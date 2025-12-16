@@ -556,16 +556,18 @@ class UIStationMenus {
                     fill(150, 255, 150);
                     text(`EVEN SWAP`, pX + pW - 30, y + rowH / 2);
                 }
-
-                this.shipyardListAreas.push({
-                    x: pX + 20, y: y, w: pW - 40, h: rowH - 6,
-                    shipTypeKey: shipKey,
-                    shipName: ship.name,
-                    price: finalPrice,
-                    originalPrice: originalPrice,
-                    canAfford: canAfford
-                });
             }
+
+            // Always add to clickable areas (including current ship)
+            this.shipyardListAreas.push({
+                x: pX + 20, y: y, w: pW - 40, h: rowH - 6,
+                shipTypeKey: shipKey,
+                shipName: ship.name,
+                price: finalPrice,
+                originalPrice: originalPrice,
+                canAfford: canAfford,
+                isCurrentShip: isCurrentShip
+            });
         }
 
         // Draw scrollbar if needed
@@ -1449,6 +1451,10 @@ class UIStationMenus {
             }
         }
 
+        // Check if viewing current ship
+        const isCurrentShip = shipDef.name === currentShipType ||
+            (currentShipDef && shipDef.name === currentShipDef.name);
+
         // Render specifications (right side)
         this._drawShipSpecifications(shipDef, currentShipDef, rightX, rightW, contentY);
 
@@ -1459,7 +1465,7 @@ class UIStationMenus {
         // Render action buttons (right column, at standard back button height)
         const BTN_HEIGHT = 30;
         const btnY = pY + pH - BTN_HEIGHT - 15;
-        this.shipDetailButtons = this._drawActionButtons(shipData.canAfford, rightX, rightW, btnY);
+        this.shipDetailButtons = this._drawActionButtons(shipData.canAfford, rightX, rightW, btnY, isCurrentShip);
     }
 
     /**
@@ -1681,31 +1687,34 @@ class UIStationMenus {
      * @param {number} columnX - Right column X position
      * @param {number} columnW - Right column width
      * @param {number} y - Y position
+     * @param {boolean} isCurrentShip - Whether this is the player's current ship
      * @returns {Object} Button areas {buy, back}
      */
-    _drawActionButtons(canAfford, columnX, columnW, y) {
+    _drawActionButtons(canAfford, columnX, columnW, y, isCurrentShip = false) {
         const BTN_WIDTH = 100;
         const BTN_HEIGHT = 30;
         const BTN_SPACING = 10;
 
         const buyBtnX = columnX;
-        const backBtnX = columnX + BTN_WIDTH + BTN_SPACING;
+        const backBtnX = isCurrentShip ? columnX : columnX + BTN_WIDTH + BTN_SPACING;
 
-        // Buy button (disabled if can't afford)
+        // Buy button (only show if not current ship)
         let buyBtn = null;
-        if (canAfford) {
-            buyBtn = UIComponents.drawButton(buyBtnX, y, BTN_WIDTH, BTN_HEIGHT, "BUY", [0, 150, 0], [100, 255, 100]);
-        } else {
-            // Draw disabled button
-            fill(40, 40, 40);
-            stroke(80, 80, 80);
-            strokeWeight(1);
-            rect(buyBtnX, y, BTN_WIDTH, BTN_HEIGHT, 5);
-            fill(100);
-            noStroke();
-            textAlign(CENTER, CENTER);
-            textSize(22);
-            text("BUY", buyBtnX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
+        if (!isCurrentShip) {
+            if (canAfford) {
+                buyBtn = UIComponents.drawButton(buyBtnX, y, BTN_WIDTH, BTN_HEIGHT, "BUY", [0, 150, 0], [100, 255, 100]);
+            } else {
+                // Draw disabled button
+                fill(40, 40, 40);
+                stroke(80, 80, 80);
+                strokeWeight(1);
+                rect(buyBtnX, y, BTN_WIDTH, BTN_HEIGHT, 5);
+                fill(100);
+                noStroke();
+                textAlign(CENTER, CENTER);
+                textSize(22);
+                text("BUY", buyBtnX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
+            }
         }
 
         // Back button
