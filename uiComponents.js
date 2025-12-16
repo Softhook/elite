@@ -865,8 +865,12 @@ class UIComponents {
 
                 // Set gun barrel to ship's front position (approximate forward edge)
                 // For centered ships (Force), this will be at +radius
-                // For left-aligned ships, this remains as before
-                gunBarrelX = shipX + actualShipSize / 2;
+                // For Turrets, use the ship center (turret mount point)
+                if (type === 'turret') {
+                    gunBarrelX = shipX;
+                } else {
+                    gunBarrelX = shipX + actualShipSize / 2;
+                }
             }
         }
 
@@ -874,7 +878,8 @@ class UIComponents {
         const mockOwner = {
             pos: createVector(gunBarrelX, gunBarrelY),
             currentWeapon: weaponDef,
-            angle: 0
+            angle: 0,
+            isPlayer: true
         };
 
         // Apply clipping to the entire weapon effect area to prevent projectiles/beams
@@ -1021,12 +1026,12 @@ class UIComponents {
                             proj.draw();
                         }
                     } else if (type === 'mine' && typeof Mine !== 'undefined') {
-                        // Mines don't travel in a stream usually, they are dropped
-                        // But for preview, let's just show one blinking mine if n==0
+                        // Mines: Static in the center of the preview area
                         if (n === 0) {
                             const mine = new Mine(0, 0, mockOwner, weaponDef.damage,
                                 weaponDef.blastRadius || 150, weaponDef.triggerRadius || 80,
                                 weaponDef.color, weaponDef.health || 30);
+
                             mine.armed = true;
                             mine.blinkTimer = time;
                             mine.draw();
