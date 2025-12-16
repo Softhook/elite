@@ -9,7 +9,7 @@ const WEAPON_UPGRADES = [
         color: [0, 255, 0], // Green
         fireRate: 0.4,
         price: 1200,
-        desc: "Standard energy weapon."
+        desc: "Standard-issue energy weapon found across the galaxy. Reliable, affordable, and effective against most targets."
     },
     {
 
@@ -19,7 +19,7 @@ const WEAPON_UPGRADES = [
         color: [200, 200, 255], // Pale blue
         fireRate: 0.7,
         price: 2500,
-        desc: "Slow but powerful shot."
+        desc: "Electromagnetic accelerator that trades fire rate for devastating penetration power."
     },
     {
         name: "Heavy Cannon",
@@ -28,7 +28,7 @@ const WEAPON_UPGRADES = [
         color: [180, 80, 80], // Brownish
         fireRate: 1.0,
         price: 3000,
-        desc: "Very high damage, long cooldown."
+        desc: "Military-grade kinetic cannon delivering massive damage per shot. The long reload demands tactical timing."
     },
 
     // -----------------------------
@@ -45,7 +45,7 @@ const WEAPON_UPGRADES = [
         heatDissipation: 0.35,
         heatRecoveryFactor: 0.3,
         price: 1600,
-        desc: "Continuous beam, high energy use."
+        desc: "Sustained coherent light projection. Highly effective but generates significant thermal buildup."
     },
     {
         name: "Scatter Beam",
@@ -58,7 +58,7 @@ const WEAPON_UPGRADES = [
         heatDissipation: 0.42,
         heatRecoveryFactor: 0.28,
         price: 2200,
-        desc: "Low damage, rapid-fire beam."
+        desc: "High-frequency micro-pulse beam optimized for sustained fire with minimal heat accumulation."
     },
     {
         name: "Disruptor",
@@ -71,7 +71,7 @@ const WEAPON_UPGRADES = [
         heatDissipation: 0.32,
         heatRecoveryFactor: 0.35,
         price: 1400,
-        desc: "Short beam, disables enemy shields."
+        desc: "Specialized beam tuned to destabilize shield harmonics. Short range but highly effective against protected targets."
     },
 
     // -----------------------------
@@ -84,7 +84,7 @@ const WEAPON_UPGRADES = [
         color: [0, 180, 255], // Blue
         fireRate: 0.35,
         price: 800,
-        desc: "Fires two parallel shots."
+        desc: "Dual-barrel configuration providing improved hit probability against maneuvering targets."
     },
     {
         name: "Triple Pulse",
@@ -93,7 +93,7 @@ const WEAPON_UPGRADES = [
         color: [255, 0, 255], // Purple
         fireRate: 0.4,
         price: 1100,
-        desc: "Fast 3-way parallel shots."
+        desc: "Triple parallel emitters delivering concentrated firepower in a tight formation."
     },
     {
         name: "Quad Pulse",
@@ -102,7 +102,7 @@ const WEAPON_UPGRADES = [
         color: [0, 255, 180], // Aqua
         fireRate: 0.5,
         price: 1300,
-        desc: "Four parallel shots."
+        desc: "Four-barrel array creating a wall of plasma. Effective against larger or slower targets."
     },
 
     // -----------------------------
@@ -115,7 +115,7 @@ const WEAPON_UPGRADES = [
         color: [255, 255, 0], // Yellow
         fireRate: 0.4,
         price: 1700,
-        desc: "Two angled shots, good for close range."
+        desc: "Diverging twin shots ideal for close-quarters engagements where precision matters less than coverage."
     },
     {
         name: "V Punch",
@@ -124,7 +124,7 @@ const WEAPON_UPGRADES = [
         color: [120, 120, 255], // Violet
         fireRate: 0.7,
         price: 1400,
-        desc: "Two heavy shots at a wide angle."
+        desc: "Heavy-hitting spread variant sacrificing fire rate for substantial damage per volley."
     },
 
     // -----------------------------
@@ -137,7 +137,7 @@ const WEAPON_UPGRADES = [
         color: [200, 200, 100], // Yellow
         fireRate: 0.25,
         price: 2400,
-        desc: "Ballistic, 3-way spread, good vs hull."
+        desc: "Kinetic projectile weapon that bypasses shields effectively. Favored for anti-hull operations."
     },
     {
         name: "Burst Blaster",
@@ -146,7 +146,7 @@ const WEAPON_UPGRADES = [
         color: [255, 100, 100], // Pinkish
         fireRate: 0.18,
         price: 2000,
-        desc: "Fast 3-way spread, good for swarms."
+        desc: "Rapid-fire spread weapon designed for engaging multiple hostiles or fast-moving targets."
     },
 
     // -----------------------------
@@ -159,7 +159,7 @@ const WEAPON_UPGRADES = [
         color: [255, 200, 0], // Orange
         fireRate: 0.3,
         price: 1400,
-        desc: "Wide 4-way spread, covers more area."
+        desc: "Wide-angle dispersal pattern providing excellent area coverage at the cost of focused damage."
     },
 
     // -----------------------------
@@ -172,7 +172,7 @@ const WEAPON_UPGRADES = [
         color: [255, 0, 0], // Red
         fireRate: 0.3,
         price: 1600,
-        desc: "Tight 5-way spread."
+        desc: "Five-way cone pattern maximizing hit probability. Devastating at close range."
     },
 
     // -----------------------------
@@ -185,7 +185,7 @@ const WEAPON_UPGRADES = [
         color: [80, 255, 80], // Light green
         fireRate: 0.7,
         price: 2300,
-        desc: "Auto-aims, moderate damage."
+        desc: "Automated targeting system tracks and engages hostiles independently. Moderate output with consistent accuracy."
     },
     {
         name: "Railgun Turret",
@@ -194,7 +194,7 @@ const WEAPON_UPGRADES = [
         color: [255, 80, 255], // Magenta
         fireRate: 1.0,
         price: 4500,
-        desc: "High damage, slow fire, auto-aims."
+        desc: "Heavy auto-tracking railgun mounting. Premium cost justified by its lethal precision."
     },
 
     // -----------------------------
@@ -208,7 +208,7 @@ const WEAPON_UPGRADES = [
         fireRate: 2,
         price: 32500,
         maxRadius: 300,
-        desc: "Area effect."
+        desc: "Generates an expanding kinetic shockwave affecting all nearby vessels. Effective for breaking formations."
     },
     {
         name: "Jedi Force",
@@ -218,7 +218,7 @@ const WEAPON_UPGRADES = [
         fireRate: 2,
         price: 40600,
         maxRadius: 750,
-        desc: "Super damage, area effect."
+        desc: "Advanced force projection technology with extended range and devastating power. Origin classified."
     },
     // -----------------------------
     // Missile Weapons
@@ -235,7 +235,7 @@ const WEAPON_UPGRADES = [
         turnRate: 0.3,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 400,         // Longer life to find target (frames or time units)
         missileHull: 30,       // Hull for destructible missiles
-        desc: "Very slow, slow reload."
+        desc: "Slow-moving guided munition with exceptional tracking. Patient pursuit ensures target acquisition."
     },
     {
         name: "Kalibr Missile",
@@ -249,7 +249,7 @@ const WEAPON_UPGRADES = [
         turnRate: 0.2,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 400,         // Longer life to find target (frames or time units)
         missileHull: 30,       // Hull for destructible missiles
-        desc: "Extremely fast, slow reload."
+        desc: "High-velocity cruise missile offering minimal flight time to target. Limited maneuverability at speed."
     },
     {
         name: "Guardian Missile",
@@ -263,7 +263,7 @@ const WEAPON_UPGRADES = [
         turnRate: 0.08,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 240,         // Longer life to find target (frames or time units)
         missileHull: 10,       // Hull for destructible missiles
-        desc: "Basic missile with moderate damage."
+        desc: "Standard guided missile platform. Balanced performance suitable for most combat scenarios."
     },
     {
         name: "Avenger Missile",
@@ -277,7 +277,7 @@ const WEAPON_UPGRADES = [
         turnRate: 0.08,
         lifespan: 300,
         missileHull: 50,       // Hull for destructible missiles
-        desc: "Devastating but slow-reloading."
+        desc: "Heavy warhead designed to eliminate hardened targets. Extended reload cycle requires tactical consideration."
     },
     // -----------------------------
     // Tangle weapons
@@ -293,7 +293,7 @@ const WEAPON_UPGRADES = [
         dragMultiplier: 2.0, // Strong drag effect
         rotationBlockMultiplier: 0.1, // Severely reduces rotation speed
         projectileSize: 5,   // Medium projectile
-        desc: "Temporarily immobilizes enemy ships with energy tethers."
+        desc: "Projects energy tethers that restrict target movement and rotation. Effective for disabling fleeing vessels."
     },
     {
         name: "Harpoon Launcher",
@@ -304,7 +304,7 @@ const WEAPON_UPGRADES = [
         price: 4200,
         projectileSize: 6,
         speed: 30,
-        desc: "Fires a harpoon that tethers to enemies and pulls ships together until the cable breaks."
+        desc: "Magnetic grapple that creates a physical tether between ships. Cable integrity depends on relative velocity."
     },
     {
         name: "Heavy Tangle",
@@ -317,7 +317,7 @@ const WEAPON_UPGRADES = [
         dragMultiplier: 5.0, // Nearly stops ships completely
         rotationBlockMultiplier: 0.01, // Almost completely blocks rotation
         projectileSize: 7,   // Larger projectile
-        desc: "Advanced immobilization system that can stop even large ships."
+        desc: "Industrial-strength immobilization system capable of restraining even capital-class vessels."
     },
 
     // -----------------------------
@@ -333,7 +333,7 @@ const WEAPON_UPGRADES = [
         color: [255, 100, 0], // Orange
         fireRate: 3.0,
         price: 2500,
-        desc: "Proximity mine that explodes when enemies approach. Can be destroyed by weapons."
+        desc: "Proximity-triggered explosive device. Deployable during combat or for area denial operations."
     },
     {
         name: "Advanced Mine",
@@ -345,7 +345,7 @@ const WEAPON_UPGRADES = [
         color: [255, 50, 0], // Red-orange
         fireRate: 4.0,
         price: 2800,
-        desc: "Powerful mine with larger blast radius and more damage."
+        desc: "Enhanced mine variant with increased blast radius and improved damage output."
     },
     {
         name: "Heavy Mine",
@@ -357,7 +357,7 @@ const WEAPON_UPGRADES = [
         color: [200, 0, 0], // Dark red
         fireRate: 5.0,
         price: 4500,
-        desc: "Devastating mine with massive blast radius. Very durable."
+        desc: "Heavily armored high-yield mine. Resistant to point defense fire and capable of crippling large vessels."
     },
 
     // -----------------------------
@@ -371,7 +371,7 @@ const WEAPON_UPGRADES = [
         fireRate: 15.0,       // Cooldown in seconds
         color: [100, 100, 255], // Light blue for visual effect
         price: 7500,
-        desc: "Temporary barrier that halves incoming damage."
+        desc: "Generates a protective energy field reducing incoming damage by half. Limited duration requires tactical deployment."
     },
     {
         name: "Shield Dome",
@@ -381,7 +381,7 @@ const WEAPON_UPGRADES = [
         fireRate: 20.0,       // Cooldown in seconds
         color: [154, 205, 50], // Green visual effect
         price: 13500,
-        desc: "Temporary barrier that strongly reduces incoming damage."
+        desc: "Advanced barrier projection offering superior damage mitigation. Extended uptime for sustained engagements."
     },
     {
         name: "Halo",
@@ -391,7 +391,7 @@ const WEAPON_UPGRADES = [
         fireRate: 20.0,       // Cooldown in seconds
         color: [255, 215, 0], // Gold for visual effect
         price: 18000,
-        desc: "Temporary barrier that blocks incoming damage."
+        desc: "Top-tier defensive system providing near-complete damage immunity. The gold standard in personal protection."
     }
 
 ];
