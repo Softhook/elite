@@ -391,6 +391,7 @@ function keyPressed() {
     if (handleWeaponSwitching()) return false;
     if (handleSingleKeyActions()) return;
     if (handleMissionNavigation()) return;
+    if (handleDetailScreenNavigation()) return;
     if (handleEscapeKey()) return;
 }
 
@@ -537,6 +538,65 @@ function handleMissionNavigation() {
         soundManager.playSound('click');
     }
     return true;
+}
+
+/**
+ * Handle ship/weapon detail screen navigation with left/right arrow keys
+ * @returns {boolean} True if handled
+ */
+function handleDetailScreenNavigation() {
+    if (!gameStateManager || !uiManager) return false;
+
+    const state = gameStateManager.currentState;
+    if (state !== "VIEWING_SHIP_DETAIL" && state !== "VIEWING_WEAPON_DETAIL") return false;
+
+    // Only react to Left/Right arrow keys
+    if (!(keyCode === LEFT_ARROW || keyCode === RIGHT_ARROW)) return false;
+
+    const stationMenus = uiManager.stationMenus;
+    if (!stationMenus) return false;
+
+    // Handle ship detail navigation
+    if (state === "VIEWING_SHIP_DETAIL") {
+        const shipList = stationMenus.availableShipsList;
+        if (!Array.isArray(shipList) || shipList.length === 0) return false;
+
+        let idx = stationMenus.currentShipIndex;
+
+        if (keyCode === LEFT_ARROW && idx > 0) {
+            stationMenus.currentShipIndex--;
+            stationMenus.selectedShipForDetail = shipList[stationMenus.currentShipIndex];
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+            return true;
+        } else if (keyCode === RIGHT_ARROW && idx < shipList.length - 1) {
+            stationMenus.currentShipIndex++;
+            stationMenus.selectedShipForDetail = shipList[stationMenus.currentShipIndex];
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+            return true;
+        }
+    }
+
+    // Handle weapon detail navigation
+    if (state === "VIEWING_WEAPON_DETAIL") {
+        const weaponList = stationMenus.availableWeaponsList;
+        if (!Array.isArray(weaponList) || weaponList.length === 0) return false;
+
+        let idx = stationMenus.currentWeaponIndex;
+
+        if (keyCode === LEFT_ARROW && idx > 0) {
+            stationMenus.currentWeaponIndex--;
+            stationMenus.selectedWeaponForDetail = weaponList[stationMenus.currentWeaponIndex];
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+            return true;
+        } else if (keyCode === RIGHT_ARROW && idx < weaponList.length - 1) {
+            stationMenus.currentWeaponIndex++;
+            stationMenus.selectedWeaponForDetail = weaponList[stationMenus.currentWeaponIndex];
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
