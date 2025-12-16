@@ -1838,8 +1838,8 @@ class UIStationMenus {
         textAlign(CENTER, TOP);
         text(weaponData.weaponDef.name, visualCenterX, contentY + 10);
 
-        // Draw animated weapon visualization with player's ship
-        UIComponents.drawWeaponVisualization(weaponData.weaponDef, visualCenterX, visualCenterY, visualSize, player);
+        // Draw animated weapon visualization with player's ship and panel bounds for clipping
+        UIComponents.drawWeaponVisualization(weaponData.weaponDef, visualCenterX, visualCenterY, visualSize, player, leftX, leftW);
     }
 
     /**

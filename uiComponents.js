@@ -758,7 +758,7 @@ class UIComponents {
      * @param {number} size - Visualization area size
      * @returns {void}
      */
-    static drawWeaponVisualization(weaponDef, centerX, centerY, size, playerShip = null) {
+    static drawWeaponVisualization(weaponDef, centerX, centerY, size, playerShip = null, panelLeftX = null, panelWidth = null) {
         if (!weaponDef) return;
 
         push();
@@ -781,6 +781,11 @@ class UIComponents {
         let gunBarrelX = 0;
         const gunBarrelY = 0;
 
+        // Calculate panel boundaries in local coordinates (relative to center)
+        const panelLeftEdge = panelLeftX !== null ? (panelLeftX - centerX) : (-size * 0.5);
+        const panelRightEdge = panelWidth !== null ? (panelLeftEdge + panelWidth) : (size * 0.5);
+        const effectiveWidth = panelRightEdge - panelLeftEdge;
+
         if (type !== 'mine' && playerShip && typeof SHIP_DEFINITIONS !== 'undefined') {
             const shipTypeName = playerShip.shipTypeName || 'Sidewinder';
             const shipDef = SHIP_DEFINITIONS[shipTypeName];
@@ -789,15 +794,15 @@ class UIComponents {
                 // Use actual ship size for realistic scaling
                 const actualShipSize = playerShip.size || shipDef.size || 30;
 
-                // Position ship so the front is near the left edge
-                const shipX = -size * 0.4;
+                // Position ship so the front is aligned with left panel edge
+                const shipX = panelLeftEdge + actualShipSize * 0.4;
 
-                // Enable clipping so ship can be cut off at left boundary
+                // Enable clipping at panel boundary
                 push();
                 drawingContext.save();
-                // Clip to visualization area (allow left overflow)
+                // Clip to actual panel area
                 drawingContext.beginPath();
-                drawingContext.rect(-size * 0.5, -size * 0.5, size, size);
+                drawingContext.rect(panelLeftEdge, -size * 0.5, effectiveWidth, size);
                 drawingContext.clip();
 
                 translate(shipX, 0);
@@ -883,7 +888,7 @@ class UIComponents {
 
             // Draw beam using actual game rendering
             if (isFiring) {
-                const beamLength = size * 0.4;
+                const beamLength = panelRightEdge - gunBarrelX;
                 const intensity = 0.6 + (heatPercent * 0.4);
 
                 // Use actual beam rendering style from player.js (lines 1404-1416)
@@ -912,7 +917,7 @@ class UIComponents {
         // Projectile-based weapons - use actual Projectile.draw()
         else {
             const firePhase = cycle;
-            const shouldFire = firePhase < 0.3;
+            const shouldFire = firePhase < 1;
 
             if (shouldFire && typeof Projectile !== 'undefined') {
                 // Determine number of projectiles
@@ -929,9 +934,12 @@ class UIComponents {
                     const halfSpread = spread * 0.5;
                     const step = count > 1 ? spread / (count - 1) : 0;
 
+                    // Calculate max travel distance (from gun barrel to right panel edge)
+                    const maxDist = panelRightEdge - gunBarrelX;
+
                     for (let i = 0; i < count; i++) {
                         const angle = -halfSpread + (i * step);
-                        const dist = firePhase * size * 1.2;
+                        const dist = firePhase * maxDist;
 
                         const projX = gunBarrelX + Math.cos(angle) * dist;
                         const projY = Math.sin(angle) * dist;
@@ -942,7 +950,8 @@ class UIComponents {
                     }
                 } else if (baseType === 'straight') {
                     const spacing = 20;
-                    const dist = firePhase * size * 1.2;
+                    const maxDist = panelRightEdge - gunBarrelX;
+                    const dist = firePhase * maxDist;
 
                     for (let i = 0; i < count; i++) {
                         const y = (i - (count - 1) / 2) * spacing;
@@ -1041,7 +1050,8 @@ class UIComponents {
                     noStroke();
                 } else {
                     // All other projectile types (missile, tangle, harpoon, etc.)
-                    const dist = firePhase * size * 1.2;
+                    const maxDist = panelRightEdge - gunBarrelX;
+                    const dist = firePhase * maxDist;
                     const projX = gunBarrelX + dist;
 
                     const proj = new Projectile(projX, 0, 0, mockOwner,
