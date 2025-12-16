@@ -1804,7 +1804,7 @@ class UIStationMenus {
         const contentH = pH - headerHeight - LAYOUT.bottomPadding;
 
         // Render weapon visualization (left side)
-        this._drawWeaponVisualizationSection(weaponData, leftX, leftW, contentY, contentH);
+        this._drawWeaponVisualizationSection(weaponData, leftX, leftW, contentY, contentH, player);
 
         // Render specifications (right side)
         this._drawWeaponSpecifications(weaponDef, rightX, rightW, contentY);
@@ -1826,7 +1826,7 @@ class UIStationMenus {
      * Draws the weapon visualization section.
      * @private
      */
-    _drawWeaponVisualizationSection(weaponData, leftX, leftW, contentY, contentH) {
+    _drawWeaponVisualizationSection(weaponData, leftX, leftW, contentY, contentH, player) {
         const visualCenterX = leftX + leftW / 2;
         const visualCenterY = contentY + contentH / 2;
         const visualSize = Math.min(leftW, contentH) * 1.2;
@@ -1838,8 +1838,8 @@ class UIStationMenus {
         textAlign(CENTER, TOP);
         text(weaponData.weaponDef.name, visualCenterX, contentY + 10);
 
-        // Draw animated weapon visualization
-        UIComponents.drawWeaponVisualization(weaponData.weaponDef, visualCenterX, visualCenterY, visualSize);
+        // Draw animated weapon visualization with player's ship
+        UIComponents.drawWeaponVisualization(weaponData.weaponDef, visualCenterX, visualCenterY, visualSize, player);
     }
 
     /**

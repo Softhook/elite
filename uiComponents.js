@@ -758,7 +758,7 @@ class UIComponents {
      * @param {number} size - Visualization area size
      * @returns {void}
      */
-    static drawWeaponVisualization(weaponDef, centerX, centerY, size) {
+    static drawWeaponVisualization(weaponDef, centerX, centerY, size, playerShip = null) {
         if (!weaponDef) return;
 
         push();
@@ -777,16 +777,58 @@ class UIComponents {
         const baseType = type.replace(/\d+$/, ''); // Remove numbers from type
         const weaponColor = weaponDef.color || [255, 255, 255];
 
-        // Weapon mount/barrel
-        fill(80, 80, 100);
-        noStroke();
-        rect(-15, -8, 30, 16, 3);
-        fill(100, 100, 120);
-        rect(15, -6, 20, 12, 2);
-
-        // Gun barrel position for projectile spawning
-        const gunBarrelX = 35;
+        // Draw player's actual ship (except for mines which are dropped)
+        let gunBarrelX = 0;
         const gunBarrelY = 0;
+
+        if (type !== 'mine' && playerShip && typeof SHIP_DEFINITIONS !== 'undefined') {
+            const shipTypeName = playerShip.shipTypeName || 'Sidewinder';
+            const shipDef = SHIP_DEFINITIONS[shipTypeName];
+
+            if (shipDef && typeof shipDef.drawFunction === 'function') {
+                // Use actual ship size for realistic scaling
+                const actualShipSize = playerShip.size || shipDef.size || 30;
+
+                // Position ship so the front is near the left edge
+                const shipX = -size * 0.4;
+
+                // Enable clipping so ship can be cut off at left boundary
+                push();
+                drawingContext.save();
+                // Clip to visualization area (allow left overflow)
+                drawingContext.beginPath();
+                drawingContext.rect(-size * 0.5, -size * 0.5, size, size);
+                drawingContext.clip();
+
+                translate(shipX, 0);
+
+                // Draw the actual player ship at realistic size
+                fill(shipDef.fillColor || [100, 120, 140]);
+                stroke(shipDef.strokeColor || [150, 170, 190]);
+                strokeWeight(shipDef.strokeW || 2);
+
+                try {
+                    shipDef.drawFunction(actualShipSize, false, 0);
+                } catch (e) {
+                    // Fallback to simple triangle if ship draw fails
+                    fill(80, 100, 120);
+                    stroke(120, 140, 160);
+                    strokeWeight(2);
+                    beginShape();
+                    vertex(-actualShipSize / 2, 0);
+                    vertex(-actualShipSize / 2, -actualShipSize / 3);
+                    vertex(actualShipSize / 2, 0);
+                    vertex(-actualShipSize / 2, actualShipSize / 3);
+                    endShape(CLOSE);
+                }
+
+                drawingContext.restore();
+                pop();
+
+                // Set gun barrel to ship's front position (approximate forward edge)
+                gunBarrelX = shipX + actualShipSize / 2;
+            }
+        }
 
         // Create mock owner object for projectile instantiation
         const mockOwner = {
@@ -844,16 +886,18 @@ class UIComponents {
                 const beamLength = size * 0.4;
                 const intensity = 0.6 + (heatPercent * 0.4);
 
-                // Use actual beam rendering style from player.js
-                stroke(weaponColor[0], weaponColor[1], weaponColor[2], 150 * intensity);
-                strokeWeight(8 + pulse * 4);
+                // Use actual beam rendering style from player.js (lines 1404-1416)
+                push();
+                // Core beam
+                stroke(weaponColor[0], weaponColor[1], weaponColor[2]);
+                strokeWeight(3 * intensity);
                 line(gunBarrelX, 0, gunBarrelX + beamLength, 0);
 
-                stroke(255, 255, 255, 220 * intensity);
-                strokeWeight((8 + pulse * 4) * 0.4);
+                // Glow layer
+                stroke(weaponColor[0], weaponColor[1], weaponColor[2], 100 * intensity);
+                strokeWeight(6 * intensity);
                 line(gunBarrelX, 0, gunBarrelX + beamLength, 0);
-
-                noStroke();
+                pop();
             } else {
                 fill(255, 50, 50);
                 textSize(12);
@@ -908,8 +952,95 @@ class UIComponents {
                             weaponDef.speed || 8, weaponDef.damage, weaponDef.color, type);
                         proj.draw();
                     }
+                } else if (type === 'mine' && typeof Mine !== 'undefined') {
+                    // Use actual Mine.draw() for authentic rendering
+                    const mine = new Mine(0, 0, mockOwner, weaponDef.damage,
+                        weaponDef.blastRadius || 150, weaponDef.triggerRadius || 80,
+                        weaponDef.color, weaponDef.health || 30);
+
+                    // Set mine to armed state for preview
+                    mine.armed = true;
+                    mine.blinkTimer = time;
+
+                    mine.draw();
+                } else if (type === 'force') {
+                    // Force weapon - expanding shockwave (custom visualization)
+                    const shockwave = (cycle % 1.0) * size * 0.6;
+                    const alpha = 255 * (1 - (cycle % 1.0));
+
+                    for (let i = 0; i < 3; i++) {
+                        const radius = shockwave - i * 20;
+                        if (radius > 0) {
+                            stroke(weaponColor[0], weaponColor[1], weaponColor[2], alpha * (1 - i / 3));
+                            strokeWeight(4 - i);
+                            noFill();
+                            ellipse(0, 0, radius * 2, radius * 2);
+                        }
+                    }
+
+                    if (cycle % 1.0 < 0.2) {
+                        fill(weaponColor[0], weaponColor[1], weaponColor[2], 255 * (1 - (cycle % 1.0) * 5));
+                        noStroke();
+                        ellipse(0, 0, 40, 40);
+                    }
+                    noStroke();
+                } else if (type === 'turret') {
+                    // Turret - auto-targeting reticle (custom visualization)
+                    const angle = time * 1.5;
+
+                    stroke(weaponColor);
+                    strokeWeight(2);
+                    noFill();
+                    ellipse(0, 0, 60, 60);
+                    line(-35, 0, -25, 0);
+                    line(35, 0, 25, 0);
+                    line(0, -35, 0, -25);
+                    line(0, 35, 0, 25);
+
+                    stroke(weaponColor[0], weaponColor[1], weaponColor[2], 150);
+                    strokeWeight(1);
+                    line(0, 0, Math.cos(angle) * 30, Math.sin(angle) * 30);
+
+                    if (firePhase < 0.2) {
+                        const dist = firePhase * size * 0.6;
+                        fill(weaponColor);
+                        noStroke();
+                        ellipse(dist, 0, 8, 8);
+                    }
+                    noStroke();
+                } else if (type === 'barrier') {
+                    // Barrier - shield dome (custom visualization)
+                    const shimmer = Math.sin(time * 3) * 0.3 + 0.7;
+
+                    for (let ring = 0; ring < 3; ring++) {
+                        const radius = (ring + 1) * 30;
+                        stroke(weaponColor[0], weaponColor[1], weaponColor[2], 100 * shimmer * (1 - ring / 3));
+                        strokeWeight(2);
+                        noFill();
+
+                        beginShape();
+                        for (let i = 0; i <= 6; i++) {
+                            const angle = (i / 6) * TWO_PI - HALF_PI;
+                            const x = Math.cos(angle) * radius;
+                            const y = Math.sin(angle) * radius;
+                            vertex(x, y);
+                        }
+                        endShape();
+                    }
+
+                    for (let i = 0; i < 8; i++) {
+                        const angle = i * Math.PI / 4 + time * 0.5;
+                        const radius = 50 + Math.sin(time * 2 + i) * 20;
+                        fill(weaponColor[0], weaponColor[1], weaponColor[2], 200 * shimmer);
+                        noStroke();
+                        ellipse(Math.cos(angle) * radius, Math.sin(angle) * radius, 4, 4);
+                    }
+
+                    fill(weaponColor[0], weaponColor[1], weaponColor[2], 100 * shimmer);
+                    ellipse(0, 0, 20, 20);
+                    noStroke();
                 } else {
-                    // Single projectile, missile, tangle, harpoon, etc.
+                    // All other projectile types (missile, tangle, harpoon, etc.)
                     const dist = firePhase * size * 1.2;
                     const projX = gunBarrelX + dist;
 
