@@ -602,6 +602,10 @@ class UIStationMenus {
         if (!player) return;
         this.upgradeListAreas = [];
 
+        // Clear any popup state from weapon detail screen
+        this.showingSlotPicker = false;
+        this.pendingWeaponPurchase = null;
+
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
 
         // FILTER UPGRADES based on system tech level
@@ -2184,6 +2188,12 @@ class UIStationMenus {
 
         // Back button
         if (this.weaponDetailButtons?.back && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.back)) {
+            // Clear popup state if showing
+            if (this.showingSlotPicker) {
+                this.showingSlotPicker = false;
+                this.pendingWeaponPurchase = null;
+            }
+
             // Return to upgrades menu
             if (typeof gameStateManager !== 'undefined') {
                 gameStateManager.setState('VIEWING_UPGRADES');

@@ -1725,7 +1725,7 @@ class StarSystem {
                 wave.processed = {};
             }
 
-            this._processForceWaveBatch(wave);
+            this._processForceWaveCollisions(wave);
 
             if (wave.radius >= wave.maxRadius && wave.processedCount >= wave.entitiesToProcess.length) {
                 this._fastRemove(this.forceWaves, i);
