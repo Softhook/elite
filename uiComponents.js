@@ -862,10 +862,10 @@ class UIComponents {
                 drawingContext.restore();
                 pop();
 
-                // Set gun barrel to ship's front position (approximate forward edge)
-                // For centered ships (Force), this will be at +radius
-                // For Turrets, use the ship center (turret mount point)
-                if (type === 'turret') {
+                // Set gun barrel position based on weapon type
+                // Turrets and Beams fire from ship center
+                // Other weapons fire from ship's front tip
+                if (type === 'turret' || type === 'beam' || baseType === 'beam') {
                     gunBarrelX = shipX;
                 } else {
                     gunBarrelX = shipX + actualShipSize / 2;
@@ -961,7 +961,7 @@ class UIComponents {
             }
         }
         // Mines: Always show static in the center, outside of projectile loop
-        if (type === 'mine' && typeof Mine !== 'undefined') {
+        else if (type === 'mine' && typeof Mine !== 'undefined') {
             const mine = new Mine(0, 0, mockOwner, weaponDef.damage,
                 weaponDef.blastRadius || 150, weaponDef.triggerRadius || 80,
                 weaponDef.color, weaponDef.health || 30);
@@ -996,129 +996,124 @@ class UIComponents {
             pop();
         }
         // Projectile-based weapons - use actual Projectile.draw()
-        else {
-            const firePhase = cycle;
-            const shouldFire = firePhase < 1; // Always true if fireRate > 0
+        else if (typeof Projectile !== 'undefined') {
+            // Determine number of projectiles
+            let count = 1;
+            const countMatch = type.match(/\d+$/);
+            if (countMatch) {
+                count = parseInt(countMatch[0]);
+            }
 
-            if (typeof Projectile !== 'undefined') {
-                // Determine number of projectiles
-                let count = 1;
-                const countMatch = type.match(/\d+$/);
-                if (countMatch) {
-                    count = parseInt(countMatch[0]);
-                }
+            // Calculate common physics parameters
+            const speed = weaponDef.speed || 8;
+            const speedPPS = speed * 60; // Pixels per second
+            const maxDist = panelRightEdge - gunBarrelX;
+            const maxLifetime = maxDist / speedPPS;
 
-                // Calculate common physics parameters
-                const speed = weaponDef.speed || 8;
-                const speedPPS = speed * 60; // Pixels per second
-                const maxDist = panelRightEdge - gunBarrelX;
-                const maxLifetime = maxDist / speedPPS;
+            // Calculate how many shots should be visible
+            // Add buffer to ensure smooth exit
+            // Limit to 50 to prevent performance issues with crazy fire rates
+            const visibleShots = Math.min(50, Math.ceil(maxLifetime / fireRate) + 1);
 
-                // Calculate how many shots should be visible
-                // Add buffer to ensure smooth exit
-                // Limit to 50 to prevent performance issues with crazy fire rates
-                const visibleShots = Math.min(50, Math.ceil(maxLifetime / fireRate) + 1);
+            for (let n = 0; n < visibleShots; n++) {
+                const timeSinceFire = (time % fireRate) + (n * fireRate);
 
-                for (let n = 0; n < visibleShots; n++) {
-                    const timeSinceFire = (time % fireRate) + (n * fireRate);
+                // Optimization: stop if this projectile is already too far
+                if (timeSinceFire > maxLifetime * 1.5) continue;
 
-                    // Optimization: stop if this projectile is already too far
-                    if (timeSinceFire > maxLifetime * 1.5) continue;
+                const dist = timeSinceFire * speedPPS;
 
-                    const dist = timeSinceFire * speedPPS;
+                // Calculate spread angles for different weapon types
+                if (baseType === 'spread') {
+                    const spreadMap = { 2: 0.18, 3: 0.3, 4: 0.4, 5: 0.2 };
+                    const spread = spreadMap[count] || 0.3;
+                    const halfSpread = spread * 0.5;
+                    const step = count > 1 ? spread / (count - 1) : 0;
 
-                    // Calculate spread angles for different weapon types
-                    if (baseType === 'spread') {
-                        const spreadMap = { 2: 0.18, 3: 0.3, 4: 0.4, 5: 0.2 };
-                        const spread = spreadMap[count] || 0.3;
-                        const halfSpread = spread * 0.5;
-                        const step = count > 1 ? spread / (count - 1) : 0;
+                    for (let i = 0; i < count; i++) {
+                        const angle = -halfSpread + (i * step);
 
-                        for (let i = 0; i < count; i++) {
-                            const angle = -halfSpread + (i * step);
+                        const projX = gunBarrelX + Math.cos(angle) * dist;
+                        const projY = Math.sin(angle) * dist;
 
-                            const projX = gunBarrelX + Math.cos(angle) * dist;
-                            const projY = Math.sin(angle) * dist;
-
-                            const proj = new Projectile(projX, projY, angle, mockOwner,
-                                weaponDef.speed || 8, weaponDef.damage, weaponDef.color, type);
-                            proj.draw();
-                        }
-                    } else if (baseType === 'straight') {
-                        const spacing = 20;
-
-                        for (let i = 0; i < count; i++) {
-                            const y = (i - (count - 1) / 2) * spacing;
-                            const projX = gunBarrelX + dist;
-
-                            // Mock owner position shifted for straight projectiles to align Y
-                            // (Actually straight projectile logic in game typically spawns them at offsets)
-                            // Here we just modify the y coordinate directly for drawing
-
-                            const proj = new Projectile(projX, y, 0, mockOwner,
-                                weaponDef.speed || 8, weaponDef.damage, weaponDef.color, type);
-                            proj.draw();
-                        }
-                    } else if (type === 'force') {
-                        // Force waves are handled similarly to mines (single pulse or manually animated loop)
-                        // But to be consistent with "Authentic", we used the expanding ring.
-                        // Let's keep the single ring effect we added previously, but only for the first instance
-                        // to avoid chaos. Or maybe we WANT multiple rings if fire rate is fast?
-                        // Authentic: StarSystem draws ALL active force waves.
-                        // So if fire rate is fast, we should see multiple rings.
-
-                        const waveLifetime = 1.0; // Force waves usually last ~1 second
-                        if (timeSinceFire < waveLifetime) {
-                            const maxRadius = weaponDef.maxRadius || 100;
-                            const waveCycle = timeSinceFire / waveLifetime;
-                            const radius = waveCycle * size * 0.6;
-                            const alpha = 200 * (1 - waveCycle);
-
-                            push();
-                            noFill();
-                            strokeWeight(3);
-                            stroke(weaponColor[0], weaponColor[1], weaponColor[2], alpha);
-                            ellipse(0, 0, radius * 2, radius * 2);
-                            pop();
-                        }
-                    } else if (type === 'turret') {
-                        // Authentic Trailing: calculate what the angle WAS when this shot was fired
-                        const emissionTime = time - timeSinceFire;
-                        const mockTargetAngleAtEmission = Math.sin(emissionTime * 2) * 0.5;
-
-                        const projX = gunBarrelX + Math.cos(mockTargetAngleAtEmission) * dist;
-                        const projY = Math.sin(mockTargetAngleAtEmission) * dist;
-
-                        const proj = new Projectile(projX, projY, mockTargetAngleAtEmission, mockOwner,
+                        const proj = new Projectile(projX, projY, angle, mockOwner,
                             weaponDef.speed || 8, weaponDef.damage, weaponDef.color, type);
-                        proj.draw();
-
-                    } else {
-                        // Default / other projectiles
-                        const projX = gunBarrelX + dist;
-
-                        const proj = new Projectile(projX, 0, 0, mockOwner,
-                            weaponDef.speed || 8, weaponDef.damage, weaponDef.color, type);
-
-                        if (type === 'harpoon') {
-                            stroke(180, 220, 255);
-                            strokeWeight(2);
-                            line(gunBarrelX, 0, projX, 0);
-                            noStroke();
-                        }
-
                         proj.draw();
                     }
+                } else if (baseType === 'straight') {
+                    const spacing = 20;
+
+                    for (let i = 0; i < count; i++) {
+                        const y = (i - (count - 1) / 2) * spacing;
+                        const projX = gunBarrelX + dist;
+
+                        // Mock owner position shifted for straight projectiles to align Y
+                        // (Actually straight projectile logic in game typically spawns them at offsets)
+                        // Here we just modify the y coordinate directly for drawing
+
+                        const proj = new Projectile(projX, y, 0, mockOwner,
+                            weaponDef.speed || 8, weaponDef.damage, weaponDef.color, type);
+                        proj.draw();
+                    }
+                } else if (type === 'force') {
+                    // Force waves are handled similarly to mines (single pulse or manually animated loop)
+                    // But to be consistent with "Authentic", we used the expanding ring.
+                    // Let's keep the single ring effect we added previously, but only for the first instance
+                    // to avoid chaos. Or maybe we WANT multiple rings if fire rate is fast?
+                    // Authentic: StarSystem draws ALL active force waves.
+                    // So if fire rate is fast, we should see multiple rings.
+
+                    const waveLifetime = 1.0; // Force waves usually last ~1 second
+                    if (timeSinceFire < waveLifetime) {
+                        const maxRadius = weaponDef.maxRadius || 100;
+                        const waveCycle = timeSinceFire / waveLifetime;
+                        const radius = waveCycle * size * 0.6;
+                        const alpha = 200 * (1 - waveCycle);
+
+                        push();
+                        noFill();
+                        strokeWeight(3);
+                        stroke(weaponColor[0], weaponColor[1], weaponColor[2], alpha);
+                        ellipse(0, 0, radius * 2, radius * 2);
+                        pop();
+                    }
+                } else if (type === 'turret') {
+                    // Authentic Trailing: calculate what the angle WAS when this shot was fired
+                    const emissionTime = time - timeSinceFire;
+                    const mockTargetAngleAtEmission = Math.sin(emissionTime * 2) * 0.5;
+
+                    const projX = gunBarrelX + Math.cos(mockTargetAngleAtEmission) * dist;
+                    const projY = Math.sin(mockTargetAngleAtEmission) * dist;
+
+                    const proj = new Projectile(projX, projY, mockTargetAngleAtEmission, mockOwner,
+                        weaponDef.speed || 8, weaponDef.damage, weaponDef.color, type);
+                    proj.draw();
+
+                } else {
+                    // Default / other projectiles
+                    const projX = gunBarrelX + dist;
+
+                    const proj = new Projectile(projX, 0, 0, mockOwner,
+                        weaponDef.speed || 8, weaponDef.damage, weaponDef.color, type);
+
+                    if (type === 'harpoon') {
+                        stroke(180, 220, 255);
+                        strokeWeight(2);
+                        line(gunBarrelX, 0, projX, 0);
+                        noStroke();
+                    }
+
+                    proj.draw();
                 }
             }
         }
 
         drawingContext.restore();
 
-
         pop();
     }
 }
+
 
 // Also export as global for use in other files
 if (typeof window !== 'undefined') {

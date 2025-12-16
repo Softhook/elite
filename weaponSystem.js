@@ -653,8 +653,8 @@ class WeaponSystem {
         // Get beam properties and cache position
         const beamLength = 1200;
 
-        // Start beam at ship's forward edge, not center
-        const spawnPos = this._getSpawnPosition(owner, angle);
+        // Start beam at ship's center (not forward edge)
+        const spawnPos = this._getSpawnPosition(owner, angle, true);
         start.set(spawnPos.x, spawnPos.y);
 
         // Note: Player beam aiming is handled in player.fireWeapon() before calling WeaponSystem.fire()
