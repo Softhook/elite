@@ -764,6 +764,10 @@ class UIComponents {
         push();
         translate(centerX, centerY);
 
+        // Scale factor for larger preview (2x size)
+        const scaleFactor = 2;
+        scale(scaleFactor);
+
         // Time-based animation with realistic firing speed
         const time = (typeof millis === 'function' ? millis() : frameCount * 16) * 0.001;
         const pulse = 0.5 + 0.5 * Math.sin(time * 2);
@@ -782,8 +786,9 @@ class UIComponents {
         const gunBarrelY = 0;
 
         // Calculate panel boundaries in local coordinates (relative to center)
-        const panelLeftEdge = panelLeftX !== null ? (panelLeftX - centerX) : (-size * 0.5);
-        const panelRightEdge = panelWidth !== null ? (panelLeftEdge + panelWidth) : (size * 0.5);
+        // Divide by scaleFactor since we've applied scale() transform
+        const panelLeftEdge = panelLeftX !== null ? (panelLeftX - centerX) / scaleFactor : (-size * 0.5 / scaleFactor);
+        const panelRightEdge = panelWidth !== null ? (panelLeftEdge + panelWidth / scaleFactor) : (size * 0.5 / scaleFactor);
         const effectiveWidth = panelRightEdge - panelLeftEdge;
 
         if (type !== 'mine' && playerShip && typeof SHIP_DEFINITIONS !== 'undefined') {
@@ -806,9 +811,9 @@ class UIComponents {
                 // Enable clipping at panel boundary
                 push();
                 drawingContext.save();
-                // Clip to actual panel area
+                // Clip to actual panel area (in scaled coordinates)
                 drawingContext.beginPath();
-                drawingContext.rect(panelLeftEdge, -size * 0.5, effectiveWidth, size);
+                drawingContext.rect(panelLeftEdge, -size * 0.5 / scaleFactor, effectiveWidth, size / scaleFactor);
                 drawingContext.clip();
 
                 translate(shipX, 0);
@@ -882,10 +887,10 @@ class UIComponents {
         };
 
         // Apply clipping to the entire weapon effect area to prevent projectiles/beams
-        // from drawing outside the preview panel
+        // from drawing outside the preview panel (in scaled coordinates)
         drawingContext.save();
         drawingContext.beginPath();
-        drawingContext.rect(panelLeftEdge, -size * 0.5, effectiveWidth, size);
+        drawingContext.rect(panelLeftEdge, -size * 0.5 / scaleFactor, effectiveWidth, size / scaleFactor);
         drawingContext.clip();
 
         // Beam weapons - use actual beam rendering
