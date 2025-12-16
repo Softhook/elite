@@ -611,7 +611,10 @@ class UIStationMenus {
         // FILTER UPGRADES based on system tech level
         const systemTechLevel = system?.techLevel || 1;
         const availableWeapons = typeof WEAPON_UPGRADES !== 'undefined' ? WEAPON_UPGRADES.filter(weapon => {
-            const weaponTechLevel = weapon.techLevel || Math.min(5, Math.ceil((weapon.damage * weapon.price) / 5000));
+            // Use weapon's explicit techLevel, or calculate from damage/price
+            // For barrier weapons (no damage property), use price-based calculation with fallback
+            const damage = weapon.damage || 1; // Fallback for barrier weapons that use damageReduction
+            const weaponTechLevel = weapon.techLevel || Math.min(5, Math.ceil((damage * weapon.price) / 5000));
             return weaponTechLevel <= systemTechLevel;
         }) : [];
 

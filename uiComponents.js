@@ -794,10 +794,9 @@ class UIComponents {
                 // Use actual ship size for realistic scaling
                 const actualShipSize = playerShip.size || shipDef.size || 30;
 
-                // Center ship for force weapons to match the wave emission
-                // Also center for mine/barrier if desired, but specifically force as requested
+                // Center ship for force and barrier weapons to match the wave/shield emission
                 let shipX;
-                if (type === 'force' || baseType === 'force') {
+                if (type === 'force' || baseType === 'force' || type === 'barrier') {
                     shipX = 0; // Center in the visualization panel (relative to translated center)
                 } else {
                     // Position ship so the front is aligned with left panel edge
@@ -971,6 +970,31 @@ class UIComponents {
             mine.blinkTimer = time;
             mine.draw();
         }
+        // Barrier: Always show around ship, outside of projectile loop (like mines)
+        else if (type === 'barrier') {
+            // Use the actual ship size for realistic barrier rendering (matches player.js)
+            const shipSize = playerShip?.size || 30;
+
+            // Authentic barrier calculation from player.js lines 1362-1374
+            const barrierPulse = (Math.sin(frameCount * 0.1) + 1) / 2; // Ranges from 0 to 1
+            const barrierRadius = shipSize * (1.7 + barrierPulse * 0.2); // Slightly larger and pulsating
+
+            // Simulate full alpha (as if barrier just activated)
+            const barrierAlpha = 150;
+
+            push();
+            noFill();
+            // Primary barrier ring
+            strokeWeight(2 + barrierPulse * 1.5); // Thicker and pulsating stroke
+            stroke(weaponColor[0], weaponColor[1], weaponColor[2], barrierAlpha);
+            ellipse(0, 0, barrierRadius * 2, barrierRadius * 2); // Diameter
+
+            // Secondary fainter pulsating ring
+            strokeWeight(1 + barrierPulse * 1);
+            stroke(weaponColor[0], weaponColor[1], weaponColor[2], barrierAlpha * 0.5);
+            ellipse(0, 0, barrierRadius * 2.3, barrierRadius * 2.3);
+            pop();
+        }
         // Projectile-based weapons - use actual Projectile.draw()
         else {
             const firePhase = cycle;
@@ -1069,25 +1093,6 @@ class UIComponents {
                             weaponDef.speed || 8, weaponDef.damage, weaponDef.color, type);
                         proj.draw();
 
-                    } else if (type === 'barrier') {
-                        // Barrier is a shield, strictly attached to the ship.
-                        // Only draw one instance (n=0)
-                        if (n === 0) {
-                            const barrierPulse = (Math.sin(time * 3) + 1) / 2;
-                            const barrierRadius = size * 0.3 * (1.7 + barrierPulse * 0.2);
-                            const barrierAlpha = 150;
-
-                            push();
-                            noFill();
-                            strokeWeight(2 + barrierPulse * 1.5);
-                            stroke(weaponColor[0], weaponColor[1], weaponColor[2], barrierAlpha);
-                            ellipse(0, 0, barrierRadius * 2, barrierRadius * 2);
-
-                            strokeWeight(1 + barrierPulse * 1);
-                            stroke(weaponColor[0], weaponColor[1], weaponColor[2], barrierAlpha * 0.5);
-                            ellipse(0, 0, barrierRadius * 2.3, barrierRadius * 2.3);
-                            pop();
-                        }
                     } else {
                         // Default / other projectiles
                         const projX = gunBarrelX + dist;
