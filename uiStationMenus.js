@@ -1518,8 +1518,8 @@ class UIStationMenus {
         const columnsStartY = specY;
         this._drawShipStats(shipDef, currentShipDef, specX, rightW, columnsStartY, lineH);
 
-        // Weapons/armament section
-        specY = columnsStartY + (lineH * 0.9 * 3) + 15;
+        // Weapons/armament section (moved down for 4 stats instead of 3)
+        specY = columnsStartY + (lineH * 0.9 * 4) + 15;
         this._drawArmamentSection(shipDef, specX, specY, lineH);
     }
 
@@ -1563,11 +1563,13 @@ class UIStationMenus {
             }
         };
 
-        // Column 1: Hull, Shield, Cargo
+        // Column 1: Hull, Shield, Shield Recharge, Cargo
         let col1Y = startY;
         drawStatWithComparison('Hull', shipDef.baseHull, currentShipDef?.baseHull, specX, col1Y);
         col1Y += lineH * 0.9;
         drawStatWithComparison('Shield', shipDef.baseShield, currentShipDef?.baseShield, specX, col1Y);
+        col1Y += lineH * 0.9;
+        drawStatWithComparison('Shield Rchg', shipDef.shieldRecharge || 0, currentShipDef?.shieldRecharge, specX, col1Y, 1);
         col1Y += lineH * 0.9;
         drawStatWithComparison('Cargo', shipDef.cargoCapacity, currentShipDef?.cargoCapacity, specX, col1Y);
 
@@ -1593,22 +1595,18 @@ class UIStationMenus {
 
         // Section header
         fill(255, 200, 100);
-        textSize(18);
+        textSize(20);
         textAlign(LEFT, TOP);
         text("Armament:", specX, y);
         y += lineH * 0.8;
 
         // Weapon list
-        textSize(14);
+        textSize(16);
         if (shipDef.armament && shipDef.armament.length > 0) {
             fill(200);
-            const maxVisible = 4;
-            for (let i = 0; i < Math.min(shipDef.armament.length, maxVisible); i++) {
+            for (let i = 0; i < shipDef.armament.length; i++) {
                 text(`• ${shipDef.armament[i]}`, specX + 10, y);
                 y += lineH * 0.6;
-            }
-            if (shipDef.armament.length > maxVisible) {
-                text(`... +${shipDef.armament.length - maxVisible} more`, specX + 10, y);
             }
         } else {
             fill(150);
