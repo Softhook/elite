@@ -790,7 +790,11 @@ class UIComponents {
             // Single projectile with trail
             const firePhase = cycle;
             if (firePhase < 0.3) {
-                const x = firePhase * size * 1.2;
+                const dist = firePhase * size * 1.2;
+
+                // Start from gun barrel position (x=35)
+                const startX = 35;
+                const x = startX + dist;
                 const trailLength = 40;
 
                 // Projectile
@@ -802,7 +806,7 @@ class UIComponents {
                 for (let i = 0; i < 5; i++) {
                     const alpha = 255 * (1 - i / 5);
                     fill(weaponColor[0], weaponColor[1], weaponColor[2], alpha);
-                    ellipse(x - i * 8, 0, 6 - i, 6 - i);
+                    ellipse(startX + dist - i * 8, 0, 6 - i, 6 - i);
                 }
 
                 // Glow
@@ -813,25 +817,90 @@ class UIComponents {
                 drawingContext.shadowBlur = 0;
             }
         } else if (type === 'beam' || baseType === 'beam') {
-            // Continuous beam
-            const beamWidth = 8 + pulse * 4;
-            const beamLength = size * 0.4;
+            // Continuous beam with heat simulation
+            const maxHeat = weaponDef.maxHeat || 1.0;
+            const heatPerShot = weaponDef.heatPerShot || 0.1;
+            const heatDissipation = weaponDef.heatDissipation || 0.3;
+            const beamFireRate = weaponDef.fireRate || 0.15;
 
-            // Outer glow
-            drawingContext.shadowBlur = 30;
-            drawingContext.shadowColor = `rgba(${weaponColor[0]}, ${weaponColor[1]}, ${weaponColor[2]}, 0.6)`;
-            stroke(weaponColor[0], weaponColor[1], weaponColor[2], 150);
-            strokeWeight(beamWidth + 4);
-            line(35, 0, beamLength, 0);
+            // Simulate heat buildup and cooldown
+            // Calculate how many shots before overheat: maxHeat / heatPerShot
+            const shotsToOverheat = maxHeat / heatPerShot;
+            const firingDuration = shotsToOverheat * beamFireRate; // Time spent firing
+            const cooldownDuration = maxHeat / heatDissipation; // Time to fully cool down
+            const totalCycle = firingDuration + cooldownDuration;
 
-            // Core beam
-            drawingContext.shadowBlur = 15;
-            stroke(255, 255, 255, 220);
-            strokeWeight(beamWidth * 0.4);
-            line(35, 0, beamLength, 0);
+            // Current position in the heat cycle
+            const cycleTime = time % totalCycle;
+            let currentHeat = 0;
+            let isFiring = false;
 
-            drawingContext.shadowBlur = 0;
+            if (cycleTime < firingDuration) {
+                // Firing phase - heat builds up
+                currentHeat = Math.min(maxHeat, (cycleTime / beamFireRate) * heatPerShot);
+                isFiring = true;
+            } else {
+                // Cooldown phase - heat dissipates
+                const cooldownTime = cycleTime - firingDuration;
+                currentHeat = Math.max(0, maxHeat - (cooldownTime * heatDissipation));
+                isFiring = false;
+            }
+
+            const heatPercent = currentHeat / maxHeat;
+
+            // Draw heat indicator bar
+            const barWidth = 100;
+            const barHeight = 8;
+            const barX = -barWidth / 2;
+            const barY = -size * 0.3;
+
+            // Bar background
+            fill(40, 40, 60);
             noStroke();
+            rect(barX, barY, barWidth, barHeight, 2);
+
+            // Heat fill with color based on heat level
+            const heatColor = heatPercent > 0.8 ? [255, 100, 100] :
+                heatPercent > 0.5 ? [255, 200, 100] :
+                    [100, 255, 100];
+            fill(...heatColor, 200);
+            rect(barX, barY, barWidth * heatPercent, barHeight, 2);
+
+            // Draw beam only when firing
+            if (isFiring) {
+                const beamWidth = 8 + pulse * 4;
+                const beamLength = size * 0.4;
+
+                // Beam intensity varies with heat
+                const intensity = 0.6 + (heatPercent * 0.4);
+
+                // Outer glow
+                drawingContext.shadowBlur = 30;
+                drawingContext.shadowColor = `rgba(${weaponColor[0]}, ${weaponColor[1]}, ${weaponColor[2]}, ${0.6 * intensity})`;
+                stroke(weaponColor[0], weaponColor[1], weaponColor[2], 150 * intensity);
+                strokeWeight(beamWidth + 4);
+                line(35, 0, beamLength, 0);
+
+                // Core beam
+                drawingContext.shadowBlur = 15;
+                stroke(255, 255, 255, 220 * intensity);
+                strokeWeight(beamWidth * 0.4);
+                line(35, 0, beamLength, 0);
+
+                drawingContext.shadowBlur = 0;
+                noStroke();
+            } else {
+                // Show "OVERHEAT" and "COOLING" text during cooldown
+                fill(255, 50, 50);
+                textSize(12);
+                textAlign(CENTER, CENTER);
+                text("OVERHEAT", 0, barY - 15);
+
+                fill(100, 200, 255, 150);
+                textSize(10);
+                text("COOLING...", 0, 5);
+            }
+
         } else if (baseType === 'straight') {
             // Parallel multi-shot
             const count = parseInt(type.match(/\d+/)?.[0]) || 2;
@@ -841,7 +910,11 @@ class UIComponents {
             if (firePhase < 0.3) {
                 for (let i = 0; i < count; i++) {
                     const y = (i - (count - 1) / 2) * spacing;
-                    const x = firePhase * size * 1.2;
+                    const dist = firePhase * size * 1.2;
+
+                    // Start from gun barrel position (x=35)
+                    const startX = 35;
+                    const x = startX + dist;
 
                     // Projectile
                     fill(weaponColor);
@@ -852,21 +925,31 @@ class UIComponents {
                     for (let j = 0; j < 3; j++) {
                         const alpha = 200 * (1 - j / 3);
                         fill(weaponColor[0], weaponColor[1], weaponColor[2], alpha);
-                        ellipse(x - j * 6, y, 5 - j, 5 - j);
+                        ellipse(startX + dist - j * 6, y, 5 - j, 5 - j);
                     }
                 }
             }
         } else if (baseType === 'spread') {
-            // Angled spread shots
+            // Angled spread shots - use actual game spread angles
             const count = parseInt(type.match(/\d+/)?.[0]) || 2;
-            const spreadAngle = 0.3;
+
+            // Actual spread angles from weaponSystem.js
+            const spreadMap = { 2: 0.18, 3: 0.3, 4: 0.4, 5: 0.2 };
+            const spread = spreadMap[count] || 0.3;
+            const halfSpread = spread * 0.5;
+            const step = count > 1 ? spread / (count - 1) : 0;
+
             const firePhase = cycle;
 
             if (firePhase < 0.3) {
                 for (let i = 0; i < count; i++) {
-                    const angle = (i - (count - 1) / 2) * spreadAngle;
+                    // Calculate angle using same logic as game
+                    const angle = -halfSpread + (i * step);
                     const dist = firePhase * size * 1.2;
-                    const x = Math.cos(angle) * dist;
+
+                    // Start from gun barrel position (x=35)
+                    const startX = 35;
+                    const x = startX + Math.cos(angle) * dist;
                     const y = Math.sin(angle) * dist;
 
                     // Projectile
@@ -878,8 +961,9 @@ class UIComponents {
                     for (let j = 0; j < 3; j++) {
                         const alpha = 200 * (1 - j / 3);
                         fill(weaponColor[0], weaponColor[1], weaponColor[2], alpha);
-                        const tx = Math.cos(angle) * (dist - j * 6);
-                        const ty = Math.sin(angle) * (dist - j * 6);
+                        const trailDist = dist - j * 6;
+                        const tx = startX + Math.cos(angle) * trailDist;
+                        const ty = Math.sin(angle) * trailDist;
                         ellipse(tx, ty, 5 - j, 5 - j);
                     }
                 }
@@ -975,36 +1059,69 @@ class UIComponents {
             }
             noStroke();
         } else if (type === 'tangle' || type === 'harpoon') {
-            // Tether/web effect
+            // Tether/web effect with realistic white tangles
             const firePhase = cycle;
             if (firePhase < 0.6) {
                 const dist = firePhase * size * 0.8;
+                const startX = 35; // Gun barrel position
 
-                // Multiple tether strands
-                for (let i = 0; i < 4; i++) {
-                    const angle = i * Math.PI / 2 + time * 0.5;
-                    const wave = Math.sin(dist * 0.1 + time * 2) * 10;
+                // Draw multiple white tangle strands emanating from the gun
+                const strandCount = type === 'harpoon' ? 1 : 6; // Harpoon has 1 strand, tangle has 6
 
-                    stroke(weaponColor[0], weaponColor[1], weaponColor[2], 200);
+                for (let i = 0; i < strandCount; i++) {
+                    const baseAngle = (i / strandCount) * TWO_PI;
+                    const angleVariation = Math.sin(time * 3 + i) * 0.15;
+                    const finalAngle = baseAngle + angleVariation;
+
+                    // Create wavy tangle effect
+                    stroke(255, 255, 255, 200); // White strands
                     strokeWeight(2);
                     noFill();
+
                     beginShape();
-                    for (let t = 0; t <= 1; t += 0.1) {
-                        const x = Math.cos(angle) * dist * t;
-                        const y = Math.sin(angle) * dist * t + Math.sin(t * Math.PI * 2) * wave * t;
+                    // Start from gun barrel
+                    vertex(startX, 0);
+
+                    // Draw wavy tangle strand
+                    const segments = 8;
+                    for (let j = 1; j <= segments; j++) {
+                        const t = j / segments;
+                        const segDist = dist * t;
+                        const wave = Math.sin(t * Math.PI * 3 + time * 2) * 8 * t;
+
+                        const x = startX + Math.cos(finalAngle) * segDist + Math.cos(finalAngle + HALF_PI) * wave;
+                        const y = Math.sin(finalAngle) * segDist + Math.sin(finalAngle + HALF_PI) * wave;
+                        vertex(x, y);
+                    }
+                    endShape();
+
+                    // Add glow effect to strands
+                    stroke(weaponColor[0], weaponColor[1], weaponColor[2], 100);
+                    strokeWeight(4);
+                    beginShape();
+                    vertex(startX, 0);
+                    for (let j = 1; j <= segments; j++) {
+                        const t = j / segments;
+                        const segDist = dist * t;
+                        const wave = Math.sin(t * Math.PI * 3 + time * 2) * 8 * t;
+
+                        const x = startX + Math.cos(finalAngle) * segDist + Math.cos(finalAngle + HALF_PI) * wave;
+                        const y = Math.sin(finalAngle) * segDist + Math.sin(finalAngle + HALF_PI) * wave;
                         vertex(x, y);
                     }
                     endShape();
                 }
 
-                // Projectile head
-                fill(weaponColor);
                 noStroke();
-                ellipse(0, 0, 10, 10);
+
+                // Projectile head at gun barrel with pulsing glow
+                fill(255, 255, 255);
+                ellipse(startX, 0, 8, 8);
 
                 drawingContext.shadowBlur = 20;
                 drawingContext.shadowColor = `rgba(${weaponColor[0]}, ${weaponColor[1]}, ${weaponColor[2]}, 0.7)`;
-                ellipse(0, 0, 15, 15);
+                fill(weaponColor[0], weaponColor[1], weaponColor[2], 200);
+                ellipse(startX, 0, 12 + pulse * 4, 12 + pulse * 4);
                 drawingContext.shadowBlur = 0;
             }
             noStroke();
@@ -1086,7 +1203,12 @@ class UIComponents {
             // Default: simple projectile
             const firePhase = cycle;
             if (firePhase < 0.3) {
-                const x = firePhase * size * 1.2;
+                const dist = firePhase * size * 1.2;
+
+                // Start from gun barrel position (x=35)
+                const startX = 35;
+                const x = startX + dist;
+
                 fill(weaponColor);
                 noStroke();
                 ellipse(x, 0, 8, 8);

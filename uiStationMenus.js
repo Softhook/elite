@@ -1829,7 +1829,7 @@ class UIStationMenus {
     _drawWeaponVisualizationSection(weaponData, leftX, leftW, contentY, contentH) {
         const visualCenterX = leftX + leftW / 2;
         const visualCenterY = contentY + contentH / 2;
-        const visualSize = Math.min(leftW, contentH) * 0.85;
+        const visualSize = Math.min(leftW, contentH) * 1.2;
 
         // Weapon name at top of visual area
         fill(180, 220, 255);
