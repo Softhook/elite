@@ -42,6 +42,15 @@ class UIStationMenus {
         this.weaponSlotButtons = [];
         this.selectedWeaponSlot = 0;
 
+        // Weapon detail areas
+        this.selectedWeaponForDetail = null;
+        this.weaponDetailButtons = {};
+
+        // Slot picker popup state
+        this.showingSlotPicker = false;
+        this.slotPickerButtons = [];
+        this.pendingWeaponPurchase = null; // Stores weapon data while picking slot
+
         // Protection services
         this.protectionServicesButtons = [];
 
@@ -595,48 +604,6 @@ class UIStationMenus {
 
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
 
-        // Weapon slot selection UI
-        const slotPanelY = pY + headerHeight + 15;
-        const slotPanelH = 80;
-
-        fill(40, 40, 70);
-        rect(pX + 10, slotPanelY, pW - 20, slotPanelH, 5);
-
-        UIComponents.setTextStyle({ fill: 255, size: 16, align: [CENTER, TOP] });
-        text("Select Weapon Slot", pX + pW / 2, slotPanelY + 5);
-
-        // Get available slots from ship's armament array
-        const shipDef = typeof SHIP_DEFINITIONS !== 'undefined' ? SHIP_DEFINITIONS[player.shipTypeName] : null;
-        const availableSlots = shipDef?.armament?.length || 1;
-
-        // Draw slot buttons
-        this.weaponSlotButtons = [];
-        const slotBtnW = min(80, (pW - 40) / availableSlots);
-        const slotBtnH = 40;
-        const slotStartX = pX + (pW - (slotBtnW * availableSlots + 10 * (availableSlots - 1))) / 2;
-
-        for (let i = 0; i < availableSlots; i++) {
-            const slotX = slotStartX + i * (slotBtnW + 10);
-            const slotY = slotPanelY + 30;
-            const isSelected = (this.selectedWeaponSlot === i);
-
-            fill(isSelected ? 100 : 60, isSelected ? 100 : 60, isSelected ? 150 : 90);
-            stroke(isSelected ? 150 : 100, isSelected ? 150 : 100, isSelected ? 255 : 150);
-            strokeWeight(1);
-            rect(slotX, slotY, slotBtnW, slotBtnH, 4);
-
-            noStroke();
-            UIComponents.setTextStyle({ fill: 230, size: 20, align: [CENTER, CENTER] });
-            text(`Slot ${i + 1}`, slotX + slotBtnW / 2, slotY + 10);
-            textSize(12);
-            text((i < player.weapons.length) ? player.weapons[i]?.name : "Empty", slotX + slotBtnW / 2, slotY + 25);
-
-            this.weaponSlotButtons.push({
-                x: slotX, y: slotY, w: slotBtnW, h: slotBtnH,
-                slotIndex: i
-            });
-        }
-
         // FILTER UPGRADES based on system tech level
         const systemTechLevel = system?.techLevel || 1;
         const availableWeapons = typeof WEAPON_UPGRADES !== 'undefined' ? WEAPON_UPGRADES.filter(weapon => {
@@ -645,7 +612,7 @@ class UIStationMenus {
         }) : [];
 
         // Continue with upgrade menu drawing
-        let rowH = 40, startY = slotPanelY + slotPanelH + 10;
+        let rowH = 40, startY = pY + headerHeight + 20;
         let visibleRows = floor((pH - startY - 60) / rowH);
         let totalRows = availableWeapons.length;
         let scrollAreaH = visibleRows * rowH;
@@ -1793,6 +1760,441 @@ class UIStationMenus {
     }
 
     /**
+     * Draws the Weapon Detail Menu.
+     * Shows an animated 3D visualization of the weapon with specifications.
+     * @param {Player} player
+     * @param {Object} panelRect - {x, y, w, h}
+     * @param {number} headerHeight
+     */
+    drawWeaponDetailMenu(player, panelRect, headerHeight) {
+        if (!player || !this.selectedWeaponForDetail) return;
+
+        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+        const weaponData = this.selectedWeaponForDetail;
+        const weaponDef = weaponData.weaponDef;
+
+        if (!weaponDef) {
+            UIComponents.drawCenteredInfo("Weapon data not available", pX + pW / 2, pY + pH / 2);
+            this.weaponDetailButtons = { back: UIComponents.drawCenteredBackButton(pX, pY, pW, pH) };
+            return;
+        }
+
+        // Layout constants
+        const LAYOUT = {
+            leftWidthRatio: 0.5,
+            rightWidthRatio: 0.5,
+            leftPadding: 20,
+            columnGap: 40,
+            topPadding: 10,
+            bottomPadding: 60,
+            priceBottomOffset: 130,
+            buttonsBottomOffset: 80
+        };
+
+        // Calculate layout dimensions
+        const leftW = pW * LAYOUT.leftWidthRatio;
+        const rightW = pW * LAYOUT.rightWidthRatio;
+        const leftX = pX + LAYOUT.leftPadding;
+        const rightX = pX + leftW + LAYOUT.columnGap;
+        const contentY = pY + headerHeight + LAYOUT.topPadding;
+        const contentH = pH - headerHeight - LAYOUT.bottomPadding;
+
+        // Render weapon visualization (left side)
+        this._drawWeaponVisualizationSection(weaponData, leftX, leftW, contentY, contentH);
+
+        // Render specifications (right side)
+        this._drawWeaponSpecifications(weaponDef, rightX, rightW, contentY);
+
+        // Render price information (right column)
+        const priceY = pY + pH - LAYOUT.priceBottomOffset;
+        this._drawWeaponPriceInfo(weaponData, player, rightX, rightW, priceY);
+
+        // Render action buttons (right column, at standard back button height)
+        const BTN_HEIGHT = 30;
+        const btnY = pY + pH - BTN_HEIGHT - 15;
+        this.weaponDetailButtons = this._drawWeaponActionButtons(weaponData.canAfford, rightX, rightW, btnY);
+
+        // Draw slot picker popup overlay if active
+        this._drawSlotPickerPopup(player);
+    }
+
+    /**
+     * Draws the weapon visualization section.
+     * @private
+     */
+    _drawWeaponVisualizationSection(weaponData, leftX, leftW, contentY, contentH) {
+        const visualCenterX = leftX + leftW / 2;
+        const visualCenterY = contentY + contentH / 2;
+        const visualSize = Math.min(leftW, contentH) * 0.7;
+
+        // Weapon name at top of visual area
+        fill(180, 220, 255);
+        noStroke();
+        textSize(24);
+        textAlign(CENTER, TOP);
+        text(weaponData.weaponDef.name, visualCenterX, contentY + 10);
+
+        // Draw animated weapon visualization
+        UIComponents.drawWeaponVisualization(weaponData.weaponDef, visualCenterX, visualCenterY, visualSize);
+    }
+
+    /**
+     * Draws the weapon specifications section.
+     * @private
+     */
+    _drawWeaponSpecifications(weaponDef, specX, rightW, contentY) {
+        let specY = contentY + 10;
+        const lineH = 28;
+
+        // Weapon description
+        fill(200, 200, 255);
+        textSize(16);
+        textAlign(LEFT, TOP);
+        const descriptionText = weaponDef.desc || "No description available.";
+        const maxDescWidth = rightW - 40;
+        text(descriptionText, specX, specY, maxDescWidth);
+
+        // Calculate description height
+        const leading = textLeading() || 16 * 1.25;
+        const avgCharWidth = textWidth('M') * 0.6;
+        const charsPerLine = Math.floor(maxDescWidth / avgCharWidth);
+        const estimatedLines = Math.ceil(descriptionText.length / charsPerLine);
+        const descriptionHeight = estimatedLines * leading + 10;
+        specY += descriptionHeight + 15;
+
+        // Stats header
+        fill(255, 200, 100);
+        textSize(20);
+        text("Specifications", specX, specY);
+        specY += lineH * 1.2;
+
+        // Draw weapon stats
+        this._drawWeaponStats(weaponDef, specX, specY, lineH);
+    }
+
+    /**
+     * Draws weapon statistics.
+     * @private
+     */
+    _drawWeaponStats(weaponDef, specX, specY, lineH) {
+        textSize(16);
+        textAlign(LEFT, TOP);
+        fill(220);
+
+        let y = specY;
+
+        // Type
+        text(`Type: ${weaponDef.type}`, specX, y);
+        y += lineH;
+
+        // Damage (or damageReduction for barriers)
+        if (weaponDef.type === 'barrier') {
+            const reduction = Math.floor((weaponDef.damageReduction || 0) * 100);
+            text(`Damage Reduction: ${reduction}%`, specX, y);
+        } else {
+            text(`Damage: ${weaponDef.damage || 0}`, specX, y);
+        }
+        y += lineH;
+
+        // Fire Rate
+        text(`Fire Rate: ${weaponDef.fireRate || 0}s`, specX, y);
+        y += lineH;
+
+        // Special properties based on weapon type
+        const type = weaponDef.type;
+        if (type === 'beam') {
+            text(`Max Heat: ${weaponDef.maxHeat || 1.0}`, specX, y);
+            y += lineH;
+            text(`Heat Per Shot: ${weaponDef.heatPerShot || 0}`, specX, y);
+            y += lineH;
+            text(`Heat Dissipation: ${weaponDef.heatDissipation || 0}`, specX, y);
+            y += lineH;
+        } else if (type === 'missile') {
+            text(`Speed: ${weaponDef.speed || 0}`, specX, y);
+            y += lineH;
+            text(`Turn Rate: ${weaponDef.turnRate || 0}`, specX, y);
+            y += lineH;
+            text(`Missile Hull: ${weaponDef.missileHull || 0}`, specX, y);
+            y += lineH;
+            text(`Lifespan: ${weaponDef.lifespan || 0} frames`, specX, y);
+            y += lineH;
+        } else if (type === 'force') {
+            text(`Max Radius: ${weaponDef.maxRadius || 0}`, specX, y);
+            y += lineH;
+        } else if (type === 'tangle' || type === 'harpoon') {
+            if (weaponDef.tangleDuration) {
+                text(`Duration: ${weaponDef.tangleDuration}s`, specX, y);
+                y += lineH;
+            }
+            if (weaponDef.dragMultiplier) {
+                text(`Drag Multiplier: ${weaponDef.dragMultiplier}x`, specX, y);
+                y += lineH;
+            }
+        } else if (type === 'mine') {
+            text(`Blast Radius: ${weaponDef.blastRadius || 0}`, specX, y);
+            y += lineH;
+            text(`Trigger Radius: ${weaponDef.triggerRadius || 0}`, specX, y);
+            y += lineH;
+            text(`Mine Health: ${weaponDef.mineHealth || 0}`, specX, y);
+            y += lineH;
+        } else if (type === 'barrier') {
+            text(`Duration: ${weaponDef.duration || 0}s`, specX, y);
+            y += lineH;
+        }
+    }
+
+    /**
+     * Draws weapon price information.
+     * @private
+     */
+    _drawWeaponPriceInfo(weaponData, player, x, rightW, y) {
+        const price = weaponData.price;
+        const canAfford = weaponData.canAfford;
+
+        // Price label
+        fill(180, 220, 255);
+        noStroke();
+        textSize(15);
+        textAlign(LEFT, TOP);
+        text("Price:", x, y);
+
+        // Price value with color coding
+        textSize(20);
+        fill(canAfford ? [100, 255, 100] : [255, 150, 150]);
+        text(`${price} cr`, x, y + 20);
+
+        // Affordability warning
+        if (!canAfford) {
+            fill(255, 150, 150);
+            textSize(12);
+            textAlign(CENTER, TOP);
+            const shortfall = price - player.credits;
+            text(`Need ${shortfall} more cr`, x + rightW / 2, y + 22);
+        }
+    }
+
+    /**
+     * Draws weapon action buttons (Buy/Back).
+     * @private
+     */
+    _drawWeaponActionButtons(canAfford, columnX, columnW, y) {
+        const BTN_WIDTH = 100;
+        const BTN_HEIGHT = 30;
+        const BTN_SPACING = 10;
+
+        const buyBtnX = columnX;
+        const backBtnX = columnX + BTN_WIDTH + BTN_SPACING;
+
+        let buyBtn = null;
+        if (canAfford) {
+            buyBtn = UIComponents.drawButton(buyBtnX, y, BTN_WIDTH, BTN_HEIGHT, "BUY", [0, 150, 0], [100, 255, 100]);
+        } else {
+            // Draw disabled button
+            fill(40, 40, 40);
+            stroke(80, 80, 80);
+            strokeWeight(1);
+            rect(buyBtnX, y, BTN_WIDTH, BTN_HEIGHT, 5);
+            fill(100);
+            noStroke();
+            textAlign(CENTER, CENTER);
+            textSize(22);
+            text("BUY", buyBtnX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
+        }
+
+        // Back button
+        const backBtn = UIComponents.drawButton(backBtnX, y, BTN_WIDTH, BTN_HEIGHT, "BACK", [80, 80, 150], [150, 150, 255]);
+
+        return { buy: buyBtn, back: backBtn };
+    }
+
+    /**
+     * Draws the slot picker popup overlay.
+     * @param {Player} player - The player object
+     * @private
+     */
+    _drawSlotPickerPopup(player) {
+        if (!this.showingSlotPicker || !this.pendingWeaponPurchase) return;
+
+        // Semi-transparent overlay
+        fill(0, 0, 0, 180);
+        noStroke();
+        rect(0, 0, width, height);
+
+        // Popup panel
+        const popupW = min(500, width * 0.8);
+        const popupH = 300;
+        const popupX = (width - popupW) / 2;
+        const popupY = (height - popupH) / 2;
+
+        fill(30, 30, 50);
+        stroke(100, 150, 200);
+        strokeWeight(2);
+        rect(popupX, popupY, popupW, popupH, 10);
+
+        // Title
+        fill(200, 220, 255);
+        noStroke();
+        textAlign(CENTER, TOP);
+        textSize(22);
+        text("Select Weapon Slot", popupX + popupW / 2, popupY + 15);
+
+        // Get ship's weapon slots
+        const shipDef = typeof SHIP_DEFINITIONS !== 'undefined' ? SHIP_DEFINITIONS[player.shipTypeName] : null;
+        const availableSlots = shipDef?.armament?.length || 1;
+
+        // Draw slot buttons
+        this.slotPickerButtons = [];
+        const slotBtnW = min(100, (popupW - 60) / availableSlots);
+        const slotBtnH = 80;
+        const slotStartX = popupX + (popupW - (slotBtnW * availableSlots + 10 * (availableSlots - 1))) / 2;
+        const slotY = popupY + 70;
+
+        for (let i = 0; i < availableSlots; i++) {
+            const slotX = slotStartX + i * (slotBtnW + 10);
+            const currentWeapon = (i < player.weapons.length) ? player.weapons[i] : null;
+
+            // Button background
+            fill(50, 60, 90);
+            stroke(120, 140, 200);
+            strokeWeight(2);
+            rect(slotX, slotY, slotBtnW, slotBtnH, 6);
+
+            // Slot number
+            noStroke();
+            fill(180, 200, 255);
+            textAlign(CENTER, TOP);
+            textSize(24);
+            text(`Slot ${i + 1}`, slotX + slotBtnW / 2, slotY + 8);
+
+            // Current weapon name
+            textSize(12);
+            fill(150, 170, 200);
+            const weaponText = currentWeapon?.name || "Empty";
+            text(weaponText, slotX + slotBtnW / 2, slotY + 40);
+
+            // Will replace warning
+            if (currentWeapon) {
+                fill(255, 200, 100);
+                textSize(10);
+                text("(replaces)", slotX + slotBtnW / 2, slotY + 55);
+            }
+
+            // Store button area
+            this.slotPickerButtons.push({
+                x: slotX, y: slotY, w: slotBtnW, h: slotBtnH,
+                slotIndex: i
+            });
+        }
+
+        // Cancel button
+        const cancelBtnW = 120;
+        const cancelBtnH = 35;
+        const cancelBtnX = popupX + (popupW - cancelBtnW) / 2;
+        const cancelBtnY = popupY + popupH - cancelBtnH - 20;
+
+        const cancelBtn = UIComponents.drawButton(
+            cancelBtnX, cancelBtnY, cancelBtnW, cancelBtnH,
+            "CANCEL", [80, 80, 100], [150, 150, 180]
+        );
+        this.slotPickerButtons.push({
+            ...cancelBtn,
+            action: "CANCEL"
+        });
+    }
+
+    /**
+     * Handles weapon detail click events.
+     * @param {number} mx - Mouse X
+     * @param {number} my - Mouse Y
+     * @param {Player} player - The player object
+     * @param {Function} addMessageFn - Function to add UI messages
+     * @returns {boolean} - True if handled
+     */
+    handleWeaponDetailClick(mx, my, player, addMessageFn) {
+        // Handle slot picker popup clicks first (if showing)
+        if (this.showingSlotPicker && this.slotPickerButtons.length > 0) {
+            for (const btn of this.slotPickerButtons) {
+                if (!UIComponents.isClickInArea(mx, my, btn)) continue;
+
+                // Cancel button
+                if (btn.action === "CANCEL") {
+                    this.showingSlotPicker = false;
+                    this.pendingWeaponPurchase = null;
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                    return true;
+                }
+
+                // Slot selection button
+                if (typeof btn.slotIndex === 'number' && this.pendingWeaponPurchase) {
+                    const weaponDef = this.pendingWeaponPurchase.weaponDef;
+                    const price = this.pendingWeaponPurchase.price;
+                    const slotIndex = btn.slotIndex;
+                    const systemName = (typeof galaxy !== 'undefined' && galaxy?.getCurrentSystem()?.name) || 'Unknown';
+
+                    // Complete the purchase
+                    player.spendCredits(price);
+                    player.installWeaponToSlot(weaponDef, slotIndex);
+
+                    player.recordWeaponUpgrade(
+                        weaponDef.name,
+                        weaponDef.type,
+                        price,
+                        slotIndex,
+                        systemName
+                    );
+
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                    addMessageFn(`Purchased ${weaponDef.name} and installed in Slot ${slotIndex + 1}!`, [100, 255, 100]);
+                    if (typeof saveGame === 'function') saveGame();
+
+                    // Close popup and return to upgrades menu
+                    this.showingSlotPicker = false;
+                    this.pendingWeaponPurchase = null;
+                    if (typeof gameStateManager !== 'undefined') {
+                        gameStateManager.setState('VIEWING_UPGRADES');
+                    }
+                    return true;
+                }
+            }
+            return true; // Consume click if popup is showing
+        }
+
+        if (!this.selectedWeaponForDetail) return false;
+
+        const weaponData = this.selectedWeaponForDetail;
+
+        // Buy button - show slot picker popup
+        if (this.weaponDetailButtons?.buy && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.buy)) {
+            const price = weaponData.price;
+
+            if (player.credits >= price) {
+                // Store weapon data and show slot picker
+                this.pendingWeaponPurchase = {
+                    weaponDef: weaponData.weaponDef,
+                    price: price
+                };
+                this.showingSlotPicker = true;
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+            } else {
+                addMessageFn(`Not enough credits! ${weaponData.weaponDef.name} costs ${price} cr.`, [255, 150, 150]);
+                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            }
+            return true;
+        }
+
+        // Back button
+        if (this.weaponDetailButtons?.back && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.back)) {
+            // Return to upgrades menu
+            if (typeof gameStateManager !== 'undefined') {
+                gameStateManager.setState('VIEWING_UPGRADES');
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Handles upgrades click events.
      * @param {number} mx - Mouse X
      * @param {number} my - Mouse Y
@@ -1802,51 +2204,20 @@ class UIStationMenus {
      * @returns {boolean} - True if handled
      */
     handleUpgradesClick(mx, my, player, addMessageFn, returnState = "DOCKED") {
-        // Check weapon slot buttons first
-        if (this.weaponSlotButtons && this.weaponSlotButtons.length > 0) {
-            for (const btn of this.weaponSlotButtons) {
-                if (UIComponents.isClickInArea(mx, my, btn)) {
-                    this.selectedWeaponSlot = btn.slotIndex;
-                    if (typeof soundManager !== 'undefined') soundManager.playSound('click');
-                    return true;
-                }
-            }
-        }
-
         // Check upgrade list items
         for (const area of this.upgradeListAreas) {
             if (!UIComponents.isClickInArea(mx, my, area)) continue;
 
-            if (player.credits >= area.upgrade.price) {
-                // Check if ship has enough weapon slots
-                const shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[player.shipTypeName] : null;
-                const availableSlots = shipDef?.armament?.length || 1;
+            // Store selected weapon data for the detail screen
+            this.selectedWeaponForDetail = {
+                weaponDef: area.upgrade,
+                price: area.upgrade.price,
+                canAfford: area.canAfford
+            };
 
-                if (this.selectedWeaponSlot >= availableSlots) {
-                    addMessageFn("Your ship doesn't have that weapon slot!", [255, 100, 100]);
-                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                    return true;
-                }
-
-                player.spendCredits(area.upgrade.price);
-                player.installWeaponToSlot(area.upgrade, this.selectedWeaponSlot);
-
-                const systemName = (typeof galaxy !== 'undefined' && galaxy?.getCurrentSystem()?.name) || 'Unknown';
-                player.recordWeaponUpgrade(
-                    area.upgrade.name,
-                    area.upgrade.type,
-                    area.upgrade.price,
-                    this.selectedWeaponSlot,
-                    systemName
-                );
-
-                if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                addMessageFn("You bought the " + area.upgrade.name + "!");
-                if (typeof saveGame === 'function') saveGame();
-            } else {
-                const shortfall = area.upgrade.price - player.credits;
-                addMessageFn(`Not enough credits! Need ${shortfall} more for ${area.upgrade.name}.`, [255, 150, 100]);
-                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            // Navigate to weapon detail screen
+            if (typeof gameStateManager !== 'undefined') {
+                gameStateManager.setState('VIEWING_WEAPON_DETAIL');
             }
             return true;
         }

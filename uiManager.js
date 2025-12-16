@@ -148,13 +148,18 @@ class UIManager {
         this.shipyardDetailButtons = {};
         this.selectedShipForDetail = null;
         this.shipDetailButtons = {};
-        this.upgradeListAreas = [];
-        this.upgradeDetailButtons = {};
-        this.repairsFullButtonArea = {};
-        this.repairsHalfButtonArea = {};
-        this.repairsBackButtonArea = {};
         this.shipyardScrollOffset = 0;
         this.shipyardScrollMax = 0;
+        this.shipyardScrollbarArea = {};
+        this.upgradeListAreas = [];
+        this.upgradeDetailButtons = {};
+        this.upgradeScrollOffset = 0;
+        this.upgradeScrollMax = 0;
+        this.upgradeScrollbarArea = {};
+        this.weaponSlotButtons = [];
+        this.selectedWeaponSlot = 0;
+        this.selectedWeaponForDetail = null;
+        this.weaponDetailButtons = {};
     }
 
     _initFPSTracking() {
@@ -546,7 +551,7 @@ class UIManager {
         // Only access galaxy/system in states where it's expected to exist
         const statesExpectingSystem = [
             "IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD",
-            "VIEWING_SHIP_DETAIL", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE",
+            "VIEWING_SHIP_DETAIL", "VIEWING_UPGRADES", "VIEWING_WEAPON_DETAIL", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE",
             "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT",
             "VIEWING_STORAGE", "VIEWING_RECORD", "VIEWING_NEWS",
             "GALAXY_MAP", "JUMPING", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS",
@@ -743,9 +748,17 @@ class UIManager {
         // --- VIEWING_UPGRADES State ---
         else if (currentState === "VIEWING_UPGRADES") {
             const result = this.stationMenus.handleUpgradesClick(mx, my, player, (msg, col) => this.addMessage(msg, col));
-            // Sync selectedWeaponSlot back from module
+            // Sync selectedWeaponSlot and selectedWeaponForDetail back from module
             this.selectedWeaponSlot = this.stationMenus.selectedWeaponSlot;
+            this.selectedWeaponForDetail = this.stationMenus.selectedWeaponForDetail;
             return result;
+        }
+        // --- VIEWING_WEAPON_DETAIL State ---
+        else if (currentState === "VIEWING_WEAPON_DETAIL") {
+            // Sync selected weapon to module before handling click
+            this.stationMenus.selectedWeaponForDetail = this.selectedWeaponForDetail;
+            this.stationMenus.selectedWeaponSlot = this.selectedWeaponSlot;
+            return this.stationMenus.handleWeaponDetailClick(mx, my, player, (msg, col) => this.addMessage(msg, col));
         }
 
         // --- VIEWING_REPAIRS State ---
@@ -990,6 +1003,30 @@ class UIManager {
         this.upgradeScrollbarArea = this.stationMenus.upgradeScrollbarArea;
         this.weaponSlotButtons = this.stationMenus.weaponSlotButtons;
         this.selectedWeaponSlot = this.stationMenus.selectedWeaponSlot;
+        pop();
+    }
+
+    /** Draws the Weapon Detail Menu - delegated to stationMenus module */
+    drawWeaponDetailMenu(player) {
+        if (!player) return;
+
+        push();
+        const panelRect = this.getPanelRect();
+        this.drawPanelBG(STANDARD_PANEL_BG, [180, 100, 200]);
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+        const headerHeight = this.drawStationHeader("Upgrades - Weapon Details", station, player, system);
+
+        // Sync selected weapon data to module
+        this.stationMenus.selectedWeaponForDetail = this.selectedWeaponForDetail || this.stationMenus.selectedWeaponForDetail;
+        this.stationMenus.selectedWeaponSlot = this.selectedWeaponSlot;
+
+        // Delegate rendering
+        this.stationMenus.drawWeaponDetailMenu(player, panelRect, headerHeight);
+
+        // Sync state back from module
+        this.weaponDetailButtons = this.stationMenus.weaponDetailButtons;
+        this.selectedWeaponForDetail = this.stationMenus.selectedWeaponForDetail;
         pop();
     }
 

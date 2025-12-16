@@ -749,6 +749,353 @@ class UIComponents {
 
         pop();
     }
+
+    /**
+     * Draws an animated weapon visualization showing firing effects.
+     * @param {Object} weaponDef - Weapon definition from WEAPON_UPGRADES
+     * @param {number} centerX - Center X position
+     * @param {number} centerY - Center Y position
+     * @param {number} size - Visualization area size
+     * @returns {void}
+     */
+    static drawWeaponVisualization(weaponDef, centerX, centerY, size) {
+        if (!weaponDef) return;
+
+        push();
+        translate(centerX, centerY);
+
+        // Time-based animation
+        const time = (typeof millis === 'function' ? millis() : frameCount * 16) * 0.001;
+        const pulse = 0.5 + 0.5 * Math.sin(time * 2);
+        const cycle = time % 2.0; // 2 second cycle
+
+        // Draw based on weapon type
+        const type = weaponDef.type;
+        const baseType = type.replace(/\d+$/, ''); // Remove numbers from type
+        const weaponColor = weaponDef.color || [255, 255, 255];
+
+        // Weapon mount/barrel
+        fill(80, 80, 100);
+        noStroke();
+        rect(-15, -8, 30, 16, 3);
+        fill(100, 100, 120);
+        rect(15, -6, 20, 12, 2);
+
+        // Type-specific visualizations
+        if (type === 'projectile' || baseType === 'projectile') {
+            // Single projectile with trail
+            const firePhase = cycle * 0.5;
+            if (firePhase < 0.3) {
+                const x = firePhase * size * 1.2;
+                const trailLength = 40;
+
+                // Projectile
+                fill(weaponColor);
+                noStroke();
+                ellipse(x, 0, 8, 8);
+
+                // Trail
+                for (let i = 0; i < 5; i++) {
+                    const alpha = 255 * (1 - i / 5);
+                    fill(weaponColor[0], weaponColor[1], weaponColor[2], alpha);
+                    ellipse(x - i * 8, 0, 6 - i, 6 - i);
+                }
+
+                // Glow
+                drawingContext.shadowBlur = 20;
+                drawingContext.shadowColor = `rgba(${weaponColor[0]}, ${weaponColor[1]}, ${weaponColor[2]}, 0.8)`;
+                fill(weaponColor[0], weaponColor[1], weaponColor[2], 200);
+                ellipse(x, 0, 12, 12);
+                drawingContext.shadowBlur = 0;
+            }
+        } else if (type === 'beam' || baseType === 'beam') {
+            // Continuous beam
+            const beamWidth = 8 + pulse * 4;
+            const beamLength = size * 0.4;
+
+            // Outer glow
+            drawingContext.shadowBlur = 30;
+            drawingContext.shadowColor = `rgba(${weaponColor[0]}, ${weaponColor[1]}, ${weaponColor[2]}, 0.6)`;
+            stroke(weaponColor[0], weaponColor[1], weaponColor[2], 150);
+            strokeWeight(beamWidth + 4);
+            line(35, 0, beamLength, 0);
+
+            // Core beam
+            drawingContext.shadowBlur = 15;
+            stroke(255, 255, 255, 220);
+            strokeWeight(beamWidth * 0.4);
+            line(35, 0, beamLength, 0);
+
+            drawingContext.shadowBlur = 0;
+            noStroke();
+        } else if (baseType === 'straight') {
+            // Parallel multi-shot
+            const count = parseInt(type.match(/\d+/)?.[0]) || 2;
+            const spacing = 20;
+            const firePhase = cycle * 0.5;
+
+            if (firePhase < 0.3) {
+                for (let i = 0; i < count; i++) {
+                    const y = (i - (count - 1) / 2) * spacing;
+                    const x = firePhase * size * 1.2;
+
+                    // Projectile
+                    fill(weaponColor);
+                    noStroke();
+                    ellipse(x, y, 6, 6);
+
+                    // Trail
+                    for (let j = 0; j < 3; j++) {
+                        const alpha = 200 * (1 - j / 3);
+                        fill(weaponColor[0], weaponColor[1], weaponColor[2], alpha);
+                        ellipse(x - j * 6, y, 5 - j, 5 - j);
+                    }
+                }
+            }
+        } else if (baseType === 'spread') {
+            // Angled spread shots
+            const count = parseInt(type.match(/\d+/)?.[0]) || 2;
+            const spreadAngle = 0.3;
+            const firePhase = cycle * 0.5;
+
+            if (firePhase < 0.3) {
+                for (let i = 0; i < count; i++) {
+                    const angle = (i - (count - 1) / 2) * spreadAngle;
+                    const dist = firePhase * size * 1.2;
+                    const x = Math.cos(angle) * dist;
+                    const y = Math.sin(angle) * dist;
+
+                    // Projectile
+                    fill(weaponColor);
+                    noStroke();
+                    ellipse(x, y, 6, 6);
+
+                    // Trail
+                    for (let j = 0; j < 3; j++) {
+                        const alpha = 200 * (1 - j / 3);
+                        fill(weaponColor[0], weaponColor[1], weaponColor[2], alpha);
+                        const tx = Math.cos(angle) * (dist - j * 6);
+                        const ty = Math.sin(angle) * (dist - j * 6);
+                        ellipse(tx, ty, 5 - j, 5 - j);
+                    }
+                }
+            }
+        } else if (type === 'missile') {
+            // Missile with smoke trail
+            const firePhase = cycle * 0.4;
+            if (firePhase < 0.5) {
+                const x = firePhase * size * 1.0;
+                const wobble = Math.sin(firePhase * 20) * 3;
+
+                // Smoke trail
+                for (let i = 0; i < 8; i++) {
+                    const alpha = 150 * (1 - i / 8);
+                    fill(150, 150, 150, alpha);
+                    const tx = x - i * 10;
+                    const size = 10 + i * 2;
+                    ellipse(tx, wobble * (i / 8), size, size);
+                }
+
+                // Missile body
+                fill(weaponColor);
+                noStroke();
+                ellipse(x, wobble, 12, 8);
+                fill(200, 200, 220);
+                ellipse(x + 3, wobble, 6, 4);
+
+                // Exhaust glow
+                drawingContext.shadowBlur = 15;
+                drawingContext.shadowColor = `rgba(255, 150, 50, 0.8)`;
+                fill(255, 200, 100, 200);
+                ellipse(x - 6, wobble, 8, 6);
+                drawingContext.shadowBlur = 0;
+            }
+        } else if (type === 'turret') {
+            // Auto-targeting reticle with rotating beam
+            const angle = time * 1.5;
+
+            // Targeting reticle
+            stroke(weaponColor);
+            strokeWeight(2);
+            noFill();
+            ellipse(0, 0, 60, 60);
+            line(-35, 0, -25, 0);
+            line(35, 0, 25, 0);
+            line(0, -35, 0, -25);
+            line(0, 35, 0, 25);
+
+            // Rotating scan line
+            stroke(weaponColor[0], weaponColor[1], weaponColor[2], 150);
+            strokeWeight(1);
+            line(0, 0, Math.cos(angle) * 30, Math.sin(angle) * 30);
+
+            // Fire burst
+            const firePhase = cycle * 0.5;
+            if (firePhase < 0.2) {
+                const dist = firePhase * size * 0.6;
+                fill(weaponColor);
+                noStroke();
+                ellipse(dist, 0, 8, 8);
+
+                drawingContext.shadowBlur = 15;
+                drawingContext.shadowColor = `rgba(${weaponColor[0]}, ${weaponColor[1]}, ${weaponColor[2]}, 0.8)`;
+                ellipse(dist, 0, 12, 12);
+                drawingContext.shadowBlur = 0;
+            }
+
+            noStroke();
+        } else if (type === 'force') {
+            // Expanding shockwave
+            const shockwave = (cycle % 1.0) * size * 0.6;
+            const alpha = 255 * (1 - (cycle % 1.0));
+
+            // Multiple rings
+            for (let i = 0; i < 3; i++) {
+                const radius = shockwave - i * 20;
+                if (radius > 0) {
+                    stroke(weaponColor[0], weaponColor[1], weaponColor[2], alpha * (1 - i / 3));
+                    strokeWeight(4 - i);
+                    noFill();
+                    ellipse(0, 0, radius * 2, radius * 2);
+                }
+            }
+
+            // Core burst
+            if (cycle % 1.0 < 0.2) {
+                drawingContext.shadowBlur = 40;
+                drawingContext.shadowColor = `rgba(${weaponColor[0]}, ${weaponColor[1]}, ${weaponColor[2]}, 0.9)`;
+                fill(weaponColor[0], weaponColor[1], weaponColor[2], 255 * (1 - (cycle % 1.0) * 5));
+                noStroke();
+                ellipse(0, 0, 40, 40);
+                drawingContext.shadowBlur = 0;
+            }
+            noStroke();
+        } else if (type === 'tangle' || type === 'harpoon') {
+            // Tether/web effect
+            const firePhase = cycle * 0.4;
+            if (firePhase < 0.6) {
+                const dist = firePhase * size * 0.8;
+
+                // Multiple tether strands
+                for (let i = 0; i < 4; i++) {
+                    const angle = i * Math.PI / 2 + time * 0.5;
+                    const wave = Math.sin(dist * 0.1 + time * 2) * 10;
+
+                    stroke(weaponColor[0], weaponColor[1], weaponColor[2], 200);
+                    strokeWeight(2);
+                    noFill();
+                    beginShape();
+                    for (let t = 0; t <= 1; t += 0.1) {
+                        const x = Math.cos(angle) * dist * t;
+                        const y = Math.sin(angle) * dist * t + Math.sin(t * Math.PI * 2) * wave * t;
+                        vertex(x, y);
+                    }
+                    endShape();
+                }
+
+                // Projectile head
+                fill(weaponColor);
+                noStroke();
+                ellipse(0, 0, 10, 10);
+
+                drawingContext.shadowBlur = 20;
+                drawingContext.shadowColor = `rgba(${weaponColor[0]}, ${weaponColor[1]}, ${weaponColor[2]}, 0.7)`;
+                ellipse(0, 0, 15, 15);
+                drawingContext.shadowBlur = 0;
+            }
+            noStroke();
+        } else if (type === 'mine') {
+            // Floating mine with warning blinks
+            const bob = Math.sin(time * 2) * 5;
+            const blink = Math.sin(time * 4) > 0.7 ? 1 : 0.3;
+
+            // Mine body
+            fill(100, 100, 110);
+            noStroke();
+            ellipse(0, bob, 50, 50);
+
+            // Spikes
+            for (let i = 0; i < 8; i++) {
+                const angle = i * Math.PI / 4;
+                const x = Math.cos(angle) * 25;
+                const y = Math.sin(angle) * 25 + bob;
+                fill(80, 80, 90);
+                triangle(x, y,
+                    x + Math.cos(angle) * 15, y + Math.sin(angle) * 15,
+                    x + Math.cos(angle + 0.3) * 10, y + Math.sin(angle + 0.3) * 10);
+            }
+
+            // Warning light
+            fill(weaponColor[0], weaponColor[1], weaponColor[2], 255 * blink);
+            ellipse(0, bob, 12, 12);
+
+            if (blink > 0.5) {
+                drawingContext.shadowBlur = 25;
+                drawingContext.shadowColor = `rgba(${weaponColor[0]}, ${weaponColor[1]}, ${weaponColor[2]}, 0.9)`;
+                ellipse(0, bob, 18, 18);
+                drawingContext.shadowBlur = 0;
+            }
+        } else if (type === 'barrier') {
+            // Shield dome effect
+            const shimmer = Math.sin(time * 3) * 0.3 + 0.7;
+            const hexSize = 30;
+
+            // Hexagonal shield pattern
+            for (let ring = 0; ring < 3; ring++) {
+                const radius = (ring + 1) * hexSize;
+                const sides = 6;
+
+                stroke(weaponColor[0], weaponColor[1], weaponColor[2], 100 * shimmer * (1 - ring / 3));
+                strokeWeight(2);
+                noFill();
+
+                beginShape();
+                for (let i = 0; i <= sides; i++) {
+                    const angle = (i / sides) * TWO_PI - HALF_PI;
+                    const x = Math.cos(angle) * radius;
+                    const y = Math.sin(angle) * radius;
+                    vertex(x, y);
+                }
+                endShape();
+            }
+
+            // Energy particles
+            for (let i = 0; i < 8; i++) {
+                const angle = i * Math.PI / 4 + time * 0.5;
+                const radius = 50 + Math.sin(time * 2 + i) * 20;
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+
+                fill(weaponColor[0], weaponColor[1], weaponColor[2], 200 * shimmer);
+                noStroke();
+                ellipse(x, y, 4, 4);
+            }
+
+            // Core
+            drawingContext.shadowBlur = 30;
+            drawingContext.shadowColor = `rgba(${weaponColor[0]}, ${weaponColor[1]}, ${weaponColor[2]}, 0.5)`;
+            fill(weaponColor[0], weaponColor[1], weaponColor[2], 100 * shimmer);
+            noStroke();
+            ellipse(0, 0, 20, 20);
+            drawingContext.shadowBlur = 0;
+        } else {
+            // Default: simple projectile
+            const firePhase = cycle * 0.5;
+            if (firePhase < 0.3) {
+                const x = firePhase * size * 1.2;
+                fill(weaponColor);
+                noStroke();
+                ellipse(x, 0, 8, 8);
+
+                drawingContext.shadowBlur = 15;
+                drawingContext.shadowColor = `rgba(${weaponColor[0]}, ${weaponColor[1]}, ${weaponColor[2]}, 0.8)`;
+                ellipse(x, 0, 12, 12);
+                drawingContext.shadowBlur = 0;
+            }
+        }
+
+        pop();
+    }
 }
 
 // Also export as global for use in other files
