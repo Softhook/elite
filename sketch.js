@@ -888,9 +888,9 @@ function __validatePayload(payload) {
         if (!payload.galaxyData) return { ok: false, reason: 'missing galaxyData' };
         if (payload.currentSystemIndex === undefined || payload.currentSystemIndex === null) return { ok: false, reason: 'missing currentSystemIndex' };
         if (!payload.playerData) return { ok: false, reason: 'missing playerData' };
-        // Credits must be a finite number
+        // Credits must be a finite number and non-negative
         const cr = payload.playerData.credits;
-        if (typeof cr !== 'number' || !isFinite(cr)) return { ok: false, reason: 'invalid credits' };
+        if (typeof cr !== 'number' || !isFinite(cr) || cr < 0) return { ok: false, reason: 'invalid credits' };
         // Weapons array can be empty but should be defined if saved
         if (payload.playerData.weapons !== undefined && !Array.isArray(payload.playerData.weapons)) return { ok: false, reason: 'invalid weapons array' };
         return { ok: true };
@@ -1157,6 +1157,18 @@ function loadGame(slotIndex) {
 
                     if (eventManager) {
                         eventManager.initializeReferences(player.currentSystem, player, uiManager);
+                    }
+
+                    // Respawn bodyguards ONLY if loading into IN_FLIGHT state
+                    // If docked, undocking will handle spawning them properly
+                    const willRestoreToDocked = dockingState && (
+                        dockingState.state === "DOCKED" ||
+                        dockingState.state === "DOCKED_SPACE_OBJECT"
+                    );
+
+                    if (!willRestoreToDocked && player.activeBodyguards && player.activeBodyguards.length > 0) {
+                        console.log(`Respawning ${player.activeBodyguards.length} bodyguards after load (in-flight state)...`);
+                        player.spawnBodyguards(player.currentSystem);
                     }
                 } else {
                     showCriticalError("CRITICAL: Failed to link player to a valid currentSystem after load!");

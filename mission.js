@@ -60,15 +60,16 @@ class Mission {
         this.rewardCredits = data.rewardCredits || data.reward || 0; // Credits awarded on completion (accept 'reward' alias)
         this.isIllegal = data.isIllegal || false; // Flag for illegal missions (smuggling, etc.)
         this.requiredRep = data.requiredRep || 0;    // Placeholder for reputation needed later
-        this.timeLimit = data.timeLimit || null;    // Placeholder for time limit later (e.g., seconds)
+        this.timeLimit = (typeof data.timeLimit === 'number') ? data.timeLimit : null;    // Time limit in seconds
+        this.activatedAt = data.activatedAt || null;    // Timestamp when mission was activated
 
         // --- Assassination-specific fields ---
         // `targetName`: human-readable name of the individual to eliminate
         // `targetShipType`: ship type the target will be traveling in (key from `SHIP_DEFINITIONS`)
-        // `canLeaveSystem`: whether the target may leave the system (if true, mission cancels on exit)
+        // `canLeaveSystem`: whether the target may leave the system (if false, mission fails if target exits)
         this.targetName = data.targetName || null;
         this.targetShipType = data.targetShipType || null;
-        this.canLeaveSystem = data.canLeaveSystem || false;
+        this.canLeaveSystem = (data.canLeaveSystem !== undefined) ? data.canLeaveSystem : true;
         this.guardCount = data.guardCount || 0;
         this.guardShipType = data.guardShipType || null;
         // runtime reference to the spawned enemy (if spawned)
@@ -125,7 +126,8 @@ class Mission {
         MISSION_LOG(`      >>> Mission.activate() called for: ${this.title}`); // Log entry
         if (this.status === 'Available') { // Only activate if it was available
             this.status = 'Active';
-            MISSION_LOG(`      <<< Mission status set to: ${this.status}`); // Log exit
+            this.activatedAt = Date.now(); // Track when mission was activated
+            MISSION_LOG(`      <<< Mission status set to: ${this.status} at ${this.activatedAt}`); // Log exit
         } else {
             console.warn(`Mission.activate() called on mission with status ${this.status}. Should be 'Available'.`);
         }
@@ -824,6 +826,7 @@ class Mission {
             isIllegal: this.isIllegal,
             requiredRep: this.requiredRep,
             timeLimit: this.timeLimit,
+            activatedAt: this.activatedAt,
             canLeaveSystem: this.canLeaveSystem,
             _targetEnemyId: this._targetEnemyId,
             _guardIds: this._guardIds,

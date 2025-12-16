@@ -1940,9 +1940,11 @@ class Player {
             activeBodyguards: (this.activeBodyguards || []).map(g => ({
                 shipType: g.shipType,
                 hull: (typeof g.hull === 'number') ? g.hull : null,
-                maxHull: (typeof g.maxHull === 'number') ? g.maxHull : null,
+                maxHull: (typeof g.hull === 'number') ? g.maxHull : null,
                 destroyed: !!g.destroyed
             })),
+            // Navigation preferences
+            showSecretBaseNavigation: this.showSecretBaseNavigation || false,
             // Personal record tracking
             shipsDestroyed: this.shipsDestroyed || [],
             systemsVisited: this.systemsVisited || [],
@@ -2125,6 +2127,9 @@ class Player {
 
         // Initialize session trade tracking (not saved, always starts fresh)
         this.currentSessionTradedLocations = new Set();
+
+        // Restore navigation preferences
+        this.showSecretBaseNavigation = data.showSecretBaseNavigation || false;
 
         console.log(`Player data finished loading. Ship: ${this.shipTypeName}, Wanted: ${this.isWanted}, Mission Status: ${this.activeMission?.status || 'None'}`);
     }
