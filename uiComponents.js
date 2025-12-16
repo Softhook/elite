@@ -961,6 +961,16 @@ class UIComponents {
                 text("COOLING...", 0, 5);
             }
         }
+        // Mines: Always show static in the center, outside of projectile loop
+        if (type === 'mine' && typeof Mine !== 'undefined') {
+            const mine = new Mine(0, 0, mockOwner, weaponDef.damage,
+                weaponDef.blastRadius || 150, weaponDef.triggerRadius || 80,
+                weaponDef.color, weaponDef.health || 30);
+
+            mine.armed = true;
+            mine.blinkTimer = time;
+            mine.draw();
+        }
         // Projectile-based weapons - use actual Projectile.draw()
         else {
             const firePhase = cycle;
@@ -1024,17 +1034,6 @@ class UIComponents {
                             const proj = new Projectile(projX, y, 0, mockOwner,
                                 weaponDef.speed || 8, weaponDef.damage, weaponDef.color, type);
                             proj.draw();
-                        }
-                    } else if (type === 'mine' && typeof Mine !== 'undefined') {
-                        // Mines: Static in the center of the preview area
-                        if (n === 0) {
-                            const mine = new Mine(0, 0, mockOwner, weaponDef.damage,
-                                weaponDef.blastRadius || 150, weaponDef.triggerRadius || 80,
-                                weaponDef.color, weaponDef.health || 30);
-
-                            mine.armed = true;
-                            mine.blinkTimer = time;
-                            mine.draw();
                         }
                     } else if (type === 'force') {
                         // Force waves are handled similarly to mines (single pulse or manually animated loop)
