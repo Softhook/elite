@@ -1414,8 +1414,8 @@ class UIStationMenus {
 
         // Layout constants
         const LAYOUT = {
-            leftWidthRatio: 0.55,
-            rightWidthRatio: 0.45,
+            leftWidthRatio: 0.5,
+            rightWidthRatio: 0.5,
             leftPadding: 20,
             columnGap: 40,
             topPadding: 10,
@@ -1436,16 +1436,30 @@ class UIStationMenus {
         // Render ship preview (left side)
         this._drawShipPreview(shipData, leftX, leftW, contentY, contentH, LAYOUT.previewSizeRatio);
 
-        // Render specifications (right side)
-        this._drawShipSpecifications(shipDef, rightX, rightW, contentY);
+        // Get current ship definition for comparison
+        const currentShipType = player.shipTypeName || "Vulture";
+        let currentShipDef = null;
+        if (typeof SHIP_DEFINITIONS !== 'undefined') {
+            if (SHIP_DEFINITIONS[currentShipType]) {
+                currentShipDef = SHIP_DEFINITIONS[currentShipType];
+            } else {
+                currentShipDef = Object.values(SHIP_DEFINITIONS).find(ship =>
+                    ship.name === currentShipType || ship.name.toLowerCase() === currentShipType.toLowerCase()
+                );
+            }
+        }
 
-        // Render price information
+        // Render specifications (right side)
+        this._drawShipSpecifications(shipDef, currentShipDef, rightX, rightW, contentY);
+
+        // Render price information (right column)
         const priceY = pY + pH - LAYOUT.priceBottomOffset;
         this._drawPriceInfo(shipData, player, rightX, rightW, priceY);
 
-        // Render action buttons
-        const btnY = pY + pH - LAYOUT.buttonsBottomOffset;
-        this.shipDetailButtons = this._drawActionButtons(shipData.canAfford, pX, pW, btnY);
+        // Render action buttons (right column, at standard back button height)
+        const BTN_HEIGHT = 30;
+        const btnY = pY + pH - BTN_HEIGHT - 15;
+        this.shipDetailButtons = this._drawActionButtons(shipData.canAfford, rightX, rightW, btnY);
     }
 
     /**
@@ -1478,11 +1492,12 @@ class UIStationMenus {
      * Draws the ship specifications section.
      * @private
      * @param {Object} shipDef - Ship definition
+     * @param {Object} currentShipDef - Current ship definition for comparison
      * @param {number} specX - Specifications X position
      * @param {number} rightW - Right area width
      * @param {number} contentY - Content area Y position
      */
-    _drawShipSpecifications(shipDef, specX, rightW, contentY) {
+    _drawShipSpecifications(shipDef, currentShipDef, specX, rightW, contentY) {
         let specY = contentY + 10;
         const lineH = 32;
 
@@ -1501,7 +1516,7 @@ class UIStationMenus {
 
         // Core stats in two columns
         const columnsStartY = specY;
-        this._drawShipStats(shipDef, specX, rightW, columnsStartY, lineH);
+        this._drawShipStats(shipDef, currentShipDef, specX, rightW, columnsStartY, lineH);
 
         // Weapons/armament section
         specY = columnsStartY + (lineH * 0.9 * 3) + 15;
@@ -1509,36 +1524,60 @@ class UIStationMenus {
     }
 
     /**
-     * Draws ship stats in two columns.
+     * Draws ship stats in two columns with comparison to current ship.
      * @private
      * @param {Object} shipDef - Ship definition
+     * @param {Object} currentShipDef - Current ship definition for comparison
      * @param {number} specX - Specifications X position
      * @param {number} rightW - Right area width
      * @param {number} startY - Starting Y position
      * @param {number} lineH - Line height
      */
-    _drawShipStats(shipDef, specX, rightW, startY, lineH) {
-        fill(220);
+    _drawShipStats(shipDef, currentShipDef, specX, rightW, startY, lineH) {
         textSize(16);
         textAlign(LEFT, TOP);
         const colW = rightW * 0.5;
         const col2X = specX + colW;
 
+        // Helper to draw stat with comparison
+        const drawStatWithComparison = (label, value, currentValue, x, y, decimals = 0) => {
+            fill(220);
+            const valueStr = decimals > 0 ? value.toFixed(decimals) : value;
+            text(`${label}: ${valueStr}`, x, y);
+
+            if (currentShipDef && currentValue !== undefined) {
+                const diff = value - currentValue;
+                if (Math.abs(diff) > 0.01) {
+                    const diffStr = decimals > 0 ? diff.toFixed(decimals) : Math.floor(diff);
+                    const sign = diff > 0 ? '+' : '';
+                    const comparison = `(${sign}${diffStr})`;
+
+                    // Measure the base text to position the comparison
+                    const baseText = `${label}: ${valueStr}  `;
+                    const baseWidth = textWidth(baseText);
+
+                    // Color code: green for positive, red for negative
+                    fill(diff > 0 ? [100, 255, 100] : [255, 100, 100]);
+                    text(comparison, x + baseWidth, y);
+                }
+            }
+        };
+
         // Column 1: Hull, Shield, Cargo
         let col1Y = startY;
-        text(`Hull: ${shipDef.baseHull}`, specX, col1Y);
+        drawStatWithComparison('Hull', shipDef.baseHull, currentShipDef?.baseHull, specX, col1Y);
         col1Y += lineH * 0.9;
-        text(`Shield: ${shipDef.baseShield}`, specX, col1Y);
+        drawStatWithComparison('Shield', shipDef.baseShield, currentShipDef?.baseShield, specX, col1Y);
         col1Y += lineH * 0.9;
-        text(`Cargo: ${shipDef.cargoCapacity}`, specX, col1Y);
+        drawStatWithComparison('Cargo', shipDef.cargoCapacity, currentShipDef?.cargoCapacity, specX, col1Y);
 
         // Column 2: Speed, Thrust, Turn
         let col2Y = startY;
-        text(`Speed: ${shipDef.baseMaxSpeed.toFixed(1)}`, col2X, col2Y);
+        drawStatWithComparison('Speed', shipDef.baseMaxSpeed, currentShipDef?.baseMaxSpeed, col2X, col2Y, 1);
         col2Y += lineH * 0.9;
-        text(`Thrust: ${shipDef.baseThrust.toFixed(2)}`, col2X, col2Y);
+        drawStatWithComparison('Thrust', shipDef.baseThrust, currentShipDef?.baseThrust, col2X, col2Y, 2);
         col2Y += lineH * 0.9;
-        text(`Turn: ${(shipDef.baseTurnRate * 100).toFixed(1)}`, col2X, col2Y);
+        drawStatWithComparison('Turn', shipDef.baseTurnRate * 100, currentShipDef ? currentShipDef.baseTurnRate * 100 : undefined, col2X, col2Y, 1);
     }
 
     /**
@@ -1624,18 +1663,18 @@ class UIStationMenus {
      * Draws the action buttons (Buy/Back).
      * @private
      * @param {boolean} canAfford - Whether player can afford the ship
-     * @param {number} panelX - Panel X position
-     * @param {number} panelW - Panel width
+     * @param {number} columnX - Right column X position
+     * @param {number} columnW - Right column width
      * @param {number} y - Y position
      * @returns {Object} Button areas {buy, back}
      */
-    _drawActionButtons(canAfford, panelX, panelW, y) {
-        const BTN_WIDTH = 120;
-        const BTN_HEIGHT = 40;
-        const BTN_SPACING = 20;
+    _drawActionButtons(canAfford, columnX, columnW, y) {
+        const BTN_WIDTH = 100;
+        const BTN_HEIGHT = 30;
+        const BTN_SPACING = 10;
 
-        const buyBtnX = panelX + panelW / 2 - BTN_WIDTH - BTN_SPACING / 2;
-        const backBtnX = panelX + panelW / 2 + BTN_SPACING / 2;
+        const buyBtnX = columnX;
+        const backBtnX = columnX + BTN_WIDTH + BTN_SPACING;
 
         // Buy button (disabled if can't afford)
         let buyBtn = null;

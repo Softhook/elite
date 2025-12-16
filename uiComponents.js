@@ -721,7 +721,7 @@ class UIComponents {
      * @param {number} [rotationSpeed=0.01] - Rotation speed multiplier
      * @returns {void}
      */
-    static drawRotatingShip(shipDef, centerX, centerY, size, rotationSpeed = 0.01) {
+    static drawRotatingShip(shipDef, centerX, centerY, size, rotationSpeed = 0.002) {
         if (!shipDef) return;
 
         push();
