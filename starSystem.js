@@ -34,7 +34,10 @@ const SPAWN_CONFIG = {
     MAX_ASTEROIDS: 45,
     DEFAULT_DESPAWN_RADIUS: 5000,
     SPAWN_DISTANCE_MIN: 800,
-    SPAWN_DISTANCE_MAX: 2000
+    SPAWN_DISTANCE_MAX: 2000,
+    // NPC Spawn specifics
+    THARGOID_SPAWN_CHANCE: 0.01,   // 1% chance for Thargoid in non-alien systems
+    HAULER_GUARD_SIZE_THRESHOLD: 60 // Minimum hauler size to spawn guards
 };
 
 // === Collision Configuration ===
@@ -304,6 +307,7 @@ class StarSystem {
         this.asteroidSpawnInterval = SPAWN_CONFIG.ASTEROID_SPAWN_INTERVAL;
         this.maxTotalAsteroids = SPAWN_CONFIG.MAX_ASTEROIDS;
         this._spawnTimer = SPAWN_CONFIG.SPAWN_INTERVAL_MS || 5000; // NPC + repair tender spawn timer
+        this.shouldSpawnNPCs = true; // Enable NPC spawning by default
         this.despawnRadius = SPAWN_CONFIG.DEFAULT_DESPAWN_RADIUS;
 
         // === Jump Zone Properties ===
@@ -1398,75 +1402,178 @@ class StarSystem {
      * - Standard: Based on security level (pirates vs police ratio)
      */
     trySpawnNPC() {
+        // === Validation ===
         if (!this.player?.pos) return;
 
-        // Calculate dynamic max enemies based on war state
-        let maxEnemies = SPAWN_CONFIG.MAX_ENEMIES_BASE;
+        // === Check Spawn Limit ===
+        const maxEnemies = this._getMaxEnemiesForWarState();
+        if (this.enemies.length >= maxEnemies) return;
+
+        // === Ship Selection ===
+        const { role: chosenRole, ship: chosenShipTypeName } = this._selectAndValidateShip();
+        if (!chosenShipTypeName) {
+            console.warn("StarSystem: Unable to select valid ship for spawning");
+            return;
+        }
+
+        // === Calculate Spawn Position ===
+        const spawnPos = this._calculateSpawnPosition();
+
+        // === Create and Initialize Enemy ===
+        try {
+            const newEnemy = this._createEnemy(spawnPos.x, spawnPos.y, chosenShipTypeName, chosenRole);
+
+            // === Post-Spawn Setup ===
+            this._setupNewlySpawnedEnemy(newEnemy);
+
+        } catch (e) {
+            console.error("ERROR during trySpawnNPC (Enemy creation/init):", e, "Ship:", chosenShipTypeName, "Role:", chosenRole);
+        }
+    }
+
+    /**
+     * Gets the maximum enemy count based on current war state.
+     * @returns {number} Maximum enemy count
+     * @private
+     */
+    _getMaxEnemiesForWarState() {
         const em = typeof eventManager !== 'undefined' ? eventManager : null;
-        if (em && em.activeWarState && em.activeWarState.isActive) {
-            maxEnemies = em.activeWarState.intensity === 'FULL_WAR'
+
+        if (em?.activeWarState?.isActive) {
+            return em.activeWarState.intensity === 'FULL_WAR'
                 ? SPAWN_CONFIG.MAX_ENEMIES_WAR
                 : SPAWN_CONFIG.MAX_ENEMIES_SKIRMISH;
         }
 
-        if (this.enemies.length >= maxEnemies) return;
+        return SPAWN_CONFIG.MAX_ENEMIES_BASE;
+    }
 
-        // Select ship based on economy
+    /**
+     * Selects ship type and validates the selection.
+     * Handles special cases like Thargoid spawns and fallback defaults.
+     * @returns {{role: string, ship: string}} Selected ship role and type
+     * @private
+     */
+    _selectAndValidateShip() {
+        // Get economy-based selection
         let selection = this._selectShipForEconomy(this.economyType, this.securityLevel);
         let chosenRole = selection.role;
         let chosenShipTypeName = selection.ship;
 
-
-        // --- Thargoid override only for non-alien systems ---
-        if (this.economyType !== "alien" && this.economyType !== "Alien") {
-            if (random() < 0.01 && ALIEN_SHIPS.includes("Thargoid")) {
-                chosenShipTypeName = "Thargoid";
-                chosenRole = AI_ROLE.ALIEN;
-                if (uiManager) uiManager.addMessage(`Hostile Alien Detected: ${chosenShipTypeName}`);
+        // Apply Thargoid override for non-alien systems (rare encounter)
+        if (this._shouldSpawnThargoid()) {
+            chosenShipTypeName = "Thargoid";
+            chosenRole = AI_ROLE.ALIEN;
+            if (uiManager) {
+                uiManager.addMessage(`Hostile Alien Detected: ${chosenShipTypeName}`);
             }
         }
 
+        // Fallback to default if selection failed
         if (!chosenShipTypeName) {
-            console.warn("StarSystem: chosenShipTypeName was undefined after role selection, defaulting to Krait (Hauler). Role was:", chosenRole);
+            console.warn("StarSystem: chosenShipTypeName undefined after role selection, defaulting to Krait (Hauler). Role:", chosenRole);
             chosenShipTypeName = "Krait";
-            if (!chosenRole) chosenRole = AI_ROLE.HAULER;
+            chosenRole = chosenRole || AI_ROLE.HAULER;
         }
 
-        // --- Spawn the ship ---
-        let angle = random(TWO_PI);
-        let spawnDist = this._getDiagonalDistance() + random(800, 2000);
-        let spawnX = this.player.pos.x + cos(angle) * spawnDist;
-        let spawnY = this.player.pos.y + sin(angle) * spawnDist;
+        return { role: chosenRole, ship: chosenShipTypeName };
+    }
 
-        try {
-            let newEnemy = new Enemy(spawnX, spawnY, this.player, chosenShipTypeName, chosenRole);
-            newEnemy.calculateRadianProperties();
-            newEnemy.initializeColors();
+    /**
+     * Determines if a Thargoid should spawn (rare event in non-alien systems).
+     * @returns {boolean} True if Thargoid should spawn
+     * @private
+     */
+    _shouldSpawnThargoid() {
+        const isNonAlienSystem = this.economyType !== "alien" && this.economyType !== "Alien";
+        const thargoidExists = ALIEN_SHIPS.includes("Thargoid");
+        const randomChance = random() < SPAWN_CONFIG.THARGOID_SPAWN_CHANCE;
 
-            this.addEnemy(newEnemy);
+        return isNonAlienSystem && thargoidExists && randomChance;
+    }
 
-            // Spawn guards for large haulers
-            if (newEnemy.role === AI_ROLE.HAULER && newEnemy.size >= 60) {
-                this._spawnGuardsForHauler(newEnemy);
-            }
+    /**
+     * Calculates spawn position around the player.
+     * @returns {{x: number, y: number}} Spawn coordinates
+     * @private
+     */
+    _calculateSpawnPosition() {
+        const angle = random(TWO_PI);
+        const spawnDist = this._getDiagonalDistance() +
+            random(SPAWN_CONFIG.SPAWN_DISTANCE_MIN, SPAWN_CONFIG.SPAWN_DISTANCE_MAX);
 
-            // Initialize police pursuit if player is wanted
-            if (newEnemy.role === AI_ROLE.POLICE &&
-                ((this.player && this.player.isWanted && !this.player.destroyed) || this.policeAlertSent)) {
+        return {
+            x: this.player.pos.x + cos(angle) * spawnDist,
+            y: this.player.pos.y + sin(angle) * spawnDist
+        };
+    }
 
-                newEnemy.target = this.player;
-                newEnemy.changeState(AI_STATE.APPROACHING);
+    /**
+     * Creates and initializes a new enemy instance.
+     * @param {number} x - Spawn X coordinate
+     * @param {number} y - Spawn Y coordinate
+     * @param {string} shipTypeName - Ship type to spawn
+     * @param {string} role - AI role for the ship
+     * @returns {Enemy} The created enemy instance
+     * @private
+     */
+    _createEnemy(x, y, shipTypeName, role) {
+        const newEnemy = new Enemy(x, y, this.player, shipTypeName, role);
+        newEnemy.calculateRadianProperties();
+        newEnemy.initializeColors();
+        this.addEnemy(newEnemy);
+        return newEnemy;
+    }
 
-                if (newEnemy.pos && this.player.pos) {
-                    let angleToPlayer = atan2(this.player.pos.y - newEnemy.pos.y, this.player.pos.x - newEnemy.pos.x);
-                    newEnemy.angle = angleToPlayer;
-                }
+    /**
+     * Performs post-spawn setup for newly created enemies.
+     * Spawns guards for large haulers and sets up police pursuit for wanted players.
+     * @param {Enemy} enemy - The newly spawned enemy
+     * @private
+     */
+    _setupNewlySpawnedEnemy(enemy) {
+        // Spawn guards for large haulers
+        if (enemy.role === AI_ROLE.HAULER && enemy.size >= SPAWN_CONFIG.HAULER_GUARD_SIZE_THRESHOLD) {
+            this._spawnGuardsForHauler(enemy);
+        }
 
-                if (STAR_SYSTEM_DEBUG) console.log(`New police ${newEnemy.shipTypeName} immediately pursuing wanted player!`);
-            }
+        // Initialize police pursuit if player is wanted
+        if (this._shouldPursueWantedPlayer(enemy)) {
+            this._initializePoliceChase(enemy);
+        }
+    }
 
-        } catch (e) {
-            console.error("!!! ERROR during trySpawnNPC (Enemy creation/init):", e, "Chosen Ship:", chosenShipTypeName, "Role:", chosenRole);
+    /**
+     * Checks if a police ship should pursue a wanted player.
+     * @param {Enemy} enemy - The enemy to check
+     * @returns {boolean} True if should pursue
+     * @private
+     */
+    _shouldPursueWantedPlayer(enemy) {
+        return enemy.role === AI_ROLE.POLICE &&
+            ((this.player?.isWanted && !this.player.destroyed) || this.policeAlertSent);
+    }
+
+    /**
+     * Initializes a police chase for a wanted player.
+     * @param {Enemy} policeShip - The police ship
+     * @private
+     */
+    _initializePoliceChase(policeShip) {
+        policeShip.target = this.player;
+        policeShip.changeState(AI_STATE.APPROACHING);
+
+        // Point police ship toward player
+        if (policeShip.pos && this.player.pos) {
+            const angleToPlayer = atan2(
+                this.player.pos.y - policeShip.pos.y,
+                this.player.pos.x - policeShip.pos.x
+            );
+            policeShip.angle = angleToPlayer;
+        }
+
+        if (STAR_SYSTEM_DEBUG) {
+            console.log(`New police ${policeShip.shipTypeName} immediately pursuing wanted player!`);
         }
     }
 
