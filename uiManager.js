@@ -741,9 +741,11 @@ class UIManager {
         }
         // --- VIEWING_SHIP_DETAIL State ---
         else if (currentState === "VIEWING_SHIP_DETAIL") {
-            // Sync selected ship to module before handling click
-            this.stationMenus.selectedShipForDetail = this.selectedShipForDetail;
-            return this.stationMenus.handleShipDetailClick(mx, my, player, (msg, col) => this.addMessage(msg, col));
+            // Handle click - let stationMenus manage its own selected ship data
+            const result = this.stationMenus.handleShipDetailClick(mx, my, player, (msg, col) => this.addMessage(msg, col));
+            // Sync state back from module after click (in case of navigation)
+            this.selectedShipForDetail = this.stationMenus.selectedShipForDetail;
+            return result;
         }
         // --- VIEWING_UPGRADES State ---
         else if (currentState === "VIEWING_UPGRADES") {
@@ -755,10 +757,11 @@ class UIManager {
         }
         // --- VIEWING_WEAPON_DETAIL State ---
         else if (currentState === "VIEWING_WEAPON_DETAIL") {
-            // Sync selected weapon to module before handling click
-            this.stationMenus.selectedWeaponForDetail = this.selectedWeaponForDetail;
-            this.stationMenus.selectedWeaponSlot = this.selectedWeaponSlot;
-            return this.stationMenus.handleWeaponDetailClick(mx, my, player, (msg, col) => this.addMessage(msg, col));
+            // Handle click - let stationMenus manage its own selected weapon data
+            const result = this.stationMenus.handleWeaponDetailClick(mx, my, player, (msg, col) => this.addMessage(msg, col));
+            // Sync state back from module after click (in case of navigation)
+            this.selectedWeaponForDetail = this.stationMenus.selectedWeaponForDetail;
+            return result;
         }
 
         // --- VIEWING_REPAIRS State ---
@@ -965,9 +968,7 @@ class UIManager {
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Ship Details", station, player, system);
 
-        // Sync selected ship data to module
-        this.stationMenus.selectedShipForDetail = this.selectedShipForDetail || this.stationMenus.selectedShipForDetail;
-
+        // stationMenus owns selectedShipForDetail - don't overwrite it
         // Delegate rendering
         this.stationMenus.drawShipDetailMenu(player, panelRect, headerHeight);
 
@@ -1017,10 +1018,7 @@ class UIManager {
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Upgrades - Weapon Details", station, player, system);
 
-        // Sync selected weapon data to module
-        this.stationMenus.selectedWeaponForDetail = this.selectedWeaponForDetail || this.stationMenus.selectedWeaponForDetail;
-        this.stationMenus.selectedWeaponSlot = this.selectedWeaponSlot;
-
+        // stationMenus owns selectedWeaponForDetail - don't overwrite it
         // Delegate rendering
         this.stationMenus.drawWeaponDetailMenu(player, panelRect, headerHeight);
 

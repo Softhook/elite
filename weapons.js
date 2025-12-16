@@ -9,7 +9,7 @@ const WEAPON_UPGRADES = [
         color: [0, 255, 0], // Green
         fireRate: 0.4,
         price: 1200,
-        desc: "Standard-issue energy weapon found across the galaxy. Reliable, affordable, and effective against most targets."
+        desc: "Standard-issue energy weapon found across the galaxy. Faulcon DeLacy's best-selling model for three centuries running."
     },
     {
 
@@ -19,7 +19,7 @@ const WEAPON_UPGRADES = [
         color: [200, 200, 255], // Pale blue
         fireRate: 0.7,
         price: 2500,
-        desc: "Electromagnetic accelerator that trades fire rate for devastating penetration power."
+        desc: "Electromagnetic accelerator that trades fire rate for devastating penetration power. Preferred by bounty hunters who value the one-shot kill."
     },
     {
         name: "Heavy Cannon",
@@ -28,7 +28,7 @@ const WEAPON_UPGRADES = [
         color: [180, 80, 80], // Brownish
         fireRate: 1.0,
         price: 3000,
-        desc: "Military-grade kinetic cannon delivering massive damage per shot. The long reload demands tactical timing."
+        desc: "Military-grade kinetic cannon delivering massive damage per shot. Gutamaya discontinued civilian sales, but black market units remain plentiful."
     },
 
     // -----------------------------
@@ -45,7 +45,7 @@ const WEAPON_UPGRADES = [
         heatDissipation: 0.35,
         heatRecoveryFactor: 0.3,
         price: 1600,
-        desc: "Sustained coherent light projection. Highly effective but generates significant thermal buildup."
+        desc: "Sustained coherent light projection derived from alien technology. Watch the heat gauge—overheating can be catastrophic."
     },
     {
         name: "Scatter Beam",
@@ -58,7 +58,7 @@ const WEAPON_UPGRADES = [
         heatDissipation: 0.42,
         heatRecoveryFactor: 0.28,
         price: 2200,
-        desc: "High-frequency micro-pulse beam optimized for sustained fire with minimal heat accumulation."
+        desc: "High-frequency micro-pulse beam reverse-engineered from Thargoid weapons. Optimized for sustained fire with minimal heat."
     },
     {
         name: "Disruptor",
@@ -71,7 +71,7 @@ const WEAPON_UPGRADES = [
         heatDissipation: 0.32,
         heatRecoveryFactor: 0.35,
         price: 1400,
-        desc: "Specialized beam tuned to destabilize shield harmonics. Short range but highly effective against protected targets."
+        desc: "Specialized beam tuned to destabilize shield harmonics. Based on xeno-tech recovered from frontier conflicts."
     },
 
     // -----------------------------
@@ -84,7 +84,7 @@ const WEAPON_UPGRADES = [
         color: [0, 180, 255], // Blue
         fireRate: 0.35,
         price: 800,
-        desc: "Dual-barrel configuration providing improved hit probability against maneuvering targets."
+        desc: "Dual-barrel configuration providing improved hit probability. A Lakon Spaceways classic found on traders and fighters alike."
     },
     {
         name: "Triple Pulse",
@@ -93,7 +93,7 @@ const WEAPON_UPGRADES = [
         color: [255, 0, 255], // Purple
         fireRate: 0.4,
         price: 1100,
-        desc: "Triple parallel emitters delivering concentrated firepower in a tight formation."
+        desc: "Triple parallel emitters delivering concentrated firepower in a tight formation. Popular with escort pilots."
     },
     {
         name: "Quad Pulse",
@@ -102,7 +102,7 @@ const WEAPON_UPGRADES = [
         color: [0, 255, 180], // Aqua
         fireRate: 0.5,
         price: 1300,
-        desc: "Four-barrel array creating a wall of plasma. Effective against larger or slower targets."
+        desc: "Four-barrel array creating a wall of plasma. Saud Kruger originally designed it for asteroid clearing."
     },
 
     // -----------------------------
@@ -115,7 +115,7 @@ const WEAPON_UPGRADES = [
         color: [255, 255, 0], // Yellow
         fireRate: 0.4,
         price: 1700,
-        desc: "Diverging twin shots ideal for close-quarters engagements where precision matters less than coverage."
+        desc: "Diverging twin shots ideal for close-quarters engagements. Federation Navy standard issue for boarding defense."
     },
     {
         name: "V Punch",
@@ -124,7 +124,7 @@ const WEAPON_UPGRADES = [
         color: [120, 120, 255], // Violet
         fireRate: 0.7,
         price: 1400,
-        desc: "Heavy-hitting spread variant sacrificing fire rate for substantial damage per volley."
+        desc: "Heavy-hitting spread variant sacrificing fire rate for substantial damage per volley. Manticore Arms' signature design."
     },
 
     // -----------------------------
@@ -137,7 +137,7 @@ const WEAPON_UPGRADES = [
         color: [200, 200, 100], // Yellow
         fireRate: 0.25,
         price: 2400,
-        desc: "Kinetic projectile weapon that bypasses shields effectively. Favored for anti-hull operations."
+        desc: "Kinetic projectile weapon that bypasses shields effectively. Remlock manufactures these under exclusive military contract."
     },
     {
         name: "Burst Blaster",
@@ -146,7 +146,7 @@ const WEAPON_UPGRADES = [
         color: [255, 100, 100], // Pinkish
         fireRate: 0.18,
         price: 2000,
-        desc: "Rapid-fire spread weapon designed for engaging multiple hostiles or fast-moving targets."
+        desc: "Rapid-fire spread weapon designed for engaging multiple hostiles. Achilles Corporation's answer to pirate swarms."
     },
 
     // -----------------------------
@@ -159,7 +159,7 @@ const WEAPON_UPGRADES = [
         color: [255, 200, 0], // Orange
         fireRate: 0.3,
         price: 1400,
-        desc: "Wide-angle dispersal pattern providing excellent area coverage at the cost of focused damage."
+        desc: "Wide-angle dispersal pattern providing excellent area coverage. Pilots call it 'the wall' for good reason."
     },
 
     // -----------------------------
@@ -172,7 +172,7 @@ const WEAPON_UPGRADES = [
         color: [255, 0, 0], // Red
         fireRate: 0.3,
         price: 1600,
-        desc: "Five-way cone pattern maximizing hit probability. Devastating at close range."
+        desc: "Five-way cone pattern maximizing hit probability. Devastatingly effective at close range."
     },
 
     // -----------------------------
@@ -185,7 +185,7 @@ const WEAPON_UPGRADES = [
         color: [80, 255, 80], // Light green
         fireRate: 0.7,
         price: 2300,
-        desc: "Automated targeting system tracks and engages hostiles independently. Moderate output with consistent accuracy."
+        desc: "Automated targeting system that tracks and engages hostiles independently. Whatt and Pritney's entry-level turret."
     },
     {
         name: "Railgun Turret",
@@ -194,7 +194,7 @@ const WEAPON_UPGRADES = [
         color: [255, 80, 255], // Magenta
         fireRate: 1.0,
         price: 4500,
-        desc: "Heavy auto-tracking railgun mounting. Premium cost justified by its lethal precision."
+        desc: "Heavy auto-tracking railgun mounting. Expensive, but Vodel's precision engineering justifies every credit."
     },
 
     // -----------------------------
@@ -208,7 +208,7 @@ const WEAPON_UPGRADES = [
         fireRate: 2,
         price: 32500,
         maxRadius: 300,
-        desc: "Generates an expanding kinetic shockwave affecting all nearby vessels. Effective for breaking formations."
+        desc: "Generates an expanding kinetic shockwave affecting all nearby vessels. Reverse-engineered from recovered alien artifacts."
     },
     {
         name: "Jedi Force",
@@ -218,7 +218,7 @@ const WEAPON_UPGRADES = [
         fireRate: 2,
         price: 40600,
         maxRadius: 750,
-        desc: "Advanced force projection technology with extended range and devastating power. Origin classified."
+        desc: "Advanced force projection technology with extended range and devastating power. Derived from Thargoid weapon systems."
     },
     // -----------------------------
     // Missile Weapons
@@ -235,7 +235,7 @@ const WEAPON_UPGRADES = [
         turnRate: 0.3,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 400,         // Longer life to find target (frames or time units)
         missileHull: 30,       // Hull for destructible missiles
-        desc: "Slow-moving guided munition with exceptional tracking. Patient pursuit ensures target acquisition."
+        desc: "Slow-moving guided munition with exceptional tracking capabilities. Nicknamed 'the patient hunter' by pilots."
     },
     {
         name: "Kalibr Missile",
@@ -249,7 +249,7 @@ const WEAPON_UPGRADES = [
         turnRate: 0.2,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 400,         // Longer life to find target (frames or time units)
         missileHull: 30,       // Hull for destructible missiles
-        desc: "High-velocity cruise missile offering minimal flight time to target. Limited maneuverability at speed."
+        desc: "High-velocity cruise missile offering minimal flight time to target. Based on old Earth naval designs."
     },
     {
         name: "Guardian Missile",
@@ -263,7 +263,7 @@ const WEAPON_UPGRADES = [
         turnRate: 0.08,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 240,         // Longer life to find target (frames or time units)
         missileHull: 10,       // Hull for destructible missiles
-        desc: "Standard guided missile platform. Balanced performance suitable for most combat scenarios."
+        desc: "Standard guided missile platform with balanced performance. Reliable Ramsay Industries engineering."
     },
     {
         name: "Avenger Missile",
@@ -277,7 +277,7 @@ const WEAPON_UPGRADES = [
         turnRate: 0.08,
         lifespan: 300,
         missileHull: 50,       // Hull for destructible missiles
-        desc: "Heavy warhead designed to eliminate hardened targets. Extended reload cycle requires tactical consideration."
+        desc: "Heavy warhead designed to eliminate hardened targets. The extended reload cycle is worth the wait."
     },
     // -----------------------------
     // Tangle weapons
@@ -293,7 +293,7 @@ const WEAPON_UPGRADES = [
         dragMultiplier: 2.0, // Strong drag effect
         rotationBlockMultiplier: 0.1, // Severely reduces rotation speed
         projectileSize: 5,   // Medium projectile
-        desc: "Projects energy tethers that restrict target movement and rotation. Effective for disabling fleeing vessels."
+        desc: "Projects energy tethers that restrict target movement and rotation. Used by police and military."
     },
     {
         name: "Harpoon Launcher",
@@ -304,7 +304,7 @@ const WEAPON_UPGRADES = [
         price: 4200,
         projectileSize: 6,
         speed: 30,
-        desc: "Magnetic grapple that creates a physical tether between ships. Cable integrity depends on relative velocity."
+        desc: "Magnetic grapple that creates a physical tether between ships. Derived from deep-space salvage equipment."
     },
     {
         name: "Heavy Tangle",
@@ -317,7 +317,7 @@ const WEAPON_UPGRADES = [
         dragMultiplier: 5.0, // Nearly stops ships completely
         rotationBlockMultiplier: 0.01, // Almost completely blocks rotation
         projectileSize: 7,   // Larger projectile
-        desc: "Industrial-strength immobilization system capable of restraining even capital-class vessels."
+        desc: "Industrial-strength immobilization system capable of restraining capital-class vessels. Not subtle, but effective."
     },
 
     // -----------------------------
@@ -333,7 +333,7 @@ const WEAPON_UPGRADES = [
         color: [255, 100, 0], // Orange
         fireRate: 3.0,
         price: 2500,
-        desc: "Proximity-triggered explosive device. Deployable during combat or for area denial operations."
+        desc: "Proximity-triggered explosive device for area denial. Achilles Corporation's most affordable ordnance."
     },
     {
         name: "Advanced Mine",
@@ -345,7 +345,7 @@ const WEAPON_UPGRADES = [
         color: [255, 50, 0], // Red-orange
         fireRate: 4.0,
         price: 2800,
-        desc: "Enhanced mine variant with increased blast radius and improved damage output."
+        desc: "Enhanced mine variant with increased blast radius and improved damage output. Popular in pirate ambushes."
     },
     {
         name: "Heavy Mine",
@@ -357,7 +357,7 @@ const WEAPON_UPGRADES = [
         color: [200, 0, 0], // Dark red
         fireRate: 5.0,
         price: 4500,
-        desc: "Heavily armored high-yield mine. Resistant to point defense fire and capable of crippling large vessels."
+        desc: "Heavily armored high-yield mine resistant to point defense fire. One well-placed unit can end a pursuit."
     },
 
     // -----------------------------
@@ -371,7 +371,7 @@ const WEAPON_UPGRADES = [
         fireRate: 15.0,       // Cooldown in seconds
         color: [100, 100, 255], // Light blue for visual effect
         price: 7500,
-        desc: "Generates a protective energy field reducing incoming damage by half. Limited duration requires tactical deployment."
+        desc: "Generates a protective energy field reducing incoming damage by half. Sirius Corporation's defensive breakthrough."
     },
     {
         name: "Shield Dome",
@@ -381,7 +381,7 @@ const WEAPON_UPGRADES = [
         fireRate: 20.0,       // Cooldown in seconds
         color: [154, 205, 50], // Green visual effect
         price: 13500,
-        desc: "Advanced barrier projection offering superior damage mitigation. Extended uptime for sustained engagements."
+        desc: "Advanced barrier projection offering superior damage mitigation. Developed from alien shield technology."
     },
     {
         name: "Halo",
@@ -391,7 +391,7 @@ const WEAPON_UPGRADES = [
         fireRate: 20.0,       // Cooldown in seconds
         color: [255, 215, 0], // Gold for visual effect
         price: 18000,
-        desc: "Top-tier defensive system providing near-complete damage immunity. The gold standard in personal protection."
+        desc: "Top-tier defensive system providing near-complete damage immunity. Named for its distinctive golden glow."
     }
 
 ];

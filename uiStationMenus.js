@@ -32,6 +32,8 @@ class UIStationMenus {
         // Ship Detail Screen
         this.selectedShipForDetail = null;
         this.shipDetailButtons = {};
+        this.availableShipsList = []; // List of filtered ships for prev/next navigation
+        this.currentShipIndex = -1;   // Index of currently viewed ship in availableShipsList
 
         // Upgrades areas
         this.upgradeListAreas = [];
@@ -45,6 +47,8 @@ class UIStationMenus {
         // Weapon detail areas
         this.selectedWeaponForDetail = null;
         this.weaponDetailButtons = {};
+        this.availableWeaponsList = []; // List of filtered weapons for prev/next navigation
+        this.currentWeaponIndex = -1;   // Index of currently viewed weapon in availableWeaponsList
 
         // Slot picker popup state
         this.showingSlotPicker = false;
@@ -1340,19 +1344,25 @@ class UIStationMenus {
      */
     handleShipyardClick(mx, my, player, addMessageFn, returnState = "DOCKED") {
         // Check shipyard list areas
-        for (const area of this.shipyardListAreas) {
+        for (let i = 0; i < this.shipyardListAreas.length; i++) {
+            const area = this.shipyardListAreas[i];
             if (!UIComponents.isClickInArea(mx, my, area)) continue;
 
-            // Store selected ship data for the detail screen
-            this.selectedShipForDetail = {
-                shipTypeKey: area.shipTypeKey,
-                shipName: area.shipName,
-                shipDef: (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[area.shipTypeKey] : null,
-                price: area.price,
-                originalPrice: area.originalPrice,
-                canAfford: area.canAfford,
+            // Store the available ships list for prev/next navigation
+            this.availableShipsList = this.shipyardListAreas.map(a => ({
+                shipTypeKey: a.shipTypeKey,
+                shipName: a.shipName,
+                shipDef: (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[a.shipTypeKey] : null,
+                price: a.price,
+                originalPrice: a.originalPrice,
+                canAfford: a.canAfford,
+                isCurrentShip: a.isCurrentShip,
                 returnState: returnState
-            };
+            }));
+            this.currentShipIndex = i;
+
+            // Store selected ship data for the detail screen
+            this.selectedShipForDetail = this.availableShipsList[i];
 
             // Navigate to ship detail screen
             if (typeof gameStateManager !== 'undefined') {
@@ -1655,46 +1665,84 @@ class UIStationMenus {
     }
 
     /**
-     * Draws the action buttons (Buy/Back).
+     * Draws the action buttons (Prev/Next/Buy/Back).
      * @private
      * @param {boolean} canAfford - Whether player can afford the ship
      * @param {number} columnX - Right column X position
      * @param {number} columnW - Right column width
      * @param {number} y - Y position
      * @param {boolean} isCurrentShip - Whether this is the player's current ship
-     * @returns {Object} Button areas {buy, back}
+     * @returns {Object} Button areas {prev, next, buy, back}
      */
     _drawActionButtons(canAfford, columnX, columnW, y, isCurrentShip = false) {
-        const BTN_WIDTH = 100;
+        const BTN_WIDTH = 70;
         const BTN_HEIGHT = 30;
-        const BTN_SPACING = 10;
+        const BTN_SPACING = 8;
 
-        const buyBtnX = columnX;
-        const backBtnX = isCurrentShip ? columnX : columnX + BTN_WIDTH + BTN_SPACING;
+        let currentX = columnX;
+
+        // Previous button
+        const hasPrev = this.currentShipIndex > 0;
+        let prevBtn = null;
+        if (hasPrev) {
+            prevBtn = UIComponents.drawButton(currentX, y, BTN_WIDTH, BTN_HEIGHT, "< PREV", [80, 80, 120], [150, 150, 200]);
+        } else {
+            // Draw disabled prev button
+            fill(40, 40, 40);
+            stroke(60, 60, 60);
+            strokeWeight(1);
+            rect(currentX, y, BTN_WIDTH, BTN_HEIGHT, 5);
+            fill(80);
+            noStroke();
+            textAlign(CENTER, CENTER);
+            textSize(14);
+            text("< PREV", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
+        }
+        currentX += BTN_WIDTH + BTN_SPACING;
+
+        // Next button
+        const hasNext = this.currentShipIndex < this.availableShipsList.length - 1;
+        let nextBtn = null;
+        if (hasNext) {
+            nextBtn = UIComponents.drawButton(currentX, y, BTN_WIDTH, BTN_HEIGHT, "NEXT >", [80, 80, 120], [150, 150, 200]);
+        } else {
+            // Draw disabled next button
+            fill(40, 40, 40);
+            stroke(60, 60, 60);
+            strokeWeight(1);
+            rect(currentX, y, BTN_WIDTH, BTN_HEIGHT, 5);
+            fill(80);
+            noStroke();
+            textAlign(CENTER, CENTER);
+            textSize(14);
+            text("NEXT >", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
+        }
+        currentX += BTN_WIDTH + BTN_SPACING;
 
         // Buy button (only show if not current ship)
         let buyBtn = null;
         if (!isCurrentShip) {
             if (canAfford) {
-                buyBtn = UIComponents.drawButton(buyBtnX, y, BTN_WIDTH, BTN_HEIGHT, "BUY", [0, 150, 0], [100, 255, 100]);
+                buyBtn = UIComponents.drawButton(currentX, y, BTN_WIDTH, BTN_HEIGHT, "BUY", [0, 150, 0], [100, 255, 100]);
             } else {
                 // Draw disabled button
                 fill(40, 40, 40);
                 stroke(80, 80, 80);
                 strokeWeight(1);
-                rect(buyBtnX, y, BTN_WIDTH, BTN_HEIGHT, 5);
+                rect(currentX, y, BTN_WIDTH, BTN_HEIGHT, 5);
                 fill(100);
                 noStroke();
                 textAlign(CENTER, CENTER);
-                textSize(22);
-                text("BUY", buyBtnX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
+                textSize(16);
+                text("BUY", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
             }
+            currentX += BTN_WIDTH + BTN_SPACING;
         }
 
         // Back button
-        const backBtn = UIComponents.drawButton(backBtnX, y, BTN_WIDTH, BTN_HEIGHT, "BACK", [80, 80, 150], [150, 150, 255]);
+        const backBtn = UIComponents.drawButton(currentX, y, BTN_WIDTH, BTN_HEIGHT, "BACK", [80, 80, 150], [150, 150, 255]);
 
-        return { buy: buyBtn, back: backBtn };
+        return { prev: prevBtn, next: nextBtn, buy: buyBtn, back: backBtn };
     }
 
     /**
@@ -1754,6 +1802,26 @@ class UIStationMenus {
             return true;
         }
 
+        // Previous button - go to previous ship
+        if (this.shipDetailButtons?.prev && UIComponents.isClickInArea(mx, my, this.shipDetailButtons.prev)) {
+            if (this.currentShipIndex > 0) {
+                this.currentShipIndex--;
+                this.selectedShipForDetail = this.availableShipsList[this.currentShipIndex];
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+            }
+            return true;
+        }
+
+        // Next button - go to next ship
+        if (this.shipDetailButtons?.next && UIComponents.isClickInArea(mx, my, this.shipDetailButtons.next)) {
+            if (this.currentShipIndex < this.availableShipsList.length - 1) {
+                this.currentShipIndex++;
+                this.selectedShipForDetail = this.availableShipsList[this.currentShipIndex];
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+            }
+            return true;
+        }
+
         // Back button
         if (this.shipDetailButtons?.back && UIComponents.isClickInArea(mx, my, this.shipDetailButtons.back)) {
             // Return to shipyard list
@@ -1789,7 +1857,7 @@ class UIStationMenus {
         // Layout constants
         const LAYOUT = {
             leftWidthRatio: 0.5,
-            rightWidthRatio: 0.5,
+            rightWidthRatio: 0.45,
             leftPadding: 20,
             columnGap: 40,
             topPadding: 10,
@@ -1858,7 +1926,7 @@ class UIStationMenus {
         textSize(16);
         textAlign(LEFT, TOP);
         const descriptionText = weaponDef.desc || "No description available.";
-        const maxDescWidth = rightW - 40;
+        const maxDescWidth = rightW - 60;
         text(descriptionText, specX, specY, maxDescWidth);
 
         // Calculate description height
@@ -1977,37 +2045,76 @@ class UIStationMenus {
     }
 
     /**
-     * Draws weapon action buttons (Buy/Back).
+     * Draws weapon action buttons (Prev/Next/Buy/Back).
      * @private
      */
     _drawWeaponActionButtons(canAfford, columnX, columnW, y) {
-        const BTN_WIDTH = 100;
+        const BTN_WIDTH = 70;
         const BTN_HEIGHT = 30;
-        const BTN_SPACING = 10;
+        const BTN_SPACING = 8;
 
-        const buyBtnX = columnX;
-        const backBtnX = columnX + BTN_WIDTH + BTN_SPACING;
+        let currentX = columnX;
 
+        // Previous button
+        const hasPrev = this.currentWeaponIndex > 0;
+        let prevBtn = null;
+        if (hasPrev) {
+            prevBtn = UIComponents.drawButton(currentX, y, BTN_WIDTH, BTN_HEIGHT, "< PREV", [80, 80, 120], [150, 150, 200]);
+        } else {
+            // Draw disabled prev button
+            fill(40, 40, 40);
+            stroke(60, 60, 60);
+            strokeWeight(1);
+            rect(currentX, y, BTN_WIDTH, BTN_HEIGHT, 5);
+            fill(80);
+            noStroke();
+            textAlign(CENTER, CENTER);
+            textSize(14);
+            text("< PREV", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
+        }
+        currentX += BTN_WIDTH + BTN_SPACING;
+
+        // Next button
+        const hasNext = this.currentWeaponIndex < this.availableWeaponsList.length - 1;
+        let nextBtn = null;
+        if (hasNext) {
+            nextBtn = UIComponents.drawButton(currentX, y, BTN_WIDTH, BTN_HEIGHT, "NEXT >", [80, 80, 120], [150, 150, 200]);
+        } else {
+            // Draw disabled next button
+            fill(40, 40, 40);
+            stroke(60, 60, 60);
+            strokeWeight(1);
+            rect(currentX, y, BTN_WIDTH, BTN_HEIGHT, 5);
+            fill(80);
+            noStroke();
+            textAlign(CENTER, CENTER);
+            textSize(14);
+            text("NEXT >", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
+        }
+        currentX += BTN_WIDTH + BTN_SPACING;
+
+        // Buy button
         let buyBtn = null;
         if (canAfford) {
-            buyBtn = UIComponents.drawButton(buyBtnX, y, BTN_WIDTH, BTN_HEIGHT, "BUY", [0, 150, 0], [100, 255, 100]);
+            buyBtn = UIComponents.drawButton(currentX, y, BTN_WIDTH, BTN_HEIGHT, "BUY", [0, 150, 0], [100, 255, 100]);
         } else {
             // Draw disabled button
             fill(40, 40, 40);
             stroke(80, 80, 80);
             strokeWeight(1);
-            rect(buyBtnX, y, BTN_WIDTH, BTN_HEIGHT, 5);
+            rect(currentX, y, BTN_WIDTH, BTN_HEIGHT, 5);
             fill(100);
             noStroke();
             textAlign(CENTER, CENTER);
-            textSize(22);
-            text("BUY", buyBtnX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
+            textSize(16);
+            text("BUY", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
         }
+        currentX += BTN_WIDTH + BTN_SPACING;
 
         // Back button
-        const backBtn = UIComponents.drawButton(backBtnX, y, BTN_WIDTH, BTN_HEIGHT, "BACK", [80, 80, 150], [150, 150, 255]);
+        const backBtn = UIComponents.drawButton(currentX, y, BTN_WIDTH, BTN_HEIGHT, "BACK", [80, 80, 150], [150, 150, 255]);
 
-        return { buy: buyBtn, back: backBtn };
+        return { prev: prevBtn, next: nextBtn, buy: buyBtn, back: backBtn };
     }
 
     /**
@@ -2185,6 +2292,26 @@ class UIStationMenus {
             return true;
         }
 
+        // Previous button - go to previous weapon
+        if (this.weaponDetailButtons?.prev && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.prev)) {
+            if (this.currentWeaponIndex > 0) {
+                this.currentWeaponIndex--;
+                this.selectedWeaponForDetail = this.availableWeaponsList[this.currentWeaponIndex];
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+            }
+            return true;
+        }
+
+        // Next button - go to next weapon
+        if (this.weaponDetailButtons?.next && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.next)) {
+            if (this.currentWeaponIndex < this.availableWeaponsList.length - 1) {
+                this.currentWeaponIndex++;
+                this.selectedWeaponForDetail = this.availableWeaponsList[this.currentWeaponIndex];
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+            }
+            return true;
+        }
+
         // Back button
         if (this.weaponDetailButtons?.back && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.back)) {
             // Clear popup state if showing
@@ -2214,15 +2341,20 @@ class UIStationMenus {
      */
     handleUpgradesClick(mx, my, player, addMessageFn, returnState = "DOCKED") {
         // Check upgrade list items
-        for (const area of this.upgradeListAreas) {
+        for (let i = 0; i < this.upgradeListAreas.length; i++) {
+            const area = this.upgradeListAreas[i];
             if (!UIComponents.isClickInArea(mx, my, area)) continue;
 
+            // Store the available weapons list for prev/next navigation
+            this.availableWeaponsList = this.upgradeListAreas.map(a => ({
+                weaponDef: a.upgrade,
+                price: a.upgrade.price,
+                canAfford: a.canAfford
+            }));
+            this.currentWeaponIndex = i;
+
             // Store selected weapon data for the detail screen
-            this.selectedWeaponForDetail = {
-                weaponDef: area.upgrade,
-                price: area.upgrade.price,
-                canAfford: area.canAfford
-            };
+            this.selectedWeaponForDetail = this.availableWeaponsList[i];
 
             // Navigate to weapon detail screen
             if (typeof gameStateManager !== 'undefined') {
