@@ -146,6 +146,8 @@ class UIManager {
     _initShopAreas() {
         this.shipyardListAreas = [];
         this.shipyardDetailButtons = {};
+        this.selectedShipForDetail = null;
+        this.shipDetailButtons = {};
         this.upgradeListAreas = [];
         this.upgradeDetailButtons = {};
         this.repairsFullButtonArea = {};
@@ -538,10 +540,13 @@ class UIManager {
 
     /** Handles mouse clicks for all UI states */
     handleMouseClicks(mx, my, currentState, player, market, galaxy) {
+        if (!currentState || !player) {
+            return false;
+        }
         // Only access galaxy/system in states where it's expected to exist
         const statesExpectingSystem = [
             "IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD",
-            "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE",
+            "VIEWING_SHIP_DETAIL", "VIEWING_UPGRADES", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE",
             "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT",
             "VIEWING_STORAGE", "VIEWING_RECORD", "VIEWING_NEWS",
             "GALAXY_MAP", "JUMPING", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS",
@@ -724,7 +729,16 @@ class UIManager {
 
         // --- VIEWING_SHIPYARD State ---
         else if (currentState === "VIEWING_SHIPYARD") {
-            return this.stationMenus.handleShipyardClick(mx, my, player, (msg, col) => this.addMessage(msg, col));
+            const result = this.stationMenus.handleShipyardClick(mx, my, player, (msg, col) => this.addMessage(msg, col));
+            // Sync selected ship data back from module
+            this.selectedShipForDetail = this.stationMenus.selectedShipForDetail;
+            return result;
+        }
+        // --- VIEWING_SHIP_DETAIL State ---
+        else if (currentState === "VIEWING_SHIP_DETAIL") {
+            // Sync selected ship to module before handling click
+            this.stationMenus.selectedShipForDetail = this.selectedShipForDetail;
+            return this.stationMenus.handleShipDetailClick(mx, my, player, (msg, col) => this.addMessage(msg, col));
         }
         // --- VIEWING_UPGRADES State ---
         else if (currentState === "VIEWING_UPGRADES") {
@@ -924,6 +938,29 @@ class UIManager {
         this.shipyardScrollMax = this.stationMenus.shipyardScrollMax;
         this.shipyardScrollOffset = this.stationMenus.shipyardScrollOffset;
         this.shipyardScrollbarArea = this.stationMenus.shipyardScrollbarArea;
+        pop();
+    }
+
+    /** Draws the Ship Detail Menu - delegated to stationMenus module */
+    drawShipDetailMenu(player) {
+        if (!player) return;
+
+        push();
+        const panelRect = this.getPanelRect();
+        this.drawPanelBG(STANDARD_PANEL_BG, [220, 190, 90]);
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+        const headerHeight = this.drawStationHeader("Ship Details", station, player, system);
+
+        // Sync selected ship data to module
+        this.stationMenus.selectedShipForDetail = this.selectedShipForDetail || this.stationMenus.selectedShipForDetail;
+
+        // Delegate rendering
+        this.stationMenus.drawShipDetailMenu(player, panelRect, headerHeight);
+
+        // Sync state back from module
+        this.shipDetailButtons = this.stationMenus.shipDetailButtons;
+        this.selectedShipForDetail = this.stationMenus.selectedShipForDetail;
         pop();
     }
 

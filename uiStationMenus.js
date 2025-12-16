@@ -29,6 +29,10 @@ class UIStationMenus {
         this.shipyardScrollMax = 0;
         this.shipyardScrollbarArea = {};
 
+        // Ship Detail Screen
+        this.selectedShipForDetail = null;
+        this.shipDetailButtons = {};
+
         // Upgrades areas
         this.upgradeListAreas = [];
         this.upgradeDetailButtons = {};
@@ -1363,36 +1367,20 @@ class UIStationMenus {
         for (const area of this.shipyardListAreas) {
             if (!UIComponents.isClickInArea(mx, my, area)) continue;
 
-            const finalPrice = area.price; // Can be negative for refunds
-            const systemName = (typeof galaxy !== 'undefined' && galaxy?.getCurrentSystem()?.name) || 'Unknown';
+            // Store selected ship data for the detail screen
+            this.selectedShipForDetail = {
+                shipTypeKey: area.shipTypeKey,
+                shipName: area.shipName,
+                shipDef: (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[area.shipTypeKey] : null,
+                price: area.price,
+                originalPrice: area.originalPrice,
+                canAfford: area.canAfford,
+                returnState: returnState
+            };
 
-            if (finalPrice > 0) {
-                // Player needs to pay
-                if (player.credits >= finalPrice) {
-                    player.spendCredits(finalPrice);
-                    player.applyShipDefinition(area.shipTypeKey);
-                    player.recordShipPurchase(area.shipName, finalPrice, systemName);
-                    if (typeof saveGame === 'function') saveGame();
-                    addMessageFn("You bought a " + area.shipName + "!");
-                    if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                } else {
-                    const shortfall = finalPrice - player.credits;
-                    addMessageFn(`Not enough credits! Need ${shortfall} more for ${area.shipName}.`, [255, 150, 100]);
-                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-                }
-            } else {
-                // Player gets a refund or even swap
-                player.addCredits(-finalPrice);
-                player.applyShipDefinition(area.shipTypeKey);
-                player.recordShipPurchase(area.shipName, finalPrice, systemName);
-                if (typeof saveGame === 'function') saveGame();
-
-                if (finalPrice < 0) {
-                    addMessageFn(`You bought a ${area.shipName} and received ${-finalPrice} credits back!`);
-                } else {
-                    addMessageFn(`You swapped to a ${area.shipName} at no additional cost.`);
-                }
-                if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+            // Navigate to ship detail screen
+            if (typeof gameStateManager !== 'undefined') {
+                gameStateManager.setState('VIEWING_SHIP_DETAIL');
             }
             return true;
         }
@@ -1402,6 +1390,254 @@ class UIStationMenus {
             if (typeof gameStateManager !== 'undefined') gameStateManager.setState(returnState);
             return true;
         }
+        return false;
+    }
+    /**
+     * Draws the Ship Detail Menu.
+     * Shows a large 3D preview of the selected ship with specifications.
+     * @param {Player} player
+     * @param {Object} panelRect - {x, y, w, h}
+     * @param {number} headerHeight
+     */
+    drawShipDetailMenu(player, panelRect, headerHeight) {
+        if (!player || !this.selectedShipForDetail) return;
+
+        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+        const shipData = this.selectedShipForDetail;
+        const shipDef = shipData.shipDef;
+
+        if (!shipDef) {
+            UIComponents.drawCenteredInfo("Ship data not available", pX + pW / 2, pY + pH / 2);
+            this.shipDetailButtons = { back: UIComponents.drawCenteredBackButton(pX, pY, pW, pH) };
+            return;
+        }
+
+        // Layout: Left = 3D Preview, Right = Specs
+        const leftW = pW * 0.55;
+        const rightW = pW * 0.45;
+        const leftX = pX + 20;
+        const rightX = pX + leftW + 40;
+        const contentY = pY + headerHeight + 10;
+        const contentH = pH - headerHeight - 60;
+
+        // --- LEFT SIDE: 3D Ship Preview ---
+        const previewCenterX = leftX + leftW / 2;
+        const previewCenterY = contentY + contentH / 2;
+        const previewSize = Math.min(leftW, contentH) * 0.6; // Reduced from 0.7 to 0.6
+
+        // Ship name at top of preview area
+        fill(180, 220, 255);
+        noStroke();
+        textSize(24);
+        textAlign(CENTER, TOP);
+        text(shipData.shipName, previewCenterX, contentY + 10);
+
+        // Draw rotating ship (no background)
+        UIComponents.drawRotatingShip(shipDef, previewCenterX, previewCenterY, previewSize, 0.0008);
+
+        // --- RIGHT SIDE: Specifications ---
+        const specX = rightX;
+        let specY = contentY + 10;
+        const lineH = 32;
+
+        // Ship Description
+        fill(200, 200, 255);
+        textSize(18);
+        textAlign(LEFT, TOP);
+        text(shipDef.description || "No description available.", specX, specY, rightW - 20, 60); // Allow wrapping
+        specY += 65; // Increased space for description (was 50)
+
+        // Ship role and category
+        fill(255, 200, 100);
+        textSize(20);
+        textAlign(LEFT, TOP);
+        text(`${shipDef.role} (${shipDef.sizeCategory})`, specX, specY);
+        specY += lineH * 1.2; // Little more space after header
+
+        // Store starting Y for columns so they align
+        const columnsStartY = specY;
+
+        // Specs in two columns
+        fill(220);
+        textSize(16);
+        const colW = rightW * 0.5;
+
+        // Column 1
+        text(`Hull: ${shipDef.baseHull}`, specX, specY);
+        specY += lineH * 0.9;
+        text(`Shield: ${shipDef.baseShield}`, specX, specY);
+        specY += lineH * 0.9;
+        text(`Cargo: ${shipDef.cargoCapacity}`, specX, specY);
+        specY += lineH * 0.9;
+
+        // Column 2
+        specY = columnsStartY; // Reset to correct start Y
+        const col2X = specX + colW;
+        text(`Speed: ${shipDef.baseMaxSpeed.toFixed(1)}`, col2X, specY);
+        specY += lineH * 0.9;
+        text(`Thrust: ${shipDef.baseThrust.toFixed(2)}`, col2X, specY);
+        specY += lineH * 0.9;
+        text(`Turn: ${(shipDef.baseTurnRate * 100).toFixed(1)}`, col2X, specY);
+
+        // Weapons section
+        specY = columnsStartY + (lineH * 0.9 * 3) + 15; // Position below the 3 spec lines
+        fill(255, 200, 100);
+        textSize(18);
+        text("Armament:", specX, specY);
+        specY += lineH * 0.8;
+
+        fill(200);
+        textSize(14);
+        if (shipDef.armament && shipDef.armament.length > 0) {
+            for (let i = 0; i < Math.min(shipDef.armament.length, 4); i++) {
+                text(`• ${shipDef.armament[i]}`, specX + 10, specY);
+                specY += lineH * 0.6;
+            }
+            if (shipDef.armament.length > 4) {
+                text(`... +${shipDef.armament.length - 4} more`, specX + 10, specY);
+                specY += lineH * 0.6;
+            }
+        } else {
+            fill(150);
+            text("None", specX + 10, specY);
+            specY += lineH * 0.6;
+        }
+
+        // Price section at bottom of right panel (moved higher to stay in bounds)
+        const priceY = pY + pH - 130;
+        const finalPrice = shipData.price;
+        const canAfford = shipData.canAfford;
+
+        fill(180, 220, 255);
+        noStroke();
+        textSize(15);
+        textAlign(LEFT, TOP);
+        text("Price (after trade-in):", specX, priceY);
+
+        // Price value - left aligned for better readability
+        textAlign(LEFT, TOP);
+        textSize(20);
+        if (finalPrice > 0) {
+            fill(canAfford ? [100, 255, 100] : [255, 150, 150]);
+            text(`${finalPrice} cr`, specX, priceY + 20);
+        } else if (finalPrice < 0) {
+            fill(100, 255, 150);
+            text(`+${-finalPrice} cr`, specX, priceY + 20);
+        } else {
+            fill(150, 255, 150);
+            text("EVEN SWAP", specX, priceY + 20);
+        }
+
+        // Affordability warning
+        if (!canAfford && finalPrice > 0) {
+            fill(255, 150, 150);
+            textSize(12);
+            textAlign(CENTER, TOP);
+            const shortfall = finalPrice - player.credits;
+            text(`Need ${shortfall} more cr`, specX + rightW / 2, priceY + 22);
+        }
+
+        // --- BUTTONS at bottom ---
+        const btnY = pY + pH - 80;
+        const btnW = 120;
+        const btnH = 40;
+        const btnSpacing = 20;
+
+        // Buy button (disabled if can't afford)
+        const buyBtnX = pX + pW / 2 - btnW - btnSpacing / 2;
+        let buyBtn = null;
+        if (canAfford) {
+            buyBtn = UIComponents.drawButton(buyBtnX, btnY, btnW, btnH, "BUY", [0, 150, 0], [100, 255, 100]);
+        } else {
+            // Disabled buy button - still draw it but don't make it clickable
+            fill(40, 40, 40);
+            stroke(80, 80, 80);
+            strokeWeight(1);
+            rect(buyBtnX, btnY, btnW, btnH, 5);
+            fill(100);
+            noStroke();
+            textAlign(CENTER, CENTER);
+            textSize(22);
+            text("BUY", buyBtnX + btnW / 2, btnY + btnH / 2);
+        }
+
+        // Back button - always create this
+        const backBtnX = pX + pW / 2 + btnSpacing / 2;
+        const backBtn = UIComponents.drawButton(backBtnX, btnY, btnW, btnH, "BACK", [80, 80, 150], [150, 150, 255]);
+
+        // Store button areas
+        this.shipDetailButtons = {
+            buy: buyBtn,
+            back: backBtn
+        };
+    }
+
+    /**
+     * Handles ship detail click events.
+     * @param {number} mx - Mouse X
+     * @param {number} my - Mouse Y
+     * @param {Player} player - The player object
+     * @param {Function} addMessageFn - Function to add UI messages
+     * @returns {boolean} - True if handled
+     */
+    handleShipDetailClick(mx, my, player, addMessageFn) {
+        if (!this.selectedShipForDetail) return false;
+
+        const shipData = this.selectedShipForDetail;
+
+        // Buy button
+        if (this.shipDetailButtons?.buy && UIComponents.isClickInArea(mx, my, this.shipDetailButtons.buy)) {
+            const finalPrice = shipData.price;
+            const systemName = (typeof galaxy !== 'undefined' && galaxy?.getCurrentSystem()?.name) || 'Unknown';
+
+            if (finalPrice > 0) {
+                // Player needs to pay
+                if (player.credits >= finalPrice) {
+                    player.spendCredits(finalPrice);
+                    player.applyShipDefinition(shipData.shipTypeKey);
+                    player.recordShipPurchase(shipData.shipName, finalPrice, systemName);
+                    if (typeof saveGame === 'function') saveGame();
+                    addMessageFn("You bought a " + shipData.shipName + "!");
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+
+                    // Return to docked state
+                    const returnState = shipData.returnState || "DOCKED";
+                    if (typeof gameStateManager !== 'undefined') gameStateManager.setState(returnState);
+                } else {
+                    const shortfall = finalPrice - player.credits;
+                    addMessageFn(`Not enough credits! Need ${shortfall} more for ${shipData.shipName}.`, [255, 150, 100]);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                }
+            } else {
+                // Player gets a refund or even swap
+                player.addCredits(-finalPrice);
+                player.applyShipDefinition(shipData.shipTypeKey);
+                player.recordShipPurchase(shipData.shipName, finalPrice, systemName);
+                if (typeof saveGame === 'function') saveGame();
+
+                if (finalPrice < 0) {
+                    addMessageFn(`You bought a ${shipData.shipName} and received ${-finalPrice} credits back!`);
+                } else {
+                    addMessageFn(`You swapped to a ${shipData.shipName} at no additional cost.`);
+                }
+                if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+
+                // Return to docked state
+                const returnState = shipData.returnState || "DOCKED";
+                if (typeof gameStateManager !== 'undefined') gameStateManager.setState(returnState);
+            }
+            return true;
+        }
+
+        // Back button
+        if (this.shipDetailButtons?.back && UIComponents.isClickInArea(mx, my, this.shipDetailButtons.back)) {
+            // Return to shipyard list
+            if (typeof gameStateManager !== 'undefined') {
+                gameStateManager.setState('VIEWING_SHIPYARD');
+            }
+            return true;
+        }
+
         return false;
     }
 

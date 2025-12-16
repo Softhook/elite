@@ -167,21 +167,21 @@ class UIComponents {
      */
     static drawScrollbar(x, y, h, scrollOffset, scrollMax, visibleItems, totalItems, bgColor = [60, 60, 100], strokeColor = [150, 150, 200]) {
         if (scrollMax <= 0) return null;
-        
+
         const barW = 12;
         const barX = x - 18;
-        
+
         fill(...bgColor);
         stroke(...strokeColor);
         rect(barX, y, barW, h, 6);
-        
+
         const handleH = max(30, h * (visibleItems / totalItems));
         const handleY = y + (h - handleH) * (scrollOffset / scrollMax);
-        
+
         fill(180, 180, 220);
         noStroke();
         rect(barX + 1, handleY, barW - 2, handleH, 6);
-        
+
         return { x: barX, y, w: barW, h, handleY, handleH };
     }
 
@@ -216,12 +216,12 @@ class UIComponents {
         const indicatorMaxH = rowH * 0.6;
         const indicatorYOffset = (rowH - indicatorMaxH) / 2;
         const threshold = 0.05;
-        
+
         let indicatorH = constrain(abs(deviation) / maxDeviation, 0, 1) * indicatorMaxH;
         let indicatorY = y + indicatorYOffset + (indicatorMaxH - indicatorH);
-        
+
         const col = UIComponents.getPriceDeviationColor(deviation, isSellPrice);
-        
+
         if (abs(deviation) <= threshold) {
             fill(120);
             indicatorH = 1;
@@ -229,7 +229,7 @@ class UIComponents {
         } else {
             fill(col[0], col[1], col[2]);
         }
-        
+
         if (indicatorH > 0) {
             noStroke();
             rect(x, indicatorY, 3, indicatorH);
@@ -274,7 +274,7 @@ class UIComponents {
             text(disabledReason || label, x + w / 2, y + h / 2);
             return null;
         }
-        
+
         if (isBuy) {
             fill(label.includes('All') ? 0 : 0, label.includes('All') ? 180 : 150, 0);
             stroke(0, label.includes('All') ? 220 : 200, 0);
@@ -289,7 +289,7 @@ class UIComponents {
         textAlign(CENTER, CENTER);
         textSize(20);
         text(label, x + w / 2, y + h / 2);
-        
+
         return { x, y, w, h };
     }
 
@@ -307,17 +307,17 @@ class UIComponents {
         const barHeight = 14;
         const barWidth = width * 0.7;
         const labelWidth = width * 0.3;
-        
+
         push();
         textAlign(LEFT, TOP);
         fill(210);
         text(`${label}:`, x, y);
-        
+
         const barX = x + labelWidth;
         fill(40, 40, 60, 200);
         noStroke();
         rect(barX, y, barWidth, barHeight, 2);
-        
+
         const fillWidth = (percent / 100) * barWidth;
         let barColor;
         if (label === 'Shield') {
@@ -329,7 +329,7 @@ class UIComponents {
             else if (percent > 33) barColor = [255, 220, 0];
             else barColor = [255, 80, 80];
         }
-        
+
         fill(barColor[0], barColor[1], barColor[2]);
         rect(barX, y, fillWidth, barHeight, 2);
         pop();
@@ -343,9 +343,9 @@ class UIComponents {
      * @returns {boolean}
      */
     static isClickInArea(mx, my, area) {
-        return area && area.w > 0 && area.h > 0 && 
-               mx > area.x && mx < area.x + area.w && 
-               my > area.y && my < area.y + area.h;
+        return area && area.w > 0 && area.h > 0 &&
+            mx > area.x && mx < area.x + area.w &&
+            my > area.y && my < area.y + area.h;
     }
 
     /**
@@ -414,7 +414,7 @@ class UIComponents {
     static drawDockedObjectBackground(panelX, panelY, panelW, panelH, options = {}) {
         const { station, spaceObject, currentState, returnFromRecordState } = options;
         if (!currentState) return;
-        
+
         // Only draw for docked states
         const dockedStates = [
             'DOCKED', 'VIEWING_MARKET', 'VIEWING_MISSIONS', 'VIEWING_SHIPYARD',
@@ -424,12 +424,12 @@ class UIComponents {
             'DOCKED_SPACE_OBJECT', 'VIEWING_SPACE_OBJECT_MARKET', 'VIEWING_SPACE_OBJECT_REPAIRS',
             'VIEWING_SPACE_OBJECT_SHIPYARD', 'VIEWING_SPACE_OBJECT_UPGRADES'
         ];
-        
+
         if (!dockedStates.includes(currentState)) return;
-        
+
         const centerX = panelX + panelW / 2;
         const centerY = panelY + panelH / 2;
-        
+
         push();
         const ctx = drawingContext;
         ctx.save();
@@ -443,7 +443,7 @@ class UIComponents {
         // Slightly stronger alpha so the rotation is visible in the border
         drawingContext.globalAlpha = 0.25;
 
-        const isSpaceObjectState = currentState.includes('SPACE_OBJECT') || 
+        const isSpaceObjectState = currentState.includes('SPACE_OBJECT') ||
             currentState === 'DOCKED_SPACE_OBJECT' ||
             (currentState === 'VIEWING_RECORD' && returnFromRecordState === 'DOCKED_SPACE_OBJECT');
 
@@ -471,39 +471,39 @@ class UIComponents {
      */
     static _drawScaledObject(obj, centerX, centerY, panelW, panelH, sizeRatio, extraScale = 1) {
         if (!obj || typeof obj.draw !== 'function') return;
-        
+
         // Save object state
         const origX = obj.pos.x;
         const origY = obj.pos.y;
         const origAngle = obj.angle;
         const origBobPhase = obj.bobPhase;
         const origLightTimer = obj.lightTimer;
-        
+
         push();
         translate(centerX, centerY);
-        
+
         const targetSize = Math.min(panelW, panelH) * sizeRatio * extraScale;
         const currentSize = obj.size || 48;
         const scaleFactor = targetSize / currentSize;
         scale(scaleFactor);
-        
+
         // Use consistent, slow rotation based on millis()
         const backgroundRotation = (typeof millis === 'function' ? millis() : 0) * 0.0001;
         rotate(backgroundRotation);
-        
+
         // Temporarily set object to origin for drawing
         obj.pos.x = 0;
         obj.pos.y = 0;
         obj.angle = 0;
-        
+
         // Animate bobPhase for space objects to keep them moving
         // Use millis() to ensure continuous animation independent of game loop
         if (obj.bobPhase !== undefined) {
             obj.bobPhase = (typeof millis === 'function' ? millis() : 0) * 0.0015;
         }
-        
+
         obj.draw();
-        
+
         // Restore original state
         obj.pos.x = origX;
         obj.pos.y = origY;
@@ -531,7 +531,7 @@ class UIComponents {
     static drawStandardHeader(config) {
         const { title, locationName, systemName, economyType, techLevel, securityLevel, player, panelX, panelY, panelW } = config;
         const headerHeight = 100;
-        
+
         // Title (centered)
         fill(255);
         noStroke();
@@ -539,22 +539,22 @@ class UIComponents {
         textSize(30);
         textAlign(CENTER, TOP);
         text(title, panelX + panelW / 2, panelY + 20);
-        
+
         // Location and system (left aligned)
         textSize(20);
         textAlign(LEFT, TOP);
         text(`${locationName} - ${systemName}`, panelX + 20, panelY + 20);
-        
+
         // Economy, tech, security (left aligned)
         text(`${economyType}   |   Tech: ${techLevel}   |   Security: ${securityLevel}`, panelX + 20, panelY + 45);
-        
+
         // Credits and cargo (right aligned)
         if (player) {
             textAlign(RIGHT, TOP);
             text(`Credits: ${Math.floor(player.credits)}`, panelX + panelW - 30, panelY + 20);
             text(`Cargo: ${Math.floor(player.getCargoAmount())}/${player.cargoCapacity}`, panelX + panelW - 30, panelY + 45);
         }
-        
+
         return headerHeight;
     }
 
@@ -574,7 +574,7 @@ class UIComponents {
     static drawMenuButtonList(options, startY, panelX, panelW, btnW, btnH, btnSpacing, fillCol, strokeCol) {
         const btnX = panelX + panelW / 2 - btnW / 2;
         const areas = [];
-        
+
         for (let i = 0; i < options.length; i++) {
             const opt = options[i];
             const btnY = startY + i * btnSpacing;
@@ -583,7 +583,7 @@ class UIComponents {
             if (opt.action) area.action = opt.action;
             areas.push(area);
         }
-        
+
         return areas;
     }
 
@@ -599,7 +599,7 @@ class UIComponents {
         const scrollOffset = constrain(currentOffset || 0, 0, scrollMax);
         const firstRow = scrollOffset;
         const lastRow = Math.min(firstRow + visibleItems, totalItems);
-        
+
         return { firstRow, lastRow, scrollOffset, scrollMax };
     }
 
@@ -627,25 +627,25 @@ class UIComponents {
      * @returns {Array} Array of button area objects for this row
      */
     static drawMarketRow(config) {
-        const { name, buyPrice, sellPrice, baseBuy, baseSell, stock, playerQty, 
-                isAvailable, isMissionCargo, rowIndex, x, y, rowH, columns, btnW, btnH,
-                showStock = true, maxDeviation = 0.8 } = config;
-        
+        const { name, buyPrice, sellPrice, baseBuy, baseSell, stock, playerQty,
+            isAvailable, isMissionCargo, rowIndex, x, y, rowH, columns, btnW, btnH,
+            showStock = true, maxDeviation = 0.8 } = config;
+
         const buttonAreas = [];
         const tY = y + rowH / 2;
         const btnY = y + (rowH - btnH) / 2;
         const btnSpacing = 5;
-        
+
         // Alternating row background
         fill(rowIndex % 2 === 0 ? color(0, 0, 0, 100) : color(80, 80, 80, 100));
         noStroke();
         rect(x, y, columns.totalWidth, rowH);
-        
+
         // Commodity name
         textAlign(LEFT, CENTER);
         fill(isAvailable ? 255 : 100);
         text(name || '?', x + 10, tY);
-        
+
         // Buy price with color coding
         textAlign(CENTER, CENTER);
         if (buyPrice > 0) {
@@ -655,7 +655,7 @@ class UIComponents {
             fill(80);
             text("-", columns.buy, tY);
         }
-        
+
         // Sell price with color coding  
         if (sellPrice > 0) {
             fill(UIComponents.getPriceDeviationColor((sellPrice - baseSell) / baseSell, true));
@@ -664,17 +664,17 @@ class UIComponents {
             fill(80);
             text("-", columns.sell, tY);
         }
-        
+
         // Stock column (optional)
         if (showStock && stock >= 0) {
             fill(UIComponents.getStockColor(stock, stock <= 0));
             text(Math.floor(stock), columns.stock, tY);
         }
-        
+
         // Cargo amount
         fill(playerQty > 0 ? 255 : 80);
         text(playerQty, columns.cargo, tY);
-        
+
         // Price indicators
         if (baseBuy > 0 && buyPrice > 0) {
             const buyDeviation = (buyPrice - baseBuy) / baseBuy;
@@ -684,32 +684,70 @@ class UIComponents {
             const sellDeviation = (sellPrice - baseSell) / baseSell;
             UIComponents.drawPriceIndicator(columns.sell + 40, y, rowH, sellDeviation, true, maxDeviation);
         }
-        
+
         // Buttons
         let btnX = columns.buttonsStart;
-        
+
         // Buy 1
         const canBuy = buyPrice > 0 && isAvailable;
         const buy1Area = UIComponents.drawMarketButton(btnX, btnY, btnW, btnH, "Buy 1", canBuy, true, !canBuy && stock === 0 ? "Out" : null);
         if (buy1Area) buttonAreas.push({ ...buy1Area, action: 'buy', quantity: 1, commodity: name });
         btnX += btnW + btnSpacing;
-        
+
         // Buy All
         const buyAllArea = UIComponents.drawMarketButton(btnX, btnY, btnW, btnH, "Buy All", canBuy, true, !canBuy && stock === 0 ? "Out" : null);
         if (buyAllArea) buttonAreas.push({ ...buyAllArea, action: 'buyAll', commodity: name });
         btnX += btnW + 10; // Extra spacing before sell
-        
+
         // Sell 1
         const canSell = sellPrice > 0 && isAvailable && !isMissionCargo;
         const sell1Area = UIComponents.drawMarketButton(btnX, btnY, btnW, btnH, "Sell 1", canSell, false);
         if (sell1Area) buttonAreas.push({ ...sell1Area, action: 'sell', quantity: 1, commodity: name });
         btnX += btnW + btnSpacing;
-        
+
         // Sell All
         const sellAllArea = UIComponents.drawMarketButton(btnX, btnY, btnW, btnH, "Sell All", canSell, false);
         if (sellAllArea) buttonAreas.push({ ...sellAllArea, action: 'sellAll', commodity: name });
-        
+
         return buttonAreas;
+    }
+
+    /**
+     * Draws a rotating 3D ship preview for detail screens.
+     * @param {Object} shipDef - Ship definition from SHIP_DEFINITIONS
+     * @param {number} centerX - Center X position
+     * @param {number} centerY - Center Y position
+     * @param {number} size - Ship size to render
+     * @param {number} [rotationSpeed=0.01] - Rotation speed multiplier
+     * @returns {void}
+     */
+    static drawRotatingShip(shipDef, centerX, centerY, size, rotationSpeed = 0.01) {
+        if (!shipDef) return;
+
+        push();
+        translate(centerX, centerY);
+
+        // Calculate rotation angle based on time
+        const rotationAngle = (typeof millis === 'function' ? millis() : frameCount * 16) * rotationSpeed;
+
+        // Rotate the entire ship
+        rotate(rotationAngle);
+
+        // Calculate local sun angle for 3D lighting
+        const localSunAngle = -0.785;
+
+        // Draw the ship using its draw function
+        // Pass angle=0 since we're already rotating the canvas, but draw function also needs it for extrusion
+        if (typeof shipDef.drawFunction === 'function') {
+            shipDef.drawFunction(size, false, rotationAngle, localSunAngle);
+        } else {
+            // Fallback to simple shape if no draw function
+            fill(100, 150, 200);
+            noStroke();
+            ellipse(0, 0, size * 0.8);
+        }
+
+        pop();
     }
 }
 

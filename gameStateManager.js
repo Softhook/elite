@@ -49,6 +49,7 @@ const STATION_STATES = [
     "VIEWING_MARKET",
     "VIEWING_MISSIONS",
     "VIEWING_SHIPYARD",
+    "VIEWING_SHIP_DETAIL",
     "VIEWING_UPGRADES",
     "VIEWING_REPAIRS",
     "VIEWING_SERVICES",
@@ -535,7 +536,7 @@ class GameStateManager {
     _getCurrentSystemIfNeeded() {
         const statesExpectingSystem = [
             "IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS",
-            "VIEWING_SHIPYARD", "VIEWING_UPGRADES", "VIEWING_REPAIRS",
+            "VIEWING_SHIPYARD", "VIEWING_SHIP_DETAIL", "VIEWING_UPGRADES", "VIEWING_REPAIRS",
             "VIEWING_PROTECTION", "VIEWING_POLICE", "GALAXY_MAP", "JUMPING",
             "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT",
             "VIEWING_MILITARY_RECRUITMENT", "DOCKED_SPACE_OBJECT",
@@ -718,12 +719,14 @@ class GameStateManager {
                 break;
 
             case "VIEWING_SHIPYARD":
+            case "VIEWING_SHIP_DETAIL":
             case "VIEWING_UPGRADES":
             case "VIEWING_REPAIRS":
             case "GAME_OVER":
             case "LOADING":
                 // Update station music for shop screens
                 if ((this.currentState === "VIEWING_SHIPYARD" ||
+                    this.currentState === "VIEWING_SHIP_DETAIL" ||
                     this.currentState === "VIEWING_UPGRADES" ||
                     this.currentState === "VIEWING_REPAIRS") &&
                     typeof stationMusicManager !== 'undefined' && stationMusicManager) {
@@ -1066,6 +1069,7 @@ class GameStateManager {
                 break;
 
             case "VIEWING_SHIPYARD":
+            case "VIEWING_SHIP_DETAIL":
             case "VIEWING_UPGRADES":
             case "VIEWING_REPAIRS":
             case "VIEWING_PROTECTION":
@@ -1432,6 +1436,9 @@ class GameStateManager {
             switch (this.currentState) {
                 case "VIEWING_SHIPYARD":
                     uiManager.drawShipyardMenu(player);
+                    break;
+                case "VIEWING_SHIP_DETAIL":
+                    uiManager.drawShipDetailMenu(player);
                     break;
                 case "VIEWING_UPGRADES":
                     uiManager.drawUpgradesMenu(player);
