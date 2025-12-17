@@ -356,6 +356,21 @@ class StarSystem {
         this._starfieldLastPlayerVelX = 0; // For predicting movement
         this._starfieldLastPlayerVelY = 0;
         this._starfieldRenderMode = 'progressive'; // 'progressive', 'buffered', 'legacy'
+
+        // === Combat Stats Tracking for News ===
+        this.combatStats = {
+            pirates: 0,
+            police: 0,
+            military: 0,
+            separatists: 0,
+            aliens: 0,
+            total: 0,
+            pilotKills: new Map(), // Map<pilotName, {kills, faction, shipType}>
+            recentDeaths: [], // Recent death names for news headlines
+            lastReportTime: 0
+        };
+        this._combatReportThreshold = 5; // Generate news after this many kills
+        this._heroReportThreshold = 3; // Generate hero news after this many kills by one pilot
     }
 
     /**
@@ -453,6 +468,132 @@ class StarSystem {
                 system.setPlayerWanted(true, connectedLevel);
             }
         });
+    }
+
+    /**
+     * Records the destruction of an NPC for combat news tracking.
+     * Tracks deaths by faction and kills by attacker pilot.
+     * Generates news when thresholds are met.
+     * @param {Enemy} destroyedEnemy - The enemy that was destroyed
+     * @param {Object} [attacker] - The entity that destroyed the enemy (optional)
+     */
+    recordDestruction(destroyedEnemy, attacker = null) {
+        if (!destroyedEnemy || !this.combatStats) return;
+
+        const role = destroyedEnemy.role;
+        const faction = destroyedEnemy.faction;
+        const enemyName = destroyedEnemy.displayName || null;
+
+        // Track death by role/faction
+        if (typeof AI_ROLE !== 'undefined') {
+            if (role === AI_ROLE.PIRATE) {
+                this.combatStats.pirates++;
+            } else if (role === AI_ROLE.POLICE) {
+                this.combatStats.police++;
+            } else if (role === AI_ROLE.ALIEN) {
+                this.combatStats.aliens++;
+            } else if (faction === 'IMPERIAL' || faction === 'MILITARY') {
+                this.combatStats.military++;
+            } else if (faction === 'SEPARATIST') {
+                this.combatStats.separatists++;
+            }
+        }
+        this.combatStats.total++;
+
+        // Track recent death names for headlines
+        if (enemyName) {
+            this.combatStats.recentDeaths.push(enemyName);
+            if (this.combatStats.recentDeaths.length > 10) {
+                this.combatStats.recentDeaths.shift();
+            }
+        }
+
+        // Track kills by attacker (for hero news)
+        if (attacker && attacker.displayName && attacker !== this.player) {
+            const attackerName = attacker.displayName;
+            const attackerFaction = attacker.faction;
+            const existing = this.combatStats.pilotKills.get(attackerName);
+            if (existing) {
+                existing.kills++;
+            } else {
+                this.combatStats.pilotKills.set(attackerName, {
+                    kills: 1,
+                    faction: attackerFaction,
+                    shipType: attacker.shipTypeName
+                });
+            }
+
+            // Check for hero threshold
+            const stats = this.combatStats.pilotKills.get(attackerName);
+            if (stats && stats.kills >= this._heroReportThreshold) {
+                this._generateHeroNews(attackerName, stats.kills, stats.faction);
+                // Reset after reporting
+                stats.kills = 0;
+            }
+        }
+
+        // Check if we should generate combat report news
+        this._checkCombatReportThreshold();
+    }
+
+    /**
+     * Checks if combat stats meet threshold for news generation
+     * @private
+     */
+    _checkCombatReportThreshold() {
+        if (!this.combatStats) return;
+        const now = Date.now();
+
+        // Rate limit: don't report more often than every 30 seconds
+        if (now - this.combatStats.lastReportTime < 30000) return;
+
+        // Check each faction for threshold
+        const threshold = this._combatReportThreshold || 5;
+        const systemName = this.name || 'Unknown System';
+
+        if (this.combatStats.pirates >= threshold) {
+            this._generateCombatNews('PIRATE', this.combatStats.pirates, systemName);
+            this.combatStats.pirates = 0;
+        } else if (this.combatStats.police >= threshold) {
+            this._generateCombatNews('POLICE', this.combatStats.police, systemName);
+            this.combatStats.police = 0;
+        } else if (this.combatStats.military >= threshold) {
+            this._generateCombatNews('IMPERIAL', this.combatStats.military, systemName);
+            this.combatStats.military = 0;
+        } else if (this.combatStats.separatists >= threshold) {
+            this._generateCombatNews('SEPARATIST', this.combatStats.separatists, systemName);
+            this.combatStats.separatists = 0;
+        } else if (this.combatStats.aliens >= threshold) {
+            this._generateCombatNews('ALIEN', this.combatStats.aliens, systemName);
+            this.combatStats.aliens = 0;
+        }
+    }
+
+    /**
+     * Generates combat news via NewsManager
+     * @private
+     */
+    _generateCombatNews(factionType, count, systemName) {
+        if (typeof GameGlobals === 'undefined' || !GameGlobals.newsManager) return;
+
+        const notableName = this.combatStats.recentDeaths.length > 0
+            ? this.combatStats.recentDeaths[this.combatStats.recentDeaths.length - 1]
+            : null;
+
+        GameGlobals.newsManager.addCombatReportNews(factionType, count, systemName, notableName);
+        this.combatStats.lastReportTime = Date.now();
+        this.combatStats.recentDeaths = []; // Clear after reporting
+    }
+
+    /**
+     * Generates hero news via NewsManager
+     * @private
+     */
+    _generateHeroNews(pilotName, kills, faction) {
+        if (typeof GameGlobals === 'undefined' || !GameGlobals.newsManager) return;
+
+        const systemName = this.name || 'Unknown System';
+        GameGlobals.newsManager.addHeroNews(pilotName, kills, faction, systemName);
     }
 
     /**

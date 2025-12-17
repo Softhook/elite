@@ -11,6 +11,7 @@ const FACTION_COLORS = {
     SEPARATIST: [128, 128, 0],      // Olive
     MILITARY: [160, 160, 170],      // Neutral gray
     ALIEN: [50, 205, 50],           // Green
+    POLICE: [30, 144, 255],         // Dodger Blue
 };
 
 /**

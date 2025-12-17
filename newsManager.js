@@ -25,9 +25,15 @@ const NEWS_CATEGORY = {
 class NewsManager {
     constructor() {
         this.newsItems = [];
-        this.maxNewsItems = 30;
+        this.maxNewsItems = 50;
         this.lastGalaxyNewsTime = 0;
         this.galaxyNewsInterval = 60000; // Generate galaxy news every 60 seconds
+
+        // Combat news cooldowns to prevent spam
+        this.lastCombatReportTime = 0;
+        this.combatReportCooldown = 30000; // 30 seconds between combat reports
+        this.lastHeroReportTime = 0;
+        this.heroReportCooldown = 45000; // 45 seconds between hero reports
 
         // Track recent news to avoid duplicates
         this.recentNewsHashes = new Set();
@@ -189,6 +195,55 @@ class NewsManager {
                 "🔥 MASSIVE BATTLE UNDERWAY IN {SYSTEM}",
                 "🔥 WAR DECLARED IN {SYSTEM} SECTOR",
                 "🔥 SECTOR-WIDE HOSTILITIES BEGIN IN {SYSTEM}"
+            ],
+
+            // Combat report headlines (system-wide destruction)
+            COMBAT_PIRATE_KILLS: [
+                "PIRATE FLEET DECIMATED IN {SYSTEM}",
+                "{COUNT} RAIDERS DESTROYED IN {SYSTEM} SKIRMISH",
+                "MAJOR PIRATE LOSSES IN {SYSTEM}: {NAME} AMONG THE FALLEN"
+            ],
+            COMBAT_POLICE_CASUALTIES: [
+                "LAW ENFORCEMENT TAKES CASUALTIES IN {SYSTEM}",
+                "OFFICER {NAME} KILLED IN {SYSTEM} VIOLENCE",
+                "{COUNT} OFFICERS FALL IN LINE OF DUTY"
+            ],
+            COMBAT_IMPERIAL_LOSSES: [
+                "IMPERIAL FORCES SUFFER SETBACK IN {SYSTEM}",
+                "{COUNT} IMPERIAL VESSELS LOST IN {SYSTEM}",
+                "MILITARY CASUALTIES MOUNT IN {SYSTEM}"
+            ],
+            COMBAT_SEPARATIST_LOSSES: [
+                "SEPARATIST CELLS CRUSHED IN {SYSTEM}",
+                "REBEL FORCES TAKE HEAVY LOSSES IN {SYSTEM}",
+                "{COUNT} RESISTANCE FIGHTERS ELIMINATED IN {SYSTEM}"
+            ],
+            COMBAT_ALIEN_KILLS: [
+                "ALIEN THREAT REPELLED IN {SYSTEM}",
+                "{COUNT} XENO HOSTILES NEUTRALIZED IN {SYSTEM}",
+                "HUMANITY STRIKES BACK IN {SYSTEM}"
+            ],
+
+            // Hero headlines (pilots with multiple kills)
+            HERO_IMPERIAL: [
+                "🏅 HERO OF THE IMPERIUM: {NAME} CLAIMS {COUNT} KILLS IN {SYSTEM}",
+                "🏅 IMPERIAL ACE {NAME} DEVASTATES ENEMIES IN {SYSTEM}",
+                "🏅 DECORATED PILOT {NAME} DOMINATES {SYSTEM} SKIES"
+            ],
+            HERO_SEPARATIST: [
+                "✊ HERO OF THE RESISTANCE: {NAME} STRIKES BACK IN {SYSTEM}",
+                "✊ FREEDOM FIGHTER {NAME} DOWNS {COUNT} IMPERIAL CRAFT",
+                "✊ REBEL ACE {NAME} TERRORIZES IMPERIAL FORCES"
+            ],
+            HERO_POLICE: [
+                "🛡️ POLICE HERO: OFFICER {NAME} NEUTRALIZES {COUNT} THREATS",
+                "🛡️ DEPUTY {NAME} CLEARS {SYSTEM} OF PIRATE MENACE",
+                "🛡️ LAW ENFORCEMENT ACE {NAME} KEEPS THE PEACE"
+            ],
+            HERO_MILITARY: [
+                "⭐ MILITARY ACE {NAME} RACKS UP {COUNT} VICTORIES",
+                "⭐ DECORATED PILOT {NAME} DOMINATES {SYSTEM}",
+                "⭐ COMBAT LEGEND {NAME} ADDS TO KILL COUNT"
             ]
         };
 
@@ -496,6 +551,131 @@ class NewsManager {
             category: NEWS_CATEGORY.PLAYER_ACTION,
             priority: NEWS_PRIORITY.HIGH
         });
+    }
+
+    // =========================================================================
+    // COMBAT REPORTS (system-wide destruction tracking)
+    // =========================================================================
+
+    /**
+     * Report combat casualties for a faction in a system
+     * @param {string} factionType - 'PIRATE', 'POLICE', 'IMPERIAL', 'SEPARATIST', 'ALIEN'
+     * @param {number} count - Number of casualties
+     * @param {string} systemName - System where combat occurred
+     * @param {string} [notableName] - Optional name of a notable casualty
+     */
+    addCombatReportNews(factionType, count, systemName, notableName = null) {
+        // Check cooldown
+        const now = Date.now();
+        if (now - this.lastCombatReportTime < this.combatReportCooldown) return;
+
+        const templateKey = `COMBAT_${factionType.toUpperCase()}_${factionType === 'POLICE' ? 'CASUALTIES' : factionType === 'PIRATE' ? 'KILLS' : 'LOSSES'}`;
+        const templates = this.headlineTemplates[templateKey] || this.headlineTemplates.COMBAT_PIRATE_KILLS;
+        if (!templates) return;
+
+        const headline = this._fillTemplate(templates, {
+            SYSTEM: systemName || 'Local Sector',
+            COUNT: count.toString(),
+            NAME: notableName || this._generateName()
+        });
+
+        // Select appropriate faction perspective for body text
+        let sourceFaction, body;
+        switch (factionType.toUpperCase()) {
+            case 'PIRATE':
+                sourceFaction = this.factions.IMPERIAL;
+                body = `Criminal elements eliminated. ${count} pirate vessels confirmed destroyed.`;
+                break;
+            case 'POLICE':
+                sourceFaction = this.factions.IMPERIAL;
+                body = `Authorities mourn fallen officers. Investigation underway.`;
+                break;
+            case 'IMPERIAL':
+            case 'MILITARY':
+                sourceFaction = this.factions.SEPARATIST;
+                body = `Imperial forces suffer losses. The resistance grows stronger.`;
+                break;
+            case 'SEPARATIST':
+                sourceFaction = this.factions.IMPERIAL;
+                body = `Rebel terrorists neutralized. Order is maintained.`;
+                break;
+            case 'ALIEN':
+                sourceFaction = this.factions.INDEPENDENT;
+                body = `Xeno threat reduced. Humanity breathes a little easier.`;
+                break;
+            default:
+                sourceFaction = this._selectFaction();
+                body = `Combat operations conclude. ${count} hostiles eliminated.`;
+        }
+
+        this._addNews({
+            headline,
+            body,
+            source: sourceFaction.name,
+            sourceColor: sourceFaction.color,
+            category: NEWS_CATEGORY.LOCAL_EVENT,
+            priority: NEWS_PRIORITY.HIGH
+        });
+
+        this.lastCombatReportTime = now;
+    }
+
+    /**
+     * Report a hero pilot with multiple kills
+     * @param {string} pilotName - Name of the hero pilot
+     * @param {number} kills - Number of kills
+     * @param {string} faction - Pilot's faction ('IMPERIAL', 'SEPARATIST', 'POLICE', 'MILITARY')
+     * @param {string} systemName - System where the heroics occurred
+     */
+    addHeroNews(pilotName, kills, faction, systemName) {
+        // Check cooldown
+        const now = Date.now();
+        if (now - this.lastHeroReportTime < this.heroReportCooldown) return;
+        if (!pilotName || kills < 3) return; // Require 3+ kills for hero status
+
+        // Map faction to template key
+        let templateKey = 'HERO_MILITARY';
+        let sourceFaction = this.factions.IMPERIAL;
+        let body = `A new combat ace emerges in ${systemName}.`;
+
+        switch (faction?.toUpperCase()) {
+            case 'IMPERIAL':
+            case 'MILITARY':
+                templateKey = 'HERO_IMPERIAL';
+                sourceFaction = this.factions.IMPERIAL;
+                body = `${pilotName} exemplifies Imperial excellence. ${kills} confirmed kills in a single engagement.`;
+                break;
+            case 'SEPARATIST':
+                templateKey = 'HERO_SEPARATIST';
+                sourceFaction = this.factions.SEPARATIST;
+                body = `${pilotName} strikes fear into Imperial hearts. The resistance celebrates ${kills} victories.`;
+                break;
+            case 'POLICE':
+                templateKey = 'HERO_POLICE';
+                sourceFaction = this.factions.IMPERIAL;
+                body = `Officer ${pilotName} honored for neutralizing ${kills} threats. The sector is safer today.`;
+                break;
+        }
+
+        const templates = this.headlineTemplates[templateKey];
+        if (!templates) return;
+
+        const headline = this._fillTemplate(templates, {
+            NAME: pilotName,
+            COUNT: kills.toString(),
+            SYSTEM: systemName || 'Local Sector'
+        });
+
+        this._addNews({
+            headline,
+            body,
+            source: sourceFaction.name,
+            sourceColor: sourceFaction.color,
+            category: NEWS_CATEGORY.LOCAL_EVENT,
+            priority: NEWS_PRIORITY.BREAKING
+        });
+
+        this.lastHeroReportTime = now;
     }
 
     // =========================================================================

@@ -439,9 +439,37 @@ class UIManager {
         this.stationMenus.drawSpaceObjectRepairsMenu(spaceObject, player, this);
     }
 
-    /** Draws the Police Menu - delegated to stationMenus module */
+    /** Draws the Police Recruitment Menu - delegated to factionRecruitment module */
     drawPoliceMenu(player) {
-        this.stationMenus.drawPoliceMenu(player, this);
+        push();
+        const panelRect = this.getPanelRect();
+        this.drawPanelBG(STANDARD_PANEL_BG, [30, 80, 130]);
+        const system = galaxy?.getCurrentSystem();
+        const station = system?.station;
+
+        // Handle anarchy system - no police presence
+        const isAnarchySystem = typeof system?.securityLevel === 'string' && system.securityLevel.toLowerCase() === 'anarchy';
+        if (isAnarchySystem) {
+            const headerHeight = this.drawStationHeader("Police Station", station, player, system);
+            UIComponents.setTextStyle({ fill: 220, size: 22, alignH: CENTER, alignV: TOP });
+            const messageY = panelRect.y + headerHeight + 20;
+            text("This anarchy system has no formal police presence.", panelRect.x + panelRect.w / 2, messageY);
+            UIComponents.setTextStyle({ fill: [180, 200, 255], size: 18 });
+            text("Local disputes are settled without official intervention.", panelRect.x + panelRect.w / 2, messageY + 35);
+
+            this.factionRecruitmentButtonAreas = [];
+            this.factionRecruitmentButtonAreas.push(UIComponents.drawCenteredBackButton(panelRect.x, panelRect.y, panelRect.w, panelRect.h, { action: 'back' }));
+            pop();
+            return;
+        }
+
+        const headerHeight = this.drawStationHeader("Police Force", station, player, system);
+
+        this.factionRecruitment.drawPoliceRecruitmentMenu(player, panelRect, headerHeight, system, this);
+
+        // Sync button areas - factionRecruitmentButtonAreas is the common array for all factions
+        this.factionRecruitmentButtonAreas = this.factionRecruitment.factionRecruitmentButtonAreas;
+        pop();
     }
 
     /** Draws the Commodity Market screen - delegated to market module */
@@ -783,11 +811,7 @@ class UIManager {
         }
         // --- VIEWING_POLICE State ---
         else if (currentState === "VIEWING_POLICE") {
-            return this.stationMenus.handlePoliceClick(
-                mx, my, player,
-                (msg, col) => this.addMessage(msg, col),
-                (p, amt) => this._processFinePayment(p, amt)
-            );
+            return this._handleRecruitmentClicks(mx, my, player, gameStateManager);
         }
 
         // --- VIEWING_PROTECTION State ---

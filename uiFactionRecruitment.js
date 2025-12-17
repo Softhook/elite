@@ -41,6 +41,18 @@ const FACTION_LORE = {
             "Access to military-grade equipment"
         ],
         warning: "You will be expected to engage high-threat targets."
+    },
+    POLICE: {
+        title: "Police Force",
+        slogan: "To serve and protect.",
+        description: "The thin blue line between civilization and chaos. Police forces maintain order across settled space, hunting pirates and keeping trade routes safe. Sign up and you'll get a patrol craft, steady bounties, and the satisfaction of knowing you're making a difference.",
+        memberDescription: "Officer on deck. Your patrol record is noted and appreciated. Pirates fear your callsign, and honest traders sleep easier knowing you're out there. Keep up the good work—and remember, we look after our own.",
+        benefits: [
+            "1,000 cr bounty per Pirate vessel destroyed",
+            "1,000 cr bounty per Alien vessel destroyed",
+            "Access to police equipment"
+        ],
+        warning: "Criminal activity will result in immediate dismissal."
     }
 };
 
@@ -99,11 +111,26 @@ class UIFactionRecruitment {
     }
 
     /**
+     * Checks if the player is a member of the specified faction.
+     * Handles POLICE specially via isPolice flag.
+     * @param {Player} player
+     * @param {string} factionKey
+     * @returns {boolean}
+     * @private
+     */
+    _isFactionMember(player, factionKey) {
+        if (factionKey === 'POLICE') {
+            return player.isPolice === true;
+        }
+        return player.playerFaction === factionKey;
+    }
+
+    /**
      * Draws the left panel content - ship preview for non-members, news for members.
      * @private
      */
     _drawLeftPanel(player, factionKey, themeColors, leftX, leftW, contentY, contentH) {
-        const isMember = player.playerFaction === factionKey;
+        const isMember = this._isFactionMember(player, factionKey);
 
         if (isMember) {
             // Member view: Show faction news
@@ -169,6 +196,7 @@ class UIFactionRecruitment {
         const allowedSources = {
             IMPERIAL: ["The Core Echo"],
             MILITARY: ["The Core Echo"],
+            POLICE: ["The Core Echo"],
             SEPARATIST: ["Free Flow Channel"]
         };
         const factionSources = allowedSources[factionKey] || ["The Core Echo"];
@@ -217,7 +245,7 @@ class UIFactionRecruitment {
      */
     _drawRightPanel(player, factionKey, factionName, themeColors, rightX, rightW, contentY, contentH, system) {
         const lore = FACTION_LORE[factionKey] || FACTION_LORE.MILITARY;
-        const isMember = player.playerFaction === factionKey;
+        const isMember = this._isFactionMember(player, factionKey);
         const isWanted = system?.isPlayerWanted ? system.isPlayerWanted() : false;
         const canJoin = player.canJoinFaction ? player.canJoinFaction(factionKey) : false;
         const padding = 15;
@@ -343,16 +371,19 @@ class UIFactionRecruitment {
             this.factionRecruitmentButtonAreas.push(
                 UIComponents.drawButton(btnX, btnY, btnW, btnH, `Enlist Now`, themeColors[0], themeColors[1], 4, { action: 'join_faction', faction: factionKey })
             );
-        } else if (player.playerFaction && player.playerFaction !== factionKey) {
-            // Button to leave current faction
+        } else if ((player.playerFaction && player.playerFaction !== factionKey) ||
+            (player.isPolice && factionKey !== 'POLICE')) {
+            // Button to leave current faction (including police)
             const rejectNames = {
                 IMPERIAL: "Imperial Navy",
                 SEPARATIST: "Separatist Cause",
-                MILITARY: "Military Forces"
+                MILITARY: "Military Forces",
+                POLICE: "Police Force"
             };
-            const rejectLabel = `Reject ${rejectNames[player.playerFaction] || 'Faction'}`;
+            const currentFaction = player.isPolice ? 'POLICE' : player.playerFaction;
+            const rejectLabel = `Reject ${rejectNames[currentFaction] || 'Faction'}`;
             this.factionRecruitmentButtonAreas.push(
-                UIComponents.drawButton(btnX, btnY, btnW, btnH, rejectLabel, [120, 40, 40], [255, 150, 150], 4, { action: 'leave_faction', faction: player.playerFaction })
+                UIComponents.drawButton(btnX, btnY, btnW, btnH, rejectLabel, [120, 40, 40], [255, 150, 150], 4, { action: 'leave_faction', faction: currentFaction })
             );
         } else if (isWanted) {
             UIComponents.setTextStyle({ fill: [255, 150, 150], size: 16, align: [CENTER, CENTER] });
@@ -368,7 +399,8 @@ class UIFactionRecruitment {
         const messages = {
             IMPERIAL: "You serve the Empire with honor",
             SEPARATIST: "You fight for freedom and independence",
-            MILITARY: "You serve with honor and distinction"
+            MILITARY: "You serve with honor and distinction",
+            POLICE: "You protect the citizens of settled space"
         };
         return messages[factionKey] || "Active faction member";
     }
@@ -507,6 +539,29 @@ class UIFactionRecruitment {
     }
 
     /**
+     * Draws the Police Force Recruitment Menu.
+     * @param {Player} player
+     * @param {Object} panelRect
+     * @param {number} headerHeight
+     * @param {StarSystem} system
+     */
+    drawPoliceRecruitmentMenu(player, panelRect, headerHeight, system) {
+        const baseColor = (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.POLICE : [30, 144, 255];
+        const darkColor = baseColor.map(c => Math.floor(c * 0.5));
+        const lightColor = baseColor;
+
+        this.drawFactionRecruitmentMenu(
+            player,
+            "Police Force",
+            "POLICE",
+            [darkColor, lightColor],
+            panelRect,
+            headerHeight,
+            system
+        );
+    }
+
+    /**
      * Handles recruitment menu button clicks for all factions.
      * @param {number} mx
      * @param {number} my
@@ -603,6 +658,10 @@ class UIFactionRecruitment {
                 MILITARY: {
                     text: () => `Serve with honor! You have been assigned a ${player.factionShip}.`,
                     color: [173, 216, 230]
+                },
+                POLICE: {
+                    text: () => `Welcome to the Police Force! You have been assigned a ${player.factionShip}.`,
+                    color: [30, 144, 255]
                 }
             };
             const fx = msgByFaction[factionKey] || { text: () => 'Joined faction.', color: [173, 216, 230] };
@@ -616,7 +675,8 @@ class UIFactionRecruitment {
             const failTextByFaction = {
                 IMPERIAL: 'Failed to join Imperial Navy.',
                 SEPARATIST: 'Failed to join Separatist Forces.',
-                MILITARY: 'Failed to join Military Forces.'
+                MILITARY: 'Failed to join Military Forces.',
+                POLICE: 'Failed to join Police Force.'
             };
             if (typeof addMessageFn === 'function') {
                 addMessageFn(failTextByFaction[factionKey] || 'Failed to join faction.', [220, 20, 60]);
@@ -641,7 +701,8 @@ class UIFactionRecruitment {
             const msgByFaction = {
                 IMPERIAL: 'You have left the Imperial Navy.',
                 SEPARATIST: 'You have left the Separatist Forces.',
-                MILITARY: 'You have left the Military Forces.'
+                MILITARY: 'You have left the Military Forces.',
+                POLICE: 'You have left the Police Force.'
             };
             if (typeof addMessageFn === 'function') {
                 addMessageFn(msgByFaction[factionKey] || 'You have left your faction.', [255, 180, 100]);

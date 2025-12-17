@@ -233,6 +233,11 @@ class EnemyDamageSystem {
             // Drop cargo
             this.dropCargo();
 
+            // Track this destruction for combat news
+            if (typeof system.recordDestruction === 'function') {
+                system.recordDestruction(this, attacker);
+            }
+
             // Handle player-related consequences (mission progress, wanted status)
             if (attacker instanceof Player && system.player === attacker) {
                 this._handlePlayerKillConsequences(attacker, system);

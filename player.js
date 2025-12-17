@@ -2001,6 +2001,14 @@ class Player {
         this.isPolice = data.isPolice || false;
         this.hasBeenPolice = data.hasBeenPolice || false;
         this.playerFaction = data.playerFaction || null;
+
+        // Safety guard: Ensure player can't be both police AND in another faction
+        // If both are set (legacy/corrupted save), isPolice takes precedence
+        if (this.isPolice && this.playerFaction) {
+            console.warn('Save data inconsistency: Player was both police and in a faction. Clearing playerFaction.');
+            this.playerFaction = null;
+        }
+
         this.hasJoinedFaction = data.hasJoinedFaction || false;
         this.factionShip = data.factionShip || null;
 
@@ -2814,8 +2822,8 @@ class Player {
      * @returns {boolean} True if the player can join the faction
      */
     canJoinFaction(factionName) {
-        // Can't join if already in a faction
-        if (this.playerFaction) {
+        // Can't join if already in a faction (including police)
+        if (this.playerFaction || this.isPolice) {
             return false;
         }
 
@@ -2824,8 +2832,8 @@ class Player {
             return false;
         }
 
-        // Valid faction names
-        const validFactions = ["IMPERIAL", "SEPARATIST", "MILITARY"];
+        // Valid faction names (including POLICE)
+        const validFactions = ["IMPERIAL", "SEPARATIST", "MILITARY", "POLICE"];
         return validFactions.includes(factionName);
     }
 
@@ -2852,6 +2860,9 @@ class Player {
             if (factionName === 'MILITARY') {
                 // Military ships are identified by having "MILITARY" in their aiRoles
                 isFactionShip = shipDef.aiRoles && Array.isArray(shipDef.aiRoles) && shipDef.aiRoles.includes('MILITARY');
+            } else if (factionName === 'POLICE') {
+                // Police ships are identified by having "POLICE" in their aiRoles
+                isFactionShip = shipDef.aiRoles && Array.isArray(shipDef.aiRoles) && shipDef.aiRoles.includes('POLICE');
             } else {
                 // Imperial and Separatist ships are identified by name prefix
                 isFactionShip = shipName.toUpperCase().startsWith(factionName.toUpperCase());
@@ -2911,8 +2922,17 @@ class Player {
         // Restore cargo (up to new capacity)
         this.cargo = savedCargo.slice(0, this.cargoCapacity);
 
-        // Set faction status
-        this.playerFaction = factionName;
+        // Set faction status (POLICE uses special isPolice flag)
+        if (factionName === 'POLICE') {
+            this.isPolice = true;
+            // Clear wanted status when joining police
+            if (this.currentSystem) {
+                this.currentSystem.playerWanted = false;
+                this.currentSystem.policeAlertSent = false;
+            }
+        } else {
+            this.playerFaction = factionName;
+        }
         this.hasJoinedFaction = true;
         this.factionShip = shipType;
 
@@ -2928,6 +2948,15 @@ class Player {
      * @returns {boolean} True if successfully left faction, false otherwise
      */
     leaveFaction() {
+        // Handle POLICE separately
+        if (this.isPolice) {
+            this.hasBeenPolice = true;
+            this.isPolice = false;
+            this.factionShip = null;
+            console.log("Player left POLICE faction");
+            return true;
+        }
+
         if (!this.playerFaction) {
             console.log("Not currently in any faction");
             return false;
