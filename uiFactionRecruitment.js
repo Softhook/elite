@@ -10,6 +10,7 @@ const FACTION_LORE = {
         title: "Imperial Navy",
         slogan: "Serve the Emperor and make the galaxy great again.",
         description: "For centuries, the Empire has maintained order across the stars. Our pilots are disciplined, our ships well-maintained, and our paperwork impeccable. Join us, and become part of a legacy that spans a thousand systems.",
+        memberDescription: "Welcome back, pilot. Your service to the Empire continues to bring honor to the fleet. Keep hunting those Separatist dogs and the credits will keep flowing. The Emperor remembers those who serve faithfully.",
         benefits: [
             "2,000 cr bounty per Separatist vessel destroyed",
             "Access to special Imperial stations",
@@ -21,6 +22,7 @@ const FACTION_LORE = {
         title: "Separatist Forces",
         slogan: "Fight for freedom and justice.",
         description: "When Imperial taxes grew unbearable and colonial voices went unheard, pilots rose to resist. We fight for every system's right to self-governance. The cause is just, the pay is decent, and nobody checks your papers.",
+        memberDescription: "Good to see you, comrade. The Separatist cause grows stronger with every Imperial ship you turn to scrap. Remember—we're the ones fighting for a galaxy where everyone gets a fair shake. Keep up the good work.",
         benefits: [
             "2,000 cr bounty per Imperial vessel destroyed",
             "Access to special Separatist stations",
@@ -32,6 +34,7 @@ const FACTION_LORE = {
         title: "Military Forces",
         slogan: "Honor, duty, excellence.",
         description: "We are the first line of defense against the alien threat. While factions squabble over politics, we defend humanity against alien incursions and pirate clans. We don't care about your past—only whether you can handle yourself in a fight.",
+        memberDescription: "At ease, soldier. Your combat record speaks for itself. The aliens aren't going to stop themselves, and the pirates need reminding who keeps this sector safe. Stay sharp out there—we're counting on you.",
         benefits: [
             "4,000 cr bounty per Alien vessel destroyed",
             "1,000 cr bounty per Pirate vessel destroyed",
@@ -230,10 +233,11 @@ class UIFactionRecruitment {
         text(lore.slogan, rightX + padding, yPos);
         yPos += 26;
 
-        // Description (wrapped text)
+        // Description (wrapped text) - use member description if applicable
+        const descText = isMember && lore.memberDescription ? lore.memberDescription : lore.description;
         UIComponents.setTextStyle({ fill: [200, 200, 255], size: 18, align: [LEFT, TOP] });
         const maxDescWidth = rightW - padding * 2;
-        const wrappedDesc = this._wrapText(lore.description, maxDescWidth, 18);
+        const wrappedDesc = this._wrapText(descText, maxDescWidth, 18);
         const descLines = wrappedDesc.split('\n').slice(0, 4); // Limit lines
         for (const line of descLines) {
             text(line, rightX + padding, yPos);
