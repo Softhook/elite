@@ -423,6 +423,16 @@ class Market {
                     break;
             }
 
+            // Apply crisis price multipliers (plague affects Medicine, famine affects Food)
+            if (typeof eventManager !== 'undefined' && eventManager.getCrisisPriceMultiplier) {
+                const crisisMultiplier = eventManager.getCrisisPriceMultiplier(comm.name);
+                if (crisisMultiplier > 1.0) {
+                    comm.buyPrice *= crisisMultiplier;
+                    comm.sellPrice *= crisisMultiplier;
+                    if (MARKET_DEBUG) console.log(` -> Crisis multiplier applied to ${comm.name}: x${crisisMultiplier.toFixed(2)}`);
+                }
+            }
+
             const baseStock = Math.max(1, comm.baseStock || 1);
             const currentStock = Math.max(0, Number.isFinite(comm.stock) ? comm.stock : baseStock);
             const stockRatio = currentStock / baseStock;

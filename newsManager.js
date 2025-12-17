@@ -197,6 +197,32 @@ class NewsManager {
                 "🔥 SECTOR-WIDE HOSTILITIES BEGIN IN {SYSTEM}"
             ],
 
+            // Crisis event headlines (plague/famine)
+            CRISIS_PLAGUE: [
+                "☠️ DEADLY PLAGUE OUTBREAK IN {SYSTEM}",
+                "☠️ CONTAGION SPREADS ACROSS {SYSTEM}",
+                "☠️ MEDICAL EMERGENCY: PLAGUE RAVAGES {SYSTEM}",
+                "☠️ QUARANTINE DECLARED IN {SYSTEM}",
+                "☠️ DISEASE OUTBREAK OVERWHELMS {SYSTEM} HOSPITALS"
+            ],
+            CRISIS_FAMINE: [
+                "🍂 SEVERE FAMINE GRIPS {SYSTEM}",
+                "🍂 FOOD CRISIS DEVASTATES {SYSTEM}",
+                "🍂 CROP FAILURES CAUSE MASS STARVATION IN {SYSTEM}",
+                "🍂 FOOD SHORTAGE EMERGENCY IN {SYSTEM}",
+                "🍂 HUNGER CRISIS SPREADS ACROSS {SYSTEM}"
+            ],
+            CRISIS_PLAGUE_DISTANT: [
+                "☠️ PLAGUE OUTBREAK SPREADS TO {SYSTEM}",
+                "☠️ NEIGHBORING SYSTEM {SYSTEM} AFFECTED BY CONTAGION",
+                "☠️ DISEASE REACHES {SYSTEM} FROM NEARBY OUTBREAK"
+            ],
+            CRISIS_FAMINE_DISTANT: [
+                "🍂 FAMINE CONDITIONS WORSEN IN {SYSTEM}",
+                "🍂 FOOD CRISIS SPREADS TO {SYSTEM}",
+                "🍂 {SYSTEM} SUFFERS FROM REGIONAL CROP FAILURES"
+            ],
+
             // Combat report headlines (system-wide destruction)
             COMBAT_PIRATE_KILLS: [
                 "PIRATE FLEET DECIMATED IN {SYSTEM}",
@@ -731,6 +757,48 @@ class NewsManager {
             sourceColor: faction.color,
             category: NEWS_CATEGORY.LOCAL_EVENT,
             priority: NEWS_PRIORITY.MEDIUM
+        });
+    }
+
+    /**
+     * Report crisis events (plague/famine)
+     * @param {string} systemName - Name of the affected system
+     * @param {string} crisisType - 'plague' or 'famine'
+     * @param {boolean} isDistant - Whether the crisis is in a distant/connected system
+     */
+    addCrisisNews(systemName, crisisType, isDistant = false) {
+        const isPlagueType = crisisType.toLowerCase() === 'plague';
+
+        let templateKey, body, sourceColor;
+
+        if (isPlagueType) {
+            templateKey = isDistant ? 'CRISIS_PLAGUE_DISTANT' : 'CRISIS_PLAGUE';
+            body = isDistant
+                ? `Medical emergency declared in ${systemName}. Medicine supplies critically low. Traders urged to deliver medical aid.`
+                : `Quarantine measures in effect. Medicine prices soaring as supplies dwindle. Emergency haulers inbound.`;
+            sourceColor = [255, 0, 255]; // Magenta
+        } else {
+            templateKey = isDistant ? 'CRISIS_FAMINE_DISTANT' : 'CRISIS_FAMINE';
+            body = isDistant
+                ? `Food shortage crisis escalates in ${systemName}. Traders redirecting cargo ships to deliver emergency supplies.`
+                : `Crop failures devastate local population. Food prices skyrocketing as emergency relief efforts begin.`;
+            sourceColor = [255, 150, 0]; // Orange
+        }
+
+        const templates = this.headlineTemplates[templateKey];
+        const headline = templates
+            ? this._fillTemplate(templates, { SYSTEM: systemName || 'Unknown Sector' })
+            : `CRISIS ALERT: ${crisisType.toUpperCase()} IN ${systemName}`;
+
+        const faction = this._selectFaction();
+
+        this._addNews({
+            headline,
+            body,
+            source: faction.name,
+            sourceColor: sourceColor,
+            category: isDistant ? NEWS_CATEGORY.GALAXY_NEWS : NEWS_CATEGORY.LOCAL_EVENT,
+            priority: isDistant ? NEWS_PRIORITY.HIGH : NEWS_PRIORITY.BREAKING
         });
     }
 

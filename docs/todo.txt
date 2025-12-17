@@ -26,8 +26,6 @@ make events more dramtic bigger cargo drops
 
 new kind of nebula and storm which slows down ship movement
 
-create a builder ship that errects space objects near planets
-
 Make space objects belong to different factions. Destroying a space object makes the player wanted. 
 
 spawn ships depengin on which systems are connected

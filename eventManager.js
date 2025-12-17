@@ -43,6 +43,12 @@ class EventManager {
             expires: 0,
             spawnModifiers: null   // Faction spawn percentage overrides
         };
+
+        // Crisis state tracking - plague and famine events that affect connected systems
+        this.activeCrisisState = {
+            plague: null,  // { originSystemIndex, expires, priceMultiplier }
+            famine: null   // { originSystemIndex, expires, priceMultiplier }
+        };
     }
 
     _initializeShipGroups() {
@@ -431,7 +437,10 @@ class EventManager {
             { type: "SKIRMISH_SEPARATIST_IMPERIAL", probabilityPerFrame: 0.000015, minCooldownFrames: 30 * 60 * 60, warningDurationFrames: 600, lastTriggeredFrame: -Infinity, isWarningActive: false, eventTriggerFrame: 0, warningConfig: { message: "⚔️ CONFLICT: Separatist and Imperial forces clashing!", color: "orange", consoleLog: "EventManager: Separatist vs Imperial skirmish warning issued." } },
             { type: "SKIRMISH_ALIEN_MILITARY", probabilityPerFrame: 0.00001, minCooldownFrames: 35 * 60 * 60, warningDurationFrames: 600, lastTriggeredFrame: -Infinity, isWarningActive: false, eventTriggerFrame: 0, warningConfig: { message: "⚔️ INVASION: Alien forces engaging military!", color: "magenta", consoleLog: "EventManager: Alien vs Military skirmish warning issued." } },
             { type: "WAR_SEPARATIST_IMPERIAL", probabilityPerFrame: 0.000008, minCooldownFrames: 60 * 60 * 60, warningDurationFrames: 900, lastTriggeredFrame: -Infinity, isWarningActive: false, eventTriggerFrame: 0, warningConfig: { message: "🔥 FULL SCALE WAR: Separatist vs Imperial forces!", color: "red", consoleLog: "EventManager: Separatist vs Imperial full war warning issued." } },
-            { type: "WAR_ALIEN_MILITARY", probabilityPerFrame: 0.000006, minCooldownFrames: 70 * 60 * 60, warningDurationFrames: 900, lastTriggeredFrame: -Infinity, isWarningActive: false, eventTriggerFrame: 0, warningConfig: { message: "🔥 FULL SCALE WAR: Alien invasion vs Military!", color: "crimson", consoleLog: "EventManager: Alien vs Military full war warning issued." } }
+            { type: "WAR_ALIEN_MILITARY", probabilityPerFrame: 0.000006, minCooldownFrames: 70 * 60 * 60, warningDurationFrames: 900, lastTriggeredFrame: -Infinity, isWarningActive: false, eventTriggerFrame: 0, warningConfig: { message: "🔥 FULL SCALE WAR: Alien invasion vs Military!", color: "crimson", consoleLog: "EventManager: Alien vs Military full war warning issued." } },
+            // === Crisis Events (affect connected systems) ===
+            { type: "PLAGUE", probabilityPerFrame: 0.000005, minCooldownFrames: 80 * 60 * 60, warningDurationFrames: 600, lastTriggeredFrame: -Infinity, isWarningActive: false, eventTriggerFrame: 0, warningConfig: { message: "☠️ PLAGUE: Deadly outbreak spreading across systems!", color: "magenta", consoleLog: "EventManager: Plague warning issued." } },
+            { type: "FAMINE", probabilityPerFrame: 0.000005, minCooldownFrames: 80 * 60 * 60, warningDurationFrames: 600, lastTriggeredFrame: -Infinity, isWarningActive: false, eventTriggerFrame: 0, warningConfig: { message: "🍂 FAMINE: Crop failures cause widespread hunger!", color: "orange", consoleLog: "EventManager: Famine warning issued." } }
         );
     }
 
@@ -488,6 +497,9 @@ class EventManager {
             };
             console.log('EventManager: War state ended, returning to peace.');
         }
+
+        // Check crisis state expiration (plague/famine)
+        this._updateCrisisState();
     }
 
     _extendDurationMs(baseMs) {
@@ -509,6 +521,16 @@ class EventManager {
             expires: millis() + durationMs,
             type: 'PERSISTENT'
         });
+    }
+
+    _removePersistentEvent(id) {
+        if (!this.uiManager) return;
+        this.uiManager.removePersistentMessage(id);
+
+        const existingIdx = this.activeEvents.findIndex(e => e.id === id);
+        if (existingIdx >= 0) {
+            this.activeEvents.splice(existingIdx, 1);
+        }
     }
 
     initiateEventWarning(eventType) {
@@ -573,7 +595,7 @@ class EventManager {
         // Route to category-specific handlers
         const marketEvents = ['MARKET_SHORTAGE', 'MARKET_SURPLUS', 'BLACK_MARKET_AUCTION'];
         const socialEvents = ['SMUGGLING_BUST', 'BLOCKADE', 'DIPLOMATIC_VISIT', 'TECH_BREAKTHROUGH', 'STATION_STRIKE'];
-        const crisisEvents = ['POWER_OUTAGE', 'SABOTAGE', 'MINING_BOOM', 'MINE_ACCIDENT', 'SOLAR_FLARE', 'QUARANTINE', 'REFUGEE_INFLUX', 'HACKER_ATTACK'];
+        const crisisEvents = ['POWER_OUTAGE', 'SABOTAGE', 'MINING_BOOM', 'MINE_ACCIDENT', 'SOLAR_FLARE', 'QUARANTINE', 'REFUGEE_INFLUX', 'HACKER_ATTACK', 'PLAGUE', 'FAMINE'];
         const warEvents = ['SKIRMISH_SEPARATIST_IMPERIAL', 'SKIRMISH_ALIEN_MILITARY', 'WAR_SEPARATIST_IMPERIAL', 'WAR_ALIEN_MILITARY'];
         const miscEvents = ['BOUNTY_INCREASE', 'REPUTATION_SCANDAL'];
 
@@ -942,6 +964,96 @@ class EventManager {
 
                 if (station?.pos) {
                     this._addEventMarkerSafely(`HACKER_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Hacker Attack`, 'purple', this._extendDurationMs(120000));
+                }
+                break;
+            }
+
+            case 'PLAGUE': {
+                // Plague affects Medicine prices in this system and connected systems
+                const durationMs = this._extendDurationMs(300000); // 5 minutes base
+                const priceMultiplier = random(8, 15); // 8x to 15x price increase for dramatic effect
+                const originSystemIndex = typeof galaxy !== 'undefined' ? galaxy.currentSystemIndex : 0;
+
+                this.activeCrisisState.plague = {
+                    originSystemIndex: originSystemIndex,
+                    expires: millis() + durationMs,
+                    priceMultiplier: priceMultiplier
+                };
+
+                // Consume Medicine stock at local station to simulate demand
+                const station = this._pickStationWithMarket();
+                if (station) {
+                    const consumed = station.market.consumeStockForNPC('Medicine', Math.max(10, Math.round(random(20, 50))), { allowPartial: true });
+                }
+
+                // Spawn emergency haulers bringing supplies
+                this._spawnCrisisHaulers(3, 'Medicine');
+
+                const systemLabel = this.starSystem?.name || 'Local sector';
+                this._notifyEvent(`${systemLabel}: PLAGUE outbreak! Medicine prices soaring (×${priceMultiplier.toFixed(1)})`, 'magenta');
+                this._addPersistentEvent('PLAGUE_ACTIVE', `☠️ PLAGUE: Medicine ×${priceMultiplier.toFixed(1)} (affects connected systems)`, 'magenta', durationMs);
+
+                // Add news about plague (local + connected systems)
+                if (typeof newsManager !== 'undefined' && newsManager.addCrisisNews) {
+                    newsManager.addCrisisNews(systemLabel, 'plague', false);
+
+                    // Also add news for connected systems (distant crises)
+                    if (typeof galaxy !== 'undefined' && galaxy.systems) {
+                        const originSystem = galaxy.systems[originSystemIndex];
+                        if (originSystem && originSystem.connectedSystemIndices) {
+                            originSystem.connectedSystemIndices.forEach(connIdx => {
+                                const connSystem = galaxy.systems[connIdx];
+                                if (connSystem && connSystem.name) {
+                                    newsManager.addCrisisNews(connSystem.name, 'plague', true);
+                                }
+                            });
+                        }
+                    }
+                }
+                break;
+            }
+
+            case 'FAMINE': {
+                // Famine affects Food prices in this system and connected systems
+                const durationMs = this._extendDurationMs(300000); // 5 minutes base
+                const priceMultiplier = random(8, 15); // 8x to 15x price increase for dramatic effect
+                const originSystemIndex = typeof galaxy !== 'undefined' ? galaxy.currentSystemIndex : 0;
+
+                this.activeCrisisState.famine = {
+                    originSystemIndex: originSystemIndex,
+                    expires: millis() + durationMs,
+                    priceMultiplier: priceMultiplier
+                };
+
+                // Consume Food stock at local station to simulate demand
+                const station = this._pickStationWithMarket();
+                if (station) {
+                    const consumed = station.market.consumeStockForNPC('Food', Math.max(10, Math.round(random(20, 50))), { allowPartial: true });
+                }
+
+                // Spawn emergency haulers bringing supplies  
+                this._spawnCrisisHaulers(3, 'Food');
+
+                const systemLabel = this.starSystem?.name || 'Local sector';
+                this._notifyEvent(`${systemLabel}: FAMINE! Food prices soaring (×${priceMultiplier.toFixed(1)})`, 'orange');
+                this._addPersistentEvent('FAMINE_ACTIVE', `🍂 FAMINE: Food ×${priceMultiplier.toFixed(1)} (affects connected systems)`, 'orange', durationMs);
+
+                // Add news about famine (local + connected systems)
+                if (typeof newsManager !== 'undefined' && newsManager.addCrisisNews) {
+                    newsManager.addCrisisNews(systemLabel, 'famine', false);
+
+                    // Also add news for connected systems (distant crises)
+                    if (typeof galaxy !== 'undefined' && galaxy.systems) {
+                        const originSystem = galaxy.systems[originSystemIndex];
+                        if (originSystem && originSystem.connectedSystemIndices) {
+                            originSystem.connectedSystemIndices.forEach(connIdx => {
+                                const connSystem = galaxy.systems[connIdx];
+                                if (connSystem && connSystem.name) {
+                                    newsManager.addCrisisNews(connSystem.name, 'famine', true);
+                                }
+                            });
+                        }
+                    }
                 }
                 break;
             }
@@ -1636,6 +1748,147 @@ class EventManager {
         if (typeof setupFn === 'function') setupFn(enemy);
         this.starSystem.addEnemy(enemy);
         return enemy;
+    }
+
+    // ============================================
+    // Crisis Event Helpers
+    // ============================================
+
+    /**
+     * Spawns emergency haulers during a crisis event.
+     * @param {number} count - Number of haulers to spawn
+     * @param {string} cargoType - Type of cargo they carry (Medicine, Food, etc.)
+     */
+    _spawnCrisisHaulers(count, cargoType) {
+        if (!this.starSystem || !this.player) return;
+
+        const jumpZone = this.starSystem.jumpZoneCenter || this.player.pos;
+        const baseRadius = (this.starSystem.jumpZoneRadius || 600) + random(200, 500);
+
+        for (let i = 0; i < count; i++) {
+            const angle = random(TWO_PI);
+            const dist = baseRadius + random(-100, 300);
+            const sx = jumpZone.x + cos(angle) * dist;
+            const sy = jumpZone.y + sin(angle) * dist;
+
+            this._spawnAdHocEnemy(sx, sy, AI_ROLE.HAULER, (enemy) => {
+                enemy.currentState = AI_STATE.TRADING;
+                // Give them relevant cargo
+                if (enemy.cargoHold) {
+                    const qty = Math.max(5, Math.floor(random(10, 25)));
+                    enemy.cargoHold.push({ type: cargoType, quantity: qty });
+                }
+            });
+        }
+    }
+
+    /**
+     * Returns list of system indices affected by a specific crisis type.
+     * Includes origin system and all connected systems.
+     * @param {string} crisisType - 'plague' or 'famine'
+     * @returns {number[]} Array of affected system indices
+     */
+    getAffectedSystemsForCrisis(crisisType) {
+        const crisis = this.activeCrisisState[crisisType];
+        if (!crisis || millis() > crisis.expires) return [];
+
+        const affected = [crisis.originSystemIndex];
+
+        // Add connected systems
+        if (typeof galaxy !== 'undefined' && galaxy.systems) {
+            const originSystem = galaxy.systems[crisis.originSystemIndex];
+            if (originSystem && originSystem.connectedSystemIndices) {
+                affected.push(...originSystem.connectedSystemIndices);
+            }
+        }
+
+        return affected;
+    }
+
+    /**
+     * Returns spawn modifier for haulers during active crisis.
+     * @returns {number} Multiplier for hauler spawn probability (1.0 = normal, 1.5 = 50% more, etc.)
+     */
+    getHaulerSpawnModifier() {
+        let modifier = 1.0;
+
+        // Check if current system is affected by plague
+        if (this.activeCrisisState.plague && millis() < this.activeCrisisState.plague.expires) {
+            const affectedByPlague = this.getAffectedSystemsForCrisis('plague');
+            const currentIndex = typeof galaxy !== 'undefined' ? galaxy.currentSystemIndex : 0;
+            if (affectedByPlague.includes(currentIndex)) {
+                modifier += 0.25; // +25% hauler spawns
+            }
+        }
+
+        // Check if current system is affected by famine
+        if (this.activeCrisisState.famine && millis() < this.activeCrisisState.famine.expires) {
+            const affectedByFamine = this.getAffectedSystemsForCrisis('famine');
+            const currentIndex = typeof galaxy !== 'undefined' ? galaxy.currentSystemIndex : 0;
+            if (affectedByFamine.includes(currentIndex)) {
+                modifier += 0.25; // +25% hauler spawns
+            }
+        }
+
+        return modifier;
+    }
+
+    /**
+     * Returns the price multiplier for a commodity based on active crises.
+     * @param {string} commodityName - Name of the commodity
+     * @param {number} systemIndex - Index of the system to check (default: current system)
+     * @returns {number} Price multiplier (1.0 = normal)
+     */
+    getCrisisPriceMultiplier(commodityName, systemIndex = null) {
+        if (systemIndex === null && typeof galaxy !== 'undefined') {
+            systemIndex = galaxy.currentSystemIndex;
+        }
+
+        // Check plague affecting Medicine
+        if (commodityName === 'Medicine' && this.activeCrisisState.plague) {
+            if (millis() < this.activeCrisisState.plague.expires) {
+                const affected = this.getAffectedSystemsForCrisis('plague');
+                if (affected.includes(systemIndex)) {
+                    return this.activeCrisisState.plague.priceMultiplier;
+                }
+            }
+        }
+
+        // Check famine affecting Food
+        if (commodityName === 'Food' && this.activeCrisisState.famine) {
+            if (millis() < this.activeCrisisState.famine.expires) {
+                const affected = this.getAffectedSystemsForCrisis('famine');
+                if (affected.includes(systemIndex)) {
+                    return this.activeCrisisState.famine.priceMultiplier;
+                }
+            }
+        }
+
+        return 1.0;
+    }
+
+    /**
+     * Updates crisis state, expiring ended crises and cleaning up UI.
+     * Called from the main update loop.
+     */
+    _updateCrisisState() {
+        const now = millis();
+
+        // Check plague expiration
+        if (this.activeCrisisState.plague && now > this.activeCrisisState.plague.expires) {
+            this.activeCrisisState.plague = null;
+            this._removePersistentEvent('PLAGUE_ACTIVE');
+            const systemLabel = this.starSystem?.name || 'Local sector';
+            this._notifyEvent(`${systemLabel}: Plague outbreak contained. Medicine prices stabilizing.`, 'green');
+        }
+
+        // Check famine expiration
+        if (this.activeCrisisState.famine && now > this.activeCrisisState.famine.expires) {
+            this.activeCrisisState.famine = null;
+            this._removePersistentEvent('FAMINE_ACTIVE');
+            const systemLabel = this.starSystem?.name || 'Local sector';
+            this._notifyEvent(`${systemLabel}: Famine relief successful. Food prices stabilizing.`, 'green');
+        }
     }
 
     _formatStationLabel(station) {

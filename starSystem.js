@@ -4875,19 +4875,45 @@ class StarSystem {
     }
 
     getEnemyRoleProbabilities() {
-        // Adjust these as needed for your game balance
+        // Base probabilities by security level
+        let probs;
         switch ((this.securityLevel || '').toLowerCase()) {
             case 'high':
-                return { PIRATE: 0.15, POLICE: 0.55, HAULER: 0.3 };
+                probs = { PIRATE: 0.15, POLICE: 0.55, HAULER: 0.3 };
+                break;
             case 'medium':
-                return { PIRATE: 0.35, POLICE: 0.35, HAULER: 0.3 };
+                probs = { PIRATE: 0.35, POLICE: 0.35, HAULER: 0.3 };
+                break;
             case 'low':
-                return { PIRATE: 0.55, POLICE: 0.2, HAULER: 0.25 };
+                probs = { PIRATE: 0.55, POLICE: 0.2, HAULER: 0.25 };
+                break;
             case 'anarchy':
-                return { PIRATE: 0.8, POLICE: 0.05, HAULER: 0.15 };
+                probs = { PIRATE: 0.8, POLICE: 0.05, HAULER: 0.15 };
+                break;
             default:
-                return { PIRATE: 0.4, POLICE: 0.3, HAULER: 0.3 };
+                probs = { PIRATE: 0.4, POLICE: 0.3, HAULER: 0.3 };
         }
+
+        // Apply crisis modifiers (plague/famine increase hauler spawns)
+        if (typeof eventManager !== 'undefined' && eventManager.getHaulerSpawnModifier) {
+            const modifier = eventManager.getHaulerSpawnModifier();
+            if (modifier > 1.0) {
+                // Calculate boost amount
+                const boost = (modifier - 1.0); // e.g., 0.25 for 25% boost
+
+                // Increase hauler probability, decrease pirate probability
+                probs.HAULER = Math.min(0.6, probs.HAULER + boost);
+                probs.PIRATE = Math.max(0.1, probs.PIRATE - boost * 0.5);
+
+                // Normalize probabilities to sum to 1
+                const total = probs.PIRATE + probs.POLICE + probs.HAULER;
+                probs.PIRATE /= total;
+                probs.POLICE /= total;
+                probs.HAULER /= total;
+            }
+        }
+
+        return probs;
     }
 
     /**
