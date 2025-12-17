@@ -1043,11 +1043,12 @@ class EnemyCombat {
         }
 
         // Fire the secondary weapon at secondary target
+        // Pass secondaryWeapon as weaponOverride so WeaponSystem.fire uses correct weapon properties
         const secondaryType = secondaryWeapon.type || WEAPON_TYPE.PROJECTILE;
 
         if (debugDualFire) AI_LOG(`${this.shipTypeName} DUAL FIRE: Attempting fire with ${secondaryWeapon.name} at ${secondaryTarget.shipTypeName || 'target'}`);
 
-        const fired = WeaponSystem.fire(this, system, angleToSecondary, secondaryType, secondaryTarget);
+        const fired = WeaponSystem.fire(this, system, angleToSecondary, secondaryType, secondaryTarget, secondaryWeapon);
 
         if (fired) {
             this._secondaryFireCooldown = this.computeCooldown(secondaryWeapon.fireRate || 0.5);

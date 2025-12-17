@@ -304,18 +304,19 @@ class UIManager {
         textFont(font);
 
         // Determine faction recruitment option based on system economy type
+        // Faction recruitment is available in faction systems even if they are anarchies
+        // Only Police stations are unavailable in anarchy systems
         const isAnarchySystem = typeof system?.securityLevel === 'string' && system.securityLevel.toLowerCase() === 'anarchy';
         let factionOption = null;
-        if (!isAnarchySystem) {
-            if (system?.economyType === "Imperial") {
-                factionOption = { text: "Imperial Navy Recruitment", state: "VIEWING_IMPERIAL_RECRUITMENT" };
-            } else if (system?.economyType === "Separatist") {
-                factionOption = { text: "Separatist Forces Recruitment", state: "VIEWING_SEPARATIST_RECRUITMENT" };
-            } else if (system?.economyType === "Military") {
-                factionOption = { text: "Military Academy Recruitment", state: "VIEWING_MILITARY_RECRUITMENT" };
-            } else {
-                factionOption = { text: "Police Station", state: "VIEWING_POLICE" };
-            }
+        if (system?.economyType === "Imperial") {
+            factionOption = { text: "Imperial Navy Recruitment", state: "VIEWING_IMPERIAL_RECRUITMENT" };
+        } else if (system?.economyType === "Separatist") {
+            factionOption = { text: "Separatist Forces Recruitment", state: "VIEWING_SEPARATIST_RECRUITMENT" };
+        } else if (system?.economyType === "Military") {
+            factionOption = { text: "Military Academy Recruitment", state: "VIEWING_MILITARY_RECRUITMENT" };
+        } else if (!isAnarchySystem) {
+            // Police stations are only available in non-anarchy systems
+            factionOption = { text: "Police Station", state: "VIEWING_POLICE" };
         }
 
         const menuOpts = [

@@ -351,8 +351,9 @@ class WeaponSystem {
      * @param {number} angle - Firing angle in radians
      * @param {string} type - Weapon type
      * @param {Object} target - Optional target for aimed weapons
+     * @param {Object} weaponOverride - Optional weapon to use instead of owner.currentWeapon (for dual-engage secondary fire)
      */
-    static fire(owner, system, angle, type = WEAPON_TYPE.PROJECTILE, target = null) {
+    static fire(owner, system, angle, type = WEAPON_TYPE.PROJECTILE, target = null, weaponOverride = null) {
         if (!owner || !system) return false;
 
         // Extract count from type name if present (e.g., "spread3" -> 3)
@@ -364,7 +365,16 @@ class WeaponSystem {
             type = type.substring(0, countMatch.index);
         }
 
-        const weapon = owner.currentWeapon;
+        // Use weaponOverride if provided, otherwise use owner's currentWeapon
+        // This fixes dual-engage secondary fire using wrong weapon properties
+        const weapon = weaponOverride || owner.currentWeapon;
+
+        // Temporarily set owner.currentWeapon to the weapon being fired
+        // so that downstream methods (fireProjectile, fireTangle, etc.) use correct properties
+        const originalWeapon = owner.currentWeapon;
+        if (weaponOverride) {
+            owner.currentWeapon = weaponOverride;
+        }
 
         // Apply aim jitter from EM disruption for angle-driven weapons
         // Exclude beams here so beam-specific inaccuracy is applied only inside fireBeam
@@ -443,6 +453,12 @@ class WeaponSystem {
                 this.fireProjectile(owner, system, angle);
                 fired = true;
         }
+
+        // Restore original weapon if we used an override
+        if (weaponOverride && originalWeapon !== undefined) {
+            owner.currentWeapon = originalWeapon;
+        }
+
         return fired;
     }
 
