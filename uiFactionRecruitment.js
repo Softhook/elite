@@ -66,12 +66,13 @@ class UIFactionRecruitment {
     }
 
     /**
-     * Returns the fine amount for a faction based on security level.
-     * @param {string} factionKey - Faction identifier
-     * @param {string} securityLevel - System security level
-     * @returns {number} Fine amount in credits
-     */
-    getFactionFineAmount(factionKey, securityLevel) {
+ * Returns the fine amount for a faction based on security level.
+ * @param {string} factionKey - Faction identifier
+ * @param {string} securityLevel - System security level
+ * @param {Player} [player] - Optional player to check hasBeenPolice for 3x multiplier
+ * @returns {number} Fine amount in credits
+ */
+    getFactionFineAmount(factionKey, securityLevel, player = null) {
         const baseFines = {
             IMPERIAL: { base: 500, High: 1200, Medium: 800 },
             SEPARATIST: { base: 400, High: 1000, Medium: 650 },
@@ -79,7 +80,14 @@ class UIFactionRecruitment {
             POLICE: { base: 300, High: 1000, Medium: 500 }
         };
         const fineData = baseFines[factionKey] || baseFines.POLICE;
-        return fineData[securityLevel] || fineData.base;
+        let amount = fineData[securityLevel] || fineData.base;
+
+        // Former police officers pay triple fines
+        if (player && player.hasBeenPolice) {
+            amount *= 3;
+        }
+
+        return amount;
     }
 
     /**
@@ -360,7 +368,12 @@ class UIFactionRecruitment {
 
         // Fine payment button if wanted
         if (isWanted) {
-            const fineAmount = this.getFactionFineAmount(factionKey, system?.securityLevel);
+            const fineAmount = this.getFactionFineAmount(factionKey, system?.securityLevel, player);
+            // Show warning for former police
+            if (player.hasBeenPolice && factionKey === 'POLICE') {
+                UIComponents.setTextStyle({ fill: [255, 200, 100], size: 14, align: [CENTER, TOP] });
+                text("Fines tripled for former police officer", btnX + btnW / 2, btnY - 65);
+            }
             this.factionRecruitmentButtonAreas.push(
                 UIComponents.drawButton(btnX, btnY - 45, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0, 120, 0], [100, 255, 100], 4, { action: 'pay_fine', amount: fineAmount, faction: factionKey })
             );
@@ -371,6 +384,13 @@ class UIFactionRecruitment {
             this.factionRecruitmentButtonAreas.push(
                 UIComponents.drawButton(btnX, btnY, btnW, btnH, `Enlist Now`, themeColors[0], themeColors[1], 4, { action: 'join_faction', faction: factionKey })
             );
+        } else if (factionKey === 'POLICE' && player.hasBeenPolice && !isMember) {
+            // Former police officers cannot rejoin - show official rejection
+            UIComponents.setTextStyle({ fill: [255, 120, 120], size: 16, align: [CENTER, TOP] });
+            text("OFFICIAL NOTICE:", btnX + btnW / 2, btnY + 10);
+            UIComponents.setTextStyle({ fill: [200, 180, 180], size: 16, align: [CENTER, TOP] });
+            text("As a former officer dismissed for criminal conduct,", btnX + btnW / 2, btnY + 32);
+            text("you are permanently barred from police service.", btnX + btnW / 2, btnY + 52);
         } else if ((player.playerFaction && player.playerFaction !== factionKey) ||
             (player.isPolice && factionKey !== 'POLICE')) {
             // Button to leave current faction (including police)

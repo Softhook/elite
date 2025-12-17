@@ -2832,6 +2832,11 @@ class Player {
             return false;
         }
 
+        // Former police officers cannot rejoin the police force
+        if (factionName === 'POLICE' && this.hasBeenPolice) {
+            return false;
+        }
+
         // Valid faction names (including POLICE)
         const validFactions = ["IMPERIAL", "SEPARATIST", "MILITARY", "POLICE"];
         return validFactions.includes(factionName);
