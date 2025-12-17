@@ -3,6 +3,45 @@
 // This file must be loaded BEFORE uiManager.js
 
 /**
+ * Faction lore data containing descriptions, benefits, and recruitment info.
+ */
+const FACTION_LORE = {
+    IMPERIAL: {
+        title: "Imperial Navy",
+        slogan: "Serve the Emperor and make the galaxy great again.",
+        description: "For centuries, the Empire has maintained order across the stars. Our pilots are disciplined, our ships well-maintained, and our paperwork impeccable. Join us, and become part of a legacy that spans a thousand systems.",
+        benefits: [
+            "2,000 cr bounty per Separatist vessel destroyed",
+            "Access to special Imperial stations",
+            "Access to Imperial Navy mission contracts"
+        ],
+        warning: "Separatist forces will treat you as hostile on sight."
+    },
+    SEPARATIST: {
+        title: "Separatist Forces",
+        slogan: "Fight for freedom and justice.",
+        description: "When Imperial taxes grew unbearable and colonial voices went unheard, pilots rose to resist. We fight for every system's right to self-governance. The cause is just, the pay is decent, and nobody checks your papers.",
+        benefits: [
+            "2,000 cr bounty per Imperial vessel destroyed",
+            "Access to special Separatist stations",
+            "Access to black market equipment channels"
+        ],
+        warning: "Imperial forces will mark you as a traitor on sight."
+    },
+    MILITARY: {
+        title: "Military Forces",
+        slogan: "Honor, duty, excellence.",
+        description: "We are the first line of defense against the alien threat. While factions squabble over politics, we defend humanity against alien incursions and pirate clans. We don't care about your past—only whether you can handle yourself in a fight.",
+        benefits: [
+            "4,000 cr bounty per Alien vessel destroyed",
+            "1,000 cr bounty per Pirate vessel destroyed",
+            "Access to military-grade equipment"
+        ],
+        warning: "You will be expected to engage high-threat targets."
+    }
+};
+
+/**
  * UIFactionRecruitment - Handles faction recruitment menu rendering.
  */
 class UIFactionRecruitment {
@@ -29,116 +68,371 @@ class UIFactionRecruitment {
     }
 
     /**
-     * Returns a faction-specific "you are a member" message.
+     * Gets the cheapest faction ship for preview.
      * @param {string} factionKey - Faction identifier
-     * @returns {string} Member status message
+     * @returns {Object|null} Ship definition or null
+     * @private
      */
-    getFactionMemberMessage(factionKey) {
-        const messages = {
-            IMPERIAL: "You serve the Empire with honor",
-            SEPARATIST: "You fight for freedom and independence",
-            MILITARY: "You serve with honor and distinction",
-            POLICE: "You are a member of the Police Force"
-        };
-        return messages[factionKey] || "You are a faction member";
+    _getFactionShipDef(factionKey) {
+        if (typeof SHIP_DEFINITIONS === 'undefined') return null;
+
+        let cheapestShip = null;
+        let lowestPrice = Infinity;
+
+        for (const [shipName, shipDef] of Object.entries(SHIP_DEFINITIONS)) {
+            const isFactionShip = shipDef.aiRoles &&
+                shipDef.aiRoles.includes(factionKey);
+
+            if (!isFactionShip) continue;
+
+            if (shipDef.price && typeof shipDef.price === 'number' &&
+                shipDef.price > 0 && shipDef.price < lowestPrice) {
+                lowestPrice = shipDef.price;
+                cheapestShip = { name: shipName, def: shipDef };
+            }
+        }
+
+        return cheapestShip;
     }
 
     /**
-     * Draws a faction recruitment menu.
-     * @param {Player} player
-     * @param {string} factionName - Display name of the faction
-     * @param {string} factionKey - Faction key (IMPERIAL, SEPARATIST, MILITARY)
-     * @param {Array} themeColors - [[dark], [light]] theme colors
-     * @param {string} tagline - Faction tagline
-     * @param {string} bountyDescription - Description of faction bounties
-     * @param {Object} panelRect - {x, y, w, h}
-     * @param {number} headerHeight
-     * @param {StarSystem} system
+     * Draws the left panel content - ship preview for non-members, news for members.
+     * @private
      */
-    drawFactionRecruitmentMenu(player, factionName, factionKey, themeColors, tagline, bountyDescription, panelRect, headerHeight, system) {
-        this.factionRecruitmentButtonAreas = [];
-        if (!player) return;
+    _drawLeftPanel(player, factionKey, themeColors, leftX, leftW, contentY, contentH) {
+        const isMember = player.playerFaction === factionKey;
 
-        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
-        const contentY = pY + headerHeight + 10;
+        if (isMember) {
+            // Member view: Show faction news
+            this._drawMemberNewsSection(factionKey, themeColors, leftX, leftW, contentY, contentH);
+        } else {
+            // Non-member view: Show ship preview
+            this._drawShipPreviewSection(factionKey, themeColors, leftX, leftW, contentY, contentH, player);
+        }
+    }
 
+    /**
+     * Draws ship preview for non-members.
+     * @private
+     */
+    _drawShipPreviewSection(factionKey, themeColors, leftX, leftW, contentY, contentH, player) {
+        const factionShip = this._getFactionShipDef(factionKey);
+        const centerX = leftX + leftW / 2;
+        const centerY = contentY + contentH * 0.45;
+        const previewSize = Math.min(leftW, contentH) * 0.5;
+
+        // Section title
+        UIComponents.setTextStyle({ fill: themeColors[1], size: 18, align: [CENTER, TOP] });
+        text("Your Assigned Ship", centerX, contentY + 10);
+
+        if (factionShip && factionShip.def) {
+            // Draw rotating ship preview
+            UIComponents.drawRotatingShip(factionShip.def, centerX, centerY, previewSize, 0.002);
+
+            // Ship name
+            UIComponents.setTextStyle({ fill: [180, 220, 255], size: 20, align: [CENTER, TOP] });
+            text(factionShip.name, centerX, centerY + previewSize * 0.55);
+
+            // Warning about losing current ship
+            const warningY = contentY + contentH - 60;
+            UIComponents.setTextStyle({ fill: [255, 180, 100], size: 16, align: [CENTER, TOP] });
+            text("⚠ WARNING", centerX, warningY);
+            UIComponents.setTextStyle({ fill: [255, 150, 100], size: 16, align: [CENTER, TOP] });
+            text("Joining will replace your current ship.", centerX, warningY + 18);
+            if (player.shipTypeName) {
+                UIComponents.setTextStyle({ fill: [200, 150, 150], size: 16, align: [CENTER, TOP] });
+                text(`Your ${player.shipTypeName} will be lost.`, centerX, warningY + 34);
+            }
+        } else {
+            // Fallback if no ship found
+            UIComponents.setTextStyle({ fill: [150, 150, 150], size: 14, align: [CENTER, CENTER] });
+            text("Ship preview unavailable", centerX, centerY);
+        }
+    }
+
+    /**
+     * Draws faction news for members.
+     * @private
+     */
+    _drawMemberNewsSection(factionKey, themeColors, leftX, leftW, contentY, contentH) {
+        const centerX = leftX + leftW / 2;
+        const padding = 15;
+
+        // Section title
+        UIComponents.setTextStyle({ fill: themeColors[1], size: 18, align: [CENTER, TOP] });
+        text("Faction Intelligence", centerX, contentY + 10);
+
+        // Determine which news source this faction sees
+        const allowedSources = {
+            IMPERIAL: ["The Core Echo"],
+            MILITARY: ["The Core Echo"],
+            SEPARATIST: ["Free Flow Channel"]
+        };
+        const factionSources = allowedSources[factionKey] || ["The Core Echo"];
+
+        // Get faction-relevant news filtered by source
+        let newsItems = [];
+        if (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager) {
+            const allNews = GameGlobals.newsManager.getNewsItems() || [];
+            // Filter by allowed sources for this faction
+            newsItems = allNews.filter(item => {
+                const source = item.source || '';
+                return factionSources.some(s => source.includes(s));
+            }).slice(0, 5);
+        }
+
+        let newsY = contentY + 45;
+        const newsItemHeight = 45;
+        const newsWidth = leftW - padding * 2;
+
+        if (newsItems.length === 0) {
+            UIComponents.setTextStyle({ fill: [150, 150, 150], size: 14, align: [CENTER, CENTER] });
+            text("No recent intelligence reports.", centerX, contentY + contentH / 2);
+        } else {
+            for (const item of newsItems.slice(0, 5)) {
+                // News item background
+                fill(30, 35, 50, 180);
+                stroke(themeColors[0][0], themeColors[0][1], themeColors[0][2], 100);
+                strokeWeight(1);
+                rect(leftX + padding, newsY, newsWidth, newsItemHeight - 5, 3);
+                noStroke();
+
+                // Message body only (no headline or source shown)
+                UIComponents.setTextStyle({ fill: [200, 200, 220], size: 12, align: [LEFT, TOP] });
+                const message = (item.body || item.headline || 'No intel available').substring(0, 50);
+                text(message + ((item.body || item.headline || '').length > 50 ? '...' : ''), leftX + padding + 8, newsY + 12);
+
+                newsY += newsItemHeight;
+            }
+        }
+    }
+
+
+    /**
+     * Draws the right panel content - faction info, benefits, and status.
+     * @private
+     */
+    _drawRightPanel(player, factionKey, factionName, themeColors, rightX, rightW, contentY, contentH, system) {
+        const lore = FACTION_LORE[factionKey] || FACTION_LORE.MILITARY;
+        const isMember = player.playerFaction === factionKey;
         const isWanted = system?.isPlayerWanted ? system.isPlayerWanted() : false;
         const canJoin = player.canJoinFaction ? player.canJoinFaction(factionKey) : false;
+        const padding = 15;
+        let yPos = contentY + 10;
 
-        // Display faction info
-        UIComponents.setTextStyle({ fill: themeColors[1], size: 24, align: [CENTER, TOP] });
-        text(`${factionName} Recruitment Office`, pX + pW / 2, contentY);
+        // Faction title
+        UIComponents.setTextStyle({ fill: themeColors[1], size: 20, align: [LEFT, TOP] });
+        text(lore.title, rightX + padding, yPos);
+        yPos += 26;
 
-        UIComponents.setTextStyle({ fill: 255, size: 18 });
-        text(tagline, pX + pW / 2, contentY + 40);
+        // Slogan
+        UIComponents.setTextStyle({ fill: [180, 180, 200], size: 16, align: [LEFT, TOP] });
+        text(lore.slogan, rightX + padding, yPos);
+        yPos += 26;
 
-        // Show legal status
-        UIComponents.setTextStyle({ fill: 255, size: 20 });
-        text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX + pW / 2, contentY + 80);
-        const statusText = isWanted ? "WANTED" : "CLEAN";
-        const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
-        UIComponents.setTextStyle({ fill: statusColor, size: 24 });
-        text(statusText, pX + pW / 2, contentY + 110);
+        // Description (wrapped text)
+        UIComponents.setTextStyle({ fill: [200, 200, 255], size: 18, align: [LEFT, TOP] });
+        const maxDescWidth = rightW - padding * 2;
+        const wrappedDesc = this._wrapText(lore.description, maxDescWidth, 18);
+        const descLines = wrappedDesc.split('\n').slice(0, 4); // Limit lines
+        for (const line of descLines) {
+            text(line, rightX + padding, yPos);
+            yPos += 22;
+        }
+        yPos += 10;
 
-        // Show current faction status
-        if (player.playerFaction) {
-            UIComponents.setTextStyle({ fill: [255, 200, 100], size: 18 });
-            text(`Current Faction: ${player.playerFaction}`, pX + pW / 2, contentY + 140);
+        // Divider
+        stroke(themeColors[0][0], themeColors[0][1], themeColors[0][2], 150);
+        strokeWeight(1);
+        line(rightX + padding, yPos, rightX + rightW - padding, yPos);
+        noStroke();
+        yPos += 15;
+
+        // Benefits section
+        UIComponents.setTextStyle({ fill: themeColors[1], size: 18, align: [LEFT, TOP] });
+        text("BENEFITS", rightX + padding, yPos);
+        yPos += 26;
+
+        UIComponents.setTextStyle({ fill: [100, 255, 100], size: 16, align: [LEFT, TOP] });
+        for (const benefit of lore.benefits) {
+            text("• " + benefit, rightX + padding, yPos);
+            yPos += 22;
+        }
+        yPos += 10;
+
+        // Warning (for non-members)
+        if (!isMember && lore.warning) {
+            UIComponents.setTextStyle({ fill: [255, 180, 100], size: 14, align: [LEFT, TOP] });
+            text("⚠ " + lore.warning, rightX + padding, yPos);
+            yPos += 25;
         }
 
-        // Display bounty information if member
-        if (player.playerFaction === factionKey) {
-            UIComponents.setTextStyle({ fill: [100, 255, 100], size: 18 });
-            text(bountyDescription, pX + pW / 2, contentY + (player.playerFaction ? 170 : 150));
-        }
+        // Member status section
+        if (isMember) {
+            yPos += 5;
+            stroke(themeColors[0][0], themeColors[0][1], themeColors[0][2], 150);
+            strokeWeight(1);
+            line(rightX + padding, yPos, rightX + rightW - padding, yPos);
+            noStroke();
+            yPos += 15;
 
-        // Show faction kill progress
-        try {
-            const progress = player.getFactionKillsProgress && player.getFactionKillsProgress(factionKey);
-            if (progress) {
-                UIComponents.setTextStyle({
-                    fill: [themeColors[1][0] * 0.9, themeColors[1][1] * 0.9, themeColors[1][2] * 0.9],
-                    size: 16,
-                    align: [CENTER, TOP]
-                });
-                if (progress.nextThreshold) {
-                    text(`${factionKey} Kills: ${progress.kills} — ${progress.killsToNext} to ${progress.nextRank}`, pX + pW / 2, contentY + 240);
-                } else {
-                    text(`${factionKey} Kills: ${progress.kills} — Max Rank`, pX + pW / 2, contentY + 240);
-                }
+            UIComponents.setTextStyle({ fill: themeColors[1], size: 18, align: [LEFT, TOP] });
+            text("YOUR STATUS", rightX + padding, yPos);
+            yPos += 26;
+
+            // Active member or wanted status first
+            if (isWanted) {
+                UIComponents.setTextStyle({ fill: [255, 80, 80], size: 16, align: [LEFT, TOP] });
+                text(`• ⚠ WANTED in ${system?.name || 'this system'}`, rightX + padding, yPos);
+                yPos += 20;
+            } else {
+                UIComponents.setTextStyle({ fill: [100, 200, 100], size: 16, align: [LEFT, TOP] });
+                text("• ✓ Active Member", rightX + padding, yPos);
+                yPos += 20;
             }
-        } catch (e) { /* fail silently */ }
 
-        let btnW = pW * 0.5, btnH = 45;
-        let btnX = pX + pW / 2 - btnW / 2;
-        let btnY1 = contentY + (player.playerFaction === factionKey ? 200 : (player.playerFaction ? 170 : 150));
+            // Member message
+            UIComponents.setTextStyle({ fill: [100, 200, 255], size: 16, align: [LEFT, TOP] });
+            const memberMsg = this._getFactionMemberMessage(factionKey);
+            text("• " + memberMsg, rightX + padding, yPos);
+            yPos += 20;
 
-        // Fine payment if wanted
+            // Kill progress
+            try {
+                const progress = player.getFactionKillsProgress && player.getFactionKillsProgress(factionKey);
+                if (progress) {
+                    UIComponents.setTextStyle({ fill: [180, 180, 200], size: 16, align: [LEFT, TOP] });
+                    if (progress.nextThreshold) {
+                        text(`• Kills: ${progress.kills} (${progress.killsToNext} to ${progress.nextRank})`, rightX + padding, yPos);
+                    } else {
+                        text(`• Kills: ${progress.kills} — Maximum Rank Achieved`, rightX + padding, yPos);
+                    }
+                    yPos += 20;
+                }
+            } catch (e) { /* fail silently */ }
+        }
+
+        // Buttons section - positioned at bottom
+        this._drawActionButtons(player, factionKey, factionName, themeColors, rightX, rightW, contentY, contentH, isWanted, canJoin, isMember, system);
+    }
+
+    /**
+     * Draws action buttons at the bottom of right panel.
+     * @private
+     */
+    _drawActionButtons(player, factionKey, factionName, themeColors, rightX, rightW, contentY, contentH, isWanted, canJoin, isMember, system) {
+        const btnW = 180;
+        const btnH = 35;
+        const btnX = rightX + (rightW - btnW) / 2;
+        const btnY = contentY + contentH - 55;
+
+        // Fine payment button if wanted
         if (isWanted) {
-            let fineAmount = this.getFactionFineAmount(factionKey, system?.securityLevel);
+            const fineAmount = this.getFactionFineAmount(factionKey, system?.securityLevel);
             this.factionRecruitmentButtonAreas.push(
-                UIComponents.drawButton(btnX, btnY1, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0, 180, 0], [100, 255, 100], 5, { action: 'pay_fine', amount: fineAmount, faction: factionKey })
+                UIComponents.drawButton(btnX, btnY - 45, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0, 120, 0], [100, 255, 100], 4, { action: 'pay_fine', amount: fineAmount, faction: factionKey })
             );
-            btnY1 += btnH + 20;
         }
 
         // Join faction button or status message
         if (canJoin && !isWanted) {
             this.factionRecruitmentButtonAreas.push(
-                UIComponents.drawButton(btnX, btnY1, btnW, btnH, `Join ${factionName}`, themeColors[0], themeColors[1], 5, { action: 'join_faction', faction: factionKey })
+                UIComponents.drawButton(btnX, btnY, btnW, btnH, `Enlist Now`, themeColors[0], themeColors[1], 4, { action: 'join_faction', faction: factionKey })
             );
-        } else if (player.playerFaction === factionKey) {
-            UIComponents.setTextStyle({ fill: 255, size: 18, align: [CENTER, CENTER] });
-            text(this.getFactionMemberMessage(factionKey), pX + pW / 2, btnY1 + btnH / 2);
         } else if (player.playerFaction && player.playerFaction !== factionKey) {
-            UIComponents.setTextStyle({ fill: [255, 150, 150], size: 16, align: [CENTER, CENTER] });
-            text("You must leave your current faction first", pX + pW / 2, btnY1 + btnH / 2);
+            // Button to leave current faction
+            const rejectNames = {
+                IMPERIAL: "Imperial Navy",
+                SEPARATIST: "Separatist Cause",
+                MILITARY: "Military Forces"
+            };
+            const rejectLabel = `Reject ${rejectNames[player.playerFaction] || 'Faction'}`;
+            this.factionRecruitmentButtonAreas.push(
+                UIComponents.drawButton(btnX, btnY, btnW, btnH, rejectLabel, [120, 40, 40], [255, 150, 150], 4, { action: 'leave_faction', faction: player.playerFaction })
+            );
         } else if (isWanted) {
             UIComponents.setTextStyle({ fill: [255, 150, 150], size: 16, align: [CENTER, CENTER] });
-            text("Clear your legal status to join", pX + pW / 2, btnY1 + btnH / 2);
+            text("Clear legal status", btnX + btnW / 2, btnY + btnH / 2);
         }
+    }
 
-        // Back button
+    /**
+     * Returns a faction-specific member message.
+     * @private
+     */
+    _getFactionMemberMessage(factionKey) {
+        const messages = {
+            IMPERIAL: "You serve the Empire with honor",
+            SEPARATIST: "You fight for freedom and independence",
+            MILITARY: "You serve with honor and distinction"
+        };
+        return messages[factionKey] || "Active faction member";
+    }
+
+    /**
+     * Simple text wrapping utility.
+     * @private
+     */
+    _wrapText(str, maxWidth, fontSize) {
+        const words = str.split(' ');
+        let lines = [];
+        let currentLine = '';
+
+        textSize(fontSize);
+        for (const word of words) {
+            const testLine = currentLine ? currentLine + ' ' + word : word;
+            if (textWidth(testLine) > maxWidth && currentLine) {
+                lines.push(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        }
+        if (currentLine) lines.push(currentLine);
+        return lines.join('\n');
+    }
+
+    /**
+     * Draws a faction recruitment menu with split layout.
+     * @param {Player} player
+     * @param {string} factionName - Display name of the faction
+     * @param {string} factionKey - Faction key (IMPERIAL, SEPARATIST, MILITARY)
+     * @param {Array} themeColors - [[dark], [light]] theme colors
+     * @param {Object} panelRect - {x, y, w, h}
+     * @param {number} headerHeight
+     * @param {StarSystem} system
+     */
+    drawFactionRecruitmentMenu(player, factionName, factionKey, themeColors, panelRect, headerHeight, system) {
+        this.factionRecruitmentButtonAreas = [];
+        if (!player) return;
+
+        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+
+        // Layout constants (similar to ship detail screen)
+        const LAYOUT = {
+            leftWidthRatio: 0.45,
+            rightWidthRatio: 0.55,
+            leftPadding: 20,
+            columnGap: 20,
+            topPadding: 15,
+            bottomPadding: 20
+        };
+
+        // Calculate layout dimensions
+        const leftW = pW * LAYOUT.leftWidthRatio;
+        const rightW = pW * LAYOUT.rightWidthRatio - LAYOUT.columnGap;
+        const leftX = pX + LAYOUT.leftPadding;
+        const rightX = pX + leftW + LAYOUT.columnGap;
+        const contentY = pY + headerHeight + LAYOUT.topPadding;
+        const contentH = pH - headerHeight - LAYOUT.bottomPadding - 50; // Reserve space for back button
+
+        // Draw left panel (ship preview or news)
+        this._drawLeftPanel(player, factionKey, themeColors, leftX, leftW, contentY, contentH);
+
+        // Draw right panel (faction info, benefits, status)
+        this._drawRightPanel(player, factionKey, factionName, themeColors, rightX, rightW, contentY, contentH, system);
+
+        // Back button (centered at bottom)
         const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: 'back' });
         this.factionRecruitmentButtonAreas.push(backBtn);
     }
@@ -151,18 +445,15 @@ class UIFactionRecruitment {
      * @param {StarSystem} system
      */
     drawImperialRecruitmentMenu(player, panelRect, headerHeight, system) {
-        // Calculate theme colors from FACTION_COLORS if available
         const baseColor = (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.IMPERIAL : [255, 235, 180];
-        const darkColor = baseColor.map(c => Math.floor(c * 0.5)); // Darker version
-        const lightColor = baseColor; // Use base color as light version
+        const darkColor = baseColor.map(c => Math.floor(c * 0.5));
+        const lightColor = baseColor;
 
         this.drawFactionRecruitmentMenu(
             player,
             "Imperial Navy",
             "IMPERIAL",
             [darkColor, lightColor],
-            "Serve the Empire. Restore order to the galaxy.",
-            "Active Bounty: 2,000 cr per Separatist killed",
             panelRect,
             headerHeight,
             system
@@ -177,18 +468,15 @@ class UIFactionRecruitment {
      * @param {StarSystem} system
      */
     drawSeparatistRecruitmentMenu(player, panelRect, headerHeight, system) {
-        // Calculate theme colors from FACTION_COLORS if available
         const baseColor = (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.SEPARATIST : [128, 128, 0];
-        const darkColor = baseColor.map(c => Math.floor(c * 0.5)); // Darker version
-        const lightColor = baseColor; // Use base color as light version
+        const darkColor = baseColor.map(c => Math.floor(c * 0.5));
+        const lightColor = baseColor;
 
         this.drawFactionRecruitmentMenu(
             player,
             "Separatist Forces",
             "SEPARATIST",
             [darkColor, lightColor],
-            "Fight for freedom. Break the chains of tyranny.",
-            "Active Bounty: 2,000 cr per Imperial killed",
             panelRect,
             headerHeight,
             system
@@ -207,9 +495,7 @@ class UIFactionRecruitment {
             player,
             "Military Forces",
             "MILITARY",
-            [[50, 60, 70], [100, 120, 140]],
-            "Honor, duty, excellence. Defend the frontier.",
-            "Active Bounty: 4,000 cr per Alien killed, 1,000 cr per Pirate killed",
+            [[50, 60, 70], [160, 170, 180]],
             panelRect,
             headerHeight,
             system
@@ -245,6 +531,13 @@ class UIFactionRecruitment {
             if (area.action === 'join_faction' && player) {
                 return {
                     action: 'join_faction',
+                    faction: area.faction
+                };
+            }
+
+            if (area.action === 'leave_faction' && player) {
+                return {
+                    action: 'leave_faction',
                     faction: area.faction
                 };
             }
@@ -323,6 +616,38 @@ class UIFactionRecruitment {
             };
             if (typeof addMessageFn === 'function') {
                 addMessageFn(failTextByFaction[factionKey] || 'Failed to join faction.', [220, 20, 60]);
+            }
+            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            return false;
+        }
+    }
+
+    /**
+     * Processes leaving a faction.
+     * @param {Player} player
+     * @param {string} factionKey
+     * @param {Function} addMessageFn
+     * @returns {boolean} Success
+     */
+    processLeaveFaction(player, factionKey, addMessageFn) {
+        if (!player) return false;
+
+        const left = player.leaveFaction ? player.leaveFaction() : false;
+        if (left) {
+            const msgByFaction = {
+                IMPERIAL: 'You have left the Imperial Navy.',
+                SEPARATIST: 'You have left the Separatist Forces.',
+                MILITARY: 'You have left the Military Forces.'
+            };
+            if (typeof addMessageFn === 'function') {
+                addMessageFn(msgByFaction[factionKey] || 'You have left your faction.', [255, 180, 100]);
+            }
+            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+            if (typeof saveGame === 'function') saveGame();
+            return true;
+        } else {
+            if (typeof addMessageFn === 'function') {
+                addMessageFn('Failed to leave faction.', [220, 20, 60]);
             }
             if (typeof soundManager !== 'undefined') soundManager.playSound('error');
             return false;

@@ -1369,6 +1369,23 @@ class UIManager {
                 }
                 return true;
             }
+            if (area.action === 'leave_faction' && player) {
+                const left = player.leaveFaction ? player.leaveFaction() : false;
+                if (left) {
+                    const msgByFaction = {
+                        IMPERIAL: 'You have left the Imperial Navy.',
+                        SEPARATIST: 'You have left the Separatist Forces.',
+                        MILITARY: 'You have left the Military Forces.'
+                    };
+                    this.addMessage(msgByFaction[area.faction] || 'You have left your faction.', 'orange');
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                    if (typeof saveGame === 'function') saveGame();
+                } else {
+                    this.addMessage('Failed to leave faction.', 'crimson');
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                }
+                return true;
+            }
         }
         return false;
     }
