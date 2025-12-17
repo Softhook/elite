@@ -34,6 +34,7 @@ class UIStationMenus {
         this.shipDetailButtons = {};
         this.availableShipsList = []; // List of filtered ships for prev/next navigation
         this.currentShipIndex = -1;   // Index of currently viewed ship in availableShipsList
+        this._fullFilteredShips = []; // Full list of filtered ships (not just visible)
 
         // Upgrades areas
         this.upgradeListAreas = [];
@@ -49,6 +50,7 @@ class UIStationMenus {
         this.weaponDetailButtons = {};
         this.availableWeaponsList = []; // List of filtered weapons for prev/next navigation
         this.currentWeaponIndex = -1;   // Index of currently viewed weapon in availableWeaponsList
+        this._fullFilteredWeapons = []; // Full list of filtered weapons (not just visible)
 
         // Slot picker popup state
         this.showingSlotPicker = false;
@@ -576,6 +578,9 @@ class UIStationMenus {
             return shipTechLevel <= systemTechLevel;
         }) : [];
 
+        // Store full filtered list for navigation (not just visible items)
+        this._fullFilteredShips = availableShips;
+
         // Draw welcome text (single line)
         const systemName = system?.name || "Unknown";
         const welcomeText = this._getShipyardWelcomeText(systemTechLevel, economyType, systemName);
@@ -704,6 +709,9 @@ class UIStationMenus {
             const weaponTechLevel = weapon.techLevel || Math.min(5, Math.ceil((damage * weapon.price) / 5000));
             return weaponTechLevel <= systemTechLevel;
         }) : [];
+
+        // Store full filtered list for navigation (not just visible items)
+        this._fullFilteredWeapons = availableWeapons;
 
         // Draw welcome text (single line)
         const systemName = system?.name || "Unknown";
@@ -1437,21 +1445,40 @@ class UIStationMenus {
             const area = this.shipyardListAreas[i];
             if (!UIComponents.isClickInArea(mx, my, area)) continue;
 
-            // Store the available ships list for prev/next navigation
-            this.availableShipsList = this.shipyardListAreas.map(a => ({
-                shipTypeKey: a.shipTypeKey,
-                shipName: a.shipName,
-                shipDef: (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[a.shipTypeKey] : null,
-                price: a.price,
-                originalPrice: a.originalPrice,
-                canAfford: a.canAfford,
-                isCurrentShip: a.isCurrentShip,
-                returnState: returnState
-            }));
-            this.currentShipIndex = i;
+            // Build full navigation list from ALL filtered ships (not just visible)
+            // This ensures arrow key navigation goes through the complete list
+            const currentShipType = player.shipTypeName || "Vulture";
+            let currentShipDef = null;
+            if (typeof SHIP_DEFINITIONS !== 'undefined') {
+                currentShipDef = SHIP_DEFINITIONS[currentShipType] ||
+                    Object.values(SHIP_DEFINITIONS).find(s => s.name === currentShipType);
+            }
+            const currentShipValue = currentShipDef ? Math.floor(currentShipDef.price * 0.7) : 0;
+
+            this.availableShipsList = this._fullFilteredShips.map(([shipKey, shipData]) => {
+                const originalPrice = shipData.price;
+                const finalPrice = originalPrice - currentShipValue;
+                const canAfford = finalPrice <= 0 || player.credits >= finalPrice;
+                const isCurrentShip = shipData.name === currentShipType ||
+                    (currentShipDef && shipData.name === currentShipDef.name);
+                return {
+                    shipTypeKey: shipKey,
+                    shipName: shipData.name,
+                    shipDef: shipData,
+                    price: finalPrice,
+                    originalPrice: originalPrice,
+                    canAfford: canAfford,
+                    isCurrentShip: isCurrentShip,
+                    returnState: returnState
+                };
+            });
+
+            // Find the correct index in the FULL list based on the clicked item
+            const clickedShipKey = area.shipTypeKey;
+            this.currentShipIndex = this._fullFilteredShips.findIndex(([key]) => key === clickedShipKey);
 
             // Store selected ship data for the detail screen
-            this.selectedShipForDetail = this.availableShipsList[i];
+            this.selectedShipForDetail = this.availableShipsList[this.currentShipIndex];
 
             // Navigate to ship detail screen
             if (typeof gameStateManager !== 'undefined') {
@@ -1496,7 +1523,7 @@ class UIStationMenus {
             topPadding: 10,
             bottomPadding: 60,
             previewSizeRatio: 0.6,
-            priceBottomOffset: 130,
+            priceBottomOffset: 110,
             buttonsBottomOffset: 80
         };
 
@@ -1951,7 +1978,7 @@ class UIStationMenus {
             columnGap: 40,
             topPadding: 10,
             bottomPadding: 60,
-            priceBottomOffset: 130,
+            priceBottomOffset: 110,
             buttonsBottomOffset: 80
         };
 
@@ -2434,16 +2461,20 @@ class UIStationMenus {
             const area = this.upgradeListAreas[i];
             if (!UIComponents.isClickInArea(mx, my, area)) continue;
 
-            // Store the available weapons list for prev/next navigation
-            this.availableWeaponsList = this.upgradeListAreas.map(a => ({
-                weaponDef: a.upgrade,
-                price: a.upgrade.price,
-                canAfford: a.canAfford
+            // Build full navigation list from ALL filtered weapons (not just visible)
+            // This ensures arrow key navigation goes through the complete list
+            this.availableWeaponsList = this._fullFilteredWeapons.map(weapon => ({
+                weaponDef: weapon,
+                price: weapon.price,
+                canAfford: player.credits >= weapon.price
             }));
-            this.currentWeaponIndex = i;
+
+            // Find the correct index in the FULL list based on the clicked item
+            const clickedWeapon = area.upgrade;
+            this.currentWeaponIndex = this._fullFilteredWeapons.findIndex(w => w.name === clickedWeapon.name);
 
             // Store selected weapon data for the detail screen
-            this.selectedWeaponForDetail = this.availableWeaponsList[i];
+            this.selectedWeaponForDetail = this.availableWeaponsList[this.currentWeaponIndex];
 
             // Navigate to weapon detail screen
             if (typeof gameStateManager !== 'undefined') {
