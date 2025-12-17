@@ -572,15 +572,15 @@ const Draw3D = {
     },
 
     /**
-     * Draw a hemisphere/dome (half sphere)
+     * Draw a hemisphere/dome (half sphere) with angle-based extrusion
      * @param {number} x - Center X
      * @param {number} y - Center Y
      * @param {number} radius - Dome radius
      * @param {number} segments - Number of segments (quality)
      * @param {color} col - Base color
-     * @param {number} angle - Extrusion angle
+     * @param {number} angle - Extrusion angle (direction the dome rises toward)
      * @param {number} sunAngle - Sun angle for shading
-     * @param {boolean} inverted - If true, dome points down instead of up
+     * @param {boolean} inverted - If true, dome is concave (dish) instead of convex
      */
     drawDome: function (x, y, radius, segments, col, angle, sunAngle, inverted = false) {
         if (_renderQueue !== null) {
@@ -592,58 +592,86 @@ const Draw3D = {
             return;
         }
 
+        // Use depth vector for angle-based extrusion (dome height direction)
+        const domeHeight = radius * 0.6; // Height of the dome
+        const dv = this.getDepthVector(domeHeight, angle);
+        const depthDir = inverted ? -1 : 1; // Inverted = dish (concave, against depth), normal = dome (convex, into depth)
+
         const cc = getColorComponents(col);
         const heightSegments = Math.max(3, Math.floor(segments / 2));
         const radialSegments = Math.max(6, segments);
         const angleStep = TWO_PI / radialSegments;
         const heightStep = (PI / 2) / heightSegments;
-        const flipY = inverted ? -1 : 1;
 
         strokeWeight(0.5);
 
-        // Draw dome segments from bottom to top
+        // Draw base/rim circle at specified position (top of dome, no offset)
+        // For inverted dome, this is the outer rim; for normal dome, this is the base
+        fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
+        stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
+        beginShape();
+        for (let i = 0; i < radialSegments; i++) {
+            const theta = i * angleStep;
+            // Rim stays at (x, y) - no dv offset for rim
+            vertex(x + Math.cos(theta) * radius, y + Math.sin(theta) * radius);
+        }
+        endShape(CLOSE);
+
+        // Draw dome segments from rim toward center/tip
         for (let h = 0; h < heightSegments; h++) {
             const phi1 = h * heightStep;
             const phi2 = (h + 1) * heightStep;
             const r1 = Math.cos(phi1) * radius;
             const r2 = Math.cos(phi2) * radius;
-            const y1 = -Math.sin(phi1) * radius * flipY;
-            const y2 = -Math.sin(phi2) * radius * flipY;
+            // Height offset: starts at 0 (rim) and increases toward tip
+            const t1 = Math.sin(phi1); // 0 to 1
+            const t2 = Math.sin(phi2);
+            // For inverted (dish): project INTO depth; for normal (dome): project AGAINST depth
+            const h1x = dv.x * t1 * depthDir;
+            const h1y = dv.y * t1 * depthDir;
+            const h2x = dv.x * t2 * depthDir;
+            const h2y = dv.y * t2 * depthDir;
 
             // Draw ring of faces at this height
-            for (let r = 0; r < radialSegments; r++) {
-                const theta1 = r * angleStep;
-                const theta2 = (r + 1) * angleStep;
+            for (let rIdx = 0; rIdx < radialSegments; rIdx++) {
+                const theta1 = rIdx * angleStep;
+                const theta2 = (rIdx + 1) * angleStep;
 
-                // Calculate vertices
-                const x1 = x + Math.cos(theta1) * r1;
-                const z1 = y + Math.sin(theta1) * r1 + y1;
-                const x2 = x + Math.cos(theta2) * r1;
-                const z2 = y + Math.sin(theta2) * r1 + y1;
-                const x3 = x + Math.cos(theta2) * r2;
-                const z3 = y + Math.sin(theta2) * r2 + y2;
-                const x4 = x + Math.cos(theta1) * r2;
-                const z4 = y + Math.sin(theta1) * r2 + y2;
+                // Outer ring vertices (closer to rim)
+                const x1 = x + Math.cos(theta1) * r1 + h1x;
+                const y1 = y + Math.sin(theta1) * r1 + h1y;
+                const x2 = x + Math.cos(theta2) * r1 + h1x;
+                const y2 = y + Math.sin(theta2) * r1 + h1y;
 
-                // Calculate face normal for lighting
+                // Inner ring vertices (closer to center/tip)
+                const x3 = x + Math.cos(theta2) * r2 + h2x;
+                const y3 = y + Math.sin(theta2) * r2 + h2y;
+                const x4 = x + Math.cos(theta1) * r2 + h2x;
+                const y4 = y + Math.sin(theta1) * r2 + h2y;
+
+                // Face normal for lighting (approximate)
                 const avgTheta = (theta1 + theta2) / 2;
                 const avgPhi = (phi1 + phi2) / 2;
-                const faceAngle = avgTheta;
-                const b = getShading(faceAngle - sunAngle) * (0.8 + Math.sin(avgPhi) * 0.4);
+                // Mix radial shading with height-based brightness
+                const radialShade = getShading(avgTheta - sunAngle);
+                const heightShade = 0.7 + Math.sin(avgPhi) * 0.3;
+                const b = radialShade * heightShade;
 
                 fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
                 stroke(cc.r * b * 0.7, cc.g * b * 0.7, cc.b * b * 0.7, cc.a);
 
-                // Draw quad face
+                // Draw quad face (or triangle at tip)
                 beginShape();
-                vertex(x1, z1);
-                vertex(x2, z2);
+                vertex(x1, y1);
+                vertex(x2, y2);
                 if (h < heightSegments - 1) {
-                    vertex(x3, z3);
-                    vertex(x4, z4);
+                    vertex(x3, y3);
+                    vertex(x4, y4);
                 } else {
-                    // Top cap - triangle
-                    vertex(x, y + y2);
+                    // Tip/center - single point at full depth
+                    const tipX = x + dv.x * depthDir;
+                    const tipY = y + dv.y * depthDir;
+                    vertex(tipX, tipY);
                 }
                 endShape(CLOSE);
             }

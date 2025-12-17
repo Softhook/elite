@@ -2520,92 +2520,12 @@ function drawPathfinderSurvey(s, thrusting = false, angle = 0, localSunAngle = -
     // Draw 3D base shape using standard wedge extrusion
     drawGenericShip(def, s, thrusting, angle, localSunAngle);
 
-    // --- 3D Scanner Dish at Front ---
-    // Draw as extruded ring shape for 3D effect
-    let dishX = r * 0.75;
-    let dishRadius = r * 0.35;
-    let dishDepth = r * 0.12;
+    // 3D depth angle - pass ship's angle so extrusion goes world-space down
+    let depthAngle = angle;
 
-    // Back of dish (darker)
-    noStroke();
-    fill(100, 110, 140);
-    beginShape();
-    for (let a = -HALF_PI; a <= HALF_PI; a += 0.15) {
-        let dr = dishRadius * cos(a * 0.7); // Curved dish shape
-        vertex(dishX + dishDepth, sin(a) * dishRadius);
-    }
-    endShape(CLOSE);
-
-    // Dish rim/edge (medium)
-    fill(140, 150, 180);
-    beginShape();
-    for (let a = -HALF_PI; a <= HALF_PI; a += 0.15) {
-        vertex(dishX + dishDepth * 0.3, sin(a) * dishRadius);
-    }
-    for (let a = HALF_PI; a >= -HALF_PI; a -= 0.15) {
-        vertex(dishX + dishDepth, sin(a) * dishRadius * 0.85);
-    }
-    endShape(CLOSE);
-
-    // Dish front face (bright)
-    fill(180, 190, 220);
-    beginShape();
-    for (let a = -HALF_PI; a <= HALF_PI; a += 0.15) {
-        vertex(dishX, sin(a) * dishRadius);
-    }
-    endShape(CLOSE);
-
-    // Dish center receiver (small 3D cylinder)
-    fill(60, 70, 100);
-    ellipse(dishX + dishDepth * 0.5, 0, r * 0.08, r * 0.12);
-    fill(200, 210, 230);
-    ellipse(dishX, 0, r * 0.06, r * 0.1);
-
-    // --- 3D Ring Elements (replacing flat green blocks) ---
-    // These are sensor rings on the wings
-    let ringPositions = [
-        { x: -r * 0.2, y: r * 0.55 },
-        { x: -r * 0.2, y: -r * 0.55 }
-    ];
-
-    for (let pos of ringPositions) {
-        // Ring back (extruded)
-        let ringRad = r * 0.18;
-        let ringDepth = r * 0.08;
-
-        // Ring outer edge (3D)
-        fill(20, 55, 35);
-        beginShape();
-        for (let a = 0; a < TWO_PI; a += 0.3) {
-            vertex(pos.x + ringDepth + cos(a) * ringRad, pos.y + sin(a) * ringRad);
-        }
-        endShape(CLOSE);
-
-        // Ring side (connector)
-        fill(35, 85, 55);
-        beginShape();
-        vertex(pos.x + ringDepth, pos.y - ringRad);
-        vertex(pos.x, pos.y - ringRad);
-        vertex(pos.x, pos.y + ringRad);
-        vertex(pos.x + ringDepth, pos.y + ringRad);
-        endShape(CLOSE);
-
-        // Ring front face
-        fill(50, 120, 75);
-        beginShape();
-        for (let a = 0; a < TWO_PI; a += 0.3) {
-            vertex(pos.x + cos(a) * ringRad, pos.y + sin(a) * ringRad);
-        }
-        endShape(CLOSE);
-
-        // Ring center (hollow)
-        fill(15, 40, 25);
-        ellipse(pos.x, pos.y, ringRad * 0.7, ringRad * 0.7);
-
-        // Ring glow
-        fill(100, 255, 150, 50);
-        ellipse(pos.x, pos.y, ringRad * 0.5, ringRad * 0.5);
-    }
+    // --- Large Scanner Dome at widest part of ship ---
+    let dishCol = color(150, 165, 200);
+    Draw3D.drawDome(-r * 0.5, 0, r * 0.35, 12, dishCol, depthAngle, localSunAngle, true);
 }
 
 // --- Initialization Logic ---
