@@ -718,18 +718,20 @@ const Draw3D = {
         const dv = this.getDepthVector(height, angle);
         const cc = getColorComponents(col);
         const angleStep = TWO_PI / segments;
-        const tipX = x;
-        const tipY = y - height;
+
+        // Base at (x, y), tip projects along depth vector (consistent with prism/box)
+        const tipX = x + dv.x;
+        const tipY = y + dv.y;
 
         strokeWeight(1);
 
-        // Draw base
-        fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
-        stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
+        // Draw base at (x, y) - top face, no offset
+        fill(col);
+        stroke(cc.r * 0.8, cc.g * 0.8, cc.b * 0.8, cc.a);
         beginShape();
         for (let i = 0; i < segments; i++) {
             const ang = i * angleStep - PI / 2;
-            vertex(x + Math.cos(ang) * baseRadius + dv.x, y + Math.sin(ang) * baseRadius + dv.y);
+            vertex(x + Math.cos(ang) * baseRadius, y + Math.sin(ang) * baseRadius);
         }
         endShape(CLOSE);
 
@@ -756,8 +758,8 @@ const Draw3D = {
 
                 // Triangle face from base edge to tip
                 beginShape();
-                vertex(baseX1 + dv.x, baseY1 + dv.y);
-                vertex(baseX2 + dv.x, baseY2 + dv.y);
+                vertex(baseX1, baseY1);
+                vertex(baseX2, baseY2);
                 vertex(tipX, tipY);
                 endShape(CLOSE);
             }
