@@ -165,7 +165,7 @@ class UIFactionRecruitment {
 
         if (factionShip && factionShip.def) {
             // Draw rotating ship preview
-            UIComponents.drawRotatingShip(factionShip.def, centerX, centerY, previewSize, 0.002);
+            UIComponents.drawRotatingShip(factionShip.def, centerX, centerY, previewSize, 0.0008);
 
             // Ship name
             UIComponents.setTextStyle({ fill: [180, 220, 255], size: 20, align: [CENTER, TOP] });
