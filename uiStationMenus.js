@@ -452,6 +452,72 @@ class UIStationMenus {
     }
 
     /**
+     * Generates welcome text for the shipyard based on tech level, economy type, and system name.
+     * @param {number} techLevel - System's tech level
+     * @param {string} economyType - System's economy type
+     * @param {string} systemName - System's name
+     * @returns {string} Single line welcome message
+     */
+    _getShipyardWelcomeText(techLevel, economyType, systemName) {
+        const name = systemName || "this station";
+
+        if (economyType === "Imperial") {
+            return techLevel >= 5
+                ? `Welcome to ${name}. We stock the finest Imperial vessels here—nothing but the best for the Empire.`
+                : `Here at ${name}, we carry Imperial craft up to tech ${techLevel}. For capital ships, visit a core Imperial world.`;
+        } else if (economyType === "Separatist") {
+            return techLevel >= 5
+                ? `Welcome to ${name}. We've got the full Separatist fleet available—built for those who value independence.`
+                : `${name} shipworks, tech ${techLevel}. We build them tough here—for heavier craft, try our main Separatist yards.`;
+        } else if (economyType === "Military") {
+            return techLevel >= 5
+                ? `${name} Military Yards. We stock everything from patrol craft to heavy destroyers.`
+                : `${name} Military Shipyard, tech ${techLevel}. Solid hardware here—classified vessels require higher clearance.`;
+        } else {
+            if (techLevel <= 2) {
+                return `Welcome to ${name}. We carry basic vessels here—for more advanced ships, try a higher-tech system.`;
+            } else if (techLevel <= 4) {
+                return `${name} shipyard. We've got a good selection up to tech ${techLevel}—for cutting-edge craft, head to a tech 5 world.`;
+            } else {
+                return `Welcome to ${name}. We stock all the latest vessels here—take your time browsing.`;
+            }
+        }
+    }
+
+    /**
+     * Generates welcome text for the upgrades menu based on tech level, economy type, and system name.
+     * @param {number} techLevel - System's tech level
+     * @param {string} economyType - System's economy type
+     * @param {string} systemName - System's name
+     * @returns {string} Single line welcome message
+     */
+    _getUpgradesWelcomeText(techLevel, economyType, systemName) {
+        const name = systemName || "this station";
+
+        if (economyType === "Military") {
+            return techLevel >= 5
+                ? `${name} Armoury. We carry the full military weapons catalog here.`
+                : `${name} Military Arms, tech ${techLevel}. Good hardware—advanced ordnance available at higher-tech bases.`;
+        } else if (economyType === "Imperial") {
+            return techLevel >= 5
+                ? `${name} Imperial Arms. We stock the finest weapons the Empire has to offer.`
+                : `${name} Imperial Arms, tech ${techLevel}. Quality weapons here—prestige pieces in the core worlds.`;
+        } else if (economyType === "Separatist") {
+            return techLevel >= 5
+                ? `${name} Revolutionary Arms. We've got everything you need for the cause.`
+                : `${name} Separatist Armoury, tech ${techLevel}. Solid gear—heavier ordnance at our main bases.`;
+        } else {
+            if (techLevel <= 2) {
+                return `${name} weapons dealer. We carry basic armaments—for advanced weapons, try a higher-tech system.`;
+            } else if (techLevel <= 4) {
+                return `${name} upgrades, tech ${techLevel}. Reliable gear here—for premium weapons, visit a tech 5 world.`;
+            } else {
+                return `${name} armoury. We stock all the latest weapons—browse at your leisure.`;
+            }
+        }
+    }
+
+    /**
      * Draws the Shipyard Menu.
      * @param {Player} player
      * @param {Object} panelRect - {x, y, w, h}
@@ -486,26 +552,42 @@ class UIStationMenus {
 
         const currentShipValue = currentShipDef ? Math.floor(currentShipDef.price * 0.7) : 0;
 
-        // Show trade-in info at top
-        UIComponents.setTextStyle({ fill: [180, 220, 255], size: 20, align: [LEFT, TOP] });
-        text(`Your current ship: ${currentShipType} (Trade-in value: ${currentShipValue} credits)`, pX + 20, pY + headerHeight);
-
         // FILTER SHIPS based on system properties
         const systemTechLevel = system?.techLevel || 1;
-        const isMillitarySystem = system?.economyType === "Military";
+        const economyType = system?.economyType || "";
+        const isImperialSystem = economyType === "Imperial";
+        const isSeparatistSystem = economyType === "Separatist";
+        const isMillitarySystem = economyType === "Military";
 
         const availableShips = typeof SHIP_DEFINITIONS !== 'undefined' ? Object.entries(SHIP_DEFINITIONS).filter(([shipKey, shipData]) => {
             // Never show alien ships
             if (shipData.aiRoles && shipData.aiRoles.includes("ALIEN")) return false;
-            // Only show military ships in military systems
-            if (shipData.aiRoles && shipData.aiRoles.includes("MILITARY")) return isMillitarySystem;
+
+            // Faction-specific ship filtering
+            // Imperial ships only in Imperial systems
+            if (shipData.aiRoles?.includes("IMPERIAL") && !isImperialSystem) return false;
+            // Separatist ships only in Separatist systems
+            if (shipData.aiRoles?.includes("SEPARATIST") && !isSeparatistSystem) return false;
+            // Military ships only in Military systems
+            if (shipData.aiRoles?.includes("MILITARY") && !isMillitarySystem) return false;
+
             // Tech level filtering
             const shipTechLevel = shipData.techLevel || Math.min(5, Math.ceil(shipData.price / 40000));
             return shipTechLevel <= systemTechLevel;
         }) : [];
 
-        // List ships
-        let rowH = 40, startY = pY + headerHeight + 30, visibleRows = floor((pH - headerHeight - 90) / rowH);
+        // Draw welcome text (single line)
+        const systemName = system?.name || "Unknown";
+        const welcomeText = this._getShipyardWelcomeText(systemTechLevel, economyType, systemName);
+        UIComponents.setTextStyle({ fill: [255, 230, 150], size: 16, align: [LEFT, TOP] });
+        text(welcomeText, pX + 20, pY + headerHeight);
+
+        // Show trade-in info
+        UIComponents.setTextStyle({ fill: [180, 220, 255], size: 16, align: [LEFT, TOP] });
+        text(`Your ship: ${currentShipType} (Trade-in: ${currentShipValue} cr)`, pX + 20, pY + headerHeight + 22);
+
+        // List ships - adjusted startY for welcome text
+        let rowH = 40, startY = pY + headerHeight + 50, visibleRows = floor((pH - headerHeight - 100) / rowH);
         let totalRows = availableShips.length;
         let scrollAreaH = visibleRows * rowH;
         this.shipyardScrollMax = max(0, totalRows - visibleRows);
@@ -614,6 +696,7 @@ class UIStationMenus {
 
         // FILTER UPGRADES based on system tech level
         const systemTechLevel = system?.techLevel || 1;
+        const economyType = system?.economyType || "";
         const availableWeapons = typeof WEAPON_UPGRADES !== 'undefined' ? WEAPON_UPGRADES.filter(weapon => {
             // Use weapon's explicit techLevel, or calculate from damage/price
             // For barrier weapons (no damage property), use price-based calculation with fallback
@@ -622,9 +705,15 @@ class UIStationMenus {
             return weaponTechLevel <= systemTechLevel;
         }) : [];
 
+        // Draw welcome text (single line)
+        const systemName = system?.name || "Unknown";
+        const welcomeText = this._getUpgradesWelcomeText(systemTechLevel, economyType, systemName);
+        UIComponents.setTextStyle({ fill: [255, 200, 150], size: 16, align: [LEFT, TOP] });
+        text(welcomeText, pX + 20, pY + headerHeight);
+
         // Continue with upgrade menu drawing
-        let rowH = 40, startY = pY + headerHeight + 20;
-        let visibleRows = floor((pH - startY - 60) / rowH);
+        let rowH = 40, startY = pY + headerHeight + 28;
+        let visibleRows = floor((pH - headerHeight - 80) / rowH);
         let totalRows = availableWeapons.length;
         let scrollAreaH = visibleRows * rowH;
         this.upgradeScrollMax = max(0, totalRows - visibleRows);
