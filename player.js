@@ -1290,10 +1290,7 @@ class Player {
         rotate(this.angle);
         drawFunc(this.size, this.isThrusting, this.angle, localSunAngle);
 
-        // Draw turret if player has turret weapon
-        if (this.currentWeapon && this.currentWeapon.type === WEAPON_TYPE.TURRET) {
-            this.drawTurret();
-        }
+        // Turret drawing removed - bullets fire without visible turret
         pop();
 
         // Draw thrust particles ON TOP of the ship

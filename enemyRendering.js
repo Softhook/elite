@@ -382,10 +382,7 @@ class EnemyRendering {
         try { drawFunc(this.size, showThrust, this.angle, localSunAngle); } // Call specific draw function
         catch (e) { console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); ellipse(0, 0, this.size, this.size); } // Fallback
 
-        // Draw turret if enemy has turret weapon
-        if (this.currentWeapon && this.currentWeapon.type === WEAPON_TYPE.TURRET) {
-            this.drawTurret();
-        }
+        // Turret drawing removed - bullets fire without visible turret
 
         // Draw tangle effect if active
         if (this.dragMultiplier > 1.0) {
