@@ -243,9 +243,17 @@ class Mission {
     // UPDATE & MONITORING
     // ═══════════════════════════════════════════════════════════════════════════
 
-    /** Per-frame update called from Player.update to monitor special mission targets. */
+    /** 
+     * Throttled update called from Player.update to monitor special mission targets. 
+     * Only performs expensive checks once per second instead of every frame.
+     */
     update(currentSystem) {
         if (this.status !== 'Active') return;
+
+        // Throttle updates to once per second (1000ms) - mission state rarely changes faster
+        const now = (typeof millis === 'function') ? millis() : Date.now();
+        if (this._lastUpdateTime && (now - this._lastUpdateTime) < 1000) return;
+        this._lastUpdateTime = now;
 
         this._ensureRuntimeLinked(currentSystem);
 
@@ -318,6 +326,13 @@ class Mission {
     _searchGalaxyForTarget() {
         if (typeof galaxy === 'undefined' || !Array.isArray(galaxy.systems)) return null;
 
+        // Early exit: Don't scan all systems if we know the target is in a specific system
+        // and the player is not there. Only do full galaxy scan when player reaches target system.
+        if (typeof this.spawnSystemIndex === 'number' &&
+            typeof player !== 'undefined' && player?.currentSystem?.index !== this.spawnSystemIndex) {
+            return null; // Not in target system, skip expensive galaxy-wide search
+        }
+
         for (const sys of galaxy.systems) {
             if (!sys?.spaceObjects) continue;
             const so = sys.spaceObjects.find(o => o?.id === this.targetObjectId);
@@ -352,22 +367,24 @@ class Mission {
         this._linkSabotageTarget(currentSystem);
     }
 
-    /** Link assassination target enemy reference */
+    /** Link assassination target enemy reference - uses O(1) Map lookup */
     _linkTargetEnemy(currentSystem) {
         if (this._targetEnemyRef || !this._targetEnemyId) return;
 
-        const enemies = currentSystem.enemies || [];
-        const found = enemies.find(e => e?.id === this._targetEnemyId);
+        // Use O(1) Map lookup if available, fallback to O(n) array search
+        const found = currentSystem.enemiesById?.get(this._targetEnemyId)
+            || currentSystem.enemies?.find(e => e?.id === this._targetEnemyId);
         if (found) this._targetEnemyRef = found;
     }
 
-    /** Link guard enemy references */
+    /** Link guard enemy references - uses O(1) Map lookup */
     _linkGuards(currentSystem) {
         if (!this._guardIds?.length || this._guardRefs?.length > 0) return;
 
-        const enemies = currentSystem.enemies || [];
         for (const gid of this._guardIds) {
-            const guard = enemies.find(e => e?.id === gid);
+            // Use O(1) Map lookup if available, fallback to O(n) array search
+            const guard = currentSystem.enemiesById?.get(gid)
+                || currentSystem.enemies?.find(e => e?.id === gid);
             if (guard) {
                 this._guardRefs.push(guard);
                 if (!guard.principal && this._targetEnemyRef) {

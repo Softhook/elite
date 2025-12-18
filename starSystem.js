@@ -286,6 +286,7 @@ class StarSystem {
         this.planets = [];
         this.asteroids = [];
         this.enemies = [];
+        this.enemiesById = new Map(); // Fast O(1) lookups by enemy ID
 
         // Cache diagonal distance for spawn calculations
         this._cachedDiagonalDist = null;
@@ -1106,7 +1107,8 @@ class StarSystem {
      */
     enterSystem(player) {
         this.discover();
-        this.enemies = []; this.projectiles = []; this.mines = []; this.asteroids = []; this.harpoons = [];
+        this.enemies = []; this.enemiesById.clear(); // Clear both array and Map
+        this.projectiles = []; this.mines = []; this.asteroids = []; this.harpoons = [];
         // Reset timers when entering
         this.enemySpawnTimer = 0; this.asteroidSpawnTimer = 0;
 
@@ -1924,6 +1926,10 @@ class StarSystem {
 
             // Despawn check (but protect mission targets)
             if (enemy.isDestroyed() || this.shouldDespawnEntity(enemy, 1.1)) {
+                // Clean up enemiesById Map when enemy is removed
+                if (enemy.id != null && this.enemiesById) {
+                    this.enemiesById.delete(enemy.id);
+                }
                 this._fastRemove(this.enemies, i);
             }
         }
@@ -2147,7 +2153,13 @@ class StarSystem {
         this._updateEntities(
             this.enemies,
             (enemy) => enemy.update(this),
-            (enemy) => enemy.isDestroyed() || this.shouldDespawnEntity(enemy, 1.1)
+            (enemy) => enemy.isDestroyed() || this.shouldDespawnEntity(enemy, 1.1),
+            (enemy) => {
+                // Clean up enemiesById Map when enemy is removed
+                if (enemy.id != null && this.enemiesById) {
+                    this.enemiesById.delete(enemy.id);
+                }
+            }
         );
     }
 
@@ -5005,16 +5017,19 @@ class StarSystem {
             cachedDescription: this.cachedDescription ?? null,
 
             // Dynamic entities
-            enemies: this._serializeEntityArray(this.enemies, (e) => ({
-                shipType: e.shipTypeName || e.shipType || null,
-                role: e.role || null,
-                pos: e.pos ? { x: e.pos.x, y: e.pos.y } : null,
-                vel: e.vel ? { x: e.vel.x, y: e.vel.y } : null,
-                hp: e.hp ?? e.health ?? null,
-                angle: e.angle ?? null,
-                state: e.currentState ?? null,
-                id: e.id ?? null
-            })),
+            // Filter out player bodyguards - they're saved with player.activeBodyguards instead
+            enemies: this._serializeEntityArray(
+                this.enemies.filter(e => !e?.isPlayerBodyguard),
+                (e) => ({
+                    shipType: e.shipTypeName || e.shipType || null,
+                    role: e.role || null,
+                    pos: e.pos ? { x: e.pos.x, y: e.pos.y } : null,
+                    vel: e.vel ? { x: e.vel.x, y: e.vel.y } : null,
+                    hp: e.hp ?? e.health ?? null,
+                    angle: e.angle ?? null,
+                    state: e.currentState ?? null,
+                    id: e.id ?? null
+                })),
             projectiles: this._serializeEntityArray(this.projectiles, (p) => ({
                 type: p.type || null,
                 pos: p.pos ? { x: p.pos.x, y: p.pos.y } : null,
@@ -5198,6 +5213,15 @@ class StarSystem {
             enemy.currentSystem = sys;
             return enemy;
         });
+
+        // Populate enemiesById Map for O(1) lookups after restore
+        if (Array.isArray(sys.enemies)) {
+            for (const enemy of sys.enemies) {
+                if (enemy && enemy.id != null) {
+                    sys.enemiesById.set(enemy.id, enemy);
+                }
+            }
+        }
 
         sys.projectiles = this._deserializeEntityArray(data.projectiles, Projectile);
         sys.asteroids = this._deserializeEntityArray(data.asteroids, Asteroid);
@@ -5807,6 +5831,8 @@ class StarSystem {
             enemy.currentSystem = this;
             window.currentSystem = this;
             this.enemies.push(enemy);
+            // Maintain Map for O(1) lookups by ID
+            if (enemy.id != null) this.enemiesById.set(enemy.id, enemy);
 
             // Centralized Thargoid/Alien spawn cue: plays once when aliens are added
             try {

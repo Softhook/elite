@@ -844,9 +844,13 @@ class EnemyAIBehaviors {
                         // Guards follow their principal to the new system
                         const targetSystem = this.principal.currentSystem;
                         if (targetSystem && targetSystem !== this.currentSystem) {
-                            // Remove from current system
+                            // Remove from current system (including enemiesById Map)
                             const index = this.currentSystem.enemies.indexOf(this);
                             if (index !== -1) {
+                                // Clean up enemiesById Map
+                                if (this.id != null && this.currentSystem.enemiesById) {
+                                    this.currentSystem.enemiesById.delete(this.id);
+                                }
                                 this.currentSystem.enemies.splice(index, 1);
                             }
                             // Add to target system

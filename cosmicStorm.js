@@ -27,7 +27,7 @@ class CosmicStorm {
 
     // --- Color and Particle Helpers ---
     getColorByType() {
-        switch(this.type) {
+        switch (this.type) {
             case 'electromagnetic': return [80, 100, 255];
             case 'radiation': return [100, 255, 50];
             case 'gravitational': return [255, 200, 50];
@@ -111,7 +111,7 @@ class CosmicStorm {
         const boltCount = floor(random(1, 3) * this.intensity);
         for (let i = 0; i < boltCount; i++) {
             const startAngle = random(TWO_PI);
-            const endAngle = startAngle + random(-PI/2, PI/2);
+            const endAngle = startAngle + random(-PI / 2, PI / 2);
             const startDist = this.radius * random(0.1, 0.4);
             const endDist = this.radius * random(0.6, 0.9);
             const start = {
@@ -160,33 +160,33 @@ class CosmicStorm {
 
     drawAura() {
         noStroke();
-        
+
         // Use Canvas 2D API for efficient radial gradient, just like in Nebula
         const ctx = drawingContext;
-        
+
         // Create a radial gradient
         const outerRadius = this.radius;
         const gradient = ctx.createRadialGradient(
             this.pos.x, this.pos.y, 0,           // Inner circle (center point, radius 0)
             this.pos.x, this.pos.y, outerRadius  // Outer circle
         );
-        
+
         // Add color stops for smooth gradient
         const r = this.color[0];
         const g = this.color[1];
         const b = this.color[2];
         const baseAlpha = 100 * this.intensity / 255; // Convert to 0-1 range for RGBA
-        
+
         // Create smooth gradient that doesn't fully fade out
         gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${baseAlpha})`);
         gradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.85})`);
         gradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.65})`);
         gradient.addColorStop(0.85, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.45})`);
         gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.3})`);
-        
+
         // Apply gradient to context
         ctx.fillStyle = gradient;
-        
+
         // Draw circle with the gradient
         ctx.beginPath();
         ctx.arc(this.pos.x, this.pos.y, this.radius * 1.5, 0, TWO_PI);
@@ -217,9 +217,9 @@ class CosmicStorm {
 
             // Simple jitter for flicker effect
             const jitterAmp = 3 * this.intensity;
-            const points = bolt.basePoints.map(p => ({ 
-                x: p.x + random(-jitterAmp, jitterAmp), 
-                y: p.y + random(-jitterAmp, jitterAmp) 
+            const points = bolt.basePoints.map(p => ({
+                x: p.x + random(-jitterAmp, jitterAmp),
+                y: p.y + random(-jitterAmp, jitterAmp)
             }));
 
             // Draw outer glow
@@ -252,7 +252,7 @@ class CosmicStorm {
         // Draw direction vector
         stroke(255, 0, 0);
         line(
-            this.pos.x, 
+            this.pos.x,
             this.pos.y,
             this.pos.x + this.velocity.x * 50,
             this.pos.y + this.velocity.y * 50
@@ -313,7 +313,7 @@ class CosmicStorm {
     showStormMessage() {
         if (typeof uiManager === 'undefined') return;
         let message = '';
-        switch(this.type) {
+        switch (this.type) {
             case 'electromagnetic': message = "Warning: Electromagnetic storm disrupting targeting!"; break;
             case 'gravitational': message = "Caution: Gravitational storm affecting navigation!"; break;
             case 'radiation': message = "Alert: Radiation storm causing hull damage!"; break;
@@ -358,12 +358,10 @@ class CosmicStorm {
         if (!window.gameStateManager || !gameStateManager.activeSystem) return null;
         const system = gameStateManager.activeSystem;
         if (id === 'player') return system.player;
-        if (system.enemies) {
-            for (let enemy of system.enemies) {
-                if (enemy.id === id) return enemy;
-            }
-        }
-        return null;
+        // Use O(1) Map lookup if available, fallback to O(n) array search
+        return system.enemiesById?.get(id)
+            || system.enemies?.find(e => e?.id === id)
+            || null;
     }
 
     toggleDebug() {

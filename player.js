@@ -3137,6 +3137,7 @@ class Player {
             // Create the bodyguard enemy
             const bodyguardEnemy = new Enemy(spawnX, spawnY, this, guard.shipType, AI_ROLE.GUARD);
             bodyguardEnemy.principal = this; // Set player as the principal to protect
+            bodyguardEnemy.isPlayerBodyguard = true; // Mark as player bodyguard to exclude from system save
             bodyguardEnemy.changeState(AI_STATE.GUARDING);
 
             // Restore hull if this bodyguard had previous damage
@@ -3152,8 +3153,8 @@ class Player {
             // Store reference
             guard.enemyRef = bodyguardEnemy;
 
-            // Add to system enemies
-            system.enemies.push(bodyguardEnemy);
+            // Add to system enemies (use addEnemy for proper Map tracking)
+            system.addEnemy(bodyguardEnemy);
 
             console.log(`Spawned bodyguard ${guard.shipType} at ${spawnX.toFixed(0)}, ${spawnY.toFixed(0)}`);
         });
