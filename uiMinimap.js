@@ -30,6 +30,8 @@ class UIMinimap {
         // Track player position when buffer was last generated for smooth offset
         this._lastHazardsPlayerX = 0;
         this._lastHazardsPlayerY = 0;
+        // Track scale to regenerate buffer on zoom
+        this._lastHazardsScale = 0;
 
         // Minimap color mapping by AI role (using centralized color constants)
         this.roleColors = {};
@@ -283,8 +285,14 @@ class UIMinimap {
 
     _drawHazardsBuffer(player, system, mapCenterX, mapCenterY) {
         // Only regenerate buffer every 15 frames - hazards move slowly
+        // Detect scale change
+        const scaleChanged = Math.abs(this.scale - (this._lastHazardsScale || 0)) > 0.000001;
+
+        // Only regenerate buffer every 15 frames - hazards move slowly
+        // BUT force regenerate if scale changed
         const shouldRegenerate = !this._lastHazardsFrame ||
-            (frameCount - this._lastHazardsFrame) >= 15;
+            (frameCount - this._lastHazardsFrame) >= 15 ||
+            scaleChanged;
 
         if (!this.hazardsBuffer || this._hazardsBufferSize !== this.size) {
             this.hazardsBuffer = createGraphics(this.size, this.size);
@@ -307,6 +315,7 @@ class UIMinimap {
         // Store player position at time of buffer generation
         this._lastHazardsPlayerX = player.pos.x;
         this._lastHazardsPlayerY = player.pos.y;
+        this._lastHazardsScale = this.scale;
 
         const hbuf = this.hazardsBuffer;
         hbuf.clear();
