@@ -248,22 +248,42 @@ class Mission {
         // Derive a likely opposing faction if none provided
         let target = this.targetFaction;
         if (!target) {
-            if (offer && offer.toLowerCase().includes('separat')) target = 'Imperial';
-            else if (offer && offer.toLowerCase().includes('imper')) target = 'Separatist';
-            else if (offer && offer.toLowerCase().includes('milit')) target = 'Alien';
+            if (offer && offer.toLowerCase().includes('separat')) target = 'Imperial forces';
+            else if (offer && offer.toLowerCase().includes('imper')) target = 'Separatist rebels';
+            else if (offer && offer.toLowerCase().includes('milit')) target = 'Alien incursion';
             else target = 'a rival faction';
         }
         const obj = this.targetObjectType || 'strategic installation';
         const planet = this.targetPlanetName ? `close to ${this.targetPlanetName}` : 'in orbit of a nearby planet';
 
         let reason = '';
-        // Create faction-aware reasons
-        if (offer && offer.toLowerCase().includes('separat')) {
-            reason = `The ${offer} claim the ${obj} is a forward listening post used by ${target} forces to track convoy movements and coordinate punitive strikes. Destroying it would blind the occupiers and open a window for daring raids.`;
-        } else if (offer && offer.toLowerCase().includes('imper')) {
-            reason = `Agents of the ${offer} have surfaced intelligence that the ${obj} is a covert separatist supply hub funneling weapons through the system. Removing it would disrupt their logistics and restore order.`;
-        } else if (offer && offer.toLowerCase().includes('milit')) {
-            reason = `Military analysts suspect the ${obj} has been corrupted by alien tech — its emissions are destabilizing local navigation and threatening civilian traffic. The military wants it eliminated before it spreads.`;
+        const offerLower = offer ? offer.toLowerCase() : '';
+
+        // Create faction-aware reasons based on the offering faction
+        if (offerLower.includes('separat')) {
+            reason = `The ${offer} claims the ${obj} is a forward listening post used by ${target} to track convoy movements and coordinate punitive strikes. Destroying it would blind the occupiers and open a window for daring raids.`;
+        } else if (offerLower.includes('imper')) {
+            reason = `Agents of the ${offer} have surfaced intelligence that the ${obj} is a covert supply hub funneling weapons to ${target} through the system. Removing it would disrupt their logistics and restore order.`;
+        } else if (offerLower.includes('milit')) {
+            reason = `Military analysts suspect the ${obj} has been corrupted by alien tech — its emissions are destabilizing local navigation and threatening civilian traffic. ${offer} wants it eliminated before it spreads.`;
+        } else if (offerLower.includes('tourism')) {
+            reason = `The ${offer} reports the ${obj} is generating hazardous electromagnetic interference that endangers passenger liners and resort shuttles. Removing it would restore safe travel corridors for tourists.`;
+        } else if (offerLower.includes('mining')) {
+            reason = `The ${offer} claims the ${obj} is disrupting mineral surveys and extraction operations. Its removal would open valuable ore deposits to exploitation.`;
+        } else if (offerLower.includes('refinery')) {
+            reason = `Engineers from the ${offer} report the ${obj} is contaminating fuel processing routes with unstable emissions. Destroying it would ensure safe refinery operations.`;
+        } else if (offerLower.includes('agricultural')) {
+            reason = `The ${offer} asserts the ${obj} is broadcasting signals that interfere with agricultural drones and climate control satellites. Its destruction would protect vital food production.`;
+        } else if (offerLower.includes('service')) {
+            reason = `Representatives of the ${offer} indicate the ${obj} is blocking critical communication frequencies used for emergency services. Eliminating it would restore life-saving communications.`;
+        } else if (offerLower.includes('post human') || offerLower.includes('council')) {
+            reason = `The ${offer} considers the ${obj} incompatible with the evolution of human consciousness. Its removal would advance the collective toward transcendence.`;
+        } else if (offerLower.includes('offworld') || offerLower.includes('trading')) {
+            reason = `The ${offer} reports the ${obj} is interfering with interstellar trade beacon frequencies. Destroying it would re-establish profitable trade routes.`;
+        } else if (offerLower.includes('xeno') || offerLower.includes('alien')) {
+            reason = `The ${offer} has determined the ${obj} poses a contamination risk to ongoing xenological research. Its removal is necessary to preserve the integrity of alien artifact studies.`;
+        } else if (offerLower.includes('consortium') || offerLower.includes('industrial')) {
+            reason = `The ${offer} reports the ${obj} is generating industrial interference that damages manufacturing automation. Its destruction would restore production efficiency.`;
         } else {
             reason = `Intelligence suggests the ${obj} is a critical node for ${target}. Removing it would significantly weaken their presence in the region.`;
         }
