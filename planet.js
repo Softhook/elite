@@ -68,13 +68,13 @@ class Planet {
         const thirdG = Math.min(255, Math.max(0, Math.floor((255 - avgG) * random(0.6, 1.0) + avgB * 0.15)));
         const thirdB = Math.min(255, Math.max(0, Math.floor((255 - avgB) * random(0.6, 1.0) + avgR * 0.15)));
         this.featureColor3 = color(thirdR, thirdG, thirdB);
-        
+
         // Set baseColor as average of the three feature colors
         const avgBaseR = Math.floor((red(this.featureColor1) + red(this.featureColor2) + red(this.featureColor3)) / 3);
         const avgBaseG = Math.floor((green(this.featureColor1) + green(this.featureColor2) + green(this.featureColor3)) / 3);
         const avgBaseB = Math.floor((blue(this.featureColor1) + blue(this.featureColor2) + blue(this.featureColor3)) / 3);
         this.baseColor = color(avgBaseR, avgBaseG, avgBaseB);
-        
+
         this.palette = [this.baseColor, this.featureColor1, this.featureColor2, this.featureColor3];
 
         // Deterministic properties using random() (seeded by StarSystem)
@@ -84,7 +84,7 @@ class Planet {
         this.noisePersistence = random(0.55, 0.9); // Stronger persistence for bolder features
 
         this.hasAtmosphere = random() < 0.4; // Less frequent
-        this.atmosphereColor = this.hasAtmosphere ? color(random(150, 220), random(150, 220), random(200, 255), random(5, 15)) : null;
+        this.atmosphereColor = this.hasAtmosphere ? color(random(150, 220), random(150, 220), random(200, 255), random(25, 50)) : null;
 
         // --- Inhabited Planet Properties ---
         this.isInhabited = random() < 0.3; // 30% chance of being inhabited
@@ -92,7 +92,7 @@ class Planet {
         this.cityLightsDensity = random(0.3, 0.8); // Controls how dense the city lights appear
         this.cityLightsBuffer = null; // Buffer will be created when needed
         // ---
-        
+
         // --- Rings Restored ---
         this.hasRings = random() < 0.25;
         if (this.hasRings) {
@@ -111,12 +111,12 @@ class Planet {
 
         // Initialize shadowOffset to null. It will be set later.
         this.shadowOffset = null;
-        
+
         // Generate planet name etymologically related to system name
         this.name = this.generatePlanetName(systemName, planetIndex);
         this.systemName = systemName;
         this.planetIndex = planetIndex;
-        
+
         // Flag to track buffer creation status
         this.buffersCreated = false;
     }
@@ -130,7 +130,7 @@ class Planet {
      */
     generatePlanetName(systemName, planetIndex) {
         if (planetIndex === 0) return systemName; // Sun keeps system name
-        
+
         // Etymological roots based on system name
         const roots = {
             'Sol': ['Sol', 'Helio', 'Phoeb'],
@@ -186,7 +186,7 @@ class Planet {
 
         // Roman numerals for planet numbering
         const romanNumerals = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
-        
+
         // Get root based on system name
         // If the system name has multiple words (e.g. "Alpha Centauri"),
         // only use the first token for stemming so the second part is ignored.
@@ -203,7 +203,7 @@ class Planet {
                 break;
             }
         }
-        
+
         // Generate suffix based on planet properties
         let suffix = '';
         if (this.isInhabited) {
@@ -216,7 +216,7 @@ class Planet {
             const suffixes = ['Prime', 'Secund', 'Tert', 'Major', 'Minor', 'Max', 'Min', 'Cent', 'Orb'];
             suffix = suffixes[Math.floor(this.featureRand * suffixes.length) % suffixes.length];
         }
-        
+
         // Combine root, suffix, and Roman numeral
         const romanNum = romanNumerals[Math.min(planetIndex, romanNumerals.length - 1)];
         return `${root}${suffix} ${romanNum}`.trim();
@@ -234,7 +234,7 @@ class Planet {
             // Fallback default
             this.shadowOffset = createVector(this.size * -0.075, this.size * 0.075);
         }
-        
+
         // Pre-calculate shadow drawing constants
         this._shadowSize = this.size * 1.05;
         this._shadowRadius = this._shadowSize * 0.5;
@@ -268,19 +268,19 @@ class Planet {
         sun.rotationSpeed = 0.0005;
         return sun;
     }
-    
+
     /**
      * Creates all the necessary graphics buffers and pre-renders
      * the planet components for efficient drawing
      */
     createBuffers() {
         if (this.buffersCreated) return;
-        
+
         // Increase buffer size for suns to avoid clipping and ensure gradients cover the canvas
         const baseFactor = this.isSun ? 1.6 : 1.2;
         const bufferSize = Math.ceil(this.size * baseFactor);
         const ringBufferSize = this.hasRings ? Math.ceil(this.ringOuterRad * 2.2) : 0;
-        
+
         // For inhabited planets with atmosphere, we need a larger buffer to contain the city glow
         let atmBufferSizeFactor = 1.0 + (5 * 0.04);
         if (this.isInhabited) {
@@ -288,21 +288,21 @@ class Planet {
             atmBufferSizeFactor = Math.max(atmBufferSizeFactor, 2.1);
         }
         if (this.isSun) {
-                // Reduce sun halo size: use a smaller buffer factor
+            // Reduce sun halo size: use a smaller buffer factor
             atmBufferSizeFactor = Math.max(atmBufferSizeFactor, 4.5);
         }
         const atmBufferSize = this.hasAtmosphere ? Math.ceil(this.size * atmBufferSizeFactor) : 0;
-        
+
         // Create main planet buffer
         this.planetBuffer = createGraphics(bufferSize, bufferSize);
         this.renderPlanetTexture();
-        
+
         // Create rings buffer only if needed
         if (this.hasRings) {
             this.ringsBuffer = createGraphics(ringBufferSize, ringBufferSize);
             this.renderRings();
         }
-        
+
         // Create atmosphere buffer if needed
         if (this.hasAtmosphere) {
             // Make sure atmosphere buffer is large enough for the outermost layer
@@ -310,44 +310,44 @@ class Planet {
             this.atmosphereBuffer = createGraphics(atmBufferSize, atmBufferSize);
             this.renderAtmosphere();
         }
-        
+
         // Create city lights buffer for inhabited planets
         if (this.isInhabited && !this.isSun) {
             this.renderCityLights();
         }
-        
+
         this.buffersCreated = true;
     }
-    
+
     /**
      * Frees memory by disposing graphics buffers when leaving a system
      */
     disposeBuffers() {
         if (!this.buffersCreated) return;
-        
+
         if (this.planetBuffer) {
             this.planetBuffer.remove();
             this.planetBuffer = null;
         }
-        
+
         if (this.hasRings && this.ringsBuffer) {
             this.ringsBuffer.remove();
             this.ringsBuffer = null;
         }
-        
+
         if (this.hasAtmosphere && this.atmosphereBuffer) {
             this.atmosphereBuffer.remove();
             this.atmosphereBuffer = null;
         }
-        
+
         if (this.isInhabited && this.cityLightsBuffer) {
             this.cityLightsBuffer.remove();
             this.cityLightsBuffer = null;
         }
-        
+
         this.buffersCreated = false;
     }
-    
+
     /**
      * Renders the planet texture to the buffer
      */
@@ -356,7 +356,7 @@ class Planet {
         const bufferCenter = pg.width * 0.5;
         const r = this.radius;
         const rSq = this.radiusSq;
-        
+
         // Clear the buffer and set up
         pg.clear();
         pg.noStroke();
@@ -388,12 +388,12 @@ class Planet {
 
         // Increase octaves/persistence for richer, more dramatic detail
         pg.noiseDetail(6, this.noisePersistence);
-        
+
         // Skip drawing the solid base circle; the textured bands will fill the planet
-        
+
         // Set resolution based on planet size
         const bandHeight = Math.max(2, Math.ceil(400 / this.size));
-        
+
         // Cache constants for inner loop
         const noiseScale = this.noiseScale;
         const featureRand = this.featureRand;
@@ -401,14 +401,14 @@ class Planet {
         const noiseZ = featureRand * 0.6;
         const paletteLen = this.palette.length;
         const paletteMaxIdx = paletteLen - 1;
-        
+
         // Loop through vertical bands (full planet)
         for (let y = -r; y < r; y += bandHeight) {
             const ySq = y * y;
             const bandRSq = rSq - ySq;
             if (bandRSq <= 0) continue;
             const bandR = Math.sqrt(bandRSq);
-            
+
             for (let x = -bandR; x < bandR; x += bandHeight) {
                 // Optimized distance and angle calculation
                 const distSq = x * x + ySq;
@@ -416,7 +416,7 @@ class Planet {
                 const angle = Math.atan2(y, x);
                 const cosA = Math.cos(angle);
                 const sinA = Math.sin(angle);
-                
+
                 // Spherical mapping: convert local x,y to normalized sphere coordinates
                 const nx = x / r; // -1..1 across the planet surface
                 const ny = y / r;
@@ -459,38 +459,38 @@ class Planet {
                 const limbFactor = Math.pow(nzUnit, 0.9); // 1 at center, 0 at edge
                 const limbDarken = 0.35 * (1 - limbFactor);
                 bandColor = lerpColor(bandColor, color(0, 0, 0), limbDarken);
-                
+
                 // Antialiasing at the planet edge for smooth transition to background
                 const edgeWidth = 5; // pixels over which to fade alpha
                 if (distFromCenter > r - edgeWidth) {
                     const alphaFactor = Math.max(0, (r - distFromCenter) / edgeWidth);
                     bandColor = color(red(bandColor), green(bandColor), blue(bandColor), alpha(bandColor) * alphaFactor);
                 }
-                
+
                 pg.fill(bandColor);
                 pg.rect(bufferCenter + x, bufferCenter + y, bandHeight, bandHeight);
             }
         }
-        
+
         // Reset noise detail 
         pg.noiseDetail(4, 0.5);
     }
-    
+
     /**
      * Renders the ring system to its buffer
      */
     renderRings() {
         const pg = this.ringsBuffer;
         const bufferCenter = pg.width * 0.5;
-        
+
         // Clear buffer
         pg.clear();
         pg.push();
         pg.translate(bufferCenter, bufferCenter);
         pg.rotate(this.ringAngle);
-        
+
         pg.noFill();
-        
+
         // Cache constants for loop
         const numSegs = this.numRingSegments;
         const innerRad = this.ringInnerRad;
@@ -499,38 +499,38 @@ class Planet {
         const featureRand = this.featureRand;
         const noiseBase1 = featureRand + 10;
         const noiseBase2 = featureRand + 20;
-        
+
         // Draw ring segments
         for (let i = 0; i < numSegs; i++) {
             const segmentProgress = i / numSegs;
             const currentRad = innerRad + radRange * segmentProgress;
-            
+
             // Use noise for color variation
             const noiseFactor1 = segmentProgress * 5 + noiseBase1;
             const noiseVal = pg.noise(noiseFactor1, noiseBase1);
             const segmentColor = lerpColor(this.ringColor1, this.ringColor2, noiseVal);
-            
+
             const noiseFactor2 = segmentProgress * 3 + noiseBase2;
             const segmentAlpha = 80 + 100 * pg.noise(noiseFactor2, noiseBase2);
-            
+
             pg.stroke(red(segmentColor), green(segmentColor), blue(segmentColor), segmentAlpha);
             pg.strokeWeight(1);
-            
+
             // Draw full ellipse with correct perspective
             const diameter = currentRad * 2;
             pg.ellipse(0, 0, diameter, diameter * perspective);
         }
-        
+
         pg.pop();
     }
-    
+
     /**
      * Renders the atmosphere effect to its buffer
      */
     renderAtmosphere() {
         const pg = this.atmosphereBuffer;
         const bufferCenter = pg.width * 0.5;
-        
+
         // Clear buffer first
         pg.clear();
         pg.noStroke();
@@ -544,7 +544,7 @@ class Planet {
             const sr = Math.round(red(this.atmosphereColor));
             const sg = Math.round(green(this.atmosphereColor));
             const sb = Math.round(blue(this.atmosphereColor));
-            
+
             // Create a smooth multi-stop gradient for soft halo edges
             const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR);
             grad.addColorStop(0, `rgba(${sr},${sg},${sb},${Math.min(1, a)})`);
@@ -563,32 +563,35 @@ class Planet {
             ctx.globalCompositeOperation = prevOp;
             return;
         }
-        
-        // Cache color components
-        const atmR = red(this.atmosphereColor);
-        const atmG = green(this.atmosphereColor);
-        const atmB = blue(this.atmosphereColor);
-        const baseAlpha = alpha(this.atmosphereColor);
-        const size = this.size;
-        
-        // Draw atmosphere layers from outside in
-        for (let i = 5; i > 0; i--) {
-            const atmSizeFactor = 1.0 + i * 0.04;
-            const atmAlpha = baseAlpha * (1.0 - i * 0.15);
-            
-            // Calculate diameter for this atmosphere layer
-            const layerDiameter = size * atmSizeFactor;
-            
-            // Draw the atmosphere layer perfectly centered in the buffer
-            pg.fill(atmR, atmG, atmB, atmAlpha);
-            pg.ellipse(bufferCenter, bufferCenter, layerDiameter, layerDiameter);
-            
-            // Debug outline
-            // pg.stroke(255);
-            // pg.noFill();
-            // pg.ellipse(bufferCenter, bufferCenter, layerDiameter, layerDiameter);
-        }
-        
+
+        // Use Canvas 2D API for smooth radial gradient (matching sun's technique)
+        const ctx = pg.drawingContext;
+        const cx = bufferCenter, cy = bufferCenter;
+
+        // Atmosphere extends from planet edge outward
+        const innerR = this.radius * 0.9;  // Start slightly inside planet surface for blending
+        const outerR = this.radius * 1.25;  // Extend outward (25% beyond surface)
+
+        // Get color components
+        const atmR = Math.round(red(this.atmosphereColor));
+        const atmG = Math.round(green(this.atmosphereColor));
+        const atmB = Math.round(blue(this.atmosphereColor));
+        const baseAlpha = alpha(this.atmosphereColor) / 255;  // Convert to 0-1 range
+
+        // Create smooth radial gradient from planet surface outward
+        const grad = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
+        grad.addColorStop(0, `rgba(${atmR},${atmG},${atmB},${Math.min(1, baseAlpha * 0.9)})`);
+        grad.addColorStop(0.2, `rgba(${atmR},${atmG},${atmB},${Math.max(0, baseAlpha * 0.7)})`);
+        grad.addColorStop(0.5, `rgba(${atmR},${atmG},${atmB},${Math.max(0, baseAlpha * 0.4)})`);
+        grad.addColorStop(0.75, `rgba(${atmR},${atmG},${atmB},${Math.max(0, baseAlpha * 0.15)})`);
+        grad.addColorStop(1.0, `rgba(${atmR},${atmG},${atmB},0)`);
+
+        // Draw gradient circle
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+        ctx.fill();
+
         // Debug: Draw center point and buffer edge markers
         // pg.fill(255, 0, 0);
         // pg.ellipse(bufferCenter, bufferCenter, 4, 4);
@@ -602,7 +605,7 @@ class Planet {
      */
     renderCityLights() {
         if (!this.isInhabited || this.isSun) return;
-        
+
         // Make city lights buffer same size as planet buffer to avoid mismatches
         const bufferSize = Math.ceil(this.size * 1.2); // Same as planetBuffer size
         const pg = createGraphics(bufferSize, bufferSize);
@@ -654,7 +657,7 @@ class Planet {
         }
 
         this.cityLightsColor = primaryColor; // Update the main color
-        
+
         // Cache color components for inner loop performance
         const primR = red(primaryColor), primG = green(primaryColor), primB = blue(primaryColor);
         const secR = red(secondaryColor), secG = green(secondaryColor), secB = blue(secondaryColor);
@@ -667,20 +670,20 @@ class Planet {
         const faintDotSize = faintBandHeight * 0.5;
         const noiseScale = this.noiseScale;
         const featureRand = this.featureRand;
-        
+
         for (let y = -r; y < r; y += faintBandHeight) {
             const ySq = y * y;
             const bandRSq = r * r - ySq;
             if (bandRSq <= 0) continue;
             const bandR = Math.sqrt(bandRSq);
-            
+
             for (let x = -bandR; x < bandR; x += faintBandHeight) {
                 const worldX = bufferCenter + x;
                 const worldY = bufferCenter + y;
                 const distSq = x * x + ySq;
                 const distFromCenter = Math.sqrt(distSq);
                 const angle = Math.atan2(y, x);
-                
+
                 // Spherical sampling so the faint sprawl wraps and fades at the limb
                 const nx = x / r;
                 const ny = y / r;
@@ -736,25 +739,25 @@ class Planet {
                 density: random(0.6, 1.0)
             });
         }
-        
+
         // Cache constants for loops
         const densityBase = this.cityLightsDensity * 0.5;
         const rSq = r * r;
-        
+
         // Draw the base grid/cells of the civilization - cover the planet surface
         for (let y = -r; y < r; y += bandHeight) {
             const ySq = y * y;
             const bandRSq = rSq - ySq;
             if (bandRSq <= 0) continue;
             const bandR = Math.sqrt(bandRSq);
-            
+
             for (let x = -bandR; x < bandR; x += bandHeight) {
                 const worldX = bufferCenter + x;
                 const worldY = bufferCenter + y;
                 const distSq = x * x + ySq;
                 const distFromCenter = Math.sqrt(distSq);
                 const angle = Math.atan2(y, x);
-                
+
                 // Spherical sampling: sample noise on unit-sphere to wrap features and compress at limb
                 const nx = x / r;
                 const ny = y / r;
@@ -771,7 +774,7 @@ class Planet {
                 const detailNoise = pg.noise(sNX * 2.2, sNY * 2.2, sNZ * 1.8);
                 let combinedNoise = (baseNoise * 0.56) + (detailNoise * 0.44);
                 combinedNoise = Math.min(1, Math.max(0, Math.pow(combinedNoise, 1.35)));
-                
+
                 // Influence from city hubs (proximity increases light density)
                 let hubInfluence = 0;
                 for (let h = 0; h < cityHubs.length; h++) {
@@ -779,7 +782,7 @@ class Planet {
                     const dx = x - hub.x;
                     const dy = y - hub.y;
                     const hubDistSq = dx * dx + dy * dy;
-                    
+
                     if (hubDistSq < hub.sizeSq) {
                         const hubDist = Math.sqrt(hubDistSq);
                         // Stronger influence closer to hub center with falloff
@@ -788,14 +791,14 @@ class Planet {
                     }
                 }
                 hubInfluence = Math.min(hubInfluence, 0.8);
-                
+
                 // Light density threshold boosted by hub proximity
                 const densityThreshold = 1 - (densityBase + hubInfluence);
 
                 // Limb attenuation so city lights wrap with the sphere
                 const limbFactor = Math.pow(nzUnit, 0.9);
                 const brightnessMul = Math.max(0.22, limbFactor);
-                
+
                 // Generate various city light elements based on the noise values
                 if (combinedNoise > densityThreshold) {
                     // Brightness varies with noise and hub influence
@@ -803,10 +806,10 @@ class Planet {
                     const brightness = 70 + brightnessFactor * 130;
                     const isNearHub = hubInfluence > 0.2;
                     const adjBrightness = brightness * brightnessMul;
-                    
+
                     // Structure type based on noise and pattern type
                     const structureType = (combinedNoise * 10 + baseNoise * 5) % 1;
-                    
+
                     // Draw different structural elements based on pattern and noise
                     if (structureType < 0.25) {
                         // Small point lights (buildings) - scale by limb foreshortening
@@ -815,7 +818,7 @@ class Planet {
                         const rawDot = isNearHub ? bandHeight * 0.7 : bandHeight * 0.4;
                         const dotSize = Math.max(1, rawDot * brightnessMul);
                         pg.ellipse(worldX, worldY, dotSize, dotSize);
-                    } 
+                    }
                     else if (structureType < 0.5) {
                         // Short line segments (roads/connections)
                         const lineAngle = (angle + baseNoise * Math.PI) % TWO_PI_CONST;
@@ -826,12 +829,12 @@ class Planet {
                         const cosAngle = Math.cos(lineAngle);
                         const sinAngle = Math.sin(lineAngle);
                         pg.line(
-                            worldX - cosAngle * halfLen, 
+                            worldX - cosAngle * halfLen,
                             worldY - sinAngle * halfLen,
-                            worldX + cosAngle * halfLen, 
+                            worldX + cosAngle * halfLen,
                             worldY + sinAngle * halfLen
                         );
-                    } 
+                    }
                     else if (structureType < 0.7) {
                         // Urban blocks/squares
                         pg.noStroke();
@@ -840,7 +843,7 @@ class Planet {
                         const blockSize = Math.max(1, rawBlock * brightnessMul);
                         const halfBlock = blockSize * 0.5;
                         pg.rect(worldX - halfBlock, worldY - halfBlock, blockSize, blockSize);
-                        
+
                         // Add interior detail to blocks
                         if (isNearHub && random() > 0.5) {
                             const innerSize = blockSize * 0.6;
@@ -848,7 +851,7 @@ class Planet {
                             pg.fill(secR, secG, secB, Math.min(255, Math.round(adjBrightness * 0.9)));
                             pg.rect(worldX - innerOffset, worldY - innerOffset, innerSize, innerSize);
                         }
-                    } 
+                    }
                     else {
                         // Scattered points (suburbs/outskirts)
                         pg.noStroke();
@@ -864,14 +867,14 @@ class Planet {
                             pg.ellipse(worldX + offsetX, worldY + offsetY, scatterSize, scatterSize);
                         }
                     }
-                    
+
                     // Add hub-specific detailed structures
                     if (isNearHub && hubInfluence > 0.5 && random() > 0.8) {
                         // Major city centers - add geometric patterns
                         const patternSize = Math.max(2, bandHeight * random(2, 4) * brightnessMul);
                         const halfPattern = patternSize * 0.5;
                         const brightAlpha = Math.max(10, Math.round(adjBrightness * 0.8));
-                        
+
                         if (patternType === 0 || patternType === 2) {
                             // Concentric circles for warm/traditional civilizations
                             pg.noFill();
@@ -893,11 +896,11 @@ class Planet {
                 }
             }
         }
-        
+
         // Angular high-tech grid overlay (jagged, noise-driven, sphere-aware)
         // This creates a semi-regular angular grid that is broken/jagged by noise
         // so it looks like advanced circuitry/transport lines wrapping the globe.
-        (function() {
+        (function () {
             const gridAngle = ((featureRand * 13.37) % TWO_PI_CONST) + this.currentRotation * 0.12;
             const baseSpacing = Math.max(8, Math.floor(r * map(this.cityLightsDensity, 0.25, 0.9, 0.18, 0.06)));
             const spacing = Math.max(6, Math.round(baseSpacing));
@@ -1058,13 +1061,13 @@ class Planet {
                 const dx = hub2.x - hub1.x;
                 const dy = hub2.y - hub1.y;
                 const hubDist = Math.sqrt(dx * dx + dy * dy);
-                
+
                 // Only connect reasonably close hubs
                 if (hubDist < maxHubDist) {
                     const alpha = 150 - (hubDist / maxHubDist) * 80;
                     pg.stroke(secR, secG, secB, alpha);
                     pg.strokeWeight(bandHeight * 0.6);
-                    
+
                     // Draw slightly curved connections with subtle variations
                     const midX = (hub1.x + hub2.x) * 0.5;
                     const midY = (hub1.y + hub2.y) * 0.5;
@@ -1074,37 +1077,37 @@ class Planet {
                     const randFactor2 = (featureRand * 9.1) % 1 - 0.5;
                     const ctrlX = midX + perpX * randFactor1;
                     const ctrlY = midY + perpY * randFactor2;
-                    
+
                     pg.beginShape();
                     pg.vertex(bufferCenter + hub1.x, bufferCenter + hub1.y);
                     pg.quadraticVertex(
-                        bufferCenter + ctrlX, 
-                        bufferCenter + ctrlY, 
-                        bufferCenter + hub2.x, 
+                        bufferCenter + ctrlX,
+                        bufferCenter + ctrlY,
+                        bufferCenter + hub2.x,
                         bufferCenter + hub2.y
                     );
                     pg.endShape();
                 }
             }
         }
-        
+
         // --- MEGA-STRUCTURES AND SPECIAL FEATURES ---
         // These are large-scale civilization features visible from space
-        
+
         // 1. ORBITAL RING / SPACE ELEVATOR (rare mega-structure)
         if ((featureRand * 31.41) % 1 > 0.85) {
             const ringAngle = (featureRand * 17.3) % TWO_PI_CONST;
             const ringRadius = r * random(1.08, 1.15); // Just outside planet surface
             const ringThickness = Math.max(1, bandHeight * 0.5);
             const segmentCount = Math.floor(120 + random(40));
-            
+
             pg.push();
             pg.translate(bufferCenter, bufferCenter);
             pg.rotate(ringAngle);
             pg.noFill();
             pg.stroke(accR, accG, accB, 160);
             pg.strokeWeight(ringThickness);
-            
+
             // Draw segmented orbital ring with gaps
             for (let seg = 0; seg < segmentCount; seg++) {
                 const segAngle = (seg / segmentCount) * TWO_PI_CONST;
@@ -1113,14 +1116,14 @@ class Planet {
                 const y1 = Math.sin(segAngle) * ringRadius * 0.3; // Perspective
                 const x2 = Math.cos(nextAngle) * ringRadius;
                 const y2 = Math.sin(nextAngle) * ringRadius * 0.3;
-                
+
                 // Only draw if segment is on the visible side
                 if (y1 < r * 0.2) {
                     pg.line(x1, y1, x2, y2);
                 }
             }
             pg.pop();
-            
+
             // Add connection points (space elevator tethers)
             const tethers = Math.floor(random(3, 6));
             for (let t = 0; t < tethers; t++) {
@@ -1129,20 +1132,20 @@ class Planet {
                 const surfaceY = Math.sin(tetherAngle) * r * 0.9;
                 const orbitX = Math.cos(tetherAngle) * ringRadius;
                 const orbitY = Math.sin(tetherAngle) * ringRadius * 0.3;
-                
+
                 pg.stroke(primR, primG, primB, 120);
                 pg.strokeWeight(Math.max(0.5, bandHeight * 0.25));
-                pg.line(bufferCenter + surfaceX, bufferCenter + surfaceY, 
-                       bufferCenter + orbitX, bufferCenter + orbitY);
-                
+                pg.line(bufferCenter + surfaceX, bufferCenter + surfaceY,
+                    bufferCenter + orbitX, bufferCenter + orbitY);
+
                 // Bright point at tether base
                 pg.noStroke();
                 pg.fill(accR, accG, accB, 200);
-                pg.ellipse(bufferCenter + surfaceX, bufferCenter + surfaceY, 
-                          bandHeight * 0.8, bandHeight * 0.8);
+                pg.ellipse(bufferCenter + surfaceX, bufferCenter + surfaceY,
+                    bandHeight * 0.8, bandHeight * 0.8);
             }
         }
-        
+
         // 2. AGRICULTURAL PATTERNS (visible geometric farms)
         const numFarmRegions = Math.floor(random(2, 5));
         for (let fr = 0; fr < numFarmRegions; fr++) {
@@ -1150,18 +1153,18 @@ class Planet {
             const farmDist = random(r * 0.4, r * 0.85);
             const farmCenterX = Math.cos(farmAngle) * farmDist;
             const farmCenterY = Math.sin(farmAngle) * farmDist;
-            
+
             // Check if within planet bounds
             const farmDistSq = farmCenterX * farmCenterX + farmCenterY * farmCenterY;
             if (farmDistSq > r * r * 0.9) continue;
-            
+
             const farmType = Math.floor((featureRand * (fr + 5) * 11.1) % 3);
             const farmScale = random(r * 0.08, r * 0.15);
             const farmSpacing = farmScale * 0.3;
-            
+
             pg.push();
             pg.translate(bufferCenter + farmCenterX, bufferCenter + farmCenterY);
-            
+
             if (farmType === 0) {
                 // Circular irrigation patterns (center pivot)
                 const numCircles = Math.floor(random(4, 8));
@@ -1171,7 +1174,7 @@ class Planet {
                     pg.stroke(primR, primG, primB, 25 + c * 5);
                     pg.strokeWeight(Math.max(0.3, bandHeight * 0.15));
                     pg.ellipse(0, 0, circRad * 2, circRad * 2);
-                    
+
                     // Add small dots around circle
                     const dotsOnCircle = Math.floor(circRad * 0.5);
                     for (let d = 0; d < dotsOnCircle; d++) {
@@ -1191,12 +1194,12 @@ class Planet {
                 pg.noFill();
                 pg.stroke(primR, primG, primB, 35);
                 pg.strokeWeight(Math.max(0.3, bandHeight * 0.12));
-                
+
                 for (let row = -hexRows; row < hexRows; row++) {
                     for (let col = -hexCols; col < hexCols; col++) {
                         const xOff = col * hexSize * 1.5;
                         const yOff = row * hexSize * Math.sqrt(3) + (col % 2) * hexSize * Math.sqrt(3) * 0.5;
-                        
+
                         // Draw hexagon
                         pg.beginShape();
                         for (let h = 0; h < 6; h++) {
@@ -1214,16 +1217,16 @@ class Planet {
                 const gridCount = 10;
                 pg.stroke(primR, primG, primB, 30);
                 pg.strokeWeight(Math.max(0.3, bandHeight * 0.15));
-                
+
                 for (let gx = -gridCount; gx < gridCount; gx++) {
                     for (let gy = -gridCount; gy < gridCount; gy++) {
                         const rx = gx * gridSize;
                         const ry = gy * gridSize;
                         const halfGrid = gridSize * 0.4;
-                        
+
                         pg.noFill();
                         pg.rect(rx - halfGrid, ry - halfGrid, gridSize * 0.8, gridSize * 0.8);
-                        
+
                         // Small bright dot at center
                         if ((gx + gy) % 2 === 0) {
                             pg.noStroke();
@@ -1235,39 +1238,39 @@ class Planet {
             }
             pg.pop();
         }
-        
+
         // 3. RADIAL CITY PATTERNS (spoke-wheel cities)
         const numRadialCities = Math.floor(random(1, 3));
         for (let rc = 0; rc < numRadialCities; rc++) {
             // Pick a hub as the center
             if (rc >= cityHubs.length) break;
             const hub = cityHubs[rc];
-            
+
             const numSpokes = Math.floor(random(6, 12));
             const spokeLength = hub.size * random(0.8, 1.2);
-            
+
             for (let sp = 0; sp < numSpokes; sp++) {
                 const spokeAngle = (sp / numSpokes) * TWO_PI_CONST;
                 const spokeEndX = hub.x + Math.cos(spokeAngle) * spokeLength;
                 const spokeEndY = hub.y + Math.sin(spokeAngle) * spokeLength;
-                
+
                 // Draw main spoke
                 pg.stroke(primR, primG, primB, 140);
                 pg.strokeWeight(Math.max(0.5, bandHeight * 0.4));
                 pg.line(bufferCenter + hub.x, bufferCenter + hub.y,
-                       bufferCenter + spokeEndX, bufferCenter + spokeEndY);
-                
+                    bufferCenter + spokeEndX, bufferCenter + spokeEndY);
+
                 // Add development along spoke
                 const segmentsAlongSpoke = Math.floor(random(4, 8));
                 for (let seg = 1; seg < segmentsAlongSpoke; seg++) {
                     const t = seg / segmentsAlongSpoke;
                     const segX = hub.x + Math.cos(spokeAngle) * spokeLength * t;
                     const segY = hub.y + Math.sin(spokeAngle) * spokeLength * t;
-                    
+
                     // Perpendicular development
                     const perpAngle = spokeAngle + PI / 2;
                     const perpLen = bandHeight * random(1, 3);
-                    
+
                     pg.stroke(secR, secG, secB, 100);
                     pg.strokeWeight(Math.max(0.3, bandHeight * 0.25));
                     pg.line(
@@ -1276,15 +1279,15 @@ class Planet {
                         bufferCenter + segX + Math.cos(perpAngle) * perpLen,
                         bufferCenter + segY + Math.sin(perpAngle) * perpLen
                     );
-                    
+
                     // Bright node at intersection
                     pg.noStroke();
                     pg.fill(accR, accG, accB, 160);
-                    pg.ellipse(bufferCenter + segX, bufferCenter + segY, 
-                              bandHeight * 0.6, bandHeight * 0.6);
+                    pg.ellipse(bufferCenter + segX, bufferCenter + segY,
+                        bandHeight * 0.6, bandHeight * 0.6);
                 }
             }
-            
+
             // Ring roads around the radial city
             const numRings = Math.floor(random(2, 4));
             for (let ring = 1; ring <= numRings; ring++) {
@@ -1293,10 +1296,10 @@ class Planet {
                 pg.stroke(secR, secG, secB, 80);
                 pg.strokeWeight(Math.max(0.4, bandHeight * 0.3));
                 pg.ellipse(bufferCenter + hub.x, bufferCenter + hub.y,
-                          ringRad * 2, ringRad * 2);
+                    ringRad * 2, ringRad * 2);
             }
         }
-        
+
         // 4. ARCOLOGIES (super-tall mega-buildings)
         const numArcologies = Math.floor(random(1, 4));
         for (let arc = 0; arc < numArcologies; arc++) {
@@ -1304,14 +1307,14 @@ class Planet {
             const arcDist = random(r * 0.3, r * 0.8);
             const arcX = Math.cos(arcAngle) * arcDist;
             const arcY = Math.sin(arcAngle) * arcDist;
-            
+
             // Check bounds
             if (arcX * arcX + arcY * arcY > r * r * 0.9) continue;
-            
+
             // Draw bright glow for arcology
             pg.push();
             pg.translate(bufferCenter + arcX, bufferCenter + arcY);
-            
+
             // Outer glow
             const glowSize = bandHeight * random(2.5, 4);
             pg.noStroke();
@@ -1321,21 +1324,21 @@ class Planet {
                 pg.fill(accR, accG, accB, gAlpha);
                 pg.ellipse(0, 0, gSize, gSize);
             }
-            
+
             // Bright core
             pg.fill(accR, accG, accB, 220);
             pg.ellipse(0, 0, bandHeight * 1.2, bandHeight * 1.2);
-            
+
             // Cross-pattern indicating structure
             pg.stroke(255, 255, 255, 180);
             pg.strokeWeight(Math.max(0.4, bandHeight * 0.2));
             const crossSize = bandHeight * 1.5;
             pg.line(-crossSize, 0, crossSize, 0);
             pg.line(0, -crossSize, 0, crossSize);
-            
+
             pg.pop();
         }
-        
+
         // 5. INDUSTRIAL ZONES (uniform bright patches)
         const numIndustrial = Math.floor(random(2, 5));
         for (let ind = 0; ind < numIndustrial; ind++) {
@@ -1343,22 +1346,22 @@ class Planet {
             const indDist = random(r * 0.4, r * 0.85);
             const indX = Math.cos(indAngle) * indDist;
             const indY = Math.sin(indAngle) * indDist;
-            
+
             if (indX * indX + indY * indY > r * r * 0.9) continue;
-            
+
             const indSize = random(r * 0.04, r * 0.08);
             const indGridSpacing = Math.max(1, bandHeight * 0.8);
-            
+
             pg.push();
             pg.translate(bufferCenter + indX, bufferCenter + indY);
-            
+
             // Uniform grid of bright lights
             const gridExtent = Math.floor(indSize / indGridSpacing);
             for (let gx = -gridExtent; gx <= gridExtent; gx++) {
                 for (let gy = -gridExtent; gy <= gridExtent; gy++) {
                     const px = gx * indGridSpacing;
                     const py = gy * indGridSpacing;
-                    
+
                     // Uniform brightness for industrial look
                     pg.noStroke();
                     pg.fill(primR, primG, primB, 150);
@@ -1367,8 +1370,8 @@ class Planet {
             }
             pg.pop();
         }
-        
-   
+
+
         // 6. TERRAFORMING/ATMOSPHERIC PROCESSORS (distinct geometric stations)
         if ((featureRand * 53.7) % 1 > 0.7) {
             const numProcessors = Math.floor(random(2, 5));
@@ -1377,15 +1380,15 @@ class Planet {
                 const procDist = random(r * 0.6, r * 0.9);
                 const procX = Math.cos(procAngle) * procDist;
                 const procY = Math.sin(procAngle) * procDist;
-                
+
                 if (procX * procX + procY * procY > r * r) continue;
-                
+
                 pg.push();
                 pg.translate(bufferCenter + procX, bufferCenter + procY);
-                
+
                 // Draw processor as geometric structure
                 const procSize = bandHeight * random(2, 3);
-                
+
                 // Rotating square/diamond
                 pg.push();
                 pg.rotate(PI / 4);
@@ -1394,12 +1397,12 @@ class Planet {
                 pg.strokeWeight(Math.max(0.5, bandHeight * 0.3));
                 pg.rect(-procSize / 2, -procSize / 2, procSize, procSize);
                 pg.pop();
-                
+
                 // Center bright point
                 pg.noStroke();
                 pg.fill(255, 255, 255, 200);
                 pg.ellipse(0, 0, bandHeight * 0.7, bandHeight * 0.7);
-                
+
                 // Energy lines radiating out
                 const numEnergyLines = 4;
                 for (let el = 0; el < numEnergyLines; el++) {
@@ -1408,30 +1411,30 @@ class Planet {
                     pg.stroke(secR, secG, secB, 140);
                     pg.strokeWeight(Math.max(0.3, bandHeight * 0.2));
                     pg.line(0, 0,
-                           Math.cos(elAngle) * elLen,
-                           Math.sin(elAngle) * elLen);
+                        Math.cos(elAngle) * elLen,
+                        Math.sin(elAngle) * elLen);
                 }
-                
+
                 pg.pop();
             }
         }
-        
+
         // No global glow - removing this fixes the offset glow issue
-        
+
         // Reset noise detail
         pg.noiseDetail(4, 0.5);
-        
+
         // Store the city lights buffer
         this.cityLightsBuffer = pg;
     }
-    
+
     /**
      * Updates planet rotation over time
      */
     update() {
         // Increment rotation based on rotation speed
         this.currentRotation += this.rotationSpeed;
-        
+
         // Keep rotation within 0 to TWO_PI for efficiency
         if (this.currentRotation > TWO_PI) {
             this.currentRotation -= TWO_PI;
@@ -1443,28 +1446,28 @@ class Planet {
         if (!this.buffersCreated) {
             this.createBuffers();
         }
-        
+
         // Compute shadow if needed
         if (!this.shadowOffset) {
             this.computeShadowOffset(sunPos);
         }
-        
+
         push();
         // Translate to planet's position in world space
         translate(this.pos.x, this.pos.y);
-        
+
         // Draw atmosphere if present (behind planet) - atmosphere is stationary and doesn't rotate
         if (this.hasAtmosphere && this.atmosphereBuffer) {
             const atmSize = this.atmosphereBuffer.width;
             const halfAtm = atmSize * 0.5;
-            
+
             // Center atmosphere precisely on the planet's center (0,0 in local coordinates)
             image(this.atmosphereBuffer, -halfAtm, -halfAtm);
         }
-        
+
         // Apply planet rotation for planet surface only
         rotate(this.currentRotation);
-        
+
         if (this.hasRings) {
             this.drawRingedPlanet();
         } else {
@@ -1473,17 +1476,17 @@ class Planet {
             const halfBuffer = bufferSize * 0.5;
             image(this.planetBuffer, -halfBuffer, -halfBuffer);
         }
-        
+
         // Draw city lights before resetting rotation so they rotate with the planet
         if (!this.isSun && this.isInhabited && this.cityLightsBuffer && this.shadowOffset) {
             // Draw the city lights aligned with the planet's current rotation
             drawingContext.save();
-            
+
             // Calculate rotated shadow position based on current planet rotation
             // This ensures the shadow rotation matches the planet's current rotation
             const rotatedShadowX = this.shadowOffset.x * cos(-this.currentRotation) - this.shadowOffset.y * sin(-this.currentRotation);
             const rotatedShadowY = this.shadowOffset.x * sin(-this.currentRotation) + this.shadowOffset.y * cos(-this.currentRotation);
-            
+
             // First, clip to the planet's circular area
             drawingContext.beginPath();
             drawingContext.arc(0, 0, this.radius, 0, TWO_PI);
@@ -1503,27 +1506,27 @@ class Planet {
             // Restore the drawing context
             drawingContext.restore();
         }
-        
+
         // Reset rotation to draw stationary shadow on top
         rotate(-this.currentRotation);
-        
+
         // Draw stationary shadow on top of the planet (semi-transparent to let city lights show through)
         if (!this.isSun && this.shadowOffset) {
             noStroke();
-            
+
             // Use pre-calculated shadow constants
             const shadowSize = this._shadowGradientOuter;
             const innerShadow = this._shadowGradientInner;
-            
+
             // Shadow gradient is more complex for inhabited planets
             if (this.isInhabited) {
                 // Base semi-transparent shadow layer
                 fill(0, 0, 0, 30);
                 ellipse(this.shadowOffset.x, this.shadowOffset.y, this._shadowSize, this._shadowSize);
-                
+
                 // Save context before custom gradient
                 drawingContext.save();
-                
+
                 // Create shadow gradient
                 const shadowGradient = drawingContext.createRadialGradient(
                     this.shadowOffset.x, this.shadowOffset.y, innerShadow,
@@ -1531,12 +1534,12 @@ class Planet {
                 );
                 shadowGradient.addColorStop(0, 'rgba(0,0,0,0.35)');
                 shadowGradient.addColorStop(1, 'rgba(0,0,0,0)');
-                
+
                 drawingContext.fillStyle = shadowGradient;
                 drawingContext.beginPath();
                 drawingContext.arc(this.shadowOffset.x, this.shadowOffset.y, shadowSize, 0, TWO_PI);
                 drawingContext.fill();
-                
+
                 // Restore context after gradient
                 drawingContext.restore();
             } else {
@@ -1561,10 +1564,10 @@ class Planet {
             text(this.name, 0, 0);
             pop();
         }
-        
+
         pop();
     }
-    
+
     /**
      * Draw a planet with rings using canvas clipping for proper layering.
      * The back portion of the ring (behind the planet) is clipped out,
@@ -1576,38 +1579,38 @@ class Planet {
         const halfW = bufferW * 0.5;
         const ringsSize = this.ringsBuffer.width;
         const halfRings = ringsSize * 0.5;
-        
+
         // Calculate the ring ellipse parameters for clipping
         // The ring is drawn rotated by ringAngle with perspective squashing
         const cosA = Math.cos(this.ringAngle);
         const sinA = Math.sin(this.ringAngle);
-        
+
         // Use a slightly smaller clip radius to account for anti-aliasing at the planet edge.
         // The planet texture fades out over ~5 pixels (edgeWidth in renderPlanetTexture),
         // so we extend the ring underneath by using a smaller exclusion radius.
         const clipRadius = this.radius - 4;
-        
+
         // --- Step 1: Draw the back portion of the rings (clipped to exclude front) ---
         ctx.save();
-        
+
         // Create a clipping path that excludes the planet circle
         // We draw the back half of the ring area, then subtract the planet
         ctx.beginPath();
-        
+
         // First, draw a large rectangle covering everything
         ctx.rect(-ringsSize, -ringsSize, ringsSize * 2, ringsSize * 2);
-        
+
         // Then cut out the planet circle using counter-clockwise winding (creates a hole)
         // Use clipRadius (slightly smaller) so rings extend under the anti-aliased edge
         ctx.arc(0, 0, clipRadius, 0, TWO_PI, true);
-        
+
         ctx.clip('evenodd');
-        
+
         // Now draw the back portion of the rings (bottom half in rotated space)
         // We need another clip to only show the back half
         ctx.save();
         ctx.beginPath();
-        
+
         // Create a half-plane clip for the back of the ring
         // The ring is tilted by ringAngle, so "back" is below the tilt axis
         // We rotate our clip region to match the ring's tilt
@@ -1615,22 +1618,22 @@ class Planet {
         // Clip to only the bottom half (y > 0 in rotated space = back of ring)
         ctx.rect(-ringsSize, 0, ringsSize * 2, ringsSize);
         ctx.clip();
-        
+
         // Undo the rotation to draw the ring buffer normally
         ctx.rotate(-this.ringAngle);
-        
+
         // Draw the rings (only the back portion will show due to clipping)
         image(this.ringsBuffer, -halfRings, -halfRings);
-        
+
         ctx.restore();
         ctx.restore();
-        
+
         // --- Step 2: Draw the full planet on top ---
         image(this.planetBuffer, -halfW, -halfW);
-        
+
         // --- Step 3: Draw the front portion of the rings on top of the planet ---
         ctx.save();
-        
+
         // Clip to only the front half of the ring (top half in rotated space)
         ctx.beginPath();
         ctx.rotate(this.ringAngle);
@@ -1638,10 +1641,10 @@ class Planet {
         ctx.rect(-ringsSize, -ringsSize, ringsSize * 2, ringsSize);
         ctx.clip();
         ctx.rotate(-this.ringAngle);
-        
+
         // Draw the rings (only the front portion will show)
         image(this.ringsBuffer, -halfRings, -halfRings);
-        
+
         ctx.restore();
     }
 
