@@ -166,3 +166,95 @@ const PIRATE_GANG_NAMES = [
     "Wraith Union", "Shard Syndicate", "Grav Cutters", "Nebula Wolves",
     "Crimson Vector", "Adkins Family"
 ];
+
+// -------------------------
+// --- NPC Name Generation ---
+// -------------------------
+
+// Single source of truth for human NPC first names
+const NPC_FIRST_NAMES = [
+    'Alex', 'Blake', 'Casey', 'Dana', 'Ellis', 'Finley', 'Gray', 'Harper',
+    'Jordan', 'Kelly', 'Lane', 'Morgan', 'Nova', 'Parker', 'Quinn', 'River',
+    'Sage', 'Taylor', 'Val', 'Zephyr', 'Aria', 'Cade', 'Echo', 'Frost',
+    'Kai', 'Luna', 'Orion', 'Phoenix', 'Raven', 'Storm', 'Ash', 'Blaze',
+    'Ahmed', 'Amina', 'Carlos', 'Elena', 'Fatima', 'Gustavo', 'Hana', 'Ibrahim',
+    'Javier', 'Katarina', 'Luis', 'Maria', 'Nadia', 'Omar', 'Priya', 'Rafael',
+    'Sofia', 'Tariq', 'Ursula', 'Viktor', 'Wafa', 'Xavier', 'Yasmin', 'Zara',
+    'Bjorn', 'Clara', 'Diego', 'Eva', 'Felix', 'Gabriela', 'Hans', 'Isabella',
+    'Johan', 'Kira', 'Lars', 'Maya', 'Christian', 'Nils', 'Olivia', 'Pedro', 'Quincy',
+    'Rosa', 'Sven', 'Tina', 'Ulf', 'Vera', 'Wolfgang', 'Xena', 'Yuri',
+    'Zoe', 'Akira', 'Bao', 'Chun', 'Dmitri', 'Emiko', 'Fahad', 'Gina',
+    'Hiroshi', 'Ines', 'Jiro', 'Kamal', 'Ling', 'Mateo', 'Nina', 'Oscar',
+    'Pavel', 'Qamar', 'Rina', 'Santiago', 'Tao', 'Uma', 'Vladimir', 'Wei',
+    'Xin', 'Yuki', 'Zheng', 'Anika', 'Poppy', 'Bruno', 'Carmen', 'Dario', 'Elsa',
+    'Fabio', 'Greta', 'Hugo', 'Ivy', 'Jasmine', 'Klaus', 'Lila', 'Miguel',
+    'Nora', 'Otto', 'Paola', 'Ruben', 'Sara', 'Sebastian', 'Theo', 'Ulla', 'Victor',
+    'Wanda', 'Ximena', 'Yara', 'Ziggy', 'Amir', 'Bianca', 'Cesar', 'Diana',
+    'Eduardo', 'Fiona', 'Giuseppe', 'Helena', 'Ivan', 'Julia', 'Kofi', 'Lena',
+    'Marco', 'Oleg', 'Paula', 'Quentin', 'Rita', 'Sergio', 'Talia',
+    'Ulrich', 'Vanessa', 'Walter', 'Xia', 'Yosef', 'Marcus', 'Ingrid', 'Rashid',
+    'Astrid', 'Chen', 'Aleksei', 'Jorge', 'Nikolai', 'Dante', 'Mei'
+];
+
+// Single source of truth for human NPC last names
+const NPC_LAST_NAMES = [
+    'Chen', 'Garcia', 'Ivanov', 'Kim', 'Li', 'Martinez', 'Nguyen', 'Okafor',
+    'Patel', 'Rodriguez', 'Santos', 'Smith', 'Takahashi', 'Volkov', 'Wang',
+    'Yamamoto', 'Zhou', 'Anderson', 'Brown', 'Davis', 'Jensen', 'Singh',
+    'Torres', 'Wilson', 'Cooper', 'Morgan', 'Reed', 'Stone', 'Vale', 'West',
+    'Abdullah', 'Bianchi', 'Cruz', 'Diaz', 'Esposito', 'Fernandez', 'Gomez',
+    'Hernandez', 'Ito', 'Jimenez', 'Khan', 'Lopez', 'Morales', 'Nakamura',
+    'Ortega', 'Perez', 'Qasim', 'Ramirez', 'Silva', 'Tanaka', 'Uchida',
+    'Vargas', 'Wu', 'Xu', 'Yoshida', 'Zhang', 'Almeida', 'Barbosa', 'Castro',
+    'Dominguez', 'Esteban', 'Flores', 'Gonzalez', 'Herrera', 'Iniguez', 'Juarez',
+    'Kovacs', 'Lima', 'Mendoza', 'Nunez', 'Oliveira', 'Pinto', 'Quintana', 'Reyes',
+    'Sanchez', 'Uribe', 'Vega', 'Wong', 'Xie', 'Yanez', 'Zavala',
+    'Andersson', 'Berg', 'Carlsson', 'Eriksson', 'Gustafsson', 'Hansen', 'Iversen',
+    'Jakobsen', 'Kristensen', 'Larsen', 'Madsen', 'Nielsen', 'Olsen', 'Petersen',
+    'Rasmussen', 'Sorensen', 'Thomsen', 'Vestergaard', 'Winther', 'Zimmermann',
+    'Abe', 'Fujimoto', 'Goto', 'Hasegawa', 'Ishikawa', 'Kato', 'Kobayashi', 'Matsumoto',
+    'Nakagawa', 'Ogawa', 'Saito', 'Sakamoto', 'Suzuki', 'Takagi', 'Taniguchi', 'Ueda',
+    'Watanabe', 'Yamaguchi', 'Yoshimoto', 'Aoki', 'Endo', 'Fukuda', 'Harada', 'Ikeda',
+    'Kojima', 'Maeda', 'Murakami', 'Nishimura', 'Ono', 'Sasaki', 'Shimizu', 'Tamura',
+    'Ueno', 'Yamada', 'Arai', 'Chiba', 'Eguchi', 'Fujioka', 'Hara',
+    'Imai', 'Kikuchi', 'Kinoshita', 'Kondo', 'Mori', 'Nagai', 'Ozawa', 'Sato',
+    'Sugiyama', 'Takeda', 'Uchiyama', 'Wada', 'Yokoyama', 'Vance', 'Okonkwo',
+    'Petrov', 'Lindqvist', 'Aziz', 'Dubois', 'Kowalski', 'Rahman', 'Johansson', 'Andersen'
+];
+
+// Titles for named NPCs (used in news reports, missions, etc.)
+const NPC_TITLES = [
+    "Commander", "Captain", "Admiral", "Director", "Chief", "Agent",
+    "Warden", "Marshal", "Baron", "Minister", "Overseer", "Prefect"
+];
+
+/**
+ * Get a random element from an array
+ * @param {Array} list - Array to pick from
+ * @returns {string} Random element or empty string if invalid
+ */
+function getRandomNamePart(list) {
+    if (!Array.isArray(list) || list.length === 0) { return ''; }
+    const index = Math.floor(Math.random() * list.length);
+    return list[index];
+}
+
+/**
+ * Generate a random human NPC name (first + last)
+ * @returns {string} Full name like "Elena Volkov"
+ */
+function generateNPCName() {
+    const first = getRandomNamePart(NPC_FIRST_NAMES);
+    const last = getRandomNamePart(NPC_LAST_NAMES);
+    if (!first && !last) { return ''; }
+    return last ? `${first} ${last}` : first;
+}
+
+/**
+ * Generate a titled NPC name (title + first + last)
+ * @returns {string} Full titled name like "Commander Elena Volkov"
+ */
+function generateTitledNPCName() {
+    const title = getRandomNamePart(NPC_TITLES);
+    return `${title} ${generateNPCName()}`;
+}

@@ -61,21 +61,8 @@ class NewsManager {
             }
         };
 
-        // NPC name generators for flavor
-        this.firstNames = [
-            "Marcus", "Elena", "Viktor", "Zara", "Chen", "Astrid", "Dmitri", "Nadia",
-            "Rashid", "Ingrid", "Kofi", "Yuki", "Aleksei", "Fatima", "Jorge", "Priya",
-            "Sven", "Amara", "Nikolai", "Lena", "Dante", "Mei", "Oleg", "Ximena"
-        ];
-        this.lastNames = [
-            "Vance", "Okonkwo", "Petrov", "Singh", "Nakamura", "Lindqvist", "Aziz",
-            "Chen", "Volkov", "Dubois", "Kowalski", "Rahman", "Torres", "Ivanova",
-            "Schmidt", "Yamamoto", "Fernandez", "Johansson", "Kim", "Andersen"
-        ];
-        this.titles = [
-            "Commander", "Captain", "Admiral", "Director", "Chief", "Agent",
-            "Warden", "Marshal", "Baron", "Minister", "Overseer", "Prefect"
-        ];
+        // NPC name generators - use centralized constants from enemyConstants.js
+        // (NPC_FIRST_NAMES, NPC_LAST_NAMES, NPC_TITLES are defined there)
 
         // Headline templates by event type
         this.headlineTemplates = {
@@ -334,20 +321,17 @@ class NewsManager {
     }
 
     /**
-     * Generate a random NPC name
+     * Generate a random NPC name (uses centralized generator from enemyConstants.js)
      */
     _generateName() {
-        const first = this.firstNames[Math.floor(Math.random() * this.firstNames.length)];
-        const last = this.lastNames[Math.floor(Math.random() * this.lastNames.length)];
-        return `${first} ${last}`;
+        return (typeof generateNPCName === 'function') ? generateNPCName() : 'Unknown';
     }
 
     /**
-     * Generate a titled NPC name
+     * Generate a titled NPC name (uses centralized generator from enemyConstants.js)
      */
     _generateTitledName() {
-        const title = this.titles[Math.floor(Math.random() * this.titles.length)];
-        return `${title} ${this._generateName()}`;
+        return (typeof generateTitledNPCName === 'function') ? generateTitledNPCName() : 'Unknown Official';
     }
 
     /**
