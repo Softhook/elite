@@ -1783,9 +1783,9 @@ class StarSystem {
      */
     _rebuildSpatialHash() {
         // Lazy initialization of spatial hash
-        // Cell size of 600 is optimal based on benchmarks (matches largest query radius for targeting)
+        // Cell size of 1000 is optimal based on benchmarks (matches largest query radius for targeting)
         if (!this.spatialHash) {
-            this.spatialHash = new SpatialHash(600);
+            this.spatialHash = new SpatialHash(1000);
         }
 
         // Clear previous frame's data

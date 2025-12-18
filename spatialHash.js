@@ -14,10 +14,10 @@
 class SpatialHash {
     /**
      * Create a new spatial hash
-     * @param {number} cellSize - Size of each grid cell in pixels (default: 600)
-     *                            600px is optimal based on benchmarks - matches largest query radius (targeting)
+     * @param {number} cellSize - Size of each grid cell in pixels (default: 1000)
+     *                            1000px is optimal based on benchmarks - matches largest query radius (targeting)
      */
-    constructor(cellSize = 600) {
+    constructor(cellSize = 1000) {
         this.cellSize = cellSize;
         this.cells = new Map();
 
@@ -113,15 +113,15 @@ class SpatialHash {
         const out = results || this._reusableResults;
         out.length = 0;
 
-        // Calculate how many cells we need to check in each direction
-        const cellRadius = Math.ceil(radius / this.cellSize);
-        const baseCx = Math.floor(x / this.cellSize);
-        const baseCy = Math.floor(y / this.cellSize);
+        // Calculate precise cell range to check
+        const minCx = Math.floor((x - radius) / this.cellSize);
+        const maxCx = Math.floor((x + radius) / this.cellSize);
+        const minCy = Math.floor((y - radius) / this.cellSize);
+        const maxCy = Math.floor((y + radius) / this.cellSize);
 
-        // Check all cells within the cell radius
-        for (let dx = -cellRadius; dx <= cellRadius; dx++) {
-            for (let dy = -cellRadius; dy <= cellRadius; dy++) {
-                const key = this._keyFromCoords(baseCx + dx, baseCy + dy);
+        for (let cx = minCx; cx <= maxCx; cx++) {
+            for (let cy = minCy; cy <= maxCy; cy++) {
+                const key = this._keyFromCoords(cx, cy);
                 const cell = this.cells.get(key);
                 if (cell) {
                     for (let i = 0, len = cell.length; i < len; i++) {
