@@ -2262,15 +2262,58 @@ class StarSystem {
 
     /**
      * Updates all asteroids with destruction and cargo drop handling.
+     * OPTIMIZED: Distant asteroids (>2000px from player) only update every 5 frames.
      * @private
      */
     _updateAsteroids() {
-        this._updateEntities(
-            this.asteroids,
-            (asteroid) => asteroid.update(),
-            (asteroid) => asteroid.isDestroyed() || this.shouldDespawnEntity(asteroid, 1.2),
-            (asteroid) => this._handleAsteroidDestruction(asteroid)
-        );
+        const count = this.asteroids.length;
+        if (count === 0) return;
+
+        // Cache player position for distance checks
+        const playerX = this.player?.pos?.x ?? 0;
+        const playerY = this.player?.pos?.y ?? 0;
+
+        // Distance threshold for throttling (beyond screen + buffer)
+        const THROTTLE_DISTANCE_SQ = 2000 * 2000; // 2000px squared
+        const THROTTLE_INTERVAL = 10; // Update every 10th frame when distant
+
+        for (let i = count - 1; i >= 0; i--) {
+            const asteroid = this.asteroids[i];
+            if (!asteroid) {
+                this._fastRemove(this.asteroids, i);
+                continue;
+            }
+
+            // Calculate squared distance to player (avoid sqrt for performance)
+            const dx = asteroid.pos.x - playerX;
+            const dy = asteroid.pos.y - playerY;
+            const distSq = dx * dx + dy * dy;
+
+            // Throttle updates for distant asteroids
+            if (distSq > THROTTLE_DISTANCE_SQ) {
+                // Initialize offset if not set (stagger updates across asteroids)
+                if (asteroid._throttleOffset === undefined) {
+                    asteroid._throttleOffset = Math.floor(Math.random() * THROTTLE_INTERVAL);
+                }
+                // Skip update on non-throttle frames
+                if ((frameCount + asteroid._throttleOffset) % THROTTLE_INTERVAL !== 0) {
+                    continue; // Skip this asteroid's update
+                }
+            }
+
+            // Normal update
+            try {
+                asteroid.update();
+            } catch (e) {
+                console.error(`Error updating asteroid:`, e);
+            }
+
+            // Check for removal (destroyed or despawned)
+            if (asteroid.isDestroyed() || this.shouldDespawnEntity(asteroid, 1.2)) {
+                this._handleAsteroidDestruction(asteroid);
+                this._fastRemove(this.asteroids, i);
+            }
+        }
     }
 
     /**
