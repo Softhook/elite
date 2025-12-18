@@ -7,11 +7,6 @@ class EventManager {
         this.player = null;
         this.uiManager = null;
 
-        this.pirateGangNames = [
-            "Void Reavers", "Cygnus Marauders", "Nebula Nomads",
-            "Quantum Corsairs", "Kygan Syndicate", "Synapse Ghosts", "Solar Scourge"
-        ];
-
         // Initialize ship groups dynamically from SHIP_DEFINITIONS
         this.shipGroups = {
             POLICE: [],
@@ -150,7 +145,7 @@ class EventManager {
                 isWarningActive: false,
                 eventTriggerFrame: 0,
                 warningConfig: {
-                    messageGenerator: () => `DANGER: ${random(this.pirateGangNames)} pirates detected!`,
+                    messageGenerator: () => `DANGER: ${random(PIRATE_GANG_NAMES)} pirates detected!`,
                     color: "red",
                     consoleLogGenerator: (gangName) => `EventManager: ${gangName} pirate swarm warning issued.`
                 },

@@ -152,3 +152,17 @@ const COMBAT_MILITARY_ANGLE_TOLERANCE_RAD = 0.15;   // tighter aim tolerance (~8
 const COMBAT_RIVALRY_MAX_SPEED_MULT = 1.2;
 const COMBAT_RIVALRY_ENGAGE_DISTANCE_MULT = 1.3;
 const COMBAT_RIVALRY_FIRING_RANGE_MULT = 1.2;
+
+// -------------------------
+// --- Pirate Gang Names ---
+// -------------------------
+
+// Single source of truth for pirate faction/gang names used across the game
+const PIRATE_GANG_NAMES = [
+    "Void Reavers", "Cygnus Marauders", "Nebula Nomads",
+    "Quantum Corsairs", "Kygan Syndicate", "Synapse Ghosts", "Solar Scourge",
+    "Black Arc", "Dust Jackals", "Red Shift", "Voidborn", "Broken Comet",
+    "Stokey Krew", "Tottenham Turks", "Hackney Bombers", "Bombacilars",
+    "Wraith Union", "Shard Syndicate", "Grav Cutters", "Nebula Wolves",
+    "Crimson Vector", "Adkins Family"
+];

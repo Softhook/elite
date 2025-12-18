@@ -11,9 +11,9 @@ class CommunicationSystem {
         this._playerTitle = "Commander";
 
         this._cargoWords = ["cargo", "freight", "payload", "haul", "manifest", "containers", "stock"];
-        this._pirateGroups = [
-            "Black Arc", "Dust Jackals", "Red Shift", "Voidborn", "Broken Comet", "Stokey Krew", "Tottenham Turks", "Hackney Bombers", "Bombacilars",
-            "Wraith Union", "Shard Syndicate", "Grav Cutters", "Nebula Wolves", "Crimson Vector", "Adkins Family"
+        // Use shared constant from enemyConstants.js for pirate gang names
+        this._pirateGroups = (typeof PIRATE_GANG_NAMES !== 'undefined') ? PIRATE_GANG_NAMES : [
+            "Black Arc", "Dust Jackals", "Red Shift", "Voidborn", "Broken Comet"
         ];
         this._pirateDemands = [
             "dump the hold",
