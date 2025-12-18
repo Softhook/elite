@@ -61,6 +61,15 @@ class NewsManager {
             }
         };
 
+        // PERF: Cache faction keys to avoid Object.keys() on every _selectFaction call
+        this._factionKeys = Object.keys(this.factions);
+
+        // PERF: Cached arrays for background news generation (built lazily)
+        this._cachedShipNames = null;
+        this._cachedPirateGangs = null;
+        this._cachedCommodities = ['Metals', 'Rare Ore', 'Medicine', 'Food', 'Luxury Goods',
+            'Textiles', 'Adv Components', 'Narcotics', 'Weapons', 'Slaves'];
+
         // NPC name generators - use centralized constants from enemyConstants.js
         // (NPC_FIRST_NAMES, NPC_LAST_NAMES, NPC_TITLES are defined there)
 
@@ -336,23 +345,26 @@ class NewsManager {
 
     /**
      * Select a random template and fill in placeholders
+     * PERF: Uses split/join instead of RegExp for faster string replacement
      */
     _fillTemplate(templates, replacements) {
-        const template = templates[Math.floor(Math.random() * templates.length)];
+        const template = templates[(Math.random() * templates.length) | 0];
         let result = template;
-        for (const [key, value] of Object.entries(replacements)) {
-            result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+        for (const key in replacements) {
+            // split/join is faster than RegExp for simple replacements
+            result = result.split('{' + key + '}').join(replacements[key]);
         }
         return result;
     }
 
     /**
      * Get faction perspective for body text
+     * PERF: Uses cached faction keys array
      */
     _selectFaction() {
-        const keys = Object.keys(this.factions);
-        const key = keys[Math.floor(Math.random() * keys.length)];
-        return { key, ...this.factions[key] };
+        const key = this._factionKeys[(Math.random() * this._factionKeys.length) | 0];
+        const faction = this.factions[key];
+        return { key, name: faction.name, tone: faction.tone, bias: faction.bias, color: faction.color };
     }
 
     /**
@@ -382,27 +394,51 @@ class NewsManager {
 
     /**
      * Add a news item with priority sorting
+     * PERF: Uses binary search insertion instead of sorting entire array
      */
     _addNews(newsItem) {
         const hash = this._hashNews(newsItem.category, newsItem.headline.substring(0, 20));
         if (this._isDuplicate(hash)) return;
         this._trackNews(hash);
 
-        this.newsItems.unshift({
-            ...newsItem,
+        const newItem = {
+            headline: newsItem.headline,
+            body: newsItem.body,
+            source: newsItem.source,
+            sourceColor: newsItem.sourceColor,
+            category: newsItem.category,
+            priority: newsItem.priority,
             timestamp: Date.now(),
             read: false
-        });
+        };
 
-        // Sort by priority (higher first), then by timestamp (newer first)
-        this.newsItems.sort((a, b) => {
-            if (b.priority !== a.priority) return b.priority - a.priority;
-            return b.timestamp - a.timestamp;
-        });
+        // Binary search for insert position (sorted by priority desc, then timestamp desc)
+        const items = this.newsItems;
+        const len = items.length;
+        if (len === 0) {
+            items.push(newItem);
+        } else {
+            // Find insertion point using binary search
+            let low = 0, high = len;
+            const newPri = newItem.priority;
+            const newTime = newItem.timestamp;
+            while (low < high) {
+                const mid = (low + high) >>> 1;
+                const midItem = items[mid];
+                // Higher priority comes first, then newer timestamp comes first
+                if (midItem.priority > newPri ||
+                    (midItem.priority === newPri && midItem.timestamp >= newTime)) {
+                    low = mid + 1;
+                } else {
+                    high = mid;
+                }
+            }
+            items.splice(low, 0, newItem);
+        }
 
-        // Trim excess
-        while (this.newsItems.length > this.maxNewsItems) {
-            this.newsItems.pop();
+        // Trim excess (remove from end)
+        if (items.length > this.maxNewsItems) {
+            items.length = this.maxNewsItems;
         }
     }
 
@@ -849,26 +885,104 @@ class NewsManager {
     }
 
     /**
-     * Generate background/flavor news
+     * PERF: Lazily cache ship names from SHIP_DEFINITIONS
+     */
+    _getShipNames() {
+        if (!this._cachedShipNames) {
+            this._cachedShipNames = (typeof SHIP_DEFINITIONS !== 'undefined')
+                ? Object.values(SHIP_DEFINITIONS).map(s => s.name).filter(Boolean)
+                : ['Sidewinder', 'Cobra Mk III', 'Viper', 'Python'];
+        }
+        return this._cachedShipNames;
+    }
+
+    /**
+     * PERF: Lazily cache pirate gang names
+     */
+    _getPirateGangs() {
+        if (!this._cachedPirateGangs) {
+            this._cachedPirateGangs = (typeof PIRATE_GANG_NAMES !== 'undefined')
+                ? PIRATE_GANG_NAMES
+                : ['Void Reavers', 'Cygnus Marauders'];
+        }
+        return this._cachedPirateGangs;
+    }
+
+    /**
+     * Generate background/flavor news using real in-game elements
+     * PERF: Uses cached arrays and template-based story generation
      */
     generateBackgroundNews() {
-        const backgroundStories = [
-            { headline: "LUXURY LINER COMPLETES MAIDEN VOYAGE", body: "Passengers report exceptional experience aboard the ISS Magnificence." },
-            { headline: "MINING CONSORTIUM REPORTS RECORD PROFITS", body: "Shareholders celebrate as ore prices remain stable." },
-            { headline: "CELEBRITY PILOT ENDORSES NEW SHIP MODEL", body: "Pre-orders exceed expectations according to manufacturer." },
-            { headline: "ANNUAL TRADE FAIR DRAWS RECORD CROWDS", body: "Merchants from across the sector showcase latest wares." },
-            { headline: "RACING CIRCUIT ANNOUNCES NEW SEASON", body: "Pilots prepare for the most challenging course yet." },
-            { headline: "CULINARY SENSATION SWEEPS STATION RESTAURANTS", body: "The new fusion cuisine has diners lining up." },
-            { headline: "HOLOVID SERIES BREAKS VIEWERSHIP RECORDS", body: "Critics praise the drama's realistic space combat scenes." },
-            { headline: "NEW TERRAFORMING PROJECT APPROVED", body: "Colony world expected to reach habitability within decades." }
+        const shipNames = this._getShipNames();
+        const pirateGangs = this._getPirateGangs();
+        const commodities = this._cachedCommodities;
+
+        // Fast random pick using bitwise OR for floor
+        const shipName = shipNames[(Math.random() * shipNames.length) | 0];
+        const pirateGang = pirateGangs[(Math.random() * pirateGangs.length) | 0];
+        const commodity = commodities[(Math.random() * commodities.length) | 0];
+        const pilotName = this._generateName();
+        const titledName = this._generateTitledName();
+
+        // Story templates with placeholders - avoids building 18 objects each call
+        const storyTemplates = [
+            // Ship stories (0-3)
+            ['{SHIP} PRODUCTION HITS RECORD NUMBERS', 'Shipyards report unprecedented demand for the {ship}. Delivery waitlists extend into next quarter.'],
+            ['CELEBRITY PILOT {PILOT} ENDORSES {SHIP}', 'Pre-orders exceed expectations after famous ace {pilot} praises the {ship}\'s handling characteristics.'],
+            ['{SHIP} RECALL ISSUED', 'Manufacturer issues voluntary recall for recent {ship} models citing minor thruster calibration issues.'],
+            ['NEW {SHIP} VARIANT UNVEILED', 'Prototype features enhanced cargo capacity. Test pilots report exceptional performance.'],
+            // Pirate stories (4-7)
+            ['{GANG} ACTIVITY DROPS SHARPLY', 'Intel suggests internal power struggle within the {gang}. Traders report quieter lanes.'],
+            ['{GANG} LEADER SPOTTED', 'Unconfirmed reports place notorious {gang} commander near frontier systems.'],
+            ['BOUNTY HUNTERS TARGET {GANG}', 'Coordinated bounty operation launches against {gang} cells. Premium rates offered.'],
+            ['{GANG} DEMANDS PROTECTION FEES', 'Station operators in outer systems report extortion attempts by {gang} operatives.'],
+            // Commodity stories (8-11)
+            ['{COMMODITY} PRICES STABILIZE', 'After weeks of volatility, {commodity} markets find equilibrium. Traders cautiously optimistic.'],
+            ['NEW {COMMODITY} TRADE ROUTE DISCOVERED', 'Explorers map efficient hyperspace corridor. {commodity} shipments expected to increase.'],
+            ['{COMMODITY} SHORTAGE FEARED', 'Supply chain analysts warn of potential {commodity} deficit in coming months.'],
+            ['{COMMODITY} SMUGGLING RING EXPOSED', 'Authorities dismantle operation moving illegal {commodity} through frontier systems.'],
+            // NPC stories (12-15)
+            ['{TITLED} ANNOUNCES RETIREMENT', 'After decades of service, the decorated official steps down amid ceremony.'],
+            ['{TITLED} CALLS FOR REFORM', 'Controversial speech demands changes to trade regulations. Reactions mixed.'],
+            ['PILOT {PILOT} SETS NEW RECORD', 'Racing circuit achievement: fastest hyperspace corridor run in sector history.'],
+            ['{PILOT} SURVIVES ALIEN ENCOUNTER', 'Lone pilot escapes Thargoid ambush. Tale of survival inspires bounty hunters.'],
+            // Static stories (16-23)
+            ['IMPERIAL CLIPPER LUXURY CRUISE DEPARTS', 'VIP passengers embark on exclusive tour of core systems. Security detail exceeds standard protocols.'],
+            ['SEPARATIST RALLY DRAWS THOUSANDS', 'Frontier colony hosts largest gathering in years. Imperial observers maintain distance.'],
+            ['MILITARY EXERCISES BEGIN NEAR FRONTIER', 'Naval forces conduct routine training. Civilian traffic rerouted during operations.'],
+            ['THARGOID ACTIVITY MONITORING STATION UPGRADED', 'New sensors provide enhanced detection range. Military officials express confidence.'],
+            ['STARLINER CRUISER COMPLETES MAIDEN VOYAGE', 'Passengers report exceptional amenities aboard the flagship tourism vessel.'],
+            ['MINING BOOM TRANSFORMS ASTEROID BELT', 'Independent prospectors flock to newly discovered Rare Ore deposits.'],
+            ['POLICE VIPER SQUADRON RECEIVES COMMENDATION', 'Officers recognized for exceptional service protecting trade lanes.'],
+            ['COBRA MK III REMAINS BEST-SELLING MULTI-ROLE', 'Venerable design continues to dominate versatility rankings across all sectors.']
         ];
 
-        const story = backgroundStories[Math.floor(Math.random() * backgroundStories.length)];
+        const template = storyTemplates[(Math.random() * storyTemplates.length) | 0];
+        const shipUpper = shipName.toUpperCase();
+        const gangUpper = pirateGang.toUpperCase();
+        const commodityUpper = commodity.toUpperCase();
+        const pilotUpper = pilotName.toUpperCase();
+        const titledUpper = titledName.toUpperCase();
+
+        // Build headline and body with fast string replacement
+        let headline = template[0]
+            .split('{SHIP}').join(shipUpper)
+            .split('{GANG}').join(gangUpper)
+            .split('{COMMODITY}').join(commodityUpper)
+            .split('{PILOT}').join(pilotUpper)
+            .split('{TITLED}').join(titledUpper);
+
+        let body = template[1]
+            .split('{ship}').join(shipName)
+            .split('{gang}').join(pirateGang)
+            .split('{commodity}').join(commodity)
+            .split('{pilot}').join(pilotName);
+
         const faction = this._selectFaction();
 
         this._addNews({
-            headline: story.headline,
-            body: story.body,
+            headline,
+            body,
             source: faction.name,
             sourceColor: faction.color,
             category: NEWS_CATEGORY.BACKGROUND,

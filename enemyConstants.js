@@ -224,8 +224,8 @@ const NPC_LAST_NAMES = [
 
 // Titles for named NPCs (used in news reports, missions, etc.)
 const NPC_TITLES = [
-    "Commander", "Captain", "Admiral", "Director", "Chief", "Agent",
-    "Warden", "Marshal", "Baron", "Minister", "Overseer", "Prefect"
+    "Commander", "Captain", "Lord", "Admiral", "Director", "Chief", "Agent",
+    "Warden", "Marshal", "Baron", "Minister", "President", "Commissar", "Overseer", "Prefect"
 ];
 
 /**
