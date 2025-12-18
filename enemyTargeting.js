@@ -347,13 +347,22 @@ class EnemyTargeting {
             }
         }
 
-        // Evaluate other enemies (no debug)
+        // Evaluate other enemies (optimized with spatial hash)
         const canTargetOtherEnemies = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.COMBAT);
         if (canTargetOtherEnemies && system.enemies && system.enemies.length > 0) {
             const isAlien = this.role === AI_ROLE.ALIEN;
 
-            for (let i = 0, len = system.enemies.length; i < len; i++) {
-                const otherEnemy = system.enemies[i];
+            // Use spatial hash if available for O(1) nearby lookup
+            // Search radius based on weapon range + some buffer for approach
+            const targetingRadius = (this.weaponRange || 400) + 200;
+            const candidates = (system.spatialHash) ?
+                system.spatialHash.getNearby(this.pos.x, this.pos.y, targetingRadius) :
+                system.enemies;
+
+            for (let i = 0, len = candidates.length; i < len; i++) {
+                const otherEnemy = candidates[i];
+                // Skip non-enemies (spatial hash may include asteroids, cargo, etc.)
+                if (!(otherEnemy instanceof Enemy)) continue;
                 if (otherEnemy === this || otherEnemy === bestTarget) {
                     continue;
                 }

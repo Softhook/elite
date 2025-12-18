@@ -1769,6 +1769,73 @@ class StarSystem {
 
     /**
      * ==========================================================================
+     * SPATIAL PARTITIONING
+     * ==========================================================================
+     * Grid-based spatial hash for efficient O(1) collision queries.
+     * Transforms O(n²) collision detection into O(n).
+     */
+
+    /**
+     * Rebuilds the spatial hash with all collidable entities.
+     * Called at the start of each update frame.
+     * @private
+     */
+    _rebuildSpatialHash() {
+        // Lazy initialization of spatial hash
+        // Cell size of 600 is optimal based on benchmarks (matches largest query radius for targeting)
+        if (!this.spatialHash) {
+            this.spatialHash = new SpatialHash(600);
+        }
+
+        // Clear previous frame's data
+        this.spatialHash.clear();
+
+        // Insert all collidable entities
+        // Note: Player is not inserted - we query from player's position
+        this.spatialHash.insertAll(this.enemies);
+        this.spatialHash.insertAll(this.asteroids);
+        this.spatialHash.insertAll(this.spaceObjects);
+        this.spatialHash.insertAll(this.mines);
+
+        // Projectiles are inserted for projectile-projectile collision (missile intercept)
+        this.spatialHash.insertAll(this.projectiles);
+
+        // Cargo is inserted for collection queries
+        this.spatialHash.insertAll(this.cargo);
+    }
+
+    /**
+     * Get nearby entities of a specific type from the spatial hash.
+     * @param {number} x - Query center X
+     * @param {number} y - Query center Y
+     * @param {number} radius - Search radius
+     * @param {string} [type] - Optional type filter: 'enemy', 'asteroid', 'spaceObject', 'mine', 'cargo'
+     * @returns {Array} Nearby entities
+     */
+    getNearbyEntities(x, y, radius, type = null) {
+        if (!this.spatialHash) return [];
+
+        const nearby = this.spatialHash.getNearby(x, y, radius);
+
+        if (!type) return nearby;
+
+        // Filter by type if specified
+        return nearby.filter(entity => {
+            if (!entity) return false;
+            switch (type) {
+                case 'enemy': return entity instanceof Enemy;
+                case 'asteroid': return entity instanceof Asteroid;
+                case 'spaceObject': return entity instanceof SpaceObject;
+                case 'mine': return entity.isMine === true;
+                case 'cargo': return entity instanceof Cargo;
+                case 'projectile': return entity instanceof Projectile;
+                default: return true;
+            }
+        });
+    }
+
+    /**
+     * ==========================================================================
      * ENTITY UPDATE & MANAGEMENT
      * ==========================================================================
      */
@@ -1816,6 +1883,11 @@ class StarSystem {
      */
     update() {
         if (!this.player || !this.player.pos) return;
+
+        // === SPATIAL HASH OPTIMIZATION ===
+        // Rebuild spatial hash each frame for efficient O(1) collision queries
+        // This transforms O(n²) collision detection into O(n)
+        this._rebuildSpatialHash();
 
         // Update dynamic stock for markets
         this._updateMarketStock();
@@ -3158,62 +3230,103 @@ class StarSystem {
     }
 
 
-    /** Handles all collision detection and responses in the system. */
+    /** 
+     * Handles all collision detection and responses in the system.
+     * OPTIMIZED: Uses spatial hash for O(n) performance instead of O(n²)
+     */
     checkCollisions() {
         // Early exit if no player
         if (!this.player || !this.player.pos) return;
-        if (!this.player) return;
 
         try {
             // --- PHYSICAL OBJECT COLLISIONS (Non-projectile) ---
+            // Using spatial hash for efficient nearby entity queries
 
-            // Player vs Enemies - cache lengths for better performance
+            const playerX = this.player.pos.x;
+            const playerY = this.player.pos.y;
+            const playerSize = this.player.size || 30;
+
+            // Query radius: player size + max enemy/asteroid size + buffer
+            const playerQueryRadius = playerSize + 100;
+
+            // Get nearby entities for player collision checks
+            const nearbyForPlayer = this.spatialHash ?
+                this.spatialHash.getNearby(playerX, playerY, playerQueryRadius) : [];
+
+            // Player vs Enemies & Asteroids - now using spatial hash query
+            for (let i = 0, len = nearbyForPlayer.length; i < len; i++) {
+                const entity = nearbyForPlayer[i];
+                if (!entity || !entity.pos) continue;
+
+                // Check if this is an enemy
+                if (entity instanceof Enemy) {
+                    if (entity.isDestroyed()) continue;
+
+                    // Skip collision detection for player's bodyguards
+                    if (entity.role === AI_ROLE.GUARD && entity.principal === this.player) {
+                        continue;
+                    }
+
+                    if (this.player.checkCollision(entity)) {
+                        this._handleShipCollision(this.player, entity);
+                    }
+                }
+                // Check if this is an asteroid
+                else if (entity instanceof Asteroid) {
+                    if (entity.isDestroyed()) continue;
+                    if (this.player.checkCollision(entity)) {
+                        this._handleAsteroidCollision(this.player, entity);
+                    }
+                }
+            }
+
+            // Enemy vs Asteroid collisions - using spatial hash per enemy
             const enemyCount = this.enemies.length;
             for (let i = 0; i < enemyCount; i++) {
                 const enemy = this.enemies[i];
                 if (!enemy || !enemy.pos || enemy.isDestroyed()) continue;
 
-                // Skip collision detection for player's bodyguards
-                if (enemy.role === AI_ROLE.GUARD && enemy.principal === this.player) {
-                    continue; // This prevents collisions between player and their bodyguards
-                }
+                // Query nearby asteroids for this enemy
+                const enemySize = enemy.size || 30;
+                const nearbyAsteroids = this.spatialHash ?
+                    this.spatialHash.getNearby(enemy.pos.x, enemy.pos.y, enemySize + 60) : [];
 
-                if (this.player.checkCollision(enemy)) {
-                    this._handleShipCollision(this.player, enemy);
-                }
-            }
-
-            // Player vs Asteroids collision - cache lengths
-            const asteroidCount = this.asteroids.length;
-            for (let i = 0; i < asteroidCount; i++) {
-                const asteroid = this.asteroids[i];
-                if (!asteroid || !asteroid.pos || asteroid.isDestroyed()) continue;
-                if (this.player.checkCollision(asteroid)) {
-                    this._handleAsteroidCollision(this.player, asteroid);
-                }
-            }
-
-            // Enemy vs Asteroid collisions - optimized with cached lengths
-            for (let i = 0; i < enemyCount; i++) {
-                const enemy = this.enemies[i];
-                if (!enemy || !enemy.pos || enemy.isDestroyed()) continue;
-                for (let j = 0; j < asteroidCount; j++) {
-                    const asteroid = this.asteroids[j];
+                for (let j = 0, nearbyLen = nearbyAsteroids.length; j < nearbyLen; j++) {
+                    const asteroid = nearbyAsteroids[j];
+                    if (!(asteroid instanceof Asteroid)) continue;
                     if (!asteroid || !asteroid.pos || asteroid.isDestroyed()) continue;
+
                     if (enemy.checkCollision(asteroid)) {
                         this._handleAsteroidCollision(enemy, asteroid);
                     }
                 }
             }
 
-            // Asteroid vs Asteroid collisions - only check each pair once
-            for (let i = 0; i < asteroidCount - 1; i++) {
+            // Asteroid vs Asteroid collisions - check each asteroid against nearby asteroids
+            const asteroidCount = this.asteroids.length;
+            const checkedPairs = new Set(); // Prevent double-checking pairs
+
+            for (let i = 0; i < asteroidCount; i++) {
                 const asteroid1 = this.asteroids[i];
                 if (!asteroid1 || !asteroid1.pos || asteroid1.isDestroyed()) continue;
 
-                for (let j = i + 1; j < asteroidCount; j++) {
-                    const asteroid2 = this.asteroids[j];
+                const maxAsteroidRadius = asteroid1.maxRadius || 40;
+                const nearbyAsteroids = this.spatialHash ?
+                    this.spatialHash.getNearby(asteroid1.pos.x, asteroid1.pos.y, maxAsteroidRadius + 60) : [];
+
+                for (let j = 0, nearbyLen = nearbyAsteroids.length; j < nearbyLen; j++) {
+                    const asteroid2 = nearbyAsteroids[j];
+                    if (!(asteroid2 instanceof Asteroid)) continue;
+                    if (asteroid2 === asteroid1) continue;
                     if (!asteroid2 || !asteroid2.pos || asteroid2.isDestroyed()) continue;
+
+                    // Create unique pair key to avoid checking same pair twice
+                    const id1 = asteroid1.id || i;
+                    const id2 = asteroid2.id || this.asteroids.indexOf(asteroid2);
+                    const pairKey = id1 < id2 ? `${id1}-${id2}` : `${id2}-${id1}`;
+
+                    if (checkedPairs.has(pairKey)) continue;
+                    checkedPairs.add(pairKey);
 
                     if (asteroid1.checkCollision(asteroid2)) {
                         this._handleAsteroidAsteroidCollision(asteroid1, asteroid2);
@@ -3221,14 +3334,18 @@ class StarSystem {
                 }
             }
 
-            // Asteroid vs Space Object collisions
-            const spaceObjectCount = this.spaceObjects.length;
+            // Asteroid vs Space Object collisions - using spatial hash
             for (let i = 0; i < asteroidCount; i++) {
                 const asteroid = this.asteroids[i];
                 if (!asteroid || !asteroid.pos || asteroid.isDestroyed()) continue;
 
-                for (let j = 0; j < spaceObjectCount; j++) {
-                    const spaceObject = this.spaceObjects[j];
+                const maxRadius = asteroid.maxRadius || 40;
+                const nearbyObjects = this.spatialHash ?
+                    this.spatialHash.getNearby(asteroid.pos.x, asteroid.pos.y, maxRadius + 80) : [];
+
+                for (let j = 0, len = nearbyObjects.length; j < len; j++) {
+                    const spaceObject = nearbyObjects[j];
+                    if (!(spaceObject instanceof SpaceObject)) continue;
                     if (!spaceObject || !spaceObject.pos || spaceObject.isDestroyed()) continue;
 
                     if (asteroid.checkCollision(spaceObject)) {
@@ -3236,7 +3353,6 @@ class StarSystem {
                     }
                 }
             }
-
 
         } catch (e) {
             console.error("Error in checkCollisions:", e);
@@ -3259,11 +3375,17 @@ class StarSystem {
 
     /**
      * Check and handle projectile collision with asteroids
+     * OPTIMIZED: Uses spatial hash for nearby asteroid lookup
      * @private
      */
     _checkProjectileAsteroidCollision(proj, i, distCheckVector, asteroidCount) {
-        for (let j = asteroidCount - 1; j >= 0; j--) {
-            const asteroid = this.asteroids[j];
+        // Use spatial hash if available for O(1) lookup
+        const nearbyAsteroids = this.spatialHash ?
+            this.spatialHash.getNearby(proj.pos.x, proj.pos.y, 80) : this.asteroids;
+
+        for (let j = nearbyAsteroids.length - 1; j >= 0; j--) {
+            const asteroid = nearbyAsteroids[j];
+            if (!(asteroid instanceof Asteroid)) continue;
             if (!asteroid || asteroid.isDestroyed()) continue;
 
             if (this._checkProjectileBroadphase(proj, asteroid, distCheckVector) && asteroid.checkCollision(proj)) {
@@ -3278,13 +3400,19 @@ class StarSystem {
 
     /**
      * Check and handle projectile collision with space objects
+     * OPTIMIZED: Uses spatial hash for nearby lookup
      * @private
      */
     _checkProjectileSpaceObjectCollision(proj, i, distCheckVector) {
         if (!this.spaceObjects || !this.spaceObjects.length) return false;
 
-        for (let j = this.spaceObjects.length - 1; j >= 0; j--) {
-            const so = this.spaceObjects[j];
+        // Use spatial hash if available
+        const nearbyObjects = this.spatialHash ?
+            this.spatialHash.getNearby(proj.pos.x, proj.pos.y, 100) : this.spaceObjects;
+
+        for (let j = nearbyObjects.length - 1; j >= 0; j--) {
+            const so = nearbyObjects[j];
+            if (!(so instanceof SpaceObject)) continue;
             const soDestroyed = so && (typeof so.isDestroyed === 'function' ? so.isDestroyed() : !!so.destroyed);
             if (!so || soDestroyed) continue;
 
@@ -3300,12 +3428,18 @@ class StarSystem {
 
     /**
      * Check and handle projectile collision with mines
+     * OPTIMIZED: Uses spatial hash for nearby lookup
      * @private
      */
     _checkProjectileMineCollision(proj, i, distCheckVector) {
-        for (let j = this.mines.length - 1; j >= 0; j--) {
-            const mine = this.mines[j];
-            if (!mine || mine.destroyed || proj.owner === mine.owner) continue;
+        // Use spatial hash if available
+        const nearbyMines = this.spatialHash ?
+            this.spatialHash.getNearby(proj.pos.x, proj.pos.y, 50) : this.mines;
+
+        for (let j = nearbyMines.length - 1; j >= 0; j--) {
+            const mine = nearbyMines[j];
+            if (!mine || !mine.isMine) continue; // Filter to mines only
+            if (mine.destroyed || proj.owner === mine.owner) continue;
 
             if (this._checkProjectileBroadphase(proj, mine, distCheckVector)) {
                 mine.takeDamage(proj.damage || 10, proj.owner, this);
