@@ -402,40 +402,48 @@ class UIHUD {
 
         const statusLineY = 20;
 
-        // Center - LEGAL status
-        fill(255);
+        // Center - LEGAL status (cached every 30 frames for performance)
+        const statusCacheInterval = 30;
+        const shouldRecalculateStatus = !this._cachedStatusText ||
+            (frameCount - this._statusTextCacheFrame) >= statusCacheInterval;
+
+        if (shouldRecalculateStatus) {
+            let factionDisplay = "";
+            let factionRank = "";
+
+            if (player.isPolice) {
+                factionDisplay = "POLICE";
+                factionRank = player.getFactionRank("POLICE");
+            } else if (player.playerFaction === "MILITARY") {
+                factionDisplay = "MILITARY";
+                factionRank = player.getFactionRank("MILITARY");
+            } else if (player.playerFaction === "IMPERIAL") {
+                factionDisplay = "IMPERIAL";
+                factionRank = player.getFactionRank("IMPERIAL");
+            } else if (player.playerFaction === "SEPARATIST") {
+                factionDisplay = "SEPARATIST";
+                factionRank = player.getFactionRank("SEPARATIST");
+            } else {
+                factionDisplay = "LEGAL";
+            }
+
+            let statusText = `${eliteRating} - ${factionDisplay}`;
+            if (factionRank) {
+                statusText += ` (${factionRank})`;
+            }
+
+            this._cachedIsWanted = player.currentSystem?.isPlayerWanted() || false;
+            if (this._cachedIsWanted) {
+                statusText += " - Wanted";
+            }
+
+            this._cachedStatusText = statusText;
+            this._statusTextCacheFrame = frameCount;
+        }
+
+        fill(this._cachedIsWanted ? color(255, 0, 0) : 255);
         textAlign(CENTER, CENTER);
-
-        let factionDisplay = "";
-        let factionRank = "";
-
-        if (player.isPolice) {
-            factionDisplay = "POLICE";
-            factionRank = player.getFactionRank("POLICE");
-        } else if (player.playerFaction === "MILITARY") {
-            factionDisplay = "MILITARY";
-            factionRank = player.getFactionRank("MILITARY");
-        } else if (player.playerFaction === "IMPERIAL") {
-            factionDisplay = "IMPERIAL";
-            factionRank = player.getFactionRank("IMPERIAL");
-        } else if (player.playerFaction === "SEPARATIST") {
-            factionDisplay = "SEPARATIST";
-            factionRank = player.getFactionRank("SEPARATIST");
-        } else {
-            factionDisplay = "LEGAL";
-        }
-
-        let statusText = `${eliteRating} - ${factionDisplay}`;
-        if (factionRank) {
-            statusText += ` (${factionRank})`;
-        }
-
-        if (player.currentSystem?.isPlayerWanted()) {
-            statusText += " - Wanted";
-            fill(255, 0, 0);
-        }
-
-        text(statusText, width / 2, statusLineY);
+        text(this._cachedStatusText, width / 2, statusLineY);
 
         // Right side - Ship info
         fill(255);

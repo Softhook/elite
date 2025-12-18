@@ -212,10 +212,23 @@ class UIMinimap {
     }
 
     _drawHazardsBuffer(player, system, mapCenterX, mapCenterY) {
+        // Only regenerate buffer every 15 frames - hazards move slowly
+        const shouldRegenerate = !this._lastHazardsFrame ||
+            (frameCount - this._lastHazardsFrame) >= 15;
+
         if (!this.hazardsBuffer || this._hazardsBufferSize !== this.size) {
             this.hazardsBuffer = createGraphics(this.size, this.size);
             this._hazardsBufferSize = this.size;
+            this._lastHazardsFrame = 0; // Force redraw on size change
         }
+
+        // Draw cached buffer and skip regeneration if not needed
+        if (!shouldRegenerate) {
+            image(this.hazardsBuffer, this.x, this.y);
+            return;
+        }
+
+        this._lastHazardsFrame = frameCount;
 
         const hbuf = this.hazardsBuffer;
         hbuf.clear();

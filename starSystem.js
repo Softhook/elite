@@ -2107,6 +2107,10 @@ class StarSystem {
      * @private
      */
     _updateMarketStock() {
+        // Throttle market updates to every 10 frames for performance
+        // Market prices don't need per-frame updates
+        if (typeof frameCount !== 'undefined' && frameCount % 10 !== 0) return;
+
         const deltaSeconds = (typeof deltaTime === 'number' && Number.isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
         if (deltaSeconds <= 0) return;
 
@@ -2245,14 +2249,30 @@ class StarSystem {
 
     /**
      * Updates decorative space objects.
+     * Distance-based throttling: far objects update every 5 frames.
      * @private
      */
     _updateSpaceObjects() {
         if (!this.spaceObjects || !this.spaceObjects.length) return;
 
+        const playerPos = this.player?.pos;
+        const viewDistSq = playerPos ? (width + height) * (width + height) : 0;
+
         this._updateEntities(
             this.spaceObjects,
-            (so) => so.update(this),
+            (so) => {
+                // Throttle updates for distant space objects
+                if (playerPos && so.pos) {
+                    const dx = so.pos.x - playerPos.x;
+                    const dy = so.pos.y - playerPos.y;
+                    const distSq = dx * dx + dy * dy;
+                    // Only update distant objects every 5 frames
+                    if (distSq > viewDistSq && frameCount % 5 !== 0) {
+                        return;
+                    }
+                }
+                so.update(this);
+            },
             (so) => so.destroyed,
             (so) => this._handleSpaceObjectDestruction(so)
         );
