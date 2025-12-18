@@ -27,6 +27,9 @@ class UIMinimap {
         // Hazards buffer for performance
         this.hazardsBuffer = null;
         this._hazardsBufferSize = 0;
+        // Track player position when buffer was last generated for smooth offset
+        this._lastHazardsPlayerX = 0;
+        this._lastHazardsPlayerY = 0;
 
         // Minimap color mapping by AI role (using centralized color constants)
         this.roleColors = {};
@@ -221,15 +224,17 @@ class UIMinimap {
     /**
      * Registers a new kill indicator at the given world position.
      * @param {p5.Vector} pos - World position of the kill
+     * @param {Array} [colorArr] - Optional RGB color array, defaults to red
      */
-    addKillIndicator(pos) {
+    addKillIndicator(pos, colorArr = null) {
         if (!pos) return;
         this.killIndicators.push({
             pos: pos.copy(),
             size: 0,
             alpha: 255,
             maxLife: 60, // 1 second at 60fps
-            maxSize: 30  // Max radius on minimap
+            maxSize: 30,  // Max radius on minimap
+            color: colorArr || [255, 80, 80] // Default to red-ish
         });
     }
 
@@ -265,7 +270,9 @@ class UIMinimap {
             if (Math.abs(mapX - mapCenterX) < this.size && Math.abs(mapY - mapCenterY) < this.size) {
                 push();
                 noFill();
-                stroke(255, 255, 255, ind.alpha);
+                // Use the stored color for this kill indicator
+                const c = ind.color || [255, 80, 80];
+                stroke(c[0], c[1], c[2], ind.alpha);
                 strokeWeight(1.5);
                 ellipse(mapX, mapY, ind.size * 2, ind.size * 2);
                 pop();
@@ -283,15 +290,23 @@ class UIMinimap {
             this.hazardsBuffer = createGraphics(this.size, this.size);
             this._hazardsBufferSize = this.size;
             this._lastHazardsFrame = 0; // Force redraw on size change
+            this._lastHazardsPlayerX = player.pos.x;
+            this._lastHazardsPlayerY = player.pos.y;
         }
 
-        // Draw cached buffer and skip regeneration if not needed
+        // Draw cached buffer with offset based on player movement since last generation
+        // This prevents jerky updates by smoothly shifting the cached buffer
         if (!shouldRegenerate) {
-            image(this.hazardsBuffer, this.x, this.y);
+            const deltaX = (this._lastHazardsPlayerX - player.pos.x) * this.scale;
+            const deltaY = (this._lastHazardsPlayerY - player.pos.y) * this.scale;
+            image(this.hazardsBuffer, this.x + deltaX, this.y + deltaY);
             return;
         }
 
         this._lastHazardsFrame = frameCount;
+        // Store player position at time of buffer generation
+        this._lastHazardsPlayerX = player.pos.x;
+        this._lastHazardsPlayerY = player.pos.y;
 
         const hbuf = this.hazardsBuffer;
         hbuf.clear();

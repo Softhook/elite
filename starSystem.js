@@ -481,9 +481,24 @@ class StarSystem {
     recordDestruction(destroyedEnemy, attacker = null) {
         if (!destroyedEnemy || !this.combatStats) return;
 
-        // Trigger minimap kill indicator
+        // Trigger minimap kill indicator with enemy's color
         if (typeof uiManager !== 'undefined' && uiManager.minimap && typeof uiManager.minimap.addKillIndicator === 'function') {
-            uiManager.minimap.addKillIndicator(destroyedEnemy.pos);
+            // Determine enemy color based on faction or role (matching minimap enemy drawing logic)
+            let killColor = null;
+            if (typeof FACTION_COLORS !== 'undefined') {
+                if (destroyedEnemy.faction === 'IMPERIAL') {
+                    killColor = FACTION_COLORS.IMPERIAL;
+                } else if (destroyedEnemy.faction === 'SEPARATIST') {
+                    killColor = FACTION_COLORS.SEPARATIST;
+                } else if (destroyedEnemy.faction === 'MILITARY') {
+                    killColor = FACTION_COLORS.MILITARY;
+                }
+            }
+            if (!killColor && typeof ROLE_COLORS !== 'undefined') {
+                const role = destroyedEnemy.role || destroyedEnemy.aiRole;
+                killColor = ROLE_COLORS[role] || [255, 80, 80];
+            }
+            uiManager.minimap.addKillIndicator(destroyedEnemy.pos, killColor);
         }
 
         const role = destroyedEnemy.role;
