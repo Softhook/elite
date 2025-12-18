@@ -67,6 +67,100 @@ class EnemyTargeting {
      * @return {boolean} Whether a valid target was found
      */
     updateTargeting(system) {
+        // --- OFF-SCREEN OPTIMIZATION ---
+        if (this._isOnScreen === false) {
+            // Periodic Scan Override: Ensure we don't stay "blind" to new nearby enemies forever.
+            // Run full targeting logic once every ~1 second (60 frames).
+            // Use _offScreenOffset (0-2) and ID to spread the load.
+            const scanInterval = 60;
+            // Generate a stable offset if not present
+            if (this._scanOffset === undefined) {
+                // Use ID hash or random if ID is string
+                const idVal = this.id ? (this.id.toString().split('').reduce((a, b) => a + b.charCodeAt(0), 0)) : Math.floor(Math.random() * 60);
+                this._scanOffset = idVal % scanInterval;
+            }
+
+            const isScanFrame = (frameCount + this._scanOffset) % scanInterval === 0;
+
+            if (!isScanFrame) {
+                // Simplified targeting: Stick to lastAttacker or existing target
+                if (this.lastAttacker && this.isTargetValid(this.lastAttacker)) {
+                    this.target = this.lastAttacker;
+                    return true;
+                }
+                if (this.target && this.isTargetValid(this.target)) {
+                    return true;
+                }
+                // Optimized Off-Screen Scanning:
+                // Instead of blindly targeting the player, scan for High Priority targets (Rivals/Prey).
+                // Falls back to player only if no better target matches.
+
+                let bestOffScreenTarget = null;
+                let bestOffScreenDistSq = Infinity;
+
+                // 1. Consider Player as baseline (if hostile/wanted)
+                const isHostileToPlayer = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.BOUNTY_HUNTER);
+                // Police only target wanted players
+                const isPoliceVsWanted = (this.role === AI_ROLE.POLICE || this.role === AI_ROLE.GUARD) && system.player && system.player.isWanted;
+
+                if ((isHostileToPlayer || isPoliceVsWanted) && system.player && this.isTargetValid(system.player)) {
+                    bestOffScreenTarget = system.player;
+                    bestOffScreenDistSq = this.pos.distSq(system.player.pos);
+                }
+
+                // 2. Scan other enemies (Sampling for performance)
+                if (system.enemies) {
+                    // Check every 2nd enemy for better coverage while still saving CPU
+                    const startIdx = (this._scanOffset || 0) % 2;
+                    for (let i = startIdx; i < system.enemies.length; i += 2) {
+                        const e = system.enemies[i];
+                        if (e === this || !e.pos || e.destroyed) continue;
+
+                        // Check Faction/Role Priorities using central constants
+                        let isPriority = false;
+
+                        // 1. Check Faction Rivalries
+                        if (typeof FACTION_ENEMY_MAP !== 'undefined' && this.faction && e.faction) {
+                            const hatedFactions = FACTION_ENEMY_MAP[this.faction];
+                            if (hatedFactions && hatedFactions.includes(e.faction)) {
+                                isPriority = true;
+                            }
+                        }
+
+                        // 2. Check Role Hostilities (if not already found)
+                        if (!isPriority && typeof ROLE_ENEMY_MAP !== 'undefined' && this.role) {
+                            const hatedRoles = ROLE_ENEMY_MAP[this.role];
+                            if (hatedRoles && (hatedRoles.includes(e.role) || hatedRoles.includes(e.faction))) {
+                                isPriority = true;
+                            }
+                        }
+
+                        // 3. Fallback for Alien vs faction specific case if not covered by maps
+                        if (!isPriority && this.faction === 'MILITARY' && e.role === AI_ROLE.ALIEN) isPriority = true;
+
+                        if (isPriority) {
+                            const d2 = this.pos.distSq(e.pos);
+                            // Switch if this rival is closer than current best (or if current best is the player)
+                            // We heavily bias towards Rivals over Player
+                            if (!bestOffScreenTarget || bestOffScreenTarget === system.player || d2 < bestOffScreenDistSq) {
+                                bestOffScreenTarget = e;
+                                bestOffScreenDistSq = d2;
+                            }
+                        }
+                    }
+                }
+
+                if (bestOffScreenTarget) {
+                    this.target = bestOffScreenTarget;
+                    return true;
+                }
+                this.target = null;
+                return false;
+            }
+            // If isScanFrame is true, FALL THROUGH to full targeting logic below!
+        }
+        // -------------------------------
+
         // Prevent transporters from retargeting while actively docking/trading/approaching or already docked.
         // Allow only emergency self-defense (lastAttacker/forced combat) so transports can finish trading/docking.
         if (this.role === AI_ROLE.TRANSPORT) {
@@ -217,7 +311,7 @@ class EnemyTargeting {
                 return true;
             }
             // If target becomes invalid during lock, allow retargeting but keep the lock active
-            // The lock will naturally expire via the timer in enemy.js update()
+            // The lock will naturally expire via the timer in enemy.js
         }
         // --- END GUARD ENGAGEMENT LOCK ---
 
@@ -520,17 +614,11 @@ class EnemyTargeting {
 
 
                 case AI_ROLE.ALIEN:
-                    if (target.role !== AI_ROLE.ALIEN) { // Target anything that is not an Alien
+                    // Aliens target ALL non-alien ships equally - no faction priority
+                    if (target.role !== AI_ROLE.ALIEN) {
                         _score += 50; // Base score for any non-alien target (human ships)
                         _interesting = true;
-
-                        // Bonus against military ships - check player's actual faction
-                        const targetFaction = (target instanceof Player)
-                            ? (target.playerFaction || 'UNKNOWN')
-                            : (enemy._getShipFaction ? enemy._getShipFaction(target) : 'UNKNOWN');
-                        if (targetFaction === 'MILITARY') {
-                            _score += TARGET_SCORE_COMBAT_VS_ALIEN_BONUS; // Strong bonus for military targets
-                        }
+                        // Note: Aliens don't prioritize any specific faction - all humans are equal targets
                     }
                     break;
 

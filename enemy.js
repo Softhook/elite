@@ -266,6 +266,7 @@ class Enemy {
 
         // Add thrust vector initialization
         this.thrustVector = createVector(0, 0);
+        this._persistedThrust = 0; // Initialize persisted thrust
         this.tempVector = createVector(0, 0);
 
         // Flag for thrusting
@@ -373,6 +374,7 @@ class Enemy {
     // -------------------------
 
     /** Updates the enemy's state machine, movement, and actions based on role. */
+    /** Updates the enemy's state machine, movement, and actions based on role. */
     update(system) {
         // Allow update to continue during jump-fade even if `destroyed` is set,
         // so we can complete the visual fade-back phase after logical destruction.
@@ -384,6 +386,151 @@ class Enemy {
         // Cache time values to avoid redundant calculations
         const deltaSeconds = deltaTime / 1000;
         const currentTime = millis();
+
+        // -------------------------------------------------------------------------
+        // PERFORMANCE OPTIMIZATION: On-Screen Check & Off-Screen Throttling
+        // -------------------------------------------------------------------------
+        // Calculate on-screen status (+margin) once per frame
+        // Margin of 200px ensures we process entities just outside view
+        // Calculate on-screen status with hysteresis to prevent rapid toggling at the edge
+        if (system.player) {
+            const distX = Math.abs(this.pos.x - system.player.pos.x);
+            const distY = Math.abs(this.pos.y - system.player.pos.y);
+            // Use global p5 width/height if available, otherwise fallback (defensive)
+            const w = (typeof width === 'number') ? width : 1000;
+            const h = (typeof height === 'number') ? height : 800;
+            const limitX = w / 2;
+            const limitY = h / 2;
+
+            if (this._isOnScreen) {
+                // Hysteresis: Harder to leave screen (must go 250px beyond edge)
+                // Reduced from 300 to minimize AI mode flickering at screen edge
+                this._isOnScreen = (distX < limitX + 250) && (distY < limitY + 250);
+            } else {
+                // Harder to enter screen (must come within 200px of edge)
+                this._isOnScreen = (distX < limitX + 200) && (distY < limitY + 200);
+            }
+        } else {
+            this._isOnScreen = false;
+        }
+
+        // For off-screen enemies: skip update periodically to save CPU.
+        // We now throttle even in combat, UNLESS they are very close to the player (active threat).
+        // 1500 is roughly (width/2 + 600), safe buffer for player interaction.
+        const isNearPlayer = system.player && this.distanceTo(system.player) < 1500;
+
+        // Ensure we don't skip the periodic scan frame
+        // Reduced from 60 to 30 frames (~0.5 sec) for faster response to off-screen events
+        const scanInterval = 30;
+        if (this._scanOffset === undefined) {
+            const idVal = this.id ? (this.id.toString().split('').reduce((a, b) => a + b.charCodeAt(0), 0)) : Math.floor(Math.random() * 30);
+            this._scanOffset = idVal % scanInterval;
+        }
+        // Store on instance so behaviors can use it
+        this.isScanFrame = (frameCount + this._scanOffset) % scanInterval === 0;
+
+        const forceUpdate = this._isOnScreen || isNearPlayer || this.isScanFrame;
+
+        // [FIX] Reset persisted thrust on active frames so we capture fresh intent from AI
+        if (forceUpdate) {
+            this._persistedThrust = 0;
+        }
+
+        // --- TIMER UPDATES (Time-Critical) ---
+        // We MUST update cooldowns and timers every frame, even if we skip the AI logic/physics step.
+        // Otherwise, off-screen enemies experienced "Time Dilation" (3x slower cooldowns).
+
+        // Update weapon cooldown
+        this.fireCooldown -= deltaSeconds;
+
+        if (typeof WeaponSystem !== 'undefined' && Number.isFinite(deltaSeconds)) {
+            WeaponSystem.coolWeaponHeat(this, deltaSeconds);
+        }
+
+        // Cargo collection cooldown
+        if (this.cargoCollectionCooldown > 0) {
+            this.cargoCollectionCooldown -= deltaSeconds;
+        }
+
+        // Process hauler attack cooldown
+        if (this.attackCooldown > 0) {
+            this.attackCooldown -= deltaSeconds;
+        }
+
+        // Process target switch cooldown
+        if (this.targetSwitchCooldown > 0) {
+            this.targetSwitchCooldown -= deltaSeconds;
+        }
+
+        // Process guard engagement lock timer
+        if (this.guardEngagementLock > 0) {
+            this.guardEngagementLock -= deltaSeconds;
+        }
+
+        // Regenerate shields
+        const timeSinceShieldHit = currentTime - this.lastShieldHitTime;
+        if (this.shield < this.maxShield && !this.destroyed && !this.shieldsDisabled && timeSinceShieldHit > this.shieldRechargeDelay) {
+            const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
+            const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016;
+            const prevShield = this.shield;
+            const newShield = Math.min(this.maxShield, prevShield + rechargeAmount);
+            if (prevShield === 0 && newShield > 0 && this._shieldWasZero) {
+                // World-positioned cue for enemies
+                if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player?.pos) {
+                    soundManager.playWorldSound('shieldUp', this.pos.x, this.pos.y, player.pos);
+                }
+                this._shieldWasZero = false;
+            }
+            this.shield = newShield;
+        }
+
+        // Update barrier cooldown and duration
+        if (this.barrierCooldown > 0) {
+            this.barrierCooldown -= deltaSeconds;
+        }
+        if (this.isBarrierActive && this.barrierDurationTimer > 0) {
+            this.barrierDurationTimer -= deltaSeconds;
+            if (this.barrierDurationTimer <= 0) {
+                this.isBarrierActive = false;
+                this.barrierDamageReduction = 0;
+                this.barrierDurationTimer = 0;
+                if (typeof soundManager !== 'undefined') { soundManager.playSound('barrierDown'); }
+            }
+        }
+
+        // Drag effect handling (part of physics, but dragTimer might need continuous update? 
+        // updatePhysics handles drag, and we call it in the skipped block, so that's fine/redundant but safe)
+
+        // --- END TIMER UPDATES ---
+
+        if (!forceUpdate) {
+            if (!this._offScreenOffset) this._offScreenOffset = Math.floor(Math.random() * 3);
+            if ((frameCount + this._offScreenOffset) % 3 !== 0) {
+                // [FIX] Movement Dilation: Re-apply thrust from last active frame logic
+                // This ensures acceleration matches 1x speed even though AI runs at 1/3 speed.
+                if (this._persistedThrust > 0) {
+                    // Pass false to skip particles (CPU calc) since off-screen
+                    this.thrustForward(this._persistedThrust, false);
+                }
+                // [FIX] Velocity cap: Prevent over-acceleration from persistent thrust
+                // Cap velocity to maxSpeed to prevent off-screen ships from building up excessive speed
+                const speed = this.vel.mag();
+                if (speed > this.maxSpeed) {
+                    this.vel.mult(this.maxSpeed / speed);
+                }
+
+                // [FIX] Persistent firing: Re-apply firing from last active frame
+                // This ensures off-screen enemies continue attacking during skipped frames
+                if (this._persistedFiring && this.fireCooldown <= 0 && this.isTargetValid(this.target)) {
+                    this.performFiring(system, true, this._persistedFiring.distance, this._persistedFiring.angle);
+                }
+
+                // When we skip, we still need to update physics so the ship moves!
+                this.updatePhysics();
+                return;
+            }
+        }
+        // -------------------------------------------------------------------------
 
         // If we're in the jump-fade phase, progress the timer and handle two phases:
         //  - 'out': fade to white, then mark destroyed (logical removal)
@@ -422,68 +569,8 @@ class Enemy {
             return; // Skip normal updates while performing jump-fade
         }
 
-        // Update weapon cooldown
-        this.fireCooldown -= deltaSeconds;
+        // [MOVED UP] Timer/Cooldown updates moved to start of method to avoid time dilation.
 
-        if (typeof WeaponSystem !== 'undefined' && Number.isFinite(deltaSeconds)) {
-            WeaponSystem.coolWeaponHeat(this, deltaSeconds);
-        }
-
-        // Cargo collection cooldown
-        if (this.cargoCollectionCooldown > 0) {
-            this.cargoCollectionCooldown -= deltaSeconds;
-        }
-
-        // Process hauler attack cooldown
-        if (this.attackCooldown > 0) {
-            this.attackCooldown -= deltaSeconds;
-        }
-
-        // Process target switch cooldown
-        if (this.targetSwitchCooldown > 0) {
-            this.targetSwitchCooldown -= deltaSeconds;
-        }
-
-        // Process guard engagement lock timer
-        if (this.guardEngagementLock > 0) {
-            this.guardEngagementLock -= deltaSeconds;
-        }
-
-        // Regenerate shields only after recharge delay has passed (and not disabled by Ion nebula)
-        const timeSinceShieldHit = currentTime - this.lastShieldHitTime;
-        if (this.shield < this.maxShield && !this.destroyed && !this.shieldsDisabled && timeSinceShieldHit > this.shieldRechargeDelay) {
-            const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
-            const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016;
-            const prevShield = this.shield;
-            const newShield = Math.min(this.maxShield, prevShield + rechargeAmount);
-            if (prevShield === 0 && newShield > 0 && this._shieldWasZero) {
-                // World-positioned cue for enemies
-                if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player?.pos) {
-                    soundManager.playWorldSound('shieldUp', this.pos.x, this.pos.y, player.pos);
-                }
-                this._shieldWasZero = false;
-            }
-            this.shield = newShield;
-        }
-
-        // Update barrier cooldown and duration
-        if (this.barrierCooldown > 0) {
-            this.barrierCooldown -= deltaSeconds;
-        }
-
-        // Update barrier duration timer
-        if (this.isBarrierActive && this.barrierDurationTimer > 0) {
-            this.barrierDurationTimer -= deltaSeconds;
-            if (this.barrierDurationTimer <= 0) {
-                this.isBarrierActive = false;
-                this.barrierDamageReduction = 0;
-                this.barrierDurationTimer = 0;
-                // Audio cue for barrier deactivation (parity with player)
-                if (typeof soundManager !== 'undefined') { soundManager.playSound('barrierDown'); }
-                // Log barrier deactivation for debugging
-                console.log(`${this.shipTypeName} barrier deactivated`);
-            }
-        }
 
         // Proactively attempt barrier activation even without a valid target (defensive behavior)
         if (typeof this.activateBarrierIfNeeded === 'function') {

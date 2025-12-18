@@ -363,6 +363,19 @@ class EnemyAIBehaviors {
             return false;
         }
 
+        // OPTIMIZATION: Skip cover RE-EVALUATION if off-screen, but maintain existing cover state
+        // This prevents ships from abandoning cover when they transition off-screen
+        if (this._isOnScreen === false) {
+            // [FIX] Validate cover target is still alive before maintaining state
+            if (this.coverTarget && this.coverTarget.destroyed) {
+                this.coverTarget = null;
+                this.repositionTarget = null;
+                return false;
+            }
+            // Keep using existing cover target without picking a new one
+            return !!this.coverTarget;
+        }
+
         // Fast bail if system lacks usable cover
         if (!system || !Array.isArray(system.asteroids) || system.asteroids.length === 0) {
             return false;
@@ -437,6 +450,96 @@ class EnemyAIBehaviors {
         // 1. Handle forced‐combat mode (e.g., Hauler retaliation override)
         const isInForcedCombat = this._handleForcedCombat(system);
 
+        // --- OFF-SCREEN OPTIMIZATION ---
+        // If off-screen, use simplified AI logic to save CPU
+        if (this._isOnScreen === false) {
+
+            // [FIX] Guards with active engagement lock should maintain their locked target
+            // This prevents Guards from abandoning their principal's attacker when going off-screen
+            if (this.role === AI_ROLE.GUARD && this.guardEngagementLock > 0 && this.isTargetValid(this.target)) {
+                // Skip simplified targeting - keep current locked target
+                // Fall through to movement/firing below
+            } else {
+                // [FIX] Perform periodic scan even when off-screen to prevent "blindness"
+                // This ensures the "mini-scan" in enemyTargeting.js actually runs.
+                if (this.isScanFrame) {
+                    this.updateTargeting(system);
+                }
+
+                // Basic targeting only: maintain lastAttacker or Player
+                if (this.lastAttacker && this.isTargetValid(this.lastAttacker)) {
+                    this.target = this.lastAttacker;
+                }
+                // Removed blind fallback to system.player here. 
+                // We rely on updateTargeting() (called periodically via isScanFrame) to find valid targets.
+                // Drifting for <1s is better than blindly attacking the player.
+            }
+
+            // Simplified movement & firing (keeps battle loop active)
+            if (this.target && this.target.pos) {
+                // Determine rough distance/angle (renamed to avoid shadowing global dist())
+                const distToTarget = this.distanceTo(this.target);
+
+                // [FIX] Use simplified predictive aiming for off-screen - half the prediction time
+                // This improves off-screen combat accuracy without full computation cost
+                let shootingAngle;
+                const simplePredictionTime = (this.predictionTime || 0.4) * 0.5;
+                if (this.target.vel && (this.target.vel.x !== 0 || this.target.vel.y !== 0)) {
+                    const predictedX = this.target.pos.x + this.target.vel.x * simplePredictionTime * 60;
+                    const predictedY = this.target.pos.y + this.target.vel.y * simplePredictionTime * 60;
+                    shootingAngle = atan2(predictedY - this.pos.y, predictedX - this.pos.x);
+                } else {
+                    shootingAngle = atan2(this.target.pos.y - this.pos.y, this.target.pos.x - this.pos.x);
+                }
+
+                // Move towards target (using safe rotation logic, but simpler in practice if collision disabled)
+                // RESPECT STATE: Handle Fleeing/Sniping correctly even off-screen
+                let moveTarget = this.target.pos;
+                let shouldThrust = true;
+
+                if (this.currentState === AI_STATE.FLEEING) {
+                    // Move AWAY from target
+                    // Create vector from target to me, add to my pos
+                    const fleeDir = createVector(this.pos.x - this.target.pos.x, this.pos.y - this.target.pos.y);
+                    fleeDir.normalize().mult(1000); // Project far away
+                    moveTarget = createVector(this.pos.x + fleeDir.x, this.pos.y + fleeDir.y);
+                } else if (this.currentState === AI_STATE.SNIPING) {
+                    // Stay put, maybe drift slightly
+                    moveTarget = this.pos;
+                    shouldThrust = false; // Snipers don't charge
+                } else {
+                    // [FIX] Prevent ramming: Stop thrusting if within optimal firing range
+                    // Use a simplified distance check (e.g. 70% of firing range)
+                    const optimalDist = (this.firingRange || 400) * 0.7;
+                    if (distToTarget < optimalDist) {
+                        shouldThrust = false;
+                    }
+                }
+
+                // FORCE THRUST: We bypass the state check in performRotationAndThrust because off-screen enemies
+                // might be in IDLE state but we want them to move towards the target anyway.
+                const angleDiff = this.performSafeRotationAndThrust(system, moveTarget);
+
+                // If aligned enough, thrust! (Manually, since performRotationAndThrust might block it for IDLE)
+                // Only thrust if state dictates motion (not Sniping)
+                if (shouldThrust && Math.abs(angleDiff) < (this.angleTolerance || 0.1) * 2) {
+                    this.thrustForward(1.0);
+                }
+
+                // Fire weapon (uses current weapon without optimization)
+                // Passing 'true' for targetExists since we validated it above
+                this.performFiring(system, true, distToTarget, shootingAngle);
+
+                // [FIX] Store firing intent for persistence during skipped frames
+                this._persistedFiring = { distance: distToTarget, angle: shootingAngle };
+            } else {
+                // If no target off-screen, clear firing persistence
+                this._persistedFiring = null;
+            }
+            return; // EXIT EARLY - Skip complex state machine, cover, and predictive aiming
+        }
+        // -------------------------------
+
         // 2. Update targeting (may be overridden by forced combat)
         let targetExists = this.updateTargeting(system);
         targetExists = this.isTargetValid(this.target);
@@ -494,8 +597,16 @@ class EnemyAIBehaviors {
 
         // Update to check system wanted status instead of player
         if (system.player && system.isPlayerWanted()) {
-            // Always set player as target when wanted
-            this.target = system.player;
+
+            // MODIFIED: Only set player as target if we don't already have a valid, higher-priority target
+            // This prevents flickering between "Player" (forced here) and "Pirate" (chosen by updateTargeting)
+            const currentTargetScore = (this.target && this.evaluateTargetScore) ? this.evaluateTargetScore(this.target, system) : 0;
+            const playerScore = (this.evaluateTargetScore) ? this.evaluateTargetScore(system.player, system) : 0;
+
+            // If player score is better, or we have no target, or player is the only target
+            if (!this.target || playerScore > currentTargetScore) {
+                this.target = system.player;
+            }
 
             // MODIFIED: Immediately pursue if system-wide alert is active
             if (system.policeAlertSent &&
@@ -531,11 +642,21 @@ class EnemyAIBehaviors {
 
         // Check for wanted ships
         let wantedTarget = null;
-        if (system.enemies && system.enemies.length > 0) {
+        let closestWantedDist = Infinity;
+
+        // [OPTIMIZATION] Throttle expensive global scan for off-screen police
+        // Only scan if on-screen OR if it's the periodic scan frame.
+        const shouldScan = this._isOnScreen || this.isScanFrame;
+
+        if (shouldScan && system.enemies && system.enemies.length > 0) {
             for (let e of system.enemies) {
                 if (e !== this && e.hull > 0 && e.isWanted) {
-                    wantedTarget = e;
-                    break;
+                    // [FIX] Add distance check - Police should only detect nearby wanted ships
+                    const distToTarget = this.distanceTo(e);
+                    if (distToTarget < this.detectionRange && distToTarget < closestWantedDist) {
+                        wantedTarget = e;
+                        closestWantedDist = distToTarget;
+                    }
                 }
             }
         }
@@ -545,6 +666,12 @@ class EnemyAIBehaviors {
             this.target = wantedTarget;
             if (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.IDLE) {
                 this.changeState(AI_STATE.APPROACHING);
+            }
+
+            // [OPTIMIZATION] Use simplified combat logic if off-screen
+            if (this._isOnScreen === false) {
+                this.updateCombatAI(system);
+                return;
             }
 
             // Handle combat directly without calling updateCombatAI (which would reset targeting)
@@ -620,6 +747,12 @@ class EnemyAIBehaviors {
 
     /** Hauler AI Logic - Moves between station and system edge. */
     updateHaulerAI(system) {
+        // Base delta time (1x speed)
+        const dtSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0.016;
+        // Timer delta compensates for off-screen frame skipping (3x to run at real-time)
+        const isOffScreenFar = !this._isOnScreen && (!system?.player || this.distanceTo(system.player) >= 1500);
+        const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
+
         // Check for attackers FIRST
         if (this.lastAttacker && this.isTargetValid(this.lastAttacker) &&
             this.currentState !== AI_STATE.FLEEING && // Don't interrupt fleeing
@@ -676,7 +809,7 @@ class EnemyAIBehaviors {
         if (this.inCombat === true) {
             // Check combat timer
             if (this.haulerCombatTimer !== undefined) {
-                this.haulerCombatTimer -= deltaTime / 1000;
+                this.haulerCombatTimer -= timerDelta;
                 if (this.haulerCombatTimer <= 0) {
                     HAULER_LOG(`Hauler ${this.shipTypeName} disengaging from combat.`);
                     this.haulerCombatTimer = undefined; // Clear timer
@@ -803,7 +936,7 @@ class EnemyAIBehaviors {
                     HAULER_LOG(`Hauler ${this.shipTypeName} starting pause near station for ${this.nearStationTimer.toFixed(1)}s`);
                 }
 
-                this.nearStationTimer -= deltaTime / 1000;
+                this.nearStationTimer -= timerDelta;
 
                 if (this.nearStationTimer <= 0) {
                     HAULER_LOG(`Hauler ${this.shipTypeName} finished pause, preparing to leave.`);
@@ -904,6 +1037,12 @@ class EnemyAIBehaviors {
     /** Transport AI Logic - Moves between two endpoints. */
     updateTransportAI(system) {
         if (!system) return;
+
+        // Base delta time (1x speed)
+        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : 0.016);
+        // Timer delta compensates for off-screen frame skipping (3x to run at real-time)
+        const isOffScreenFar = !this._isOnScreen && (!system.player || this.distanceTo(system.player) >= 1500);
+        const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
 
         const _resolveSpaceObjectCommodities = (obj) => {
             const defaultSet = { produces: ['Metals'], buys: [] };
@@ -1226,7 +1365,8 @@ class EnemyAIBehaviors {
                         // defensive: ignore trading errors
                     }
                 } else if (this.waitTimer > 0) {
-                    this.waitTimer -= deltaTime;
+                    // Correct for off-screen throttling (ms)
+                    this.waitTimer -= timerDelta * 1000; // timerDelta is in seconds, waitTimer in ms
                     if (this.waitTimer <= 0) {
                         // Switch destination.
                         this.currentRouteIndex = (this.currentRouteIndex + 1) % this.routePoints.length;
@@ -1247,6 +1387,12 @@ class EnemyAIBehaviors {
 
     /** Handles cargo collection AI */
     updateCargoCollectionAI(system) {
+        // Base delta time (1x speed)
+        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : 0.016);
+        // Timer delta compensates for off-screen frame skipping (3x to run at real-time)
+        const isOffScreenFar = !this._isOnScreen && (!system?.player || this.distanceTo(system.player) >= 1500);
+        const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
+
         const determineReturnState = () => {
             if (this.previousState !== null && this.previousState !== undefined) {
                 return this.previousState;
@@ -1437,6 +1583,12 @@ class EnemyAIBehaviors {
      * @param {Object} system - The current star system
      */
     updateCombatRoleAI(system) {
+        // Base delta time (1x speed)
+        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : 0.016);
+        // Timer delta compensates for off-screen frame skipping (3x to run at real-time)
+        const isOffScreenFar = !this._isOnScreen && (!system?.player || this.distanceTo(system.player) >= 1500);
+        const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
+
         // Check for attackers FIRST - similar to hauler logic
         if (this.lastAttacker && this.isTargetValid(this.lastAttacker) &&
             this.currentState !== AI_STATE.FLEEING && // Don't interrupt fleeing
@@ -1467,7 +1619,7 @@ class EnemyAIBehaviors {
         if (this.inCombat === true) {
             // Update combat timer
             if (this.combatEngagementTimer !== undefined) {
-                this.combatEngagementTimer -= deltaTime / 1000;
+                this.combatEngagementTimer -= timerDelta;
                 if (this.combatEngagementTimer <= 0) {
                     AI_LOG(`Combat ship ${this.shipTypeName} disengaging from combat.`);
                     this.combatEngagementTimer = undefined; // Clear timer
@@ -1627,9 +1779,15 @@ class EnemyAIBehaviors {
      * @param {Object} system - The current star system
      */
     updateMinerAI(system) {
+        // Base delta time (1x speed)
+        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : 0.016);
+        // Timer delta compensates for off-screen frame skipping (3x to run at real-time)
+        const isOffScreenFar = !this._isOnScreen && (!system?.player || this.distanceTo(system.player) >= 1500);
+        const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
+
         // Apply initialization timing offset to prevent synchronized spawning behavior
         if (this._minerInitOffset !== undefined && this._minerElapsedTime !== undefined) {
-            this._minerElapsedTime += (deltaTime / 1000);
+            this._minerElapsedTime += timerDelta;
             if (this._minerElapsedTime < this._minerInitOffset) {
                 // Still in initialization delay - idle with gentle drift
                 this.vel.mult(0.95);
@@ -1671,17 +1829,24 @@ class EnemyAIBehaviors {
             const distToStation = dist(this.pos.x, this.pos.y, system.station.pos.x, system.station.pos.y);
 
             if (distToStation < this.stationProximityThreshold) {
-                // At station - dock and sell cargo
-                if (typeof this.handleStationDocking === 'function') {
-                    this.handleStationDocking(system);
+                // At station - idle and wait (will re-check on next update)
+                // Ensure to dock eventually? 
+                this.changeState(AI_STATE.NEAR_STATION);
+                this.vel.mult(0.9);
+
+                // Count down wait timer using corrected delta
+                if (this.nearStationTimer === undefined) {
+                    this.nearStationTimer = 5.0; // Wait 5 seconds
                 }
-                this.shouldReturnToStation = false;
-                this.changeState(AI_STATE.IDLE);
-                // Clean up asteroid targeting
-                if (this.asteroidTarget && this.asteroidTarget._targetingCount > 0) {
-                    this.asteroidTarget._targetingCount--;
+                this.nearStationTimer -= timerDelta;
+
+                if (this.nearStationTimer <= 0) {
+                    // Docking/Trade logic simulation
+                    this.nearStationTimer = undefined;
+                    this.shouldReturnToStation = false;
+                    // Assume trade complete, head back out
+                    // (Logic continues to next phase)
                 }
-                this.asteroidTarget = null;
             } else {
                 // Move toward station
                 this.changeState(AI_STATE.PATROLLING);
@@ -1906,6 +2071,12 @@ class EnemyAIBehaviors {
      * @param {Object} system - The current star system
      */
     _updateCombatPatrolBehavior(system) {
+        // Base delta time (1x speed)
+        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : 0.016);
+        // Timer delta compensates for off-screen frame skipping (3x to run at real-time)
+        const isOffScreenFar = !this._isOnScreen && (!system?.player || this.distanceTo(system.player) >= 1500);
+        const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
+
         if (this.currentState !== AI_STATE.PATROLLING) {
             this.changeState(AI_STATE.PATROLLING);
         }
@@ -1939,7 +2110,7 @@ class EnemyAIBehaviors {
                 if (!this._scanPauseTimer) {
                     this._scanPauseTimer = random(1, 3); // 1-3 seconds
                 } else {
-                    this._scanPauseTimer -= deltaTime / 1000;
+                    this._scanPauseTimer -= timerDelta;
                     if (this._scanPauseTimer <= 0) {
                         this._scanPauseTimer = null;
                         this.patrolTargetPos = null; // Will select new target next frame
@@ -2082,6 +2253,11 @@ class EnemyAIBehaviors {
      * Also applies gentle damping while avoidance timer is active.
      */
     performSafeRotationAndThrust(system, desiredMovementTargetPos) {
+        // OPTIMIZATION: Off-screen enemies skip obstacle avoidance
+        if (this._isOnScreen === false) {
+            this.performRotationAndThrust(desiredMovementTargetPos);
+            return;
+        }
         const safeTarget = this._avoidObstaclesAndAdjustTarget(system, desiredMovementTargetPos);
         // Delegate to existing movement helper
         try {
@@ -2161,7 +2337,7 @@ class EnemyAIBehaviors {
             if (distToTarget < repairRange) {
                 // Within range - perform repairs
                 this.changeState(AI_STATE.IDLE);
-                this.performRepair(this.repairTarget);
+                this.performRepair(system, this.repairTarget); // Pass system for throttling check
                 this.vel.mult(0.9);
 
                 // Check if current target is fully repaired
@@ -2417,14 +2593,17 @@ class EnemyAIBehaviors {
     /**
      * Perform repair on target object
      * Restores health and shields at configured repair rate
+     * @param {Object} system - The current star system (for throttling check)
      * @param {Object} target - The object to repair
      */
-    performRepair(target) {
+    performRepair(system, target) {
         const repairRate = EnemyAIBehaviors.REPAIR_CONFIG.REPAIR_RATE;
         const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime))
             ? (deltaTime / 1000)
             : 0.016;
 
+        // Correct for off-screen throttling
+        // Standard delta time - no multiplier needed since off-screen frame skipping already handles throttling
         const repairAmount = repairRate * deltaSeconds;
 
         // Repair health (space objects use 'health', not 'hull')

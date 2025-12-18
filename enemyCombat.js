@@ -29,6 +29,11 @@ class EnemyCombat {
         // Note: For unarmed ships, this returns null which is correct
         if (!this.weapons || this.weapons.length <= 1) return this.currentWeapon;
 
+        // OPTIMIZATION: Skip weapon scoring for off-screen enemies, just use current
+        if (this._isOnScreen === false) {
+            return this.currentWeapon || (this.weapons && this.weapons.length > 0 ? this.weapons[0] : null);
+        }
+
         // Prioritize barrier if health or shield are low
         const barrierWeapon = this.weapons.find(w => w.type === WEAPON_TYPE.BARRIER);
         if (barrierWeapon && this.barrierCooldown <= 0) {
@@ -345,6 +350,9 @@ class EnemyCombat {
             (this.firingRange || distanceToTarget || 0) * 1.5 || Infinity
         );
         const maxCheckDistSq = isFinite(maxCheckDist) ? maxCheckDist * maxCheckDist : Infinity;
+
+        // OPTIMIZATION: Skip LOS checks for off-screen enemies (trust they can hit)
+        if (this._isOnScreen === false) return true;
 
         // Quiet LOS test (no console spam) to avoid firing into asteroids or friendlies between us and the target.
         const p1x = this.pos?.x;

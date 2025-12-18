@@ -481,6 +481,11 @@ class StarSystem {
     recordDestruction(destroyedEnemy, attacker = null) {
         if (!destroyedEnemy || !this.combatStats) return;
 
+        // Trigger minimap kill indicator
+        if (typeof uiManager !== 'undefined' && uiManager.minimap && typeof uiManager.minimap.addKillIndicator === 'function') {
+            uiManager.minimap.addKillIndicator(destroyedEnemy.pos);
+        }
+
         const role = destroyedEnemy.role;
         const faction = destroyedEnemy.faction;
         const enemyName = destroyedEnemy.displayName || null;
@@ -2330,7 +2335,7 @@ class StarSystem {
             let proj = this.projectiles[i];
             proj.update();
 
-            if (proj.lifespan <= 0 || proj.isOffScreen()) {
+            if (proj.lifespan <= 0) {
                 this.removeProjectile(i);
             }
         }

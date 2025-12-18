@@ -110,6 +110,9 @@ class EnemyUtils {
      * @param {boolean} [createParticles=true] - Whether to create visual thrust particles
      */
     thrustForward(multiplier = 1.0, createParticles = true) {
+        // [FIX] Persist thrust intent for off-screen throttling (re-applied in skipped frames)
+        this._persistedThrust = multiplier;
+
         // Skip negligible thrust and particle work
         if (!(multiplier > 0.01)) { return; }
 
@@ -227,6 +230,12 @@ class EnemyUtils {
      */
     _getShipFaction(ship) {
         if (!ship) return 'UNKNOWN';
+
+        // [FIX] Check runtime faction property first (set in Enemy constructor)
+        // This ensures Police/Pirates are correctly identified even if the ship hull defaults to UNKNOWN
+        if (ship.faction) {
+            return ship.faction;
+        }
 
         // Check if this is a player with a faction
         if (ship.playerFaction) {

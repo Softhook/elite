@@ -349,7 +349,7 @@ class SoundManager {
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
                 "sample_size": 16
-                },
+            },
 
             // Weapon-specific new sounds
             turretFire: {
@@ -441,34 +441,34 @@ class SoundManager {
             },
 
             // Generic explosion alias (used by mines); balanced between small and large
-            explosion: { 
-                "oldParams": true, 
-                "wave_type": 3, 
-                "p_env_attack": 0, 
-                "p_env_sustain": 0.28, 
-                "p_env_punch": 0.34, 
-                "p_env_decay": 0.22, 
-                "p_base_freq": 0.106, 
-                "p_freq_limit": 0, 
-                "p_freq_ramp": -0.18, 
-                "p_freq_dramp": 0, 
-                "p_vib_strength": 0, 
-                "p_vib_speed": 0, 
-                "p_arp_mod": 0, 
-                "p_arp_speed": 0, 
-                "p_duty": 0, 
-                "p_duty_ramp": 0, 
-                "p_repeat_speed": 0, 
-                "p_pha_offset": 0.12, 
-                "p_pha_ramp": -0.08, 
-                "p_lpf_freq": 1, 
-                "p_lpf_ramp": 0, 
-                "p_lpf_resonance": 0, 
-                "p_hpf_freq": 0, 
-                "p_hpf_ramp": 0, 
-                "sound_vol": 0.35, 
-                "sample_rate": 44100, 
-                "sample_size": 16 
+            explosion: {
+                "oldParams": true,
+                "wave_type": 3,
+                "p_env_attack": 0,
+                "p_env_sustain": 0.28,
+                "p_env_punch": 0.34,
+                "p_env_decay": 0.22,
+                "p_base_freq": 0.106,
+                "p_freq_limit": 0,
+                "p_freq_ramp": -0.18,
+                "p_freq_dramp": 0,
+                "p_vib_strength": 0,
+                "p_vib_speed": 0,
+                "p_arp_mod": 0,
+                "p_arp_speed": 0,
+                "p_duty": 0,
+                "p_duty_ramp": 0,
+                "p_repeat_speed": 0,
+                "p_pha_offset": 0.12,
+                "p_pha_ramp": -0.08,
+                "p_lpf_freq": 1,
+                "p_lpf_ramp": 0,
+                "p_lpf_resonance": 0,
+                "p_hpf_freq": 0,
+                "p_hpf_ramp": 0,
+                "sound_vol": 0.35,
+                "sample_rate": 44100,
+                "sample_size": 16
             },
             pickupCoin: {
                 "oldParams": true,
@@ -527,7 +527,7 @@ class SoundManager {
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
                 "sample_size": 16
-              },
+            },
             // New bump sound for collisions (provided params)
             bump: {
                 "oldParams": true,
@@ -558,34 +558,34 @@ class SoundManager {
                 "sample_rate": 44100,
                 "sample_size": 16
             },
-            explosionSmall: { 
-                "oldParams": true, 
-                "wave_type": 3, 
-                "p_env_attack": 0, 
-                "p_env_sustain": 0.2444, 
-                "p_env_punch": 0.4165, 
-                "p_env_decay": 0.0050, 
-                "p_base_freq": 0.1051, 
-                "p_freq_limit": 0, 
-                "p_freq_ramp": -0.3072, 
-                "p_freq_dramp": 0, 
-                "p_vib_strength": 0, 
-                "p_vib_speed": 0, 
-                "p_arp_mod": 0, 
-                "p_arp_speed": 0, 
-                "p_duty": 0, 
-                "p_duty_ramp": 0, 
-                "p_repeat_speed": 0, 
-                "p_pha_offset": 0.2161, 
-                "p_pha_ramp": -0.0017, 
-                "p_lpf_freq": 1, 
-                "p_lpf_ramp": 0, 
-                "p_lpf_resonance": 0, 
-                "p_hpf_freq": 0, 
-                "p_hpf_ramp": 0, 
-                "sound_vol": 0.3, 
-                "sample_rate": 44100, 
-                "sample_size": 16 
+            explosionSmall: {
+                "oldParams": true,
+                "wave_type": 3,
+                "p_env_attack": 0,
+                "p_env_sustain": 0.2444,
+                "p_env_punch": 0.4165,
+                "p_env_decay": 0.0050,
+                "p_base_freq": 0.1051,
+                "p_freq_limit": 0,
+                "p_freq_ramp": -0.3072,
+                "p_freq_dramp": 0,
+                "p_vib_strength": 0,
+                "p_vib_speed": 0,
+                "p_arp_mod": 0,
+                "p_arp_speed": 0,
+                "p_duty": 0,
+                "p_duty_ramp": 0,
+                "p_repeat_speed": 0,
+                "p_pha_offset": 0.2161,
+                "p_pha_ramp": -0.0017,
+                "p_lpf_freq": 1,
+                "p_lpf_ramp": 0,
+                "p_lpf_resonance": 0,
+                "p_hpf_freq": 0,
+                "p_hpf_ramp": 0,
+                "sound_vol": 0.3,
+                "sample_rate": 44100,
+                "sample_size": 16
             },
             explosionLarge: { "oldParams": true, "wave_type": 3, "p_env_attack": 0, "p_env_sustain": 0.3331, "p_env_punch": 0.2926, "p_env_decay": 0.3540, "p_base_freq": 0.1086, "p_freq_limit": 0, "p_freq_ramp": 0, "p_freq_dramp": 0, "p_vib_strength": 0, "p_vib_speed": 0, "p_arp_mod": 0, "p_arp_speed": 0, "p_duty": 0, "p_duty_ramp": 0, "p_repeat_speed": 0, "p_pha_offset": 0.1855, "p_pha_ramp": -0.2955, "p_lpf_freq": 1, "p_lpf_ramp": 0, "p_lpf_resonance": 0, "p_hpf_freq": 0, "p_hpf_ramp": 0, "sound_vol": 0.4, "sample_rate": 44100, "sample_size": 16 },
             error: { "oldParams": true, "wave_type": 1, "p_env_attack": 0, "p_env_sustain": 0.1579, "p_env_punch": 0, "p_env_decay": 0.1758, "p_base_freq": 0.2731, "p_freq_limit": 0, "p_freq_ramp": 0, "p_freq_dramp": 0, "p_vib_strength": 0, "p_vib_speed": 0, "p_arp_mod": 0, "p_arp_speed": 0, "p_duty": 0.0093, "p_duty_ramp": 0, "p_repeat_speed": 0, "p_pha_offset": 0, "p_pha_ramp": 0, "p_lpf_freq": 1, "p_lpf_ramp": 0, "p_lpf_resonance": 0, "p_hpf_freq": 0.1, "p_hpf_ramp": 0, "sound_vol": 0.25, "sample_rate": 44100, "sample_size": 16 },
@@ -647,7 +647,7 @@ class SoundManager {
                 "sample_rate": 44100,
                 "sample_size": 8
             },
-                        harpoonBreak: {
+            harpoonBreak: {
                 "oldParams": true,
                 "wave_type": 0,
                 "p_env_attack": 0.041,
@@ -1061,7 +1061,7 @@ class SoundManager {
                 "sound_vol": 0.25,
                 "sample_rate": 44100,
                 "sample_size": 8
-                },
+            },
             startSound: {
                 "oldParams": true,
                 "wave_type": 0,
@@ -1091,7 +1091,7 @@ class SoundManager {
                 "sample_rate": 44100,
                 "sample_size": 8,
                 "p_vib_delay": null
-                },
+            },
             gameOver: {
                 "oldParams": true,
                 "wave_type": 3,
@@ -1171,16 +1171,16 @@ class SoundManager {
             const sanitizedDef = this._sanitizeDefinition(def, name);
             // Only generate one audio object per sound
             const audio = this._generateSingleSound(name, sanitizedDef, sanitizedDef.sound_vol, "Normal");
-            
+
             // Pre-generate and cache Web Audio buffers for better performance
             let normalized = null;
             let audioBuffer = null;
-            
+
             if (this.audioContext && typeof SoundEffect !== 'undefined') {
                 try {
                     const sfx = new SoundEffect(sanitizedDef);
                     normalized = sfx.getRawBuffer().normalized;
-                    
+
                     if (normalized && normalized.length) {
                         const sampleRate = sanitizedDef.sample_rate || 44100;
                         audioBuffer = this.audioContext.createBuffer(1, normalized.length, sampleRate);
@@ -1190,7 +1190,7 @@ class SoundManager {
                     AUDIO_LOG(`Failed to pre-generate buffer for '${name}': ${e.message}`);
                 }
             }
-            
+
             if (audio) {
                 this.sounds[name] = {
                     audio: audio,
@@ -1209,7 +1209,7 @@ class SoundManager {
         }
         AUDIO_LOG(`SoundManager initSounds finished. Generated sound entries: ${generatedCount}/${Object.keys(this.soundDefinitions).length}`);
     }
-    
+
 
     /**
      * Sanitizes a sound definition to ensure valid wave_type and required parameters.
@@ -1219,19 +1219,19 @@ class SoundManager {
      */
     _sanitizeDefinition(definition, name) {
         const defCopy = JSON.parse(JSON.stringify(definition || {}));
-        
+
         // Ensure wave_type is valid (0=SQUARE, 1=SAWTOOTH, 2=SINE, 3=NOISE)
         let wt = parseInt(defCopy.wave_type);
         if (isNaN(wt) || wt < 0 || wt > 3) {
             wt = 1; // Default to SAWTOOTH
         }
         defCopy.wave_type = wt;
-        
+
         // Ensure critical parameters exist with safe defaults
         if (typeof defCopy.sound_vol === 'undefined') defCopy.sound_vol = 0.25;
         if (typeof defCopy.sample_rate === 'undefined') defCopy.sample_rate = 44100;
         if (typeof defCopy.sample_size === 'undefined') defCopy.sample_size = 16;
-        
+
         return defCopy;
     }
 
@@ -1286,8 +1286,8 @@ class SoundManager {
                 return null;
             }
         } catch (e) {
-             console.error(`   Error during ${versionLabel} audio generation for '${name}':`, e);
-             return null;
+            console.error(`   Error during ${versionLabel} audio generation for '${name}':`, e);
+            return null;
         }
     }
 
@@ -1304,11 +1304,11 @@ class SoundManager {
         if (!listenerPos || typeof sourceX !== 'number' || typeof sourceY !== 'number') {
             return 0;
         }
-        
+
         const dx = sourceX - listenerPos.x;
         const dy = sourceY - listenerPos.y;
         const distanceSq = dx * dx + dy * dy;
-        
+
         // Priority based on volume and inverse distance (closer = higher priority)
         // Volume range: 0-1, distance contribution: 0-1 (clamped)
         const distanceFactor = 1 / (1 + distanceSq / 1000000); // Normalize distance influence
@@ -1321,7 +1321,7 @@ class SoundManager {
      */
     _cullOldestSources(count) {
         if (!this.globalActiveSources || this.globalActiveSources.length === 0) return;
-        
+
         // Sort by priority (lowest first) and age (oldest first)
         const now = Date.now();
         this.globalActiveSources.sort((a, b) => {
@@ -1332,7 +1332,7 @@ class SoundManager {
             // Then by age (older gets culled first)
             return a.startTime - b.startTime;
         });
-        
+
         // Stop the lowest priority/oldest sources
         for (let i = 0; i < Math.min(count, this.globalActiveSources.length); i++) {
             const source = this.globalActiveSources[i];
@@ -1345,7 +1345,7 @@ class SoundManager {
                 }
             }
         }
-        
+
         // Clean up ended sources
         this._cleanupGlobalSources();
     }
@@ -1355,7 +1355,7 @@ class SoundManager {
      */
     _cleanupGlobalSources() {
         if (!this.globalActiveSources) return;
-        
+
         for (let i = this.globalActiveSources.length - 1; i >= 0; i--) {
             if (this.globalActiveSources[i].source._ended) {
                 this.globalActiveSources.splice(i, 1);
@@ -1372,14 +1372,14 @@ class SoundManager {
         if (!this.soundThrottles[name]) {
             this.soundThrottles[name] = 0;
         }
-        
+
         const now = Date.now();
         const lastPlayTime = this.soundThrottles[name];
-        
+
         if (now - lastPlayTime < this.minSoundInterval) {
             return false;
         }
-        
+
         this.soundThrottles[name] = now;
         return true;
     }
@@ -1407,7 +1407,7 @@ class SoundManager {
         const screenBottom = screenTop + height;
 
         return (sourceX < screenLeft || sourceX > screenRight ||
-                sourceY < screenTop  || sourceY > screenBottom);
+            sourceY < screenTop || sourceY > screenBottom);
     }
 
     // Helper: Compute intended volume based on distance and off-screen status
@@ -1418,7 +1418,7 @@ class SoundManager {
             console.warn("_computeIntendedVolume: Invalid parameters", { baseVolume, sourceX, sourceY });
             return 0; // Mute if invalid
         }
-        
+
         const dx = sourceX - listenerPos.x;
         const dy = sourceY - listenerPos.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -1429,15 +1429,15 @@ class SoundManager {
         let dropoff = 1 - (distance / maxDistance);
         dropoff = Math.max(dropoff, 0.04);
         let volume = baseVolume * dropoff;
-        
+
         // Apply off-screen volume reduction
         if (this._isOffScreen(sourceX, sourceY, listenerPos)) {
-            const reductionFactor = typeof OFFSCREEN_VOLUME_REDUCTION_FACTOR !== 'undefined' 
-                ? OFFSCREEN_VOLUME_REDUCTION_FACTOR 
+            const reductionFactor = typeof OFFSCREEN_VOLUME_REDUCTION_FACTOR !== 'undefined'
+                ? OFFSCREEN_VOLUME_REDUCTION_FACTOR
                 : 0.1;
             volume *= reductionFactor;
         }
-        
+
         // Clamp final volume
         return Math.max(0, Math.min(1, volume));
     }
@@ -1538,22 +1538,31 @@ class SoundManager {
             console.warn(`playWorldSound: Sound entry '${name}' not found (likely failed generation).`);
             return;
         }
-        
+
         // Validate coordinates early
         if (typeof sourceX !== 'number' || typeof sourceY !== 'number' || isNaN(sourceX) || isNaN(sourceY)) {
             console.warn(`playWorldSound: Invalid coordinates for '${name}'`, { sourceX, sourceY });
             return;
         }
-        
+
         const baseVolume = soundEntry.definition.sound_vol;
         const intendedVolume = this._computeIntendedVolume(baseVolume, sourceX, sourceY, listenerPos);
         const dockedVolume = this._applyDockedAttenuation(intendedVolume);
-        
+
+        // UI indicator (always call, regardless of volume/throttling)
+        if (typeof uiManager !== 'undefined' && typeof uiManager.trackCombatSound === 'function') {
+            uiManager.trackCombatSound(sourceX, sourceY, name);
+        }
+
         // Skip if volume is too low after dock attenuation
         if (dockedVolume < 0.01) return;
 
         // Apply throttling to prevent sound spam
         if (!this._canPlayThrottled(name)) {
+            // Even if audio is throttled, we might want the visual indicator? 
+            // The previous logic had the indicator call at the end, implying it ran for both WebAudio and fallback.
+            // However, it was after the volume check.
+            // By moving it up, we ensure it runs.
             return;
         }
 
@@ -1574,10 +1583,10 @@ class SoundManager {
                     // iOS-specific state, try to resume
                     this.audioContext.resume();
                 }
-                
+
                 // Clean up ended sources first
                 this._cleanupGlobalSources();
-                
+
                 // Check global limit and cull if needed
                 if (this.globalActiveSources.length >= this.maxGlobalSources) {
                     // Check if this sound is higher priority than the lowest priority active sound
@@ -1589,41 +1598,41 @@ class SoundManager {
                     // Cull one source to make room
                     this._cullOldestSources(1);
                 }
-                
+
                 // Track active Web Audio sources for this sound
                 if (!this.activeWebSources[name]) this.activeWebSources[name] = [];
                 const webList = this.activeWebSources[name];
-                
+
                 // Clean out finished sources
                 for (let i = webList.length - 1; i >= 0; i--) {
                     if (webList[i]._ended) webList.splice(i, 1);
                 }
-                
+
                 const source = this.audioContext.createBufferSource();
                 source.buffer = soundEntry.audioBuffer;
                 const gainNode = this.audioContext.createGain();
-                
+
                 // Stronger gain scaling: more aggressive volume reduction as sounds stack
                 const activeCount = webList.length;
                 const scale = 1 / Math.pow(activeCount + 1, 0.85); // Increased from 0.6 to 0.85 for more aggressive reduction
                 const baseGain = Math.max(0, Math.min(1, intendedVolume * scale));
                 const finalGain = this._applyDockedAttenuation(baseGain);
                 gainNode.gain.value = finalGain;
-                
+
                 source.connect(gainNode);
-                
+
                 // Connect through compressor if available
                 const bus = (typeof window !== 'undefined' && window._eliteAudioBus) ? window._eliteAudioBus : null;
                 if (bus && bus.compressor) {
-                    try { 
-                        gainNode.connect(bus.compressor); 
-                    } catch (_) { 
-                        gainNode.connect(this.audioContext.destination); 
+                    try {
+                        gainNode.connect(bus.compressor);
+                    } catch (_) {
+                        gainNode.connect(this.audioContext.destination);
                     }
                 } else {
                     gainNode.connect(this.audioContext.destination);
                 }
-                
+
                 // Track this source globally and per-sound
                 const sourceInfo = {
                     source: source,
@@ -1633,22 +1642,22 @@ class SoundManager {
                     name: name,
                     baseGain: baseGain
                 };
-                
+
                 this.globalActiveSources.push(sourceInfo);
                 webList.push(source);
-                
+
                 source.onended = () => {
                     try {
                         gainNode.disconnect();
                         source.disconnect();
                         source._ended = true;
-                        
+
                         // Remove from per-sound tracking list
                         if (this.activeWebSources[name]) {
                             const idx = this.activeWebSources[name].indexOf(source);
                             if (idx !== -1) this.activeWebSources[name].splice(idx, 1);
                         }
-                        
+
                         // Remove from global tracking list
                         const globalIdx = this.globalActiveSources.findIndex(s => s.source === source);
                         if (globalIdx !== -1) this.globalActiveSources.splice(globalIdx, 1);
@@ -1656,18 +1665,17 @@ class SoundManager {
                         // Already disconnected, ignore
                     }
                 };
-                
+
                 source.start();
                 usedWebAudio = true;
             } catch (e) {
                 console.warn('Web Audio API playback failed, falling back to HTMLAudioElement:', e);
             }
         }
-        
-        // UI indicator (always call, only once)
-        if (typeof uiManager !== 'undefined' && typeof uiManager.trackCombatSound === 'function') {
-            uiManager.trackCombatSound(sourceX, sourceY, name);
-        }
+
+
+
+
         if (usedWebAudio) return;
 
         // --- Fallback: HTMLAudioElement pooling for overlapping sounds ---
@@ -1682,7 +1690,7 @@ class SoundManager {
      */
     _playPooledSound(name, soundEntry, volume) {
         const instances = this.activeInstances[name];
-        
+
         // Clean up finished instances
         for (let i = instances.length - 1; i >= 0; i--) {
             const inst = instances[i];
@@ -1690,10 +1698,10 @@ class SoundManager {
                 instances.splice(i, 1);
             }
         }
-        
+
         // Find or create an available instance
         let audioToPlay = null;
-        
+
         // Try to reuse a finished instance
         for (const inst of instances) {
             if (inst.ended || inst.paused) {
@@ -1701,7 +1709,7 @@ class SoundManager {
                 break;
             }
         }
-        
+
         // Create new instance if under limit
         if (!audioToPlay && instances.length < this.maxInstancesPerSound) {
             try {
@@ -1726,17 +1734,17 @@ class SoundManager {
                 return;
             }
         }
-        
+
         // If still no instance available, use the oldest one
         if (!audioToPlay && instances.length > 0) {
             audioToPlay = instances[0];
         }
-        
+
         if (!audioToPlay) {
             console.error(`SoundManager: No playable audio for sound '${name}'.`);
             return;
         }
-        
+
         this._playAnyAudio(audioToPlay, volume, { resetTime: true });
     }
 
@@ -1813,8 +1821,8 @@ class SoundManager {
      */
     playExplosion(size = 30, sourceX, sourceY, listenerPos) {
         if (!listenerPos) {
-             console.warn("SoundManager.playExplosion: listenerPos is required.");
-             return;
+            console.warn("SoundManager.playExplosion: listenerPos is required.");
+            return;
         }
         // Simple size check for sound selection
         const soundName = size > 60 ? 'explosionLarge' : 'explosionSmall';
@@ -1873,12 +1881,12 @@ class SoundManager {
                 }
                 this.globalActiveSources = [];
             }
-            
+
             // Clear per-sound Web Audio tracking
             for (const name in this.activeWebSources) {
                 this.activeWebSources[name] = [];
             }
-            
+
             // Stop all pooled instances
             for (const name in this.activeInstances) {
                 const instances = this.activeInstances[name];
@@ -1893,7 +1901,7 @@ class SoundManager {
                     }
                 }
             }
-            
+
             // Stop original audio objects
             for (const name in this.sounds) {
                 const soundEntry = this.sounds[name];
@@ -1908,13 +1916,13 @@ class SoundManager {
                     }
                 }
             }
-            
+
             // Clear throttle timers
             this.soundThrottles = {};
-            
+
             // Don't suspend/resume AudioContext - just let it be
             // Suspending can cause issues with subsequent playback
-            
+
             AUDIO_LOG("All sounds stopped");
         } catch (e) {
             console.warn("Error stopping sounds:", e);

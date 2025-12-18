@@ -41,6 +41,9 @@ class UIMinimap {
             this.roleColors[AI_ROLE.GUARD] = ROLE_COLORS.GUARD;
             this.roleColors[AI_ROLE.COMBAT] = ROLE_COLORS.COMBAT;
         }
+
+        // Active kill indicators
+        this.killIndicators = [];
     }
 
     /**
@@ -204,11 +207,71 @@ class UIMinimap {
             // Draw jump zone
             this._drawJumpZone(player, system, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom);
 
+            // Draw kill indicators
+            // Draw kill indicators
+            this._drawKillIndicators(player, mapCenterX, mapCenterY);
+
         } catch (e) {
             console.error("Error during minimap element drawing:", e);
         } finally {
             pop();
         }
+    }
+
+    /**
+     * Registers a new kill indicator at the given world position.
+     * @param {p5.Vector} pos - World position of the kill
+     */
+    addKillIndicator(pos) {
+        if (!pos) return;
+        this.killIndicators.push({
+            pos: pos.copy(),
+            size: 0,
+            alpha: 255,
+            maxLife: 60, // 1 second at 60fps
+            maxSize: 30  // Max radius on minimap
+        });
+    }
+
+    /**
+     * Draws and updates active kill indicators (expanding rings).
+     * @private
+     */
+    _drawKillIndicators(player, mapCenterX, mapCenterY) {
+        if (!player || !player.pos) return;
+
+        for (let i = this.killIndicators.length - 1; i >= 0; i--) {
+            const ind = this.killIndicators[i];
+
+            // Update state
+            ind.size += 0.5; // Expand speed
+            ind.alpha = map(ind.size, 0, ind.maxSize, 255, 0);
+
+            // Remove if expired or too big
+            if (ind.alpha <= 0 || ind.size >= ind.maxSize) {
+                this.killIndicators.splice(i, 1);
+                continue;
+            }
+
+            // Calculate position on minimap
+            const relX = ind.pos.x - player.pos.x;
+            const relY = ind.pos.y - player.pos.y;
+            const mapX = mapCenterX + relX * this.scale;
+            const mapY = mapCenterY + relY * this.scale;
+
+            // Draw
+            // Check if roughly in bounds to avoid drawing far off-screen
+            // We use a loose check since it's just a visual effect
+            if (Math.abs(mapX - mapCenterX) < this.size && Math.abs(mapY - mapCenterY) < this.size) {
+                push();
+                noFill();
+                stroke(255, 255, 255, ind.alpha);
+                strokeWeight(1.5);
+                ellipse(mapX, mapY, ind.size * 2, ind.size * 2);
+                pop();
+            }
+        }
+        // End of _drawKillIndicators
     }
 
     _drawHazardsBuffer(player, system, mapCenterX, mapCenterY) {

@@ -86,13 +86,35 @@ const TARGET_SCORE_HULL_DAMAGE_MULT = 20;        // Multiplier for hull damage b
 // -------------------------
 
 // Used by `AI_ROLE.COMBAT` in targeting to prioritize threats/factions
-const TARGET_SCORE_COMBAT_VS_ALIEN_BONUS = 50; // Military vs Aliens
-const TARGET_SCORE_COMBAT_RIVALRY_BONUS = 50;   // Imperial vs Separatist rivalry
-const TARGET_SCORE_COMBAT_STANDARD_ENGAGE = 20;  // Pirates
+// Used by `AI_ROLE.COMBAT` in targeting to prioritize threats/factions
+const TARGET_SCORE_COMBAT_VS_ALIEN_BONUS = 500; // Military vs Aliens (High priority)
+const TARGET_SCORE_COMBAT_RIVALRY_BONUS = 500;   // Imperial vs Separatist rivalry (High priority)
+const TARGET_SCORE_COMBAT_STANDARD_ENGAGE = 100;  // Pirates (Medium priority)
 const TARGET_SCORE_COMBAT_LOW_PRIORITY = 0;     // Other ships (generic)
 
 // Faction-based targeting modifier
+// Faction-based targeting modifier
 const TARGET_SCORE_SAME_FACTION_PENALTY = 200;  // Large penalty for targeting same faction (prevents friendly fire)
+
+// -------------------------
+// --- Faction and Role Hostility Maps ---
+// -------------------------
+
+// Defines which factions are enemies of each other (Symmetric rivalry)
+const FACTION_ENEMY_MAP = {
+    'IMPERIAL': ['SEPARATIST'],
+    'SEPARATIST': ['IMPERIAL'],
+    'MILITARY': ['ALIEN'], // Military hates aliens (Note: Alien is a role, but often treated as a faction context)
+    'ALIEN': ['MILITARY', 'IMPERIAL', 'SEPARATIST', 'INDEPENDENT', 'CIVILIAN'] // Aliens maintain hostilities with all
+};
+
+// Defines which roles are hostile to other roles/factions
+const ROLE_ENEMY_MAP = {
+    [AI_ROLE.ALIEN]: ['MILITARY'], // Aliens specifically target military first
+    [AI_ROLE.PIRATE]: [AI_ROLE.HAULER, AI_ROLE.TRANSPORT], // Pirates prey on commerce
+    [AI_ROLE.POLICE]: [AI_ROLE.PIRATE, AI_ROLE.ALIEN], // Police hunt criminals and aliens
+    [AI_ROLE.COMBAT]: [AI_ROLE.PIRATE, AI_ROLE.ALIEN]  // Combat ships hunt threats
+};
 
 // -------------------------
 // --- Movement & Combat Constants ---
