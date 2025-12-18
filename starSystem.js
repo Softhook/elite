@@ -2102,8 +2102,65 @@ class StarSystem {
                 }
             }
 
-            // Enemy vs Enemy collisions (optional, can be costly)
-            // Skipped for performance - enemies don't collide with each other normally
+            // Enemy vs Enemy collisions - using spatial hash for O(n) performance
+            const checkedEnemyPairs = new Set();
+            for (let i = 0; i < enemyCount; i++) {
+                const enemy1 = this.enemies[i];
+                if (!enemy1 || !enemy1.pos || enemy1.isDestroyed()) continue;
+
+                const enemy1Size = enemy1.size || 30;
+                // Query nearby enemies using spatial hash
+                const nearbyEnemies = this.spatialHash ?
+                    this.spatialHash.getNearby(enemy1.pos.x, enemy1.pos.y, enemy1Size + 60) : [];
+
+                for (let j = 0, nearbyLen = nearbyEnemies.length; j < nearbyLen; j++) {
+                    const enemy2 = nearbyEnemies[j];
+                    if (!(enemy2 instanceof Enemy)) continue;
+                    if (enemy2 === enemy1) continue;
+                    if (!enemy2 || !enemy2.pos || enemy2.isDestroyed()) continue;
+
+                    // Skip bodyguards colliding with their principal
+                    if (enemy1.role === AI_ROLE.GUARD && enemy1.principal === enemy2) continue;
+                    if (enemy2.role === AI_ROLE.GUARD && enemy2.principal === enemy1) continue;
+
+                    // Skip guards belonging to the same principal (flying in formation)
+                    if (enemy1.role === AI_ROLE.GUARD && enemy2.role === AI_ROLE.GUARD &&
+                        enemy1.principal && enemy1.principal === enemy2.principal) continue;
+
+                    // Prevent checking same pair twice using id-based key
+                    const id1 = enemy1.id ?? i;
+                    const id2 = enemy2.id ?? this.enemies.indexOf(enemy2);
+                    const pairKey = id1 < id2 ? `${id1}-${id2}` : `${id2}-${id1}`;
+                    if (checkedEnemyPairs.has(pairKey)) continue;
+                    checkedEnemyPairs.add(pairKey);
+
+                    if (enemy1.checkCollision(enemy2)) {
+                        this._handleShipCollision(enemy1, enemy2);
+                    }
+                }
+            }
+
+            // Enemy vs Space Object collisions
+            for (let i = 0; i < enemyCount; i++) {
+                const enemy = this.enemies[i];
+                if (!enemy || !enemy.pos || enemy.isDestroyed()) continue;
+
+                const enemySize = enemy.size || 30;
+                const nearbySpaceObjects = this.spatialHash ?
+                    this.spatialHash.getNearby(enemy.pos.x, enemy.pos.y, enemySize + 100) : [];
+
+                for (let j = 0, nearbyLen = nearbySpaceObjects.length; j < nearbyLen; j++) {
+                    const spaceObject = nearbySpaceObjects[j];
+                    if (!(spaceObject instanceof SpaceObject)) continue;
+                    if (!spaceObject || !spaceObject.pos || spaceObject.destroyed) continue;
+                    // Only transports and repair ships skip dockable objects (they need to dock/repair)
+                    if (spaceObject.isDockable && (enemy.role === AI_ROLE.TRANSPORT || enemy.role === AI_ROLE.REPAIR)) continue;
+
+                    if (enemy.checkCollision(spaceObject)) {
+                        this._handleShipSpaceObjectCollision(enemy, spaceObject);
+                    }
+                }
+            }
         } catch (e) {
             console.error('Error in _checkNPCCollisions:', e);
         }
@@ -3290,6 +3347,66 @@ class StarSystem {
         asteroid.vel.y += impulse * ny;
     }
 
+    /**
+     * Handles ship-to-space object collision (bounce off with damage)
+     * Space objects are treated as static/very massive, so ship bounces off
+     * @private
+     */
+    _handleShipSpaceObjectCollision(ship, spaceObject) {
+        const dx = spaceObject.pos.x - ship.pos.x;
+        const dy = spaceObject.pos.y - ship.pos.y;
+        const distSq = dx * dx + dy * dy;
+        const dist = Math.sqrt(distSq) || 0.001;
+
+        // Calculate overlap
+        const rShip = ship.size / 2;
+        const rObject = (typeof spaceObject.collisionRadius === 'number')
+            ? spaceObject.collisionRadius
+            : spaceObject.size / 2;
+        const minDist = rShip + rObject;
+        const overlap = minDist - dist;
+
+        if (overlap <= 0) return; // No actual overlap
+
+        // Normalized collision vector
+        const nx = dx / dist;
+        const ny = dy / dist;
+
+        // Push ship away from space object
+        ship.pos.x -= nx * overlap;
+        ship.pos.y -= ny * overlap;
+
+        // Calculate damage based on impact velocity
+        const velAlongNormal = ship.vel.x * nx + ship.vel.y * ny;
+
+        // Only apply damage/bounce if ship is moving toward the object
+        if (velAlongNormal > 0) {
+            const collisionDamage = Math.floor(Math.abs(velAlongNormal) * 0.3);
+            if (collisionDamage > 0) {
+                ship.takeDamage(collisionDamage, spaceObject);
+            }
+
+            // Bounce physics (treat space object as immovable)
+            const restitution = 0.5; // Less bouncy than asteroids
+            const impulse = -(1 + restitution) * velAlongNormal;
+            ship.vel.x += impulse * nx;
+            ship.vel.y += impulse * ny;
+
+            // Play bump sound with cooldown
+            if (ship === this.player) {
+                try {
+                    if (typeof soundManager !== 'undefined') {
+                        const now = (typeof millis === 'function') ? millis() : Date.now();
+                        if (!this._lastPlayerSpaceObjectBumpTime || (now - this._lastPlayerSpaceObjectBumpTime) > 250) {
+                            soundManager.playWorldSound('bump', ship.pos.x, ship.pos.y, ship.pos);
+                            this._lastPlayerSpaceObjectBumpTime = now;
+                        }
+                    }
+                } catch (e) { /* ignore sound errors */ }
+            }
+        }
+    }
+
 
     /** 
      * Handles all collision detection and responses in the system.
@@ -3339,6 +3456,15 @@ class StarSystem {
                         this._handleAsteroidCollision(this.player, entity);
                     }
                 }
+                // Check if this is a space object (station, platform, etc.)
+                else if (entity instanceof SpaceObject) {
+                    if (entity.destroyed) continue;
+                    // Skip dockable objects - player needs to approach them to dock
+                    if (entity.isDockable) continue;
+                    if (this.player.checkCollision(entity)) {
+                        this._handleShipSpaceObjectCollision(this.player, entity);
+                    }
+                }
             }
 
             // Enemy vs Asteroid collisions - using spatial hash per enemy
@@ -3359,6 +3485,65 @@ class StarSystem {
 
                     if (enemy.checkCollision(asteroid)) {
                         this._handleAsteroidCollision(enemy, asteroid);
+                    }
+                }
+            }
+
+            // Enemy vs Enemy collisions - using spatial hash for O(n) performance
+            const checkedEnemyPairs = new Set();
+            for (let i = 0; i < enemyCount; i++) {
+                const enemy1 = this.enemies[i];
+                if (!enemy1 || !enemy1.pos || enemy1.isDestroyed()) continue;
+
+                const enemy1Size = enemy1.size || 30;
+                const nearbyEnemies = this.spatialHash ?
+                    this.spatialHash.getNearby(enemy1.pos.x, enemy1.pos.y, enemy1Size + 60) : [];
+
+                for (let j = 0, nearbyLen = nearbyEnemies.length; j < nearbyLen; j++) {
+                    const enemy2 = nearbyEnemies[j];
+                    if (!(enemy2 instanceof Enemy)) continue;
+                    if (enemy2 === enemy1) continue;
+                    if (!enemy2 || !enemy2.pos || enemy2.isDestroyed()) continue;
+
+                    // Skip bodyguards colliding with their principal
+                    if (enemy1.role === AI_ROLE.GUARD && enemy1.principal === enemy2) continue;
+                    if (enemy2.role === AI_ROLE.GUARD && enemy2.principal === enemy1) continue;
+
+                    // Skip guards belonging to the same principal (flying in formation)
+                    if (enemy1.role === AI_ROLE.GUARD && enemy2.role === AI_ROLE.GUARD &&
+                        enemy1.principal && enemy1.principal === enemy2.principal) continue;
+
+                    // Prevent checking same pair twice
+                    const id1 = enemy1.id ?? i;
+                    const id2 = enemy2.id ?? this.enemies.indexOf(enemy2);
+                    const pairKey = id1 < id2 ? `${id1}-${id2}` : `${id2}-${id1}`;
+                    if (checkedEnemyPairs.has(pairKey)) continue;
+                    checkedEnemyPairs.add(pairKey);
+
+                    if (enemy1.checkCollision(enemy2)) {
+                        this._handleShipCollision(enemy1, enemy2);
+                    }
+                }
+            }
+
+            // Enemy vs Space Object collisions - using spatial hash per enemy
+            for (let i = 0; i < enemyCount; i++) {
+                const enemy = this.enemies[i];
+                if (!enemy || !enemy.pos || enemy.isDestroyed()) continue;
+
+                const enemySize = enemy.size || 30;
+                const nearbySpaceObjects = this.spatialHash ?
+                    this.spatialHash.getNearby(enemy.pos.x, enemy.pos.y, enemySize + 100) : [];
+
+                for (let j = 0, nearbyLen = nearbySpaceObjects.length; j < nearbyLen; j++) {
+                    const spaceObject = nearbySpaceObjects[j];
+                    if (!(spaceObject instanceof SpaceObject)) continue;
+                    if (!spaceObject || !spaceObject.pos || spaceObject.destroyed) continue;
+                    // Only transports and repair ships skip dockable objects (they need to dock/repair)
+                    if (spaceObject.isDockable && (enemy.role === AI_ROLE.TRANSPORT || enemy.role === AI_ROLE.REPAIR)) continue;
+
+                    if (enemy.checkCollision(spaceObject)) {
+                        this._handleShipSpaceObjectCollision(enemy, spaceObject);
                     }
                 }
             }
