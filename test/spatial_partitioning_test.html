@@ -274,12 +274,17 @@
                 expect(hash.entityCount).toBe(10);
             });
 
-            it('should clear all entities', () => {
+            it('should clear all entities while reusing memory', () => {
                 const hash = new SpatialHash(200);
                 hash.insertAll(createMockEntities(10));
+
+                const initialCellCount = hash.cellCount;
+                expect(initialCellCount).toBeGreaterThan(0);
+
                 hash.clear();
                 expect(hash.entityCount).toBe(0);
-                expect(hash.cellCount).toBe(0);
+                // Optimization: We reuse arrays, so cellCount should remain the same (no map deletions)
+                expect(hash.cellCount).toBe(initialCellCount);
             });
 
             it('should handle null/undefined entities gracefully', () => {

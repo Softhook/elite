@@ -168,9 +168,12 @@ class SpatialHash {
     /**
      * Clear all entities from the hash
      * Call this at the start of each frame before re-inserting entities
+     * OPTIMIZED: Reuses arrays to avoid garbage collection
      */
     clear() {
-        this.cells.clear();
+        for (const cell of this.cells.values()) {
+            cell.length = 0;
+        }
     }
 
     /**

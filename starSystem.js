@@ -2674,8 +2674,17 @@ class StarSystem {
             }
 
             // Apply effects to enemies
-            for (let j = 0, elen = this.enemies.length; j < elen; j++) {
-                nebula.applyEffects(this.enemies[j]);
+            // OPTIMIZATION: Use spatial hash to find enemies within nebula radius
+            const nearbyEnemies = this.spatialHash ?
+                this.spatialHash.getNearby(nebula.pos.x, nebula.pos.y, nebula.radius || 1000) :
+                this.enemies;
+
+            for (let j = 0, len = nearbyEnemies.length; j < len; j++) {
+                const enemy = nearbyEnemies[j];
+                // Ensure it's actually an enemy (spatial hash might have other entities)
+                if (enemy instanceof Enemy) {
+                    nebula.applyEffects(enemy);
+                }
             }
         }
     }
@@ -2704,8 +2713,16 @@ class StarSystem {
                 storm.applyEffects(this.player);
             }
 
-            for (let enemy of this.enemies) {
-                storm.applyEffects(enemy);
+            // OPTIMIZATION: Use spatial hash for enemies
+            const nearbyEnemies = this.spatialHash ?
+                this.spatialHash.getNearby(storm.pos.x, storm.pos.y, storm.radius || 1000) :
+                this.enemies;
+
+            for (let j = 0, len = nearbyEnemies.length; j < len; j++) {
+                const enemy = nearbyEnemies[j];
+                if (enemy instanceof Enemy) {
+                    storm.applyEffects(enemy);
+                }
             }
         }
 
@@ -3643,11 +3660,16 @@ class StarSystem {
 
             // For enemy hits - use spatial partitioning approach
             if (proj.owner instanceof Player) {
-                // Get only nearby enemies using pre-check with distance squared
-                for (let j = 0; j < enemyCount; j++) {
-                    const enemy = this.enemies[j];
-                    // Early bailout for invalid or destroyed enemies
-                    if (!enemy || !enemy.pos || (typeof enemy.isDestroyed === 'function' && enemy.isDestroyed())) continue;
+                // OPTIMIZATED: Query spatial hash for nearby enemies instead of checking all
+                const nearbyEnemies = this.spatialHash ?
+                    this.spatialHash.getNearby(projPos.x, projPos.y, 300) : this.enemies;
+
+                for (let j = 0, len = nearbyEnemies.length; j < len; j++) {
+                    const enemy = nearbyEnemies[j];
+                    // Early bailout for invalid entries, self-hits (though strict equality handles that), or non-Enemies
+                    // Spatial hash contains projectiles too, so we MUST check type
+                    if (!enemy || !enemy.pos || !(enemy instanceof Enemy)) continue;
+                    if (typeof enemy.isDestroyed === 'function' && enemy.isDestroyed()) continue;
                     const combinedRadius = enemy.size + projSize;
                     const combinedRadiusSquared = combinedRadius * combinedRadius;
                     distCheckVector.set(enemy.pos.x - projPos.x, enemy.pos.y - projPos.y);
@@ -3727,10 +3749,16 @@ class StarSystem {
 
             // For enemy-to-enemy hits (friendly fire)
             if (proj.owner instanceof Enemy) {
-                for (let j = 0; j < enemyCount; j++) {
-                    const enemy = this.enemies[j];
-                    // Early bailout for invalid enemies or self-fire
-                    if (!enemy || !enemy.pos || enemy === proj.owner || (typeof enemy.isDestroyed === 'function' && enemy.isDestroyed())) continue;
+                // OPTIMIZATED: Query spatial hash for nearby enemies instead of checking all
+                const nearbyEnemies = this.spatialHash ?
+                    this.spatialHash.getNearby(projPos.x, projPos.y, 300) : this.enemies;
+
+                for (let j = 0, len = nearbyEnemies.length; j < len; j++) {
+                    const enemy = nearbyEnemies[j];
+                    // Early bailout for invalid enemies, self-fire, or non-Enemies
+                    // Spatial hash contains projectiles too, so we MUST check type
+                    if (!enemy || !enemy.pos || !(enemy instanceof Enemy)) continue;
+                    if (enemy === proj.owner || (typeof enemy.isDestroyed === 'function' && enemy.isDestroyed())) continue;
                     if (proj.checkCollision(enemy)) {
                         // Harpoon special-case: spawn a Harpoon tether between enemies
                         if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
@@ -3807,13 +3835,32 @@ class StarSystem {
     handleCargoCollection() {
         if (!this.player || !this.player.pos || !this.cargo || this.cargo.length === 0) return;
 
-        for (let i = this.cargo.length - 1; i >= 0; i--) {
-            const cargoItem = this.cargo[i];
+        // OPTIMIZATION: Use spatial hash to find nearby cargo only
+        // This assumes cargo is inserted into spatial hash (it is, in _rebuildSpatialHash)
+        // 200px radius is sufficient for collection range checks
+        const nearbyCargo = this.spatialHash ?
+            this.spatialHash.getNearby(this.player.pos.x, this.player.pos.y, 200) :
+            this.cargo;
+
+        // Create a temporary list for items to remove from the main cargo array
+        const cargoToRemove = [];
+
+        for (let i = 0, len = nearbyCargo.length; i < len; i++) {
+            const cargoItem = nearbyCargo[i];
+
+            // Spatial hash contains all entities, so we must filter for Cargo instances
+            // or check for specific cargo properties
+            if (!cargoItem || !cargoItem.type || typeof cargoItem.checkCollision !== 'function') continue;
+            if (cargoItem instanceof SpaceObject || cargoItem instanceof Enemy || cargoItem instanceof Asteroid) continue;
+
+            // Basic validation (spatial hash might return items that were just fastRemoved from main list but not hash,
+            // though hash is rebuilt every frame so it should be consistent)
 
             // Skip if invalid, already collected, or expired
             if (!cargoItem || !cargoItem.pos || !cargoItem.type) {
-                console.warn(`Invalid cargo item at index ${i}, removing`);
-                this._fastRemove(this.cargo, i);
+                console.warn(`Invalid cargo item found in nearbyCargo, removing`);
+                // Mark for removal from the main cargo array
+                cargoToRemove.push(cargoItem);
                 continue;
             }
 
@@ -3827,7 +3874,7 @@ class StarSystem {
                         uiManager.removeEventMarker(cargoItem.eventMarkerId);
                     }
                 } catch (e) { }
-                this._fastRemove(this.cargo, i);
+                cargoToRemove.push(cargoItem);
                 continue;
             }
 
@@ -3878,7 +3925,7 @@ class StarSystem {
                             }
                         } catch (e) { }
                         // Since it's fully collected, remove it immediately from the system
-                        this._fastRemove(this.cargo, i);
+                        cargoToRemove.push(cargoItem);
                         //console.log(`  Full pickup: Removed ${cargoItem.type}x${cargoItem.quantity}`);
                     }
                 } else {
@@ -3887,6 +3934,16 @@ class StarSystem {
                         uiManager.addMessage(`Cargo hold full!`, [255, 200, 0]);
                     }
                 }
+            }
+        }
+
+        // Process removals safely from the main array
+        // We must re-find the index for each item as _fastRemove swaps elements
+        for (let i = 0; i < cargoToRemove.length; i++) {
+            const item = cargoToRemove[i];
+            const idx = this.cargo.indexOf(item);
+            if (idx !== -1) {
+                this._fastRemove(this.cargo, idx);
             }
         }
     }

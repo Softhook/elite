@@ -726,15 +726,24 @@ class EnemyTargeting {
 
                 // 3. Ally engagement penalty - encourage target distribution
                 // Count same-faction allies already targeting this same target
-                // Apply scaling penalty based on distance: close ships can engage, distant ships should find other targets
                 if (system?.enemies && enemy._getShipFaction) {
                     const myFaction = enemy._getShipFaction(enemy);
                     let alliesTargetingSame = 0;
 
-                    for (let i = 0, len = system.enemies.length; i < len; i++) {
-                        const ally = system.enemies[i];
+                    // OPTIMIZATION: Use spatial hash to find allies near the TARGET (swarming behavior)
+                    // instead of iterating all global enemies. Radius 1000 covers most engagement ranges.
+                    const potentialAllies = (system.spatialHash && target.pos) ?
+                        system.spatialHash.getNearby(target.pos.x, target.pos.y, 1000) :
+                        system.enemies;
+
+                    for (let i = 0, len = potentialAllies.length; i < len; i++) {
+                        const ally = potentialAllies[i];
                         if (ally === enemy || !ally.target) continue;
-                        if (ally.target === target) {
+
+                        // Strict check: Must be an Enemy ship (spatial hash contains other things)
+                        // and logic must hold: target match + faction match
+                        // Also ensure ally is actually an Enemy instance
+                        if ((ally instanceof Enemy) && ally.target === target && ally.role) {
                             const allyFaction = enemy._getShipFaction(ally);
                             if (allyFaction === myFaction && myFaction !== 'UNKNOWN') {
                                 alliesTargetingSame++;

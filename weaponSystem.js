@@ -1164,15 +1164,25 @@ class WeaponSystem {
             } catch (e) { /* non-fatal */ }
         }
 
-        // Only create explosion if there were NO shields before the hit
-        if (!targetHasShield && system.addExplosion) {
-            // Convert color to safe format - cache isArray check
-            const isColorArray = Array.isArray(color);
-            const explosionColor = isColorArray ? color :
-                (color && color.levels) ? [color.levels[0], color.levels[1], color.levels[2]] :
-                    [255, 0, 0];
+        // Create explosion/spark effect for ALL hits (shields or hull)
+        if (system.addExplosion) {
+            // Determine effective color: generic weapon color or specific shield flare
+            let hitColor;
+            let hitSize = 5;
 
-            system.addExplosion(hitPoint.x, hitPoint.y, 5, explosionColor);
+            if (targetHasShield) {
+                // Shield hit: Cyan/Blue sparks
+                hitColor = [100, 200, 255];
+                hitSize = 4;
+            } else {
+                // Hull hit: Weapon color
+                const isColorArray = Array.isArray(color);
+                hitColor = isColorArray ? color :
+                    (color && color.levels) ? [color.levels[0], color.levels[1], color.levels[2]] :
+                        [255, 0, 0];
+            }
+
+            system.addExplosion(hitPoint.x, hitPoint.y, hitSize, hitColor);
         }
     }
 

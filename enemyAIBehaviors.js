@@ -269,20 +269,58 @@ class EnemyAIBehaviors {
     }
 
     _pickCoverTarget(system, targetPos) {
-        const candidates = this._refreshCoverCandidates(system);
-        if (!candidates.length) return null;
-        // Take nearest N to bound cost
-        const nearest = [];
-        for (const ast of candidates) {
-            if (!ast?.pos) continue;
-            const dx = ast.pos.x - this.pos.x;
-            const dy = ast.pos.y - this.pos.y;
-            const d2 = dx * dx + dy * dy;
-            nearest.push({ ast, d2 });
+        // [OPTIMIZATION] Use SpatialHash to find nearby cover candidates instead of global scan
+        const maxCoverDist = 600; // slightly increased from 500 to ensure we catch enough helpers
+        let candidates = [];
+
+        if (system.spatialHash) {
+            // Query nearby entities
+            const potential = system.spatialHash.getNearby(this.pos.x, this.pos.y, maxCoverDist);
+            const minSize = 0;
+            const maxSpeed = 1.2;
+
+            for (let i = 0, len = potential.length; i < len; i++) {
+                const ast = potential[i];
+
+                // Filter: Must be Asteroid, valid pos, not destroyed
+                // Note: instanceof check is safer than checking properties
+                if (!ast || !ast.pos || !(ast instanceof Asteroid) || ast.destroyed) continue;
+
+                // Filter: Speed and Size (replicating _refreshCoverCandidates logic locally)
+                const speed = (ast.vel && typeof ast.vel.mag === 'function') ? ast.vel.mag() : 0;
+                if (speed > maxSpeed) continue;
+
+                const size = ast.size || (ast.maxRadius ? ast.maxRadius * 2 : 0);
+                if (size < minSize) continue;
+
+                const dx = ast.pos.x - this.pos.x;
+                const dy = ast.pos.y - this.pos.y;
+                const d2 = dx * dx + dy * dy;
+
+                if (d2 <= maxCoverDist * maxCoverDist) {
+                    candidates.push({ ast, d2 });
+                }
+            }
+        } else {
+            // Fallback to old inefficient method if spatial hash is missing
+            const globalCandidates = this._refreshCoverCandidates(system);
+            for (const ast of globalCandidates) {
+                if (!ast?.pos) continue;
+                const dx = ast.pos.x - this.pos.x;
+                const dy = ast.pos.y - this.pos.y;
+                const d2 = dx * dx + dy * dy;
+                // Apply distance limit here for the fallback too
+                if (d2 <= maxCoverDist * maxCoverDist) {
+                    candidates.push({ ast, d2 });
+                }
+            }
         }
-        nearest.sort((a, b) => a.d2 - b.d2);
-        const maxCoverDist = 500; // max distance for cover asteroids
-        const limited = nearest.filter(entry => entry.d2 <= maxCoverDist * maxCoverDist).slice(0, 8);
+
+        if (!candidates.length) return null;
+
+        // Take nearest N
+        candidates.sort((a, b) => a.d2 - b.d2);
+        const limited = candidates.slice(0, 8);
         let best = null;
         let bestScore = -Infinity;
         for (const entry of limited) {
@@ -648,12 +686,22 @@ class EnemyAIBehaviors {
         // Only scan if on-screen OR if it's the periodic scan frame.
         const shouldScan = this._isOnScreen || this.isScanFrame;
 
-        if (shouldScan && system.enemies && system.enemies.length > 0) {
-            for (let e of system.enemies) {
-                if (e !== this && e.hull > 0 && e.isWanted) {
-                    // [FIX] Add distance check - Police should only detect nearby wanted ships
+        // [OPTIMIZATION] Search for nearby wanted ships using SpatialHash if available
+        if (shouldScan) {
+            const scanRadius = this.detectionRange || 1500;
+
+            // Use SpatialHash for O(1) nearby lookup if available
+            const potentialTargets = (system.spatialHash) ?
+                system.spatialHash.getNearby(this.pos.x, this.pos.y, scanRadius) :
+                (system.enemies || []);
+
+            for (let i = 0, len = potentialTargets.length; i < len; i++) {
+                const e = potentialTargets[i];
+
+                // Validate target: Must be Enemy (not asteroid/etc), not self, alive, and Wanted
+                if (e && e !== this && (e instanceof Enemy) && e.hull > 0 && e.isWanted) {
                     const distToTarget = this.distanceTo(e);
-                    if (distToTarget < this.detectionRange && distToTarget < closestWantedDist) {
+                    if (distToTarget < scanRadius && distToTarget < closestWantedDist) {
                         wantedTarget = e;
                         closestWantedDist = distToTarget;
                     }
