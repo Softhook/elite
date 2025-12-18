@@ -105,7 +105,9 @@ class EnemyTargeting {
 
                 if ((isHostileToPlayer || isPoliceVsWanted) && system.player && this.isTargetValid(system.player)) {
                     bestOffScreenTarget = system.player;
-                    bestOffScreenDistSq = this.pos.distSq(system.player.pos);
+                    const dx = this.pos.x - system.player.pos.x;
+                    const dy = this.pos.y - system.player.pos.y;
+                    bestOffScreenDistSq = dx * dx + dy * dy;
                 }
 
                 // 2. Scan other enemies (Sampling for performance)
@@ -127,6 +129,10 @@ class EnemyTargeting {
                             }
                         }
 
+                        // 1b. Check direct hatred (e.g. Police vs Pirate)
+                        // Handled via ROLE_ENEMY_MAP usually, but ensure basics:
+                        if (e.role === AI_ROLE.PIRATE && (this.role === AI_ROLE.POLICE || this.role === AI_ROLE.GUARD)) isPriority = true;
+
                         // 2. Check Role Hostilities (if not already found)
                         if (!isPriority && typeof ROLE_ENEMY_MAP !== 'undefined' && this.role) {
                             const hatedRoles = ROLE_ENEMY_MAP[this.role];
@@ -139,7 +145,9 @@ class EnemyTargeting {
                         if (!isPriority && this.faction === 'MILITARY' && e.role === AI_ROLE.ALIEN) isPriority = true;
 
                         if (isPriority) {
-                            const d2 = this.pos.distSq(e.pos);
+                            const idx = this.pos.x - e.pos.x;
+                            const idy = this.pos.y - e.pos.y;
+                            const d2 = idx * idx + idy * idy;
                             // Switch if this rival is closer than current best (or if current best is the player)
                             // We heavily bias towards Rivals over Player
                             if (!bestOffScreenTarget || bestOffScreenTarget === system.player || d2 < bestOffScreenDistSq) {

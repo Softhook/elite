@@ -1129,6 +1129,7 @@ class StarSystem {
         this.discover();
         this.enemies = []; this.enemiesById.clear(); // Clear both array and Map
         this.projectiles = []; this.mines = []; this.asteroids = []; this.harpoons = [];
+        if (this.spatialHash) this.spatialHash.clear(); // Clear spatial hash on entry to prevent stale queries
         // Reset timers when entering
         this.enemySpawnTimer = 0; this.asteroidSpawnTimer = 0;
 
