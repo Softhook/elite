@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Station Sound Test - Internal & External</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0f0f2a 100%);
+            color: #e0e0f0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2em;
+            background: linear-gradient(90deg, #6af, #a6f, #f6a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .instructions {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #8888aa;
+            font-size: 0.9em;
+        }
+
+        .mode-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .mode-btn {
+            padding: 12px 30px;
+            border: 2px solid #6af;
+            border-radius: 8px;
+            background: transparent;
+            color: #6af;
+            font-weight: 600;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mode-btn:hover {
+            background: rgba(102, 170, 255, 0.1);
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #6af, #48f);
+            color: #fff;
+            border-color: transparent;
+        }
+
+        .mode-description {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(30, 30, 60, 0.6);
+            border-radius: 8px;
+            border-left: 4px solid #6af;
+        }
+
+        .mode-description h3 {
+            color: #6af;
+            margin-bottom: 5px;
+        }
+
+        .mode-description p {
+            color: #aaa;
+            font-size: 0.9em;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 15px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .station-card {
+            background: rgba(30, 30, 60, 0.8);
+            border: 1px solid rgba(100, 100, 150, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .station-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent-color);
+            opacity: 0.7;
+        }
+
+        .station-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+            border-color: var(--accent-color);
+        }
+
+        .station-card.playing {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .station-name {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--accent-color);
+        }
+
+        .station-mood {
+            font-size: 0.85em;
+            color: #8888aa;
+            margin-bottom: 8px;
+            font-style: italic;
+        }
+
+        .station-details {
+            font-size: 0.75em;
+            color: #6666aa;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .play-btn {
+            flex: 1;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-dark));
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .play-btn:hover {
+            filter: brightness(1.2);
+            transform: scale(1.02);
+        }
+
+        .play-btn.active {
+            background: linear-gradient(135deg, #f55, #a33);
+        }
+
+        .visualizer-container {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(20, 20, 40, 0.8);
+            border-radius: 12px;
+            border: 1px solid rgba(100, 100, 150, 0.3);
+        }
+
+        .visualizer-container h2 {
+            margin-bottom: 15px;
+            color: #aaf;
+        }
+
+        #visualizer {
+            width: 100%;
+            height: 200px;
+            background: #0a0a1a;
+            border-radius: 8px;
+        }
+
+        .master-controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .master-btn {
+            padding: 12px 25px;
+            border: 2px solid #6af;
+            border-radius: 8px;
+            background: transparent;
+            color: #6af;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .master-btn:hover {
+            background: rgba(102, 170, 255, 0.2);
+        }
+
+        .master-btn.active {
+            background: #6af;
+            color: #0a0a1a;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .volume-control input {
+            width: 120px;
+        }
+
+        .now-playing {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(40, 40, 80, 0.6);
+            border-radius: 8px;
+            border: 1px solid rgba(100, 100, 150, 0.3);
+        }
+
+        .now-playing-label {
+            font-size: 0.85em;
+            color: #8888aa;
+            margin-bottom: 5px;
+        }
+
+        .now-playing-name {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #aaf;
+        }
+
+        .now-playing-mode {
+            font-size: 0.9em;
+            color: #88aa88;
+            margin-top: 5px;
+        }
+
+        /* Station-specific colors */
+        .station-military {
+            --accent-color: #6688aa;
+            --accent-dark: #445566;
+            --accent-glow: rgba(102, 136, 170, 0.3);
+        }
+
+        .station-alien {
+            --accent-color: #50dcaa;
+            --accent-dark: #308866;
+            --accent-glow: rgba(80, 220, 170, 0.3);
+        }
+
+        .station-agricultural {
+            --accent-color: #78b464;
+            --accent-dark: #4a7040;
+            --accent-glow: rgba(120, 180, 100, 0.3);
+        }
+
+        .station-industrial {
+            --accent-color: #a08c78;
+            --accent-dark: #6a5c4c;
+            --accent-glow: rgba(160, 140, 120, 0.3);
+        }
+
+        .station-mining {
+            --accent-color: #a0825a;
+            --accent-dark: #6a5438;
+            --accent-glow: rgba(160, 130, 90, 0.3);
+        }
+
+        .station-tourism {
+            --accent-color: #c8a0dc;
+            --accent-dark: #8a6898;
+            --accent-glow: rgba(200, 160, 220, 0.3);
+        }
+
+        .station-refinery {
+            --accent-color: #c85032;
+            --accent-dark: #8a3420;
+            --accent-glow: rgba(200, 80, 50, 0.3);
+        }
+
+        .station-post-human {
+            --accent-color: #64b4e6;
+            --accent-dark: #407898;
+            --accent-glow: rgba(100, 180, 230, 0.3);
+        }
+
+        .station-offworld {
+            --accent-color: #64dc96;
+            --accent-dark: #409060;
+            --accent-glow: rgba(100, 220, 150, 0.3);
+        }
+
+        .station-service {
+            --accent-color: #b4dcff;
+            --accent-dark: #7898aa;
+            --accent-glow: rgba(180, 220, 255, 0.3);
+        }
+
+        .station-imperial {
+            --accent-color: #dcbe5a;
+            --accent-dark: #987c38;
+            --accent-glow: rgba(220, 190, 90, 0.3);
+        }
+
+        .station-separatist {
+            --accent-color: #c86400;
+            --accent-dark: #864200;
+            --accent-glow: rgba(200, 100, 0, 0.3);
+        }
+
+        .station-standard {
+            --accent-color: #b4b4c8;
+            --accent-dark: #787898;
+            --accent-glow: rgba(180, 180, 200, 0.3);
+        }
+
+        .melody-indicator {
+            margin-top: 10px;
+            padding: 8px;
+            background: rgba(50, 100, 50, 0.3);
+            border-radius: 6px;
+            font-size: 0.75em;
+            color: #8f8;
+            text-align: center;
+            display: none;
+        }
+
+        .melody-indicator.visible {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🎵 Station Sound Test</h1>
+    <p class="instructions">Compare INTERNAL music (when docked) vs EXTERNAL ambient sounds (flying near station)</p>
+
+    <div class="mode-toggle">
+        <button class="mode-btn active" id="modeInternal">🎹 Internal Music</button>
+        <button class="mode-btn" id="modeExternal">🔊 External Ambient</button>
+    </div>
+
+    <div class="mode-description" id="modeDesc">
+        <h3>Internal Station Music</h3>
+        <p>Generative melodic music with scales, motifs, and harmonies - plays when docked at a station</p>
+    </div>
+
+    <div class="master-controls">
+        <button class="master-btn" id="stopAll">⏹ Stop All</button>
+        <div class="volume-control">
+            <span>🔊</span>
+            <input type="range" id="masterVolume" min="0" max="100" value="50">
+            <span id="volumeLabel">50%</span>
+        </div>
+    </div>
+
+    <div class="now-playing">
+        <div class="now-playing-label">Now Playing:</div>
+        <div class="now-playing-name" id="nowPlaying">None</div>
+        <div class="now-playing-mode" id="nowPlayingMode"></div>
+    </div>
+
+    <div class="container" id="stationsContainer"></div>
+
+    <div class="visualizer-container">
+        <h2>📊 Frequency Spectrum</h2>
+        <canvas id="visualizer"></canvas>
+    </div>
+
+    <!-- Load p5.js and p5.sound for the internal music system -->
+    <script src="../libraries/p5.min.js"></script>
+    <script src="../libraries/p5.sound.min.js"></script>
+    <script src="../stationMusic.js"></script>
+    <script src="../ambientSoundManager.js"></script>
+    <script>
+        // Station configurations with descriptions for both internal and external sounds
+        const stationConfigs = [
+            {
+                type: 'military',
+                name: 'Military Station',
+                internal: {
+                    mood: 'Austere, march-like patterns',
+                    details: 'Natural minor scale, march rhythm, fourth intervals, trumpet-like descent'
+                },
+                external: {
+                    mood: 'Tense, industrial, disciplined',
+                    details: 'Tritone intervals (devil\'s interval), march-like 4/4 rhythm, harsh square waves'
+                }
+            },
+            {
+                type: 'alien',
+                name: 'Alien Station',
+                internal: {
+                    mood: 'Microtonal, otherworldly intervals',
+                    details: 'Augmented/whole-tone hybrid scale, strange alien intervals, eerie aug 5th harmony'
+                },
+                external: {
+                    mood: 'Otherworldly, mysterious, crystalline',
+                    details: 'Microtonal detuning, exotic Major 7th/9th intervals, heavy reverb'
+                }
+            },
+            {
+                type: 'agricultural',
+                name: 'Agricultural Station',
+                internal: {
+                    mood: 'Pastoral, folk-like pentatonic',
+                    details: 'Major pentatonic scale, simple folk melodies, octave drone harmony'
+                },
+                external: {
+                    mood: 'Pastoral, organic, peaceful',
+                    details: 'Major chord (C-E-G), warm sine waves, very slow breathing LFO'
+                }
+            },
+            {
+                type: 'industrial',
+                name: 'Industrial Station',
+                internal: {
+                    mood: 'Deep, mechanical, repetitive',
+                    details: 'Dorian mode, mechanical pulse patterns, factory rhythm, dark filter'
+                },
+                external: {
+                    mood: 'Mechanical, rhythmic, grinding',
+                    details: 'Polyrhythmic beating, sawtooth dominance, heavy pumping rhythm'
+                }
+            },
+            {
+                type: 'mining',
+                name: 'Mining Station',
+                internal: {
+                    mood: 'Cavernous, sparse, deep echoes',
+                    details: 'Minor pentatonic, very low E1 base, sparse notes with rests, long reverb'
+                },
+                external: {
+                    mood: 'Cavernous, heavy, drilling',
+                    details: 'Extremely low sub-bass (27.5Hz), heavy modulation, cavernous reverb'
+                }
+            },
+            {
+                type: 'tourism',
+                name: 'Tourism Station',
+                internal: {
+                    mood: 'Bright, welcoming, major arpeggios',
+                    details: 'Major scale, sparkling arpeggios, major 3rd harmonies, bright filter'
+                },
+                external: {
+                    mood: 'Luxurious, pleasant, melodic',
+                    details: 'Major 7th jazz chord (C-E-G-B), smooth modulation, lush reverb'
+                }
+            },
+            {
+                type: 'refinery',
+                name: 'Refinery Station',
+                internal: {
+                    mood: 'Harsh, industrial, slightly dissonant',
+                    details: 'Minor/dissonant palette, grinding intervals, harsh machinery motifs'
+                },
+                external: {
+                    mood: 'Chemical, processing, hissing',
+                    details: 'Diminished 5th (dark), minor 3rd, irregular rhythm, metallic edge'
+                }
+            },
+            {
+                type: 'post human',
+                name: 'Post Human Station',
+                internal: {
+                    mood: 'Ethereal, high, glassy textures',
+                    details: 'Lydian mode (dreamy), high F4 register, crystalline motifs, major 6th harmony'
+                },
+                external: {
+                    mood: 'Digital, ethereal, transcendent',
+                    details: 'Pure sines, wide octave+5th intervals, fast shimmer, vast digital space'
+                }
+            },
+            {
+                type: 'offworld',
+                name: 'Offworld Station',
+                internal: {
+                    mood: 'Balanced, spacious, optimistic',
+                    details: 'Major pentatonic/mixolydian, spacious leaps, 4th harmony, clear filter'
+                },
+                external: {
+                    mood: 'Vast, isolated, frontier',
+                    details: 'Open 5ths, sparse texture, very slow LFO, huge lonely reverb'
+                }
+            },
+            {
+                type: 'service',
+                name: 'Service Station',
+                internal: {
+                    mood: 'Reliable, standard, efficient',
+                    details: 'Major hexatonic scale, reliable cycling patterns, octave harmony'
+                },
+                external: {
+                    mood: 'Functional, clean, efficient',
+                    details: 'Simple 5th intervals, steady pulse, neutral-pleasant'
+                }
+            },
+            {
+                type: 'imperial',
+                name: 'Imperial Station',
+                internal: {
+                    mood: 'Regal, slow fanfare-like phrases',
+                    details: 'Major scale, rising/falling arpeggio motifs, 5th harmony, brass-like warmth'
+                },
+                external: {
+                    mood: 'Regal, majestic, ceremonial',
+                    details: 'Perfect 4ths/5ths fanfare, brass-like triangles, slow grandeur'
+                }
+            },
+            {
+                type: 'separatist',
+                name: 'Separatist Station',
+                internal: {
+                    mood: 'Tense, minor key suspense',
+                    details: 'Harmonic minor scale, tense creeping motifs, minor 3rd harmony (dark)'
+                },
+                external: {
+                    mood: 'Gritty, rebellious, rough',
+                    details: 'Dissonant minor 2nd clash, aggressive modulation, gritty'
+                }
+            },
+            {
+                type: 'standard',
+                name: 'Standard Station',
+                internal: {
+                    mood: 'Neutral, ambient, calming',
+                    details: 'Major pentatonic (safe), simple calming waves, octave harmony'
+                },
+                external: {
+                    mood: 'Neutral, balanced',
+                    details: 'Simple major chord (D-F#-A), pleasant but unremarkable'
+                }
+            }
+        ];
+
+        // State
+        let currentMode = 'internal'; // 'internal' or 'external'
+        let ambientManager = null;
+        let musicManager = null;
+        let currentlyPlaying = null;
+        let analyser = null;
+        let dataArray = null;
+        let animationId = null;
+        let musicUpdateInterval = null;
+
+        // Initialize
+        function init() {
+            // Initialize ambient sound manager for external sounds
+            ambientManager = new AmbientSoundManager();
+            ambientManager.globalVolume = 0.5;
+            if (ambientManager.masterGain) {
+                ambientManager.masterGain.gain.value = 0.5;
+            }
+
+            // Initialize station music manager for internal sounds
+            musicManager = new StationMusicManager();
+            musicManager.baseVolume = 0.5;
+
+            // Setup analyzer with ambient manager's context
+            if (ambientManager.audioContext) {
+                analyser = ambientManager.audioContext.createAnalyser();
+                analyser.fftSize = 2048;
+                analyser.smoothingTimeConstant = 0.8;
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                if (ambientManager.masterGain) {
+                    ambientManager.masterGain.connect(analyser);
+                }
+            }
+
+            renderStations();
+            setupEventListeners();
+            startVisualizer();
+        }
+
+        function renderStations() {
+            const container = document.getElementById('stationsContainer');
+            container.innerHTML = stationConfigs.map(station => {
+                const cssClass = `station-${station.type.replace(' ', '-')}`;
+                const info = currentMode === 'internal' ? station.internal : station.external;
+                return `
+                    <div class="station-card ${cssClass}" data-type="${station.type}">
+                        <div class="station-name">${station.name}</div>
+                        <div class="station-mood">${info.mood}</div>
+                        <div class="station-details">${info.details}</div>
+                        <div class="controls">
+                            <button class="play-btn" data-type="${station.type}">▶ Play</button>
+                        </div>
+                        <div class="melody-indicator" id="melody-${station.type.replace(' ', '-')}">
+                            ♪ Generating melodic phrases...
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Re-bind play button events
+            document.querySelectorAll('.play-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const type = e.target.dataset.type;
+                    toggleSound(type);
+                });
+            });
+        }
+
+        function setupEventListeners() {
+            // Mode toggle buttons
+            document.getElementById('modeInternal').addEventListener('click', () => setMode('internal'));
+            document.getElementById('modeExternal').addEventListener('click', () => setMode('external'));
+
+            // Stop all button
+            document.getElementById('stopAll').addEventListener('click', stopAll);
+
+            // Volume control
+            const volumeSlider = document.getElementById('masterVolume');
+            volumeSlider.addEventListener('input', (e) => {
+                const value = e.target.value / 100;
+                document.getElementById('volumeLabel').textContent = `${e.target.value}%`;
+
+                if (currentMode === 'external' && ambientManager && ambientManager.masterGain) {
+                    ambientManager.masterGain.gain.value = value;
+                } else if (currentMode === 'internal' && musicManager) {
+                    musicManager.setVolume(value);
+                }
+            });
+        }
+
+        function setMode(mode) {
+            if (mode === currentMode) return;
+
+            stopAll();
+            currentMode = mode;
+
+            // Update mode buttons
+            document.getElementById('modeInternal').classList.toggle('active', mode === 'internal');
+            document.getElementById('modeExternal').classList.toggle('active', mode === 'external');
+
+            // Update description
+            const desc = document.getElementById('modeDesc');
+            if (mode === 'internal') {
+                desc.innerHTML = `
+                    <h3>🎹 Internal Station Music</h3>
+                    <p>Generative melodic music with scales, motifs, and harmonies - plays when docked at a station</p>
+                `;
+            } else {
+                desc.innerHTML = `
+                    <h3>🔊 External Ambient Sounds</h3>
+                    <p>Layered oscillator drones - heard when flying near a station in space</p>
+                `;
+            }
+
+            // Re-render station cards with appropriate descriptions
+            renderStations();
+        }
+
+        function toggleSound(type) {
+            if (currentlyPlaying === type) {
+                stopAll();
+            } else {
+                stopAll();
+
+                if (currentMode === 'external') {
+                    playExternalSound(type);
+                } else {
+                    playInternalMusic(type);
+                }
+            }
+        }
+
+        function playExternalSound(type) {
+            // Resume audio context if needed
+            if (ambientManager.audioContext && ambientManager.audioContext.state === 'suspended') {
+                ambientManager.audioContext.resume();
+            }
+
+            const profile = AmbientSoundManager.getSoundProfile('station', { type: type });
+            const sourceId = `test-${type}`;
+            const soundConfig = ambientManager.createAmbientSound(sourceId, profile);
+
+            if (soundConfig) {
+                soundConfig.position = { x: 0, y: 0 };
+                soundConfig.mainGain.gain.value = profile.baseVolume;
+
+                currentlyPlaying = type;
+                updateUI(type, true);
+                document.getElementById('nowPlaying').textContent =
+                    stationConfigs.find(s => s.type === type)?.name || type;
+                document.getElementById('nowPlayingMode').textContent = '(External Ambient)';
+            }
+        }
+
+        function playInternalMusic(type) {
+            // Initialize music manager if needed
+            if (!musicManager.isInitialized) {
+                // p5.sound needs user interaction first
+                if (!musicManager.init()) {
+                    console.warn('Failed to initialize music manager');
+                    return;
+                }
+            }
+
+            // Start music for this station type
+            musicManager.start({
+                stationType: type,
+                economyType: type,
+                techLevel: 5
+            });
+
+            currentlyPlaying = type;
+            updateUI(type, true);
+            document.getElementById('nowPlaying').textContent =
+                stationConfigs.find(s => s.type === type)?.name || type;
+            document.getElementById('nowPlayingMode').textContent = '(Internal Music)';
+
+            // Show melody indicator
+            const melodyId = `melody-${type.replace(' ', '-')}`;
+            const indicator = document.getElementById(melodyId);
+            if (indicator) {
+                indicator.classList.add('visible');
+            }
+
+            // Start update loop for the music
+            if (musicUpdateInterval) clearInterval(musicUpdateInterval);
+            musicUpdateInterval = setInterval(() => {
+                if (musicManager.isPlaying) {
+                    musicManager.update();
+                }
+            }, 1000 / 60); // 60fps
+
+            // Try to connect music to our analyzer
+            try {
+                if (musicManager.masterGain && ambientManager.audioContext) {
+                    // The music uses p5.sound which has its own context
+                    // We can't easily cross-connect, but the music will still play
+                }
+            } catch (e) {
+                // Ignore analyzer connection issues
+            }
+        }
+
+        function stopAll() {
+            // Stop external sounds
+            if (ambientManager) {
+                ambientManager.cleanup();
+            }
+
+            // Stop internal music
+            if (musicManager && musicManager.isPlaying) {
+                musicManager.stop(500);
+            }
+
+            // Clear music update interval
+            if (musicUpdateInterval) {
+                clearInterval(musicUpdateInterval);
+                musicUpdateInterval = null;
+            }
+
+            // Hide all melody indicators
+            document.querySelectorAll('.melody-indicator').forEach(el => {
+                el.classList.remove('visible');
+            });
+
+            currentlyPlaying = null;
+            updateUI(null, false);
+            document.getElementById('nowPlaying').textContent = 'None';
+            document.getElementById('nowPlayingMode').textContent = '';
+        }
+
+        function updateUI(activeType, isPlaying) {
+            document.querySelectorAll('.station-card').forEach(card => {
+                card.classList.remove('playing');
+            });
+            document.querySelectorAll('.play-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.textContent = '▶ Play';
+            });
+
+            if (isPlaying && activeType) {
+                const card = document.querySelector(`.station-card[data-type="${activeType}"]`);
+                const btn = document.querySelector(`.play-btn[data-type="${activeType}"]`);
+                if (card) card.classList.add('playing');
+                if (btn) {
+                    btn.classList.add('active');
+                    btn.textContent = '⏹ Stop';
+                }
+            }
+        }
+
+        function startVisualizer() {
+            const canvas = document.getElementById('visualizer');
+            const ctx = canvas.getContext('2d');
+
+            function resizeCanvas() {
+                canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+                canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            function draw() {
+                animationId = requestAnimationFrame(draw);
+
+                const width = canvas.offsetWidth;
+                const height = canvas.offsetHeight;
+
+                ctx.fillStyle = '#0a0a1a';
+                ctx.fillRect(0, 0, width, height);
+
+                if (!analyser || !dataArray) return;
+
+                analyser.getByteFrequencyData(dataArray);
+
+                // Grid
+                ctx.strokeStyle = 'rgba(100, 100, 150, 0.1)';
+                ctx.lineWidth = 1;
+                for (let y = 0; y < height; y += 20) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                    ctx.stroke();
+                }
+
+                // Frequency bars
+                const barCount = 128;
+                const barWidth = width / barCount;
+                const barGap = 1;
+
+                for (let i = 0; i < barCount; i++) {
+                    const value = dataArray[i];
+                    const barHeight = (value / 255) * height * 0.9;
+                    const x = i * barWidth;
+
+                    const hue = currentMode === 'internal' ? (120 + (i / barCount) * 60) : (200 + (i / barCount) * 100);
+                    const saturation = 70 + (value / 255) * 30;
+                    const lightness = 40 + (value / 255) * 30;
+
+                    ctx.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                    ctx.fillRect(x, height - barHeight, barWidth - barGap, barHeight);
+
+                    if (value > 180) {
+                        ctx.fillStyle = `hsla(${hue}, ${saturation}%, 70%, 0.3)`;
+                        ctx.fillRect(x - 2, height - barHeight - 10, barWidth + 4, barHeight + 20);
+                    }
+                }
+
+                // Frequency labels
+                ctx.fillStyle = '#6666aa';
+                ctx.font = '10px sans-serif';
+                const freqLabels = [20, 50, 100, 200, 500, 1000, 2000, 5000];
+                freqLabels.forEach(freq => {
+                    const sampleRate = ambientManager?.audioContext?.sampleRate || 44100;
+                    const nyquist = sampleRate / 2;
+                    const binFreq = nyquist / analyser.frequencyBinCount;
+                    const binIndex = Math.round(freq / binFreq);
+                    const x = (binIndex / barCount) * width;
+
+                    if (x > 0 && x < width) {
+                        ctx.fillText(`${freq}Hz`, x, 15);
+                    }
+                });
+            }
+
+            draw();
+        }
+
+        // Initialize on load
+        window.addEventListener('load', init);
+
+        // Handle page visibility
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && currentlyPlaying) {
+                // Optionally pause when hidden
+            }
+        });
+    </script>
+</body>
+
+</html>

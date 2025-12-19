@@ -529,158 +529,244 @@ class AmbientSoundManager {
                 const stationType = (params.type || 'standard').toLowerCase();
                 switch (stationType) {
                     case 'military':
+                        // Tense, industrial, disciplined - tritone intervals, march-like 4/4 rhythm
+                        // Root: 55Hz (A1), Tritone: 77.78Hz (D#2) - the "devil's interval" for tension
                         return {
-                            baseVolume: 0.1,
+                            baseVolume: 0.12,
                             texture: true,
-                            lfoFreq: 0.7,
-                            lfoDepthFactor: 0.10,
+                            lfoFreq: 1.0,           // March tempo ~60 BPM subdivided
+                            lfoDepthFactor: 0.15,    // Strong rhythmic pulse
+                            reverbSend: 0.03,        // Minimal reverb - tight, controlled
+                            delaySend: 0.02,
                             layers: [
-                                { type: 'square', frequency: 45, volume: 0.5 }, // Heavy machinery
-                                { type: 'sawtooth', frequency: 90, volume: 0.35, detune: 3 }, // Aggressive hum
-                                { type: 'triangle', frequency: 135, volume: 0.25, detune: -2 } // Alert systems
+                                { type: 'square', frequency: 55, volume: 0.45 },        // Root A1 - harsh, disciplined
+                                { type: 'sawtooth', frequency: 77.78, volume: 0.35, detune: 0 },  // Tritone - tension
+                                { type: 'square', frequency: 110, volume: 0.25, detune: 5 },     // Octave - reinforcement
+                                { type: 'triangle', frequency: 27.5, volume: 0.30 },    // Sub-bass pulse
+                                { type: 'sawtooth', frequency: 220, volume: 0.15, detune: -8 }   // High alert whine
                             ]
                         };
                     case 'alien':
+                        // Otherworldly, mysterious, crystalline - microtonal, exotic intervals (7ths, 9ths)
+                        // Root: 110Hz, Major 7th: 207.65Hz, 9th: 246.94Hz - ethereal chord
                         return {
-                            baseVolume: 0.42,
+                            baseVolume: 0.38,
                             texture: true,
-                            lfoFreq: 0.9,
-                            lfoDepthFactor: 0.07,
+                            lfoFreq: 0.33,           // Slow, alien breathing rhythm
+                            lfoDepthFactor: 0.12,
+                            reverbSend: 0.20,        // Heavy reverb for vastness
+                            delaySend: 0.15,         // Echo for otherworldly feel
                             layers: [
-                                { type: 'sine', frequency: 120, volume: 0.4 }, // High-frequency alien tech
-                                { type: 'triangle', frequency: 240, volume: 0.3, detune: 7 }, // Harmonic shimmer
-                                { type: 'sine', frequency: 60, volume: 0.35, detune: -4 } // Sub-bass thrum
+                                { type: 'sine', frequency: 110, volume: 0.35, detune: 23 },      // Microtonally shifted root
+                                { type: 'sine', frequency: 207.65, volume: 0.30, detune: -17 },  // Major 7th, shimmer
+                                { type: 'triangle', frequency: 246.94, volume: 0.25, detune: 31 }, // 9th, crystalline
+                                { type: 'sine', frequency: 55, volume: 0.20, detune: 11 },       // Sub-bass, pulsing
+                                { type: 'sine', frequency: 440, volume: 0.12, detune: -23 },     // High harmonic glitter
+                                { type: 'triangle', frequency: 165, volume: 0.18, detune: 7 }    // Perfect 5th overtone
                             ]
                         };
                     case 'agricultural':
+                        // Pastoral, organic, peaceful - major chord (C-E-G), warm sine waves
+                        // Root: 65.41Hz (C2), Major 3rd: 82.41Hz (E2), 5th: 98Hz (G2)
                         return {
-                            baseVolume: 0.38,
+                            baseVolume: 0.35,
                             texture: true,
-                            lfoFreq: 0.45,
-                            lfoDepthFactor: 0.06,
+                            lfoFreq: 0.15,           // Very slow breathing, like crops swaying
+                            lfoDepthFactor: 0.08,    // Subtle modulation
+                            reverbSend: 0.12,        // Warm, open reverb
+                            delaySend: 0.04,
                             layers: [
-                                { type: 'sine', frequency: 50, volume: 0.45 }, // Gentle organic hum
-                                { type: 'triangle', frequency: 100, volume: 0.4, detune: 2 }, // Ventilation
-                                { type: 'sine', frequency: 25, volume: 0.3 } // Low rumble
+                                { type: 'sine', frequency: 65.41, volume: 0.40 },       // Root C2 - warm foundation
+                                { type: 'sine', frequency: 82.41, volume: 0.32, detune: 3 },  // Major 3rd - happiness
+                                { type: 'sine', frequency: 98, volume: 0.28, detune: -2 },    // Perfect 5th - stability
+                                { type: 'triangle', frequency: 130.81, volume: 0.18 },  // Octave, gentle
+                                { type: 'sine', frequency: 32.70, volume: 0.22 }        // Sub-bass earth rumble
                             ]
                         };
                     case 'industrial':
+                        // Mechanical, rhythmic, grinding - polyrhythmic beating, power chord
+                        // Root: 41.2Hz (E1), 5th: 61.74Hz (B1), dissonant 4th: 55Hz for grind
                         return {
-                            baseVolume: 0.1,
+                            baseVolume: 0.14,
                             texture: true,
-                            lfoFreq: 0.65,
-                            lfoDepthFactor: 0.11,
+                            lfoFreq: 0.8,            // Fast mechanical pulse
+                            lfoDepthFactor: 0.18,    // Heavy pumping rhythm
+                            reverbSend: 0.04,        // Tight industrial space
+                            delaySend: 0.08,         // Rhythmic echo
                             layers: [
-                                { type: 'sawtooth', frequency: 40, volume: 0.5 }, // Heavy industrial rumble
-                                { type: 'square', frequency: 40, volume: 0.4, detune: -3 }, // Machinery
-                                { type: 'triangle', frequency: 60, volume: 0.25, detune: 5 } // High-pitched whine
+                                { type: 'sawtooth', frequency: 41.2, volume: 0.50 },    // Low grinding root
+                                { type: 'square', frequency: 82.4, volume: 0.40, detune: -5 },  // Octave machinery
+                                { type: 'sawtooth', frequency: 61.74, volume: 0.35, detune: 7 }, // 5th - power
+                                { type: 'square', frequency: 55, volume: 0.30, detune: 3 },     // 4th - beating against 5th
+                                { type: 'triangle', frequency: 123.47, volume: 0.20, detune: -10 }, // High grind
+                                { type: 'sawtooth', frequency: 20.6, volume: 0.25 }     // Sub-bass rumble
                             ]
                         };
                     case 'mining':
+                        // Cavernous, heavy, drilling - very low frequencies, strong pulse
+                        // Root: 27.5Hz (A0), 5th: 41.2Hz, emphasis on sub-bass
                         return {
-                            baseVolume: 0.1,
+                            baseVolume: 0.15,
                             texture: true,
-                            lfoFreq: 0.55,
-                            lfoDepthFactor: 0.10,
+                            lfoFreq: 0.4,            // Slower drill rhythm
+                            lfoDepthFactor: 0.22,    // Heavy modulation for drilling effect
+                            reverbSend: 0.15,        // Cavernous reverb
+                            delaySend: 0.10,         // Echo in the mine shafts
                             layers: [
-                                { type: 'sawtooth', frequency: 35, volume: 0.5 }, // Drilling vibration
-                                { type: 'square', frequency: 70, volume: 0.4, detune: 4 }, // Heavy equipment
-                                { type: 'sine', frequency: 140, volume: 0.3, detune: -6 } // Compressor hum
+                                { type: 'sine', frequency: 27.5, volume: 0.50 },        // Sub-bass - feel it in your chest
+                                { type: 'sawtooth', frequency: 41.2, volume: 0.40, detune: 6 },  // 5th - resonant
+                                { type: 'square', frequency: 55, volume: 0.35, detune: -4 },     // Octave - drilling
+                                { type: 'triangle', frequency: 82.4, volume: 0.25, detune: 8 },  // Higher harmonic
+                                { type: 'sine', frequency: 20, volume: 0.30 },          // Infra-bass rumble
+                                { type: 'square', frequency: 110, volume: 0.18, detune: -12 }    // Machinery whine
                             ]
                         };
                     case 'tourism':
+                        // Luxurious, pleasant, melodic - Major 7th chord, jazzy
+                        // Root: 130.81Hz (C3), 3rd: 164.81Hz (E3), 5th: 196Hz (G3), 7th: 246.94Hz (B3)
                         return {
-                            baseVolume: 0.35,
+                            baseVolume: 0.32,
                             texture: true,
-                            lfoFreq: 0.4,
-                            lfoDepthFactor: 0.2,
+                            lfoFreq: 0.25,           // Smooth, relaxed modulation
+                            lfoDepthFactor: 0.06,    // Subtle shimmer
+                            reverbSend: 0.18,        // Lush, spacious reverb
+                            delaySend: 0.12,         // Warm delays
                             layers: [
-                                { type: 'sine', frequency: 110, volume: 0.4 }, // Pleasant ambient
-                                { type: 'triangle', frequency: 150, volume: 0.3, detune: 3 }, // Melodic harmony
-                                { type: 'sine', frequency: 85, volume: 0.35 } // Comforting base
+                                { type: 'sine', frequency: 130.81, volume: 0.38 },      // Root C3 - warm
+                                { type: 'sine', frequency: 164.81, volume: 0.30, detune: 2 },  // Major 3rd
+                                { type: 'triangle', frequency: 196, volume: 0.28, detune: -3 }, // 5th
+                                { type: 'sine', frequency: 246.94, volume: 0.22, detune: 5 },  // Major 7th - jazzy
+                                { type: 'sine', frequency: 65.41, volume: 0.25 },       // Octave below root
+                                { type: 'triangle', frequency: 293.66, volume: 0.15, detune: -2 } // 9th for extra lushness
                             ]
                         };
                     case 'refinery':
+                        // Chemical, processing, hissing - mid-high harmonics, irregular, metallic
+                        // Root: 73.42Hz (D2), minor 3rd: 87.31Hz (F2), dim 5th: 103.83Hz - dark, chemical
                         return {
-                            baseVolume: 0.1,
+                            baseVolume: 0.12,
                             texture: true,
-                            lfoFreq: 0.6,
-                            lfoDepthFactor: 0.08,
+                            lfoFreq: 0.75,           // Irregular processing rhythm
+                            lfoDepthFactor: 0.14,    // Pumping, hissing
+                            reverbSend: 0.06,        // Industrial echo
+                            delaySend: 0.09,
                             layers: [
-                                { type: 'sawtooth', frequency: 65, volume: 0.45 }, // Chemical processing
-                                { type: 'square', frequency: 130, volume: 0.35, detune: 6 }, // Pumping systems
-                                { type: 'triangle', frequency: 30, volume: 0.3 } // Low hiss
+                                { type: 'sawtooth', frequency: 73.42, volume: 0.42 },   // Root - grinding
+                                { type: 'square', frequency: 87.31, volume: 0.35, detune: 4 },  // Minor 3rd - dark
+                                { type: 'sawtooth', frequency: 103.83, volume: 0.30, detune: -6 }, // Dim 5th - unstable
+                                { type: 'triangle', frequency: 146.83, volume: 0.25, detune: 10 }, // Octave whine
+                                { type: 'square', frequency: 220, volume: 0.18, detune: -15 },  // High hiss
+                                { type: 'sine', frequency: 36.71, volume: 0.28 }        // Sub-bass
                             ]
                         };
                     case 'post human':
+                        // Digital, ethereal, transcendent - pure sines, wide intervals (octave + 5th)
+                        // Root: 174.61Hz (F3), Octave: 349.23Hz, Perfect 5th above that: 523.25Hz
                         return {
-                            baseVolume: 0.4,
+                            baseVolume: 0.36,
                             texture: true,
-                            lfoFreq: 1.0,
-                            lfoDepthFactor: 0.07,
+                            lfoFreq: 1.5,            // Fast digital shimmer
+                            lfoDepthFactor: 0.05,    // Subtle, precise
+                            reverbSend: 0.22,        // Vast digital space
+                            delaySend: 0.18,         // Clean digital echoes
                             layers: [
-                                { type: 'sine', frequency: 150, volume: 0.4 }, // Clean electronic
-                                { type: 'triangle', frequency: 300, volume: 0.3, detune: 8 }, // Digital harmonics
-                                { type: 'sine', frequency: 75, volume: 0.35, detune: -5 } // Subtle base
+                                { type: 'sine', frequency: 174.61, volume: 0.35 },      // Pure root F3
+                                { type: 'sine', frequency: 349.23, volume: 0.28, detune: 2 },  // Perfect octave
+                                { type: 'sine', frequency: 523.25, volume: 0.22, detune: -3 }, // 5th above octave
+                                { type: 'triangle', frequency: 87.31, volume: 0.25 },   // Sub-octave warmth
+                                { type: 'sine', frequency: 698.46, volume: 0.15, detune: 5 },  // High digital sparkle
+                                { type: 'sine', frequency: 261.63, volume: 0.20, detune: -2 }  // 5th for fullness
                             ]
                         };
                     case 'offworld':
+                        // Vast, isolated, frontier - open 5ths, sparse, lonely
+                        // Root: 82.41Hz (E2), Perfect 5th: 123.47Hz (B2) - open, wide sound
                         return {
-                            baseVolume: 0.38,
+                            baseVolume: 0.34,
                             texture: true,
-                            lfoFreq: 0.5,
-                            lfoDepthFactor: 0.08,
+                            lfoFreq: 0.12,           // Very slow, isolated breathing
+                            lfoDepthFactor: 0.10,
+                            reverbSend: 0.25,        // Huge, empty reverb
+                            delaySend: 0.20,         // Long, lonely echoes
                             layers: [
-                                { type: 'sine', frequency: 90, volume: 0.4 }, // Open space hum
-                                { type: 'triangle', frequency: 180, volume: 0.3, detune: 4 }, // Structural resonance
-                                { type: 'sine', frequency: 45, volume: 0.35 } // Distant drone
+                                { type: 'sine', frequency: 82.41, volume: 0.40 },       // Root E2 - foundation
+                                { type: 'sine', frequency: 123.47, volume: 0.35, detune: 4 },  // Perfect 5th - open
+                                { type: 'triangle', frequency: 164.81, volume: 0.25, detune: -5 }, // Octave
+                                { type: 'sine', frequency: 41.2, volume: 0.28 },        // Sub-bass - vast space
+                                { type: 'sine', frequency: 246.94, volume: 0.15, detune: 7 }   // High, distant harmonic
                             ]
                         };
                     case 'service':
+                        // Functional, clean, efficient - simple intervals, steady, neutral
+                        // Root: 110Hz (A2), 5th: 165Hz (E3), Octave: 220Hz - clean, functional
                         return {
-                            baseVolume: 0.35,
+                            baseVolume: 0.32,
                             texture: true,
-                            lfoFreq: 0.6,
-                            lfoDepthFactor: 0.09,
+                            lfoFreq: 0.5,            // Steady, regular pulse
+                            lfoDepthFactor: 0.07,    // Subtle, not distracting
+                            reverbSend: 0.08,        // Clean, functional reverb
+                            delaySend: 0.05,
                             layers: [
-                                { type: 'sine', frequency: 120, volume: 0.4 }, // Electronic hum
-                                { type: 'triangle', frequency: 60, volume: 0.3, detune: -3 }, // Life support
-                                { type: 'sine', frequency: 180, volume: 0.2, detune: 5 } // High tech whine
+                                { type: 'sine', frequency: 110, volume: 0.40 },         // Root A2
+                                { type: 'triangle', frequency: 165, volume: 0.32, detune: 3 },  // Perfect 5th
+                                { type: 'sine', frequency: 220, volume: 0.25, detune: -2 },    // Octave
+                                { type: 'sine', frequency: 55, volume: 0.22 },          // Sub-octave
+                                { type: 'triangle', frequency: 330, volume: 0.12, detune: 4 }  // 2nd harmonic
                             ]
                         };
                     case 'imperial':
+                        // Regal, majestic, ceremonial - Perfect 5ths/4ths, brass-like, slow grandeur
+                        // Root: 98Hz (G2), 4th: 130.81Hz (C3), 5th: 146.83Hz (D3) - fanfare chord
                         return {
-                            baseVolume: 0.4,
+                            baseVolume: 0.38,
                             texture: true,
-                            lfoFreq: 0.5,
-                            lfoDepthFactor: 0.06,
+                            lfoFreq: 0.2,            // Slow, stately modulation
+                            lfoDepthFactor: 0.06,    // Dignified, controlled
+                            reverbSend: 0.16,        // Grand hall reverb
+                            delaySend: 0.08,
                             layers: [
-                                { type: 'sine', frequency: 85, volume: 0.45 }, // Regal depth
-                                { type: 'triangle', frequency: 170, volume: 0.35, detune: 4 }, // Noble harmonics
-                                { type: 'sine', frequency: 42.5, volume: 0.4, detune: -3 } // Stately base
+                                { type: 'triangle', frequency: 98, volume: 0.42 },      // Root G2 - brass-like
+                                { type: 'triangle', frequency: 130.81, volume: 0.35, detune: 2 }, // Perfect 4th
+                                { type: 'sine', frequency: 146.83, volume: 0.32, detune: -3 },  // Perfect 5th
+                                { type: 'triangle', frequency: 196, volume: 0.25, detune: 4 },  // Octave - majesty
+                                { type: 'sine', frequency: 49, volume: 0.30 },          // Sub-bass power
+                                { type: 'triangle', frequency: 293.66, volume: 0.15, detune: -2 } // High harmonic
                             ]
                         };
                     case 'separatist':
+                        // Gritty, rebellious, rough - dissonant minor 2nds, irregular, distorted
+                        // Root: 55Hz (A1), minor 2nd: 58.27Hz (Bb1), 5th: 82.41Hz - dissonant, tense
                         return {
-                            baseVolume: 0.1,
+                            baseVolume: 0.13,
                             texture: true,
-                            lfoFreq: 0.6,
-                            lfoDepthFactor: 0.1,
+                            lfoFreq: 0.7,            // Irregular, restless rhythm  
+                            lfoDepthFactor: 0.20,    // Heavy, aggressive modulation
+                            reverbSend: 0.05,        // Gritty, close
+                            delaySend: 0.06,
                             layers: [
-                                { type: 'sawtooth', frequency: 50, volume: 0.5 }, // Rough machinery
-                                { type: 'square', frequency: 100, volume: 0.4, detune: 5 }, // Industrial edge
-                                { type: 'triangle', frequency: 25, volume: 0.35 } // Deep vibration
+                                { type: 'sawtooth', frequency: 55, volume: 0.48 },      // Root - rough
+                                { type: 'square', frequency: 58.27, volume: 0.40, detune: 8 },  // Minor 2nd - CLASH
+                                { type: 'sawtooth', frequency: 82.41, volume: 0.35, detune: -5 }, // 5th - some stability
+                                { type: 'square', frequency: 110, volume: 0.28, detune: 12 },   // Octave - harsh
+                                { type: 'sawtooth', frequency: 27.5, volume: 0.32 },    // Sub-bass aggression
+                                { type: 'square', frequency: 116.54, volume: 0.20, detune: -10 } // Minor 2nd up high
                             ]
                         };
                     default: // standard
+                        // Neutral, balanced - simple major chord, pleasant but unremarkable
+                        // Root: 73.42Hz (D2), 3rd: 92.5Hz (F#2), 5th: 110Hz (A2)
                         return {
-                            baseVolume: 0.4,
+                            baseVolume: 0.35,
                             texture: true,
-                            lfoFreq: 0.6,
+                            lfoFreq: 0.45,
                             lfoDepthFactor: 0.08,
+                            reverbSend: 0.10,
+                            delaySend: 0.06,
                             layers: [
-                                { type: 'sine', frequency: 55, volume: 0.45 }, // Deep machinery
-                                { type: 'triangle', frequency: 50, volume: 0.4, detune: -5 } // Ventilation
+                                { type: 'sine', frequency: 73.42, volume: 0.42 },       // Root D2
+                                { type: 'triangle', frequency: 92.5, volume: 0.32, detune: 2 }, // Major 3rd
+                                { type: 'sine', frequency: 110, volume: 0.28, detune: -3 },    // 5th
+                                { type: 'sine', frequency: 36.71, volume: 0.25 }        // Sub-octave
                             ]
                         };
                 }
