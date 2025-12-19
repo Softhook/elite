@@ -13,7 +13,7 @@ class Planet {
      * @param {string} systemName - Name of the star system for generating planet name.
      * @param {number} planetIndex - Index of the planet in the system (0 for sun, 1+ for planets).
      */
-    constructor(worldX, worldY, size, color1, color2, systemName = "Unknown", planetIndex = 0) {
+    constructor(worldX, worldY, size, color1, color2, systemName = "Unknown", planetIndex = 0, options = {}) {
         this.pos = createVector(worldX, worldY);
         this.size = size;
         this.radius = size * 0.5; // Cache radius
@@ -86,10 +86,46 @@ class Planet {
         this.hasAtmosphere = random() < 0.4; // Less frequent
         this.atmosphereColor = this.hasAtmosphere ? color(random(150, 220), random(150, 220), random(200, 255), random(25, 50)) : null;
 
+        // Apply properties from options if provided
+        this.economyType = options.economyType || null;
+        this.techLevel = (typeof options.techLevel === 'number') ? options.techLevel : null;
+
+        // --- Visual Variations by Economy ---
+        if (this.economyType) {
+            if (["Industrial", "Refinery", "Mining"].includes(this.economyType)) {
+                // Polluted/Smoggy look
+                this.hasAtmosphere = true;
+                this.atmosphereColor = color(random(100, 140), random(90, 110), random(60, 90), random(100, 160)); // Brownish smog
+                this.noisePersistence = random(0.7, 0.9); // Rugged/messy surface
+            } else if (this.economyType === "Post Human") {
+                // High-tech terraforming
+                this.hasAtmosphere = true;
+                // Cleaner, maybe slightly unnatural atmosphere colors (gentle cyan/purple hint)
+                if (random() < 0.3) {
+                    this.atmosphereColor = color(180, 220, 255, 120);
+                } else if (!this.atmosphereColor) {
+                    // Ensure we have a color if we forced atmosphere on (and it was previously null)
+                    this.atmosphereColor = color(150, 200, 255, 100);
+                }
+                this.noiseScale *= 0.8; // Smoother surface (advanced terraforming)
+            }
+        }
+
         // --- Inhabited Planet Properties ---
-        this.isInhabited = random() < 0.3; // 30% chance of being inhabited
+        if (typeof options.isInhabited === 'boolean') {
+            this.isInhabited = options.isInhabited;
+        } else {
+            this.isInhabited = random() < 0.3; // Default 30%
+        }
+
         this.cityLightsColor = color(255, 240, 180, 200); // Default warm yellow/amber lights (may be changed based on pattern type)
-        this.cityLightsDensity = random(0.3, 0.8); // Controls how dense the city lights appear
+
+        if (typeof options.cityLightsDensity === 'number') {
+            this.cityLightsDensity = options.cityLightsDensity;
+        } else {
+            this.cityLightsDensity = random(0.3, 0.8);
+        }
+
         this.cityLightsBuffer = null; // Buffer will be created when needed
         // ---
 
@@ -113,6 +149,7 @@ class Planet {
         this.shadowOffset = null;
 
         // Generate planet name etymologically related to system name
+        // (Now performed AFTER economy/tech properties are set, so suffixes like "Hab" are accurate)
         this.name = this.generatePlanetName(systemName, planetIndex);
         this.systemName = systemName;
         this.planetIndex = planetIndex;
@@ -708,74 +745,80 @@ class Planet {
         this._renderTransportLines(pg, r, bufferCenter, cityHubs, bandHeight, secR, secG, secB);
 
 
-        // --- MEGA-STRUCTURES AND SPECIAL FEATURES ---
-        // These are large-scale civilization features visible from space
+        // --- MEG-STRUCTURES & SPECIAL FEATURES ---
+        // Only render mega-structures if tech level is sufficient and NOT a "grimy" industrial world
+        // Low Tech = techLevel < 3 (1 or 2)
+        // Industrial-types = Mining, Industrial, Refinery (regardless of tech level, usually don't have fancy rings/arcologies)
+        const isLowTech = (typeof this.techLevel === 'number' && this.techLevel < 3);
+        const isIndustrial = ["Mining", "Industrial", "Refinery"].includes(this.economyType);
 
-        // 1. ORBITAL RING / SPACE ELEVATOR
-        this._renderMegaStructureOrbitalRing(pg, r, bufferCenter, this.featureRand, bandHeight);
+        if (!isLowTech && !isIndustrial) {
+            // 1. ORBITAL RING / SPACE ELEVATOR
+            this._renderMegaStructureOrbitalRing(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-        // 2. AGRICULTURAL PATTERNS
-        this._renderMegaStructureAgricultural(pg, r, bufferCenter, this.featureRand, bandHeight, primR, primG, primB, secR, secG, secB);
+            // 2. AGRICULTURAL PATTERNS
+            this._renderMegaStructureAgricultural(pg, r, bufferCenter, this.featureRand, bandHeight, primR, primG, primB, secR, secG, secB);
 
-        // 3. RADIAL CITY PATTERNS
-        this._renderMegaStructureRadialCities(pg, r, bufferCenter, cityHubs, bandHeight, primR, primG, primB, secR, secG, secB, accR, accG, accB);
+            // 3. RADIAL CITY PATTERNS
+            this._renderMegaStructureRadialCities(pg, r, bufferCenter, cityHubs, bandHeight, primR, primG, primB, secR, secG, secB, accR, accG, accB);
 
-        // 4. ARCOLOGIES
-        this._renderMegaStructureArcologies(pg, r, bufferCenter, this.featureRand, bandHeight, accR, accG, accB);
+            // 4. ARCOLOGIES
+            this._renderMegaStructureArcologies(pg, r, bufferCenter, this.featureRand, bandHeight, accR, accG, accB);
 
-        // 5. INDUSTRIAL ZONES
-        this._renderMegaStructureIndustrial(pg, r, bufferCenter, this.featureRand, bandHeight, primR, primG, primB);
+            // 5. INDUSTRIAL ZONES
+            this._renderMegaStructureIndustrial(pg, r, bufferCenter, this.featureRand, bandHeight, primR, primG, primB);
 
-        // 6. TERRAFORMING/ATMOSPHERIC PROCESSORS
-        this._renderMegaStructureProcessors(pg, r, bufferCenter, this.featureRand, bandHeight, secR, secG, secB, accR, accG, accB);
-
-
-        // 7. SOLAR COLLECTOR ARRAYS
-        this._renderMegaStructureSolarCollectors(pg, r, bufferCenter, this.featureRand, bandHeight);
-
-        // 8. ORBITAL DEFENSE PLATFORMS
-        this._renderMegaStructureDefensePlatforms(pg, r, bufferCenter, this.featureRand, bandHeight);
-
-        // 9. MASS DRIVER / RAILGUN ARRAYS
-        this._renderMegaStructureRailguns(pg, r, bufferCenter, this.featureRand, bandHeight);
-
-        // 10. FUSION POWER ARRAYS
-        this._renderMegaStructureFusionArrays(pg, r, bufferCenter, this.featureRand, bandHeight);
-
-        // 11. GEODESIC DOME CLUSTERS
-        this._renderMegaStructureDomes(pg, r, bufferCenter, this.featureRand, bandHeight);
+            // 6. TERRAFORMING/ATMOSPHERIC PROCESSORS
+            this._renderMegaStructureProcessors(pg, r, bufferCenter, this.featureRand, bandHeight, secR, secG, secB, accR, accG, accB);
 
 
-        // 12. QUANTUM COMMUNICATION RELAYS
-        this._renderMegaStructureRelays(pg, r, bufferCenter, this.featureRand, bandHeight);
+            // 7. SOLAR COLLECTOR ARRAYS
+            this._renderMegaStructureSolarCollectors(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-        // 13. MINING EXTRACTION FACILITIES
-        this._renderMegaStructureMines(pg, r, bufferCenter, this.featureRand, bandHeight);
+            // 8. ORBITAL DEFENSE PLATFORMS
+            this._renderMegaStructureDefensePlatforms(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-        // 14. ANTIMATTER CONTAINMENT FACILITIES
-        this._renderMegaStructureAntimatter(pg, r, bufferCenter, this.featureRand, bandHeight);
+            // 9. MASS DRIVER / RAILGUN ARRAYS
+            this._renderMegaStructureRailguns(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-        // 15. ORBITAL SHIPYARD FACILITIES
-        this._renderMegaStructureShipyards(pg, r, bufferCenter, this.featureRand, bandHeight);
+            // 10. FUSION POWER ARRAYS
+            this._renderMegaStructureFusionArrays(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-        // 16. ATMOSPHERIC SCRUBBERS / TERRAFORMING TOWERS
-        this._renderMegaStructureScrubbers(pg, r, bufferCenter, this.featureRand, bandHeight);
+            // 11. GEODESIC DOME CLUSTERS
+            this._renderMegaStructureDomes(pg, r, bufferCenter, this.featureRand, bandHeight);
 
 
-        // 17. GEOTHERMAL POWER TAPS
-        this._renderMegaStructureGeothermal(pg, r, bufferCenter, this.featureRand, bandHeight);
+            // 12. QUANTUM COMMUNICATION RELAYS
+            this._renderMegaStructureRelays(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-        // 18. PARTICLE SUPERCOLLIDER RINGS
-        this._renderMegaStructureColliders(pg, r, bufferCenter, this.featureRand, bandHeight);
+            // 13. MINING EXTRACTION FACILITIES
+            this._renderMegaStructureMines(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-        // 19. MEGACITY DATA CENTERS / AI CORES
-        this._renderMegaStructureDataCenters(pg, r, bufferCenter, this.featureRand, bandHeight);
+            // 14. ANTIMATTER CONTAINMENT FACILITIES
+            this._renderMegaStructureAntimatter(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-        // 20. SPACEPORT HUB COMPLEXES
-        this._renderMegaStructureSpaceports(pg, r, bufferCenter, this.featureRand, bandHeight);
+            // 15. ORBITAL SHIPYARD FACILITIES
+            this._renderMegaStructureShipyards(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-        // 21. ARCOLOGY MEGA-CLUSTERS
-        this._renderMegaStructureArcologyClusters(pg, r, bufferCenter, this.featureRand, bandHeight);
+            // 16. ATMOSPHERIC SCRUBBERS / TERRAFORMING TOWERS
+            this._renderMegaStructureScrubbers(pg, r, bufferCenter, this.featureRand, bandHeight);
+
+
+            // 17. GEOTHERMAL POWER TAPS
+            this._renderMegaStructureGeothermal(pg, r, bufferCenter, this.featureRand, bandHeight);
+
+            // 18. PARTICLE SUPERCOLLIDER RINGS
+            this._renderMegaStructureColliders(pg, r, bufferCenter, this.featureRand, bandHeight);
+
+            // 19. MEGACITY DATA CENTERS / AI CORES
+            this._renderMegaStructureDataCenters(pg, r, bufferCenter, this.featureRand, bandHeight);
+
+            // 20. SPACEPORT HUB COMPLEXES
+            this._renderMegaStructureSpaceports(pg, r, bufferCenter, this.featureRand, bandHeight);
+
+            // 21. ARCOLOGY MEGA-CLUSTERS
+            this._renderMegaStructureArcologyClusters(pg, r, bufferCenter, this.featureRand, bandHeight);
+        }
 
         // No global glow - removing this fixes the offset glow issue
 
@@ -1180,6 +1223,31 @@ class Planet {
     }
 
     _getCivilizationColors(patternType) {
+        // --- Economy Overrides ---
+        if (this.economyType === "Post Human") {
+            // Neon Cyberpunk colors (Cyan / Magenta / Deep Blue)
+            // Giving it a very synthetic, high-tech look
+            return {
+                primaryColor: color(0, 255, 255, 200),
+                secondaryColor: color(255, 0, 220, 180),
+                accentColor: color(50, 100, 255, 220)
+            };
+        } else if (["Mining", "Industrial", "Refinery"].includes(this.economyType)) {
+            // Industrial / Dirty (Sodium Orange / Amber / Dim Yellow)
+            return {
+                primaryColor: color(255, 140, 20, 200),
+                secondaryColor: color(200, 80, 20, 180),
+                accentColor: color(255, 200, 50, 160)
+            };
+        } else if (["Military", "Offworld", "Service"].includes(this.economyType)) {
+            // Precise / Cold (Cool White / Ice Blue)
+            return {
+                primaryColor: color(220, 235, 255, 210),
+                secondaryColor: color(150, 200, 255, 180),
+                accentColor: color(100, 150, 255, 220)
+            };
+        }
+
         let pCol, sCol, aCol;
         switch (patternType) {
             case 0: pCol = color(255, 240, 180, 180); sCol = color(255, 220, 140, 160); aCol = color(255, 200, 100, 200); break;

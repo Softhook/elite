@@ -912,28 +912,45 @@ class StarSystem {
             let c1 = color(random(50, 200), random(50, 200), random(50, 200));
             let c2 = color(random(50, 200), random(50, 200), random(50, 200));
 
-            // Create the planet with the computed world coordinates, system name, and planet index
-            let planet = new Planet(px, py, sz, c1, c2, this.name, i + 1); // i+1 since 0 is sun
-
-            // OVerride inhabitance based on Tech Level
-            // Tech Level 1: ~10% inhabited (Rare)
-            // Tech Level 5: ~75% inhabited (Ubiquitous)
+            // Calculate properties BEFORE creation to ensure name generation is accurate
+            // Tech Level & Economy Logic
             let techVal = (typeof this.techLevel === 'number') ? this.techLevel : 3;
             techVal = Math.max(1, Math.min(5, techVal)); // Clamp 1-5
 
-            const inhabitedChance = map(techVal, 1, 5, 0.1, 0.75);
-            planet.isInhabited = random() < inhabitedChance;
+            let inhabitedChance = map(techVal, 1, 5, 0.1, 0.75);
+            let minDens = map(techVal, 1, 5, 0.3, 0.6);
+            let maxDens = map(techVal, 1, 5, 0.5, 0.95);
 
-            // If inhabited, scale the density of lights by tech level too
-            if (planet.isInhabited) {
-                const minDens = map(techVal, 1, 5, 0.3, 0.6);
-                const maxDens = map(techVal, 1, 5, 0.5, 0.95);
-                planet.cityLightsDensity = random(minDens, maxDens);
+            // Economy Overrides
+            const eco = this.economyType || "Unknown";
+            if (eco === "Post Human") {
+                // Post Human: Full inhabited, high density
+                inhabitedChance = 0.95;
+                minDens = 0.7;
+                maxDens = 1.0;
+            } else if (["Mining", "Industrial", "Refinery"].includes(eco)) {
+                // Industrial/Mining: Very sparse
+                inhabitedChance *= 0.3;
+                minDens = 0.2;
+                maxDens = 0.5;
             }
+
+            const isInhabited = random() < inhabitedChance;
+            const cityLightsDensity = isInhabited ? random(minDens, maxDens) : 0;
+
+            const planetOptions = {
+                isInhabited: isInhabited,
+                cityLightsDensity: cityLightsDensity,
+                economyType: eco,
+                techLevel: techVal
+            };
+
+            // Create the planet with options
+            let planet = new Planet(px, py, sz, c1, c2, this.name, i + 1, planetOptions);
 
             this.planets.push(planet);
 
-            console.log(`Planet ${i}: angle=${angle.toFixed(2)}, orbitRadius=${orbitRadius.toFixed(2)}, px=${px.toFixed(2)}, py=${py.toFixed(2)}, inhabited=${planet.isInhabited}, density=${planet.cityLightsDensity?.toFixed(2) || 0}`);
+            console.log(`Planet ${i}: angle=${angle.toFixed(2)}, orbitRadius=${orbitRadius.toFixed(2)}, px=${px.toFixed(2)}, py=${py.toFixed(2)}, inhabited=${planet.isInhabited}, density=${planet.cityLightsDensity?.toFixed(2) || 0} (Eco: ${eco})`);
         }
 
         // Position the station near a random planet (do not use the star at index 0)
