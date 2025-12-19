@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inhabited Planet Test</title>
+    <title>Planet Atmosphere Test</title>
     <script src="../libraries/p5.min.js"></script>
     <script src="../libraries/p5.sound.min.js"></script>
     <style>
@@ -23,10 +23,11 @@
             background: rgba(0, 0, 0, 0.7);
             padding: 10px;
             border: 1px solid #444;
+            max-width: 280px;
         }
 
         button {
-            margin: 5px;
+            margin: 5px 5px 5px 0;
             padding: 5px 10px;
             background: #333;
             color: #fff;
@@ -37,15 +38,51 @@
         button:hover {
             background: #555;
         }
+
+        .control-group {
+            margin: 10px 0;
+            padding: 8px;
+            background: rgba(50, 50, 80, 0.5);
+            border-radius: 4px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #aaf;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .alpha-value {
+            color: #ff0;
+            font-weight: bold;
+        }
     </style>
 </head>
 
 <body>
     <div id="info">
-        <h3>Inhabited Planet Features Test</h3>
-        <p>Click to generate a new inhabited planet</p>
+        <h3>Planet Atmosphere Test</h3>
         <button id="newPlanet">New Planet</button>
         <button id="toggleRotation">Toggle Rotation</button>
+        <button id="toggleAtmosphere">Toggle Atmosphere</button>
+
+        <div class="control-group">
+            <label>Atmosphere Alpha: <span id="alphaValue" class="alpha-value">37</span></label>
+            <input type="range" id="alphaSlider" min="0" max="255" value="37">
+            <button id="alphaDown">-10</button>
+            <button id="alphaUp">+10</button>
+        </div>
+
+        <div class="control-group">
+            <label>Planet Size: <span id="sizeValue" class="alpha-value">275</span>px</label>
+            <input type="range" id="sizeSlider" min="50" max="2000" value="275">
+        </div>
+
         <div id="stats"></div>
     </div>
 
@@ -59,6 +96,8 @@
         let testPlanet;
         let rotationEnabled = true;
         let currentPlanetSeed = 0;
+        let atmosphereAlpha = 37; // Default value (midpoint of 25-50)
+        let planetSize = 275; // Default planet size
 
         function setup() {
             createCanvas(1200, 800);
@@ -70,6 +109,94 @@
             document.getElementById('toggleRotation').addEventListener('click', () => {
                 rotationEnabled = !rotationEnabled;
             });
+            document.getElementById('toggleAtmosphere').addEventListener('click', () => {
+                if (testPlanet) {
+                    testPlanet.hasAtmosphere = !testPlanet.hasAtmosphere;
+                    updateStats();
+                }
+            });
+
+            // Alpha slider
+            const alphaSlider = document.getElementById('alphaSlider');
+            alphaSlider.addEventListener('input', (e) => {
+                atmosphereAlpha = parseInt(e.target.value);
+                updateAtmosphereAlpha();
+            });
+
+            // Alpha buttons
+            document.getElementById('alphaDown').addEventListener('click', () => {
+                atmosphereAlpha = Math.max(0, atmosphereAlpha - 10);
+                document.getElementById('alphaSlider').value = atmosphereAlpha;
+                updateAtmosphereAlpha();
+            });
+            document.getElementById('alphaUp').addEventListener('click', () => {
+                atmosphereAlpha = Math.min(255, atmosphereAlpha + 10);
+                document.getElementById('alphaSlider').value = atmosphereAlpha;
+                updateAtmosphereAlpha();
+            });
+
+            // Size slider
+            const sizeSlider = document.getElementById('sizeSlider');
+            sizeSlider.addEventListener('input', (e) => {
+                planetSize = parseInt(e.target.value);
+                document.getElementById('sizeValue').textContent = planetSize;
+                regeneratePlanetWithCurrentSettings();
+            });
+        }
+
+        function updateAtmosphereAlpha() {
+            document.getElementById('alphaValue').textContent = atmosphereAlpha;
+            if (testPlanet && testPlanet.atmosphereColor) {
+                // Update atmosphere color with new alpha
+                const r = red(testPlanet.atmosphereColor);
+                const g = green(testPlanet.atmosphereColor);
+                const b = blue(testPlanet.atmosphereColor);
+                testPlanet.atmosphereColor = color(r, g, b, atmosphereAlpha);
+
+                // Regenerate atmosphere buffer with new alpha
+                if (testPlanet.atmosphereBuffer) {
+                    testPlanet.atmosphereBuffer.remove();
+                }
+                const atmBufferSizeFactor = testPlanet.isInhabited ? 2.1 : (1.0 + (5 * 0.04));
+                const atmBufferSize = Math.ceil(testPlanet.size * atmBufferSizeFactor);
+                testPlanet.atmosphereBuffer = createGraphics(atmBufferSize, atmBufferSize);
+                testPlanet.renderAtmosphere();
+
+                updateStats();
+            }
+        }
+
+        function regeneratePlanetWithCurrentSettings() {
+            // Regenerate planet with same seed but new size
+            randomSeed(currentPlanetSeed);
+            noiseSeed(currentPlanetSeed);
+
+            const color1 = color(random(80, 180), random(80, 180), random(80, 180));
+            const color2 = color(random(80, 180), random(80, 180), random(80, 180));
+
+            // Dispose old buffers
+            if (testPlanet) {
+                testPlanet.disposeBuffers();
+            }
+
+            testPlanet = new Planet(width / 2, height / 2, planetSize, color1, color2, "Test System", 1);
+
+            // Force it to be inhabited
+            testPlanet.isInhabited = true;
+            testPlanet.cityLightsDensity = random(0.4, 0.8);
+
+            // Add atmosphere with current alpha setting
+            testPlanet.hasAtmosphere = true;
+            testPlanet.atmosphereColor = color(random(150, 220), random(150, 220), random(200, 255), atmosphereAlpha);
+
+            // Create buffers
+            testPlanet.createBuffers();
+
+            // Compute shadow
+            const sunPos = createVector(width / 2 - 500, height / 2 - 300);
+            testPlanet.computeShadowOffset(sunPos);
+
+            updateStats();
         }
 
         function generateNewPlanet() {
@@ -77,8 +204,11 @@
             randomSeed(currentPlanetSeed);
             noiseSeed(currentPlanetSeed);
 
-            // Create an inhabited planet
-            const planetSize = random(200, 350);
+            // Randomize size and update slider
+            planetSize = Math.floor(random(200, 350));
+            document.getElementById('sizeSlider').value = planetSize;
+            document.getElementById('sizeValue').textContent = planetSize;
+
             const color1 = color(random(80, 180), random(80, 180), random(80, 180));
             const color2 = color(random(80, 180), random(80, 180), random(80, 180));
 
@@ -88,9 +218,9 @@
             testPlanet.isInhabited = true;
             testPlanet.cityLightsDensity = random(0.4, 0.8);
 
-            // Add atmosphere
+            // Add atmosphere with current alpha setting
             testPlanet.hasAtmosphere = true;
-            testPlanet.atmosphereColor = color(random(150, 220), random(150, 220), random(200, 255), random(25, 50));
+            testPlanet.atmosphereColor = color(random(150, 220), random(150, 220), random(200, 255), atmosphereAlpha);
 
             // Create buffers
             testPlanet.createBuffers();
@@ -99,13 +229,15 @@
             const sunPos = createVector(width / 2 - 500, height / 2 - 300);
             testPlanet.computeShadowOffset(sunPos);
 
-            // Update stats
+            updateStats();
+        }
+
+        function updateStats() {
             const stats = document.getElementById('stats');
             stats.innerHTML = `
                 <p>Seed: ${Math.floor(currentPlanetSeed)}</p>
-                <p>Size: ${Math.floor(planetSize)}</p>
-                <p>City Density: ${testPlanet.cityLightsDensity.toFixed(2)}</p>
-                <p>Pattern Type: ${Math.floor((testPlanet.featureRand * 122.27) % 6)}</p>
+                <p>Size: ${Math.floor(testPlanet.size)}</p>
+                <p>Atmosphere: ${testPlanet.hasAtmosphere ? 'ON' : 'OFF'}</p>
                 <p>Name: ${testPlanet.name}</p>
             `;
         }

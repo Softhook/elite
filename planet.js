@@ -1456,14 +1456,7 @@ class Planet {
         // Translate to planet's position in world space
         translate(this.pos.x, this.pos.y);
 
-        // Draw atmosphere if present (behind planet) - atmosphere is stationary and doesn't rotate
-        if (this.hasAtmosphere && this.atmosphereBuffer) {
-            const atmSize = this.atmosphereBuffer.width;
-            const halfAtm = atmSize * 0.5;
 
-            // Center atmosphere precisely on the planet's center (0,0 in local coordinates)
-            image(this.atmosphereBuffer, -halfAtm, -halfAtm);
-        }
 
         // Apply planet rotation for planet surface only
         rotate(this.currentRotation);
@@ -1510,7 +1503,9 @@ class Planet {
         // Reset rotation to draw stationary shadow on top
         rotate(-this.currentRotation);
 
-        // Draw stationary shadow on top of the planet (semi-transparent to let city lights show through)
+
+
+        // Draw stationary shadow on top of the planet and atmosphere
         if (!this.isSun && this.shadowOffset) {
             noStroke();
 
@@ -1547,6 +1542,13 @@ class Planet {
                 fill(0, 0, 0, 55);
                 ellipse(this.shadowOffset.x, this.shadowOffset.y, this._shadowSize, this._shadowSize);
             }
+        }
+
+        // Draw atmosphere on top of shadow for a glow effect
+        if (this.hasAtmosphere && this.atmosphereBuffer) {
+            const atmSize = this.atmosphereBuffer.width;
+            const halfAtm = atmSize * 0.5;
+            image(this.atmosphereBuffer, -halfAtm, -halfAtm);
         }
 
         // Draw planet name in the center
