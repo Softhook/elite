@@ -82,6 +82,8 @@
                 systemIndex: options.index || 0,
                 economyType: options.economyType || 'Industrial',
                 securityLevel: options.securityLevel || 'Medium',
+                techLevel: options.techLevel || 5,
+                connectedSystemIndices: options.connectedSystemIndices || [],
                 station: options.station || { name: 'Test Station', pos: createVector(500, 500) }
             };
         }
@@ -90,10 +92,18 @@
         function createMockGalaxy(numSystems = 4) {
             const systems = [];
             for (let i = 0; i < numSystems; i++) {
+                // Build connected system indices - connect to adjacent systems
+                const connected = [];
+                if (i > 0) connected.push(i - 1);
+                if (i < numSystems - 1) connected.push(i + 1);
+                // Also connect to some systems further away for more routing options
+                if (i + 2 < numSystems) connected.push(i + 2);
+
                 systems.push(createMockSystem({
                     name: `System ${i}`,
                     index: i,
-                    economyType: ['Industrial', 'Agricultural', 'Mining', 'Service'][i % 4]
+                    economyType: ['Industrial', 'Agricultural', 'Mining', 'Service'][i % 4],
+                    connectedSystemIndices: connected
                 }));
             }
             return {
