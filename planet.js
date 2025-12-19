@@ -122,6 +122,75 @@ class Planet {
     }
 
     /**
+     * Helper to compute limb foreshortening factor for a point on the planet surface.
+     * Returns 1 at center (fully visible), 0 at edge (on the limb).
+     * @param {number} localX - X position relative to planet center
+     * @param {number} localY - Y position relative to planet center
+     * @returns {number} Limb factor from 0 to 1
+     */
+    _getLimbFactor(localX, localY) {
+        const nx = localX / this.radius;
+        const ny = localY / this.radius;
+        const inside = nx * nx + ny * ny;
+        if (inside > 1) return 0;
+        const nzUnit = Math.sqrt(Math.max(0, 1 - inside));
+        return Math.pow(nzUnit, 0.9); // 1 at center, 0 at edge
+    }
+
+    /**
+     * Helper to draw a curved line on the sphere surface.
+     * The line curves toward the planet center, with curve amount increasing near the limb.
+     * @param {p5.Graphics} pg - Graphics context
+     * @param {number} x1 - Start X (relative to planet center)
+     * @param {number} y1 - Start Y
+     * @param {number} x2 - End X
+     * @param {number} y2 - End Y
+     * @param {number} bufferCenter - Buffer center offset
+     * @param {number} r - Planet radius
+     */
+    _drawCurvedLine(pg, x1, y1, x2, y2, bufferCenter, r) {
+        // Midpoint of the line
+        const midX = (x1 + x2) * 0.5;
+        const midY = (y1 + y2) * 0.5;
+
+        // Direction from midpoint toward planet center
+        const midDistActual = Math.sqrt(midX * midX + midY * midY);
+        if (midDistActual < 0.001) {
+            // Line passes through center, draw straight
+            pg.line(bufferCenter + x1, bufferCenter + y1, bufferCenter + x2, bufferCenter + y2);
+            return;
+        }
+
+        // How far is the midpoint from center (0-1)
+        const midDistNorm = midDistActual / r;
+
+        // Line length
+        const lineLen = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+
+        // DRAMATICALLY VISIBLE curve amount
+        // Linear with distance from center, 50% of line length at the edge
+        const curveAmount = lineLen * 0.5 * midDistNorm;
+
+        if (curveAmount < 2) {
+            // Very small curve, draw straight
+            pg.line(bufferCenter + x1, bufferCenter + y1, bufferCenter + x2, bufferCenter + y2);
+            return;
+        }
+
+        // Control point - displaced AWAY from planet center (outward)
+        // This simulates great circle arcs on a sphere viewed from above
+        const ctrlX = midX + (midX / midDistActual) * curveAmount;
+        const ctrlY = midY + (midY / midDistActual) * curveAmount;
+
+        // Draw as bezier curve
+        pg.noFill();
+        pg.beginShape();
+        pg.vertex(bufferCenter + x1, bufferCenter + y1);
+        pg.quadraticVertex(bufferCenter + ctrlX, bufferCenter + ctrlY, bufferCenter + x2, bufferCenter + y2);
+        pg.endShape();
+    }
+
+    /**
      * Generates a planet name etymologically related to the system name.
      * Uses Latin/Greek roots and Roman numerals for uniqueness.
      * @param {string} systemName - The name of the star system.
@@ -896,116 +965,122 @@ class Planet {
                 }
             }
         }
-
-        // Angular high-tech grid overlay (jagged, noise-driven, sphere-aware)
-        // This creates a semi-regular angular grid that is broken/jagged by noise
-        // so it looks like advanced circuitry/transport lines wrapping the globe.
+        // Angular high-tech grid overlay - with TRUE spherical projection
+        // Each segment is positioned along a curved arc that follows the sphere surface
         (function () {
             const gridAngle = ((featureRand * 13.37) % TWO_PI_CONST) + this.currentRotation * 0.12;
             const baseSpacing = Math.max(8, Math.floor(r * map(this.cityLightsDensity, 0.25, 0.9, 0.18, 0.06)));
             const spacing = Math.max(6, Math.round(baseSpacing));
             const segStep = Math.max(4, Math.round(spacing * 0.35));
             const noiseJitter = Math.max(0.5, spacing * 0.22);
+            const noiseScale = this.noiseScale || 0.01;
 
             pg.push();
             pg.translate(bufferCenter, bufferCenter);
             pg.rotate(gridAngle);
 
-            // Primary grid lines
-            pg.stroke(primR, primG, primB, 180);
+            // Primary grid lines - following curved arcs on sphere surface
+            pg.stroke(primR, primG, primB, 160);
             pg.strokeWeight(Math.max(0.6, bandHeight * 0.35));
 
-            for (let gx = -r - spacing; gx <= r + spacing; gx += spacing) {
-                // Draw this line as broken segments using noise to decide visible pieces
-                let draw = false;
-                for (let yy = -r; yy <= r; yy += segStep) {
-                    // Compute world sample coordinates (undo translate/rotation by using the local coords gx,yy)
-                    const x = gx;
-                    const y = yy;
-                    const inside = (x * x + y * y) / (r * r);
-                    if (inside > 1) continue; // skip outside disc
+            const safeR = r * 0.85;
 
-                    // Spherical sampling so grid wraps and fades at the limb
+            // For each grid line at offset gx from center
+            for (let gx = -safeR; gx <= safeR; gx += spacing) {
+                const halfChord = Math.sqrt(Math.max(0, safeR * safeR - gx * gx));
+                if (halfChord < 5) continue;
+
+                // How far this line is from center (0-1)
+                const lineDistNorm = Math.abs(gx) / r;
+
+                for (let yy = -halfChord; yy <= halfChord; yy += segStep) {
+                    // Original grid position
+                    const baseX = gx;
+                    const baseY = yy;
+
+                    // Spherical projection: calculate curved x position
+                    // As we move along y, the x position curves outward
+                    // The further from center (gx), the more curvature
+                    const yNorm = baseY / r; // -1 to 1
+                    const distFromPolesSq = yNorm * yNorm;
+                    // Curve amount: line bows outward, maximum at y=0, minimum at poles
+                    const curveDisplacement = lineDistNorm * (1 - distFromPolesSq) * r * 0.3;
+                    // Displacement direction: away from center (same sign as gx)
+                    const curvedX = baseX + Math.sign(gx) * curveDisplacement;
+
+                    const x = curvedX;
+                    const y = baseY;
+
+                    // Spherical sampling for visibility
                     const nx = x / r;
                     const ny = y / r;
                     const nzUnit = Math.sqrt(Math.max(0, 1 - (nx * nx + ny * ny)));
+                    if (nzUnit < 0.15) continue;
+
                     const sampleMultiplier = Math.max(0.0006, (this.radius * noiseScale) * 0.9);
                     const sNX = nx * sampleMultiplier + featureRand * 0.002 + 7.13;
                     const sNY = ny * sampleMultiplier + featureRand * 0.003 + 9.71;
                     const sNZ = nzUnit * sampleMultiplier + featureRand * 0.004 + 1.41;
 
-                    // Noise controls visibility and jagged offset
                     const nVal = pg.noise(sNX * 2.2, sNY * 2.2, sNZ * 1.6);
                     const nDetail = pg.noise(sNX * 6.0, sNY * 6.0, sNZ * 4.2);
                     const visibility = Math.pow(nVal * 0.7 + nDetail * 0.3, 1.25);
 
-                    // Limb fade so grid disappears at edges
                     const limbFactor = Math.pow(nzUnit, 0.85);
                     const threshold = 0.35 + (0.45 * (1 - this.cityLightsDensity));
 
                     if (visibility > threshold * (0.6 + 0.4 * limbFactor)) {
-                        // Draw a curved, jagged segment as a short polyline so it follows
-                        // the sphere curvature. We sample multiple points along the
-                        // short segment and apply per-point noise jitter + a bend
-                        // that increases toward the limb.
                         const segHalf = Math.max(1, segStep * 0.45);
-                        const steps = Math.max(3, Math.round(segStep / 2));
                         const baseJitter = (nDetail - 0.5) * noiseJitter;
-                        const curveScale = spacing * 0.28; // how strongly the line bends toward center
+                        const jitter = (pg.noise(sNX * 1.5, sNY * 1.5) - 0.5) * baseJitter * (1 - limbFactor);
 
-                        pg.noFill();
-                        pg.beginShape();
-                        for (let sI = 0; sI < steps; sI++) {
-                            const t = steps === 1 ? 0 : sI / (steps - 1);
-                            const sPos = -segHalf + t * (2 * segHalf);
+                        // Calculate curved positions for start and end of segment
+                        const startYNorm = (y - segHalf) / r;
+                        const endYNorm = (y + segHalf) / r;
+                        const startCurve = lineDistNorm * (1 - startYNorm * startYNorm) * r * 0.3;
+                        const endCurve = lineDistNorm * (1 - endYNorm * endYNorm) * r * 0.3;
 
-                            // Per-point noise to jitter the line
-                            const pNoise = pg.noise(sNX + sPos * 0.02, sNY + sPos * 0.02, sNZ + t * 0.01);
-                            const jitter = (pNoise - 0.5) * baseJitter * (1 - limbFactor);
+                        const startX = baseX + Math.sign(gx || 1) * startCurve + jitter;
+                        const startY = y - segHalf;
+                        const endX = baseX + Math.sign(gx || 1) * endCurve + jitter;
+                        const endY = y + segHalf;
 
-                            // Local point before curvature
-                            let px = x + jitter;
-                            let py = y + sPos;
+                        if ((startX * startX + startY * startY) > safeR * safeR) continue;
+                        if ((endX * endX + endY * endY) > safeR * safeR) continue;
 
-                            // Skip points outside the disc
-                            const insideP = (px * px + py * py) / (r * r);
-                            if (insideP > 1) continue;
-
-                            // Compute sphere-normal at this point and bend toward center
-                            const nxP = px / r;
-                            const nyP = py / r;
-                            const nzP = Math.sqrt(Math.max(0, 1 - (nxP * nxP + nyP * nyP)));
-                            // Apply a perpendicular inward offset that increases toward the limb
-                            // This produces a visible arc as lines approach the edge.
-                            const limbBias = Math.pow(1 - nzP, 1.8);
-                            const bendAmount = curveScale * limbBias;
-                            const side = (px === 0) ? 1 : Math.sign(px);
-                            px -= side * bendAmount;
-                            // Slightly move the point inward on Y as well to keep smooth projection
-                            py *= (1 - Math.min(0.35, bendAmount / Math.max(1, r)));
-
-                            pg.vertex(px, py);
-                        }
-                        pg.endShape();
+                        pg.line(startX, startY, endX, endY);
                     }
                 }
             }
 
-            // Secondary angular cross-grid for a circuitry look
-            pg.stroke(secR, secG, secB, 140);
+            // Secondary angular cross-grid - also with spherical projection
+            pg.stroke(secR, secG, secB, 120);
             pg.strokeWeight(Math.max(0.35, bandHeight * 0.22));
             const crossAngle = gridAngle + PI / 2.3;
             pg.rotate(crossAngle - gridAngle);
-            for (let gx = -r - spacing; gx <= r + spacing; gx += Math.round(spacing * 1.4)) {
-                for (let yy = -r; yy <= r; yy += Math.max(3, Math.round(segStep * 0.9))) {
-                    const x = gx;
-                    const y = yy;
-                    const inside = (x * x + y * y) / (r * r);
-                    if (inside > 1) continue;
+
+            for (let gx = -safeR; gx <= safeR; gx += Math.round(spacing * 1.4)) {
+                const halfChord = Math.sqrt(Math.max(0, safeR * safeR - gx * gx));
+                if (halfChord < 5) continue;
+
+                const lineDistNorm = Math.abs(gx) / r;
+
+                for (let yy = -halfChord; yy <= halfChord; yy += Math.max(3, Math.round(segStep * 0.9))) {
+                    const baseX = gx;
+                    const baseY = yy;
+
+                    const yNorm = baseY / r;
+                    const curveDisplacement = lineDistNorm * (1 - yNorm * yNorm) * r * 0.3;
+                    const curvedX = baseX + Math.sign(gx) * curveDisplacement;
+
+                    const x = curvedX;
+                    const y = baseY;
 
                     const nx = x / r;
                     const ny = y / r;
                     const nzUnit = Math.sqrt(Math.max(0, 1 - (nx * nx + ny * ny)));
+                    if (nzUnit < 0.2) continue;
+
                     const sampleMultiplier = Math.max(0.0006, (this.radius * noiseScale) * 0.9);
                     const sNX = nx * sampleMultiplier + featureRand * 0.005 + 3.21;
                     const sNY = ny * sampleMultiplier + featureRand * 0.006 + 4.19;
@@ -1013,37 +1088,25 @@ class Planet {
 
                     const nVal = pg.noise(sNX * 2.6, sNY * 2.6, sNZ * 1.9);
                     const limbFactor = Math.pow(nzUnit, 0.9);
+
                     if (nVal > 0.48 * (0.7 + 0.3 * limbFactor)) {
                         const len = Math.max(1, segStep * 0.6);
-                        const steps2 = Math.max(3, Math.round(len / 1.2));
-                        const curveScale2 = spacing * 0.22;
+                        const jitter = (pg.noise(sNX * 1.3, sNY * 1.3) - 0.5) * noiseJitter * 0.6 * (1 - limbFactor);
 
-                        pg.noFill();
-                        pg.beginShape();
-                        for (let si = 0; si < steps2; si++) {
-                            const tt = steps2 === 1 ? 0 : si / (steps2 - 1);
-                            const sPos = -len + tt * (2 * len);
-                            const pNoise = pg.noise(sNX * 1.2 + sPos * 0.02, sNY * 1.2 + sPos * 0.02);
-                            const jitter = (pNoise - 0.5) * noiseJitter * 0.6 * (1 - limbFactor);
+                        const startYNorm = (y - len) / r;
+                        const endYNorm = (y + len) / r;
+                        const startCurve = lineDistNorm * (1 - startYNorm * startYNorm) * r * 0.3;
+                        const endCurve = lineDistNorm * (1 - endYNorm * endYNorm) * r * 0.3;
 
-                            let px = x + jitter;
-                            let py = y + sPos;
-                            const insideP = (px * px + py * py) / (r * r);
-                            if (insideP > 1) continue;
+                        const startX = baseX + Math.sign(gx || 1) * startCurve + jitter;
+                        const startY = y - len;
+                        const endX = baseX + Math.sign(gx || 1) * endCurve + jitter;
+                        const endY = y + len;
 
-                            const nxP = px / r;
-                            const nyP = py / r;
-                            const nzP = Math.sqrt(Math.max(0, 1 - (nxP * nxP + nyP * nyP)));
-                            // Perpendicular inward offset for visible curvature on cross-grid
-                            const limbBias2 = Math.pow(1 - nzP, 1.7);
-                            const bendAmount2 = curveScale2 * limbBias2;
-                            const side2 = (px === 0) ? 1 : Math.sign(px);
-                            px -= side2 * bendAmount2;
-                            py *= (1 - Math.min(0.3, bendAmount2 / Math.max(1, r)));
+                        if ((startX * startX + startY * startY) > safeR * safeR) continue;
+                        if ((endX * endX + endY * endY) > safeR * safeR) continue;
 
-                            pg.vertex(px, py);
-                        }
-                        pg.endShape();
+                        pg.line(startX, startY, endX, endY);
                     }
                 }
             }
@@ -1051,7 +1114,8 @@ class Planet {
             pg.pop();
         }).call(this);
 
-        // Draw connecting transport/highway lines between hubs
+
+        // Draw connecting transport/highway lines between hubs - with TRUE spherical projection
         pg.noFill();
         const maxHubDist = r * 0.7;
         for (let i = 0; i < cityHubs.length; i++) {
@@ -1064,29 +1128,18 @@ class Planet {
 
                 // Only connect reasonably close hubs
                 if (hubDist < maxHubDist) {
-                    const alpha = 150 - (hubDist / maxHubDist) * 80;
-                    pg.stroke(secR, secG, secB, alpha);
-                    pg.strokeWeight(bandHeight * 0.6);
+                    // Compute limb factor at both endpoints
+                    const hub1Limb = this._getLimbFactor(hub1.x, hub1.y);
+                    const hub2Limb = this._getLimbFactor(hub2.x, hub2.y);
+                    const avgLimb = (hub1Limb + hub2Limb) * 0.5;
+                    if (avgLimb < 0.2) continue; // Skip lines too close to limb
 
-                    // Draw slightly curved connections with subtle variations
-                    const midX = (hub1.x + hub2.x) * 0.5;
-                    const midY = (hub1.y + hub2.y) * 0.5;
-                    const perpX = -dy * 0.2;
-                    const perpY = dx * 0.2;
-                    const randFactor1 = (featureRand * 7.3) % 1 - 0.5;
-                    const randFactor2 = (featureRand * 9.1) % 1 - 0.5;
-                    const ctrlX = midX + perpX * randFactor1;
-                    const ctrlY = midY + perpY * randFactor2;
+                    const baseAlpha = 150 - (hubDist / maxHubDist) * 80;
+                    pg.stroke(secR, secG, secB, Math.round(baseAlpha * avgLimb));
+                    pg.strokeWeight(bandHeight * 0.6 * avgLimb);
 
-                    pg.beginShape();
-                    pg.vertex(bufferCenter + hub1.x, bufferCenter + hub1.y);
-                    pg.quadraticVertex(
-                        bufferCenter + ctrlX,
-                        bufferCenter + ctrlY,
-                        bufferCenter + hub2.x,
-                        bufferCenter + hub2.y
-                    );
-                    pg.endShape();
+                    // Draw curved line following sphere surface
+                    this._drawCurvedLine(pg, hub1.x, hub1.y, hub2.x, hub2.y, bufferCenter, r);
                 }
             }
         }
@@ -1146,7 +1199,7 @@ class Planet {
             }
         }
 
-        // 2. AGRICULTURAL PATTERNS (visible geometric farms)
+        // 2. AGRICULTURAL PATTERNS (visible geometric farms) - with globe curvature
         const numFarmRegions = Math.floor(random(2, 5));
         for (let fr = 0; fr < numFarmRegions; fr++) {
             const farmAngle = (featureRand * (fr + 1) * 23.7) % TWO_PI_CONST;
@@ -1158,80 +1211,123 @@ class Planet {
             const farmDistSq = farmCenterX * farmCenterX + farmCenterY * farmCenterY;
             if (farmDistSq > r * r * 0.9) continue;
 
+            // Compute limb factor at farm center for globe curvature
+            const farmLimbFactor = this._getLimbFactor(farmCenterX, farmCenterY);
+            if (farmLimbFactor < 0.15) continue; // Skip farms too close to limb
+
             const farmType = Math.floor((featureRand * (fr + 5) * 11.1) % 3);
-            const farmScale = random(r * 0.08, r * 0.15);
+            const baseFarmScale = random(r * 0.08, r * 0.15);
+            // Scale farm size by limb factor so farms shrink at edges
+            const farmScale = baseFarmScale * Math.max(0.3, farmLimbFactor);
             const farmSpacing = farmScale * 0.3;
+            // Fade alpha based on limb factor
+            const farmAlphaScale = Math.max(0.3, farmLimbFactor);
 
             pg.push();
             pg.translate(bufferCenter + farmCenterX, bufferCenter + farmCenterY);
 
             if (farmType === 0) {
-                // Circular irrigation patterns (center pivot)
+                // Circular irrigation patterns (center pivot) - with per-element globe curvature
                 const numCircles = Math.floor(random(4, 8));
                 for (let c = 0; c < numCircles; c++) {
-                    const circRad = (c + 1) * farmSpacing;
+                    const baseCircRad = (c + 1) * farmSpacing;
+
+                    // For the main circle, we'll draw it as individual arc segments
+                    // to allow variable curvature, but for simplicity we use farm center limb
+                    const circLimb = farmLimbFactor; // Circle stays uniform
+                    const circRad = baseCircRad * Math.max(0.3, circLimb);
+
                     pg.noFill();
-                    pg.stroke(primR, primG, primB, 25 + c * 5);
-                    pg.strokeWeight(Math.max(0.3, bandHeight * 0.15));
+                    pg.stroke(primR, primG, primB, Math.round((25 + c * 5) * circLimb));
+                    pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * circLimb));
                     pg.ellipse(0, 0, circRad * 2, circRad * 2);
 
-                    // Add small dots around circle
+                    // Add small dots around circle - each with individual limb factor
                     const dotsOnCircle = Math.floor(circRad * 0.5);
                     for (let d = 0; d < dotsOnCircle; d++) {
                         const dotAngle = (d / dotsOnCircle) * TWO_PI_CONST;
                         const dx = Math.cos(dotAngle) * circRad;
                         const dy = Math.sin(dotAngle) * circRad;
+
+                        // Compute limb factor for this specific dot
+                        const dotWorldX = farmCenterX + dx;
+                        const dotWorldY = farmCenterY + dy;
+                        const dotLimb = this._getLimbFactor(dotWorldX, dotWorldY);
+                        if (dotLimb < 0.1) continue;
+
                         pg.noStroke();
-                        pg.fill(secR, secG, secB, 40);
-                        pg.ellipse(dx, dy, bandHeight * 0.2, bandHeight * 0.2);
+                        pg.fill(secR, secG, secB, Math.round(40 * dotLimb));
+                        const dotSize = bandHeight * 0.2 * dotLimb;
+                        pg.ellipse(dx, dy, dotSize, dotSize);
                     }
                 }
             } else if (farmType === 1) {
-                // Hexagonal grid pattern
+                // Hexagonal grid pattern - with TRUE spherical perspective distortion
                 const hexSize = farmSpacing * 0.6;
                 const hexRows = 8;
                 const hexCols = 8;
                 pg.noFill();
-                pg.stroke(primR, primG, primB, 35);
-                pg.strokeWeight(Math.max(0.3, bandHeight * 0.12));
 
                 for (let row = -hexRows; row < hexRows; row++) {
                     for (let col = -hexCols; col < hexCols; col++) {
                         const xOff = col * hexSize * 1.5;
                         const yOff = row * hexSize * Math.sqrt(3) + (col % 2) * hexSize * Math.sqrt(3) * 0.5;
 
-                        // Draw hexagon
+                        // Compute limb factor for hexagon center
+                        const cellWorldX = farmCenterX + xOff;
+                        const cellWorldY = farmCenterY + yOff;
+                        const cellLimb = this._getLimbFactor(cellWorldX, cellWorldY);
+                        if (cellLimb < 0.1) continue; // Skip cells too close to limb
+
+                        // Scale hexagon size and alpha based on limb factor
+                        const scaledHexSize = hexSize * Math.max(0.2, cellLimb);
+
+                        pg.stroke(primR, primG, primB, Math.round(35 * cellLimb));
+                        pg.strokeWeight(Math.max(0.3, bandHeight * 0.12 * cellLimb));
+
+                        // Draw simple hexagon with scaled size
                         pg.beginShape();
                         for (let h = 0; h < 6; h++) {
                             const hAngle = (h / 6) * TWO_PI_CONST;
-                            const hx = xOff + Math.cos(hAngle) * hexSize;
-                            const hy = yOff + Math.sin(hAngle) * hexSize;
+                            const hx = xOff + Math.cos(hAngle) * scaledHexSize;
+                            const hy = yOff + Math.sin(hAngle) * scaledHexSize;
                             pg.vertex(hx, hy);
                         }
                         pg.endShape(CLOSE);
                     }
                 }
             } else {
-                // Rectangular field grid
+                // Rectangular field grid - with TRUE spherical perspective distortion
                 const gridSize = farmSpacing * 0.8;
                 const gridCount = 10;
-                pg.stroke(primR, primG, primB, 30);
-                pg.strokeWeight(Math.max(0.3, bandHeight * 0.15));
 
                 for (let gx = -gridCount; gx < gridCount; gx++) {
                     for (let gy = -gridCount; gy < gridCount; gy++) {
                         const rx = gx * gridSize;
                         const ry = gy * gridSize;
-                        const halfGrid = gridSize * 0.4;
 
+                        // Compute limb factor for cell center
+                        const cellWorldX = farmCenterX + rx;
+                        const cellWorldY = farmCenterY + ry;
+                        const cellLimb = this._getLimbFactor(cellWorldX, cellWorldY);
+                        if (cellLimb < 0.1) continue; // Skip cells too close to limb
+
+                        // Scale cell size and alpha by local limb factor
+                        const cellScale = Math.max(0.2, cellLimb);
+                        const scaledGridSize = gridSize * 0.8 * cellScale;
+                        const halfGrid = scaledGridSize * 0.5;
+
+                        pg.stroke(primR, primG, primB, Math.round(30 * cellLimb));
+                        pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * cellLimb));
                         pg.noFill();
-                        pg.rect(rx - halfGrid, ry - halfGrid, gridSize * 0.8, gridSize * 0.8);
+                        pg.rect(rx - halfGrid, ry - halfGrid, scaledGridSize, scaledGridSize);
 
                         // Small bright dot at center
                         if ((gx + gy) % 2 === 0) {
                             pg.noStroke();
-                            pg.fill(secR, secG, secB, 45);
-                            pg.ellipse(rx, ry, bandHeight * 0.25, bandHeight * 0.25);
+                            pg.fill(secR, secG, secB, Math.round(45 * cellLimb));
+                            const dotSize = bandHeight * 0.25 * cellLimb;
+                            pg.ellipse(rx, ry, dotSize, dotSize);
                         }
                     }
                 }
@@ -1239,26 +1335,36 @@ class Planet {
             pg.pop();
         }
 
-        // 3. RADIAL CITY PATTERNS (spoke-wheel cities)
+        // 3. RADIAL CITY PATTERNS (spoke-wheel cities) - with globe curvature
         const numRadialCities = Math.floor(random(1, 3));
         for (let rc = 0; rc < numRadialCities; rc++) {
             // Pick a hub as the center
             if (rc >= cityHubs.length) break;
             const hub = cityHubs[rc];
 
+            // Compute limb factor at hub center
+            const hubLimbFactor = this._getLimbFactor(hub.x, hub.y);
+            if (hubLimbFactor < 0.2) continue; // Skip hubs too close to limb
+            const hubAlphaScale = Math.max(0.3, hubLimbFactor);
+
             const numSpokes = Math.floor(random(6, 12));
-            const spokeLength = hub.size * random(0.8, 1.2);
+            const baseSpokeLength = hub.size * random(0.8, 1.2);
+            // Scale spoke length by limb factor
+            const spokeLength = baseSpokeLength * Math.max(0.4, hubLimbFactor);
 
             for (let sp = 0; sp < numSpokes; sp++) {
                 const spokeAngle = (sp / numSpokes) * TWO_PI_CONST;
                 const spokeEndX = hub.x + Math.cos(spokeAngle) * spokeLength;
                 const spokeEndY = hub.y + Math.sin(spokeAngle) * spokeLength;
 
-                // Draw main spoke
-                pg.stroke(primR, primG, primB, 140);
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.4));
-                pg.line(bufferCenter + hub.x, bufferCenter + hub.y,
-                    bufferCenter + spokeEndX, bufferCenter + spokeEndY);
+                // Compute limb factor at spoke end
+                const endLimbFactor = this._getLimbFactor(spokeEndX, spokeEndY);
+                const avgLimb = (hubLimbFactor + endLimbFactor) * 0.5;
+
+                // Draw main spoke with globe curvature
+                pg.stroke(primR, primG, primB, Math.round(140 * avgLimb));
+                pg.strokeWeight(Math.max(0.5, bandHeight * 0.4 * avgLimb));
+                this._drawCurvedLine(pg, hub.x, hub.y, spokeEndX, spokeEndY, bufferCenter, r);
 
                 // Add development along spoke
                 const segmentsAlongSpoke = Math.floor(random(4, 8));
@@ -1267,12 +1373,16 @@ class Planet {
                     const segX = hub.x + Math.cos(spokeAngle) * spokeLength * t;
                     const segY = hub.y + Math.sin(spokeAngle) * spokeLength * t;
 
-                    // Perpendicular development
-                    const perpAngle = spokeAngle + PI / 2;
-                    const perpLen = bandHeight * random(1, 3);
+                    // Compute limb factor at this segment
+                    const segLimb = this._getLimbFactor(segX, segY);
+                    if (segLimb < 0.15) continue;
 
-                    pg.stroke(secR, secG, secB, 100);
-                    pg.strokeWeight(Math.max(0.3, bandHeight * 0.25));
+                    // Perpendicular development - scale by limb factor
+                    const perpAngle = spokeAngle + PI / 2;
+                    const perpLen = bandHeight * random(1, 3) * segLimb;
+
+                    pg.stroke(secR, secG, secB, Math.round(100 * segLimb));
+                    pg.strokeWeight(Math.max(0.3, bandHeight * 0.25 * segLimb));
                     pg.line(
                         bufferCenter + segX - Math.cos(perpAngle) * perpLen,
                         bufferCenter + segY - Math.sin(perpAngle) * perpLen,
@@ -1282,9 +1392,9 @@ class Planet {
 
                     // Bright node at intersection
                     pg.noStroke();
-                    pg.fill(accR, accG, accB, 160);
-                    pg.ellipse(bufferCenter + segX, bufferCenter + segY,
-                        bandHeight * 0.6, bandHeight * 0.6);
+                    pg.fill(accR, accG, accB, Math.round(160 * segLimb));
+                    const nodeSize = bandHeight * 0.6 * segLimb;
+                    pg.ellipse(bufferCenter + segX, bufferCenter + segY, nodeSize, nodeSize);
                 }
             }
 
@@ -1293,14 +1403,14 @@ class Planet {
             for (let ring = 1; ring <= numRings; ring++) {
                 const ringRad = (ring / numRings) * spokeLength;
                 pg.noFill();
-                pg.stroke(secR, secG, secB, 80);
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.3));
+                pg.stroke(secR, secG, secB, Math.round(80 * hubAlphaScale));
+                pg.strokeWeight(Math.max(0.4, bandHeight * 0.3 * hubLimbFactor));
                 pg.ellipse(bufferCenter + hub.x, bufferCenter + hub.y,
                     ringRad * 2, ringRad * 2);
             }
         }
 
-        // 4. ARCOLOGIES (super-tall mega-buildings)
+        // 4. ARCOLOGIES (super-tall mega-buildings) - with globe curvature
         const numArcologies = Math.floor(random(1, 4));
         for (let arc = 0; arc < numArcologies; arc++) {
             const arcAngle = (featureRand * (arc + 7) * 19.3) % TWO_PI_CONST;
@@ -1311,35 +1421,42 @@ class Planet {
             // Check bounds
             if (arcX * arcX + arcY * arcY > r * r * 0.9) continue;
 
+            // Compute limb factor for arcology position
+            const arcLimbFactor = this._getLimbFactor(arcX, arcY);
+            if (arcLimbFactor < 0.2) continue; // Skip arcologies too close to limb
+            const arcScale = Math.max(0.3, arcLimbFactor);
+
             // Draw bright glow for arcology
             pg.push();
             pg.translate(bufferCenter + arcX, bufferCenter + arcY);
 
-            // Outer glow
-            const glowSize = bandHeight * random(2.5, 4);
+            // Outer glow - scaled by limb factor
+            const baseGlowSize = bandHeight * random(2.5, 4);
+            const glowSize = baseGlowSize * arcScale;
             pg.noStroke();
             for (let g = 3; g > 0; g--) {
                 const gSize = glowSize * (g / 3);
-                const gAlpha = 60 / g;
+                const gAlpha = Math.round((60 / g) * arcLimbFactor);
                 pg.fill(accR, accG, accB, gAlpha);
                 pg.ellipse(0, 0, gSize, gSize);
             }
 
-            // Bright core
-            pg.fill(accR, accG, accB, 220);
-            pg.ellipse(0, 0, bandHeight * 1.2, bandHeight * 1.2);
+            // Bright core - scaled
+            const coreSize = bandHeight * 1.2 * arcScale;
+            pg.fill(accR, accG, accB, Math.round(220 * arcLimbFactor));
+            pg.ellipse(0, 0, coreSize, coreSize);
 
-            // Cross-pattern indicating structure
-            pg.stroke(255, 255, 255, 180);
-            pg.strokeWeight(Math.max(0.4, bandHeight * 0.2));
-            const crossSize = bandHeight * 1.5;
+            // Cross-pattern indicating structure - scaled
+            pg.stroke(255, 255, 255, Math.round(180 * arcLimbFactor));
+            pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * arcScale));
+            const crossSize = bandHeight * 1.5 * arcScale;
             pg.line(-crossSize, 0, crossSize, 0);
             pg.line(0, -crossSize, 0, crossSize);
 
             pg.pop();
         }
 
-        // 5. INDUSTRIAL ZONES (uniform bright patches)
+        // 5. INDUSTRIAL ZONES (uniform bright patches) - with globe curvature
         const numIndustrial = Math.floor(random(2, 5));
         for (let ind = 0; ind < numIndustrial; ind++) {
             const indAngle = (featureRand * (ind + 13) * 27.1) % TWO_PI_CONST;
@@ -1349,30 +1466,43 @@ class Planet {
 
             if (indX * indX + indY * indY > r * r * 0.9) continue;
 
-            const indSize = random(r * 0.04, r * 0.08);
-            const indGridSpacing = Math.max(1, bandHeight * 0.8);
+            // Compute limb factor at zone center
+            const zoneLimbFactor = this._getLimbFactor(indX, indY);
+            if (zoneLimbFactor < 0.2) continue; // Skip zones too close to limb
+            const zoneScale = Math.max(0.3, zoneLimbFactor);
+
+            const baseIndSize = random(r * 0.04, r * 0.08);
+            const indSize = baseIndSize * zoneScale;
+            const indGridSpacing = Math.max(1, bandHeight * 0.8 * zoneScale);
 
             pg.push();
             pg.translate(bufferCenter + indX, bufferCenter + indY);
 
-            // Uniform grid of bright lights
+            // Uniform grid of bright lights - scaled
             const gridExtent = Math.floor(indSize / indGridSpacing);
             for (let gx = -gridExtent; gx <= gridExtent; gx++) {
                 for (let gy = -gridExtent; gy <= gridExtent; gy++) {
                     const px = gx * indGridSpacing;
                     const py = gy * indGridSpacing;
 
-                    // Uniform brightness for industrial look
+                    // Compute per-point limb factor for more accurate fade
+                    const pointWorldX = indX + px;
+                    const pointWorldY = indY + py;
+                    const pointLimb = this._getLimbFactor(pointWorldX, pointWorldY);
+                    if (pointLimb < 0.1) continue;
+
+                    // Brightness and size scaled by local limb factor
                     pg.noStroke();
-                    pg.fill(primR, primG, primB, 150);
-                    pg.ellipse(px, py, bandHeight * 0.5, bandHeight * 0.5);
+                    pg.fill(primR, primG, primB, Math.round(150 * pointLimb));
+                    const dotSize = bandHeight * 0.5 * pointLimb;
+                    pg.ellipse(px, py, dotSize, dotSize);
                 }
             }
             pg.pop();
         }
 
 
-        // 6. TERRAFORMING/ATMOSPHERIC PROCESSORS (distinct geometric stations)
+        // 6. TERRAFORMING/ATMOSPHERIC PROCESSORS (distinct geometric stations) - with globe curvature
         if ((featureRand * 53.7) % 1 > 0.7) {
             const numProcessors = Math.floor(random(2, 5));
             for (let proc = 0; proc < numProcessors; proc++) {
@@ -1383,33 +1513,40 @@ class Planet {
 
                 if (procX * procX + procY * procY > r * r) continue;
 
+                // Compute limb factor for processor position
+                const procLimbFactor = this._getLimbFactor(procX, procY);
+                if (procLimbFactor < 0.15) continue; // Skip processors too close to limb
+                const procScale = Math.max(0.25, procLimbFactor);
+
                 pg.push();
                 pg.translate(bufferCenter + procX, bufferCenter + procY);
 
-                // Draw processor as geometric structure
-                const procSize = bandHeight * random(2, 3);
+                // Draw processor as geometric structure - scaled
+                const baseProcSize = bandHeight * random(2, 3);
+                const procSize = baseProcSize * procScale;
 
-                // Rotating square/diamond
+                // Rotating square/diamond - scaled
                 pg.push();
                 pg.rotate(PI / 4);
                 pg.noFill();
-                pg.stroke(accR, accG, accB, 180);
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3));
+                pg.stroke(accR, accG, accB, Math.round(180 * procLimbFactor));
+                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * procScale));
                 pg.rect(-procSize / 2, -procSize / 2, procSize, procSize);
                 pg.pop();
 
-                // Center bright point
+                // Center bright point - scaled
                 pg.noStroke();
-                pg.fill(255, 255, 255, 200);
-                pg.ellipse(0, 0, bandHeight * 0.7, bandHeight * 0.7);
+                const centerSize = bandHeight * 0.7 * procScale;
+                pg.fill(255, 255, 255, Math.round(200 * procLimbFactor));
+                pg.ellipse(0, 0, centerSize, centerSize);
 
-                // Energy lines radiating out
+                // Energy lines radiating out - scaled
                 const numEnergyLines = 4;
                 for (let el = 0; el < numEnergyLines; el++) {
                     const elAngle = (el / numEnergyLines) * TWO_PI_CONST;
                     const elLen = procSize * 1.2;
-                    pg.stroke(secR, secG, secB, 140);
-                    pg.strokeWeight(Math.max(0.3, bandHeight * 0.2));
+                    pg.stroke(secR, secG, secB, Math.round(140 * procLimbFactor));
+                    pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * procScale));
                     pg.line(0, 0,
                         Math.cos(elAngle) * elLen,
                         Math.sin(elAngle) * elLen);
@@ -1471,7 +1608,8 @@ class Planet {
         }
 
         // Draw city lights before resetting rotation so they rotate with the planet
-        if (!this.isSun && this.isInhabited && this.cityLightsBuffer && this.shadowOffset) {
+        // For ringed planets, city lights are drawn inside drawRingedPlanet() between planet and front ring
+        if (!this.isSun && this.isInhabited && this.cityLightsBuffer && this.shadowOffset && !this.hasRings) {
             // Draw the city lights aligned with the planet's current rotation
             drawingContext.save();
 
@@ -1632,6 +1770,32 @@ class Planet {
 
         // --- Step 2: Draw the full planet on top ---
         image(this.planetBuffer, -halfW, -halfW);
+
+        // --- Step 2.5: Draw city lights on top of planet but BEFORE front ring ---
+        if (this.isInhabited && this.cityLightsBuffer && this.shadowOffset) {
+            ctx.save();
+
+            // Calculate rotated shadow position based on current planet rotation
+            const rotatedShadowX = this.shadowOffset.x * Math.cos(-this.currentRotation) - this.shadowOffset.y * Math.sin(-this.currentRotation);
+            const rotatedShadowY = this.shadowOffset.x * Math.sin(-this.currentRotation) + this.shadowOffset.y * Math.cos(-this.currentRotation);
+
+            // Clip to planet circle
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius, 0, TWO_PI);
+            ctx.clip();
+
+            // Clip to shadow area (night side)
+            ctx.beginPath();
+            ctx.arc(rotatedShadowX, rotatedShadowY, this._shadowRadius, 0, TWO_PI);
+            ctx.clip();
+
+            // Draw city lights
+            const lightsSize = this.cityLightsBuffer.width;
+            const halfLights = lightsSize * 0.5;
+            image(this.cityLightsBuffer, -halfLights, -halfLights);
+
+            ctx.restore();
+        }
 
         // --- Step 3: Draw the front portion of the rings on top of the planet ---
         ctx.save();
