@@ -325,7 +325,7 @@ class Planet {
 
         // Combine root, suffix, and Roman numeral
         const romanNum = romanNumerals[Math.min(planetIndex, romanNumerals.length - 1)];
-        return `${root}${suffix} ${romanNum}`.trim();
+        return `${root} ${suffix} ${romanNum}`.trim();
     }
 
     // Call this method once you know the sun's position.
