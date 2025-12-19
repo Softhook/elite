@@ -1592,7 +1592,7 @@ class Planet {
 
                 // Spiral arms of collector panels
                 pg.noFill();
-                pg.stroke(255, 180, 40, Math.round(100 * scLimbFactor)); // Reduced alpha
+                pg.stroke(255, 180, 40, Math.round(180 * scLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * scScale));
 
                 for (let arm = 0; arm < 3; arm++) {
@@ -1609,7 +1609,7 @@ class Planet {
                             pg.push();
                             pg.translate(Math.cos(angle) * dist, Math.sin(angle) * dist);
                             pg.rotate(angle);
-                            pg.fill(255, 200, 50, Math.round(60 * scLimbFactor)); // Subtle fill
+                            pg.fill(255, 200, 50, Math.round(120 * scLimbFactor)); // Increased alpha
                             pg.noStroke();
                             pg.rect(-bandHeight * 0.5 * scScale, -bandHeight * 0.3 * scScale, bandHeight * 1.0 * scScale, bandHeight * 0.6 * scScale);
                             pg.pop();
@@ -1619,7 +1619,7 @@ class Planet {
                 }
 
                 // Central node - not a simple circle
-                pg.stroke(255, 220, 100, Math.round(120 * scLimbFactor));
+                pg.stroke(255, 220, 100, Math.round(200 * scLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * scScale));
                 pg.noFill();
                 pg.beginShape();
@@ -1631,7 +1631,7 @@ class Planet {
 
                 // Core glow - very subtle
                 pg.noStroke();
-                pg.fill(255, 255, 220, Math.round(100 * scLimbFactor));
+                pg.fill(255, 255, 220, Math.round(150 * scLimbFactor)); // Increased alpha
                 pg.ellipse(0, 0, panelSize * 0.15, panelSize * 0.15);
 
                 pg.pop();
@@ -1663,7 +1663,7 @@ class Planet {
                 const dfSize = bandHeight * random(8, 12) * dfScale;
 
                 // Skeleton frame (less solid)
-                pg.stroke(0, 200, 255, Math.round(100 * dfLimbFactor)); // Reduced alpha
+                pg.stroke(0, 200, 255, Math.round(160 * dfLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * dfScale));
                 pg.noFill();
 
@@ -1685,20 +1685,20 @@ class Planet {
                     const wtY = Math.sin(wtAngle) * dfSize;
 
                     // Turret base
-                    pg.fill(30, 80, 150, Math.round(120 * dfLimbFactor));
+                    pg.fill(30, 80, 150, Math.round(180 * dfLimbFactor)); // Increased alpha
                     pg.ellipse(wtX, wtY, bandHeight * 0.8 * dfScale, bandHeight * 0.8 * dfScale);
 
                     // Turret glow - subtle red
-                    pg.fill(255, 50, 50, Math.round(100 * dfLimbFactor));
+                    pg.fill(255, 50, 50, Math.round(160 * dfLimbFactor)); // Increased alpha
                     pg.ellipse(wtX, wtY, bandHeight * 0.4 * dfScale, bandHeight * 0.4 * dfScale);
                 }
 
                 // Central command
-                pg.fill(200, 240, 255, Math.round(120 * dfLimbFactor));
+                pg.fill(200, 240, 255, Math.round(180 * dfLimbFactor)); // Increased alpha
                 pg.ellipse(0, 0, dfSize * 0.25, dfSize * 0.25);
 
                 // Targeting beams - very faint
-                pg.stroke(255, 80, 80, Math.round(60 * dfLimbFactor));
+                pg.stroke(255, 80, 80, Math.round(120 * dfLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * dfScale));
                 const bAngle = (featureRand * 10) % TWO_PI_CONST;
                 pg.line(0, 0, Math.cos(bAngle) * dfSize * 2, Math.sin(bAngle) * dfSize * 2);
@@ -1737,7 +1737,7 @@ class Planet {
                 pg.rotate(barrelAngle);
 
                 // Open frame barrel design
-                pg.stroke(140, 80, 200, Math.round(100 * rgLimbFactor)); // Reduced alpha
+                pg.stroke(140, 80, 200, Math.round(180 * rgLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.5, rgWidth * 0.3));
 
                 // Top and bottom rails
@@ -1745,7 +1745,7 @@ class Planet {
                 pg.line(0, rgWidth * 0.5, rgLen, rgWidth * 0.5);
 
                 // Accelerator coils - spaced out
-                pg.stroke(0, 220, 255, Math.round(80 * rgLimbFactor)); // Subtle cyan
+                pg.stroke(0, 220, 255, Math.round(140 * rgLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * rgScale));
                 for (let ring = 1; ring <= 6; ring++) {
                     const ringX = rgLen * (ring / 7);
@@ -1758,7 +1758,7 @@ class Planet {
                 // Base power station - Geometric, not just round
                 pg.noStroke();
                 // Hexagonal base
-                pg.fill(120, 60, 180, Math.round(80 * rgLimbFactor));
+                pg.fill(120, 60, 180, Math.round(150 * rgLimbFactor)); // Increased alpha
                 pg.beginShape();
                 for (let i = 0; i < 6; i++) {
                     const a = (i / 6) * TWO_PI_CONST;
@@ -1767,7 +1767,7 @@ class Planet {
                 pg.endShape(CLOSE);
 
                 // Core
-                pg.fill(200, 180, 255, Math.round(120 * rgLimbFactor));
+                pg.fill(200, 180, 255, Math.round(180 * rgLimbFactor)); // Increased alpha
                 pg.rect(-bandHeight * rgScale, -bandHeight * rgScale, bandHeight * 2 * rgScale, bandHeight * 2 * rgScale);
 
                 pg.pop();
@@ -1800,7 +1800,7 @@ class Planet {
 
                 // Stellarator design: Interlocking twisted loops (figure-8 ish)
                 pg.noFill();
-                pg.stroke(255, 120, 20, Math.round(100 * fuLimbFactor)); // Reduced alpha
+                pg.stroke(255, 120, 20, Math.round(160 * fuLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.6, bandHeight * 0.3 * fuScale));
 
                 pg.beginShape();
@@ -1814,7 +1814,7 @@ class Planet {
                 pg.endShape(CLOSE);
 
                 // Second interlocking loop
-                pg.stroke(255, 180, 50, Math.round(100 * fuLimbFactor));
+                pg.stroke(255, 180, 50, Math.round(160 * fuLimbFactor)); // Increased alpha
                 pg.push();
                 pg.rotate(PI / 2);
                 pg.beginShape();
@@ -1829,9 +1829,9 @@ class Planet {
 
                 // Central Plasma Node - subtle
                 pg.noStroke();
-                pg.fill(200, 220, 255, Math.round(50 * fuLimbFactor)); // Very faint blue core
+                pg.fill(200, 220, 255, Math.round(100 * fuLimbFactor)); // Increased alpha
                 pg.ellipse(0, 0, fuSize * 0.5, fuSize * 0.5);
-                pg.fill(255, 255, 255, Math.round(150 * fuLimbFactor)); // Hot center
+                pg.fill(255, 255, 255, Math.round(200 * fuLimbFactor)); // Hot center
                 pg.ellipse(0, 0, fuSize * 0.15, fuSize * 0.15);
 
                 pg.pop();
@@ -1865,13 +1865,13 @@ class Planet {
 
                 // Central large dome - bright green outline with hexagonal pattern
                 const mainDomeR = clusterSize * 0.45;
-                pg.stroke(80, 220, 120, Math.round(110 * bdLimbFactor)); // Reduced alpha
+                pg.stroke(80, 220, 120, Math.round(160 * bdLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * bdScale));
                 pg.noFill();
                 pg.ellipse(0, 0, mainDomeR * 2, mainDomeR * 2);
 
                 // Hexagonal glass panels on main dome
-                pg.stroke(100, 255, 150, Math.round(80 * bdLimbFactor)); // Reduced alpha
+                pg.stroke(100, 255, 150, Math.round(120 * bdLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * bdScale));
                 for (let h = 0; h < 6; h++) {
                     const hAngle = (h / 6) * TWO_PI_CONST;
@@ -1888,11 +1888,11 @@ class Planet {
 
                 // Interior glow - forest green
                 pg.noStroke();
-                pg.fill(50, 180, 90, Math.round(50 * bdLimbFactor)); // Very subtle fill
+                pg.fill(50, 180, 90, Math.round(100 * bdLimbFactor)); // Increased alpha
                 pg.ellipse(0, 0, mainDomeR * 1.6, mainDomeR * 1.6);
 
                 // Central atrium - bright white
-                pg.fill(200, 255, 220, Math.round(100 * bdLimbFactor));
+                pg.fill(200, 255, 220, Math.round(180 * bdLimbFactor)); // Increased alpha
                 pg.ellipse(0, 0, mainDomeR * 0.35, mainDomeR * 0.35);
 
                 // 4 smaller satellite domes around the main one
@@ -1904,25 +1904,25 @@ class Planet {
                     const sdY = Math.sin(sdAngle) * satelliteDist;
 
                     // Satellite dome outline - teal
-                    pg.stroke(60, 200, 160, Math.round(100 * bdLimbFactor));
+                    pg.stroke(60, 200, 160, Math.round(150 * bdLimbFactor)); // Increased alpha
                     pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * bdScale));
                     pg.noFill();
                     pg.ellipse(sdX, sdY, satelliteR * 2, satelliteR * 2);
 
                     // Satellite inner glow
                     pg.noStroke();
-                    pg.fill(70, 190, 130, Math.round(60 * bdLimbFactor));
+                    pg.fill(70, 190, 130, Math.round(120 * bdLimbFactor)); // Increased alpha
                     pg.ellipse(sdX, sdY, satelliteR * 1.5, satelliteR * 1.5);
 
                     // Satellite core - varies color
-                    if (sd === 0) pg.fill(100, 180, 255, Math.round(90 * bdLimbFactor));
-                    else if (sd === 1) pg.fill(40, 160, 60, Math.round(90 * bdLimbFactor));
-                    else if (sd === 2) pg.fill(255, 220, 100, Math.round(90 * bdLimbFactor));
-                    else pg.fill(180, 220, 200, Math.round(90 * bdLimbFactor));
+                    if (sd === 0) pg.fill(100, 180, 255, Math.round(150 * bdLimbFactor));
+                    else if (sd === 1) pg.fill(40, 160, 60, Math.round(150 * bdLimbFactor));
+                    else if (sd === 2) pg.fill(255, 220, 100, Math.round(150 * bdLimbFactor));
+                    else pg.fill(180, 220, 200, Math.round(150 * bdLimbFactor));
                     pg.ellipse(sdX, sdY, satelliteR * 0.6, satelliteR * 0.6);
 
                     // Connecting walkway to main dome - white
-                    pg.stroke(180, 220, 190, Math.round(80 * bdLimbFactor));
+                    pg.stroke(180, 220, 190, Math.round(130 * bdLimbFactor)); // Increased alpha
                     pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * bdScale));
                     pg.line(
                         Math.cos(sdAngle) * mainDomeR, Math.sin(sdAngle) * mainDomeR,
@@ -1932,7 +1932,7 @@ class Planet {
 
                 // Solar collectors on top of main dome - gold
                 pg.noStroke();
-                pg.fill(255, 230, 100, Math.round(100 * bdLimbFactor));
+                pg.fill(255, 230, 100, Math.round(160 * bdLimbFactor)); // Increased alpha
                 pg.ellipse(0, -mainDomeR * 0.3, bandHeight * 1.0 * bdScale, bandHeight * 0.5 * bdScale);
                 pg.ellipse(mainDomeR * 0.4, -mainDomeR * 0.1, bandHeight * 0.6 * bdScale, bandHeight * 0.3 * bdScale);
                 pg.ellipse(-mainDomeR * 0.4, -mainDomeR * 0.1, bandHeight * 0.6 * bdScale, bandHeight * 0.3 * bdScale);
@@ -1968,28 +1968,28 @@ class Planet {
                 const qrBase = bandHeight * 3 * qrScale;
 
                 // Main tower structure - gradient blue to purple
-                pg.stroke(40, 100, 200, Math.round(110 * qrLimbFactor)); // Reduced alpha
+                pg.stroke(40, 100, 200, Math.round(180 * qrLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * qrScale));
                 pg.line(0, 0, 0, -qrHeight * 0.6);
 
-                pg.stroke(80, 80, 220, Math.round(100 * qrLimbFactor));
+                pg.stroke(80, 80, 220, Math.round(160 * qrLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.6, bandHeight * 0.4 * qrScale));
                 pg.line(0, -qrHeight * 0.5, 0, -qrHeight);
 
                 // Main dish - large cyan parabolic
                 pg.noFill();
-                pg.stroke(0, 255, 255, Math.round(120 * qrLimbFactor)); // Reduced alpha
+                pg.stroke(0, 255, 255, Math.round(180 * qrLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.7, bandHeight * 0.4 * qrScale));
                 pg.arc(0, -qrHeight, bandHeight * 5 * qrScale, bandHeight * 3.5 * qrScale, PI, TWO_PI);
 
                 // Secondary dishes - smaller, white
-                pg.stroke(200, 220, 255, Math.round(90 * qrLimbFactor));
+                pg.stroke(200, 220, 255, Math.round(150 * qrLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * qrScale));
                 pg.arc(-bandHeight * 2 * qrScale, -qrHeight * 0.7, bandHeight * 2 * qrScale, bandHeight * 1.5 * qrScale, PI, TWO_PI);
                 pg.arc(bandHeight * 2 * qrScale, -qrHeight * 0.7, bandHeight * 2 * qrScale, bandHeight * 1.5 * qrScale, PI, TWO_PI);
 
                 // Transmission beams - purple laser
-                pg.stroke(180, 100, 255, Math.round(60 * qrLimbFactor));
+                pg.stroke(180, 100, 255, Math.round(120 * qrLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * qrScale));
                 pg.line(0, -qrHeight, 0, -qrHeight - bandHeight * 6 * qrScale);
                 pg.line(0, -qrHeight, -bandHeight * 3 * qrScale, -qrHeight - bandHeight * 5 * qrScale);
@@ -1997,7 +1997,7 @@ class Planet {
 
                 // Signal waves - expanding cyan rings
                 pg.noFill();
-                pg.stroke(100, 255, 255, Math.round(30 * qrLimbFactor)); // very subtle
+                pg.stroke(100, 255, 255, Math.round(80 * qrLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * qrScale));
                 for (let w = 1; w <= 4; w++) {
                     pg.arc(0, -qrHeight, bandHeight * w * 2 * qrScale, bandHeight * w * 1.4 * qrScale, PI + 0.3, TWO_PI - 0.3);
@@ -2005,11 +2005,11 @@ class Planet {
 
                 // Base station complex - multi-level
                 pg.noStroke();
-                pg.fill(60, 100, 180, Math.round(90 * qrLimbFactor));
+                pg.fill(60, 100, 180, Math.round(160 * qrLimbFactor)); // Increased alpha
                 pg.ellipse(0, 0, qrBase * 2, qrBase * 1.5);
-                pg.fill(100, 140, 220, Math.round(100 * qrLimbFactor));
+                pg.fill(100, 140, 220, Math.round(180 * qrLimbFactor)); // Increased alpha
                 pg.ellipse(0, 0, qrBase * 1.4, qrBase * 1.0);
-                pg.fill(150, 180, 255, Math.round(110 * qrLimbFactor));
+                pg.fill(150, 180, 255, Math.round(200 * qrLimbFactor)); // Increased alpha
                 pg.ellipse(0, 0, qrBase * 0.8, qrBase * 0.6);
 
                 pg.pop();
@@ -2042,7 +2042,7 @@ class Planet {
 
                 // Jagged/Irregular Excavation Pit (no longer concentric)
                 pg.noFill();
-                pg.stroke(140, 100, 40, Math.round(100 * mnLimbFactor)); // Reduced alpha
+                pg.stroke(140, 100, 40, Math.round(180 * mnLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * mnScale));
 
                 pg.beginShape();
@@ -2054,7 +2054,7 @@ class Planet {
                 pg.endShape(CLOSE);
 
                 // Inner extraction arms
-                pg.stroke(220, 120, 40, Math.round(80 * mnLimbFactor));
+                pg.stroke(220, 120, 40, Math.round(150 * mnLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * mnScale));
                 for (let arm = 0; arm < 3; arm++) {
                     const angle = (arm / 3) * TWO_PI_CONST;
@@ -2063,11 +2063,11 @@ class Planet {
 
                 // Central deep pit - dark gradient
                 pg.noStroke();
-                pg.fill(60, 40, 20, Math.round(90 * mnLimbFactor));
+                pg.fill(60, 40, 20, Math.round(180 * mnLimbFactor)); // Increased alpha
                 pg.ellipse(0, 0, mnSize * 0.7, mnSize * 0.7);
 
                 // Magma glow at bottom - red/orange, varied
-                pg.fill(255, 100, 30, Math.round(80 * mnLimbFactor));
+                pg.fill(255, 100, 30, Math.round(150 * mnLimbFactor)); // Increased alpha
                 pg.ellipse(0, 0, mnSize * 0.25, mnSize * 0.25);
 
                 // Processing facilities around irregular edge
@@ -2078,12 +2078,12 @@ class Planet {
                     const pfY = Math.sin(pfAngle) * pfDist;
 
                     // Facility building
-                    pg.fill(200, 180, 120, Math.round(100 * mnLimbFactor));
+                    pg.fill(200, 180, 120, Math.round(180 * mnLimbFactor)); // Increased alpha
                     pg.rect(pfX, pfY, bandHeight * 0.8 * mnScale, bandHeight * 0.6 * mnScale);
 
                     // Warning lights - red
                     if (pf % 2 === 0) {
-                        pg.fill(255, 50, 50, Math.round(120 * mnLimbFactor));
+                        pg.fill(255, 50, 50, Math.round(200 * mnLimbFactor)); // Increased alpha
                         pg.ellipse(pfX, pfY, bandHeight * 0.3 * mnScale, bandHeight * 0.3 * mnScale);
                     }
                 }
@@ -2118,7 +2118,7 @@ class Planet {
 
                 // Geometric Cage Containment (not just spheres)
                 pg.noFill();
-                pg.stroke(255, 30, 180, Math.round(80 * amLimbFactor)); // Reduced alpha
+                pg.stroke(255, 30, 180, Math.round(120 * amLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * amScale));
 
                 // Outer Hexagon Cage
@@ -2130,7 +2130,7 @@ class Planet {
                 pg.endShape(CLOSE);
 
                 // Inner Square Cage (rotated)
-                pg.stroke(0, 255, 255, Math.round(90 * amLimbFactor));
+                pg.stroke(0, 255, 255, Math.round(150 * amLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * amScale));
                 pg.push();
                 pg.rotate(PI / 4);
@@ -2139,11 +2139,11 @@ class Planet {
 
                 // Antimatter core - brilliant white center
                 pg.noStroke();
-                pg.fill(255, 240, 255, Math.round(150 * amLimbFactor));
+                pg.fill(255, 240, 255, Math.round(200 * amLimbFactor)); // Increased alpha
                 pg.ellipse(0, 0, amSize * 0.4, amSize * 0.4);
 
                 // Inner glow - hot white-pink
-                pg.fill(255, 200, 255, Math.round(100 * amLimbFactor));
+                pg.fill(255, 200, 255, Math.round(150 * amLimbFactor)); // Increased alpha
                 pg.ellipse(0, 0, amSize * 0.6, amSize * 0.6);
 
                 // Warning markers - alternating red and yellow at hex vertices
@@ -2153,9 +2153,9 @@ class Planet {
                     const wy = Math.sin(wAngle) * amSize * 2.0;
 
                     if (w % 2 === 0) {
-                        pg.fill(255, 50, 50, Math.round(120 * amLimbFactor));
+                        pg.fill(255, 50, 50, Math.round(180 * amLimbFactor)); // Increased alpha
                     } else {
-                        pg.fill(255, 220, 50, Math.round(110 * amLimbFactor));
+                        pg.fill(255, 220, 50, Math.round(160 * amLimbFactor)); // Increased alpha
                     }
                     pg.ellipse(wx, wy, bandHeight * 0.6 * amScale, bandHeight * 0.6 * amScale);
                 }
@@ -2190,19 +2190,19 @@ class Planet {
                 const syHeight = bandHeight * random(6, 9) * syScale;
 
                 // Main structural frame - steel blue
-                pg.stroke(100, 140, 180, Math.round(150 * syLimbFactor)); // Reduced alpha
+                pg.stroke(100, 140, 180, Math.round(180 * syLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * syScale));
                 pg.noFill();
                 pg.rect(-syWidth / 2, -syHeight / 2, syWidth, syHeight);
 
                 // Inner frame - lighter steel
-                pg.stroke(140, 170, 210, Math.round(120 * syLimbFactor));
+                pg.stroke(140, 170, 210, Math.round(160 * syLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * syScale));
                 pg.rect(-syWidth / 2.3, -syHeight / 2.3, syWidth / 1.15, syHeight / 1.15);
 
                 // Drydock bays with ships under construction
                 const numBays = 4;
-                pg.stroke(120, 160, 200, Math.round(100 * syLimbFactor));
+                pg.stroke(120, 160, 200, Math.round(140 * syLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * syScale));
                 for (let bay = 0; bay < numBays; bay++) {
                     const bayX = -syWidth / 2 + (bay + 0.5) * (syWidth / numBays);
@@ -2210,24 +2210,24 @@ class Planet {
 
                     // Ship hull in each bay - grey/silver
                     pg.noStroke();
-                    pg.fill(160, 170, 180, Math.round(120 * syLimbFactor));
+                    pg.fill(160, 170, 180, Math.round(150 * syLimbFactor)); // Increased alpha
                     const shipLen = syHeight * 0.7;
                     const shipW = (syWidth / numBays) * 0.4;
                     pg.ellipse(bayX, 0, shipW, shipLen);
 
                     // Ship lights - orange welding (sparking)
                     if (random() > 0.5) {
-                        pg.fill(255, 150, 50, Math.round(180 * syLimbFactor));
+                        pg.fill(255, 150, 50, Math.round(200 * syLimbFactor)); // Increased alpha
                         pg.ellipse(bayX + random(-shipW / 3, shipW / 3), random(-shipLen / 3, shipLen / 3),
                             bandHeight * 0.4 * syScale, bandHeight * 0.4 * syScale);
                     }
-                    pg.stroke(120, 160, 200, Math.round(100 * syLimbFactor));
+                    pg.stroke(120, 160, 200, Math.round(140 * syLimbFactor)); // Increased alpha
                     pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * syScale));
                 }
 
                 // Work lights - bright white-blue dots
                 pg.noStroke();
-                pg.fill(220, 240, 255, Math.round(160 * syLimbFactor));
+                pg.fill(220, 240, 255, Math.round(180 * syLimbFactor)); // Increased alpha
                 for (let wl = 0; wl < 15; wl++) {
                     const wlX = random(-syWidth / 2.2, syWidth / 2.2);
                     const wlY = random(-syHeight / 2.2, syHeight / 2.2);
@@ -2235,14 +2235,14 @@ class Planet {
                 }
 
                 // Warning lights - yellow blinking
-                pg.fill(255, 220, 50, Math.round(150 * syLimbFactor));
+                pg.fill(255, 220, 50, Math.round(180 * syLimbFactor)); // Increased alpha
                 pg.ellipse(-syWidth / 2, -syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
                 pg.ellipse(syWidth / 2, -syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
                 pg.ellipse(-syWidth / 2, syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
                 pg.ellipse(syWidth / 2, syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
 
                 // Crane arms extending - dark steel with orange tips
-                pg.stroke(80, 110, 150, Math.round(120 * syLimbFactor));
+                pg.stroke(80, 110, 150, Math.round(150 * syLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * syScale));
                 const craneLen = bandHeight * 4 * syScale;
                 pg.line(-syWidth / 2, 0, -syWidth / 2 - craneLen, -craneLen * 0.4);
@@ -2250,7 +2250,7 @@ class Planet {
 
                 // Crane tips - orange
                 pg.noStroke();
-                pg.fill(255, 140, 40, Math.round(150 * syLimbFactor));
+                pg.fill(255, 140, 40, Math.round(200 * syLimbFactor)); // Increased alpha
                 pg.ellipse(-syWidth / 2 - craneLen, -craneLen * 0.4, bandHeight * 0.5 * syScale, bandHeight * 0.5 * syScale);
                 pg.ellipse(syWidth / 2 + craneLen, -craneLen * 0.4, bandHeight * 0.5 * syScale, bandHeight * 0.5 * syScale);
 
@@ -2285,12 +2285,12 @@ class Planet {
                 const asWidth = bandHeight * 0.8 * asScale;
 
                 // Main tower
-                pg.stroke(0, 180, 180, Math.round(150 * asLimbFactor)); // Reduced alpha
+                pg.stroke(0, 180, 180, Math.round(180 * asLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.5, asWidth));
                 pg.line(0, 0, 0, -asHeight);
 
                 // Processing vanes at top
-                pg.stroke(50, 220, 200, Math.round(120 * asLimbFactor));
+                pg.stroke(50, 220, 200, Math.round(150 * asLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * asScale));
                 const vaneSpread = bandHeight * 1.5 * asScale;
                 pg.line(-vaneSpread, -asHeight, vaneSpread, -asHeight);
@@ -2298,8 +2298,8 @@ class Planet {
 
                 // Emission plume - lighter teal
                 pg.noStroke();
-                pg.fill(100, 255, 230, Math.round(50 * asLimbFactor)); // Very subtle plume
-                pg.ellipse(0, -asHeight - bandHeight * asScale, bandHeight * 2 * asScale, bandHeight * 3 * asScale);
+                pg.fill(100, 255, 220, Math.round(120 * asLimbFactor)); // Increased alpha
+                pg.ellipse(0, -asHeight * 1.2, bandHeight * 2 * asScale, bandHeight * 4 * asScale);
 
                 // Base structure
                 pg.fill(0, 150, 160, Math.round(100 * asLimbFactor));
@@ -2335,7 +2335,7 @@ class Planet {
 
                 // Fissure Network (not just a hole)
                 pg.noFill();
-                pg.stroke(200, 50, 20, Math.round(100 * gtLimbFactor)); // Reduced alpha
+                pg.stroke(200, 50, 20, Math.round(150 * gtLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * gtScale));
 
                 // Main cracks
@@ -2350,11 +2350,11 @@ class Planet {
 
                 // Magma glow at center
                 pg.noStroke();
-                pg.fill(255, 100, 30, Math.round(100 * gtLimbFactor));
+                pg.fill(255, 100, 30, Math.round(180 * gtLimbFactor)); // Increased alpha
                 pg.ellipse(0, 0, gtSize * 1.0, gtSize * 1.0);
 
                 // Extraction pipes interlaced with fissures
-                pg.stroke(180, 80, 40, Math.round(120 * gtLimbFactor));
+                pg.stroke(180, 80, 40, Math.round(160 * gtLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * gtScale));
                 for (let ep = 0; ep < 3; ep++) {
                     const epAngle = (ep / 3) * TWO_PI_CONST + PI / 2;
@@ -2366,7 +2366,7 @@ class Planet {
 
                 // Steam vents - lighter colored
                 pg.noStroke();
-                pg.fill(255, 150, 100, Math.round(80 * gtLimbFactor));
+                pg.fill(255, 150, 100, Math.round(120 * gtLimbFactor)); // Increased alpha
                 for (let sv = 0; sv < 3; sv++) {
                     const svAngle = random(0, TWO_PI_CONST);
                     const svDist = gtSize * random(0.8, 1.5);
@@ -2405,7 +2405,7 @@ class Planet {
                 // Large collider - OCTAGONAL/POLYGONAL design
                 const pcRadius = bandHeight * random(4, 6) * pcScale;
                 pg.noFill();
-                pg.stroke(255, 50, 150, Math.round(120 * pcLimbFactor)); // Reduced alpha
+                pg.stroke(255, 50, 150, Math.round(160 * pcLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * pcScale));
 
                 // Octagonal accelerator path
@@ -2417,7 +2417,7 @@ class Planet {
                 pg.endShape(CLOSE);
 
                 // Inner beam tube (smaller polygon)
-                pg.stroke(255, 100, 180, Math.round(100 * pcLimbFactor));
+                pg.stroke(255, 100, 180, Math.round(140 * pcLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * pcScale));
                 pg.beginShape();
                 for (let i = 0; i < 8; i++) {
@@ -2428,7 +2428,7 @@ class Planet {
 
                 // Detector stations at vertices
                 pg.noStroke();
-                pg.fill(255, 150, 200, Math.round(150 * pcLimbFactor));
+                pg.fill(255, 150, 200, Math.round(180 * pcLimbFactor)); // Increased alpha
                 for (let d = 0; d < 8; d++) {
                     const dAngle = (d / 8) * TWO_PI_CONST;
                     const dx = Math.cos(dAngle) * pcRadius;
@@ -2437,7 +2437,7 @@ class Planet {
                 }
 
                 // Energy glow at center collision point
-                pg.fill(255, 80, 180, Math.round(80 * pcLimbFactor));
+                pg.fill(255, 80, 180, Math.round(150 * pcLimbFactor)); // Increased alpha
                 pg.ellipse(0, 0, pcRadius * 0.4, pcRadius * 0.4);
 
                 pg.pop();
@@ -2471,14 +2471,14 @@ class Planet {
                 const dcWidth = bandHeight * random(2, 4) * dcScale;
                 const dcHeight = bandHeight * random(1.5, 2.5) * dcScale;
 
-                pg.stroke(200, 220, 255, Math.round(100 * dcLimbFactor)); // Reduced alpha
+                pg.stroke(200, 220, 255, Math.round(160 * dcLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * dcScale));
                 pg.noFill();
                 pg.rect(-dcWidth / 2, -dcHeight / 2, dcWidth, dcHeight);
 
                 // Blinking status lights - rows of white-blue dots
                 pg.noStroke();
-                pg.fill(220, 240, 255, Math.round(120 * dcLimbFactor));
+                pg.fill(220, 240, 255, Math.round(180 * dcLimbFactor)); // Increased alpha
                 const numRows = 3;
                 const numCols = 5;
                 for (let row = 0; row < numRows; row++) {
@@ -2492,12 +2492,12 @@ class Planet {
                 }
 
                 // Cooling tower on top
-                pg.stroke(180, 200, 240, Math.round(80 * dcLimbFactor));
+                pg.stroke(180, 200, 240, Math.round(140 * dcLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * dcScale));
                 pg.line(0, -dcHeight / 2, 0, -dcHeight / 2 - bandHeight * 1.5 * dcScale);
 
                 // Data transmission beam
-                pg.stroke(150, 200, 255, Math.round(40 * dcLimbFactor));
+                pg.stroke(150, 200, 255, Math.round(100 * dcLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * dcScale));
                 pg.line(0, -dcHeight / 2 - bandHeight * 1.5 * dcScale, 0, -dcHeight / 2 - bandHeight * 4 * dcScale);
 
@@ -2530,11 +2530,11 @@ class Planet {
                 // Central terminal - bright warm white
                 const spSize = bandHeight * random(2.5, 4) * spScale;
                 pg.noStroke();
-                pg.fill(255, 250, 230, Math.round(150 * spLimbFactor)); // Reduced alpha
+                pg.fill(255, 250, 230, Math.round(200 * spLimbFactor)); // Increased alpha
                 pg.ellipse(0, 0, spSize, spSize);
 
                 // Landing pads radiating outward
-                pg.stroke(255, 240, 200, Math.round(100 * spLimbFactor));
+                pg.stroke(255, 240, 200, Math.round(160 * spLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * spScale));
                 const numPads = 6;
                 for (let pad = 0; pad < numPads; pad++) {
@@ -2548,15 +2548,15 @@ class Planet {
 
                     // Landing pad circle
                     pg.noStroke();
-                    pg.fill(255, 245, 210, Math.round(120 * spLimbFactor));
+                    pg.fill(255, 245, 210, Math.round(180 * spLimbFactor)); // Increased alpha
                     pg.ellipse(padX, padY, bandHeight * 0.8 * spScale, bandHeight * 0.8 * spScale);
-                    pg.stroke(255, 240, 200, Math.round(100 * spLimbFactor));
+                    pg.stroke(255, 240, 200, Math.round(160 * spLimbFactor)); // Increased alpha
                     pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * spScale));
                 }
 
                 // Beacon lights - bright yellow
                 pg.noStroke();
-                pg.fill(255, 230, 100, Math.round(180 * spLimbFactor));
+                pg.fill(255, 230, 100, Math.round(220 * spLimbFactor)); // Slightly Increased alpha
                 pg.ellipse(0, 0, bandHeight * 0.5 * spScale, bandHeight * 0.5 * spScale);
 
                 pg.pop();
@@ -2603,18 +2603,18 @@ class Planet {
                     const tHeight = bandHeight * random(1.5, 3) * clScale;
 
                     // Tower
-                    pg.stroke(clR, clG, clB, Math.round(120 * clLimbFactor)); // Reduced alpha
+                    pg.stroke(clR, clG, clB, Math.round(160 * clLimbFactor)); // Increased alpha
                     pg.strokeWeight(Math.max(0.5, bandHeight * 0.4 * clScale));
                     pg.line(tX, tY, tX, tY - tHeight);
 
                     // Tower top glow
                     pg.noStroke();
-                    pg.fill(clR, clG, clB, Math.round(150 * clLimbFactor));
+                    pg.fill(clR, clG, clB, Math.round(180 * clLimbFactor)); // Increased alpha
                     pg.ellipse(tX, tY - tHeight, bandHeight * 0.5 * clScale, bandHeight * 0.5 * clScale);
                 }
 
                 // Connecting skyways between towers
-                pg.stroke(clR, clG, clB, Math.round(60 * clLimbFactor));
+                pg.stroke(clR, clG, clB, Math.round(100 * clLimbFactor)); // Increased alpha
                 pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * clScale));
                 for (let s = 0; s < 5; s++) {
                     const s1Angle = random(0, TWO_PI_CONST);
@@ -2629,7 +2629,7 @@ class Planet {
 
                 // Central plaza glow
                 pg.noStroke();
-                pg.fill(clR, clG, clB, Math.round(50 * clLimbFactor));
+                pg.fill(clR, clG, clB, Math.round(90 * clLimbFactor)); // Increased alpha
                 pg.ellipse(0, 0, clusterRadius * 1.5, clusterRadius * 1.5);
 
                 pg.pop();
