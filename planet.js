@@ -775,7 +775,7 @@ class Planet {
         this._renderMegaStructureSpaceports(pg, r, bufferCenter, this.featureRand, bandHeight);
 
         // 21. ARCOLOGY MEGA-CLUSTERS
-        this._renderMegaStructureArcologyClusters(pg, r, bufferCenter, this.featureRand, bandHeight, primR, primG, primB, secR, secG, secB, accR, accG, accB);
+        this._renderMegaStructureArcologyClusters(pg, r, bufferCenter, this.featureRand, bandHeight);
 
         // No global glow - removing this fixes the offset glow issue
 
@@ -1119,6 +1119,59 @@ class Planet {
 
     // --- Internal Rendering Helpers for renderCityLights ---
 
+    /**
+     * Helper to render a feature at a specific local coordinate with spherical projection and limb fading.
+     * @param {p5.Graphics} pg - Graphics context
+     * @param {number} r - Planet radius
+     * @param {number} bufferCenter - Center of the buffer
+     * @param {number} x - Local X coordinate
+     * @param {number} y - Local Y coordinate
+     * @param {function} drawFn - Function to perform the actual drawing (receives limbFactor and size multiplier)
+     * @param {boolean} useSphericalProjection - Whether to apply spherical projection (default: true)
+     */
+    _renderFeatureAtLocation(pg, r, bufferCenter, x, y, drawFn, useSphericalProjection = true) {
+        if (x * x + y * y > r * r * 0.95) return; // Skip if too close to or beyond the edge
+
+        const limbFactor = this._getLimbFactor(x, y);
+        if (limbFactor < 0.15) return; // Skip if on the far limb
+
+        pg.push();
+        pg.translate(bufferCenter + x, bufferCenter + y);
+        if (useSphericalProjection) {
+            this._applySphericalProjection(pg, x, y, limbFactor);
+        }
+
+        drawFn(limbFactor);
+        pg.pop();
+    }
+
+    /**
+     * Helper to render multiple instances of a feature distributed across the planet surface.
+     * @param {p5.Graphics} pg - Graphics context
+     * @param {number} r - Planet radius
+     * @param {number} bufferCenter - Center of the buffer
+     * @param {number} featureRand - Random seed for this planet
+     * @param {object} params - Distribution parameters (chance, countMin, countMax, distMin, distMax)
+     * @param {function} drawFn - Function to perform the actual drawing
+     */
+    _renderDistributedFeatures(pg, r, bufferCenter, featureRand, params, drawFn) {
+        const { chance = 0.7, countMin = 2, countMax = 5, distMin = 0.3, distMax = 0.8, seedOffset = 0 } = params;
+
+        if ((featureRand * (seedOffset + 13.37)) % 1 > chance) return;
+
+        const count = Math.floor(random(countMin, countMax + 1));
+        for (let i = 0; i < count; i++) {
+            const angle = random(TWO_PI);
+            const dist = random(r * distMin, r * distMax);
+            const x = Math.cos(angle) * dist;
+            const y = Math.sin(angle) * dist;
+
+            this._renderFeatureAtLocation(pg, r, bufferCenter, x, y, (limbFactor) => {
+                drawFn(limbFactor, i, angle, dist);
+            });
+        }
+    }
+
     _applySphericalProjection(pg, x, y, limbFactor) {
         const radAngle = Math.atan2(y, x);
         pg.rotate(radAngle);
@@ -1192,7 +1245,6 @@ class Planet {
 
     _renderCityHubs(pg, r, bufferCenter, cityHubs, bandHeight, noiseScale, featureRand, primR, primG, primB, secR, secG, secB, accR, accG, accB, densityBase) {
         const rSq = r * r;
-        const TWO_PI_CONST = TWO_PI;
         for (let y = -r; y < r; y += bandHeight) {
             const ySq = y * y;
             const bandRSq = rSq - ySq;
@@ -1233,7 +1285,7 @@ class Planet {
                         const dotSize = Math.max(1, (isNearHub ? bandHeight * 0.7 : bandHeight * 0.4) * brightnessMul);
                         pg.ellipse(worldX, worldY, dotSize, dotSize);
                     } else if (structureType < 0.5) {
-                        const lineAngle = (Math.atan2(y, x) + baseNoise * Math.PI) % TWO_PI_CONST;
+                        const lineAngle = (Math.atan2(y, x) + baseNoise * Math.PI) % TWO_PI;
                         pg.stroke(secR, secG, secB, Math.min(255, Math.round(adjBrightness * 0.9)));
                         pg.strokeWeight(bandHeight * 0.4 * brightnessMul);
                         const halfLen = ((isNearHub ? bandHeight * 2 : bandHeight * 1.2) * brightnessMul) * 0.5;
@@ -1267,8 +1319,7 @@ class Planet {
     }
 
     _renderGridOverlay(pg, r, bufferCenter, featureRand, bandHeight, primR, primG, primB, secR, secG, secB) {
-        const TWO_PI_CONST = TWO_PI;
-        const gridAngle = ((featureRand * 13.37) % TWO_PI_CONST) + (this.currentRotation || 0) * 0.12;
+        const gridAngle = ((featureRand * 13.37) % TWO_PI) + (this.currentRotation || 0) * 0.12;
         const baseSpacing = Math.max(8, Math.floor(r * map(this.cityLightsDensity || 0.5, 0.25, 0.9, 0.18, 0.06)));
         const spacing = Math.max(6, Math.round(baseSpacing));
         const segStep = Math.max(4, Math.round(spacing * 0.35));
@@ -1373,46 +1424,37 @@ class Planet {
             pg.pop();
             const tethers = Math.floor(random(3, 6));
             for (let t = 0; t < tethers; t++) {
-                const tA = ringAngle + (t / tethers) * TWO_PI;
-                const sx = Math.cos(tA) * r * 0.9, sy = Math.sin(tA) * r * 0.9;
-                const ox = Math.cos(tA) * ringRadius, oy = Math.sin(tA) * ringRadius * 0.3;
-                pg.stroke(255, 80, 60, 180); pg.strokeWeight(Math.max(0.8, bandHeight * 0.35));
-                pg.line(bufferCenter + sx, bufferCenter + sy, bufferCenter + ox, bufferCenter + oy);
-                pg.noStroke(); pg.fill(255, 100, 80, 220); pg.ellipse(bufferCenter + sx, bufferCenter + sy, bandHeight, bandHeight);
-                pg.fill(255, 60, 40, 100); pg.ellipse(bufferCenter + sx, bufferCenter + sy, bandHeight * 2, bandHeight * 2);
+                const tA = ringAngle + (t / tethers) * TWO_PI, sx = Math.cos(tA) * r * 0.9, sy = Math.sin(tA) * r * 0.9, ox = Math.cos(tA) * ringRadius, oy = Math.sin(tA) * ringRadius * 0.3;
+                this._renderFeatureAtLocation(pg, r, bufferCenter, sx, sy, (limbFactor) => {
+                    pg.stroke(255, 80, 60, Math.round(180 * limbFactor)); pg.strokeWeight(Math.max(0.8, bandHeight * 0.35));
+                    pg.line(0, 0, ox - sx, oy - sy);
+                    pg.noStroke(); pg.fill(255, 100, 80, Math.round(220 * limbFactor)); pg.ellipse(0, 0, bandHeight, bandHeight);
+                    pg.fill(255, 60, 40, Math.round(100 * limbFactor)); pg.ellipse(0, 0, bandHeight * 2, bandHeight * 2);
+                }, false); // No spherical projection for tether base
             }
         }
     }
 
     _renderMegaStructureAgricultural(pg, r, bufferCenter, featureRand, bandHeight, primR, primG, primB, secR, secG, secB) {
-        const numFarmRegions = Math.floor(random(2, 5));
-        for (let fr = 0; fr < numFarmRegions; fr++) {
-            const fA = (featureRand * (fr + 1) * 23.7) % TWO_PI, fD = random(r * 0.4, r * 0.85);
-            const fx = Math.cos(fA) * fD, fy = Math.sin(fA) * fD;
-            if (fx * fx + fy * fy > r * r * 0.9) continue;
-            const fLimb = this._getLimbFactor(fx, fy);
-            if (fLimb < 0.15) continue;
-            const fType = Math.floor((featureRand * (fr + 5) * 11.1) % 3), fScale = random(r * 0.08, r * 0.15) * Math.max(0.3, fLimb);
-            const fSp = fScale * 0.3;
-            pg.push(); pg.translate(bufferCenter + fx, bufferCenter + fy);
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 1.0, countMin: 2, countMax: 4, distMin: 0.4, distMax: 0.85, seedOffset: 23.7
+        }, (limbFactor, i, angle, dist, fx, fy) => {
+            const fType = Math.floor(random(3)), fScale = random(r * 0.08, r * 0.15) * Math.max(0.3, limbFactor), fSp = fScale * 0.3;
             if (fType === 0) {
                 const nC = Math.floor(random(4, 8));
                 for (let c = 0; c < nC; c++) {
-                    const cR = (c + 1) * fSp * Math.max(0.3, fLimb);
-                    pg.noFill(); pg.stroke(primR, primG, primB, Math.round((25 + c * 5) * fLimb)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * fLimb)); pg.ellipse(0, 0, cR * 2, cR * 2);
+                    const cR = (c + 1) * fSp * Math.max(0.3, limbFactor);
+                    pg.noFill(); pg.stroke(primR, primG, primB, Math.round((25 + c * 5) * limbFactor)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * limbFactor)); pg.ellipse(0, 0, cR * 2, cR * 2);
                     const nD = Math.floor(cR * 0.5);
                     for (let d = 0; d < nD; d++) {
-                        const dA = (d / nD) * TWO_PI, dx = Math.cos(dA) * cR, dy = Math.sin(dA) * cR;
-                        const dL = this._getLimbFactor(fx + dx, fy + dy);
-                        if (dL < 0.1) continue;
+                        const dA = (d / nD) * TWO_PI, dx = Math.cos(dA) * cR, dy = Math.sin(dA) * cR, dL = this._getLimbFactor(fx + dx, fy + dy);
                         pg.noStroke(); pg.fill(secR, secG, secB, Math.round(40 * dL)); pg.ellipse(dx, dy, bandHeight * 0.2 * dL, bandHeight * 0.2 * dL);
                     }
                 }
             } else if (fType === 1) {
                 const hS = fSp * 0.6, hR = 8, hC = 8;
                 for (let row = -hR; row < hR; row++) for (let col = -hC; col < hC; col++) {
-                    const xOff = col * hS * 1.5, yOff = row * hS * Math.sqrt(3) + (col % 2) * hS * Math.sqrt(3) * 0.5;
-                    const cL = this._getLimbFactor(fx + xOff, fy + yOff);
+                    const xOff = col * hS * 1.5, yOff = row * hS * Math.sqrt(3) + (col % 2) * hS * Math.sqrt(3) * 0.5, cL = this._getLimbFactor(fx + xOff, fy + yOff);
                     if (cL < 0.1) continue;
                     const sHS = hS * Math.max(0.2, cL); pg.noFill(); pg.stroke(primR, primG, primB, Math.round(35 * cL)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.12 * cL));
                     pg.beginShape(); for (let h = 0; h < 6; h++) pg.vertex(xOff + Math.cos((h / 6) * TWO_PI) * sHS, yOff + Math.sin((h / 6) * TWO_PI) * sHS); pg.endShape(CLOSE);
@@ -1427,834 +1469,311 @@ class Planet {
                     if ((gx + gy) % 2 === 0) { pg.noStroke(); pg.fill(secR, secG, secB, Math.round(45 * cL)); pg.ellipse(rx, ry, bandHeight * 0.25 * cL, bandHeight * 0.25 * cL); }
                 }
             }
-            pg.pop();
-        }
+        });
     }
 
     _renderMegaStructureRadialCities(pg, r, bufferCenter, cityHubs, bandHeight, primR, primG, primB, secR, secG, secB, accR, accG, accB) {
-        const nRC = Math.floor(random(1, 3));
+        const nRC = Math.min(cityHubs.length, Math.floor(random(1, 3)));
         for (let rc = 0; rc < nRC; rc++) {
-            if (rc >= cityHubs.length) break;
-            const hub = cityHubs[rc], hL = this._getLimbFactor(hub.x, hub.y);
-            if (hL < 0.2) continue;
-            const hAS = Math.max(0.3, hL), nS = Math.floor(random(6, 12)), sL = hub.size * random(0.8, 1.2) * Math.max(0.4, hL);
-            for (let sp = 0; sp < nS; sp++) {
-                const sA = (sp / nS) * TWO_PI, sex = hub.x + Math.cos(sA) * sL, sey = hub.y + Math.sin(sA) * sL;
-                const eL = this._getLimbFactor(sex, sey), aL = (hL + eL) * 0.5;
-                pg.stroke(primR, primG, primB, Math.round(140 * aL)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.4 * aL));
-                this._drawCurvedLine(pg, hub.x, hub.y, sex, sey, bufferCenter, r);
-                const nSeg = Math.floor(random(4, 8));
-                for (let seg = 1; seg < nSeg; seg++) {
-                    const t = seg / nSeg, sx = hub.x + Math.cos(sA) * sL * t, sy = hub.y + Math.sin(sA) * sL * t, sLimb = this._getLimbFactor(sx, sy);
-                    if (sLimb < 0.15) continue;
-                    const pA = sA + PI / 2, pL = bandHeight * random(1, 3) * sLimb;
-                    pg.stroke(secR, secG, secB, Math.round(100 * sLimb)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.25 * sLimb));
-                    pg.line(bufferCenter + sx - Math.cos(pA) * pL, bufferCenter + sy - Math.sin(pA) * pL, bufferCenter + sx + Math.cos(pA) * pL, bufferCenter + sy + Math.sin(pA) * pL);
-                    pg.noStroke(); pg.fill(accR, accG, accB, Math.round(160 * sLimb)); pg.ellipse(bufferCenter + sx, bufferCenter + sy, bandHeight * 0.6 * sLimb, bandHeight * 0.6 * sLimb);
+            const hub = cityHubs[rc];
+            this._renderFeatureAtLocation(pg, r, bufferCenter, hub.x, hub.y, (limbFactor, x, y) => {
+                const nS = Math.floor(random(6, 12)), sL = hub.size * random(0.8, 1.2) * Math.max(0.4, limbFactor);
+                for (let sp = 0; sp < nS; sp++) {
+                    const sA = (sp / nS) * TWO_PI, sex = Math.cos(sA) * sL, sey = Math.sin(sA) * sL;
+                    const aL = (limbFactor + this._getLimbFactor(x + sex, y + sey)) * 0.5;
+                    pg.stroke(primR, primG, primB, Math.round(140 * aL)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.4 * aL));
+                    this._drawCurvedLine(pg, 0, 0, sex, sey, bufferCenter + x, r);
+                    const nSeg = Math.floor(random(4, 8));
+                    for (let seg = 1; seg < nSeg; seg++) {
+                        const t = seg / nSeg, sx = Math.cos(sA) * sL * t, sy = Math.sin(sA) * sL * t, sLimb = this._getLimbFactor(x + sx, y + sy);
+                        if (sLimb < 0.15) continue;
+                        const pA = sA + PI / 2, pL = bandHeight * random(1, 3) * sLimb;
+                        pg.stroke(secR, secG, secB, Math.round(100 * sLimb)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.25 * sLimb));
+                        pg.line(sx - Math.cos(pA) * pL, sy - Math.sin(pA) * pL, sx + Math.cos(pA) * pL, sy + Math.sin(pA) * pL);
+                        pg.noStroke(); pg.fill(accR, accG, accB, Math.round(160 * sLimb)); pg.ellipse(sx, sy, bandHeight * 0.6 * sLimb, bandHeight * 0.6 * sLimb);
+                    }
                 }
-            }
-            const nR = Math.floor(random(2, 4));
-            for (let ring = 1; ring <= nR; ring++) {
-                const rR = (ring / nR) * sL;
-                pg.noFill(); pg.stroke(secR, secG, secB, Math.round(80 * hAS)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.3 * hL)); pg.ellipse(bufferCenter + hub.x, bufferCenter + hub.y, rR * 2, rR * 2);
-            }
+                const nR = Math.floor(random(2, 4));
+                for (let ring = 1; ring <= nR; ring++) {
+                    const rR = (ring / nR) * sL; pg.noFill(); pg.stroke(secR, secG, secB, Math.round(80 * limbFactor)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.3 * limbFactor)); pg.ellipse(0, 0, rR * 2, rR * 2);
+                }
+            });
         }
     }
 
     _renderMegaStructureArcologies(pg, r, bufferCenter, featureRand, bandHeight, accR, accG, accB) {
-        const nA = Math.floor(random(1, 4));
-        for (let arc = 0; arc < nA; arc++) {
-            const aA = (featureRand * (arc + 7) * 19.3) % TWO_PI, aD = random(r * 0.3, r * 0.8), ax = Math.cos(aA) * aD, ay = Math.sin(aA) * aD;
-            if (ax * ax + ay * ay > r * r * 0.9) continue;
-            const aL = this._getLimbFactor(ax, ay);
-            if (aL < 0.2) continue;
-            const aS = Math.max(0.3, aL), gS = bandHeight * random(2.5, 4) * aS;
-            pg.push(); pg.translate(bufferCenter + ax, bufferCenter + ay); pg.noStroke();
-            for (let g = 3; g > 0; g--) { pg.fill(accR, accG, accB, Math.round((60 / g) * aL)); pg.ellipse(0, 0, gS * (g / 3), gS * (g / 3)); }
-            pg.fill(accR, accG, accB, Math.round(220 * aL)); pg.ellipse(0, 0, bandHeight * 1.2 * aS, bandHeight * 1.2 * aS);
-            pg.stroke(255, 255, 255, Math.round(180 * aL)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * aS)); const cS = bandHeight * 1.5 * aS; pg.line(-cS, 0, cS, 0); pg.line(0, -cS, 0, cS);
-            pg.pop();
-        }
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 1.0, countMin: 1, countMax: 3, distMin: 0.3, distMax: 0.8, seedOffset: 7.3
+        }, (limbFactor) => {
+            const gS = bandHeight * random(2.5, 4) * Math.max(0.3, limbFactor); pg.noStroke();
+            for (let g = 3; g > 0; g--) { pg.fill(accR, accG, accB, Math.round((60 / g) * limbFactor)); pg.ellipse(0, 0, gS * (g / 3), gS * (g / 3)); }
+            pg.fill(accR, accG, accB, Math.round(220 * limbFactor)); pg.ellipse(0, 0, bandHeight * 1.2 * Math.max(0.3, limbFactor), bandHeight * 1.2 * Math.max(0.3, limbFactor));
+            pg.stroke(255, 255, 255, Math.round(180 * limbFactor)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * Math.max(0.3, limbFactor))); const cS = bandHeight * 1.5 * Math.max(0.3, limbFactor); pg.line(-cS, 0, cS, 0); pg.line(0, -cS, 0, cS);
+        });
     }
 
     _renderMegaStructureIndustrial(pg, r, bufferCenter, featureRand, bandHeight, primR, primG, primB) {
-        const nI = Math.floor(random(2, 5));
-        for (let ind = 0; ind < nI; ind++) {
-            const iA = (featureRand * (ind + 13) * 27.1) % TWO_PI, iD = random(r * 0.4, r * 0.85), ix = Math.cos(iA) * iD, iy = Math.sin(iA) * iD;
-            if (ix * ix + iy * iy > r * r * 0.9) continue;
-            const zL = this._getLimbFactor(ix, iy);
-            if (zL < 0.2) continue;
-            const zS = Math.max(0.3, zL), iS = random(r * 0.04, r * 0.08) * zS, gS = Math.max(1, bandHeight * 0.8 * zS);
-            pg.push(); pg.translate(bufferCenter + ix, bufferCenter + iy);
-            const gE = Math.floor(iS / gS);
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 1.0, countMin: 2, countMax: 4, distMin: 0.4, distMax: 0.85, seedOffset: 13.1
+        }, (limbFactor, i, angle, dist, ix, iy) => {
+            const iS = random(r * 0.04, r * 0.08) * Math.max(0.3, limbFactor), gS = Math.max(1, bandHeight * 0.8 * Math.max(0.3, limbFactor)), gE = Math.floor(iS / gS);
             for (let gx = -gE; gx <= gE; gx++) for (let gy = -gE; gy <= gE; gy++) {
                 const px = gx * gS, py = gy * gS, pL = this._getLimbFactor(ix + px, iy + py);
                 if (pL < 0.1) continue;
                 pg.noStroke(); pg.fill(primR, primG, primB, Math.round(150 * pL)); pg.ellipse(px, py, bandHeight * 0.5 * pL, bandHeight * 0.5 * pL);
             }
-            pg.pop();
-        }
+        });
     }
 
     _renderMegaStructureProcessors(pg, r, bufferCenter, featureRand, bandHeight, secR, secG, secB, accR, accG, accB) {
-        if ((featureRand * 53.7) % 1 > 0.7) {
-            const nP = Math.floor(random(2, 5));
-            for (let proc = 0; proc < nP; proc++) {
-                const pA = (proc / nP) * TWO_PI + random(-0.3, 0.3), pD = random(r * 0.6, r * 0.9), px = Math.cos(pA) * pD, py = Math.sin(pA) * pD;
-                if (px * px + py * py > r * r) continue;
-                const pL = this._getLimbFactor(px, py);
-                if (pL < 0.15) continue;
-                const pS = Math.max(0.25, pL), bPS = bandHeight * random(2, 3) * pS;
-                pg.push(); pg.translate(bufferCenter + px, bufferCenter + py); pg.push(); pg.rotate(PI / 4); pg.noFill(); pg.stroke(accR, accG, accB, Math.round(180 * pL)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * pS)); pg.rect(-bPS / 2, -bPS / 2, bPS, bPS); pg.pop();
-                pg.noStroke(); pg.fill(255, 255, 255, Math.round(200 * pL)); pg.ellipse(0, 0, bandHeight * 0.7 * pS, bandHeight * 0.7 * pS);
-                for (let el = 0; el < 4; el++) { const eA = (el / 4) * TWO_PI, eL = bPS * 1.2; pg.stroke(secR, secG, secB, Math.round(140 * pL)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * pS)); pg.line(0, 0, Math.cos(eA) * eL, Math.sin(eA) * eL); }
-                pg.pop();
-            }
-        }
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 0.7, countMin: 2, countMax: 4, distMin: 0.6, distMax: 0.9, seedOffset: 53.7
+        }, (limbFactor) => {
+            const pS = Math.max(0.25, limbFactor), bPS = bandHeight * random(2, 3) * pS;
+            pg.push(); pg.rotate(PI / 4); pg.noFill(); pg.stroke(accR, accG, accB, Math.round(180 * limbFactor)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * pS)); pg.rect(-bPS / 2, -bPS / 2, bPS, bPS); pg.pop();
+            pg.noStroke(); pg.fill(255, 255, 255, Math.round(200 * limbFactor)); pg.ellipse(0, 0, bandHeight * 0.7 * pS, bandHeight * 0.7 * pS);
+            for (let el = 0; el < 4; el++) { const eA = (el / 4) * TWO_PI, eL = bPS * 1.2; pg.stroke(secR, secG, secB, Math.round(140 * limbFactor)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * pS)); pg.line(0, 0, Math.cos(eA) * eL, Math.sin(eA) * eL); }
+        });
     }
 
     _renderMegaStructureSolarCollectors(pg, r, bufferCenter, featureRand, bandHeight) {
-        if ((featureRand * 47.3) % 1 > 0.7) {
-            const nC = Math.floor(random(2, 5));
-            for (let sc = 0; sc < nC; sc++) {
-                const sA = (sc / nC) * TWO_PI + (featureRand * 3.14), sD = random(r * 0.3, r * 0.7), sx = Math.cos(sA) * sD, sy = Math.sin(sA) * sD;
-                if (sx * sx + sy * sy > r * r * 0.8) continue;
-                const sL = this._getLimbFactor(sx, sy);
-                if (sL < 0.2) continue;
-                const scS = random(0.8, 1.2); pg.push(); pg.translate(bufferCenter + sx, bufferCenter + sy);
-                this._applySphericalProjection(pg, sx, sy, sL);
-                const pS = bandHeight * random(7, 11) * scS; pg.noFill(); pg.stroke(255, 180, 40, Math.round(180 * sL)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * scS));
-                for (let arm = 0; arm < 3; arm++) {
-                    const aSA = (arm / 3) * TWO_PI; pg.beginShape();
-                    for (let p = 0; p < 5; p++) {
-                        const t = p / 4, ang = aSA + t * 2.0, dist = pS * (0.2 + t * 0.8); pg.vertex(Math.cos(ang) * dist, Math.sin(ang) * dist);
-                        if (p > 0) { pg.push(); pg.translate(Math.cos(ang) * dist, Math.sin(ang) * dist); pg.rotate(ang); pg.fill(255, 200, 50, Math.round(120 * sL)); pg.noStroke(); pg.rect(-bandHeight * 0.5 * scS, -bandHeight * 0.3 * scS, bandHeight * scS, bandHeight * 0.6 * scS); pg.pop(); }
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 0.7, countMin: 2, countMax: 4, distMin: 0.3, distMax: 0.7, seedOffset: 47.3
+        }, (limbFactor, i, angle, dist) => {
+            const scS = random(0.8, 1.2);
+            const pS = bandHeight * random(7, 11) * scS;
+            pg.noFill(); pg.stroke(255, 180, 40, Math.round(180 * limbFactor)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * scS));
+            for (let arm = 0; arm < 3; arm++) {
+                const aSA = (arm / 3) * TWO_PI; pg.beginShape();
+                for (let p = 0; p < 5; p++) {
+                    const t = p / 4, ang = aSA + t * 2.0, d = pS * (0.2 + t * 0.8); pg.vertex(Math.cos(ang) * d, Math.sin(ang) * d);
+                    if (p > 0) {
+                        pg.push(); pg.translate(Math.cos(ang) * d, Math.sin(ang) * d); pg.rotate(ang); pg.fill(255, 200, 50, Math.round(120 * limbFactor)); pg.noStroke();
+                        pg.rect(-bandHeight * 0.5 * scS, -bandHeight * 0.3 * scS, bandHeight * scS, bandHeight * 0.6 * scS); pg.pop();
                     }
-                    pg.endShape();
                 }
-                pg.stroke(255, 220, 100, Math.round(200 * sL)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * scS)); pg.noFill(); pg.beginShape();
-                for (let i = 0; i < 3; i++) pg.vertex(Math.cos((i / 3) * TWO_PI - PI / 6) * pS * 0.3, Math.sin((i / 3) * TWO_PI - PI / 6) * pS * 0.3); pg.endShape(CLOSE);
-                pg.noStroke(); pg.fill(255, 255, 220, Math.round(150 * sL)); pg.ellipse(0, 0, pS * 0.15, pS * 0.15);
-                pg.pop();
+                pg.endShape();
             }
-        }
+            pg.stroke(255, 220, 100, Math.round(200 * limbFactor)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * scS)); pg.noFill(); pg.beginShape();
+            for (let j = 0; j < 3; j++) pg.vertex(Math.cos((j / 3) * TWO_PI - PI / 6) * pS * 0.3, Math.sin((j / 3) * TWO_PI - PI / 6) * pS * 0.3); pg.endShape(CLOSE);
+            pg.noStroke(); pg.fill(255, 255, 220, Math.round(150 * limbFactor)); pg.ellipse(0, 0, pS * 0.15, pS * 0.15);
+        });
     }
 
     _renderMegaStructureDefensePlatforms(pg, r, bufferCenter, featureRand, bandHeight) {
-        if ((featureRand * 61.9) % 1 > 0.75) {
-            const nD = Math.floor(random(2, 5));
-            for (let df = 0; df < nD; df++) {
-                const dA = (df / nD) * TWO_PI + random(-0.2, 0.2), dD = random(r * 0.4, r * 0.8), dx = Math.cos(dA) * dD, dy = Math.sin(dA) * dD;
-                if (dx * dx + dy * dy > r * r * 0.85) continue;
-                const dL = this._getLimbFactor(dx, dy);
-                if (dL < 0.2) continue;
-                const dS = random(0.8, 1.2), dfS = bandHeight * random(8, 12) * dS;
-                pg.push(); pg.translate(bufferCenter + dx, bufferCenter + dy);
-                this._applySphericalProjection(pg, dx, dy, dL);
-                pg.stroke(0, 200, 255, Math.round(160 * dL)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * dS)); pg.noFill();
-                pg.beginShape(); for (let t = 0; t < 3; t++) { const tA = (t / 3) * TWO_PI - PI / 2; pg.vertex(Math.cos(tA) * dfS, Math.sin(tA) * dfS); pg.line(0, 0, Math.cos(tA) * dfS, Math.sin(tA) * dfS); } pg.endShape(CLOSE);
-                pg.noStroke(); for (let wt = 0; wt < 3; wt++) {
-                    const wA = (wt / 3) * TWO_PI - PI / 2, wx = Math.cos(wA) * dfS, wy = Math.sin(wA) * dfS;
-                    pg.fill(30, 80, 150, Math.round(180 * dL)); pg.ellipse(wx, wy, bandHeight * 0.8 * dS, bandHeight * 0.8 * dS);
-                    pg.fill(255, 50, 50, Math.round(160 * dL)); pg.ellipse(wx, wy, bandHeight * 0.4 * dS, bandHeight * 0.4 * dS);
-                }
-                pg.fill(200, 240, 255, Math.round(180 * dL)); pg.ellipse(0, 0, dfS * 0.25, dfS * 0.25);
-                pg.stroke(255, 80, 80, Math.round(120 * dL)); pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * dS)); pg.line(0, 0, Math.cos((featureRand * 10) % TWO_PI) * dfS * 2, Math.sin((featureRand * 10) % TWO_PI) * dfS * 2);
-                pg.pop();
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 0.75, countMin: 2, countMax: 4, distMin: 0.4, distMax: 0.8, seedOffset: 61.9
+        }, (limbFactor) => {
+            const dS = random(0.8, 1.2), dfS = bandHeight * random(8, 12) * dS;
+            pg.stroke(0, 200, 255, Math.round(160 * limbFactor)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * dS)); pg.noFill();
+            pg.beginShape(); for (let t = 0; t < 3; t++) { const tA = (t / 3) * TWO_PI - PI / 2; pg.vertex(Math.cos(tA) * dfS, Math.sin(tA) * dfS); pg.line(0, 0, Math.cos(tA) * dfS, Math.sin(tA) * dfS); } pg.endShape(CLOSE);
+            pg.noStroke(); for (let wt = 0; wt < 3; wt++) {
+                const wA = (wt / 3) * TWO_PI - PI / 2, wx = Math.cos(wA) * dfS, wy = Math.sin(wA) * dfS;
+                pg.fill(30, 80, 150, Math.round(180 * limbFactor)); pg.ellipse(wx, wy, bandHeight * 0.8 * dS, bandHeight * 0.8 * dS);
+                pg.fill(255, 50, 50, Math.round(160 * limbFactor)); pg.ellipse(wx, wy, bandHeight * 0.4 * dS, bandHeight * 0.4 * dS);
             }
-        }
+            pg.fill(200, 240, 255, Math.round(180 * limbFactor)); pg.ellipse(0, 0, dfS * 0.25, dfS * 0.25);
+            pg.stroke(255, 80, 80, Math.round(120 * limbFactor)); pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * dS)); pg.line(0, 0, Math.cos((featureRand * 10) % TWO_PI) * dfS * 2, Math.sin((featureRand * 10) % TWO_PI) * dfS * 2);
+        });
     }
 
     _renderMegaStructureRailguns(pg, r, bufferCenter, featureRand, bandHeight) {
-        if ((featureRand * 73.1) % 1 > 0.78) {
-            const nR = Math.floor(random(2, 4));
-            for (let rg = 0; rg < nR; rg++) {
-                const rA = (featureRand * (rg + 1) * 31.7) % TWO_PI, rD = random(r * 0.4, r * 0.75), rx = Math.cos(rA) * rD, ry = Math.sin(rA) * rD;
-                if (rx * rx + ry * ry > r * r * 0.85) continue;
-                const rL = this._getLimbFactor(rx, ry);
-                if (rL < 0.2) continue;
-                const rS = random(0.8, 1.2), rLen = bandHeight * random(12, 18) * rS, rW = bandHeight * 1.5 * rS;
-                pg.push(); pg.translate(bufferCenter + rx, bufferCenter + ry);
-                this._applySphericalProjection(pg, rx, ry, rL);
-                pg.push(); pg.rotate(rA + PI); pg.stroke(140, 80, 200, Math.round(180 * rL)); pg.strokeWeight(Math.max(0.5, rW * 0.3)); pg.line(0, -rW * 0.5, rLen, -rW * 0.5); pg.line(0, rW * 0.5, rLen, rW * 0.5);
-                pg.stroke(0, 220, 255, Math.round(140 * rL)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * rS)); for (let ring = 1; ring <= 6; ring++) pg.line(rLen * (ring / 7), -rW * 0.8, rLen * (ring / 7), rW * 0.8); pg.pop();
-                pg.noStroke(); pg.fill(120, 60, 180, Math.round(150 * rL)); pg.beginShape(); for (let i = 0; i < 6; i++) pg.vertex(Math.cos((i / 6) * TWO_PI) * bandHeight * 2.5 * rS, Math.sin((i / 6) * TWO_PI) * bandHeight * 2.5 * rS); pg.endShape(CLOSE);
-                pg.fill(200, 180, 255, Math.round(180 * rL)); pg.rect(-bandHeight * rS, -bandHeight * rS, bandHeight * 2 * rS, bandHeight * 2 * rS);
-                pg.pop();
-            }
-        }
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 0.78, countMin: 2, countMax: 3, distMin: 0.4, distMax: 0.75, seedOffset: 73.1
+        }, (limbFactor, i, angle) => {
+            const rS = random(0.8, 1.2), rLen = bandHeight * random(12, 18) * rS, rW = bandHeight * 1.5 * rS;
+            pg.push(); pg.rotate(angle + PI); pg.stroke(140, 80, 200, Math.round(180 * limbFactor)); pg.strokeWeight(Math.max(0.5, rW * 0.3)); pg.line(0, -rW * 0.5, rLen, -rW * 0.5); pg.line(0, rW * 0.5, rLen, rW * 0.5);
+            pg.stroke(0, 220, 255, Math.round(140 * limbFactor)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * rS)); for (let ring = 1; ring <= 6; ring++) pg.line(rLen * (ring / 7), -rW * 0.8, rLen * (ring / 7), rW * 0.8); pg.pop();
+            pg.noStroke(); pg.fill(120, 60, 180, Math.round(150 * limbFactor)); pg.beginShape(); for (let j = 0; j < 6; j++) pg.vertex(Math.cos((j / 6) * TWO_PI) * bandHeight * 2.5 * rS, Math.sin((j / 6) * TWO_PI) * bandHeight * 2.5 * rS); pg.endShape(CLOSE);
+            pg.fill(200, 180, 255, Math.round(180 * limbFactor)); pg.rect(-bandHeight * rS, -bandHeight * rS, bandHeight * 2 * rS, bandHeight * 2 * rS);
+        });
     }
 
     _renderMegaStructureFusionArrays(pg, r, bufferCenter, featureRand, bandHeight) {
-        if ((featureRand * 83.7) % 1 > 0.72) {
-            const nF = Math.floor(random(2, 4));
-            for (let fu = 0; fu < nF; fu++) {
-                const fA = (featureRand * (fu + 3) * 17.9) % TWO_PI, fD = random(r * 0.3, r * 0.65), fx = Math.cos(fA) * fD, fy = Math.sin(fA) * fD;
-                if (fx * fx + fy * fy > r * r * 0.8) continue;
-                const fL = this._getLimbFactor(fx, fy);
-                if (fL < 0.2) continue;
-                const fS = random(0.8, 1.2), fuS = bandHeight * random(8, 12) * fS;
-                pg.push(); pg.translate(bufferCenter + fx, bufferCenter + fy);
-                this._applySphericalProjection(pg, fx, fy, fL);
-                pg.noFill(); pg.stroke(255, 120, 20, Math.round(160 * fL)); pg.strokeWeight(Math.max(0.6, bandHeight * 0.3 * fS)); pg.beginShape();
-                for (let i = 0; i <= 30; i++) { const t = (i / 30) * TWO_PI; pg.vertex(Math.cos(t) * fuS, Math.sin(t) * Math.cos(t) * fuS * 0.6); } pg.endShape(CLOSE);
-                pg.stroke(255, 180, 50, Math.round(160 * fL)); pg.push(); pg.rotate(PI / 2); pg.beginShape();
-                for (let i = 0; i <= 30; i++) { const t = (i / 30) * TWO_PI; pg.vertex(Math.cos(t) * fuS * 0.8, Math.sin(t) * Math.cos(t) * fuS * 0.5); } pg.endShape(CLOSE); pg.pop();
-                pg.noStroke(); pg.fill(200, 220, 255, Math.round(100 * fL)); pg.ellipse(0, 0, fuS * 0.5, fuS * 0.5); pg.fill(255, 255, 255, Math.round(200 * fL)); pg.ellipse(0, 0, fuS * 0.15, fuS * 0.15);
-                pg.pop();
-            }
-        }
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 0.72, countMin: 2, countMax: 3, distMin: 0.3, distMax: 0.65, seedOffset: 83.7
+        }, (limbFactor) => {
+            const fS = random(0.8, 1.2), fuS = bandHeight * random(8, 12) * fS;
+            pg.noFill(); pg.stroke(255, 120, 20, Math.round(160 * limbFactor)); pg.strokeWeight(Math.max(0.6, bandHeight * 0.3 * fS)); pg.beginShape();
+            for (let i = 0; i <= 30; i++) { const t = (i / 30) * TWO_PI; pg.vertex(Math.cos(t) * fuS, Math.sin(t) * Math.cos(t) * fuS * 0.6); } pg.endShape(CLOSE);
+            pg.stroke(255, 180, 50, Math.round(160 * limbFactor)); pg.push(); pg.rotate(PI / 2); pg.beginShape();
+            for (let i = 0; i <= 30; i++) { const t = (i / 30) * TWO_PI; pg.vertex(Math.cos(t) * fuS * 0.8, Math.sin(t) * Math.cos(t) * fuS * 0.5); } pg.endShape(CLOSE); pg.pop();
+            pg.noStroke(); pg.fill(200, 220, 255, Math.round(100 * limbFactor)); pg.ellipse(0, 0, fuS * 0.5, fuS * 0.5); pg.fill(255, 255, 255, Math.round(200 * limbFactor)); pg.ellipse(0, 0, fuS * 0.15, fuS * 0.15);
+        });
     }
 
     _renderMegaStructureDomes(pg, r, bufferCenter, featureRand, bandHeight) {
-        if ((featureRand * 91.3) % 1 > 0.68) {
-            const nD = Math.floor(random(2, 5));
-            for (let bd = 0; bd < nD; bd++) {
-                const bA = (featureRand * (bd + 2) * 29.3) % TWO_PI, bD = random(r * 0.25, r * 0.7), bx = Math.cos(bA) * bD, by = Math.sin(bA) * bD;
-                if (bx * bx + by * by > r * r * 0.8) continue;
-                const bL = this._getLimbFactor(bx, by);
-                if (bL < 0.2) continue;
-                const bS = random(0.8, 1.2), cS = bandHeight * random(10, 16) * bS, mDR = cS * 0.45;
-                pg.push(); pg.translate(bufferCenter + bx, bufferCenter + by);
-                this._applySphericalProjection(pg, bx, by, bL);
-                pg.stroke(80, 220, 120, Math.round(160 * bL)); pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * bS)); pg.noFill(); pg.ellipse(0, 0, mDR * 2, mDR * 2);
-                pg.stroke(100, 255, 150, Math.round(120 * bL)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * bS));
-                for (let h = 0; h < 6; h++) { const hA = (h / 6) * TWO_PI, nA = ((h + 1) / 6) * TWO_PI; pg.line(Math.cos(hA) * mDR * 0.5, Math.sin(hA) * mDR * 0.5, Math.cos(hA) * mDR, Math.sin(hA) * mDR); pg.line(Math.cos(hA) * mDR * 0.5, Math.sin(hA) * mDR * 0.5, Math.cos(nA) * mDR * 0.5, Math.sin(nA) * mDR * 0.5); }
-                pg.noStroke(); pg.fill(50, 180, 90, Math.round(100 * bL)); pg.ellipse(0, 0, mDR * 1.6, mDR * 1.6); pg.fill(200, 255, 220, Math.round(180 * bL)); pg.ellipse(0, 0, mDR * 0.35, mDR * 0.35);
-                const sR = mDR * 0.5, sDist = mDR * 1.3;
-                for (let sd = 0; sd < 4; sd++) {
-                    const sdA = (sd / 4) * TWO_PI + PI / 4, sdx = Math.cos(sdA) * sDist, sdy = Math.sin(sdA) * sDist;
-                    pg.stroke(60, 200, 160, Math.round(150 * bL)); pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * bS)); pg.noFill(); pg.ellipse(sdx, sdy, sR * 2, sR * 2);
-                    pg.noStroke(); pg.fill(70, 190, 130, Math.round(120 * bL)); pg.ellipse(sdx, sdy, sR * 1.5, sR * 1.5);
-                    const cols = [[100, 180, 255], [40, 160, 60], [255, 220, 100], [180, 220, 200]];
-                    pg.fill(cols[sd][0], cols[sd][1], cols[sd][2], Math.round(150 * bL)); pg.ellipse(sdx, sdy, sR * 0.6, sR * 0.6);
-                    pg.stroke(180, 220, 190, Math.round(130 * bL)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * bS)); pg.line(Math.cos(sdA) * mDR, Math.sin(sdA) * mDR, sdx - Math.cos(sdA) * sR, sdy - Math.sin(sdA) * sR);
-                }
-                pg.noStroke(); pg.fill(255, 230, 100, Math.round(160 * bL)); pg.ellipse(0, -mDR * 0.3, bandHeight * bS, bandHeight * 0.5 * bS); pg.ellipse(mDR * 0.4, -mDR * 0.1, bandHeight * 0.6 * bS, bandHeight * 0.3 * bS); pg.ellipse(-mDR * 0.4, -mDR * 0.1, bandHeight * 0.6 * bS, bandHeight * 0.3 * bS);
-                pg.pop();
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 0.68, countMin: 2, countMax: 5, distMin: 0.25, distMax: 0.7, seedOffset: 91.3
+        }, (limbFactor) => {
+            const bS = random(0.8, 1.2), cS = bandHeight * random(10, 16) * bS, mDR = cS * 0.45;
+            pg.stroke(80, 220, 120, Math.round(160 * limbFactor)); pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * bS)); pg.noFill(); pg.ellipse(0, 0, mDR * 2, mDR * 2);
+            pg.stroke(100, 255, 150, Math.round(120 * limbFactor)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * bS));
+            for (let h = 0; h < 6; h++) { const hA = (h / 6) * TWO_PI, nA = ((h + 1) / 6) * TWO_PI; pg.line(Math.cos(hA) * mDR * 0.5, Math.sin(hA) * mDR * 0.5, Math.cos(hA) * mDR, Math.sin(hA) * mDR); pg.line(Math.cos(hA) * mDR * 0.5, Math.sin(hA) * mDR * 0.5, Math.cos(nA) * mDR * 0.5, Math.sin(nA) * mDR * 0.5); }
+            pg.noStroke(); pg.fill(50, 180, 90, Math.round(100 * limbFactor)); pg.ellipse(0, 0, mDR * 1.6, mDR * 1.6); pg.fill(200, 255, 220, Math.round(180 * limbFactor)); pg.ellipse(0, 0, mDR * 0.35, mDR * 0.35);
+            const sR = mDR * 0.5, sDist = mDR * 1.3;
+            for (let sd = 0; sd < 4; sd++) {
+                const sdA = (sd / 4) * TWO_PI + PI / 4, sdx = Math.cos(sdA) * sDist, sdy = Math.sin(sdA) * sDist;
+                pg.stroke(60, 200, 160, Math.round(150 * limbFactor)); pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * bS)); pg.noFill(); pg.ellipse(sdx, sdy, sR * 2, sR * 2);
+                pg.noStroke(); pg.fill(70, 190, 130, Math.round(120 * limbFactor)); pg.ellipse(sdx, sdy, sR * 1.5, sR * 1.5);
+                const cols = [[100, 180, 255], [40, 160, 60], [255, 220, 100], [180, 220, 200]];
+                pg.fill(cols[sd][0], cols[sd][1], cols[sd][2], Math.round(150 * limbFactor)); pg.ellipse(sdx, sdy, sR * 0.6, sR * 0.6);
+                pg.stroke(180, 220, 190, Math.round(130 * limbFactor)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * bS)); pg.line(Math.cos(sdA) * mDR, Math.sin(sdA) * mDR, sdx - Math.cos(sdA) * sR, sdy - Math.sin(sdA) * sR);
             }
-        }
+            pg.noStroke(); pg.fill(255, 230, 100, Math.round(160 * limbFactor)); pg.ellipse(0, -mDR * 0.3, bandHeight * bS, bandHeight * 0.5 * bS); pg.ellipse(mDR * 0.4, -mDR * 0.1, bandHeight * 0.6 * bS, bandHeight * 0.3 * bS); pg.ellipse(-mDR * 0.4, -mDR * 0.1, bandHeight * 0.6 * bS, bandHeight * 0.3 * bS);
+        });
     }
 
     _renderMegaStructureRelays(pg, r, bufferCenter, featureRand, bandHeight) {
-        if ((featureRand * 67.7) % 1 > 0.78) {
-            const numRelays = Math.floor(random(2, 4));
-            for (let qr = 0; qr < numRelays; qr++) {
-                const qrAngle = (featureRand * (qr + 5) * 41.3) % TWO_PI;
-                const qrDist = random(r * 0.35, r * 0.75);
-                const qrX = Math.cos(qrAngle) * qrDist;
-                const qrY = Math.sin(qrAngle) * qrDist;
-
-                if (qrX * qrX + qrY * qrY > r * r * 0.85) continue;
-
-                const qrLimbFactor = this._getLimbFactor(qrX, qrY);
-                if (qrLimbFactor < 0.2) continue;
-                const qrScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + qrX, bufferCenter + qrY);
-                this._applySphericalProjection(pg, qrX, qrY, qrLimbFactor);
-
-                const qrHeight = bandHeight * random(10, 16) * qrScale;
-                const qrBase = bandHeight * 3 * qrScale;
-
-                // Main tower structure
-                pg.stroke(40, 100, 200, Math.round(180 * qrLimbFactor));
-                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * qrScale));
-                pg.line(0, 0, 0, -qrHeight * 0.6);
-
-                pg.stroke(80, 80, 220, Math.round(160 * qrLimbFactor));
-                pg.strokeWeight(Math.max(0.6, bandHeight * 0.4 * qrScale));
-                pg.line(0, -qrHeight * 0.5, 0, -qrHeight);
-
-                // Main dish
-                pg.noFill();
-                pg.stroke(0, 255, 255, Math.round(180 * qrLimbFactor));
-                pg.strokeWeight(Math.max(0.7, bandHeight * 0.4 * qrScale));
-                pg.arc(0, -qrHeight, bandHeight * 5 * qrScale, bandHeight * 3.5 * qrScale, PI, TWO_PI);
-
-                // Secondary dishes
-                pg.stroke(200, 220, 255, Math.round(150 * qrLimbFactor));
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * qrScale));
-                pg.arc(-bandHeight * 2 * qrScale, -qrHeight * 0.7, bandHeight * 2 * qrScale, bandHeight * 1.5 * qrScale, PI, TWO_PI);
-                pg.arc(bandHeight * 2 * qrScale, -qrHeight * 0.7, bandHeight * 2 * qrScale, bandHeight * 1.5 * qrScale, PI, TWO_PI);
-
-                // Transmission beams
-                pg.stroke(180, 100, 255, Math.round(120 * qrLimbFactor));
-                pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * qrScale));
-                pg.line(0, -qrHeight, 0, -qrHeight - bandHeight * 6 * qrScale);
-                pg.line(0, -qrHeight, -bandHeight * 3 * qrScale, -qrHeight - bandHeight * 5 * qrScale);
-                pg.line(0, -qrHeight, bandHeight * 3 * qrScale, -qrHeight - bandHeight * 5 * qrScale);
-
-                // Signal waves
-                pg.noFill();
-                pg.stroke(100, 255, 255, Math.round(80 * qrLimbFactor));
-                pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * qrScale));
-                for (let w = 1; w <= 4; w++) {
-                    pg.arc(0, -qrHeight, bandHeight * w * 2 * qrScale, bandHeight * w * 1.4 * qrScale, PI + 0.3, TWO_PI - 0.3);
-                }
-
-                // Base station complex
-                pg.noStroke();
-                pg.fill(60, 100, 180, Math.round(160 * qrLimbFactor));
-                pg.ellipse(0, 0, qrBase * 2, qrBase * 1.5);
-                pg.fill(100, 140, 220, Math.round(180 * qrLimbFactor));
-                pg.ellipse(0, 0, qrBase * 1.4, qrBase * 1.0);
-                pg.fill(150, 180, 255, Math.round(200 * qrLimbFactor));
-                pg.ellipse(0, 0, qrBase * 0.8, qrBase * 0.6);
-
-                pg.pop();
-            }
-        }
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 0.78, countMin: 2, countMax: 4, distMin: 0.35, distMax: 0.75, seedOffset: 67.7
+        }, (limbFactor) => {
+            const qrScale = random(0.8, 1.2);
+            const qrHeight = bandHeight * random(10, 16) * qrScale;
+            const qrBase = bandHeight * 3 * qrScale;
+            pg.stroke(40, 100, 200, Math.round(180 * limbFactor)); pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * qrScale)); pg.line(0, 0, 0, -qrHeight * 0.6);
+            pg.stroke(80, 80, 220, Math.round(160 * limbFactor)); pg.strokeWeight(Math.max(0.6, bandHeight * 0.4 * qrScale)); pg.line(0, -qrHeight * 0.5, 0, -qrHeight);
+            pg.noFill(); pg.stroke(0, 255, 255, Math.round(180 * limbFactor)); pg.strokeWeight(Math.max(0.7, bandHeight * 0.4 * qrScale)); pg.arc(0, -qrHeight, bandHeight * 5 * qrScale, bandHeight * 3.5 * qrScale, PI, TWO_PI);
+            pg.stroke(200, 220, 255, Math.round(150 * limbFactor)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * qrScale)); pg.arc(-bandHeight * 2 * qrScale, -qrHeight * 0.7, bandHeight * 2 * qrScale, bandHeight * 1.5 * qrScale, PI, TWO_PI); pg.arc(bandHeight * 2 * qrScale, -qrHeight * 0.7, bandHeight * 2 * qrScale, bandHeight * 1.5 * qrScale, PI, TWO_PI);
+            pg.stroke(180, 100, 255, Math.round(120 * limbFactor)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * qrScale)); pg.line(0, -qrHeight, 0, -qrHeight - bandHeight * 6 * qrScale); pg.line(0, -qrHeight, -bandHeight * 3 * qrScale, -qrHeight - bandHeight * 5 * qrScale); pg.line(0, -qrHeight, bandHeight * 3 * qrScale, -qrHeight - bandHeight * 5 * qrScale);
+            pg.noFill(); pg.stroke(100, 255, 255, Math.round(80 * limbFactor)); pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * qrScale)); for (let w = 1; w <= 4; w++) pg.arc(0, -qrHeight, bandHeight * w * 2 * qrScale, bandHeight * w * 1.4 * qrScale, PI + 0.3, TWO_PI - 0.3);
+            pg.noStroke(); pg.fill(60, 100, 180, Math.round(160 * limbFactor)); pg.ellipse(0, 0, qrBase * 2, qrBase * 1.5); pg.fill(100, 140, 220, Math.round(180 * limbFactor)); pg.ellipse(0, 0, qrBase * 1.4, qrBase * 1.0); pg.fill(150, 180, 255, Math.round(200 * limbFactor)); pg.ellipse(0, 0, qrBase * 0.8, qrBase * 0.6);
+        });
     }
 
     _renderMegaStructureMines(pg, r, bufferCenter, featureRand, bandHeight) {
-        if ((featureRand * 79.1) % 1 > 0.7) {
-            const numMines = Math.floor(random(2, 5));
-            for (let mn = 0; mn < numMines; mn++) {
-                const mnAngle = (featureRand * (mn + 7) * 23.7) % TWO_PI;
-                const mnDist = random(r * 0.4, r * 0.8);
-                const mnX = Math.cos(mnAngle) * mnDist;
-                const mnY = Math.sin(mnAngle) * mnDist;
-
-                if (mnX * mnX + mnY * mnY > r * r * 0.85) continue;
-
-                const mnLimbFactor = this._getLimbFactor(mnX, mnY);
-                if (mnLimbFactor < 0.2) continue;
-                const mnScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + mnX, bufferCenter + mnY);
-                this._applySphericalProjection(pg, mnX, mnY, mnLimbFactor);
-
-                const mnSize = bandHeight * random(10, 15) * mnScale;
-
-                // Jagged Pit
-                pg.noFill();
-                pg.stroke(140, 100, 40, Math.round(180 * mnLimbFactor));
-                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * mnScale));
-
-                pg.beginShape();
-                for (let i = 0; i < 8; i++) {
-                    const angle = (i / 8) * TWO_PI;
-                    const d = mnSize * (1.0 + random(-0.2, 0.2));
-                    pg.vertex(Math.cos(angle) * d, Math.sin(angle) * d);
-                }
-                pg.endShape(CLOSE);
-
-                // Extraction arms
-                pg.stroke(220, 120, 40, Math.round(150 * mnLimbFactor));
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * mnScale));
-                for (let arm = 0; arm < 3; arm++) {
-                    const angle = (arm / 3) * TWO_PI;
-                    pg.line(0, 0, Math.cos(angle) * mnSize * 1.2, Math.sin(angle) * mnSize * 1.2);
-                }
-
-                // Central deep pit
-                pg.noStroke();
-                pg.fill(60, 40, 20, Math.round(180 * mnLimbFactor));
-                pg.ellipse(0, 0, mnSize * 0.7, mnSize * 0.7);
-
-                // Magma glow
-                pg.fill(255, 100, 30, Math.round(150 * mnLimbFactor));
-                pg.ellipse(0, 0, mnSize * 0.25, mnSize * 0.25);
-
-                // Processing facilities
-                for (let pf = 0; pf < 6; pf++) {
-                    const pfAngle = (pf / 6) * TWO_PI + random(0.5);
-                    const pfDist = mnSize * random(1.1, 1.4);
-                    const pfX = Math.cos(pfAngle) * pfDist;
-                    const pfY = Math.sin(pfAngle) * pfDist;
-                    pg.fill(200, 180, 120, Math.round(180 * mnLimbFactor));
-                    pg.rect(pfX, pfY, bandHeight * 0.8 * mnScale, bandHeight * 0.6 * mnScale);
-                    if (pf % 2 === 0) {
-                        pg.fill(255, 50, 50, Math.round(200 * mnLimbFactor));
-                        pg.ellipse(pfX, pfY, bandHeight * 0.3 * mnScale, bandHeight * 0.3 * mnScale);
-                    }
-                }
-
-                pg.pop();
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 0.7, countMin: 2, countMax: 5, distMin: 0.4, distMax: 0.8, seedOffset: 79.1
+        }, (limbFactor) => {
+            const mnScale = random(0.8, 1.2), mnSize = bandHeight * random(10, 15) * mnScale;
+            pg.noFill(); pg.stroke(140, 100, 40, Math.round(180 * limbFactor)); pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * mnScale)); pg.beginShape();
+            for (let i = 0; i < 8; i++) { const angle = (i / 8) * TWO_PI; const d = mnSize * (1.0 + random(-0.2, 0.2)); pg.vertex(Math.cos(angle) * d, Math.sin(angle) * d); } pg.endShape(CLOSE);
+            pg.stroke(220, 120, 40, Math.round(150 * limbFactor)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * mnScale)); for (let arm = 0; arm < 3; arm++) { const angle = (arm / 3) * TWO_PI; pg.line(0, 0, Math.cos(angle) * mnSize * 1.2, Math.sin(angle) * mnSize * 1.2); }
+            pg.noStroke(); pg.fill(60, 40, 20, Math.round(180 * limbFactor)); pg.ellipse(0, 0, mnSize * 0.7, mnSize * 0.7); pg.fill(255, 100, 30, Math.round(150 * limbFactor)); pg.ellipse(0, 0, mnSize * 0.25, mnSize * 0.25);
+            for (let pf = 0; pf < 6; pf++) {
+                const pfAngle = (pf / 6) * TWO_PI + random(0.5); const pfDist = mnSize * random(1.1, 1.4); const pfX = Math.cos(pfAngle) * pfDist, pfY = Math.sin(pfAngle) * pfDist;
+                pg.fill(200, 180, 120, Math.round(180 * limbFactor)); pg.rect(pfX, pfY, bandHeight * 0.8 * mnScale, bandHeight * 0.6 * mnScale);
+                if (pf % 2 === 0) { pg.fill(255, 50, 50, Math.round(200 * limbFactor)); pg.ellipse(pfX, pfY, bandHeight * 0.3 * mnScale, bandHeight * 0.3 * mnScale); }
             }
-        }
+        });
     }
 
     _renderMegaStructureAntimatter(pg, r, bufferCenter, featureRand, bandHeight) {
-        if ((featureRand * 97.3) % 1 > 0.78) {
-            const numAntimatter = Math.floor(random(2, 4));
-            for (let am = 0; am < numAntimatter; am++) {
-                const amAngle = (featureRand * (am + 11) * 37.9) % TWO_PI;
-                const amDist = random(r * 0.3, r * 0.65);
-                const amX = Math.cos(amAngle) * amDist;
-                const amY = Math.sin(amAngle) * amDist;
-
-                if (amX * amX + amY * amY > r * r * 0.8) continue;
-
-                const amLimbFactor = this._getLimbFactor(amX, amY);
-                if (amLimbFactor < 0.2) continue;
-                const amScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + amX, bufferCenter + amY);
-                this._applySphericalProjection(pg, amX, amY, amLimbFactor);
-
-                const amSize = bandHeight * random(8, 12) * amScale;
-
-                // Geometric Cage
-                pg.noFill();
-                pg.stroke(255, 30, 180, Math.round(120 * amLimbFactor));
-                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * amScale));
-
-                pg.beginShape();
-                for (let i = 0; i < 6; i++) {
-                    const a = (i / 6) * TWO_PI;
-                    pg.vertex(Math.cos(a) * amSize * 2.0, Math.sin(a) * amSize * 2.0);
-                }
-                pg.endShape(CLOSE);
-
-                pg.stroke(0, 255, 255, Math.round(150 * amLimbFactor));
-                pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * amScale));
-                pg.push();
-                pg.rotate(PI / 4);
-                pg.rect(-amSize * 1.2, -amSize * 1.2, amSize * 2.4, amSize * 2.4);
-                pg.pop();
-
-                // Core
-                pg.noStroke();
-                pg.fill(255, 240, 255, Math.round(200 * amLimbFactor));
-                pg.ellipse(0, 0, amSize * 0.4, amSize * 0.4);
-                pg.fill(255, 200, 255, Math.round(150 * amLimbFactor));
-                pg.ellipse(0, 0, amSize * 0.6, amSize * 0.6);
-
-                // Warning markers
-                for (let w = 0; w < 6; w++) {
-                    const wAngle = (w / 6) * TWO_PI;
-                    const wx = Math.cos(wAngle) * amSize * 2.0, wy = Math.sin(wAngle) * amSize * 2.0;
-                    pg.fill(w % 2 === 0 ? color(255, 50, 50, Math.round(180 * amLimbFactor)) : color(255, 220, 50, Math.round(160 * amLimbFactor)));
-                    pg.ellipse(wx, wy, bandHeight * 0.6 * amScale, bandHeight * 0.6 * amScale);
-                }
-
-                pg.pop();
-            }
-        }
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 0.78, countMin: 2, countMax: 3, distMin: 0.3, distMax: 0.65, seedOffset: 97.3
+        }, (limbFactor) => {
+            const amScale = random(0.8, 1.2), amSize = bandHeight * random(8, 12) * amScale;
+            pg.noFill(); pg.stroke(255, 30, 180, Math.round(120 * limbFactor)); pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * amScale));
+            pg.beginShape(); for (let i = 0; i < 6; i++) { const a = (i / 6) * TWO_PI; pg.vertex(Math.cos(a) * amSize * 2.0, Math.sin(a) * amSize * 2.0); } pg.endShape(CLOSE);
+            pg.stroke(0, 255, 255, Math.round(150 * limbFactor)); pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * amScale)); pg.push(); pg.rotate(PI / 4); pg.rect(-amSize * 1.2, -amSize * 1.2, amSize * 2.4, amSize * 2.4); pg.pop();
+            pg.noStroke(); pg.fill(255, 240, 255, Math.round(200 * limbFactor)); pg.ellipse(0, 0, amSize * 0.4, amSize * 0.4); pg.fill(255, 200, 255, Math.round(150 * limbFactor)); pg.ellipse(0, 0, amSize * 0.6, amSize * 0.6);
+            for (let w = 0; w < 6; w++) { const wA = (w / 6) * TWO_PI; const wx = Math.cos(wA) * amSize * 2.0, wy = Math.sin(wA) * amSize * 2.0; pg.fill(w % 2 === 0 ? color(255, 50, 50, Math.round(180 * limbFactor)) : color(255, 220, 50, Math.round(160 * limbFactor))); pg.ellipse(wx, wy, bandHeight * 0.6 * amScale, bandHeight * 0.6 * amScale); }
+        });
     }
 
     _renderMegaStructureShipyards(pg, r, bufferCenter, featureRand, bandHeight) {
-        if ((featureRand * 103.7) % 1 > 0.74) {
-            const numShipyards = Math.floor(random(1, 4));
-            for (let sy = 0; sy < numShipyards; sy++) {
-                const syAngle = (featureRand * (sy + 13) * 43.1) % TWO_PI;
-                const syDist = random(r * 0.4, r * 0.8);
-                const syX = Math.cos(syAngle) * syDist;
-                const syY = Math.sin(syAngle) * syDist;
-
-                if (syX * syX + syY * syY > r * r * 0.85) continue;
-
-                const syLimbFactor = this._getLimbFactor(syX, syY);
-                if (syLimbFactor < 0.2) continue;
-                const syScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + syX, bufferCenter + syY);
-                this._applySphericalProjection(pg, syX, syY, syLimbFactor);
-
-                const syWidth = bandHeight * random(14, 20) * syScale;
-                const syHeight = bandHeight * random(6, 9) * syScale;
-
-                // Frame
-                pg.stroke(100, 140, 180, Math.round(180 * syLimbFactor));
-                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * syScale));
-                pg.noFill();
-                pg.rect(-syWidth / 2, -syHeight / 2, syWidth, syHeight);
-                pg.stroke(140, 170, 210, Math.round(160 * syLimbFactor));
-                pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * syScale));
-                pg.rect(-syWidth / 2.3, -syHeight / 2.3, syWidth / 1.15, syHeight / 1.15);
-
-                // Bays
-                const numBays = 4;
-                for (let bay = 0; bay < numBays; bay++) {
-                    const bayX = -syWidth / 2 + (bay + 0.5) * (syWidth / numBays);
-                    pg.stroke(120, 160, 200, Math.round(140 * syLimbFactor));
-                    pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * syScale));
-                    pg.line(bayX, -syHeight / 2, bayX, syHeight / 2);
-
-                    pg.noStroke();
-                    pg.fill(160, 170, 180, Math.round(150 * syLimbFactor));
-                    const shipLen = syHeight * 0.7, shipW = (syWidth / numBays) * 0.4;
-                    pg.ellipse(bayX, 0, shipW, shipLen);
-
-                    if (random() > 0.5) {
-                        pg.fill(255, 150, 50, Math.round(200 * syLimbFactor));
-                        pg.ellipse(bayX + random(-shipW / 3, shipW / 3), random(-shipLen / 3, shipLen / 3), bandHeight * 0.4 * syScale, bandHeight * 0.4 * syScale);
-                    }
-                }
-
-                // Lights
-                pg.noStroke();
-                pg.fill(220, 240, 255, Math.round(180 * syLimbFactor));
-                for (let wl = 0; wl < 15; wl++) pg.ellipse(random(-syWidth / 2.2, syWidth / 2.2), random(-syHeight / 2.2, syHeight / 2.2), bandHeight * 0.4 * syScale, bandHeight * 0.4 * syScale);
-
-                pg.fill(255, 220, 50, Math.round(180 * syLimbFactor));
-                pg.ellipse(-syWidth / 2, -syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
-                pg.ellipse(syWidth / 2, -syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
-                pg.ellipse(-syWidth / 2, syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
-                pg.ellipse(syWidth / 2, syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
-
-                // Cranes
-                pg.stroke(80, 110, 150, Math.round(150 * syLimbFactor));
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * syScale));
-                const craneLen = bandHeight * 4 * syScale;
-                pg.line(-syWidth / 2, 0, -syWidth / 2 - craneLen, -craneLen * 0.4);
-                pg.line(syWidth / 2, 0, syWidth / 2 + craneLen, -craneLen * 0.4);
-                pg.noStroke();
-                pg.fill(255, 140, 40, Math.round(200 * syLimbFactor));
-                pg.ellipse(-syWidth / 2 - craneLen, -craneLen * 0.4, bandHeight * 0.5 * syScale, bandHeight * 0.5 * syScale);
-                pg.ellipse(syWidth / 2 + craneLen, -craneLen * 0.4, bandHeight * 0.5 * syScale, bandHeight * 0.5 * syScale);
-
-                pg.pop();
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 0.74, countMin: 1, countMax: 3, distMin: 0.4, distMax: 0.8, seedOffset: 103.7
+        }, (limbFactor) => {
+            const syScale = random(0.8, 1.2), syWidth = bandHeight * random(14, 20) * syScale, syHeight = bandHeight * random(6, 9) * syScale;
+            pg.stroke(100, 140, 180, Math.round(180 * limbFactor)); pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * syScale)); pg.noFill(); pg.rect(-syWidth / 2, -syHeight / 2, syWidth, syHeight);
+            pg.stroke(140, 170, 210, Math.round(160 * limbFactor)); pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * syScale)); pg.rect(-syWidth / 2.3, -syHeight / 2.3, syWidth / 1.15, syHeight / 1.15);
+            const numBays = 4;
+            for (let bay = 0; bay < numBays; bay++) {
+                const bayX = -syWidth / 2 + (bay + 0.5) * (syWidth / numBays); pg.stroke(120, 160, 200, Math.round(140 * limbFactor)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * syScale)); pg.line(bayX, -syHeight / 2, bayX, syHeight / 2);
+                pg.noStroke(); pg.fill(160, 170, 180, Math.round(150 * limbFactor)); const shipLen = syHeight * 0.7, shipW = (syWidth / numBays) * 0.4; pg.ellipse(bayX, 0, shipW, shipLen);
+                if (random() > 0.5) { pg.fill(255, 150, 50, Math.round(200 * limbFactor)); pg.ellipse(bayX + random(-shipW / 3, shipW / 3), random(-shipLen / 3, shipLen / 3), bandHeight * 0.4 * syScale, bandHeight * 0.4 * syScale); }
             }
-        }
+            pg.noStroke(); pg.fill(220, 240, 255, Math.round(180 * limbFactor)); for (let wl = 0; wl < 15; wl++) pg.ellipse(random(-syWidth / 2.2, syWidth / 2.2), random(-syHeight / 2.2, syHeight / 2.2), bandHeight * 0.4 * syScale, bandHeight * 0.4 * syScale);
+            pg.fill(255, 220, 50, Math.round(180 * limbFactor)); pg.ellipse(-syWidth / 2, -syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale); pg.ellipse(syWidth / 2, -syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale); pg.ellipse(-syWidth / 2, syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale); pg.ellipse(syWidth / 2, syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
+            pg.stroke(80, 110, 150, Math.round(150 * limbFactor)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * syScale)); const craneLen = bandHeight * 4 * syScale; pg.line(-syWidth / 2, 0, -syWidth / 2 - craneLen, -craneLen * 0.4); pg.line(syWidth / 2, 0, syWidth / 2 + craneLen, -craneLen * 0.4);
+            pg.noStroke(); pg.fill(255, 140, 40, Math.round(200 * limbFactor)); pg.ellipse(-syWidth / 2 - craneLen, -craneLen * 0.4, bandHeight * 0.5 * syScale, bandHeight * 0.5 * syScale); pg.ellipse(syWidth / 2 + craneLen, -craneLen * 0.4, bandHeight * 0.5 * syScale, bandHeight * 0.5 * syScale);
+        });
     }
 
     _renderMegaStructureScrubbers(pg, r, bufferCenter, featureRand, bandHeight) {
-        if ((featureRand * 109.1) % 1 > 0.74) {
-            const numScrubbers = Math.floor(random(4, 8));
-            for (let as = 0; as < numScrubbers; as++) {
-                const asAngle = (featureRand * (as + 17) * 29.7) % TWO_PI;
-                const asDist = random(r * 0.3, r * 0.8);
-                const asX = Math.cos(asAngle) * asDist, asY = Math.sin(asAngle) * asDist;
-
-                if (asX * asX + asY * asY > r * r * 0.9) continue;
-
-                const asLimbFactor = this._getLimbFactor(asX, asY);
-                if (asLimbFactor < 0.15) continue;
-                const asScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + asX, bufferCenter + asY);
-                this._applySphericalProjection(pg, asX, asY, asLimbFactor);
-
-                const asHeight = bandHeight * random(3, 5) * asScale, asWidth = bandHeight * 0.8 * asScale;
-                pg.stroke(0, 180, 180, Math.round(180 * asLimbFactor));
-                pg.strokeWeight(Math.max(0.5, asWidth));
-                pg.line(0, 0, 0, -asHeight);
-
-                pg.stroke(50, 220, 200, Math.round(150 * asLimbFactor));
-                pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * asScale));
-                const vaneSpread = bandHeight * 1.5 * asScale;
-                pg.line(-vaneSpread, -asHeight, vaneSpread, -asHeight);
-                pg.line(-vaneSpread * 0.6, -asHeight * 0.7, vaneSpread * 0.6, -asHeight * 0.7);
-
-                pg.noStroke();
-                pg.fill(100, 255, 220, Math.round(120 * asLimbFactor));
-                pg.ellipse(0, -asHeight * 1.2, bandHeight * 2 * asScale, bandHeight * 4 * asScale);
-                pg.fill(0, 150, 160, Math.round(100 * asLimbFactor));
-                pg.ellipse(0, 0, bandHeight * 1.5 * asScale, bandHeight * 1.5 * asScale);
-
-                pg.pop();
-            }
-        }
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 0.74, countMin: 4, countMax: 7, distMin: 0.3, distMax: 0.8, seedOffset: 109.1
+        }, (limbFactor) => {
+            const asScale = random(0.8, 1.2), asHeight = bandHeight * random(3, 5) * asScale, asWidth = bandHeight * 0.8 * asScale;
+            pg.stroke(0, 180, 180, Math.round(180 * limbFactor)); pg.strokeWeight(Math.max(0.5, asWidth)); pg.line(0, 0, 0, -asHeight);
+            pg.stroke(50, 220, 200, Math.round(150 * limbFactor)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * asScale)); const vaneSpread = bandHeight * 1.5 * asScale; pg.line(-vaneSpread, -asHeight, vaneSpread, -asHeight); pg.line(-vaneSpread * 0.6, -asHeight * 0.7, vaneSpread * 0.6, -asHeight * 0.7);
+            pg.noStroke(); pg.fill(100, 255, 220, Math.round(120 * limbFactor)); pg.ellipse(0, -asHeight * 1.2, bandHeight * 2 * asScale, bandHeight * 4 * asScale); pg.fill(0, 150, 160, Math.round(100 * limbFactor)); pg.ellipse(0, 0, bandHeight * 1.5 * asScale, bandHeight * 1.5 * asScale);
+        });
     }
 
     _renderMegaStructureGeothermal(pg, r, bufferCenter, featureRand, bandHeight) {
-        if ((featureRand * 113.9) % 1 > 0.78) {
-            const numGeothermal = Math.floor(random(3, 6));
-            for (let gt = 0; gt < numGeothermal; gt++) {
-                const gtAngle = (featureRand * (gt + 19) * 31.3) % TWO_PI;
-                const gtDist = random(r * 0.4, r * 0.8);
-                const gtX = Math.cos(gtAngle) * gtDist;
-                const gtY = Math.sin(gtAngle) * gtDist;
-
-                if (gtX * gtX + gtY * gtY > r * r * 0.9) continue;
-
-                const gtLimbFactor = this._getLimbFactor(gtX, gtY);
-                if (gtLimbFactor < 0.2) continue;
-                const gtScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + gtX, bufferCenter + gtY);
-                this._applySphericalProjection(pg, gtX, gtY, gtLimbFactor);
-
-                const gtSize = bandHeight * random(2, 4) * gtScale;
-
-                // Fissure Network
-                pg.noFill();
-                pg.stroke(200, 50, 20, Math.round(150 * gtLimbFactor));
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * gtScale));
-
-                for (let i = 0; i < 3; i++) {
-                    const angle = (i / 3) * TWO_PI + random(0.5);
-                    pg.beginShape();
-                    pg.vertex(0, 0);
-                    pg.vertex(Math.cos(angle) * gtSize * 1.5, Math.sin(angle) * gtSize * 1.5);
-                    pg.vertex(Math.cos(angle + 0.2) * gtSize * 2.5, Math.sin(angle + 0.2) * gtSize * 2.5);
-                    pg.endShape();
-                }
-
-                // Magma glow
-                pg.noStroke();
-                pg.fill(255, 100, 30, Math.round(180 * gtLimbFactor));
-                pg.ellipse(0, 0, gtSize * 1.0, gtSize * 1.0);
-
-                // Extraction pipes
-                pg.stroke(180, 80, 40, Math.round(160 * gtLimbFactor));
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * gtScale));
-                for (let ep = 0; ep < 3; ep++) {
-                    const epAngle = (ep / 3) * TWO_PI + PI / 2;
-                    pg.line(
-                        Math.cos(epAngle) * gtSize * 0.2, Math.sin(epAngle) * gtSize * 0.2,
-                        Math.cos(epAngle) * gtSize * 1.8, Math.sin(epAngle) * gtSize * 1.8
-                    );
-                }
-
-                // Steam vents
-                pg.noStroke();
-                pg.fill(255, 150, 100, Math.round(120 * gtLimbFactor));
-                for (let sv = 0; sv < 3; sv++) {
-                    const svAngle = random(0, TWO_PI);
-                    const svDist = gtSize * random(0.8, 1.5);
-                    pg.ellipse(
-                        Math.cos(svAngle) * svDist, Math.sin(svAngle) * svDist,
-                        bandHeight * 0.5 * gtScale, bandHeight * 0.5 * gtScale
-                    );
-                }
-
-                pg.pop();
-            }
-        }
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 0.78, countMin: 3, countMax: 5, distMin: 0.4, distMax: 0.8, seedOffset: 113.9
+        }, (limbFactor) => {
+            const gtScale = random(0.8, 1.2), gtSize = bandHeight * random(2, 4) * gtScale;
+            pg.noFill(); pg.stroke(200, 50, 20, Math.round(150 * limbFactor)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * gtScale));
+            for (let i = 0; i < 3; i++) { const angle = (i / 3) * TWO_PI + random(0.5); pg.beginShape(); pg.vertex(0, 0); pg.vertex(Math.cos(angle) * gtSize * 1.5, Math.sin(angle) * gtSize * 1.5); pg.vertex(Math.cos(angle + 0.2) * gtSize * 2.5, Math.sin(angle + 0.2) * gtSize * 2.5); pg.endShape(); }
+            pg.noStroke(); pg.fill(255, 100, 30, Math.round(180 * limbFactor)); pg.ellipse(0, 0, gtSize * 1.0, gtSize * 1.0);
+            pg.stroke(180, 80, 40, Math.round(160 * limbFactor)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * gtScale)); for (let ep = 0; ep < 3; ep++) { const epAngle = (ep / 3) * TWO_PI + PI / 2; pg.line(Math.cos(epAngle) * gtSize * 0.2, Math.sin(epAngle) * gtSize * 0.2, Math.cos(epAngle) * gtSize * 1.8, Math.sin(epAngle) * gtSize * 1.8); }
+            pg.noStroke(); pg.fill(255, 150, 100, Math.round(120 * limbFactor)); for (let sv = 0; sv < 3; sv++) { const svAngle = random(0, TWO_PI); const svDist = gtSize * random(0.8, 1.5); pg.ellipse(Math.cos(svAngle) * svDist, Math.sin(svAngle) * svDist, bandHeight * 0.5 * gtScale, bandHeight * 0.5 * gtScale); }
+        });
     }
 
     _renderMegaStructureColliders(pg, r, bufferCenter, featureRand, bandHeight) {
-        if ((featureRand * 127.3) % 1 > 0.88) {
-            const numColliders = Math.floor(random(1, 3));
-            for (let pc = 0; pc < numColliders; pc++) {
-                const pcAngle = (featureRand * (pc + 23) * 47.1) % TWO_PI;
-                const pcDist = random(r * 0.3, r * 0.6);
-                const pcX = Math.cos(pcAngle) * pcDist;
-                const pcY = Math.sin(pcAngle) * pcDist;
-
-                if (pcX * pcX + pcY * pcY > r * r * 0.75) continue;
-
-                const pcLimbFactor = this._getLimbFactor(pcX, pcY);
-                if (pcLimbFactor < 0.25) continue;
-                const pcScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + pcX, bufferCenter + pcY);
-                this._applySphericalProjection(pg, pcX, pcY, pcLimbFactor);
-
-                const pcRadius = bandHeight * random(4, 6) * pcScale;
-
-                // accelerator path
-                pg.noFill();
-                pg.stroke(255, 50, 150, Math.round(160 * pcLimbFactor));
-                pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * pcScale));
-
-                pg.beginShape();
-                for (let i = 0; i < 8; i++) {
-                    const a = (i / 8) * TWO_PI;
-                    pg.vertex(Math.cos(a) * pcRadius, Math.sin(a) * pcRadius);
-                }
-                pg.endShape(CLOSE);
-
-                // Inner beam tube
-                pg.stroke(255, 100, 180, Math.round(140 * pcLimbFactor));
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * pcScale));
-                pg.beginShape();
-                for (let i = 0; i < 8; i++) {
-                    const a = (i / 8) * TWO_PI;
-                    pg.vertex(Math.cos(a) * pcRadius * 0.8, Math.sin(a) * pcRadius * 0.8);
-                }
-                pg.endShape(CLOSE);
-
-                // Detector stations
-                pg.noStroke();
-                pg.fill(255, 150, 200, Math.round(180 * pcLimbFactor));
-                for (let d = 0; d < 8; d++) {
-                    const dAngle = (d / 8) * TWO_PI;
-                    const dx = Math.cos(dAngle) * pcRadius;
-                    const dy = Math.sin(dAngle) * pcRadius;
-                    pg.ellipse(dx, dy, bandHeight * 0.6 * pcScale, bandHeight * 0.6 * pcScale);
-                }
-
-                // Energy glow
-                pg.fill(255, 80, 180, Math.round(150 * pcLimbFactor));
-                pg.ellipse(0, 0, pcRadius * 0.4, pcRadius * 0.4);
-
-                pg.pop();
-            }
-        }
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 0.88, countMin: 1, countMax: 2, distMin: 0.3, distMax: 0.6, seedOffset: 127.3
+        }, (limbFactor) => {
+            const pcRadius = bandHeight * random(4, 6) * random(0.8, 1.2);
+            pg.noFill(); pg.stroke(255, 50, 150, Math.round(160 * limbFactor)); pg.strokeWeight(Math.max(0.6, bandHeight * 0.35)); pg.beginShape();
+            for (let i = 0; i < 8; i++) { const a = (i / 8) * TWO_PI; pg.vertex(Math.cos(a) * pcRadius, Math.sin(a) * pcRadius); } pg.endShape(CLOSE);
+            pg.stroke(255, 100, 180, Math.round(140 * limbFactor)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.2)); pg.beginShape();
+            for (let i = 0; i < 8; i++) { const a = (i / 8) * TWO_PI; pg.vertex(Math.cos(a) * pcRadius * 0.8, Math.sin(a) * pcRadius * 0.8); } pg.endShape(CLOSE);
+            pg.noStroke(); pg.fill(255, 150, 200, Math.round(180 * limbFactor)); for (let d = 0; d < 8; d++) { const dA = (d / 8) * TWO_PI; pg.ellipse(Math.cos(dA) * pcRadius, Math.sin(dA) * pcRadius, bandHeight * 0.6, bandHeight * 0.6); }
+            pg.fill(255, 80, 180, Math.round(150 * limbFactor)); pg.ellipse(0, 0, pcRadius * 0.4, pcRadius * 0.4);
+        });
     }
 
     _renderMegaStructureDataCenters(pg, r, bufferCenter, featureRand, bandHeight) {
-        if ((featureRand * 131.7) % 1 > 0.76) {
-            const numDataCenters = Math.floor(random(3, 6));
-            for (let dc = 0; dc < numDataCenters; dc++) {
-                const dcAngle = (featureRand * (dc + 29) * 19.3) % TWO_PI;
-                const dcDist = random(r * 0.35, r * 0.75);
-                const dcX = Math.cos(dcAngle) * dcDist;
-                const dcY = Math.sin(dcAngle) * dcDist;
-
-                if (dcX * dcX + dcY * dcY > r * r * 0.85) continue;
-
-                const dcLimbFactor = this._getLimbFactor(dcX, dcY);
-                if (dcLimbFactor < 0.2) continue;
-                const dcScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + dcX, bufferCenter + dcY);
-                this._applySphericalProjection(pg, dcX, dcY, dcLimbFactor);
-
-                const dcWidth = bandHeight * random(2, 4) * dcScale;
-                const dcHeight = bandHeight * random(1.5, 2.5) * dcScale;
-
-                pg.stroke(200, 220, 255, Math.round(160 * dcLimbFactor));
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * dcScale));
-                pg.noFill();
-                pg.rect(-dcWidth / 2, -dcHeight / 2, dcWidth, dcHeight);
-
-                // Blinking status lights
-                pg.noStroke();
-                pg.fill(220, 240, 255, Math.round(180 * dcLimbFactor));
-                const numRows = 3;
-                const numCols = 5;
-                for (let row = 0; row < numRows; row++) {
-                    for (let col = 0; col < numCols; col++) {
-                        if (random() > 0.3) {
-                            const lx = -dcWidth / 2.5 + col * (dcWidth / (numCols + 1));
-                            const ly = -dcHeight / 2.5 + row * (dcHeight / (numRows + 1));
-                            pg.ellipse(lx, ly, bandHeight * 0.2 * dcScale, bandHeight * 0.2 * dcScale);
-                        }
-                    }
-                }
-
-                // Cooling tower
-                pg.stroke(180, 200, 240, Math.round(140 * dcLimbFactor));
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * dcScale));
-                pg.line(0, -dcHeight / 2, 0, -dcHeight / 2 - bandHeight * 1.5 * dcScale);
-
-                // Data transmission beam
-                pg.stroke(150, 200, 255, Math.round(100 * dcLimbFactor));
-                pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * dcScale));
-                pg.line(0, -dcHeight / 2 - bandHeight * 1.5 * dcScale, 0, -dcHeight / 2 - bandHeight * 4 * dcScale);
-
-                pg.pop();
-            }
-        }
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 0.76, countMin: 3, countMax: 5, distMin: 0.35, distMax: 0.75, seedOffset: 131.7
+        }, (limbFactor) => {
+            const dcScale = random(0.8, 1.2), dcWidth = bandHeight * random(2, 4) * dcScale, dcHeight = bandHeight * random(1.5, 2.5) * dcScale;
+            pg.stroke(200, 220, 255, Math.round(160 * limbFactor)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * dcScale)); pg.noFill(); pg.rect(-dcWidth / 2, -dcHeight / 2, dcWidth, dcHeight);
+            pg.noStroke(); pg.fill(220, 240, 255, Math.round(180 * limbFactor));
+            for (let row = 0; row < 3; row++) for (let col = 0; col < 5; col++) if (random() > 0.3) { pg.ellipse(-dcWidth / 2.5 + col * (dcWidth / 6), -dcHeight / 2.5 + row * (dcHeight / 4), bandHeight * 0.2 * dcScale, bandHeight * 0.2 * dcScale); }
+            pg.stroke(180, 200, 240, Math.round(140 * limbFactor)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * dcScale)); pg.line(0, -dcHeight / 2, 0, -dcHeight / 2 - bandHeight * 1.5 * dcScale);
+            pg.stroke(150, 200, 255, Math.round(100 * limbFactor)); pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * dcScale)); pg.line(0, -dcHeight / 2 - bandHeight * 1.5 * dcScale, 0, -dcHeight / 2 - bandHeight * 4 * dcScale);
+        });
     }
 
     _renderMegaStructureSpaceports(pg, r, bufferCenter, featureRand, bandHeight) {
-        if ((featureRand * 137.9) % 1 > 0.72) {
-            const numSpaceports = Math.floor(random(2, 5));
-            for (let sp = 0; sp < numSpaceports; sp++) {
-                const spAngle = (featureRand * (sp + 31) * 53.7) % TWO_PI;
-                const spDist = random(r * 0.4, r * 0.8);
-                const spX = Math.cos(spAngle) * spDist;
-                const spY = Math.sin(spAngle) * spDist;
-
-                if (spX * spX + spY * spY > r * r * 0.9) continue;
-
-                const spLimbFactor = this._getLimbFactor(spX, spY);
-                if (spLimbFactor < 0.2) continue;
-                const spScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + spX, bufferCenter + spY);
-                this._applySphericalProjection(pg, spX, spY, spLimbFactor);
-
-                const spSize = bandHeight * random(2.5, 4) * spScale;
-
-                // Central terminal
-                pg.noStroke();
-                pg.fill(255, 250, 230, Math.round(200 * spLimbFactor));
-                pg.ellipse(0, 0, spSize, spSize);
-
-                // Landing pads
-                pg.stroke(255, 240, 200, Math.round(160 * spLimbFactor));
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * spScale));
-                const numPads = 6;
-                for (let pad = 0; pad < numPads; pad++) {
-                    const padAngle = (pad / numPads) * TWO_PI;
-                    const padDist = spSize * 1.2;
-                    const padX = Math.cos(padAngle) * padDist, padY = Math.sin(padAngle) * padDist;
-                    pg.line(Math.cos(padAngle) * spSize * 0.5, Math.sin(padAngle) * spSize * 0.5, padX, padY);
-                    pg.noStroke();
-                    pg.fill(255, 245, 210, Math.round(180 * spLimbFactor));
-                    pg.ellipse(padX, padY, bandHeight * 0.8 * spScale, bandHeight * 0.8 * spScale);
-                    pg.stroke(255, 240, 200, Math.round(160 * spLimbFactor));
-                    pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * spScale));
-                }
-
-                // Beacon lights
-                pg.noStroke();
-                pg.fill(255, 230, 100, Math.round(220 * spLimbFactor));
-                pg.ellipse(0, 0, bandHeight * 0.5 * spScale, bandHeight * 0.5 * spScale);
-
-                pg.pop();
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 0.72, countMin: 2, countMax: 4, distMin: 0.4, distMax: 0.8, seedOffset: 137.9
+        }, (limbFactor) => {
+            const spSize = bandHeight * random(2.5, 4) * random(0.8, 1.2);
+            pg.noStroke(); pg.fill(255, 250, 230, Math.round(200 * limbFactor)); pg.ellipse(0, 0, spSize, spSize);
+            pg.stroke(255, 240, 200, Math.round(160 * limbFactor)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.3));
+            for (let pad = 0; pad < 6; pad++) {
+                const pA = (pad / 6) * TWO_PI, pD = spSize * 1.2, pX = Math.cos(pA) * pD, pY = Math.sin(pA) * pD;
+                pg.line(Math.cos(pA) * spSize * 0.5, Math.sin(pA) * spSize * 0.5, pX, pY);
+                pg.noStroke(); pg.fill(255, 245, 210, Math.round(180 * limbFactor)); pg.ellipse(pX, pY, bandHeight * 0.8, bandHeight * 0.8);
+                pg.stroke(255, 240, 200, Math.round(160 * limbFactor)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.3));
             }
-        }
+            pg.noStroke(); pg.fill(255, 230, 100, Math.round(220 * limbFactor)); pg.ellipse(0, 0, bandHeight * 0.5, bandHeight * 0.5);
+        });
     }
 
-    _renderMegaStructureArcologyClusters(pg, r, bufferCenter, featureRand, bandHeight, primR, primG, primB, secR, secG, secB, accR, accG, accB) {
-        if ((featureRand * 143.1) % 1 > 0.82) {
-            const numClusters = Math.floor(random(2, 4));
-            for (let cl = 0; cl < numClusters; cl++) {
-                const clAngle = (featureRand * (cl + 37) * 61.9) % TWO_PI;
-                const clDist = random(r * 0.35, r * 0.7);
-                const clX = Math.cos(clAngle) * clDist, clY = Math.sin(clAngle) * clDist;
-
-                if (clX * clX + clY * clY > r * r * 0.8) continue;
-
-                const clLimbFactor = this._getLimbFactor(clX, clY);
-                if (clLimbFactor < 0.25) continue;
-                const clScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + clX, bufferCenter + clY);
-                this._applySphericalProjection(pg, clX, clY, clLimbFactor);
-
-                // Cluster color logic
-                const colorHue = (featureRand * (cl + 1) * 97) % 360;
-                const clR = Math.floor(128 + 127 * Math.sin(colorHue * PI / 180));
-                const clG = Math.floor(128 + 127 * Math.sin((colorHue + 120) * PI / 180));
-                const clB = Math.floor(128 + 127 * Math.sin((colorHue + 240) * PI / 180));
-
-                const numTowers = Math.floor(random(4, 8));
-                const clusterRadius = bandHeight * random(3, 5) * clScale;
-
-                for (let t = 0; t < numTowers; t++) {
-                    const tAngle = (t / numTowers) * TWO_PI + random(-0.2, 0.2);
-                    const tDist = random(clusterRadius * 0.3, clusterRadius * 0.9);
-                    const tX = Math.cos(tAngle) * tDist, tY = Math.sin(tAngle) * tDist;
-                    const tHeight = bandHeight * random(1.5, 3) * clScale;
-
-                    pg.stroke(clR, clG, clB, Math.round(160 * clLimbFactor));
-                    pg.strokeWeight(Math.max(0.5, bandHeight * 0.4 * clScale));
-                    pg.line(tX, tY, tX, tY - tHeight);
-
-                    pg.noStroke();
-                    pg.fill(clR, clG, clB, Math.round(180 * clLimbFactor));
-                    pg.ellipse(tX, tY - tHeight, bandHeight * 0.5 * clScale, bandHeight * 0.5 * clScale);
-                }
-
-                // Skyways
-                pg.stroke(clR, clG, clB, Math.round(100 * clLimbFactor));
-                pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * clScale));
-                for (let s = 0; s < 5; s++) {
-                    const s1Angle = random(0, TWO_PI), s2Angle = s1Angle + random(1, 2.5);
-                    const s1Dist = random(clusterRadius * 0.3, clusterRadius * 0.8), s2Dist = random(clusterRadius * 0.3, clusterRadius * 0.8);
-                    pg.line(
-                        Math.cos(s1Angle) * s1Dist, Math.sin(s1Angle) * s1Dist - bandHeight * clScale,
-                        Math.cos(s2Angle) * s2Dist, Math.sin(s2Angle) * s2Dist - bandHeight * clScale
-                    );
-                }
-
-                // Central plaza
-                pg.noStroke();
-                pg.fill(clR, clG, clB, Math.round(90 * clLimbFactor));
-                pg.ellipse(0, 0, clusterRadius * 1.5, clusterRadius * 1.5);
-
-                pg.pop();
+    _renderMegaStructureArcologyClusters(pg, r, bufferCenter, featureRand, bandHeight) {
+        this._renderDistributedFeatures(pg, r, bufferCenter, featureRand, {
+            chance: 0.82, countMin: 2, countMax: 3, distMin: 0.35, distMax: 0.7, seedOffset: 143.1
+        }, (limbFactor) => {
+            const clScale = random(0.8, 1.2), colorHue = (featureRand * 97) % 360;
+            const clR = Math.floor(128 + 127 * Math.sin(colorHue * PI / 180)), clG = Math.floor(128 + 127 * Math.sin((colorHue + 120) * PI / 180)), clB = Math.floor(128 + 127 * Math.sin((colorHue + 240) * PI / 180));
+            const numTowers = Math.floor(random(4, 8)), clusterRadius = bandHeight * random(3, 5) * clScale;
+            for (let t = 0; t < numTowers; t++) {
+                const tA = (t / numTowers) * TWO_PI + random(-0.2, 0.2), tD = random(clusterRadius * 0.3, clusterRadius * 0.9), tX = Math.cos(tA) * tD, tY = Math.sin(tA) * tD, tH = bandHeight * random(1.5, 3) * clScale;
+                pg.stroke(clR, clG, clB, Math.round(160 * limbFactor)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.4 * clScale)); pg.line(tX, tY, tX, tY - tH);
+                pg.noStroke(); pg.fill(clR, clG, clB, Math.round(180 * limbFactor)); pg.ellipse(tX, tY - tH, bandHeight * 0.5 * clScale, bandHeight * 0.5 * clScale);
             }
-        }
+            pg.stroke(clR, clG, clB, Math.round(100 * limbFactor)); pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * clScale));
+            for (let s = 0; s < 5; s++) { const s1A = random(TWO_PI), s2A = s1A + random(1, 2.5), s1D = random(clusterRadius * 0.3, clusterRadius * 0.8), s2D = random(clusterRadius * 0.3, clusterRadius * 0.8); pg.line(Math.cos(s1A) * s1D, Math.sin(s1A) * s1D - bandHeight * clScale, Math.cos(s2A) * s2D, Math.sin(s2A) * s2D - bandHeight * clScale); }
+            pg.noStroke(); pg.fill(clR, clG, clB, Math.round(90 * limbFactor)); pg.ellipse(0, 0, clusterRadius * 1.5, clusterRadius * 1.5);
+        });
     }
 } // End of Planet Class
