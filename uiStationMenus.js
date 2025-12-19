@@ -94,22 +94,8 @@ class UIStationMenus {
             ? GameGlobals.newsManager.getNewsItems()
             : [];
 
-        // Header with styling
-        push();
-        noStroke();
-        fill(255, 200, 100);
-        textSize(22);
-        textAlign(LEFT, TOP);
-        textStyle(BOLD);
-        text("THE GALACTIC ECHO", pX + 30, contentY);
-        textStyle(NORMAL);
-        fill(180);
-        textSize(14);
-        text("Your Trusted Source Across the Sectors", pX + 30, contentY + 26);
-        pop();
-
-        let currentY = contentY + 55;
-        const availableHeight = contentH - 55;
+        let currentY = contentY;
+        const availableHeight = contentH;
 
         if (newsItems.length === 0) {
             UIComponents.setTextStyle({ fill: 180, size: 16, align: [CENTER, CENTER] });

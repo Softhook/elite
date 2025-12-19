@@ -70,195 +70,195 @@ const NEWS_COMMODITIES = [
 const HEADLINE_TEMPLATES = {
     // --- Player Action Headlines ---
     ASSASSINATION_SUCCESS: [
-        "NOTORIOUS {TARGET} ELIMINATED IN DARING STRIKE",
-        "SHADOWY OPERATIVE SILENCES {TARGET}",
-        "CONTRACT FULFILLED: {TARGET} MEETS VIOLENT END",
-        "{TARGET} FOUND DEAD AMID DEBRIS FIELD",
-        "BOUNTY CLAIMED ON INFAMOUS {TARGET}"
+        "Notorious {TARGET} eliminated in daring strike",
+        "Shadowy operative silences {TARGET}",
+        "Contract fulfilled: {TARGET} meets violent end",
+        "{TARGET} found dead amid debris field",
+        "Bounty claimed on infamous {TARGET}"
     ],
     SABOTAGE_SUCCESS: [
-        "INDUSTRIAL SABOTAGE ROCKS {LOCATION}",
-        "EXPLOSION DESTROYS {TARGET} NEAR {LOCATION}",
-        "INFRASTRUCTURE ATTACK LEAVES {LOCATION} REELING",
-        "COVERT OPERATION CRIPPLES {TARGET}",
-        "MYSTERIOUS BLAST DEVASTATES {LOCATION} FACILITY"
+        "Industrial sabotage rocks {LOCATION}",
+        "Explosion destroys {TARGET} near {LOCATION}",
+        "Infrastructure attack leaves {LOCATION} reeling",
+        "Covert operation cripples {TARGET}",
+        "Mysterious blast devastates {LOCATION} facility"
     ],
     BOUNTY_PIRATE: [
-        "FREELANCER CLAIMS BOUNTY ON {COUNT} PIRATES",
-        "PIRATE HUNTERS CELEBRATE {COUNT} KILLS",
-        "MARAUDER WING DECIMATED BY LONE PILOT",
-        "PIRACY DEALT MAJOR BLOW IN {SYSTEM}",
-        "{COUNT} RAIDERS MEET FIERY END"
+        "Freelancer claims bounty on {COUNT} pirates",
+        "Pirate hunters celebrate {COUNT} kills",
+        "Marauder wing decimated by lone pilot",
+        "Piracy dealt major blow in {SYSTEM}",
+        "{COUNT} raiders meet fiery end"
     ],
     BOUNTY_POLICE: [
-        "ROGUE COP KILLER STRIKES AGAIN",
-        "AUTHORITIES MOURN {COUNT} FALLEN OFFICERS",
-        "VIGILANTE VIOLENCE CLAIMS {COUNT} POLICE",
-        "LAW ENFORCEMENT UNDER SIEGE",
-        "COP KILLER ON THE LOOSE IN {SYSTEM}"
+        "Rogue cop killer strikes again",
+        "Authorities mourn {COUNT} fallen officers",
+        "Vigilante violence claims {COUNT} police",
+        "Law enforcement under siege",
+        "Cop killer on the loose in {SYSTEM}"
     ],
     BOUNTY_ALIEN: [
-        "XENO-HUNTER BAGS {COUNT} ALIEN HOSTILES",
-        "ALIEN MENACE PUSHED BACK IN {SYSTEM}",
-        "OTHERWORLDLY THREAT NEUTRALIZED",
-        "{COUNT} ALIEN CRAFT DESTROYED BY HUMAN PILOT",
-        "HUMANITY STRIKES BACK AGAINST XENO INCURSION"
+        "Xeno-hunter bags {COUNT} alien hostiles",
+        "Alien menace pushed back in {SYSTEM}",
+        "Otherworldly threat neutralized",
+        "{COUNT} alien craft destroyed by human pilot",
+        "Humanity strikes back against xeno incursion"
     ],
     POLICE_JOINED: [
-        "NEW DEPUTY JOINS {SYSTEM} PATROL",
-        "AUTHORITIES BOLSTER RANKS WITH NEW RECRUIT",
-        "FREELANCER SWORN IN AS LAW ENFORCEMENT",
-        "POLICE WELCOME COMBAT VETERAN TO FORCE"
+        "New deputy joins {SYSTEM} patrol",
+        "Authorities bolster ranks with new recruit",
+        "Freelancer sworn in as law enforcement",
+        "Police welcome combat veteran to force"
     ],
     FACTION_JOINED: [
-        "NEW RECRUIT SWEARS ALLEGIANCE TO {FACTION}",
-        "{FACTION} RANKS SWELL WITH NEW BLOOD",
-        "PILOT PLEDGES LOYALTY TO {FACTION} CAUSE"
+        "New recruit swears allegiance to {FACTION}",
+        "{FACTION} ranks swell with new blood",
+        "Pilot pledges loyalty to {FACTION} cause"
     ],
 
     // --- Environmental Headlines ---
     PIRATE_HIGH: [
-        "PIRATE ACTIVITY SURGES IN {SYSTEM}",
-        "TRADE ROUTES UNDER SIEGE BY MARAUDERS",
-        "SHIPPING LANES CRAWLING WITH RAIDERS",
-        "MERCHANTS WARNED: {SYSTEM} IS HOT",
-        "SECURITY FIRMS OVERWHELMED BY PIRATE WAVE"
+        "Pirate activity surges in {SYSTEM}",
+        "Trade routes under siege by marauders",
+        "Shipping lanes crawling with raiders",
+        "Merchants warned: {SYSTEM} is hot",
+        "Security firms overwhelmed by pirate wave"
     ],
     PIRATE_LOW: [
-        "TRADE FLOWS FREELY IN PEACEFUL {SYSTEM}",
-        "PIRACY AT RECORD LOWS NEAR {SYSTEM}",
-        "MERCHANTS CELEBRATE QUIET SHIPPING LANES",
-        "SECURITY PATROLS REPORT ALL CLEAR"
+        "Trade flows freely in peaceful {SYSTEM}",
+        "Piracy at record lows near {SYSTEM}",
+        "Merchants celebrate quiet shipping lanes",
+        "Security patrols report all clear"
     ],
     MARKET_BOOM: [
-        "PRICES SOAR AT {STATION}",
-        "COMMODITY SHORTAGE DRIVES {COMMODITY} PRICES UP",
-        "TRADERS RUSH TO {STATION} FOR HIGH MARGINS",
-        "DEMAND SURGE HITS {STATION} MARKETS"
+        "Prices soar at {STATION}",
+        "Commodity shortage drives {COMMODITY} prices up",
+        "Traders rush to {STATION} for high margins",
+        "Demand surge hits {STATION} markets"
     ],
     MARKET_CRASH: [
-        "PRICES CRASH AT {STATION}",
-        "{COMMODITY} GLUT DEVASTATES LOCAL TRADERS",
-        "OVERSUPPLY TANKS MARKET AT {STATION}",
-        "BUYING OPPORTUNITY: {COMMODITY} DIRT CHEAP"
+        "Prices crash at {STATION}",
+        "{COMMODITY} glut devastates local traders",
+        "Oversupply tanks market at {STATION}",
+        "Buying opportunity: {COMMODITY} dirt cheap"
     ],
 
     // --- Galaxy-Wide Headlines ---
     DISTANT_CONFLICT: [
-        "WAR ERUPTS IN {SYSTEM} SECTOR",
-        "IMPERIAL FORCES CLASH WITH REBELS IN {SYSTEM}",
-        "SEPARATIST UPRISING ROCKS {SYSTEM}",
-        "MILITARY BUILDUP REPORTED NEAR {SYSTEM}",
-        "TENSIONS ESCALATE IN {SYSTEM} QUADRANT"
+        "War erupts in {SYSTEM} sector",
+        "Imperial forces clash with rebels in {SYSTEM}",
+        "Separatist uprising rocks {SYSTEM}",
+        "Military buildup reported near {SYSTEM}",
+        "Tensions escalate in {SYSTEM} quadrant"
     ],
     DISTANT_DISCOVERY: [
-        "EXPLORERS REPORT ANOMALY NEAR {SYSTEM}",
-        "MYSTERIOUS SIGNAL DETECTED FROM {SYSTEM}",
-        "NEW HYPERSPACE ROUTE FOUND TO {SYSTEM}",
-        "SCIENTISTS BAFFLED BY {SYSTEM} PHENOMENON"
+        "Explorers report anomaly near {SYSTEM}",
+        "Mysterious signal detected from {SYSTEM}",
+        "New hyperspace route found to {SYSTEM}",
+        "Scientists baffled by {SYSTEM} phenomenon"
     ],
     DISTANT_TRADE: [
-        "NEW TRADE AGREEMENT BENEFITS {SYSTEM}",
-        "{SYSTEM} OPENS MARKETS TO FOREIGN TRADERS",
-        "ECONOMIC BOOM TRANSFORMS {SYSTEM}",
-        "LUXURY GOODS FLOODING INTO {SYSTEM}"
+        "New trade agreement benefits {SYSTEM}",
+        "{SYSTEM} opens markets to foreign traders",
+        "Economic boom transforms {SYSTEM}",
+        "Luxury goods flooding into {SYSTEM}"
     ],
     DISTANT_DISASTER: [
-        "CATASTROPHE STRIKES {SYSTEM}",
-        "STATION DISASTER CLAIMS LIVES IN {SYSTEM}",
-        "ASTEROID IMPACT DEVASTATES {SYSTEM} COLONY",
-        "PLAGUE OUTBREAK REPORTED IN {SYSTEM}"
+        "Catastrophe strikes {SYSTEM}",
+        "Station disaster claims lives in {SYSTEM}",
+        "Asteroid impact devastates {SYSTEM} colony",
+        "Plague outbreak reported in {SYSTEM}"
     ],
 
     // --- War Event Headlines ---
     WAR_SKIRMISH: [
-        "⚔️ MILITARY SKIRMISH ERUPTS IN {SYSTEM}",
-        "⚔️ ARMED CONFLICT BREAKS OUT NEAR {SYSTEM}",
-        "⚔️ FACTION FORCES CLASH IN {SYSTEM} SECTOR",
-        "⚔️ BORDER SKIRMISH REPORTED IN {SYSTEM}",
-        "⚔️ HOSTILE ENGAGEMENT DETECTED IN {SYSTEM}"
+        "⚔️ Military skirmish erupts in {SYSTEM}",
+        "⚔️ Armed conflict breaks out near {SYSTEM}",
+        "⚔️ Faction forces clash in {SYSTEM} sector",
+        "⚔️ Border skirmish reported in {SYSTEM}",
+        "⚔️ Hostile engagement detected in {SYSTEM}"
     ],
     WAR_FULL: [
-        "🔥 FULL SCALE WAR ERUPTS IN {SYSTEM}",
-        "🔥 ALL-OUT CONFLICT ENGULFS {SYSTEM}",
-        "🔥 MASSIVE BATTLE UNDERWAY IN {SYSTEM}",
-        "🔥 WAR DECLARED IN {SYSTEM} SECTOR",
-        "🔥 SECTOR-WIDE HOSTILITIES BEGIN IN {SYSTEM}"
+        "🔥 Full scale war erupts in {SYSTEM}",
+        "🔥 All-out conflict engulfs {SYSTEM}",
+        "🔥 Massive battle underway in {SYSTEM}",
+        "🔥 War declared in {SYSTEM} sector",
+        "🔥 Sector-wide hostilities begin in {SYSTEM}"
     ],
 
     // --- Crisis Event Headlines ---
     CRISIS_PLAGUE: [
-        "☠️ DEADLY PLAGUE OUTBREAK IN {SYSTEM}",
-        "☠️ CONTAGION SPREADS ACROSS {SYSTEM}",
-        "☠️ MEDICAL EMERGENCY: PLAGUE RAVAGES {SYSTEM}",
-        "☠️ QUARANTINE DECLARED IN {SYSTEM}",
-        "☠️ DISEASE OUTBREAK OVERWHELMS {SYSTEM} HOSPITALS"
+        "☠️ Deadly plague outbreak in {SYSTEM}",
+        "☠️ Contagion spreads across {SYSTEM}",
+        "☠️ Medical emergency: Plague ravages {SYSTEM}",
+        "☠️ Quarantine declared in {SYSTEM}",
+        "☠️ Disease outbreak overwhelms {SYSTEM} hospitals"
     ],
     CRISIS_FAMINE: [
-        "🍂 SEVERE FAMINE GRIPS {SYSTEM}",
-        "🍂 FOOD CRISIS DEVASTATES {SYSTEM}",
-        "🍂 CROP FAILURES CAUSE MASS STARVATION IN {SYSTEM}",
-        "🍂 FOOD SHORTAGE EMERGENCY IN {SYSTEM}",
-        "🍂 HUNGER CRISIS SPREADS ACROSS {SYSTEM}"
+        "🍂 Severe famine grips {SYSTEM}",
+        "🍂 Food crisis devastates {SYSTEM}",
+        "🍂 Crop failures cause mass starvation in {SYSTEM}",
+        "🍂 Food shortage emergency in {SYSTEM}",
+        "🍂 Hunger crisis spreads across {SYSTEM}"
     ],
     CRISIS_PLAGUE_DISTANT: [
-        "☠️ PLAGUE OUTBREAK SPREADS TO {SYSTEM}",
-        "☠️ NEIGHBORING SYSTEM {SYSTEM} AFFECTED BY CONTAGION",
-        "☠️ DISEASE REACHES {SYSTEM} FROM NEARBY OUTBREAK"
+        "☠️ Plague outbreak spreads to {SYSTEM}",
+        "☠️ Neighboring system {SYSTEM} affected by contagion",
+        "☠️ Disease reaches {SYSTEM} from nearby outbreak"
     ],
     CRISIS_FAMINE_DISTANT: [
-        "🍂 FAMINE CONDITIONS WORSEN IN {SYSTEM}",
-        "🍂 FOOD CRISIS SPREADS TO {SYSTEM}",
-        "🍂 {SYSTEM} SUFFERS FROM REGIONAL CROP FAILURES"
+        "🍂 Famine conditions worsen in {SYSTEM}",
+        "🍂 Food crisis spreads to {SYSTEM}",
+        "🍂 {SYSTEM} suffers from regional crop failures"
     ],
 
     // --- Combat Report Headlines ---
     COMBAT_PIRATE_KILLS: [
-        "PIRATE FLEET DECIMATED IN {SYSTEM}",
-        "{COUNT} RAIDERS DESTROYED IN {SYSTEM} SKIRMISH",
-        "MAJOR PIRATE LOSSES IN {SYSTEM}: {NAME} AMONG THE FALLEN"
+        "Pirate fleet decimated in {SYSTEM}",
+        "{COUNT} raiders destroyed in {SYSTEM} skirmish",
+        "Major pirate losses in {SYSTEM}: {NAME} among the fallen"
     ],
     COMBAT_POLICE_CASUALTIES: [
-        "LAW ENFORCEMENT TAKES CASUALTIES IN {SYSTEM}",
-        "OFFICER {NAME} KILLED IN {SYSTEM} VIOLENCE",
-        "{COUNT} OFFICERS FALL IN LINE OF DUTY"
+        "Law enforcement takes casualties in {SYSTEM}",
+        "Officer {NAME} killed in {SYSTEM} violence",
+        "{COUNT} officers fall in line of duty"
     ],
     COMBAT_IMPERIAL_LOSSES: [
-        "IMPERIAL FORCES SUFFER SETBACK IN {SYSTEM}",
-        "{COUNT} IMPERIAL VESSELS LOST IN {SYSTEM}",
-        "MILITARY CASUALTIES MOUNT IN {SYSTEM}"
+        "Imperial forces suffer setback in {SYSTEM}",
+        "{COUNT} Imperial vessels lost in {SYSTEM}",
+        "Military casualties mount in {SYSTEM}"
     ],
     COMBAT_SEPARATIST_LOSSES: [
-        "SEPARATIST CELLS CRUSHED IN {SYSTEM}",
-        "REBEL FORCES TAKE HEAVY LOSSES IN {SYSTEM}",
-        "{COUNT} RESISTANCE FIGHTERS ELIMINATED IN {SYSTEM}"
+        "Separatist cells crushed in {SYSTEM}",
+        "Rebel forces take heavy losses in {SYSTEM}",
+        "{COUNT} resistance fighters eliminated in {SYSTEM}"
     ],
     COMBAT_ALIEN_KILLS: [
-        "ALIEN THREAT REPELLED IN {SYSTEM}",
-        "{COUNT} XENO HOSTILES NEUTRALIZED IN {SYSTEM}",
-        "HUMANITY STRIKES BACK IN {SYSTEM}"
+        "Alien threat repelled in {SYSTEM}",
+        "{COUNT} xeno hostiles neutralized in {SYSTEM}",
+        "Humanity strikes back in {SYSTEM}"
     ],
 
     // --- Hero Headlines ---
     HERO_IMPERIAL: [
-        "🏅 HERO OF THE IMPERIUM: {NAME} CLAIMS {COUNT} KILLS IN {SYSTEM}",
-        "🏅 IMPERIAL ACE {NAME} DEVASTATES ENEMIES IN {SYSTEM}",
-        "🏅 DECORATED PILOT {NAME} DOMINATES {SYSTEM} SKIES"
+        "🏅 Hero of the Imperium: {NAME} claims {COUNT} kills in {SYSTEM}",
+        "🏅 Imperial ace {NAME} devastates enemies in {SYSTEM}",
+        "🏅 Decorated pilot {NAME} dominates {SYSTEM} skies"
     ],
     HERO_SEPARATIST: [
-        "✊ HERO OF THE RESISTANCE: {NAME} STRIKES BACK IN {SYSTEM}",
-        "✊ FREEDOM FIGHTER {NAME} DOWNS {COUNT} IMPERIAL CRAFT",
-        "✊ REBEL ACE {NAME} TERRORIZES IMPERIAL FORCES"
+        "✊ Hero of the Resistance: {NAME} strikes back in {SYSTEM}",
+        "✊ Freedom fighter {NAME} downs {COUNT} Imperial craft",
+        "✊ Rebel ace {NAME} terrorizes Imperial forces"
     ],
     HERO_POLICE: [
-        "🛡️ POLICE HERO: OFFICER {NAME} NEUTRALIZES {COUNT} THREATS",
-        "🛡️ DEPUTY {NAME} CLEARS {SYSTEM} OF PIRATE MENACE",
-        "🛡️ LAW ENFORCEMENT ACE {NAME} KEEPS THE PEACE"
+        "🛡️ Police hero: Officer {NAME} neutralizes {COUNT} threats",
+        "🛡️ Deputy {NAME} clears {SYSTEM} of pirate menace",
+        "🛡️ Law enforcement ace {NAME} keeps the peace"
     ],
     HERO_MILITARY: [
-        "⭐ MILITARY ACE {NAME} RACKS UP {COUNT} VICTORIES",
-        "⭐ DECORATED PILOT {NAME} DOMINATES {SYSTEM}",
-        "⭐ COMBAT LEGEND {NAME} ADDS TO KILL COUNT"
+        "⭐ Military ace {NAME} racks up {COUNT} victories",
+        "⭐ Decorated pilot {NAME} dominates {SYSTEM}",
+        "⭐ Combat legend {NAME} adds to kill count"
     ]
 };
 
@@ -268,34 +268,34 @@ const HEADLINE_TEMPLATES = {
 
 const BODY_TEMPLATES = {
     ASSASSINATION_SUCCESS: {
-        IMPERIAL: "Imperial Security confirms the elimination of a designated threat. Order is maintained.",
-        SEPARATIST: "Another bootlicker silenced. The resistance grows stronger with each tyrant removed.",
-        INDEPENDENT: "Contract work pays well for those with steady aim. Premium rates available."
+        IMPERIAL: "Imperial Security confirms the elimination of a designated threat to galactic stability. Local patrols have been increased as investigators sweep the area for accomplices.",
+        SEPARATIST: "Another bootlicker silenced by the brave operatives of the resistance. Each tyrant removed brings us closer to freedom from corporate tyranny. The people remember.",
+        INDEPENDENT: "Contract work pays well for those with steady aim and no questions asked. Premium rates currently available for experienced operatives with clean records."
     },
     SABOTAGE_SUCCESS: {
-        IMPERIAL: "Terrorist attack disrupts critical infrastructure. Perpetrators will face justice.",
-        SEPARATIST: "The chains of corporate oppression shatter. The people will not be silenced!",
-        INDEPENDENT: "Major disruption to supply chain. Expect price volatility in affected sectors."
+        IMPERIAL: "Terrorist attack disrupts critical infrastructure serving millions of loyal citizens. Security forces are conducting a sector-wide manhunt. Perpetrators will face Imperial justice.",
+        SEPARATIST: "The chains of corporate oppression shatter as workers strike back against their exploiters. Solidarity actions reported across neighboring systems. The people will not be silenced!",
+        INDEPENDENT: "Major disruption to regional supply chain will impact commodity prices for weeks. Traders should monitor market fluctuations closely—significant opportunities for profit."
     },
     BOUNTY_PIRATE: {
-        IMPERIAL: "Criminal elements eliminated. Shipping lanes secured for lawful commerce.",
-        SEPARATIST: "Free traders cut down by corporate mercenaries. The struggle continues.",
-        INDEPENDENT: "Good hunting out there. Insurance premiums already dropping."
+        IMPERIAL: "Criminal elements eliminated by authorized bounty hunters operating under Imperial contract. Shipping lanes are now secured for lawful commerce and trade flows resume.",
+        SEPARATIST: "Free traders cut down by corporate mercenaries enforcing monopoly shipping rights. The struggle for economic freedom continues across the frontier systems.",
+        INDEPENDENT: "Good hunting out there for those with combat-ready ships. Insurance premiums already dropping as patrol coverage increases. Check bounty boards for updated rates."
     },
     PIRATE_HIGH: {
-        IMPERIAL: "Criminal anarchy threatens Imperial supply lines. Naval response authorized.",
-        SEPARATIST: "The desperate strike back against monopoly rule. Who can blame them?",
-        INDEPENDENT: "High risk means high reward—but triple-check your insurance."
+        IMPERIAL: "Criminal anarchy threatens Imperial supply lines and endangers civilian traffic. Naval command has authorized enhanced patrol routes and deployed additional security assets.",
+        SEPARATIST: "The desperate and dispossessed strike back against monopoly rule and corporate exploitation. When legitimate trade is criminalized, outlaws become revolutionaries.",
+        INDEPENDENT: "High risk means high reward for traders willing to run the gauntlet. Triple-check your insurance coverage and consider hiring escort protection before departure."
     },
     WAR_SEPARATIST_VS_IMPERIAL: {
-        IMPERIAL: "Separatist terrorists have initiated unprovoked aggression. Order will be restored.",
-        SEPARATIST: "The revolution has begun! Death to the corporate oppressors!",
-        INDEPENDENT: "Traders advised to avoid conflict zones. War profiteering opportunities abound."
+        IMPERIAL: "Separatist terrorists have initiated unprovoked aggression against lawful Imperial installations. Military command assures citizens that order will be restored swiftly.",
+        SEPARATIST: "The revolution has begun! Brave freedom fighters rise up against decades of corporate exploitation. Death to the oppressors! Victory to the people!",
+        INDEPENDENT: "Traders strongly advised to avoid active conflict zones until hostilities conclude. War profiteering opportunities abound for those with armored cargo holds."
     },
     WAR_ALIEN_VS_MILITARY: {
-        IMPERIAL: "Xeno threat requires unified military response. All personnel mobilized.",
-        SEPARATIST: "The aliens strike the heart of Imperial tyranny. Interesting times ahead.",
-        INDEPENDENT: "Alien technology salvage could be highly profitable. Proceed with caution."
+        IMPERIAL: "Xeno threat requires unified military response from all human factions. All reserve personnel mobilized. Civilian ships advised to shelter in secured stations.",
+        SEPARATIST: "The aliens strike the heart of Imperial military power. While we oppose the Empire, this threat concerns all humanity. Interesting times ahead.",
+        INDEPENDENT: "Alien technology salvage could be highly profitable for those brave or foolish enough to enter the combat zone. Proceed with extreme caution and heavy armament."
     }
 };
 
@@ -305,34 +305,34 @@ const BODY_TEMPLATES = {
 
 const BACKGROUND_STORY_TEMPLATES = [
     // Ship stories (0-3)
-    ['{SHIP} PRODUCTION HITS RECORD NUMBERS', 'Shipyards report unprecedented demand for the {ship}. Delivery waitlists extend into next quarter.'],
-    ['CELEBRITY PILOT {PILOT} ENDORSES {SHIP}', 'Pre-orders exceed expectations after famous ace {pilot} praises the {ship}\'s handling characteristics.'],
-    ['{SHIP} RECALL ISSUED', 'Manufacturer issues voluntary recall for recent {ship} models citing minor thruster calibration issues.'],
-    ['NEW {SHIP} VARIANT UNVEILED', 'Prototype features enhanced cargo capacity. Test pilots report exceptional performance.'],
+    ['{SHIP} production hits record numbers', 'Shipyards across the sector report unprecedented demand for the {ship} as buyers rush to secure delivery slots. Manufacturing facilities operating at maximum capacity with waitlists extending well into the next quarter.'],
+    ['Celebrity pilot {PILOT} endorses {SHIP}', 'Pre-orders for the {ship} exceed all expectations after famous combat ace {pilot} publicly praised its handling characteristics and combat performance. Dealers report showroom traffic has tripled since the endorsement.'],
+    ['{SHIP} recall issued', 'Manufacturer issues voluntary recall affecting recent {ship} production runs citing minor thruster calibration issues discovered during routine quality testing. Owners advised to visit authorized service centers for free inspection and adjustment.'],
+    ['New {SHIP} variant unveiled', 'Prototype {ship} variant featuring enhanced cargo capacity and improved jump range impresses at industry showcase. Test pilots report exceptional performance metrics. Mass production expected to begin within months.'],
     // Pirate stories (4-7)
-    ['{GANG} ACTIVITY DROPS SHARPLY', 'Intel suggests internal power struggle within the {gang}. Traders report quieter lanes.'],
-    ['{GANG} LEADER SPOTTED', 'Unconfirmed reports place notorious {gang} commander near frontier systems.'],
-    ['BOUNTY HUNTERS TARGET {GANG}', 'Coordinated bounty operation launches against {gang} cells. Premium rates offered.'],
-    ['{GANG} DEMANDS PROTECTION FEES', 'Station operators in outer systems report extortion attempts by {gang} operatives.'],
+    ['{GANG} activity drops sharply', 'Intelligence analysts suggest internal power struggle within the {gang} has disrupted their operations significantly. Traders report quieter shipping lanes as the criminal organization deals with leadership disputes.'],
+    ['{GANG} leader spotted', 'Unconfirmed reports place the notorious {gang} commander near frontier system outposts. Bounty hunters mobilizing to intercept. Authorities urge civilians to report any sightings immediately while avoiding direct contact.'],
+    ['Bounty hunters target {GANG}', 'Coordinated multi-system bounty operation launches against {gang} cells with significant financial backing from shipping corporations. Premium rates offered for verified eliminations. Hunters gathering at staging areas.'],
+    ['{GANG} demands protection fees', 'Station operators in outer systems report escalating extortion attempts by {gang} operatives threatening cargo interdiction. Security consultants recommend enhanced escort protocols for valuable shipments.'],
     // Commodity stories (8-11)
-    ['{COMMODITY} PRICES STABILIZE', 'After weeks of volatility, {commodity} markets find equilibrium. Traders cautiously optimistic.'],
-    ['NEW {COMMODITY} TRADE ROUTE DISCOVERED', 'Explorers map efficient hyperspace corridor. {commodity} shipments expected to increase.'],
-    ['{COMMODITY} SHORTAGE FEARED', 'Supply chain analysts warn of potential {commodity} deficit in coming months.'],
-    ['{COMMODITY} SMUGGLING RING EXPOSED', 'Authorities dismantle operation moving illegal {commodity} through frontier systems.'],
+    ['{COMMODITY} prices stabilize', 'After weeks of dramatic price volatility driven by supply disruptions, {commodity} markets finally find equilibrium. Traders cautiously optimistic as futures contracts normalize across major exchanges.'],
+    ['New {COMMODITY} trade route discovered', 'Explorers map highly efficient hyperspace corridor connecting previously isolated {commodity} producers to major markets. Transportation costs expected to drop significantly. Shipping volumes already increasing.'],
+    ['{COMMODITY} shortage feared', 'Supply chain analysts warn of potential {commodity} deficit in coming months as production facilities struggle with aging infrastructure. Stockpiling reported by major distributors. Prices trending upward.'],
+    ['{COMMODITY} smuggling ring exposed', 'Coordinated law enforcement operation dismantles sophisticated smuggling network moving illegal {commodity} shipments through frontier systems. Multiple arrests made. Seized cargo valued in millions.'],
     // NPC stories (12-15)
-    ['{TITLED} ANNOUNCES RETIREMENT', 'After decades of service, the decorated official steps down amid ceremony.'],
-    ['{TITLED} CALLS FOR REFORM', 'Controversial speech demands changes to trade regulations. Reactions mixed.'],
-    ['PILOT {PILOT} SETS NEW RECORD', 'Racing circuit achievement: fastest hyperspace corridor run in sector history.'],
-    ['{PILOT} SURVIVES ALIEN ENCOUNTER', 'Lone pilot escapes Thargoid ambush. Tale of survival inspires bounty hunters.'],
+    ['{TITLED} announces retirement', 'After decades of distinguished service shaping interstellar policy, the decorated official steps down amid elaborate ceremony. Successor appointment expected within weeks. Legacy includes landmark trade agreements.'],
+    ['{TITLED} calls for reform', 'Controversial speech delivered to packed assembly hall demands sweeping changes to outdated trade regulations. Reactions sharply divided along factional lines. Protests and counter-protests reported at government buildings.'],
+    ['Pilot {PILOT} sets new record', 'Racing circuit achievement celebrated as {pilot} completes fastest hyperspace corridor run in sector history. Previous record stood for over a decade. Sponsors announce substantial bonus payments.'],
+    ['{PILOT} survives alien encounter', 'Lone pilot {pilot} escapes Thargoid ambush against overwhelming odds in tale of survival inspiring bounty hunters and military pilots across human space. Interview requests flooding in from media outlets.'],
     // Static stories (16-23)
-    ['IMPERIAL CLIPPER LUXURY CRUISE DEPARTS', 'VIP passengers embark on exclusive tour of core systems. Security detail exceeds standard protocols.'],
-    ['SEPARATIST RALLY DRAWS THOUSANDS', 'Frontier colony hosts largest gathering in years. Imperial observers maintain distance.'],
-    ['MILITARY EXERCISES BEGIN NEAR FRONTIER', 'Naval forces conduct routine training. Civilian traffic rerouted during operations.'],
-    ['THARGOID ACTIVITY MONITORING STATION UPGRADED', 'New sensors provide enhanced detection range. Military officials express confidence.'],
-    ['STARLINER CRUISER COMPLETES MAIDEN VOYAGE', 'Passengers report exceptional amenities aboard the flagship tourism vessel.'],
-    ['MINING BOOM TRANSFORMS ASTEROID BELT', 'Independent prospectors flock to newly discovered Rare Ore deposits.'],
-    ['POLICE VIPER SQUADRON RECEIVES COMMENDATION', 'Officers recognized for exceptional service protecting trade lanes.'],
-    ['COBRA MK III REMAINS BEST-SELLING MULTI-ROLE', 'Venerable design continues to dominate versatility rankings across all sectors.']
+    ['Imperial Clipper luxury cruise departs', 'VIP passengers embark on exclusive multi-system tour aboard the prestigious vessel. Security detail exceeds standard protocols with military escort through less secure regions. Passenger manifest includes notable celebrities.'],
+    ['Separatist rally draws thousands', 'Frontier colony hosts largest political gathering in years as supporters demand greater autonomy from core world governance. Imperial observers maintain careful distance while monitoring communications. Speeches broadcast widely.'],
+    ['Military exercises begin near frontier', 'Combined naval forces conduct extensive training operations involving hundreds of vessels. Civilian traffic rerouted during maneuvers. Officials describe exercises as routine preparedness drills. Critics question timing.'],
+    ['Thargoid activity monitoring station upgraded', 'New long-range sensors provide dramatically enhanced detection capabilities for alien vessel movements. Military officials express confidence in improved early warning systems. Defense contractors celebrate major contract.'],
+    ['Starliner cruiser completes maiden voyage', 'Passengers disembarking from flagship tourism vessel report exceptional amenities and flawless service. Booking requests surge for upcoming voyages. Industry analysts predict tourism sector growth.'],
+    ['Mining boom transforms asteroid belt', 'Independent prospectors and corporate operations flock to newly discovered Rare Ore deposits. Boom town atmosphere develops around makeshift stations. Environmental concerns raised about extraction pace.'],
+    ['Police Viper squadron receives commendation', 'Officers formally recognized for exceptional service protecting vital trade lanes from pirate incursions. Ceremony attended by sector governor. Decorated pilots credited with dozens of criminal interdictions.'],
+    ['Cobra Mk III remains best-selling multi-role', 'Venerable design continues to dominate versatility rankings across all sectors despite newer competition. Manufacturers attribute success to proven reliability and extensive modification options. Sales remain strong.']
 ];
 
 /**
@@ -379,16 +379,7 @@ class NewsManager {
     }
 
     _addInitialNews() {
-        this.newsItems.push({
-            headline: "GALACTIC ECHO NETWORK ONLINE",
-            body: "Your trusted source for news across the sectors. Stay informed, stay alive.",
-            source: "The Galactic Echo",
-            sourceColor: [255, 200, 100],
-            category: NEWS_CATEGORY.BACKGROUND,
-            priority: NEWS_PRIORITY.LOW,
-            timestamp: Date.now() - 120000,
-            read: false
-        });
+        // No initial news - let actual news items fill the feed
     }
 
     // -------------------------------------------------------------------------
@@ -724,28 +715,28 @@ class NewsManager {
         switch (factionType.toUpperCase()) {
             case 'PIRATE':
                 sourceFaction = NEWS_FACTIONS.IMPERIAL;
-                body = `Criminal elements eliminated. ${count} pirate vessels confirmed destroyed.`;
+                body = `Criminal elements eliminated by coordinated patrol operations. ${count} pirate vessels confirmed destroyed with minimal collateral damage. Salvage teams moving in to secure debris fields.`;
                 break;
             case 'POLICE':
                 sourceFaction = NEWS_FACTIONS.IMPERIAL;
-                body = `Authorities mourn fallen officers. Investigation underway.`;
+                body = `Authorities mourn the loss of dedicated officers who gave their lives in service to the community. Full investigation underway as colleagues vow to bring perpetrators to justice.`;
                 break;
             case 'IMPERIAL':
             case 'MILITARY':
                 sourceFaction = NEWS_FACTIONS.SEPARATIST;
-                body = `Imperial forces suffer losses. The resistance grows stronger.`;
+                body = `Imperial forces suffer significant tactical losses as resistance operations prove devastatingly effective. The movement grows stronger with each victory against tyranny.`;
                 break;
             case 'SEPARATIST':
                 sourceFaction = NEWS_FACTIONS.IMPERIAL;
-                body = `Rebel terrorists neutralized. Order is maintained.`;
+                body = `Rebel terrorists neutralized in decisive security operation. Order is maintained throughout the sector as loyal citizens report suspicious activity to authorities.`;
                 break;
             case 'ALIEN':
                 sourceFaction = NEWS_FACTIONS.INDEPENDENT;
-                body = `Xeno threat reduced. Humanity breathes a little easier.`;
+                body = `Xeno threat substantially reduced following intense combat engagement. Humanity breathes a little easier as defense forces demonstrate their effectiveness against the alien menace.`;
                 break;
             default:
                 sourceFaction = this._selectFaction();
-                body = `Combat operations conclude. ${count} hostiles eliminated.`;
+                body = `Combat operations conclude successfully with ${count} hostile vessels eliminated. Patrol forces returning to base for resupply and debriefing. Shipping lanes reopened.`;
         }
 
         this._addNews({
@@ -774,24 +765,24 @@ class NewsManager {
 
         let templateKey = 'HERO_MILITARY';
         let sourceFaction = NEWS_FACTIONS.IMPERIAL;
-        let body = `A new combat ace emerges in ${systemName}.`;
+        let body = `A new combat ace emerges in ${systemName} with a display of exceptional piloting skill and tactical brilliance. Military analysts are taking note of this rising talent.`;
 
         switch (faction?.toUpperCase()) {
             case 'IMPERIAL':
             case 'MILITARY':
                 templateKey = 'HERO_IMPERIAL';
                 sourceFaction = NEWS_FACTIONS.IMPERIAL;
-                body = `${pilotName} exemplifies Imperial excellence. ${kills} confirmed kills in a single engagement.`;
+                body = `${pilotName} exemplifies Imperial excellence with ${kills} confirmed kills in a single engagement. Command has recommended formal commendation. This is what dedication to the Empire looks like.`;
                 break;
             case 'SEPARATIST':
                 templateKey = 'HERO_SEPARATIST';
                 sourceFaction = NEWS_FACTIONS.SEPARATIST;
-                body = `${pilotName} strikes fear into Imperial hearts. The resistance celebrates ${kills} victories.`;
+                body = `${pilotName} strikes fear into Imperial hearts as the resistance celebrates ${kills} decisive victories. Songs are already being written about this fearless freedom fighter.`;
                 break;
             case 'POLICE':
                 templateKey = 'HERO_POLICE';
                 sourceFaction = NEWS_FACTIONS.IMPERIAL;
-                body = `Officer ${pilotName} honored for neutralizing ${kills} threats. The sector is safer today.`;
+                body = `Officer ${pilotName} honored for neutralizing ${kills} serious threats to public safety. The sector is measurably safer thanks to this officer's exceptional courage and skill.`;
                 break;
         }
 
@@ -833,8 +824,8 @@ class NewsManager {
 
         const headline = this._fillTemplate(templates, { SYSTEM: systemName });
         const body = isHigh ?
-            (BODY_TEMPLATES.PIRATE_HIGH[faction.key] || 'Increased hostile activity detected.') :
-            'Clear skies for traders. Low risk transit recommended.';
+            (BODY_TEMPLATES.PIRATE_HIGH[faction.key] || 'Increased hostile activity detected across multiple shipping corridors. Patrol forces stretched thin as attacks continue. Security firms offering premium escort rates.') :
+            'Clear skies reported by traders completing transit through the region. Low risk conditions make this an ideal time for valuable cargo runs. Insurance rates favorable.';
 
         this._addNews({
             headline,
@@ -859,8 +850,8 @@ class NewsManager {
         });
 
         const body = isBoom ?
-            `Demand outstrips supply. Sellers commanding premium prices.` :
-            `Oversupply crashes prices. Buyers rejoice, sellers weep.`;
+            `Demand dramatically outstrips available supply as buyers compete for limited inventory. Sellers commanding premium prices with room for negotiation limited. Traders rushing to capitalize.` :
+            `Oversupply crashes market prices as warehouses overflow with unsold inventory. Buyers rejoice at rock-bottom rates while sellers scramble to minimize losses. Excellent buying opportunity.`;
 
         this._addNews({
             headline,
@@ -886,14 +877,14 @@ class NewsManager {
         if (isPlagueType) {
             templateKey = isDistant ? 'CRISIS_PLAGUE_DISTANT' : 'CRISIS_PLAGUE';
             body = isDistant
-                ? `Medical emergency declared in ${systemName}. Medicine supplies critically low. Traders urged to deliver medical aid.`
-                : `Quarantine measures in effect. Medicine prices soaring as supplies dwindle. Emergency haulers inbound.`;
+                ? `Medical emergency declared in ${systemName} with disease spreading rapidly through population centers. Medicine supplies critically low and running out fast. Traders urged to deliver medical aid for substantial rewards.`
+                : `Quarantine measures in effect as health authorities struggle to contain the outbreak. Medicine prices soaring astronomically as available supplies dwindle to critical levels. Emergency haulers already inbound with relief shipments.`;
             sourceColor = [255, 0, 255];
         } else {
             templateKey = isDistant ? 'CRISIS_FAMINE_DISTANT' : 'CRISIS_FAMINE';
             body = isDistant
-                ? `Food shortage crisis escalates in ${systemName}. Traders redirecting cargo ships to deliver emergency supplies.`
-                : `Crop failures devastate local population. Food prices skyrocketing as emergency relief efforts begin.`;
+                ? `Food shortage crisis escalates dramatically in ${systemName} as stores empty and panic spreads. Traders from across the sector redirecting cargo ships to deliver emergency supplies. Premium prices offered.`
+                : `Catastrophic crop failures devastate local population as food rationing begins. Prices skyrocketing beyond reach of ordinary citizens. Emergency relief efforts underway with humanitarian convoys forming at nearby stations.`;
             sourceColor = [255, 150, 0];
         }
 
@@ -946,19 +937,19 @@ class NewsManager {
         let body;
         switch (storyType) {
             case 'DISTANT_CONFLICT':
-                body = `Reports of military action near ${systemName}. Travel advisories in effect.`;
+                body = `Reports of significant military action near ${systemName} continue to develop. Travel advisories issued for the region as civilian traffic diverted around combat zones. Diplomatic efforts underway.`;
                 break;
             case 'DISTANT_DISCOVERY':
-                body = `Scientists and explorers flock to ${systemName} to investigate.`;
+                body = `Scientists and explorers from across human space flock to ${systemName} to investigate the remarkable findings. Research vessels already en route. Exclusive rights negotiations ongoing.`;
                 break;
             case 'DISTANT_TRADE':
-                body = `Economic indicators positive. Traders seeking new opportunities.`;
+                body = `Economic indicators strongly positive as ${systemName} emerges as a major trading hub. Savvy traders already repositioning their operations to capitalize on new opportunities. Commodity futures active.`;
                 break;
             case 'DISTANT_DISASTER':
-                body = `Emergency response teams dispatched. Casualty reports pending.`;
+                body = `Emergency response teams from multiple systems dispatched to assist with humanitarian crisis. Casualty reports still coming in as rescue operations continue around the clock. Aid convoys forming.`;
                 break;
             default:
-                body = `Developing story from ${systemName}.`;
+                body = `Developing story from ${systemName} continues to unfold as reporters gather additional details. Check back for updates as more information becomes available from our correspondents on scene.`;
         }
 
         this._addNews({
@@ -986,18 +977,13 @@ class NewsManager {
         const titledName = this._generateTitledName();
 
         const template = BACKGROUND_STORY_TEMPLATES[(Math.random() * BACKGROUND_STORY_TEMPLATES.length) | 0];
-        const shipUpper = shipName.toUpperCase();
-        const gangUpper = pirateGang.toUpperCase();
-        const commodityUpper = commodity.toUpperCase();
-        const pilotUpper = pilotName.toUpperCase();
-        const titledUpper = titledName.toUpperCase();
 
         let headline = template[0]
-            .split('{SHIP}').join(shipUpper)
-            .split('{GANG}').join(gangUpper)
-            .split('{COMMODITY}').join(commodityUpper)
-            .split('{PILOT}').join(pilotUpper)
-            .split('{TITLED}').join(titledUpper);
+            .split('{SHIP}').join(shipName)
+            .split('{GANG}').join(pirateGang)
+            .split('{COMMODITY}').join(commodity)
+            .split('{PILOT}').join(pilotName)
+            .split('{TITLED}').join(titledName);
 
         let body = template[1]
             .split('{ship}').join(shipName)

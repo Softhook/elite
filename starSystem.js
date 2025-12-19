@@ -327,6 +327,12 @@ class StarSystem {
         // Pre-allocate reusable vector for distance checks (hot path optimization)
         this._distCheckVector = null; // Lazy init in checkProjectileCollisions
 
+        // Pre-allocate reusable Sets for collision pair deduplication (hot path optimization)
+        // Clears and reuses instead of creating new Set each frame, reducing GC pressure
+        this._checkedEnemyPairs = new Set();
+        this._checkedAsteroidPairs = new Set();
+        this._checkedForceWaveEnemyPairs = new Set();
+
         // Add a system-specific player wanted status
         this.playerWanted = false;
 
@@ -2138,7 +2144,9 @@ class StarSystem {
             }
 
             // Enemy vs Enemy collisions - using spatial hash for O(n) performance
-            const checkedEnemyPairs = new Set();
+            // Reuse pre-allocated Set to reduce GC pressure
+            const checkedEnemyPairs = this._checkedEnemyPairs;
+            checkedEnemyPairs.clear();
             for (let i = 0; i < enemyCount; i++) {
                 const enemy1 = this.enemies[i];
                 if (!enemy1 || !enemy1.pos || enemy1.isDestroyed()) continue;
@@ -3525,7 +3533,9 @@ class StarSystem {
             }
 
             // Enemy vs Enemy collisions - using spatial hash for O(n) performance
-            const checkedEnemyPairs = new Set();
+            // Reuse pre-allocated Set to reduce GC pressure
+            const checkedEnemyPairs = this._checkedEnemyPairs;
+            checkedEnemyPairs.clear();
             for (let i = 0; i < enemyCount; i++) {
                 const enemy1 = this.enemies[i];
                 if (!enemy1 || !enemy1.pos || enemy1.isDestroyed()) continue;
@@ -3548,10 +3558,11 @@ class StarSystem {
                     if (enemy1.role === AI_ROLE.GUARD && enemy2.role === AI_ROLE.GUARD &&
                         enemy1.principal && enemy1.principal === enemy2.principal) continue;
 
-                    // Prevent checking same pair twice
+                    // Prevent checking same pair twice using numeric hash instead of string concatenation
                     const id1 = enemy1.id ?? i;
                     const id2 = enemy2.id ?? this.enemies.indexOf(enemy2);
-                    const pairKey = id1 < id2 ? `${id1}-${id2}` : `${id2}-${id1}`;
+                    // Use numeric pair key: smaller ID * large prime + larger ID
+                    const pairKey = id1 < id2 ? (id1 * 100003 + id2) : (id2 * 100003 + id1);
                     if (checkedEnemyPairs.has(pairKey)) continue;
                     checkedEnemyPairs.add(pairKey);
 
@@ -3585,7 +3596,9 @@ class StarSystem {
 
             // Asteroid vs Asteroid collisions - check each asteroid against nearby asteroids
             const asteroidCount = this.asteroids.length;
-            const checkedPairs = new Set(); // Prevent double-checking pairs
+            // Reuse pre-allocated Set to reduce GC pressure
+            const checkedPairs = this._checkedAsteroidPairs;
+            checkedPairs.clear();
 
             for (let i = 0; i < asteroidCount; i++) {
                 const asteroid1 = this.asteroids[i];
@@ -3601,10 +3614,11 @@ class StarSystem {
                     if (asteroid2 === asteroid1) continue;
                     if (!asteroid2 || !asteroid2.pos || asteroid2.isDestroyed()) continue;
 
-                    // Create unique pair key to avoid checking same pair twice
+                    // Create unique pair key using numeric hash to avoid checking same pair twice
                     const id1 = asteroid1.id || i;
                     const id2 = asteroid2.id || this.asteroids.indexOf(asteroid2);
-                    const pairKey = id1 < id2 ? `${id1}-${id2}` : `${id2}-${id1}`;
+                    // Use numeric pair key: smaller ID * large prime + larger ID
+                    const pairKey = id1 < id2 ? (id1 * 100003 + id2) : (id2 * 100003 + id1);
 
                     if (checkedPairs.has(pairKey)) continue;
                     checkedPairs.add(pairKey);
@@ -5182,6 +5196,10 @@ class StarSystem {
 
         // Determine sun position using the first planet if it exists (cache to avoid repeated access)
         const sunPos = this.planets.length > 0 ? this.planets[0].pos : { x: 0, y: 0 };
+
+        // Cache sun position for space object renderers (PERFORMANCE OPTIMIZATION)
+        // This avoids 60+ Math.atan2 calls per frame in SpaceObjectRenderers
+        this._cachedSunPos = sunPos;
 
         // Draw only visible planets
         for (let i = 0; i < planetCount; i++) {

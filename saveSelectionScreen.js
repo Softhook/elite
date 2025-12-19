@@ -426,7 +426,8 @@ class SaveSelectionScreen {
             // Columned layout (ship/icon in col0, text across col1-col3)
             const columns = this.computeSlotColumns(x + hoverOffset, y, w, h);
             const textColX = columns[1].x + 8;
-            const textColMax = columns[1].w - 16; // only one line here, so narrow is fine
+            // Use width spanning col1 through col3 so "Begin a new adventure." isn't truncated
+            const textColMax = (columns[3].x + columns[3].w) - columns[1].x - 16;
             text(this.truncateText("Begin a new adventure.", textColMax), textColX, lineY);
 
             // Place the new game icon where the ship would be (col0)

@@ -171,8 +171,7 @@ const ANIM_RATES = [
 // NOTE: Draw3D object is now in draw3d.js (loaded before this file)
 
 const SpaceObjectRenderers = {
-    satellite: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    satellite: function (obj, size, anim, bob, sunAngle) {
 
         // Central bus as a short cylinder (many-sided prism for smooth look)
         Draw3D.drawPrism(0, bob, size * 0.18, 16, size * 0.28, color(200, 200, 220), obj.angle, sunAngle);
@@ -209,8 +208,7 @@ const SpaceObjectRenderers = {
         Draw3D.drawBox3D(0, -size * 0.12 + bob, 4, 4, 2, color(255, 120, 100, 255 * flash), obj.angle, sunAngle);
     },
 
-    fuelDepot: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    fuelDepot: function (obj, size, anim, bob, sunAngle) {
 
         // tanks (three vertical tanks)
         const tankW = size * 0.22;
@@ -290,8 +288,7 @@ const SpaceObjectRenderers = {
         Draw3D.drawBox3D(-size * 0.18, size * 0.36 + bob, 4, 3, 3, color(255, 255, 0, 180 * warn), obj.angle, sunAngle);
     },
 
-    telescope: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    telescope: function (obj, size, anim, bob, sunAngle) {
 
         // Main cylindrical body
         Draw3D.drawPrism(0, bob, size * 0.12, 8, size * 0.8, color(180, 190, 200), obj.angle, sunAngle);
@@ -365,8 +362,7 @@ const SpaceObjectRenderers = {
         Draw3D.drawBox3D(size * 0.05, -size * 0.3 + bob, 3, 3, 3, color(0, 255, 255, 255 * flash2), obj.angle, sunAngle);
     },
 
-    relay: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    relay: function (obj, size, anim, bob, sunAngle) {
         const relayPhase = (anim ? anim.relayPhase : 0) + obj.bobPhase * 0.06;
 
         // Main tower (vertical cylinder)
@@ -428,8 +424,7 @@ const SpaceObjectRenderers = {
         ellipse(0, bob - size * 0.32, 4, 3);
     },
 
-    commDish: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    commDish: function (obj, size, anim, bob, sunAngle) {
 
         // Base pedestal
         Draw3D.drawBox3D(0, bob + size * 0.18, size * 0.18, size * 0.12, size * 0.1, color(110, 120, 130), obj.angle, sunAngle);
@@ -502,8 +497,7 @@ const SpaceObjectRenderers = {
         pop(); // end swivel
     },
 
-    habitat: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    habitat: function (obj, size, anim, bob, sunAngle) {
         const cylW = size * 0.9;
         const cylH = size * 0.6;
 
@@ -557,8 +551,7 @@ const SpaceObjectRenderers = {
         ellipse(0, -size * 0.15 + bob, size * 0.1, size * 0.06);
     },
 
-    debris: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    debris: function (obj, size, anim, bob, sunAngle) {
 
         if (obj._shards && obj._shards.length) {
             for (let i = 0; i < obj._shards.length; i++) {
@@ -610,8 +603,7 @@ const SpaceObjectRenderers = {
         }
     },
 
-    probe: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    probe: function (obj, size, anim, bob, sunAngle) {
 
         // Body
         Draw3D.drawPrism(0, bob, size * 0.18, 4, size * 0.9, color(200, 200, 220), obj.angle, sunAngle);
@@ -673,8 +665,7 @@ const SpaceObjectRenderers = {
         noStroke();
     },
 
-    beacon: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    beacon: function (obj, size, anim, bob, sunAngle) {
 
         // Main body
         Draw3D.drawBox3D(0, bob + size * 0.15, size * 0.18, size * 0.5, size * 0.18, color(100, 100, 110), obj.angle, sunAngle);
@@ -739,8 +730,7 @@ const SpaceObjectRenderers = {
         Draw3D.drawBox3D(0, bob + size * 0.3, size * 0.1, size * 0.08, size * 0.1, color(80, 80, 90), obj.angle, sunAngle);
     },
 
-    outpost: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    outpost: function (obj, size, anim, bob, sunAngle) {
 
         // Central hub (large cylindrical core)
         Draw3D.drawPrism(0, bob, size * 0.15, 12, size * 0.8, color(180, 190, 200), obj.angle, sunAngle);
@@ -845,8 +835,7 @@ const SpaceObjectRenderers = {
         Draw3D.drawBox3D(size * 0.08, bob + size * 0.15, size * 0.04, size * 0.4, size * 0.1, color(160, 170, 180, 150), obj.angle, sunAngle);
     },
 
-    observatoryDome: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    observatoryDome: function (obj, size, anim, bob, sunAngle) {
 
         // Simple cylindrical base
         Draw3D.drawCylinder(0, bob + size * 0.1, size * 0.4, size * 0.35, 16, color(120, 130, 140), obj.angle, sunAngle);
@@ -869,8 +858,7 @@ const SpaceObjectRenderers = {
         fill(100, 180, 255, 255 * obsFlash);
         ellipse(0, bob - size * 0.5, 4, 4);
     },
-    weaponPlatform: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    weaponPlatform: function (obj, size, anim, bob, sunAngle) {
 
         // Main armored hull
         Draw3D.drawBox3D(0, bob, size * 0.8, size * 0.5, size * 0.2, color(60, 60, 70), obj.angle, sunAngle);
@@ -1053,14 +1041,13 @@ const SpaceObjectRenderers = {
         pop();
     },
 
-    default: function (obj, size, anim, bob) {
+    default: function (obj, size, anim, bob, sunAngle) {
         // fallback simple marker
         fill(200, 200, 200);
         ellipse(0, 0 + bob, size * 0.6, size * 0.6);
     },
 
-    shieldGenerator: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    shieldGenerator: function (obj, size, anim, bob, sunAngle) {
 
         // Standalone shield generator: visible dome, emitter pylons, pulsing energy field and protective ring
         // Main housing
@@ -1107,8 +1094,7 @@ const SpaceObjectRenderers = {
         fill(120, 255, 180, 200); ellipse(size * 0.18, bob - size * 0.02, 4, 3);
     },
 
-    undergroundMarket: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    undergroundMarket: function (obj, size, anim, bob, sunAngle) {
 
         // Dark, low-profile black market hub with neon signage and covered cargo crates
         // base platform shadow
@@ -1154,8 +1140,7 @@ const SpaceObjectRenderers = {
 
     },
 
-    solarSail: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    solarSail: function (obj, size, anim, bob, sunAngle) {
 
         // Central bus
         Draw3D.drawBox3D(0, bob, size * 0.18, size * 0.12, size * 0.1, color(160, 160, 180), obj.angle, sunAngle);
@@ -1235,8 +1220,7 @@ const SpaceObjectRenderers = {
         ellipse(size * 0.08, bob - size * 0.04, 3, 3);
     },
 
-    engineArray: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    engineArray: function (obj, size, anim, bob, sunAngle) {
 
         // Platform body
         Draw3D.drawBox3D(0, bob + size * 0.02, size * 0.7, size * 0.28, size * 0.1, color(80, 80, 80), obj.angle, sunAngle);
@@ -1292,8 +1276,7 @@ const SpaceObjectRenderers = {
         pop();
     },
 
-    cargoCluster: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    cargoCluster: function (obj, size, anim, bob, sunAngle) {
 
         const cols = 3;
         const rows = 2;
@@ -1356,8 +1339,7 @@ const SpaceObjectRenderers = {
         pop();
     },
 
-    researchArray: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    researchArray: function (obj, size, anim, bob, sunAngle) {
 
         // Low platform
         Draw3D.drawBox3D(0, bob, size * 0.38, size * 0.38, size * 0.22, color(200, 200, 200), obj.angle, sunAngle);
@@ -1435,8 +1417,7 @@ const SpaceObjectRenderers = {
         pop();
     },
 
-    orbitalGarden: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    orbitalGarden: function (obj, size, anim, bob, sunAngle) {
 
         // Helper to project "height" (z) along the object's rotation axis
         // z > 0 is "up" (towards the top of the station), z < 0 is "down"
@@ -1681,8 +1662,7 @@ const SpaceObjectRenderers = {
         }
     },
 
-    hydroponicsBay: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    hydroponicsBay: function (obj, size, anim, bob, sunAngle) {
 
         // Helper to project "height" (z) along the object's rotation axis
         const sin = Math.sin(obj.angle || 0);
@@ -1764,8 +1744,7 @@ const SpaceObjectRenderers = {
         pop();
     },
 
-    decoyBuoy: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    decoyBuoy: function (obj, size, anim, bob, sunAngle) {
 
         // small, cheap decoy that pulses and emits short-lived flares
         // Main body
@@ -1801,8 +1780,7 @@ const SpaceObjectRenderers = {
         pop();
     },
 
-    miningPlatform: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    miningPlatform: function (obj, size, anim, bob, sunAngle) {
 
         // Initialize mining state with all needed properties
         if (!obj._miningState) {
@@ -2111,8 +2089,7 @@ const SpaceObjectRenderers = {
         ellipse(0, bob - size * 0.38, 6 * activityPulse, 4 * activityPulse);
     },
 
-    ancientRelic: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    ancientRelic: function (obj, size, anim, bob, sunAngle) {
         // Redesigned obelisk-style relic with stacked prisms, floating ring and shards
         const pulse = (Math.sin(anim ? anim.relicPulse : obj.bobPhase * 0.001) + 1) * 0.5;
 
@@ -2160,8 +2137,7 @@ const SpaceObjectRenderers = {
         ellipse(size * 0.14, size * 0.16 + bob, 5, 5);
     },
 
-    alienArtifact: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    alienArtifact: function (obj, size, anim, bob, sunAngle) {
         const phase = (typeof anim.artifactPhase === 'number') ? anim.artifactPhase : obj.bobPhase;
 
         // Central Crystal Cluster
@@ -2211,8 +2187,7 @@ const SpaceObjectRenderers = {
             noStroke();
         }
     },
-    signalFlare: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    signalFlare: function (obj, size, anim, bob, sunAngle) {
         const phase = (anim ? anim.flarePhase : obj.bobPhase * 0.008);
 
         // Base pulse and color cycling
@@ -2308,8 +2283,7 @@ const SpaceObjectRenderers = {
         pop();
     },
 
-    asteroidMiner: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    asteroidMiner: function (obj, size, anim, bob, sunAngle) {
 
         // Base skid
         Draw3D.drawBox3D(0, bob + size * 0.20, size * 0.88, size * 0.38, size * 0.1, color(50, 50, 58), obj.angle, sunAngle);
@@ -2455,8 +2429,7 @@ const SpaceObjectRenderers = {
         ellipse(ddx - 4, ddy - 2, 3, 3);
     },
 
-    energyCollector: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    energyCollector: function (obj, size, anim, bob, sunAngle) {
 
         // Base dish
         Draw3D.drawBox3D(0, bob, size * 0.94, size * 0.36, size * 0.1, color(24, 32, 48), obj.angle, sunAngle);
@@ -2507,8 +2480,7 @@ const SpaceObjectRenderers = {
         }
     },
 
-    iceCrystal: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    iceCrystal: function (obj, size, anim, bob, sunAngle) {
 
         // Main crystal cluster
         for (let s = 0; s < 5; s++) {
@@ -2532,8 +2504,7 @@ const SpaceObjectRenderers = {
         }
     },
 
-    nebulaFragment: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    nebulaFragment: function (obj, size, anim, bob, sunAngle) {
         const phase = (anim && typeof anim.nebulaPhase === 'number') ? anim.nebulaPhase : obj.bobPhase * 0.008;
         const t = (Math.sin(phase) + 1) * 0.5;
 
@@ -2617,8 +2588,7 @@ const SpaceObjectRenderers = {
         }
     },
 
-    wreckage: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    wreckage: function (obj, size, anim, bob, sunAngle) {
 
         // Main plate
         Draw3D.drawBox3D(0, bob, size * 0.6, size * 0.28, size * 0.05, color(120, 110, 100), obj.angle, sunAngle);
@@ -2632,8 +2602,7 @@ const SpaceObjectRenderers = {
         ellipse(size * 0.36, bob - size * 0.06, 6, 3);
     },
 
-    solarFarm: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    solarFarm: function (obj, size, anim, bob, sunAngle) {
         const a = anim || obj._anim || {};
 
         // Floating frame / base
@@ -2722,8 +2691,7 @@ const SpaceObjectRenderers = {
         }
     },
 
-    prison: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    prison: function (obj, size, anim, bob, sunAngle) {
 
         // Base platform shadow
         Draw3D.drawBox3D(0, size * 0.22 + bob, size * 0.95, size * 0.28, size * 0.05, color(12, 12, 16, 220), obj.angle, sunAngle);
@@ -2847,8 +2815,7 @@ const SpaceObjectRenderers = {
         }
     },
 
-    drugLab: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    drugLab: function (obj, size, anim, bob, sunAngle) {
 
         // Platform shadow
         Draw3D.drawBox3D(0, size * 0.2 + bob, size * 0.88, size * 0.26, size * 0.05, color(16, 20, 16, 200), obj.angle, sunAngle);
@@ -2974,9 +2941,8 @@ const SpaceObjectRenderers = {
         ellipse(botX + 3, botY, 2, 2);
     },
 
-    labourColony: function (obj, size, anim, bob) {
+    labourColony: function (obj, size, anim, bob, sunAngle) {
         // Labour colony: industrial complex with worker modules, mining equipment, processing facilities and transport rails
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
 
         // Base platform with industrial grid
         Draw3D.drawBox3D(0, size * 0.25 + bob, size * 1.0, size * 0.3, size * 0.05, color(30, 30, 35), obj.angle, sunAngle);
@@ -3105,9 +3071,8 @@ const SpaceObjectRenderers = {
         }
     },
 
-    quantumGate: function (obj, size, anim, bob) {
+    quantumGate: function (obj, size, anim, bob, sunAngle) {
         // Enhanced quantum gate: multi-ring shimmer, rotating glyphs, teleport arcs and particle jets
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         const phase = (anim && anim.gatePhase) ? anim.gatePhase : obj.bobPhase * 0.01;
         const spin = obj.bobPhase * 0.0025;
         const pulse = 0.6 + 0.45 * Math.sin(phase * 1.8);
@@ -3203,9 +3168,8 @@ const SpaceObjectRenderers = {
     // SHIPYARD - Large orbital shipbuilding facility with unified structure
     // and consistent perspective orientation
     // ==========================================================================
-    shipyard: function (obj, size, anim, bob) {
+    shipyard: function (obj, size, anim, bob, sunAngle) {
         // Animation phases
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
         const phase = (anim && anim.shipyardPhase) ? anim.shipyardPhase : obj.bobPhase * 0.0015;
         const cranePhase = (anim && anim.cranePhase) ? anim.cranePhase : obj.bobPhase * 0.0008;
         const assemblyPhase = (anim && anim.assemblyPhase) ? anim.assemblyPhase : obj.bobPhase * 0.001;
@@ -3399,8 +3363,7 @@ const SpaceObjectRenderers = {
     },
 
     // Advanced Research Station - showcases torus, dome, cone, lattice
-    advancedResearchStation: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    advancedResearchStation: function (obj, size, anim, bob, sunAngle) {
 
         // Habitat ring - rotating torus
         const rotPhase = obj.bobPhase * 0.001;
@@ -3435,8 +3398,7 @@ const SpaceObjectRenderers = {
     },
 
     // Power Generation Station - showcases helix, torus stack, geodesic dome
-    powerStation: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    powerStation: function (obj, size, anim, bob, sunAngle) {
 
         // Main reactor core - cylinder with glow
         Draw3D.drawCylinder(0, bob, size * 0.25, size * 0.5, 16, color(100, 120, 140), obj.angle, sunAngle);
@@ -3480,8 +3442,7 @@ const SpaceObjectRenderers = {
     },
 
     // Communication Hub - showcases cylinder stacking, rods, inverted domes, lattice
-    commHub: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    commHub: function (obj, size, anim, bob, sunAngle) {
 
         // Central tower - tapered cylinders
         Draw3D.drawCylinder(0, bob + size * 0.1, size * 0.15, size * 0.3, 12, color(140, 145, 150), obj.angle, sunAngle);
@@ -3518,8 +3479,7 @@ const SpaceObjectRenderers = {
     },
 
     // Alien Monolith - showcases ALL primitives with pulsing animation
-    alienMonolith: function (obj, size, anim, bob) {
-        const sunAngle = Math.atan2(-obj.pos.y, -obj.pos.x) - (obj.angle || 0);
+    alienMonolith: function (obj, size, anim, bob, sunAngle) {
         const pulse = Math.sin(obj.bobPhase * 0.003) * 0.5 + 0.5;
 
         // Base - torus platform
@@ -3948,8 +3908,12 @@ class SpaceObject {
         // subtle bob when drawing
         const bob = Math.sin(this.bobPhase) * this.bobAmp;
 
-        // Use the cached renderer for this type
-        this.renderer(this, size, anim, bob);
+        // PERFORMANCE OPTIMIZATION: Compute sunAngle once here instead of in each renderer
+        // This eliminates 60+ Math.atan2 calls per frame
+        const sunAngle = Math.atan2(-this.pos.y, -this.pos.x) - (this.angle || 0);
+
+        // Use the cached renderer for this type, passing pre-computed sunAngle
+        this.renderer(this, size, anim, bob, sunAngle);
 
         // --- Draw Player's Target Indicator for this space object ---
         if (typeof player !== 'undefined' && player.target === this) {

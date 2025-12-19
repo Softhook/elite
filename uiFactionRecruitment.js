@@ -221,7 +221,7 @@ class UIFactionRecruitment {
         }
 
         let newsY = contentY + 45;
-        const newsItemHeight = 45;
+        const newsItemHeight = 58;
         const newsWidth = leftW - padding * 2;
 
         if (newsItems.length === 0) {
@@ -236,10 +236,39 @@ class UIFactionRecruitment {
                 rect(leftX + padding, newsY, newsWidth, newsItemHeight - 5, 3);
                 noStroke();
 
-                // Message body only (no headline or source shown)
+                // Body text with wrapping to show more content
                 UIComponents.setTextStyle({ fill: [200, 200, 220], size: 12, align: [LEFT, TOP] });
-                const message = (item.body || item.headline || 'No intel available').substring(0, 50);
-                text(message + ((item.body || item.headline || '').length > 50 ? '...' : ''), leftX + padding + 8, newsY + 12);
+                const body = item.body || item.headline || 'No intel available';
+                const maxLineWidth = newsWidth - 16;
+
+                // Simple word wrap for 2-3 lines
+                const words = body.split(' ');
+                let lines = [];
+                let currentLine = '';
+
+                for (const word of words) {
+                    const testLine = currentLine ? currentLine + ' ' + word : word;
+                    if (textWidth(testLine) > maxLineWidth && currentLine) {
+                        lines.push(currentLine);
+                        currentLine = word;
+                        if (lines.length >= 2) break; // Limit to 2-3 lines
+                    } else {
+                        currentLine = testLine;
+                    }
+                }
+                if (currentLine && lines.length < 3) lines.push(currentLine);
+
+                // Add ellipsis if truncated
+                if (lines.length >= 2 && words.length > lines.join(' ').split(' ').length) {
+                    lines[lines.length - 1] = lines[lines.length - 1].slice(0, -3) + '...';
+                }
+
+                // Draw lines
+                let lineY = newsY + 8;
+                for (const line of lines) {
+                    text(line, leftX + padding + 8, lineY);
+                    lineY += 16;
+                }
 
                 newsY += newsItemHeight;
             }
