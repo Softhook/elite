@@ -690,1951 +690,92 @@ class Planet {
         // Choose a civilization pattern type (0-5) based on featureRand for more variety
         const patternType = Math.floor((this.featureRand * 122.27) % 6);
 
-        // Set colors based on civilization type to add variety
-        let primaryColor, secondaryColor, accentColor;
-        switch (patternType) {
-            case 0: // Warm/amber - standard Earth-like
-                primaryColor = color(255, 240, 180, 180);
-                secondaryColor = color(255, 220, 140, 160);
-                accentColor = color(255, 200, 100, 200);
-                break;
-            case 1: // Cooler/blueish - advanced tech
-                primaryColor = color(220, 240, 255, 170);
-                secondaryColor = color(180, 200, 255, 150);
-                accentColor = color(150, 180, 255, 190);
-                break;
-            case 2: // Warm/reddish - older civilization
-                primaryColor = color(255, 220, 160, 180);
-                secondaryColor = color(255, 200, 130, 160);
-                accentColor = color(255, 180, 100, 200);
-                break;
-            case 3: // Greenish tint - alien/bio-tech
-                primaryColor = color(220, 255, 220, 170);
-                secondaryColor = color(180, 245, 190, 150);
-                accentColor = color(140, 255, 160, 190);
-                break;
-            case 4: // Purple/violet - exotic civilization
-                primaryColor = color(240, 200, 255, 170);
-                secondaryColor = color(200, 150, 255, 150);
-                accentColor = color(180, 120, 255, 190);
-                break;
-            case 5: // Cyan/teal - aquatic or fusion-based
-                primaryColor = color(180, 240, 255, 170);
-                secondaryColor = color(140, 220, 255, 150);
-                accentColor = color(100, 200, 255, 190);
-                break;
-        }
+        const { primaryColor, secondaryColor, accentColor } = this._getCivilizationColors(patternType);
+        this.cityLightsColor = primaryColor;
 
-        this.cityLightsColor = primaryColor; // Update the main color
-
-        // Cache color components for inner loop performance
         const primR = red(primaryColor), primG = green(primaryColor), primB = blue(primaryColor);
         const secR = red(secondaryColor), secG = green(secondaryColor), secB = blue(secondaryColor);
         const accR = red(accentColor), accG = green(accentColor), accB = blue(accentColor);
 
-
-        // --- PLANET-WIDE FAINT NOISE TEXTURE ---
-        // This covers the whole planet with faint city sprawl
-        const faintBandHeight = Math.max(2, Math.ceil(3 * random(10)));
-        const faintDotSize = faintBandHeight * 0.5;
-        const noiseScale = this.noiseScale;
-        const featureRand = this.featureRand;
-
-        for (let y = -r; y < r; y += faintBandHeight) {
-            const ySq = y * y;
-            const bandRSq = r * r - ySq;
-            if (bandRSq <= 0) continue;
-            const bandR = Math.sqrt(bandRSq);
-
-            for (let x = -bandR; x < bandR; x += faintBandHeight) {
-                const worldX = bufferCenter + x;
-                const worldY = bufferCenter + y;
-                const distSq = x * x + ySq;
-                const distFromCenter = Math.sqrt(distSq);
-                const angle = Math.atan2(y, x);
-
-                // Spherical sampling so the faint sprawl wraps and fades at the limb
-                const nx = x / r;
-                const ny = y / r;
-                const inside = nx * nx + ny * ny;
-                if (inside > 1) continue;
-                const nzUnit = Math.sqrt(Math.max(0, 1 - inside));
-                const sampleMultiplier = Math.max(0.0005, (this.radius * noiseScale) * 0.8);
-                const bNX = nx * sampleMultiplier + featureRand * 0.001;
-                const bNY = ny * sampleMultiplier + featureRand * 0.002;
-                const bNZ = nzUnit * sampleMultiplier + featureRand * 0.003;
-
-                const baseNoise = pg.noise(bNX, bNY, bNZ);
-                const detailNoise = pg.noise(bNX * 2.5, bNY * 2.5, bNZ * 2.0);
-                let combinedNoise = baseNoise * 0.62 + detailNoise * 0.38;
-                combinedNoise = Math.min(1, Math.max(0, Math.pow(combinedNoise, 1.25)));
-
-                // Fade faint noise toward the limb
-                const limbFactor = Math.pow(nzUnit, 0.9);
-                if (combinedNoise > 0.2) {
-                    const faintAlpha = Math.max(8, Math.round(36 * limbFactor));
-                    const fo = Math.max(0.35, limbFactor);
-                    const fd = Math.max(1, Math.round(faintDotSize * fo));
-                    pg.noStroke();
-                    pg.fill(primR, primG, primB, faintAlpha);
-                    pg.ellipse(worldX, worldY, fd, fd);
-                }
-            }
-        }
-        // --- END PLANET-WIDE FAINT NOISE TEXTURE ---
-
-        // Smaller resolution for detailed structures
         const bandHeight = Math.max(2, Math.ceil(240 / this.size));
-
-        // Generate civilization hubs - define core city centers
-        const cityHubs = [];
-        const numHubs = Math.floor(r / 80) + Math.floor(random(2, 5));
-        const TWO_PI_CONST = TWO_PI;
-
-        for (let i = 0; i < numHubs; i++) {
-            // Distribute hubs across planet's surface with clustering tendencies
-            const hubAngle = (i / numHubs) * TWO_PI_CONST + random(-0.3, 0.3);
-            // Vary the distance from center but avoid edges
-            const hubDist = random(r * 0.3, r * 0.85);
-            const hubSize = random(r * 0.1, r * 0.25);
-            const hubX = Math.cos(hubAngle) * hubDist;
-            const hubY = Math.sin(hubAngle) * hubDist;
-
-            cityHubs.push({
-                x: hubX,
-                y: hubY,
-                sizeSq: hubSize * hubSize, // Pre-calculate squared size
-                size: hubSize,
-                density: random(0.6, 1.0)
-            });
-        }
-
-        // Cache constants for loops
         const densityBase = this.cityLightsDensity * 0.5;
-        const rSq = r * r;
 
-        // Draw the base grid/cells of the civilization - cover the planet surface
-        for (let y = -r; y < r; y += bandHeight) {
-            const ySq = y * y;
-            const bandRSq = rSq - ySq;
-            if (bandRSq <= 0) continue;
-            const bandR = Math.sqrt(bandRSq);
+        // Render layers
+        this._renderCitySprawl(pg, r, bufferCenter, this.noiseScale, this.featureRand, primR, primG, primB);
+        const cityHubs = this._generateCityHubs(r);
+        this._renderCityHubs(pg, r, bufferCenter, cityHubs, bandHeight, this.noiseScale, this.featureRand, primR, primG, primB, secR, secG, secB, accR, accG, accB, densityBase);
+        this._renderGridOverlay(pg, r, bufferCenter, this.featureRand, bandHeight, primR, primG, primB, secR, secG, secB);
+        this._renderTransportLines(pg, r, bufferCenter, cityHubs, bandHeight, secR, secG, secB);
 
-            for (let x = -bandR; x < bandR; x += bandHeight) {
-                const worldX = bufferCenter + x;
-                const worldY = bufferCenter + y;
-                const distSq = x * x + ySq;
-                const distFromCenter = Math.sqrt(distSq);
-                const angle = Math.atan2(y, x);
-
-                // Spherical sampling: sample noise on unit-sphere to wrap features and compress at limb
-                const nx = x / r;
-                const ny = y / r;
-                const inside = nx * nx + ny * ny;
-                if (inside > 1) continue;
-                const nzUnit = Math.sqrt(Math.max(0, 1 - inside));
-                const sampleMultiplier = Math.max(0.0005, (this.radius * noiseScale) * 0.8);
-                const sNX = nx * sampleMultiplier + featureRand * 0.001;
-                const sNY = ny * sampleMultiplier + featureRand * 0.002;
-                const sNZ = nzUnit * sampleMultiplier + featureRand * 0.004;
-
-                // Blend different noise octaves sampled in 3D for natural wrapping
-                const baseNoise = pg.noise(sNX, sNY, sNZ);
-                const detailNoise = pg.noise(sNX * 2.2, sNY * 2.2, sNZ * 1.8);
-                let combinedNoise = (baseNoise * 0.56) + (detailNoise * 0.44);
-                combinedNoise = Math.min(1, Math.max(0, Math.pow(combinedNoise, 1.35)));
-
-                // Influence from city hubs (proximity increases light density)
-                let hubInfluence = 0;
-                for (let h = 0; h < cityHubs.length; h++) {
-                    const hub = cityHubs[h];
-                    const dx = x - hub.x;
-                    const dy = y - hub.y;
-                    const hubDistSq = dx * dx + dy * dy;
-
-                    if (hubDistSq < hub.sizeSq) {
-                        const hubDist = Math.sqrt(hubDistSq);
-                        // Stronger influence closer to hub center with falloff
-                        const normalizedDist = hubDist / hub.size;
-                        hubInfluence += hub.density * (1 - normalizedDist);
-                    }
-                }
-                hubInfluence = Math.min(hubInfluence, 0.8);
-
-                // Light density threshold boosted by hub proximity
-                const densityThreshold = 1 - (densityBase + hubInfluence);
-
-                // Limb attenuation so city lights wrap with the sphere
-                const limbFactor = Math.pow(nzUnit, 0.9);
-                const brightnessMul = Math.max(0.22, limbFactor);
-
-                // Generate various city light elements based on the noise values
-                if (combinedNoise > densityThreshold) {
-                    // Brightness varies with noise and hub influence
-                    const brightnessFactor = (combinedNoise + hubInfluence - densityThreshold) / (1.5 - densityThreshold);
-                    const brightness = 70 + brightnessFactor * 130;
-                    const isNearHub = hubInfluence > 0.2;
-                    const adjBrightness = brightness * brightnessMul;
-
-                    // Structure type based on noise and pattern type
-                    const structureType = (combinedNoise * 10 + baseNoise * 5) % 1;
-
-                    // Draw different structural elements based on pattern and noise
-                    if (structureType < 0.25) {
-                        // Small point lights (buildings) - scale by limb foreshortening
-                        pg.noStroke();
-                        pg.fill(primR, primG, primB, Math.min(255, Math.round(adjBrightness * 0.8)));
-                        const rawDot = isNearHub ? bandHeight * 0.7 : bandHeight * 0.4;
-                        const dotSize = Math.max(1, rawDot * brightnessMul);
-                        pg.ellipse(worldX, worldY, dotSize, dotSize);
-                    }
-                    else if (structureType < 0.5) {
-                        // Short line segments (roads/connections)
-                        const lineAngle = (angle + baseNoise * Math.PI) % TWO_PI_CONST;
-                        pg.stroke(secR, secG, secB, Math.min(255, Math.round(adjBrightness * 0.9)));
-                        pg.strokeWeight(bandHeight * 0.4 * brightnessMul);
-                        const lineLength = (isNearHub ? bandHeight * 2 : bandHeight * 1.2) * brightnessMul;
-                        const halfLen = lineLength * 0.5;
-                        const cosAngle = Math.cos(lineAngle);
-                        const sinAngle = Math.sin(lineAngle);
-                        pg.line(
-                            worldX - cosAngle * halfLen,
-                            worldY - sinAngle * halfLen,
-                            worldX + cosAngle * halfLen,
-                            worldY + sinAngle * halfLen
-                        );
-                    }
-                    else if (structureType < 0.7) {
-                        // Urban blocks/squares
-                        pg.noStroke();
-                        pg.fill(primR, primG, primB, Math.min(255, Math.round(adjBrightness * 0.7)));
-                        const rawBlock = isNearHub ? bandHeight * 1.2 : bandHeight * 0.8;
-                        const blockSize = Math.max(1, rawBlock * brightnessMul);
-                        const halfBlock = blockSize * 0.5;
-                        pg.rect(worldX - halfBlock, worldY - halfBlock, blockSize, blockSize);
-
-                        // Add interior detail to blocks
-                        if (isNearHub && random() > 0.5) {
-                            const innerSize = blockSize * 0.6;
-                            const innerOffset = blockSize * 0.3;
-                            pg.fill(secR, secG, secB, Math.min(255, Math.round(adjBrightness * 0.9)));
-                            pg.rect(worldX - innerOffset, worldY - innerOffset, innerSize, innerSize);
-                        }
-                    }
-                    else {
-                        // Scattered points (suburbs/outskirts)
-                        pg.noStroke();
-                        const scatterSize = Math.max(1, bandHeight * 0.3 * brightnessMul);
-                        const maxDist = bandHeight * 1.4;
-                        for (let i = 0; i < 3; i++) {
-                            const offsetX = random(-bandHeight, bandHeight) * brightnessMul;
-                            const offsetY = random(-bandHeight, bandHeight) * brightnessMul;
-                            const offsetDistSq = offsetX * offsetX + offsetY * offsetY;
-                            const offsetDist = Math.sqrt(offsetDistSq);
-                            const scatterBrightness = adjBrightness * (1 - 0.6 * offsetDist / maxDist);
-                            pg.fill(primR, primG, primB, Math.max(8, Math.round(scatterBrightness)));
-                            pg.ellipse(worldX + offsetX, worldY + offsetY, scatterSize, scatterSize);
-                        }
-                    }
-
-                    // Add hub-specific detailed structures
-                    if (isNearHub && hubInfluence > 0.5 && random() > 0.8) {
-                        // Major city centers - add geometric patterns
-                        const patternSize = Math.max(2, bandHeight * random(2, 4) * brightnessMul);
-                        const halfPattern = patternSize * 0.5;
-                        const brightAlpha = Math.max(10, Math.round(adjBrightness * 0.8));
-
-                        if (patternType === 0 || patternType === 2) {
-                            // Concentric circles for warm/traditional civilizations
-                            pg.noFill();
-                            pg.stroke(secR, secG, secB, brightAlpha);
-                            pg.strokeWeight(bandHeight * 0.3 * brightnessMul);
-                            pg.ellipse(worldX, worldY, patternSize * 0.7, patternSize * 0.7);
-                            pg.strokeWeight(bandHeight * 0.2 * brightnessMul);
-                            pg.ellipse(worldX, worldY, patternSize, patternSize);
-                        } else {
-                            // Grid/angular patterns for cooler/advanced civilizations
-                            pg.stroke(secR, secG, secB, brightAlpha);
-                            pg.strokeWeight(bandHeight * 0.3 * brightnessMul);
-                            const x1 = worldX - halfPattern, y1 = worldY - halfPattern;
-                            const x2 = worldX + halfPattern, y2 = worldY + halfPattern;
-                            pg.line(x1, y1, x2, y2);
-                            pg.line(x2, y1, x1, y2);
-                        }
-                    }
-                }
-            }
-        }
-        // Angular high-tech grid overlay - with TRUE spherical projection
-        // Each segment is positioned along a curved arc that follows the sphere surface
-        (function () {
-            const gridAngle = ((featureRand * 13.37) % TWO_PI_CONST) + this.currentRotation * 0.12;
-            const baseSpacing = Math.max(8, Math.floor(r * map(this.cityLightsDensity, 0.25, 0.9, 0.18, 0.06)));
-            const spacing = Math.max(6, Math.round(baseSpacing));
-            const segStep = Math.max(4, Math.round(spacing * 0.35));
-            const noiseJitter = Math.max(0.5, spacing * 0.22);
-            const noiseScale = this.noiseScale || 0.01;
-
-            pg.push();
-            pg.translate(bufferCenter, bufferCenter);
-            pg.rotate(gridAngle);
-
-            // Primary grid lines - following curved arcs on sphere surface
-            pg.stroke(primR, primG, primB, 160);
-            pg.strokeWeight(Math.max(0.6, bandHeight * 0.35));
-
-            const safeR = r * 0.85;
-
-            // For each grid line at offset gx from center
-            for (let gx = -safeR; gx <= safeR; gx += spacing) {
-                const halfChord = Math.sqrt(Math.max(0, safeR * safeR - gx * gx));
-                if (halfChord < 5) continue;
-
-                // How far this line is from center (0-1)
-                const lineDistNorm = Math.abs(gx) / r;
-
-                for (let yy = -halfChord; yy <= halfChord; yy += segStep) {
-                    // Original grid position
-                    const baseX = gx;
-                    const baseY = yy;
-
-                    // Spherical projection: calculate curved x position
-                    // As we move along y, the x position curves outward
-                    // The further from center (gx), the more curvature
-                    const yNorm = baseY / r; // -1 to 1
-                    const distFromPolesSq = yNorm * yNorm;
-                    // Curve amount: line bows outward, maximum at y=0, minimum at poles
-                    const curveDisplacement = lineDistNorm * (1 - distFromPolesSq) * r * 0.3;
-                    // Displacement direction: away from center (same sign as gx)
-                    const curvedX = baseX + Math.sign(gx) * curveDisplacement;
-
-                    const x = curvedX;
-                    const y = baseY;
-
-                    // Spherical sampling for visibility
-                    const nx = x / r;
-                    const ny = y / r;
-                    const nzUnit = Math.sqrt(Math.max(0, 1 - (nx * nx + ny * ny)));
-                    if (nzUnit < 0.15) continue;
-
-                    const sampleMultiplier = Math.max(0.0006, (this.radius * noiseScale) * 0.9);
-                    const sNX = nx * sampleMultiplier + featureRand * 0.002 + 7.13;
-                    const sNY = ny * sampleMultiplier + featureRand * 0.003 + 9.71;
-                    const sNZ = nzUnit * sampleMultiplier + featureRand * 0.004 + 1.41;
-
-                    const nVal = pg.noise(sNX * 2.2, sNY * 2.2, sNZ * 1.6);
-                    const nDetail = pg.noise(sNX * 6.0, sNY * 6.0, sNZ * 4.2);
-                    const visibility = Math.pow(nVal * 0.7 + nDetail * 0.3, 1.25);
-
-                    const limbFactor = Math.pow(nzUnit, 0.85);
-                    const threshold = 0.35 + (0.45 * (1 - this.cityLightsDensity));
-
-                    if (visibility > threshold * (0.6 + 0.4 * limbFactor)) {
-                        const segHalf = Math.max(1, segStep * 0.45);
-                        const baseJitter = (nDetail - 0.5) * noiseJitter;
-                        const jitter = (pg.noise(sNX * 1.5, sNY * 1.5) - 0.5) * baseJitter * (1 - limbFactor);
-
-                        // Calculate curved positions for start and end of segment
-                        const startYNorm = (y - segHalf) / r;
-                        const endYNorm = (y + segHalf) / r;
-                        const startCurve = lineDistNorm * (1 - startYNorm * startYNorm) * r * 0.3;
-                        const endCurve = lineDistNorm * (1 - endYNorm * endYNorm) * r * 0.3;
-
-                        const startX = baseX + Math.sign(gx || 1) * startCurve + jitter;
-                        const startY = y - segHalf;
-                        const endX = baseX + Math.sign(gx || 1) * endCurve + jitter;
-                        const endY = y + segHalf;
-
-                        if ((startX * startX + startY * startY) > safeR * safeR) continue;
-                        if ((endX * endX + endY * endY) > safeR * safeR) continue;
-
-                        pg.line(startX, startY, endX, endY);
-                    }
-                }
-            }
-
-            // Secondary angular cross-grid - also with spherical projection
-            pg.stroke(secR, secG, secB, 120);
-            pg.strokeWeight(Math.max(0.35, bandHeight * 0.22));
-            const crossAngle = gridAngle + PI / 2.3;
-            pg.rotate(crossAngle - gridAngle);
-
-            for (let gx = -safeR; gx <= safeR; gx += Math.round(spacing * 1.4)) {
-                const halfChord = Math.sqrt(Math.max(0, safeR * safeR - gx * gx));
-                if (halfChord < 5) continue;
-
-                const lineDistNorm = Math.abs(gx) / r;
-
-                for (let yy = -halfChord; yy <= halfChord; yy += Math.max(3, Math.round(segStep * 0.9))) {
-                    const baseX = gx;
-                    const baseY = yy;
-
-                    const yNorm = baseY / r;
-                    const curveDisplacement = lineDistNorm * (1 - yNorm * yNorm) * r * 0.3;
-                    const curvedX = baseX + Math.sign(gx) * curveDisplacement;
-
-                    const x = curvedX;
-                    const y = baseY;
-
-                    const nx = x / r;
-                    const ny = y / r;
-                    const nzUnit = Math.sqrt(Math.max(0, 1 - (nx * nx + ny * ny)));
-                    if (nzUnit < 0.2) continue;
-
-                    const sampleMultiplier = Math.max(0.0006, (this.radius * noiseScale) * 0.9);
-                    const sNX = nx * sampleMultiplier + featureRand * 0.005 + 3.21;
-                    const sNY = ny * sampleMultiplier + featureRand * 0.006 + 4.19;
-                    const sNZ = nzUnit * sampleMultiplier + featureRand * 0.007 + 2.17;
-
-                    const nVal = pg.noise(sNX * 2.6, sNY * 2.6, sNZ * 1.9);
-                    const limbFactor = Math.pow(nzUnit, 0.9);
-
-                    if (nVal > 0.48 * (0.7 + 0.3 * limbFactor)) {
-                        const len = Math.max(1, segStep * 0.6);
-                        const jitter = (pg.noise(sNX * 1.3, sNY * 1.3) - 0.5) * noiseJitter * 0.6 * (1 - limbFactor);
-
-                        const startYNorm = (y - len) / r;
-                        const endYNorm = (y + len) / r;
-                        const startCurve = lineDistNorm * (1 - startYNorm * startYNorm) * r * 0.3;
-                        const endCurve = lineDistNorm * (1 - endYNorm * endYNorm) * r * 0.3;
-
-                        const startX = baseX + Math.sign(gx || 1) * startCurve + jitter;
-                        const startY = y - len;
-                        const endX = baseX + Math.sign(gx || 1) * endCurve + jitter;
-                        const endY = y + len;
-
-                        if ((startX * startX + startY * startY) > safeR * safeR) continue;
-                        if ((endX * endX + endY * endY) > safeR * safeR) continue;
-
-                        pg.line(startX, startY, endX, endY);
-                    }
-                }
-            }
-
-            pg.pop();
-        }).call(this);
-
-
-        // Draw connecting transport/highway lines between hubs - with TRUE spherical projection
-        pg.noFill();
-        const maxHubDist = r * 0.7;
-        for (let i = 0; i < cityHubs.length; i++) {
-            for (let j = i + 1; j < cityHubs.length; j++) {
-                const hub1 = cityHubs[i];
-                const hub2 = cityHubs[j];
-                const dx = hub2.x - hub1.x;
-                const dy = hub2.y - hub1.y;
-                const hubDist = Math.sqrt(dx * dx + dy * dy);
-
-                // Only connect reasonably close hubs
-                if (hubDist < maxHubDist) {
-                    // Compute limb factor at both endpoints
-                    const hub1Limb = this._getLimbFactor(hub1.x, hub1.y);
-                    const hub2Limb = this._getLimbFactor(hub2.x, hub2.y);
-                    const avgLimb = (hub1Limb + hub2Limb) * 0.5;
-                    if (avgLimb < 0.2) continue; // Skip lines too close to limb
-
-                    const baseAlpha = 150 - (hubDist / maxHubDist) * 80;
-                    pg.stroke(secR, secG, secB, Math.round(baseAlpha * avgLimb));
-                    pg.strokeWeight(bandHeight * 0.6 * avgLimb);
-
-                    // Draw curved line following sphere surface
-                    this._drawCurvedLine(pg, hub1.x, hub1.y, hub2.x, hub2.y, bufferCenter, r);
-                }
-            }
-        }
 
         // --- MEGA-STRUCTURES AND SPECIAL FEATURES ---
         // These are large-scale civilization features visible from space
 
-        // 1. ORBITAL RING / SPACE ELEVATOR (rare mega-structure)
-        if ((featureRand * 31.41) % 1 > 0.85) {
-            const ringAngle = (featureRand * 17.3) % TWO_PI_CONST;
-            const ringRadius = r * random(1.08, 1.15); // Just outside planet surface
-            const ringThickness = Math.max(1, bandHeight * 0.5);
-            const segmentCount = Math.floor(120 + random(40));
+        // 1. ORBITAL RING / SPACE ELEVATOR
+        this._renderMegaStructureOrbitalRing(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-            pg.push();
-            pg.translate(bufferCenter, bufferCenter);
-            pg.rotate(ringAngle);
-            pg.noFill();
-            // Reddish orbital ring to match space elevator tethers
-            pg.stroke(200, 60, 50, 180);
-            pg.strokeWeight(ringThickness);
+        // 2. AGRICULTURAL PATTERNS
+        this._renderMegaStructureAgricultural(pg, r, bufferCenter, this.featureRand, bandHeight, primR, primG, primB, secR, secG, secB);
 
-            // Draw segmented orbital ring with gaps
-            for (let seg = 0; seg < segmentCount; seg++) {
-                const segAngle = (seg / segmentCount) * TWO_PI_CONST;
-                const nextAngle = ((seg + 0.7) / segmentCount) * TWO_PI_CONST; // 70% segment, 30% gap
-                const x1 = Math.cos(segAngle) * ringRadius;
-                const y1 = Math.sin(segAngle) * ringRadius * 0.3; // Perspective
-                const x2 = Math.cos(nextAngle) * ringRadius;
-                const y2 = Math.sin(nextAngle) * ringRadius * 0.3;
+        // 3. RADIAL CITY PATTERNS
+        this._renderMegaStructureRadialCities(pg, r, bufferCenter, cityHubs, bandHeight, primR, primG, primB, secR, secG, secB, accR, accG, accB);
 
-                // Only draw if segment is on the visible side
-                if (y1 < r * 0.2) {
-                    pg.line(x1, y1, x2, y2);
-                }
-            }
-            pg.pop();
+        // 4. ARCOLOGIES
+        this._renderMegaStructureArcologies(pg, r, bufferCenter, this.featureRand, bandHeight, accR, accG, accB);
 
-            // Add connection points (space elevator tethers) - REDDISH COLOR
-            const tethers = Math.floor(random(3, 6));
-            for (let t = 0; t < tethers; t++) {
-                const tetherAngle = ringAngle + (t / tethers) * TWO_PI_CONST;
-                const surfaceX = Math.cos(tetherAngle) * r * 0.9;
-                const surfaceY = Math.sin(tetherAngle) * r * 0.9;
-                const orbitX = Math.cos(tetherAngle) * ringRadius;
-                const orbitY = Math.sin(tetherAngle) * ringRadius * 0.3;
+        // 5. INDUSTRIAL ZONES
+        this._renderMegaStructureIndustrial(pg, r, bufferCenter, this.featureRand, bandHeight, primR, primG, primB);
 
-                // Reddish space elevator tethers
-                pg.stroke(255, 80, 60, 180);
-                pg.strokeWeight(Math.max(0.8, bandHeight * 0.35));
-                pg.line(bufferCenter + surfaceX, bufferCenter + surfaceY,
-                    bufferCenter + orbitX, bufferCenter + orbitY);
+        // 6. TERRAFORMING/ATMOSPHERIC PROCESSORS
+        this._renderMegaStructureProcessors(pg, r, bufferCenter, this.featureRand, bandHeight, secR, secG, secB, accR, accG, accB);
 
-                // Bright reddish point at tether base
-                pg.noStroke();
-                pg.fill(255, 100, 80, 220);
-                pg.ellipse(bufferCenter + surfaceX, bufferCenter + surfaceY,
-                    bandHeight * 1.0, bandHeight * 1.0);
 
-                // Add glow around tether base
-                pg.fill(255, 60, 40, 100);
-                pg.ellipse(bufferCenter + surfaceX, bufferCenter + surfaceY,
-                    bandHeight * 2.0, bandHeight * 2.0);
-            }
-        }
+        // 7. SOLAR COLLECTOR ARRAYS
+        this._renderMegaStructureSolarCollectors(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-        // 2. AGRICULTURAL PATTERNS (visible geometric farms) - with globe curvature
-        const numFarmRegions = Math.floor(random(2, 5));
-        for (let fr = 0; fr < numFarmRegions; fr++) {
-            const farmAngle = (featureRand * (fr + 1) * 23.7) % TWO_PI_CONST;
-            const farmDist = random(r * 0.4, r * 0.85);
-            const farmCenterX = Math.cos(farmAngle) * farmDist;
-            const farmCenterY = Math.sin(farmAngle) * farmDist;
+        // 8. ORBITAL DEFENSE PLATFORMS
+        this._renderMegaStructureDefensePlatforms(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-            // Check if within planet bounds
-            const farmDistSq = farmCenterX * farmCenterX + farmCenterY * farmCenterY;
-            if (farmDistSq > r * r * 0.9) continue;
+        // 9. MASS DRIVER / RAILGUN ARRAYS
+        this._renderMegaStructureRailguns(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-            // Compute limb factor at farm center for globe curvature
-            const farmLimbFactor = this._getLimbFactor(farmCenterX, farmCenterY);
-            if (farmLimbFactor < 0.15) continue; // Skip farms too close to limb
+        // 10. FUSION POWER ARRAYS
+        this._renderMegaStructureFusionArrays(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-            const farmType = Math.floor((featureRand * (fr + 5) * 11.1) % 3);
-            const baseFarmScale = random(r * 0.08, r * 0.15);
-            // Scale farm size by limb factor so farms shrink at edges
-            const farmScale = baseFarmScale * Math.max(0.3, farmLimbFactor);
-            const farmSpacing = farmScale * 0.3;
-            // Fade alpha based on limb factor
-            const farmAlphaScale = Math.max(0.3, farmLimbFactor);
+        // 11. GEODESIC DOME CLUSTERS
+        this._renderMegaStructureDomes(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-            pg.push();
-            pg.translate(bufferCenter + farmCenterX, bufferCenter + farmCenterY);
 
-            if (farmType === 0) {
-                // Circular irrigation patterns (center pivot) - with per-element globe curvature
-                const numCircles = Math.floor(random(4, 8));
-                for (let c = 0; c < numCircles; c++) {
-                    const baseCircRad = (c + 1) * farmSpacing;
+        // 12. QUANTUM COMMUNICATION RELAYS
+        this._renderMegaStructureRelays(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-                    // For the main circle, we'll draw it as individual arc segments
-                    // to allow variable curvature, but for simplicity we use farm center limb
-                    const circLimb = farmLimbFactor; // Circle stays uniform
-                    const circRad = baseCircRad * Math.max(0.3, circLimb);
+        // 13. MINING EXTRACTION FACILITIES
+        this._renderMegaStructureMines(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-                    pg.noFill();
-                    pg.stroke(primR, primG, primB, Math.round((25 + c * 5) * circLimb));
-                    pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * circLimb));
-                    pg.ellipse(0, 0, circRad * 2, circRad * 2);
+        // 14. ANTIMATTER CONTAINMENT FACILITIES
+        this._renderMegaStructureAntimatter(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-                    // Add small dots around circle - each with individual limb factor
-                    const dotsOnCircle = Math.floor(circRad * 0.5);
-                    for (let d = 0; d < dotsOnCircle; d++) {
-                        const dotAngle = (d / dotsOnCircle) * TWO_PI_CONST;
-                        const dx = Math.cos(dotAngle) * circRad;
-                        const dy = Math.sin(dotAngle) * circRad;
+        // 15. ORBITAL SHIPYARD FACILITIES
+        this._renderMegaStructureShipyards(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-                        // Compute limb factor for this specific dot
-                        const dotWorldX = farmCenterX + dx;
-                        const dotWorldY = farmCenterY + dy;
-                        const dotLimb = this._getLimbFactor(dotWorldX, dotWorldY);
-                        if (dotLimb < 0.1) continue;
+        // 16. ATMOSPHERIC SCRUBBERS / TERRAFORMING TOWERS
+        this._renderMegaStructureScrubbers(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-                        pg.noStroke();
-                        pg.fill(secR, secG, secB, Math.round(40 * dotLimb));
-                        const dotSize = bandHeight * 0.2 * dotLimb;
-                        pg.ellipse(dx, dy, dotSize, dotSize);
-                    }
-                }
-            } else if (farmType === 1) {
-                // Hexagonal grid pattern - with TRUE spherical perspective distortion
-                const hexSize = farmSpacing * 0.6;
-                const hexRows = 8;
-                const hexCols = 8;
-                pg.noFill();
 
-                for (let row = -hexRows; row < hexRows; row++) {
-                    for (let col = -hexCols; col < hexCols; col++) {
-                        const xOff = col * hexSize * 1.5;
-                        const yOff = row * hexSize * Math.sqrt(3) + (col % 2) * hexSize * Math.sqrt(3) * 0.5;
+        // 17. GEOTHERMAL POWER TAPS
+        this._renderMegaStructureGeothermal(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-                        // Compute limb factor for hexagon center
-                        const cellWorldX = farmCenterX + xOff;
-                        const cellWorldY = farmCenterY + yOff;
-                        const cellLimb = this._getLimbFactor(cellWorldX, cellWorldY);
-                        if (cellLimb < 0.1) continue; // Skip cells too close to limb
+        // 18. PARTICLE SUPERCOLLIDER RINGS
+        this._renderMegaStructureColliders(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-                        // Scale hexagon size and alpha based on limb factor
-                        const scaledHexSize = hexSize * Math.max(0.2, cellLimb);
+        // 19. MEGACITY DATA CENTERS / AI CORES
+        this._renderMegaStructureDataCenters(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-                        pg.stroke(primR, primG, primB, Math.round(35 * cellLimb));
-                        pg.strokeWeight(Math.max(0.3, bandHeight * 0.12 * cellLimb));
+        // 20. SPACEPORT HUB COMPLEXES
+        this._renderMegaStructureSpaceports(pg, r, bufferCenter, this.featureRand, bandHeight);
 
-                        // Draw simple hexagon with scaled size
-                        pg.beginShape();
-                        for (let h = 0; h < 6; h++) {
-                            const hAngle = (h / 6) * TWO_PI_CONST;
-                            const hx = xOff + Math.cos(hAngle) * scaledHexSize;
-                            const hy = yOff + Math.sin(hAngle) * scaledHexSize;
-                            pg.vertex(hx, hy);
-                        }
-                        pg.endShape(CLOSE);
-                    }
-                }
-            } else {
-                // Rectangular field grid - with TRUE spherical perspective distortion
-                const gridSize = farmSpacing * 0.8;
-                const gridCount = 10;
-
-                for (let gx = -gridCount; gx < gridCount; gx++) {
-                    for (let gy = -gridCount; gy < gridCount; gy++) {
-                        const rx = gx * gridSize;
-                        const ry = gy * gridSize;
-
-                        // Compute limb factor for cell center
-                        const cellWorldX = farmCenterX + rx;
-                        const cellWorldY = farmCenterY + ry;
-                        const cellLimb = this._getLimbFactor(cellWorldX, cellWorldY);
-                        if (cellLimb < 0.1) continue; // Skip cells too close to limb
-
-                        // Scale cell size and alpha by local limb factor
-                        const cellScale = Math.max(0.2, cellLimb);
-                        const scaledGridSize = gridSize * 0.8 * cellScale;
-                        const halfGrid = scaledGridSize * 0.5;
-
-                        pg.stroke(primR, primG, primB, Math.round(30 * cellLimb));
-                        pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * cellLimb));
-                        pg.noFill();
-                        pg.rect(rx - halfGrid, ry - halfGrid, scaledGridSize, scaledGridSize);
-
-                        // Small bright dot at center
-                        if ((gx + gy) % 2 === 0) {
-                            pg.noStroke();
-                            pg.fill(secR, secG, secB, Math.round(45 * cellLimb));
-                            const dotSize = bandHeight * 0.25 * cellLimb;
-                            pg.ellipse(rx, ry, dotSize, dotSize);
-                        }
-                    }
-                }
-            }
-            pg.pop();
-        }
-
-        // 3. RADIAL CITY PATTERNS (spoke-wheel cities) - with globe curvature
-        const numRadialCities = Math.floor(random(1, 3));
-        for (let rc = 0; rc < numRadialCities; rc++) {
-            // Pick a hub as the center
-            if (rc >= cityHubs.length) break;
-            const hub = cityHubs[rc];
-
-            // Compute limb factor at hub center
-            const hubLimbFactor = this._getLimbFactor(hub.x, hub.y);
-            if (hubLimbFactor < 0.2) continue; // Skip hubs too close to limb
-            const hubAlphaScale = Math.max(0.3, hubLimbFactor);
-
-            const numSpokes = Math.floor(random(6, 12));
-            const baseSpokeLength = hub.size * random(0.8, 1.2);
-            // Scale spoke length by limb factor
-            const spokeLength = baseSpokeLength * Math.max(0.4, hubLimbFactor);
-
-            for (let sp = 0; sp < numSpokes; sp++) {
-                const spokeAngle = (sp / numSpokes) * TWO_PI_CONST;
-                const spokeEndX = hub.x + Math.cos(spokeAngle) * spokeLength;
-                const spokeEndY = hub.y + Math.sin(spokeAngle) * spokeLength;
-
-                // Compute limb factor at spoke end
-                const endLimbFactor = this._getLimbFactor(spokeEndX, spokeEndY);
-                const avgLimb = (hubLimbFactor + endLimbFactor) * 0.5;
-
-                // Draw main spoke with globe curvature
-                pg.stroke(primR, primG, primB, Math.round(140 * avgLimb));
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.4 * avgLimb));
-                this._drawCurvedLine(pg, hub.x, hub.y, spokeEndX, spokeEndY, bufferCenter, r);
-
-                // Add development along spoke
-                const segmentsAlongSpoke = Math.floor(random(4, 8));
-                for (let seg = 1; seg < segmentsAlongSpoke; seg++) {
-                    const t = seg / segmentsAlongSpoke;
-                    const segX = hub.x + Math.cos(spokeAngle) * spokeLength * t;
-                    const segY = hub.y + Math.sin(spokeAngle) * spokeLength * t;
-
-                    // Compute limb factor at this segment
-                    const segLimb = this._getLimbFactor(segX, segY);
-                    if (segLimb < 0.15) continue;
-
-                    // Perpendicular development - scale by limb factor
-                    const perpAngle = spokeAngle + PI / 2;
-                    const perpLen = bandHeight * random(1, 3) * segLimb;
-
-                    pg.stroke(secR, secG, secB, Math.round(100 * segLimb));
-                    pg.strokeWeight(Math.max(0.3, bandHeight * 0.25 * segLimb));
-                    pg.line(
-                        bufferCenter + segX - Math.cos(perpAngle) * perpLen,
-                        bufferCenter + segY - Math.sin(perpAngle) * perpLen,
-                        bufferCenter + segX + Math.cos(perpAngle) * perpLen,
-                        bufferCenter + segY + Math.sin(perpAngle) * perpLen
-                    );
-
-                    // Bright node at intersection
-                    pg.noStroke();
-                    pg.fill(accR, accG, accB, Math.round(160 * segLimb));
-                    const nodeSize = bandHeight * 0.6 * segLimb;
-                    pg.ellipse(bufferCenter + segX, bufferCenter + segY, nodeSize, nodeSize);
-                }
-            }
-
-            // Ring roads around the radial city
-            const numRings = Math.floor(random(2, 4));
-            for (let ring = 1; ring <= numRings; ring++) {
-                const ringRad = (ring / numRings) * spokeLength;
-                pg.noFill();
-                pg.stroke(secR, secG, secB, Math.round(80 * hubAlphaScale));
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.3 * hubLimbFactor));
-                pg.ellipse(bufferCenter + hub.x, bufferCenter + hub.y,
-                    ringRad * 2, ringRad * 2);
-            }
-        }
-
-        // 4. ARCOLOGIES (super-tall mega-buildings) - with globe curvature
-        const numArcologies = Math.floor(random(1, 4));
-        for (let arc = 0; arc < numArcologies; arc++) {
-            const arcAngle = (featureRand * (arc + 7) * 19.3) % TWO_PI_CONST;
-            const arcDist = random(r * 0.3, r * 0.8);
-            const arcX = Math.cos(arcAngle) * arcDist;
-            const arcY = Math.sin(arcAngle) * arcDist;
-
-            // Check bounds
-            if (arcX * arcX + arcY * arcY > r * r * 0.9) continue;
-
-            // Compute limb factor for arcology position
-            const arcLimbFactor = this._getLimbFactor(arcX, arcY);
-            if (arcLimbFactor < 0.2) continue; // Skip arcologies too close to limb
-            const arcScale = Math.max(0.3, arcLimbFactor);
-
-            // Draw bright glow for arcology
-            pg.push();
-            pg.translate(bufferCenter + arcX, bufferCenter + arcY);
-
-            // Outer glow - scaled by limb factor
-            const baseGlowSize = bandHeight * random(2.5, 4);
-            const glowSize = baseGlowSize * arcScale;
-            pg.noStroke();
-            for (let g = 3; g > 0; g--) {
-                const gSize = glowSize * (g / 3);
-                const gAlpha = Math.round((60 / g) * arcLimbFactor);
-                pg.fill(accR, accG, accB, gAlpha);
-                pg.ellipse(0, 0, gSize, gSize);
-            }
-
-            // Bright core - scaled
-            const coreSize = bandHeight * 1.2 * arcScale;
-            pg.fill(accR, accG, accB, Math.round(220 * arcLimbFactor));
-            pg.ellipse(0, 0, coreSize, coreSize);
-
-            // Cross-pattern indicating structure - scaled
-            pg.stroke(255, 255, 255, Math.round(180 * arcLimbFactor));
-            pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * arcScale));
-            const crossSize = bandHeight * 1.5 * arcScale;
-            pg.line(-crossSize, 0, crossSize, 0);
-            pg.line(0, -crossSize, 0, crossSize);
-
-            pg.pop();
-        }
-
-        // 5. INDUSTRIAL ZONES (uniform bright patches) - with globe curvature
-        const numIndustrial = Math.floor(random(2, 5));
-        for (let ind = 0; ind < numIndustrial; ind++) {
-            const indAngle = (featureRand * (ind + 13) * 27.1) % TWO_PI_CONST;
-            const indDist = random(r * 0.4, r * 0.85);
-            const indX = Math.cos(indAngle) * indDist;
-            const indY = Math.sin(indAngle) * indDist;
-
-            if (indX * indX + indY * indY > r * r * 0.9) continue;
-
-            // Compute limb factor at zone center
-            const zoneLimbFactor = this._getLimbFactor(indX, indY);
-            if (zoneLimbFactor < 0.2) continue; // Skip zones too close to limb
-            const zoneScale = Math.max(0.3, zoneLimbFactor);
-
-            const baseIndSize = random(r * 0.04, r * 0.08);
-            const indSize = baseIndSize * zoneScale;
-            const indGridSpacing = Math.max(1, bandHeight * 0.8 * zoneScale);
-
-            pg.push();
-            pg.translate(bufferCenter + indX, bufferCenter + indY);
-
-            // Uniform grid of bright lights - scaled
-            const gridExtent = Math.floor(indSize / indGridSpacing);
-            for (let gx = -gridExtent; gx <= gridExtent; gx++) {
-                for (let gy = -gridExtent; gy <= gridExtent; gy++) {
-                    const px = gx * indGridSpacing;
-                    const py = gy * indGridSpacing;
-
-                    // Compute per-point limb factor for more accurate fade
-                    const pointWorldX = indX + px;
-                    const pointWorldY = indY + py;
-                    const pointLimb = this._getLimbFactor(pointWorldX, pointWorldY);
-                    if (pointLimb < 0.1) continue;
-
-                    // Brightness and size scaled by local limb factor
-                    pg.noStroke();
-                    pg.fill(primR, primG, primB, Math.round(150 * pointLimb));
-                    const dotSize = bandHeight * 0.5 * pointLimb;
-                    pg.ellipse(px, py, dotSize, dotSize);
-                }
-            }
-            pg.pop();
-        }
-
-
-        // 6. TERRAFORMING/ATMOSPHERIC PROCESSORS (distinct geometric stations) - with globe curvature
-        if ((featureRand * 53.7) % 1 > 0.7) {
-            const numProcessors = Math.floor(random(2, 5));
-            for (let proc = 0; proc < numProcessors; proc++) {
-                const procAngle = (proc / numProcessors) * TWO_PI_CONST + random(-0.3, 0.3);
-                const procDist = random(r * 0.6, r * 0.9);
-                const procX = Math.cos(procAngle) * procDist;
-                const procY = Math.sin(procAngle) * procDist;
-
-                if (procX * procX + procY * procY > r * r) continue;
-
-                // Compute limb factor for processor position
-                const procLimbFactor = this._getLimbFactor(procX, procY);
-                if (procLimbFactor < 0.15) continue; // Skip processors too close to limb
-                const procScale = Math.max(0.25, procLimbFactor);
-
-                pg.push();
-                pg.translate(bufferCenter + procX, bufferCenter + procY);
-
-                // Draw processor as geometric structure - scaled
-                const baseProcSize = bandHeight * random(2, 3);
-                const procSize = baseProcSize * procScale;
-
-                // Rotating square/diamond - scaled
-                pg.push();
-                pg.rotate(PI / 4);
-                pg.noFill();
-                pg.stroke(accR, accG, accB, Math.round(180 * procLimbFactor));
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * procScale));
-                pg.rect(-procSize / 2, -procSize / 2, procSize, procSize);
-                pg.pop();
-
-                // Center bright point - scaled
-                pg.noStroke();
-                const centerSize = bandHeight * 0.7 * procScale;
-                pg.fill(255, 255, 255, Math.round(200 * procLimbFactor));
-                pg.ellipse(0, 0, centerSize, centerSize);
-
-                // Energy lines radiating out - scaled
-                const numEnergyLines = 4;
-                for (let el = 0; el < numEnergyLines; el++) {
-                    const elAngle = (el / numEnergyLines) * TWO_PI_CONST;
-                    const elLen = procSize * 1.2;
-                    pg.stroke(secR, secG, secB, Math.round(140 * procLimbFactor));
-                    pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * procScale));
-                    pg.line(0, 0,
-                        Math.cos(elAngle) * elLen,
-                        Math.sin(elAngle) * elLen);
-                }
-
-                pg.pop();
-            }
-        }
-
-        // 7. SOLAR COLLECTOR ARRAYS (Dyson Swarm elements) - GOLD/ORANGE/WHITE
-        if ((featureRand * 47.3) % 1 > 0.7) {
-            const numCollectors = Math.floor(random(2, 5));
-            for (let sc = 0; sc < numCollectors; sc++) {
-                const scAngle = (sc / numCollectors) * TWO_PI_CONST + (featureRand * 3.14);
-                const scDist = random(r * 0.3, r * 0.7);
-                const scX = Math.cos(scAngle) * scDist;
-                const scY = Math.sin(scAngle) * scDist;
-
-                if (scX * scX + scY * scY > r * r * 0.8) continue;
-
-                const scLimbFactor = this._getLimbFactor(scX, scY);
-                if (scLimbFactor < 0.2) continue;
-                // [SPHERICAL PROJECTION] Constant scale, limb determines radial squash
-                const scScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + scX, bufferCenter + scY);
-                // Apply spherical projection: rotate to radial vector, squash radial axis, un-rotate
-                const radAngle = Math.atan2(scY, scX);
-                pg.rotate(radAngle);
-                pg.scale(scLimbFactor, 1.0);
-                pg.rotate(-radAngle);
-
-                // SPIRAL ARRAY DESIGN (Non-concentric)
-                const panelSize = bandHeight * random(7, 11) * scScale;
-
-                // Spiral arms of collector panels
-                pg.noFill();
-                pg.stroke(255, 180, 40, Math.round(180 * scLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * scScale));
-
-                for (let arm = 0; arm < 3; arm++) {
-                    const armStartAngle = (arm / 3) * TWO_PI_CONST;
-                    pg.beginShape();
-                    for (let p = 0; p < 5; p++) {
-                        const t = p / 4;
-                        const angle = armStartAngle + t * 2.0;
-                        const dist = panelSize * (0.2 + t * 0.8);
-                        pg.vertex(Math.cos(angle) * dist, Math.sin(angle) * dist);
-
-                        // Panel at vertex
-                        if (p > 0) {
-                            pg.push();
-                            pg.translate(Math.cos(angle) * dist, Math.sin(angle) * dist);
-                            pg.rotate(angle);
-                            pg.fill(255, 200, 50, Math.round(120 * scLimbFactor)); // Increased alpha
-                            pg.noStroke();
-                            pg.rect(-bandHeight * 0.5 * scScale, -bandHeight * 0.3 * scScale, bandHeight * 1.0 * scScale, bandHeight * 0.6 * scScale);
-                            pg.pop();
-                        }
-                    }
-                    pg.endShape();
-                }
-
-                // Central node - not a simple circle
-                pg.stroke(255, 220, 100, Math.round(200 * scLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * scScale));
-                pg.noFill();
-                pg.beginShape();
-                for (let i = 0; i < 3; i++) {
-                    const angle = (i / 3) * TWO_PI_CONST - PI / 6;
-                    pg.vertex(Math.cos(angle) * panelSize * 0.3, Math.sin(angle) * panelSize * 0.3);
-                }
-                pg.endShape(CLOSE);
-
-                // Core glow - very subtle
-                pg.noStroke();
-                pg.fill(255, 255, 220, Math.round(150 * scLimbFactor)); // Increased alpha
-                pg.ellipse(0, 0, panelSize * 0.15, panelSize * 0.15);
-
-                pg.pop();
-            }
-        }
-
-        // 8. ORBITAL DEFENSE PLATFORMS - CYAN/BLUE/RED/WHITE
-        if ((featureRand * 61.9) % 1 > 0.75) {
-            const numDefense = Math.floor(random(2, 5));
-            for (let df = 0; df < numDefense; df++) {
-                const dfAngle = (df / numDefense) * TWO_PI_CONST + random(-0.2, 0.2);
-                const dfDist = random(r * 0.4, r * 0.8);
-                const dfX = Math.cos(dfAngle) * dfDist;
-                const dfY = Math.sin(dfAngle) * dfDist;
-
-                if (dfX * dfX + dfY * dfY > r * r * 0.85) continue;
-
-                const dfLimbFactor = this._getLimbFactor(dfX, dfY);
-                if (dfLimbFactor < 0.2) continue;
-                const dfScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + dfX, bufferCenter + dfY);
-                const radAngle = Math.atan2(dfY, dfX);
-                pg.rotate(radAngle);
-                pg.scale(dfLimbFactor, 1.0);
-                pg.rotate(-radAngle);
-
-                const dfSize = bandHeight * random(8, 12) * dfScale;
-
-                // Skeleton frame (less solid)
-                pg.stroke(0, 200, 255, Math.round(160 * dfLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * dfScale));
-                pg.noFill();
-
-                // Triangular lattice
-                pg.beginShape();
-                for (let t = 0; t < 3; t++) {
-                    const tAngle = (t / 3) * TWO_PI_CONST - PI / 2;
-                    pg.vertex(Math.cos(tAngle) * dfSize, Math.sin(tAngle) * dfSize);
-                    // Internal bracing
-                    pg.line(0, 0, Math.cos(tAngle) * dfSize, Math.sin(tAngle) * dfSize);
-                }
-                pg.endShape(CLOSE);
-
-                // Hardpoints/Turrets - smaller dots
-                pg.noStroke();
-                for (let wt = 0; wt < 3; wt++) {
-                    const wtAngle = (wt / 3) * TWO_PI_CONST - PI / 2;
-                    const wtX = Math.cos(wtAngle) * dfSize;
-                    const wtY = Math.sin(wtAngle) * dfSize;
-
-                    // Turret base
-                    pg.fill(30, 80, 150, Math.round(180 * dfLimbFactor)); // Increased alpha
-                    pg.ellipse(wtX, wtY, bandHeight * 0.8 * dfScale, bandHeight * 0.8 * dfScale);
-
-                    // Turret glow - subtle red
-                    pg.fill(255, 50, 50, Math.round(160 * dfLimbFactor)); // Increased alpha
-                    pg.ellipse(wtX, wtY, bandHeight * 0.4 * dfScale, bandHeight * 0.4 * dfScale);
-                }
-
-                // Central command
-                pg.fill(200, 240, 255, Math.round(180 * dfLimbFactor)); // Increased alpha
-                pg.ellipse(0, 0, dfSize * 0.25, dfSize * 0.25);
-
-                // Targeting beams - very faint
-                pg.stroke(255, 80, 80, Math.round(120 * dfLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * dfScale));
-                const bAngle = (featureRand * 10) % TWO_PI_CONST;
-                pg.line(0, 0, Math.cos(bAngle) * dfSize * 2, Math.sin(bAngle) * dfSize * 2);
-
-                pg.pop();
-            }
-        }
-
-        // 9. MASS DRIVER / RAILGUN ARRAYS - VIOLET/PURPLE/CYAN/WHITE
-        if ((featureRand * 73.1) % 1 > 0.78) {
-            const numRailguns = Math.floor(random(2, 4));
-            for (let rg = 0; rg < numRailguns; rg++) {
-                const rgAngle = (featureRand * (rg + 1) * 31.7) % TWO_PI_CONST;
-                const rgDist = random(r * 0.4, r * 0.75);
-                const rgX = Math.cos(rgAngle) * rgDist;
-                const rgY = Math.sin(rgAngle) * rgDist;
-
-                if (rgX * rgX + rgY * rgY > r * r * 0.85) continue;
-
-                const rgLimbFactor = this._getLimbFactor(rgX, rgY);
-                if (rgLimbFactor < 0.2) continue;
-                const rgScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + rgX, bufferCenter + rgY);
-                const radAngle = Math.atan2(rgY, rgX);
-                pg.rotate(radAngle);
-                pg.scale(rgLimbFactor, 1.0);
-                pg.rotate(-radAngle);
-
-                const rgLen = bandHeight * random(12, 18) * rgScale;
-                const rgWidth = bandHeight * 1.5 * rgScale;
-                const barrelAngle = rgAngle + PI;
-
-                pg.push();
-                pg.rotate(barrelAngle);
-
-                // Open frame barrel design
-                pg.stroke(140, 80, 200, Math.round(180 * rgLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.5, rgWidth * 0.3));
-
-                // Top and bottom rails
-                pg.line(0, -rgWidth * 0.5, rgLen, -rgWidth * 0.5);
-                pg.line(0, rgWidth * 0.5, rgLen, rgWidth * 0.5);
-
-                // Accelerator coils - spaced out
-                pg.stroke(0, 220, 255, Math.round(140 * rgLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * rgScale));
-                for (let ring = 1; ring <= 6; ring++) {
-                    const ringX = rgLen * (ring / 7);
-                    // Diagonal cross-bracing per segment
-                    pg.line(ringX, -rgWidth * 0.8, ringX, rgWidth * 0.8);
-                }
-
-                pg.pop();
-
-                // Base power station - Geometric, not just round
-                pg.noStroke();
-                // Hexagonal base
-                pg.fill(120, 60, 180, Math.round(150 * rgLimbFactor)); // Increased alpha
-                pg.beginShape();
-                for (let i = 0; i < 6; i++) {
-                    const a = (i / 6) * TWO_PI_CONST;
-                    pg.vertex(Math.cos(a) * bandHeight * 2.5 * rgScale, Math.sin(a) * bandHeight * 2.5 * rgScale);
-                }
-                pg.endShape(CLOSE);
-
-                // Core
-                pg.fill(200, 180, 255, Math.round(180 * rgLimbFactor)); // Increased alpha
-                pg.rect(-bandHeight * rgScale, -bandHeight * rgScale, bandHeight * 2 * rgScale, bandHeight * 2 * rgScale);
-
-                pg.pop();
-            }
-        }
-
-        // 10. FUSION POWER ARRAYS - STELLARATOR DESIGN
-        if ((featureRand * 83.7) % 1 > 0.72) {
-            const numFusion = Math.floor(random(2, 4));
-            for (let fu = 0; fu < numFusion; fu++) {
-                const fuAngle = (featureRand * (fu + 3) * 17.9) % TWO_PI_CONST;
-                const fuDist = random(r * 0.3, r * 0.65);
-                const fuX = Math.cos(fuAngle) * fuDist;
-                const fuY = Math.sin(fuAngle) * fuDist;
-
-                if (fuX * fuX + fuY * fuY > r * r * 0.8) continue;
-
-                const fuLimbFactor = this._getLimbFactor(fuX, fuY);
-                if (fuLimbFactor < 0.2) continue;
-                const fuScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + fuX, bufferCenter + fuY);
-                const radAngle = Math.atan2(fuY, fuX);
-                pg.rotate(radAngle);
-                pg.scale(fuLimbFactor, 1.0);
-                pg.rotate(-radAngle);
-
-                const fuSize = bandHeight * random(8, 12) * fuScale;
-
-                // Stellarator design: Interlocking twisted loops (figure-8 ish)
-                pg.noFill();
-                pg.stroke(255, 120, 20, Math.round(160 * fuLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.6, bandHeight * 0.3 * fuScale));
-
-                pg.beginShape();
-                for (let i = 0; i <= 30; i++) {
-                    const t = (i / 30) * TWO_PI_CONST;
-                    // Parametric twisted loop
-                    const lx = Math.cos(t) * fuSize;
-                    const ly = Math.sin(t) * Math.cos(t) * fuSize * 0.6; // Figure 8-ish
-                    pg.vertex(lx, ly);
-                }
-                pg.endShape(CLOSE);
-
-                // Second interlocking loop
-                pg.stroke(255, 180, 50, Math.round(160 * fuLimbFactor)); // Increased alpha
-                pg.push();
-                pg.rotate(PI / 2);
-                pg.beginShape();
-                for (let i = 0; i <= 30; i++) {
-                    const t = (i / 30) * TWO_PI_CONST;
-                    const lx = Math.cos(t) * fuSize * 0.8;
-                    const ly = Math.sin(t) * Math.cos(t) * fuSize * 0.5;
-                    pg.vertex(lx, ly);
-                }
-                pg.endShape(CLOSE);
-                pg.pop();
-
-                // Central Plasma Node - subtle
-                pg.noStroke();
-                pg.fill(200, 220, 255, Math.round(100 * fuLimbFactor)); // Increased alpha
-                pg.ellipse(0, 0, fuSize * 0.5, fuSize * 0.5);
-                pg.fill(255, 255, 255, Math.round(200 * fuLimbFactor)); // Hot center
-                pg.ellipse(0, 0, fuSize * 0.15, fuSize * 0.15);
-
-                pg.pop();
-            }
-        }
-
-        // 11. GEODESIC DOME CLUSTERS - GREEN/BLUE/YELLOW/WHITE
-        if ((featureRand * 91.3) % 1 > 0.68) {
-            const numDomes = Math.floor(random(2, 5));
-            for (let bd = 0; bd < numDomes; bd++) {
-                const bdAngle = (featureRand * (bd + 2) * 29.3) % TWO_PI_CONST;
-                const bdDist = random(r * 0.25, r * 0.7);
-                const bdX = Math.cos(bdAngle) * bdDist;
-                const bdY = Math.sin(bdAngle) * bdDist;
-
-                if (bdX * bdX + bdY * bdY > r * r * 0.8) continue;
-
-                const bdLimbFactor = this._getLimbFactor(bdX, bdY);
-                if (bdLimbFactor < 0.2) continue;
-                const bdScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + bdX, bufferCenter + bdY);
-                const radAngle = Math.atan2(bdY, bdX);
-                pg.rotate(radAngle);
-                pg.scale(bdLimbFactor, 1.0);
-                pg.rotate(-radAngle);
-
-                // Cluster of interconnected geodesic domes
-                const clusterSize = bandHeight * random(10, 16) * bdScale;
-
-                // Central large dome - bright green outline with hexagonal pattern
-                const mainDomeR = clusterSize * 0.45;
-                pg.stroke(80, 220, 120, Math.round(160 * bdLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * bdScale));
-                pg.noFill();
-                pg.ellipse(0, 0, mainDomeR * 2, mainDomeR * 2);
-
-                // Hexagonal glass panels on main dome
-                pg.stroke(100, 255, 150, Math.round(120 * bdLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * bdScale));
-                for (let h = 0; h < 6; h++) {
-                    const hAngle = (h / 6) * TWO_PI_CONST;
-                    const nextAngle = ((h + 1) / 6) * TWO_PI_CONST;
-                    pg.line(
-                        Math.cos(hAngle) * mainDomeR * 0.5, Math.sin(hAngle) * mainDomeR * 0.5,
-                        Math.cos(hAngle) * mainDomeR, Math.sin(hAngle) * mainDomeR
-                    );
-                    pg.line(
-                        Math.cos(hAngle) * mainDomeR * 0.5, Math.sin(hAngle) * mainDomeR * 0.5,
-                        Math.cos(nextAngle) * mainDomeR * 0.5, Math.sin(nextAngle) * mainDomeR * 0.5
-                    );
-                }
-
-                // Interior glow - forest green
-                pg.noStroke();
-                pg.fill(50, 180, 90, Math.round(100 * bdLimbFactor)); // Increased alpha
-                pg.ellipse(0, 0, mainDomeR * 1.6, mainDomeR * 1.6);
-
-                // Central atrium - bright white
-                pg.fill(200, 255, 220, Math.round(180 * bdLimbFactor)); // Increased alpha
-                pg.ellipse(0, 0, mainDomeR * 0.35, mainDomeR * 0.35);
-
-                // 4 smaller satellite domes around the main one
-                const satelliteR = mainDomeR * 0.5;
-                const satelliteDist = mainDomeR * 1.3;
-                for (let sd = 0; sd < 4; sd++) {
-                    const sdAngle = (sd / 4) * TWO_PI_CONST + PI / 4;
-                    const sdX = Math.cos(sdAngle) * satelliteDist;
-                    const sdY = Math.sin(sdAngle) * satelliteDist;
-
-                    // Satellite dome outline - teal
-                    pg.stroke(60, 200, 160, Math.round(150 * bdLimbFactor)); // Increased alpha
-                    pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * bdScale));
-                    pg.noFill();
-                    pg.ellipse(sdX, sdY, satelliteR * 2, satelliteR * 2);
-
-                    // Satellite inner glow
-                    pg.noStroke();
-                    pg.fill(70, 190, 130, Math.round(120 * bdLimbFactor)); // Increased alpha
-                    pg.ellipse(sdX, sdY, satelliteR * 1.5, satelliteR * 1.5);
-
-                    // Satellite core - varies color
-                    if (sd === 0) pg.fill(100, 180, 255, Math.round(150 * bdLimbFactor));
-                    else if (sd === 1) pg.fill(40, 160, 60, Math.round(150 * bdLimbFactor));
-                    else if (sd === 2) pg.fill(255, 220, 100, Math.round(150 * bdLimbFactor));
-                    else pg.fill(180, 220, 200, Math.round(150 * bdLimbFactor));
-                    pg.ellipse(sdX, sdY, satelliteR * 0.6, satelliteR * 0.6);
-
-                    // Connecting walkway to main dome - white
-                    pg.stroke(180, 220, 190, Math.round(130 * bdLimbFactor)); // Increased alpha
-                    pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * bdScale));
-                    pg.line(
-                        Math.cos(sdAngle) * mainDomeR, Math.sin(sdAngle) * mainDomeR,
-                        sdX - Math.cos(sdAngle) * satelliteR, sdY - Math.sin(sdAngle) * satelliteR
-                    );
-                }
-
-                // Solar collectors on top of main dome - gold
-                pg.noStroke();
-                pg.fill(255, 230, 100, Math.round(160 * bdLimbFactor)); // Increased alpha
-                pg.ellipse(0, -mainDomeR * 0.3, bandHeight * 1.0 * bdScale, bandHeight * 0.5 * bdScale);
-                pg.ellipse(mainDomeR * 0.4, -mainDomeR * 0.1, bandHeight * 0.6 * bdScale, bandHeight * 0.3 * bdScale);
-                pg.ellipse(-mainDomeR * 0.4, -mainDomeR * 0.1, bandHeight * 0.6 * bdScale, bandHeight * 0.3 * bdScale);
-
-                pg.pop();
-            }
-        }
-
-        // 12. QUANTUM COMMUNICATION RELAYS - BLUE/PURPLE/WHITE/CYAN
-        if ((featureRand * 67.7) % 1 > 0.78) {
-            const numRelays = Math.floor(random(2, 4));
-            for (let qr = 0; qr < numRelays; qr++) {
-                const qrAngle = (featureRand * (qr + 5) * 41.3) % TWO_PI_CONST;
-                const qrDist = random(r * 0.35, r * 0.75);
-                const qrX = Math.cos(qrAngle) * qrDist;
-                const qrY = Math.sin(qrAngle) * qrDist;
-
-                if (qrX * qrX + qrY * qrY > r * r * 0.85) continue;
-
-                const qrLimbFactor = this._getLimbFactor(qrX, qrY);
-                if (qrLimbFactor < 0.2) continue;
-                const qrScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + qrX, bufferCenter + qrY);
-                const radAngle = Math.atan2(qrY, qrX);
-                pg.rotate(radAngle);
-                pg.scale(qrLimbFactor, 1.0);
-                pg.rotate(-radAngle);
-
-                // MUCH LARGER relay complex
-                const qrHeight = bandHeight * random(10, 16) * qrScale;
-                const qrBase = bandHeight * 3 * qrScale;
-
-                // Main tower structure - gradient blue to purple
-                pg.stroke(40, 100, 200, Math.round(180 * qrLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * qrScale));
-                pg.line(0, 0, 0, -qrHeight * 0.6);
-
-                pg.stroke(80, 80, 220, Math.round(160 * qrLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.6, bandHeight * 0.4 * qrScale));
-                pg.line(0, -qrHeight * 0.5, 0, -qrHeight);
-
-                // Main dish - large cyan parabolic
-                pg.noFill();
-                pg.stroke(0, 255, 255, Math.round(180 * qrLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.7, bandHeight * 0.4 * qrScale));
-                pg.arc(0, -qrHeight, bandHeight * 5 * qrScale, bandHeight * 3.5 * qrScale, PI, TWO_PI);
-
-                // Secondary dishes - smaller, white
-                pg.stroke(200, 220, 255, Math.round(150 * qrLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * qrScale));
-                pg.arc(-bandHeight * 2 * qrScale, -qrHeight * 0.7, bandHeight * 2 * qrScale, bandHeight * 1.5 * qrScale, PI, TWO_PI);
-                pg.arc(bandHeight * 2 * qrScale, -qrHeight * 0.7, bandHeight * 2 * qrScale, bandHeight * 1.5 * qrScale, PI, TWO_PI);
-
-                // Transmission beams - purple laser
-                pg.stroke(180, 100, 255, Math.round(120 * qrLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * qrScale));
-                pg.line(0, -qrHeight, 0, -qrHeight - bandHeight * 6 * qrScale);
-                pg.line(0, -qrHeight, -bandHeight * 3 * qrScale, -qrHeight - bandHeight * 5 * qrScale);
-                pg.line(0, -qrHeight, bandHeight * 3 * qrScale, -qrHeight - bandHeight * 5 * qrScale);
-
-                // Signal waves - expanding cyan rings
-                pg.noFill();
-                pg.stroke(100, 255, 255, Math.round(80 * qrLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * qrScale));
-                for (let w = 1; w <= 4; w++) {
-                    pg.arc(0, -qrHeight, bandHeight * w * 2 * qrScale, bandHeight * w * 1.4 * qrScale, PI + 0.3, TWO_PI - 0.3);
-                }
-
-                // Base station complex - multi-level
-                pg.noStroke();
-                pg.fill(60, 100, 180, Math.round(160 * qrLimbFactor)); // Increased alpha
-                pg.ellipse(0, 0, qrBase * 2, qrBase * 1.5);
-                pg.fill(100, 140, 220, Math.round(180 * qrLimbFactor)); // Increased alpha
-                pg.ellipse(0, 0, qrBase * 1.4, qrBase * 1.0);
-                pg.fill(150, 180, 255, Math.round(200 * qrLimbFactor)); // Increased alpha
-                pg.ellipse(0, 0, qrBase * 0.8, qrBase * 0.6);
-
-                pg.pop();
-            }
-        }
-
-        // 13. MINING EXTRACTION FACILITIES - AMBER/BROWN/ORANGE/RED/WHITE
-        if ((featureRand * 79.1) % 1 > 0.7) {
-            const numMines = Math.floor(random(2, 5));
-            for (let mn = 0; mn < numMines; mn++) {
-                const mnAngle = (featureRand * (mn + 7) * 23.7) % TWO_PI_CONST;
-                const mnDist = random(r * 0.4, r * 0.8);
-                const mnX = Math.cos(mnAngle) * mnDist;
-                const mnY = Math.sin(mnAngle) * mnDist;
-
-                if (mnX * mnX + mnY * mnY > r * r * 0.85) continue;
-
-                const mnLimbFactor = this._getLimbFactor(mnX, mnY);
-                if (mnLimbFactor < 0.2) continue;
-                const mnScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + mnX, bufferCenter + mnY);
-                const radAngle = Math.atan2(mnY, mnX);
-                pg.rotate(radAngle);
-                pg.scale(mnLimbFactor, 1.0);
-                pg.rotate(-radAngle);
-
-                const mnSize = bandHeight * random(10, 15) * mnScale;
-
-                // Jagged/Irregular Excavation Pit (no longer concentric)
-                pg.noFill();
-                pg.stroke(140, 100, 40, Math.round(180 * mnLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * mnScale));
-
-                pg.beginShape();
-                for (let i = 0; i < 8; i++) {
-                    const angle = (i / 8) * TWO_PI_CONST;
-                    const d = mnSize * (1.0 + random(-0.2, 0.2)); // Irregularity
-                    pg.vertex(Math.cos(angle) * d, Math.sin(angle) * d);
-                }
-                pg.endShape(CLOSE);
-
-                // Inner extraction arms
-                pg.stroke(220, 120, 40, Math.round(150 * mnLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * mnScale));
-                for (let arm = 0; arm < 3; arm++) {
-                    const angle = (arm / 3) * TWO_PI_CONST;
-                    pg.line(0, 0, Math.cos(angle) * mnSize * 1.2, Math.sin(angle) * mnSize * 1.2);
-                }
-
-                // Central deep pit - dark gradient
-                pg.noStroke();
-                pg.fill(60, 40, 20, Math.round(180 * mnLimbFactor)); // Increased alpha
-                pg.ellipse(0, 0, mnSize * 0.7, mnSize * 0.7);
-
-                // Magma glow at bottom - red/orange, varied
-                pg.fill(255, 100, 30, Math.round(150 * mnLimbFactor)); // Increased alpha
-                pg.ellipse(0, 0, mnSize * 0.25, mnSize * 0.25);
-
-                // Processing facilities around irregular edge
-                for (let pf = 0; pf < 6; pf++) {
-                    const pfAngle = (pf / 6) * TWO_PI_CONST + random(0.5);
-                    const pfDist = mnSize * random(1.1, 1.4);
-                    const pfX = Math.cos(pfAngle) * pfDist;
-                    const pfY = Math.sin(pfAngle) * pfDist;
-
-                    // Facility building
-                    pg.fill(200, 180, 120, Math.round(180 * mnLimbFactor)); // Increased alpha
-                    pg.rect(pfX, pfY, bandHeight * 0.8 * mnScale, bandHeight * 0.6 * mnScale);
-
-                    // Warning lights - red
-                    if (pf % 2 === 0) {
-                        pg.fill(255, 50, 50, Math.round(200 * mnLimbFactor)); // Increased alpha
-                        pg.ellipse(pfX, pfY, bandHeight * 0.3 * mnScale, bandHeight * 0.3 * mnScale);
-                    }
-                }
-
-                pg.pop();
-            }
-        }
-
-        // 14. ANTIMATTER CONTAINMENT FACILITIES - MAGENTA/PINK/CYAN/WHITE
-        if ((featureRand * 97.3) % 1 > 0.78) {
-            const numAntimatter = Math.floor(random(2, 4));
-            for (let am = 0; am < numAntimatter; am++) {
-                const amAngle = (featureRand * (am + 11) * 37.9) % TWO_PI_CONST;
-                const amDist = random(r * 0.3, r * 0.65);
-                const amX = Math.cos(amAngle) * amDist;
-                const amY = Math.sin(amAngle) * amDist;
-
-                if (amX * amX + amY * amY > r * r * 0.8) continue;
-
-                const amLimbFactor = this._getLimbFactor(amX, amY);
-                if (amLimbFactor < 0.2) continue;
-                const amScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + amX, bufferCenter + amY);
-                const radAngle = Math.atan2(amY, amX);
-                pg.rotate(radAngle);
-                pg.scale(amLimbFactor, 1.0);
-                pg.rotate(-radAngle);
-
-                const amSize = bandHeight * random(8, 12) * amScale;
-
-                // Geometric Cage Containment (not just spheres)
-                pg.noFill();
-                pg.stroke(255, 30, 180, Math.round(120 * amLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * amScale));
-
-                // Outer Hexagon Cage
-                pg.beginShape();
-                for (let i = 0; i < 6; i++) {
-                    const a = (i / 6) * TWO_PI_CONST;
-                    pg.vertex(Math.cos(a) * amSize * 2.0, Math.sin(a) * amSize * 2.0);
-                }
-                pg.endShape(CLOSE);
-
-                // Inner Square Cage (rotated)
-                pg.stroke(0, 255, 255, Math.round(150 * amLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * amScale));
-                pg.push();
-                pg.rotate(PI / 4);
-                pg.rect(-amSize * 1.2, -amSize * 1.2, amSize * 2.4, amSize * 2.4);
-                pg.pop();
-
-                // Antimatter core - brilliant white center
-                pg.noStroke();
-                pg.fill(255, 240, 255, Math.round(200 * amLimbFactor)); // Increased alpha
-                pg.ellipse(0, 0, amSize * 0.4, amSize * 0.4);
-
-                // Inner glow - hot white-pink
-                pg.fill(255, 200, 255, Math.round(150 * amLimbFactor)); // Increased alpha
-                pg.ellipse(0, 0, amSize * 0.6, amSize * 0.6);
-
-                // Warning markers - alternating red and yellow at hex vertices
-                for (let w = 0; w < 6; w++) {
-                    const wAngle = (w / 6) * TWO_PI_CONST;
-                    const wx = Math.cos(wAngle) * amSize * 2.0;
-                    const wy = Math.sin(wAngle) * amSize * 2.0;
-
-                    if (w % 2 === 0) {
-                        pg.fill(255, 50, 50, Math.round(180 * amLimbFactor)); // Increased alpha
-                    } else {
-                        pg.fill(255, 220, 50, Math.round(160 * amLimbFactor)); // Increased alpha
-                    }
-                    pg.ellipse(wx, wy, bandHeight * 0.6 * amScale, bandHeight * 0.6 * amScale);
-                }
-
-                pg.pop();
-            }
-        }
-
-        // 15. ORBITAL SHIPYARD FACILITIES - STEEL BLUE/ORANGE/YELLOW/WHITE
-        if ((featureRand * 103.7) % 1 > 0.74) {
-            const numShipyards = Math.floor(random(1, 4)); // Slightly more common
-            for (let sy = 0; sy < numShipyards; sy++) {
-                const syAngle = (featureRand * (sy + 13) * 43.1) % TWO_PI_CONST;
-                const syDist = random(r * 0.4, r * 0.8);
-                const syX = Math.cos(syAngle) * syDist;
-                const syY = Math.sin(syAngle) * syDist;
-
-                if (syX * syX + syY * syY > r * r * 0.85) continue;
-
-                const syLimbFactor = this._getLimbFactor(syX, syY);
-                if (syLimbFactor < 0.2) continue;
-                const syScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + syX, bufferCenter + syY);
-                const radAngle = Math.atan2(syY, syX);
-                pg.rotate(radAngle);
-                pg.scale(syLimbFactor, 1.0);
-                pg.rotate(-radAngle);
-
-                const syWidth = bandHeight * random(14, 20) * syScale;
-                const syHeight = bandHeight * random(6, 9) * syScale;
-
-                // Main structural frame - steel blue
-                pg.stroke(100, 140, 180, Math.round(180 * syLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * syScale));
-                pg.noFill();
-                pg.rect(-syWidth / 2, -syHeight / 2, syWidth, syHeight);
-
-                // Inner frame - lighter steel
-                pg.stroke(140, 170, 210, Math.round(160 * syLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * syScale));
-                pg.rect(-syWidth / 2.3, -syHeight / 2.3, syWidth / 1.15, syHeight / 1.15);
-
-                // Drydock bays with ships under construction
-                const numBays = 4;
-                pg.stroke(120, 160, 200, Math.round(140 * syLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * syScale));
-                for (let bay = 0; bay < numBays; bay++) {
-                    const bayX = -syWidth / 2 + (bay + 0.5) * (syWidth / numBays);
-                    pg.line(bayX, -syHeight / 2, bayX, syHeight / 2);
-
-                    // Ship hull in each bay - grey/silver
-                    pg.noStroke();
-                    pg.fill(160, 170, 180, Math.round(150 * syLimbFactor)); // Increased alpha
-                    const shipLen = syHeight * 0.7;
-                    const shipW = (syWidth / numBays) * 0.4;
-                    pg.ellipse(bayX, 0, shipW, shipLen);
-
-                    // Ship lights - orange welding (sparking)
-                    if (random() > 0.5) {
-                        pg.fill(255, 150, 50, Math.round(200 * syLimbFactor)); // Increased alpha
-                        pg.ellipse(bayX + random(-shipW / 3, shipW / 3), random(-shipLen / 3, shipLen / 3),
-                            bandHeight * 0.4 * syScale, bandHeight * 0.4 * syScale);
-                    }
-                    pg.stroke(120, 160, 200, Math.round(140 * syLimbFactor)); // Increased alpha
-                    pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * syScale));
-                }
-
-                // Work lights - bright white-blue dots
-                pg.noStroke();
-                pg.fill(220, 240, 255, Math.round(180 * syLimbFactor)); // Increased alpha
-                for (let wl = 0; wl < 15; wl++) {
-                    const wlX = random(-syWidth / 2.2, syWidth / 2.2);
-                    const wlY = random(-syHeight / 2.2, syHeight / 2.2);
-                    pg.ellipse(wlX, wlY, bandHeight * 0.4 * syScale, bandHeight * 0.4 * syScale);
-                }
-
-                // Warning lights - yellow blinking
-                pg.fill(255, 220, 50, Math.round(180 * syLimbFactor)); // Increased alpha
-                pg.ellipse(-syWidth / 2, -syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
-                pg.ellipse(syWidth / 2, -syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
-                pg.ellipse(-syWidth / 2, syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
-                pg.ellipse(syWidth / 2, syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
-
-                // Crane arms extending - dark steel with orange tips
-                pg.stroke(80, 110, 150, Math.round(150 * syLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * syScale));
-                const craneLen = bandHeight * 4 * syScale;
-                pg.line(-syWidth / 2, 0, -syWidth / 2 - craneLen, -craneLen * 0.4);
-                pg.line(syWidth / 2, 0, syWidth / 2 + craneLen, -craneLen * 0.4);
-
-                // Crane tips - orange
-                pg.noStroke();
-                pg.fill(255, 140, 40, Math.round(200 * syLimbFactor)); // Increased alpha
-                pg.ellipse(-syWidth / 2 - craneLen, -craneLen * 0.4, bandHeight * 0.5 * syScale, bandHeight * 0.5 * syScale);
-                pg.ellipse(syWidth / 2 + craneLen, -craneLen * 0.4, bandHeight * 0.5 * syScale, bandHeight * 0.5 * syScale);
-
-                pg.pop();
-            }
-        }
-
-        // 16. ATMOSPHERIC SCRUBBERS / TERRAFORMING TOWERS - TEAL
-        if ((featureRand * 109.1) % 1 > 0.74) {
-            const numScrubbers = Math.floor(random(4, 8));
-            for (let as = 0; as < numScrubbers; as++) {
-                const asAngle = (featureRand * (as + 17) * 29.7) % TWO_PI_CONST;
-                const asDist = random(r * 0.3, r * 0.8);
-                const asX = Math.cos(asAngle) * asDist;
-                const asY = Math.sin(asAngle) * asDist;
-
-                if (asX * asX + asY * asY > r * r * 0.9) continue;
-
-                const asLimbFactor = this._getLimbFactor(asX, asY);
-                if (asLimbFactor < 0.15) continue;
-                const asScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + asX, bufferCenter + asY);
-                const radAngle = Math.atan2(asY, asX);
-                pg.rotate(radAngle);
-                pg.scale(asLimbFactor, 1.0);
-                pg.rotate(-radAngle);
-
-                // Tower structure - teal
-                const asHeight = bandHeight * random(3, 5) * asScale;
-                const asWidth = bandHeight * 0.8 * asScale;
-
-                // Main tower
-                pg.stroke(0, 180, 180, Math.round(180 * asLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.5, asWidth));
-                pg.line(0, 0, 0, -asHeight);
-
-                // Processing vanes at top
-                pg.stroke(50, 220, 200, Math.round(150 * asLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * asScale));
-                const vaneSpread = bandHeight * 1.5 * asScale;
-                pg.line(-vaneSpread, -asHeight, vaneSpread, -asHeight);
-                pg.line(-vaneSpread * 0.6, -asHeight * 0.7, vaneSpread * 0.6, -asHeight * 0.7);
-
-                // Emission plume - lighter teal
-                pg.noStroke();
-                pg.fill(100, 255, 220, Math.round(120 * asLimbFactor)); // Increased alpha
-                pg.ellipse(0, -asHeight * 1.2, bandHeight * 2 * asScale, bandHeight * 4 * asScale);
-
-                // Base structure
-                pg.fill(0, 150, 160, Math.round(100 * asLimbFactor));
-                pg.ellipse(0, 0, bandHeight * 1.5 * asScale, bandHeight * 1.5 * asScale);
-
-                pg.pop();
-            }
-        }
-
-        // 17. GEOTHERMAL POWER TAPS - DEEP RED/ORANGE
-        if ((featureRand * 113.9) % 1 > 0.78) {
-            const numGeothermal = Math.floor(random(3, 6));
-            for (let gt = 0; gt < numGeothermal; gt++) {
-                const gtAngle = (featureRand * (gt + 19) * 31.3) % TWO_PI_CONST;
-                const gtDist = random(r * 0.4, r * 0.8);
-                const gtX = Math.cos(gtAngle) * gtDist;
-                const gtY = Math.sin(gtAngle) * gtDist;
-
-                if (gtX * gtX + gtY * gtY > r * r * 0.9) continue;
-
-                const gtLimbFactor = this._getLimbFactor(gtX, gtY);
-                if (gtLimbFactor < 0.2) continue;
-                const gtScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + gtX, bufferCenter + gtY);
-                const radAngle = Math.atan2(gtY, gtX);
-                pg.rotate(radAngle);
-                pg.scale(gtLimbFactor, 1.0);
-                pg.rotate(-radAngle);
-
-                const gtSize = bandHeight * random(2, 4) * gtScale;
-
-                // Fissure Network (not just a hole)
-                pg.noFill();
-                pg.stroke(200, 50, 20, Math.round(150 * gtLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * gtScale));
-
-                // Main cracks
-                for (let i = 0; i < 3; i++) {
-                    const angle = (i / 3) * TWO_PI_CONST + random(0.5);
-                    pg.beginShape();
-                    pg.vertex(0, 0);
-                    pg.vertex(Math.cos(angle) * gtSize * 1.5, Math.sin(angle) * gtSize * 1.5);
-                    pg.vertex(Math.cos(angle + 0.2) * gtSize * 2.5, Math.sin(angle + 0.2) * gtSize * 2.5);
-                    pg.endShape();
-                }
-
-                // Magma glow at center
-                pg.noStroke();
-                pg.fill(255, 100, 30, Math.round(180 * gtLimbFactor)); // Increased alpha
-                pg.ellipse(0, 0, gtSize * 1.0, gtSize * 1.0);
-
-                // Extraction pipes interlaced with fissures
-                pg.stroke(180, 80, 40, Math.round(160 * gtLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * gtScale));
-                for (let ep = 0; ep < 3; ep++) {
-                    const epAngle = (ep / 3) * TWO_PI_CONST + PI / 2;
-                    pg.line(
-                        Math.cos(epAngle) * gtSize * 0.2, Math.sin(epAngle) * gtSize * 0.2,
-                        Math.cos(epAngle) * gtSize * 1.8, Math.sin(epAngle) * gtSize * 1.8
-                    );
-                }
-
-                // Steam vents - lighter colored
-                pg.noStroke();
-                pg.fill(255, 150, 100, Math.round(120 * gtLimbFactor)); // Increased alpha
-                for (let sv = 0; sv < 3; sv++) {
-                    const svAngle = random(0, TWO_PI_CONST);
-                    const svDist = gtSize * random(0.8, 1.5);
-                    pg.ellipse(
-                        Math.cos(svAngle) * svDist, Math.sin(svAngle) * svDist,
-                        bandHeight * 0.5 * gtScale, bandHeight * 0.5 * gtScale
-                    );
-                }
-
-                pg.pop();
-            }
-        }
-
-        // 18. PARTICLE SUPERCOLLIDER RINGS - HOT PINK/MAGENTA
-        if ((featureRand * 127.3) % 1 > 0.88) {
-            const numColliders = Math.floor(random(1, 3));
-            for (let pc = 0; pc < numColliders; pc++) {
-                const pcAngle = (featureRand * (pc + 23) * 47.1) % TWO_PI_CONST;
-                const pcDist = random(r * 0.3, r * 0.6);
-                const pcX = Math.cos(pcAngle) * pcDist;
-                const pcY = Math.sin(pcAngle) * pcDist;
-
-                if (pcX * pcX + pcY * pcY > r * r * 0.75) continue;
-
-                const pcLimbFactor = this._getLimbFactor(pcX, pcY);
-                if (pcLimbFactor < 0.25) continue;
-                const pcScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + pcX, bufferCenter + pcY);
-                const radAngle = Math.atan2(pcY, pcX);
-                pg.rotate(radAngle);
-                pg.scale(pcLimbFactor, 1.0);
-                pg.rotate(-radAngle);
-
-                // Large collider - OCTAGONAL/POLYGONAL design
-                const pcRadius = bandHeight * random(4, 6) * pcScale;
-                pg.noFill();
-                pg.stroke(255, 50, 150, Math.round(160 * pcLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * pcScale));
-
-                // Octagonal accelerator path
-                pg.beginShape();
-                for (let i = 0; i < 8; i++) {
-                    const a = (i / 8) * TWO_PI_CONST;
-                    pg.vertex(Math.cos(a) * pcRadius, Math.sin(a) * pcRadius);
-                }
-                pg.endShape(CLOSE);
-
-                // Inner beam tube (smaller polygon)
-                pg.stroke(255, 100, 180, Math.round(140 * pcLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * pcScale));
-                pg.beginShape();
-                for (let i = 0; i < 8; i++) {
-                    const a = (i / 8) * TWO_PI_CONST;
-                    pg.vertex(Math.cos(a) * pcRadius * 0.8, Math.sin(a) * pcRadius * 0.8);
-                }
-                pg.endShape(CLOSE);
-
-                // Detector stations at vertices
-                pg.noStroke();
-                pg.fill(255, 150, 200, Math.round(180 * pcLimbFactor)); // Increased alpha
-                for (let d = 0; d < 8; d++) {
-                    const dAngle = (d / 8) * TWO_PI_CONST;
-                    const dx = Math.cos(dAngle) * pcRadius;
-                    const dy = Math.sin(dAngle) * pcRadius;
-                    pg.ellipse(dx, dy, bandHeight * 0.6 * pcScale, bandHeight * 0.6 * pcScale);
-                }
-
-                // Energy glow at center collision point
-                pg.fill(255, 80, 180, Math.round(150 * pcLimbFactor)); // Increased alpha
-                pg.ellipse(0, 0, pcRadius * 0.4, pcRadius * 0.4);
-
-                pg.pop();
-            }
-        }
-
-        // 19. MEGACITY DATA CENTERS / AI CORES - WHITE/COOL BLUE
-        if ((featureRand * 131.7) % 1 > 0.76) {
-            const numDataCenters = Math.floor(random(3, 6));
-            for (let dc = 0; dc < numDataCenters; dc++) {
-                const dcAngle = (featureRand * (dc + 29) * 19.3) % TWO_PI_CONST;
-                const dcDist = random(r * 0.35, r * 0.75);
-                const dcX = Math.cos(dcAngle) * dcDist;
-                const dcY = Math.sin(dcAngle) * dcDist;
-
-                if (dcX * dcX + dcY * dcY > r * r * 0.85) continue;
-
-                const dcLimbFactor = this._getLimbFactor(dcX, dcY);
-                if (dcLimbFactor < 0.2) continue;
-                const dcScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + dcX, bufferCenter + dcY);
-                const radAngle = Math.atan2(dcY, dcX);
-                pg.rotate(radAngle);
-                pg.scale(dcLimbFactor, 1.0);
-                pg.rotate(-radAngle);
-
-                // Server block - rectangular with cool lighting
-
-                const dcWidth = bandHeight * random(2, 4) * dcScale;
-                const dcHeight = bandHeight * random(1.5, 2.5) * dcScale;
-
-                pg.stroke(200, 220, 255, Math.round(160 * dcLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * dcScale));
-                pg.noFill();
-                pg.rect(-dcWidth / 2, -dcHeight / 2, dcWidth, dcHeight);
-
-                // Blinking status lights - rows of white-blue dots
-                pg.noStroke();
-                pg.fill(220, 240, 255, Math.round(180 * dcLimbFactor)); // Increased alpha
-                const numRows = 3;
-                const numCols = 5;
-                for (let row = 0; row < numRows; row++) {
-                    for (let col = 0; col < numCols; col++) {
-                        if (random() > 0.3) {
-                            const lx = -dcWidth / 2.5 + col * (dcWidth / (numCols + 1));
-                            const ly = -dcHeight / 2.5 + row * (dcHeight / (numRows + 1));
-                            pg.ellipse(lx, ly, bandHeight * 0.2 * dcScale, bandHeight * 0.2 * dcScale);
-                        }
-                    }
-                }
-
-                // Cooling tower on top
-                pg.stroke(180, 200, 240, Math.round(140 * dcLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * dcScale));
-                pg.line(0, -dcHeight / 2, 0, -dcHeight / 2 - bandHeight * 1.5 * dcScale);
-
-                // Data transmission beam
-                pg.stroke(150, 200, 255, Math.round(100 * dcLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * dcScale));
-                pg.line(0, -dcHeight / 2 - bandHeight * 1.5 * dcScale, 0, -dcHeight / 2 - bandHeight * 4 * dcScale);
-
-                pg.pop();
-            }
-        }
-
-        // 20. SPACEPORT HUB COMPLEXES - WARM WHITE/YELLOW
-        if ((featureRand * 137.9) % 1 > 0.72) {
-            const numSpaceports = Math.floor(random(2, 5));
-            for (let sp = 0; sp < numSpaceports; sp++) {
-                const spAngle = (featureRand * (sp + 31) * 53.7) % TWO_PI_CONST;
-                const spDist = random(r * 0.4, r * 0.8);
-                const spX = Math.cos(spAngle) * spDist;
-                const spY = Math.sin(spAngle) * spDist;
-
-                if (spX * spX + spY * spY > r * r * 0.9) continue;
-
-                const spLimbFactor = this._getLimbFactor(spX, spY);
-                if (spLimbFactor < 0.2) continue;
-                const spScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + spX, bufferCenter + spY);
-                const radAngle = Math.atan2(spY, spX);
-                pg.rotate(radAngle);
-                pg.scale(spLimbFactor, 1.0);
-                pg.rotate(-radAngle);
-
-                // Central terminal - bright warm white
-                const spSize = bandHeight * random(2.5, 4) * spScale;
-                pg.noStroke();
-                pg.fill(255, 250, 230, Math.round(200 * spLimbFactor)); // Increased alpha
-                pg.ellipse(0, 0, spSize, spSize);
-
-                // Landing pads radiating outward
-                pg.stroke(255, 240, 200, Math.round(160 * spLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * spScale));
-                const numPads = 6;
-                for (let pad = 0; pad < numPads; pad++) {
-                    const padAngle = (pad / numPads) * TWO_PI_CONST;
-                    const padDist = spSize * 1.2;
-                    const padX = Math.cos(padAngle) * padDist;
-                    const padY = Math.sin(padAngle) * padDist;
-
-                    // Runway line
-                    pg.line(Math.cos(padAngle) * spSize * 0.5, Math.sin(padAngle) * spSize * 0.5, padX, padY);
-
-                    // Landing pad circle
-                    pg.noStroke();
-                    pg.fill(255, 245, 210, Math.round(180 * spLimbFactor)); // Increased alpha
-                    pg.ellipse(padX, padY, bandHeight * 0.8 * spScale, bandHeight * 0.8 * spScale);
-                    pg.stroke(255, 240, 200, Math.round(160 * spLimbFactor)); // Increased alpha
-                    pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * spScale));
-                }
-
-                // Beacon lights - bright yellow
-                pg.noStroke();
-                pg.fill(255, 230, 100, Math.round(220 * spLimbFactor)); // Slightly Increased alpha
-                pg.ellipse(0, 0, bandHeight * 0.5 * spScale, bandHeight * 0.5 * spScale);
-
-                pg.pop();
-            }
-        }
-
-        // 21. ARCOLOGY MEGA-CLUSTERS - MULTI-COLORED (varies per cluster)
-        if ((featureRand * 143.1) % 1 > 0.82) {
-            const numClusters = Math.floor(random(2, 4));
-            for (let cl = 0; cl < numClusters; cl++) {
-                const clAngle = (featureRand * (cl + 37) * 61.9) % TWO_PI_CONST;
-                const clDist = random(r * 0.35, r * 0.7);
-                const clX = Math.cos(clAngle) * clDist;
-                const clY = Math.sin(clAngle) * clDist;
-
-                if (clX * clX + clY * clY > r * r * 0.8) continue;
-
-                const clLimbFactor = this._getLimbFactor(clX, clY);
-                if (clLimbFactor < 0.25) continue;
-                const clScale = random(0.8, 1.2);
-
-                pg.push();
-                pg.translate(bufferCenter + clX, bufferCenter + clY);
-                const radAngle = Math.atan2(clY, clX);
-                pg.rotate(radAngle);
-                pg.scale(clLimbFactor, 1.0);
-                pg.rotate(-radAngle);
-
-                // Generate cluster color based on position
-                const colorHue = (featureRand * (cl + 1) * 97) % 360;
-                const clR = Math.floor(128 + 127 * Math.sin(colorHue * PI / 180));
-                const clG = Math.floor(128 + 127 * Math.sin((colorHue + 120) * PI / 180));
-                const clB = Math.floor(128 + 127 * Math.sin((colorHue + 240) * PI / 180));
-
-                // Multiple interconnected towers
-                const numTowers = Math.floor(random(4, 8));
-                const clusterRadius = bandHeight * random(3, 5) * clScale;
-
-                for (let t = 0; t < numTowers; t++) {
-                    const tAngle = (t / numTowers) * TWO_PI_CONST + random(-0.2, 0.2);
-                    const tDist = random(clusterRadius * 0.3, clusterRadius * 0.9);
-                    const tX = Math.cos(tAngle) * tDist;
-                    const tY = Math.sin(tAngle) * tDist;
-                    const tHeight = bandHeight * random(1.5, 3) * clScale;
-
-                    // Tower
-                    pg.stroke(clR, clG, clB, Math.round(160 * clLimbFactor)); // Increased alpha
-                    pg.strokeWeight(Math.max(0.5, bandHeight * 0.4 * clScale));
-                    pg.line(tX, tY, tX, tY - tHeight);
-
-                    // Tower top glow
-                    pg.noStroke();
-                    pg.fill(clR, clG, clB, Math.round(180 * clLimbFactor)); // Increased alpha
-                    pg.ellipse(tX, tY - tHeight, bandHeight * 0.5 * clScale, bandHeight * 0.5 * clScale);
-                }
-
-                // Connecting skyways between towers
-                pg.stroke(clR, clG, clB, Math.round(100 * clLimbFactor)); // Increased alpha
-                pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * clScale));
-                for (let s = 0; s < 5; s++) {
-                    const s1Angle = random(0, TWO_PI_CONST);
-                    const s2Angle = s1Angle + random(1, 2.5);
-                    const s1Dist = random(clusterRadius * 0.3, clusterRadius * 0.8);
-                    const s2Dist = random(clusterRadius * 0.3, clusterRadius * 0.8);
-                    pg.line(
-                        Math.cos(s1Angle) * s1Dist, Math.sin(s1Angle) * s1Dist - bandHeight * clScale,
-                        Math.cos(s2Angle) * s2Dist, Math.sin(s2Angle) * s2Dist - bandHeight * clScale
-                    );
-                }
-
-                // Central plaza glow
-                pg.noStroke();
-                pg.fill(clR, clG, clB, Math.round(90 * clLimbFactor)); // Increased alpha
-                pg.ellipse(0, 0, clusterRadius * 1.5, clusterRadius * 1.5);
-
-                pg.pop();
-            }
-        }
+        // 21. ARCOLOGY MEGA-CLUSTERS
+        this._renderMegaStructureArcologyClusters(pg, r, bufferCenter, this.featureRand, bandHeight, primR, primG, primB, secR, secG, secB, accR, accG, accB);
 
         // No global glow - removing this fixes the offset glow issue
 
@@ -2974,5 +1115,1146 @@ class Planet {
         p.palette = [p.baseColor, p.featureColor1, p.featureColor2, p.featureColor3];
 
         return p;
+    }
+
+    // --- Internal Rendering Helpers for renderCityLights ---
+
+    _applySphericalProjection(pg, x, y, limbFactor) {
+        const radAngle = Math.atan2(y, x);
+        pg.rotate(radAngle);
+        pg.scale(limbFactor, 1.0);
+        pg.rotate(-radAngle);
+    }
+
+    _getCivilizationColors(patternType) {
+        let pCol, sCol, aCol;
+        switch (patternType) {
+            case 0: pCol = color(255, 240, 180, 180); sCol = color(255, 220, 140, 160); aCol = color(255, 200, 100, 200); break;
+            case 1: pCol = color(220, 240, 255, 170); sCol = color(180, 200, 255, 150); aCol = color(150, 180, 255, 190); break;
+            case 2: pCol = color(255, 220, 160, 180); sCol = color(255, 200, 130, 160); aCol = color(255, 180, 100, 200); break;
+            case 3: pCol = color(220, 255, 220, 170); sCol = color(180, 245, 190, 150); aCol = color(140, 255, 160, 190); break;
+            case 4: pCol = color(240, 200, 255, 170); sCol = color(200, 150, 255, 150); aCol = color(180, 120, 255, 190); break;
+            case 5: pCol = color(180, 240, 255, 170); sCol = color(140, 220, 255, 150); aCol = color(100, 200, 255, 190); break;
+            default: pCol = color(255, 240, 180, 180); sCol = color(255, 220, 140, 160); aCol = color(255, 200, 100, 200);
+        }
+        return { primaryColor: pCol, secondaryColor: sCol, accentColor: aCol };
+    }
+
+    _renderCitySprawl(pg, r, bufferCenter, noiseScale, featureRand, primR, primG, primB) {
+        const faintBandHeight = Math.max(2, Math.ceil(3 * random(10)));
+        const faintDotSize = faintBandHeight * 0.5;
+        for (let y = -r; y < r; y += faintBandHeight) {
+            const ySq = y * y;
+            const bandRSq = r * r - ySq;
+            if (bandRSq <= 0) continue;
+            const bandR = Math.sqrt(bandRSq);
+            for (let x = -bandR; x < bandR; x += faintBandHeight) {
+                const nx = x / r, ny = y / r;
+                const inside = nx * nx + ny * ny;
+                if (inside > 1) continue;
+                const nzUnit = Math.sqrt(Math.max(0, 1 - inside));
+                const sampleMultiplier = Math.max(0.0005, (r * noiseScale) * 0.8);
+                const bNX = nx * sampleMultiplier + featureRand * 0.001;
+                const bNY = ny * sampleMultiplier + featureRand * 0.002;
+                const bNZ = nzUnit * sampleMultiplier + featureRand * 0.003;
+                const baseNoise = pg.noise(bNX, bNY, bNZ);
+                const detailNoise = pg.noise(bNX * 2.5, bNY * 2.5, bNZ * 2.0);
+                let combinedNoise = baseNoise * 0.62 + detailNoise * 0.38;
+                combinedNoise = Math.min(1, Math.max(0, Math.pow(combinedNoise, 1.25)));
+                const limbFactor = Math.pow(nzUnit, 0.9);
+                if (combinedNoise > 0.2) {
+                    const faintAlpha = Math.max(8, Math.round(36 * limbFactor));
+                    const fd = Math.max(1, Math.round(faintDotSize * Math.max(0.35, limbFactor)));
+                    pg.noStroke(); pg.fill(primR, primG, primB, faintAlpha);
+                    pg.ellipse(bufferCenter + x, bufferCenter + y, fd, fd);
+                }
+            }
+        }
+    }
+
+    _generateCityHubs(r) {
+        const cityHubs = [];
+        const numHubs = Math.floor(r / 80) + Math.floor(random(2, 5));
+        for (let i = 0; i < numHubs; i++) {
+            const hubAngle = (i / numHubs) * TWO_PI + random(-0.3, 0.3);
+            const hubDist = random(r * 0.3, r * 0.85);
+            const hubSize = random(r * 0.1, r * 0.25);
+            cityHubs.push({
+                x: Math.cos(hubAngle) * hubDist,
+                y: Math.sin(hubAngle) * hubDist,
+                sizeSq: hubSize * hubSize,
+                size: hubSize,
+                density: random(0.6, 1.0)
+            });
+        }
+        return cityHubs;
+    }
+
+    _renderCityHubs(pg, r, bufferCenter, cityHubs, bandHeight, noiseScale, featureRand, primR, primG, primB, secR, secG, secB, accR, accG, accB, densityBase) {
+        const rSq = r * r;
+        const TWO_PI_CONST = TWO_PI;
+        for (let y = -r; y < r; y += bandHeight) {
+            const ySq = y * y;
+            const bandRSq = rSq - ySq;
+            if (bandRSq <= 0) continue;
+            const bandR = Math.sqrt(bandRSq);
+            for (let x = -bandR; x < bandR; x += bandHeight) {
+                const nx = x / r, ny = y / r;
+                const inside = nx * nx + ny * ny;
+                if (inside > 1) continue;
+                const nzUnit = Math.sqrt(Math.max(0, 1 - inside));
+                const sampleMultiplier = Math.max(0.0005, (r * noiseScale) * 0.8);
+                const sNX = nx * sampleMultiplier + featureRand * 0.001;
+                const sNY = ny * sampleMultiplier + featureRand * 0.002;
+                const sNZ = nzUnit * sampleMultiplier + featureRand * 0.004;
+                const baseNoise = pg.noise(sNX, sNY, sNZ);
+                const detailNoise = pg.noise(sNX * 2.2, sNY * 2.2, sNZ * 1.8);
+                let combinedNoise = (baseNoise * 0.56) + (detailNoise * 0.44);
+                combinedNoise = Math.min(1, Math.max(0, Math.pow(combinedNoise, 1.35)));
+                let hubInfluence = 0;
+                for (let h = 0; h < cityHubs.length; h++) {
+                    const hub = cityHubs[h];
+                    const dx = x - hub.x, dy = y - hub.y;
+                    const hubDistSq = dx * dx + dy * dy;
+                    if (hubDistSq < hub.sizeSq) hubInfluence += hub.density * (1 - Math.sqrt(hubDistSq) / hub.size);
+                }
+                hubInfluence = Math.min(hubInfluence, 0.8);
+                const densityThreshold = 1 - (densityBase + hubInfluence);
+                const limbFactor = Math.pow(nzUnit, 0.9);
+                const brightnessMul = Math.max(0.22, limbFactor);
+                if (combinedNoise > densityThreshold) {
+                    const brightness = 70 + ((combinedNoise + hubInfluence - densityThreshold) / (1.5 - densityThreshold)) * 130;
+                    const isNearHub = hubInfluence > 0.2;
+                    const adjBrightness = brightness * brightnessMul;
+                    const structureType = (combinedNoise * 10 + baseNoise * 5) % 1;
+                    const worldX = bufferCenter + x, worldY = bufferCenter + y;
+                    if (structureType < 0.25) {
+                        pg.noStroke(); pg.fill(primR, primG, primB, Math.min(255, Math.round(adjBrightness * 0.8)));
+                        const dotSize = Math.max(1, (isNearHub ? bandHeight * 0.7 : bandHeight * 0.4) * brightnessMul);
+                        pg.ellipse(worldX, worldY, dotSize, dotSize);
+                    } else if (structureType < 0.5) {
+                        const lineAngle = (Math.atan2(y, x) + baseNoise * Math.PI) % TWO_PI_CONST;
+                        pg.stroke(secR, secG, secB, Math.min(255, Math.round(adjBrightness * 0.9)));
+                        pg.strokeWeight(bandHeight * 0.4 * brightnessMul);
+                        const halfLen = ((isNearHub ? bandHeight * 2 : bandHeight * 1.2) * brightnessMul) * 0.5;
+                        pg.line(worldX - Math.cos(lineAngle) * halfLen, worldY - Math.sin(lineAngle) * halfLen, worldX + Math.cos(lineAngle) * halfLen, worldY + Math.sin(lineAngle) * halfLen);
+                    } else if (structureType < 0.7) {
+                        pg.noStroke(); pg.fill(primR, primG, primB, Math.min(255, Math.round(adjBrightness * 0.7)));
+                        const blockSize = Math.max(1, (isNearHub ? bandHeight * 1.2 : bandHeight * 0.8) * brightnessMul);
+                        pg.rect(worldX - blockSize * 0.5, worldY - blockSize * 0.5, blockSize, blockSize);
+                        if (isNearHub && random() > 0.5) {
+                            pg.fill(secR, secG, secB, Math.min(255, Math.round(adjBrightness * 0.9)));
+                            pg.rect(worldX - blockSize * 0.3, worldY - blockSize * 0.3, blockSize * 0.6, blockSize * 0.6);
+                        }
+                    } else {
+                        pg.noStroke();
+                        const scatterSize = Math.max(1, bandHeight * 0.3 * brightnessMul);
+                        for (let i = 0; i < 3; i++) {
+                            const ox = random(-bandHeight, bandHeight) * brightnessMul, oy = random(-bandHeight, bandHeight) * brightnessMul;
+                            pg.fill(primR, primG, primB, Math.max(8, Math.round(adjBrightness * (1 - 0.6 * Math.sqrt(ox * ox + oy * oy) / (bandHeight * 1.4)))));
+                            pg.ellipse(worldX + ox, worldY + oy, scatterSize, scatterSize);
+                        }
+                    }
+                    if (isNearHub && hubInfluence > 0.5 && random() > 0.8) {
+                        const pSize = Math.max(2, bandHeight * random(2, 4) * brightnessMul);
+                        const bAlpha = Math.max(10, Math.round(adjBrightness * 0.8));
+                        pg.noFill(); pg.stroke(secR, secG, secB, bAlpha); pg.strokeWeight(bandHeight * 0.3 * brightnessMul);
+                        pg.ellipse(worldX, worldY, pSize * 0.7, pSize * 0.7); pg.strokeWeight(bandHeight * 0.2 * brightnessMul); pg.ellipse(worldX, worldY, pSize, pSize);
+                    }
+                }
+            }
+        }
+    }
+
+    _renderGridOverlay(pg, r, bufferCenter, featureRand, bandHeight, primR, primG, primB, secR, secG, secB) {
+        const TWO_PI_CONST = TWO_PI;
+        const gridAngle = ((featureRand * 13.37) % TWO_PI_CONST) + (this.currentRotation || 0) * 0.12;
+        const baseSpacing = Math.max(8, Math.floor(r * map(this.cityLightsDensity || 0.5, 0.25, 0.9, 0.18, 0.06)));
+        const spacing = Math.max(6, Math.round(baseSpacing));
+        const segStep = Math.max(4, Math.round(spacing * 0.35));
+        const noiseJitter = Math.max(0.5, spacing * 0.22);
+        const nScale = this.noiseScale || 0.01;
+
+        pg.push();
+        pg.translate(bufferCenter, bufferCenter);
+        pg.rotate(gridAngle);
+        pg.stroke(primR, primG, primB, 160);
+        pg.strokeWeight(Math.max(0.6, bandHeight * 0.35));
+        const safeR = r * 0.85;
+
+        for (let gx = -safeR; gx <= safeR; gx += spacing) {
+            const halfChord = Math.sqrt(Math.max(0, safeR * safeR - gx * gx));
+            if (halfChord < 5) continue;
+            const lineDistNorm = Math.abs(gx) / r;
+            for (let yy = -halfChord; yy <= halfChord; yy += segStep) {
+                const yNorm = yy / r;
+                const curveDisp = lineDistNorm * (1 - yNorm * yNorm) * r * 0.3;
+                const x = gx + Math.sign(gx) * curveDisp;
+                const nx = x / r, ny = yNorm;
+                const inside = nx * nx + ny * ny;
+                if (inside > 1) continue;
+                const nzUnit = Math.sqrt(Math.max(0, 1 - inside));
+                if (nzUnit < 0.15) continue;
+                const sMul = Math.max(0.0006, (r * nScale) * 0.9);
+                const sNX = nx * sMul + featureRand * 0.002 + 7.13, sNY = ny * sMul + featureRand * 0.003 + 9.71, sNZ = nzUnit * sMul + featureRand * 0.004 + 1.41;
+                const visibility = Math.pow(pg.noise(sNX * 2.2, sNY * 2.2, sNZ * 1.6) * 0.7 + pg.noise(sNX * 6.0, sNY * 6.0, sNZ * 4.2) * 0.3, 1.25);
+                const limbFactor = Math.pow(nzUnit, 0.85);
+                if (visibility > (0.35 + (0.45 * (1 - (this.cityLightsDensity || 0.5)))) * (0.6 + 0.4 * limbFactor)) {
+                    const jitter = (pg.noise(sNX * 1.5, sNY * 1.5) - 0.5) * ((pg.noise(sNX * 6.0, sNY * 6.0, sNZ * 4.2) - 0.5) * noiseJitter) * (1 - limbFactor);
+                    const sYN = (yy - segStep * 0.45) / r, eYN = (yy + segStep * 0.45) / r;
+                    const sX = gx + Math.sign(gx || 1) * (lineDistNorm * (1 - sYN * sYN) * r * 0.3) + jitter;
+                    const eX = gx + Math.sign(gx || 1) * (lineDistNorm * (1 - eYN * eYN) * r * 0.3) + jitter;
+                    if ((sX * sX + (yy - segStep * 0.45) * (yy - segStep * 0.45)) <= safeR * safeR && (eX * eX + (yy + segStep * 0.45) * (yy + segStep * 0.45)) <= safeR * safeR) {
+                        pg.line(sX, yy - segStep * 0.45, eX, yy + segStep * 0.45);
+                    }
+                }
+            }
+        }
+        pg.stroke(secR, secG, secB, 120); pg.strokeWeight(Math.max(0.35, bandHeight * 0.22)); pg.rotate(PI / 2.3);
+        for (let gx = -safeR; gx <= safeR; gx += Math.round(spacing * 1.4)) {
+            const halfChord = Math.sqrt(Math.max(0, safeR * safeR - gx * gx));
+            if (halfChord < 5) continue;
+            const lineDistNorm = Math.abs(gx) / r;
+            for (let yy = -halfChord; yy <= halfChord; yy += Math.max(3, Math.round(segStep * 0.9))) {
+                const yNorm = yy / r;
+                const x = gx + Math.sign(gx) * (lineDistNorm * (1 - yNorm * yNorm) * r * 0.3);
+                const nx = x / r, ny = yNorm;
+                const inside = nx * nx + ny * ny;
+                if (inside > 1) continue;
+                const nzUnit = Math.sqrt(Math.max(0, 1 - inside));
+                if (nzUnit < 0.2) continue;
+                const sMul = Math.max(0.0006, (r * nScale) * 0.9);
+                const sNX = nx * sMul + featureRand * 0.005 + 3.21, sNY = ny * sMul + featureRand * 0.006 + 4.19, sNZ = nzUnit * sMul + featureRand * 0.007 + 2.17;
+                if (pg.noise(sNX * 2.6, sNY * 2.6, sNZ * 1.9) > 0.48 * (0.7 + 0.3 * Math.pow(nzUnit, 0.9))) {
+                    const jitter = (pg.noise(sNX * 1.3, sNY * 1.3) - 0.5) * noiseJitter * 0.6 * (1 - Math.pow(nzUnit, 0.9));
+                    const sYN = (yy - segStep * 0.3) / r, eYN = (yy + segStep * 0.3) / r;
+                    const sX = gx + Math.sign(gx || 1) * (lineDistNorm * (1 - sYN * sYN) * r * 0.3) + jitter;
+                    const eX = gx + Math.sign(gx || 1) * (lineDistNorm * (1 - eYN * eYN) * r * 0.3) + jitter;
+                    if ((sX * sX + (yy - segStep * 0.3) * (yy - segStep * 0.3)) <= safeR * safeR && (eX * eX + (yy + segStep * 0.3) * (yy + segStep * 0.3)) <= safeR * safeR) {
+                        pg.line(sX, yy - segStep * 0.3, eX, yy + segStep * 0.3);
+                    }
+                }
+            }
+        }
+        pg.pop();
+    }
+
+    _renderTransportLines(pg, r, bufferCenter, cityHubs, bandHeight, secR, secG, secB) {
+        pg.noFill();
+        const maxHubDist = r * 0.7;
+        for (let i = 0; i < cityHubs.length; i++) {
+            for (let j = i + 1; j < cityHubs.length; j++) {
+                const h1 = cityHubs[i], h2 = cityHubs[j];
+                const dx = h2.x - h1.x, dy = h2.y - h1.y;
+                const hubDist = Math.sqrt(dx * dx + dy * dy);
+                if (hubDist < maxHubDist) {
+                    const avgLimb = (this._getLimbFactor(h1.x, h1.y) + this._getLimbFactor(h2.x, h2.y)) * 0.5;
+                    if (avgLimb < 0.2) continue;
+                    pg.stroke(secR, secG, secB, Math.round((150 - (hubDist / maxHubDist) * 80) * avgLimb));
+                    pg.strokeWeight(bandHeight * 0.6 * avgLimb);
+                    this._drawCurvedLine(pg, h1.x, h1.y, h2.x, h2.y, bufferCenter, r);
+                }
+            }
+        }
+    }
+
+    _renderMegaStructureOrbitalRing(pg, r, bufferCenter, featureRand, bandHeight) {
+        if ((featureRand * 31.41) % 1 > 0.85) {
+            const ringAngle = (featureRand * 17.3) % TWO_PI;
+            const ringRadius = r * random(1.08, 1.15);
+            const ringThickness = Math.max(1, bandHeight * 0.5);
+            pg.push(); pg.translate(bufferCenter, bufferCenter); pg.rotate(ringAngle); pg.noFill(); pg.stroke(200, 60, 50, 180); pg.strokeWeight(ringThickness);
+            const segCount = Math.floor(120 + random(40));
+            for (let seg = 0; seg < segCount; seg++) {
+                const sA = (seg / segCount) * TWO_PI, nA = ((seg + 0.7) / segCount) * TWO_PI;
+                const x1 = Math.cos(sA) * ringRadius, y1 = Math.sin(sA) * ringRadius * 0.3;
+                if (y1 < r * 0.2) pg.line(x1, y1, Math.cos(nA) * ringRadius, Math.sin(nA) * ringRadius * 0.3);
+            }
+            pg.pop();
+            const tethers = Math.floor(random(3, 6));
+            for (let t = 0; t < tethers; t++) {
+                const tA = ringAngle + (t / tethers) * TWO_PI;
+                const sx = Math.cos(tA) * r * 0.9, sy = Math.sin(tA) * r * 0.9;
+                const ox = Math.cos(tA) * ringRadius, oy = Math.sin(tA) * ringRadius * 0.3;
+                pg.stroke(255, 80, 60, 180); pg.strokeWeight(Math.max(0.8, bandHeight * 0.35));
+                pg.line(bufferCenter + sx, bufferCenter + sy, bufferCenter + ox, bufferCenter + oy);
+                pg.noStroke(); pg.fill(255, 100, 80, 220); pg.ellipse(bufferCenter + sx, bufferCenter + sy, bandHeight, bandHeight);
+                pg.fill(255, 60, 40, 100); pg.ellipse(bufferCenter + sx, bufferCenter + sy, bandHeight * 2, bandHeight * 2);
+            }
+        }
+    }
+
+    _renderMegaStructureAgricultural(pg, r, bufferCenter, featureRand, bandHeight, primR, primG, primB, secR, secG, secB) {
+        const numFarmRegions = Math.floor(random(2, 5));
+        for (let fr = 0; fr < numFarmRegions; fr++) {
+            const fA = (featureRand * (fr + 1) * 23.7) % TWO_PI, fD = random(r * 0.4, r * 0.85);
+            const fx = Math.cos(fA) * fD, fy = Math.sin(fA) * fD;
+            if (fx * fx + fy * fy > r * r * 0.9) continue;
+            const fLimb = this._getLimbFactor(fx, fy);
+            if (fLimb < 0.15) continue;
+            const fType = Math.floor((featureRand * (fr + 5) * 11.1) % 3), fScale = random(r * 0.08, r * 0.15) * Math.max(0.3, fLimb);
+            const fSp = fScale * 0.3;
+            pg.push(); pg.translate(bufferCenter + fx, bufferCenter + fy);
+            if (fType === 0) {
+                const nC = Math.floor(random(4, 8));
+                for (let c = 0; c < nC; c++) {
+                    const cR = (c + 1) * fSp * Math.max(0.3, fLimb);
+                    pg.noFill(); pg.stroke(primR, primG, primB, Math.round((25 + c * 5) * fLimb)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * fLimb)); pg.ellipse(0, 0, cR * 2, cR * 2);
+                    const nD = Math.floor(cR * 0.5);
+                    for (let d = 0; d < nD; d++) {
+                        const dA = (d / nD) * TWO_PI, dx = Math.cos(dA) * cR, dy = Math.sin(dA) * cR;
+                        const dL = this._getLimbFactor(fx + dx, fy + dy);
+                        if (dL < 0.1) continue;
+                        pg.noStroke(); pg.fill(secR, secG, secB, Math.round(40 * dL)); pg.ellipse(dx, dy, bandHeight * 0.2 * dL, bandHeight * 0.2 * dL);
+                    }
+                }
+            } else if (fType === 1) {
+                const hS = fSp * 0.6, hR = 8, hC = 8;
+                for (let row = -hR; row < hR; row++) for (let col = -hC; col < hC; col++) {
+                    const xOff = col * hS * 1.5, yOff = row * hS * Math.sqrt(3) + (col % 2) * hS * Math.sqrt(3) * 0.5;
+                    const cL = this._getLimbFactor(fx + xOff, fy + yOff);
+                    if (cL < 0.1) continue;
+                    const sHS = hS * Math.max(0.2, cL); pg.noFill(); pg.stroke(primR, primG, primB, Math.round(35 * cL)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.12 * cL));
+                    pg.beginShape(); for (let h = 0; h < 6; h++) pg.vertex(xOff + Math.cos((h / 6) * TWO_PI) * sHS, yOff + Math.sin((h / 6) * TWO_PI) * sHS); pg.endShape(CLOSE);
+                }
+            } else {
+                const gS = fSp * 0.8, gC = 10;
+                for (let gx = -gC; gx < gC; gx++) for (let gy = -gC; gy < gC; gy++) {
+                    const rx = gx * gS, ry = gy * gS, cL = this._getLimbFactor(fx + rx, fy + ry);
+                    if (cL < 0.1) continue;
+                    const cS = Math.max(0.2, cL), sGS = gS * 0.8 * cS;
+                    pg.stroke(primR, primG, primB, Math.round(30 * cL)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * cL)); pg.noFill(); pg.rect(rx - sGS * 0.5, ry - sGS * 0.5, sGS, sGS);
+                    if ((gx + gy) % 2 === 0) { pg.noStroke(); pg.fill(secR, secG, secB, Math.round(45 * cL)); pg.ellipse(rx, ry, bandHeight * 0.25 * cL, bandHeight * 0.25 * cL); }
+                }
+            }
+            pg.pop();
+        }
+    }
+
+    _renderMegaStructureRadialCities(pg, r, bufferCenter, cityHubs, bandHeight, primR, primG, primB, secR, secG, secB, accR, accG, accB) {
+        const nRC = Math.floor(random(1, 3));
+        for (let rc = 0; rc < nRC; rc++) {
+            if (rc >= cityHubs.length) break;
+            const hub = cityHubs[rc], hL = this._getLimbFactor(hub.x, hub.y);
+            if (hL < 0.2) continue;
+            const hAS = Math.max(0.3, hL), nS = Math.floor(random(6, 12)), sL = hub.size * random(0.8, 1.2) * Math.max(0.4, hL);
+            for (let sp = 0; sp < nS; sp++) {
+                const sA = (sp / nS) * TWO_PI, sex = hub.x + Math.cos(sA) * sL, sey = hub.y + Math.sin(sA) * sL;
+                const eL = this._getLimbFactor(sex, sey), aL = (hL + eL) * 0.5;
+                pg.stroke(primR, primG, primB, Math.round(140 * aL)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.4 * aL));
+                this._drawCurvedLine(pg, hub.x, hub.y, sex, sey, bufferCenter, r);
+                const nSeg = Math.floor(random(4, 8));
+                for (let seg = 1; seg < nSeg; seg++) {
+                    const t = seg / nSeg, sx = hub.x + Math.cos(sA) * sL * t, sy = hub.y + Math.sin(sA) * sL * t, sLimb = this._getLimbFactor(sx, sy);
+                    if (sLimb < 0.15) continue;
+                    const pA = sA + PI / 2, pL = bandHeight * random(1, 3) * sLimb;
+                    pg.stroke(secR, secG, secB, Math.round(100 * sLimb)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.25 * sLimb));
+                    pg.line(bufferCenter + sx - Math.cos(pA) * pL, bufferCenter + sy - Math.sin(pA) * pL, bufferCenter + sx + Math.cos(pA) * pL, bufferCenter + sy + Math.sin(pA) * pL);
+                    pg.noStroke(); pg.fill(accR, accG, accB, Math.round(160 * sLimb)); pg.ellipse(bufferCenter + sx, bufferCenter + sy, bandHeight * 0.6 * sLimb, bandHeight * 0.6 * sLimb);
+                }
+            }
+            const nR = Math.floor(random(2, 4));
+            for (let ring = 1; ring <= nR; ring++) {
+                const rR = (ring / nR) * sL;
+                pg.noFill(); pg.stroke(secR, secG, secB, Math.round(80 * hAS)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.3 * hL)); pg.ellipse(bufferCenter + hub.x, bufferCenter + hub.y, rR * 2, rR * 2);
+            }
+        }
+    }
+
+    _renderMegaStructureArcologies(pg, r, bufferCenter, featureRand, bandHeight, accR, accG, accB) {
+        const nA = Math.floor(random(1, 4));
+        for (let arc = 0; arc < nA; arc++) {
+            const aA = (featureRand * (arc + 7) * 19.3) % TWO_PI, aD = random(r * 0.3, r * 0.8), ax = Math.cos(aA) * aD, ay = Math.sin(aA) * aD;
+            if (ax * ax + ay * ay > r * r * 0.9) continue;
+            const aL = this._getLimbFactor(ax, ay);
+            if (aL < 0.2) continue;
+            const aS = Math.max(0.3, aL), gS = bandHeight * random(2.5, 4) * aS;
+            pg.push(); pg.translate(bufferCenter + ax, bufferCenter + ay); pg.noStroke();
+            for (let g = 3; g > 0; g--) { pg.fill(accR, accG, accB, Math.round((60 / g) * aL)); pg.ellipse(0, 0, gS * (g / 3), gS * (g / 3)); }
+            pg.fill(accR, accG, accB, Math.round(220 * aL)); pg.ellipse(0, 0, bandHeight * 1.2 * aS, bandHeight * 1.2 * aS);
+            pg.stroke(255, 255, 255, Math.round(180 * aL)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * aS)); const cS = bandHeight * 1.5 * aS; pg.line(-cS, 0, cS, 0); pg.line(0, -cS, 0, cS);
+            pg.pop();
+        }
+    }
+
+    _renderMegaStructureIndustrial(pg, r, bufferCenter, featureRand, bandHeight, primR, primG, primB) {
+        const nI = Math.floor(random(2, 5));
+        for (let ind = 0; ind < nI; ind++) {
+            const iA = (featureRand * (ind + 13) * 27.1) % TWO_PI, iD = random(r * 0.4, r * 0.85), ix = Math.cos(iA) * iD, iy = Math.sin(iA) * iD;
+            if (ix * ix + iy * iy > r * r * 0.9) continue;
+            const zL = this._getLimbFactor(ix, iy);
+            if (zL < 0.2) continue;
+            const zS = Math.max(0.3, zL), iS = random(r * 0.04, r * 0.08) * zS, gS = Math.max(1, bandHeight * 0.8 * zS);
+            pg.push(); pg.translate(bufferCenter + ix, bufferCenter + iy);
+            const gE = Math.floor(iS / gS);
+            for (let gx = -gE; gx <= gE; gx++) for (let gy = -gE; gy <= gE; gy++) {
+                const px = gx * gS, py = gy * gS, pL = this._getLimbFactor(ix + px, iy + py);
+                if (pL < 0.1) continue;
+                pg.noStroke(); pg.fill(primR, primG, primB, Math.round(150 * pL)); pg.ellipse(px, py, bandHeight * 0.5 * pL, bandHeight * 0.5 * pL);
+            }
+            pg.pop();
+        }
+    }
+
+    _renderMegaStructureProcessors(pg, r, bufferCenter, featureRand, bandHeight, secR, secG, secB, accR, accG, accB) {
+        if ((featureRand * 53.7) % 1 > 0.7) {
+            const nP = Math.floor(random(2, 5));
+            for (let proc = 0; proc < nP; proc++) {
+                const pA = (proc / nP) * TWO_PI + random(-0.3, 0.3), pD = random(r * 0.6, r * 0.9), px = Math.cos(pA) * pD, py = Math.sin(pA) * pD;
+                if (px * px + py * py > r * r) continue;
+                const pL = this._getLimbFactor(px, py);
+                if (pL < 0.15) continue;
+                const pS = Math.max(0.25, pL), bPS = bandHeight * random(2, 3) * pS;
+                pg.push(); pg.translate(bufferCenter + px, bufferCenter + py); pg.push(); pg.rotate(PI / 4); pg.noFill(); pg.stroke(accR, accG, accB, Math.round(180 * pL)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * pS)); pg.rect(-bPS / 2, -bPS / 2, bPS, bPS); pg.pop();
+                pg.noStroke(); pg.fill(255, 255, 255, Math.round(200 * pL)); pg.ellipse(0, 0, bandHeight * 0.7 * pS, bandHeight * 0.7 * pS);
+                for (let el = 0; el < 4; el++) { const eA = (el / 4) * TWO_PI, eL = bPS * 1.2; pg.stroke(secR, secG, secB, Math.round(140 * pL)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * pS)); pg.line(0, 0, Math.cos(eA) * eL, Math.sin(eA) * eL); }
+                pg.pop();
+            }
+        }
+    }
+
+    _renderMegaStructureSolarCollectors(pg, r, bufferCenter, featureRand, bandHeight) {
+        if ((featureRand * 47.3) % 1 > 0.7) {
+            const nC = Math.floor(random(2, 5));
+            for (let sc = 0; sc < nC; sc++) {
+                const sA = (sc / nC) * TWO_PI + (featureRand * 3.14), sD = random(r * 0.3, r * 0.7), sx = Math.cos(sA) * sD, sy = Math.sin(sA) * sD;
+                if (sx * sx + sy * sy > r * r * 0.8) continue;
+                const sL = this._getLimbFactor(sx, sy);
+                if (sL < 0.2) continue;
+                const scS = random(0.8, 1.2); pg.push(); pg.translate(bufferCenter + sx, bufferCenter + sy);
+                this._applySphericalProjection(pg, sx, sy, sL);
+                const pS = bandHeight * random(7, 11) * scS; pg.noFill(); pg.stroke(255, 180, 40, Math.round(180 * sL)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * scS));
+                for (let arm = 0; arm < 3; arm++) {
+                    const aSA = (arm / 3) * TWO_PI; pg.beginShape();
+                    for (let p = 0; p < 5; p++) {
+                        const t = p / 4, ang = aSA + t * 2.0, dist = pS * (0.2 + t * 0.8); pg.vertex(Math.cos(ang) * dist, Math.sin(ang) * dist);
+                        if (p > 0) { pg.push(); pg.translate(Math.cos(ang) * dist, Math.sin(ang) * dist); pg.rotate(ang); pg.fill(255, 200, 50, Math.round(120 * sL)); pg.noStroke(); pg.rect(-bandHeight * 0.5 * scS, -bandHeight * 0.3 * scS, bandHeight * scS, bandHeight * 0.6 * scS); pg.pop(); }
+                    }
+                    pg.endShape();
+                }
+                pg.stroke(255, 220, 100, Math.round(200 * sL)); pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * scS)); pg.noFill(); pg.beginShape();
+                for (let i = 0; i < 3; i++) pg.vertex(Math.cos((i / 3) * TWO_PI - PI / 6) * pS * 0.3, Math.sin((i / 3) * TWO_PI - PI / 6) * pS * 0.3); pg.endShape(CLOSE);
+                pg.noStroke(); pg.fill(255, 255, 220, Math.round(150 * sL)); pg.ellipse(0, 0, pS * 0.15, pS * 0.15);
+                pg.pop();
+            }
+        }
+    }
+
+    _renderMegaStructureDefensePlatforms(pg, r, bufferCenter, featureRand, bandHeight) {
+        if ((featureRand * 61.9) % 1 > 0.75) {
+            const nD = Math.floor(random(2, 5));
+            for (let df = 0; df < nD; df++) {
+                const dA = (df / nD) * TWO_PI + random(-0.2, 0.2), dD = random(r * 0.4, r * 0.8), dx = Math.cos(dA) * dD, dy = Math.sin(dA) * dD;
+                if (dx * dx + dy * dy > r * r * 0.85) continue;
+                const dL = this._getLimbFactor(dx, dy);
+                if (dL < 0.2) continue;
+                const dS = random(0.8, 1.2), dfS = bandHeight * random(8, 12) * dS;
+                pg.push(); pg.translate(bufferCenter + dx, bufferCenter + dy);
+                this._applySphericalProjection(pg, dx, dy, dL);
+                pg.stroke(0, 200, 255, Math.round(160 * dL)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * dS)); pg.noFill();
+                pg.beginShape(); for (let t = 0; t < 3; t++) { const tA = (t / 3) * TWO_PI - PI / 2; pg.vertex(Math.cos(tA) * dfS, Math.sin(tA) * dfS); pg.line(0, 0, Math.cos(tA) * dfS, Math.sin(tA) * dfS); } pg.endShape(CLOSE);
+                pg.noStroke(); for (let wt = 0; wt < 3; wt++) {
+                    const wA = (wt / 3) * TWO_PI - PI / 2, wx = Math.cos(wA) * dfS, wy = Math.sin(wA) * dfS;
+                    pg.fill(30, 80, 150, Math.round(180 * dL)); pg.ellipse(wx, wy, bandHeight * 0.8 * dS, bandHeight * 0.8 * dS);
+                    pg.fill(255, 50, 50, Math.round(160 * dL)); pg.ellipse(wx, wy, bandHeight * 0.4 * dS, bandHeight * 0.4 * dS);
+                }
+                pg.fill(200, 240, 255, Math.round(180 * dL)); pg.ellipse(0, 0, dfS * 0.25, dfS * 0.25);
+                pg.stroke(255, 80, 80, Math.round(120 * dL)); pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * dS)); pg.line(0, 0, Math.cos((featureRand * 10) % TWO_PI) * dfS * 2, Math.sin((featureRand * 10) % TWO_PI) * dfS * 2);
+                pg.pop();
+            }
+        }
+    }
+
+    _renderMegaStructureRailguns(pg, r, bufferCenter, featureRand, bandHeight) {
+        if ((featureRand * 73.1) % 1 > 0.78) {
+            const nR = Math.floor(random(2, 4));
+            for (let rg = 0; rg < nR; rg++) {
+                const rA = (featureRand * (rg + 1) * 31.7) % TWO_PI, rD = random(r * 0.4, r * 0.75), rx = Math.cos(rA) * rD, ry = Math.sin(rA) * rD;
+                if (rx * rx + ry * ry > r * r * 0.85) continue;
+                const rL = this._getLimbFactor(rx, ry);
+                if (rL < 0.2) continue;
+                const rS = random(0.8, 1.2), rLen = bandHeight * random(12, 18) * rS, rW = bandHeight * 1.5 * rS;
+                pg.push(); pg.translate(bufferCenter + rx, bufferCenter + ry);
+                this._applySphericalProjection(pg, rx, ry, rL);
+                pg.push(); pg.rotate(rA + PI); pg.stroke(140, 80, 200, Math.round(180 * rL)); pg.strokeWeight(Math.max(0.5, rW * 0.3)); pg.line(0, -rW * 0.5, rLen, -rW * 0.5); pg.line(0, rW * 0.5, rLen, rW * 0.5);
+                pg.stroke(0, 220, 255, Math.round(140 * rL)); pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * rS)); for (let ring = 1; ring <= 6; ring++) pg.line(rLen * (ring / 7), -rW * 0.8, rLen * (ring / 7), rW * 0.8); pg.pop();
+                pg.noStroke(); pg.fill(120, 60, 180, Math.round(150 * rL)); pg.beginShape(); for (let i = 0; i < 6; i++) pg.vertex(Math.cos((i / 6) * TWO_PI) * bandHeight * 2.5 * rS, Math.sin((i / 6) * TWO_PI) * bandHeight * 2.5 * rS); pg.endShape(CLOSE);
+                pg.fill(200, 180, 255, Math.round(180 * rL)); pg.rect(-bandHeight * rS, -bandHeight * rS, bandHeight * 2 * rS, bandHeight * 2 * rS);
+                pg.pop();
+            }
+        }
+    }
+
+    _renderMegaStructureFusionArrays(pg, r, bufferCenter, featureRand, bandHeight) {
+        if ((featureRand * 83.7) % 1 > 0.72) {
+            const nF = Math.floor(random(2, 4));
+            for (let fu = 0; fu < nF; fu++) {
+                const fA = (featureRand * (fu + 3) * 17.9) % TWO_PI, fD = random(r * 0.3, r * 0.65), fx = Math.cos(fA) * fD, fy = Math.sin(fA) * fD;
+                if (fx * fx + fy * fy > r * r * 0.8) continue;
+                const fL = this._getLimbFactor(fx, fy);
+                if (fL < 0.2) continue;
+                const fS = random(0.8, 1.2), fuS = bandHeight * random(8, 12) * fS;
+                pg.push(); pg.translate(bufferCenter + fx, bufferCenter + fy);
+                this._applySphericalProjection(pg, fx, fy, fL);
+                pg.noFill(); pg.stroke(255, 120, 20, Math.round(160 * fL)); pg.strokeWeight(Math.max(0.6, bandHeight * 0.3 * fS)); pg.beginShape();
+                for (let i = 0; i <= 30; i++) { const t = (i / 30) * TWO_PI; pg.vertex(Math.cos(t) * fuS, Math.sin(t) * Math.cos(t) * fuS * 0.6); } pg.endShape(CLOSE);
+                pg.stroke(255, 180, 50, Math.round(160 * fL)); pg.push(); pg.rotate(PI / 2); pg.beginShape();
+                for (let i = 0; i <= 30; i++) { const t = (i / 30) * TWO_PI; pg.vertex(Math.cos(t) * fuS * 0.8, Math.sin(t) * Math.cos(t) * fuS * 0.5); } pg.endShape(CLOSE); pg.pop();
+                pg.noStroke(); pg.fill(200, 220, 255, Math.round(100 * fL)); pg.ellipse(0, 0, fuS * 0.5, fuS * 0.5); pg.fill(255, 255, 255, Math.round(200 * fL)); pg.ellipse(0, 0, fuS * 0.15, fuS * 0.15);
+                pg.pop();
+            }
+        }
+    }
+
+    _renderMegaStructureDomes(pg, r, bufferCenter, featureRand, bandHeight) {
+        if ((featureRand * 91.3) % 1 > 0.68) {
+            const nD = Math.floor(random(2, 5));
+            for (let bd = 0; bd < nD; bd++) {
+                const bA = (featureRand * (bd + 2) * 29.3) % TWO_PI, bD = random(r * 0.25, r * 0.7), bx = Math.cos(bA) * bD, by = Math.sin(bA) * bD;
+                if (bx * bx + by * by > r * r * 0.8) continue;
+                const bL = this._getLimbFactor(bx, by);
+                if (bL < 0.2) continue;
+                const bS = random(0.8, 1.2), cS = bandHeight * random(10, 16) * bS, mDR = cS * 0.45;
+                pg.push(); pg.translate(bufferCenter + bx, bufferCenter + by);
+                this._applySphericalProjection(pg, bx, by, bL);
+                pg.stroke(80, 220, 120, Math.round(160 * bL)); pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * bS)); pg.noFill(); pg.ellipse(0, 0, mDR * 2, mDR * 2);
+                pg.stroke(100, 255, 150, Math.round(120 * bL)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * bS));
+                for (let h = 0; h < 6; h++) { const hA = (h / 6) * TWO_PI, nA = ((h + 1) / 6) * TWO_PI; pg.line(Math.cos(hA) * mDR * 0.5, Math.sin(hA) * mDR * 0.5, Math.cos(hA) * mDR, Math.sin(hA) * mDR); pg.line(Math.cos(hA) * mDR * 0.5, Math.sin(hA) * mDR * 0.5, Math.cos(nA) * mDR * 0.5, Math.sin(nA) * mDR * 0.5); }
+                pg.noStroke(); pg.fill(50, 180, 90, Math.round(100 * bL)); pg.ellipse(0, 0, mDR * 1.6, mDR * 1.6); pg.fill(200, 255, 220, Math.round(180 * bL)); pg.ellipse(0, 0, mDR * 0.35, mDR * 0.35);
+                const sR = mDR * 0.5, sDist = mDR * 1.3;
+                for (let sd = 0; sd < 4; sd++) {
+                    const sdA = (sd / 4) * TWO_PI + PI / 4, sdx = Math.cos(sdA) * sDist, sdy = Math.sin(sdA) * sDist;
+                    pg.stroke(60, 200, 160, Math.round(150 * bL)); pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * bS)); pg.noFill(); pg.ellipse(sdx, sdy, sR * 2, sR * 2);
+                    pg.noStroke(); pg.fill(70, 190, 130, Math.round(120 * bL)); pg.ellipse(sdx, sdy, sR * 1.5, sR * 1.5);
+                    const cols = [[100, 180, 255], [40, 160, 60], [255, 220, 100], [180, 220, 200]];
+                    pg.fill(cols[sd][0], cols[sd][1], cols[sd][2], Math.round(150 * bL)); pg.ellipse(sdx, sdy, sR * 0.6, sR * 0.6);
+                    pg.stroke(180, 220, 190, Math.round(130 * bL)); pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * bS)); pg.line(Math.cos(sdA) * mDR, Math.sin(sdA) * mDR, sdx - Math.cos(sdA) * sR, sdy - Math.sin(sdA) * sR);
+                }
+                pg.noStroke(); pg.fill(255, 230, 100, Math.round(160 * bL)); pg.ellipse(0, -mDR * 0.3, bandHeight * bS, bandHeight * 0.5 * bS); pg.ellipse(mDR * 0.4, -mDR * 0.1, bandHeight * 0.6 * bS, bandHeight * 0.3 * bS); pg.ellipse(-mDR * 0.4, -mDR * 0.1, bandHeight * 0.6 * bS, bandHeight * 0.3 * bS);
+                pg.pop();
+            }
+        }
+    }
+
+    _renderMegaStructureRelays(pg, r, bufferCenter, featureRand, bandHeight) {
+        if ((featureRand * 67.7) % 1 > 0.78) {
+            const numRelays = Math.floor(random(2, 4));
+            for (let qr = 0; qr < numRelays; qr++) {
+                const qrAngle = (featureRand * (qr + 5) * 41.3) % TWO_PI;
+                const qrDist = random(r * 0.35, r * 0.75);
+                const qrX = Math.cos(qrAngle) * qrDist;
+                const qrY = Math.sin(qrAngle) * qrDist;
+
+                if (qrX * qrX + qrY * qrY > r * r * 0.85) continue;
+
+                const qrLimbFactor = this._getLimbFactor(qrX, qrY);
+                if (qrLimbFactor < 0.2) continue;
+                const qrScale = random(0.8, 1.2);
+
+                pg.push();
+                pg.translate(bufferCenter + qrX, bufferCenter + qrY);
+                this._applySphericalProjection(pg, qrX, qrY, qrLimbFactor);
+
+                const qrHeight = bandHeight * random(10, 16) * qrScale;
+                const qrBase = bandHeight * 3 * qrScale;
+
+                // Main tower structure
+                pg.stroke(40, 100, 200, Math.round(180 * qrLimbFactor));
+                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * qrScale));
+                pg.line(0, 0, 0, -qrHeight * 0.6);
+
+                pg.stroke(80, 80, 220, Math.round(160 * qrLimbFactor));
+                pg.strokeWeight(Math.max(0.6, bandHeight * 0.4 * qrScale));
+                pg.line(0, -qrHeight * 0.5, 0, -qrHeight);
+
+                // Main dish
+                pg.noFill();
+                pg.stroke(0, 255, 255, Math.round(180 * qrLimbFactor));
+                pg.strokeWeight(Math.max(0.7, bandHeight * 0.4 * qrScale));
+                pg.arc(0, -qrHeight, bandHeight * 5 * qrScale, bandHeight * 3.5 * qrScale, PI, TWO_PI);
+
+                // Secondary dishes
+                pg.stroke(200, 220, 255, Math.round(150 * qrLimbFactor));
+                pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * qrScale));
+                pg.arc(-bandHeight * 2 * qrScale, -qrHeight * 0.7, bandHeight * 2 * qrScale, bandHeight * 1.5 * qrScale, PI, TWO_PI);
+                pg.arc(bandHeight * 2 * qrScale, -qrHeight * 0.7, bandHeight * 2 * qrScale, bandHeight * 1.5 * qrScale, PI, TWO_PI);
+
+                // Transmission beams
+                pg.stroke(180, 100, 255, Math.round(120 * qrLimbFactor));
+                pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * qrScale));
+                pg.line(0, -qrHeight, 0, -qrHeight - bandHeight * 6 * qrScale);
+                pg.line(0, -qrHeight, -bandHeight * 3 * qrScale, -qrHeight - bandHeight * 5 * qrScale);
+                pg.line(0, -qrHeight, bandHeight * 3 * qrScale, -qrHeight - bandHeight * 5 * qrScale);
+
+                // Signal waves
+                pg.noFill();
+                pg.stroke(100, 255, 255, Math.round(80 * qrLimbFactor));
+                pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * qrScale));
+                for (let w = 1; w <= 4; w++) {
+                    pg.arc(0, -qrHeight, bandHeight * w * 2 * qrScale, bandHeight * w * 1.4 * qrScale, PI + 0.3, TWO_PI - 0.3);
+                }
+
+                // Base station complex
+                pg.noStroke();
+                pg.fill(60, 100, 180, Math.round(160 * qrLimbFactor));
+                pg.ellipse(0, 0, qrBase * 2, qrBase * 1.5);
+                pg.fill(100, 140, 220, Math.round(180 * qrLimbFactor));
+                pg.ellipse(0, 0, qrBase * 1.4, qrBase * 1.0);
+                pg.fill(150, 180, 255, Math.round(200 * qrLimbFactor));
+                pg.ellipse(0, 0, qrBase * 0.8, qrBase * 0.6);
+
+                pg.pop();
+            }
+        }
+    }
+
+    _renderMegaStructureMines(pg, r, bufferCenter, featureRand, bandHeight) {
+        if ((featureRand * 79.1) % 1 > 0.7) {
+            const numMines = Math.floor(random(2, 5));
+            for (let mn = 0; mn < numMines; mn++) {
+                const mnAngle = (featureRand * (mn + 7) * 23.7) % TWO_PI;
+                const mnDist = random(r * 0.4, r * 0.8);
+                const mnX = Math.cos(mnAngle) * mnDist;
+                const mnY = Math.sin(mnAngle) * mnDist;
+
+                if (mnX * mnX + mnY * mnY > r * r * 0.85) continue;
+
+                const mnLimbFactor = this._getLimbFactor(mnX, mnY);
+                if (mnLimbFactor < 0.2) continue;
+                const mnScale = random(0.8, 1.2);
+
+                pg.push();
+                pg.translate(bufferCenter + mnX, bufferCenter + mnY);
+                this._applySphericalProjection(pg, mnX, mnY, mnLimbFactor);
+
+                const mnSize = bandHeight * random(10, 15) * mnScale;
+
+                // Jagged Pit
+                pg.noFill();
+                pg.stroke(140, 100, 40, Math.round(180 * mnLimbFactor));
+                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * mnScale));
+
+                pg.beginShape();
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * TWO_PI;
+                    const d = mnSize * (1.0 + random(-0.2, 0.2));
+                    pg.vertex(Math.cos(angle) * d, Math.sin(angle) * d);
+                }
+                pg.endShape(CLOSE);
+
+                // Extraction arms
+                pg.stroke(220, 120, 40, Math.round(150 * mnLimbFactor));
+                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * mnScale));
+                for (let arm = 0; arm < 3; arm++) {
+                    const angle = (arm / 3) * TWO_PI;
+                    pg.line(0, 0, Math.cos(angle) * mnSize * 1.2, Math.sin(angle) * mnSize * 1.2);
+                }
+
+                // Central deep pit
+                pg.noStroke();
+                pg.fill(60, 40, 20, Math.round(180 * mnLimbFactor));
+                pg.ellipse(0, 0, mnSize * 0.7, mnSize * 0.7);
+
+                // Magma glow
+                pg.fill(255, 100, 30, Math.round(150 * mnLimbFactor));
+                pg.ellipse(0, 0, mnSize * 0.25, mnSize * 0.25);
+
+                // Processing facilities
+                for (let pf = 0; pf < 6; pf++) {
+                    const pfAngle = (pf / 6) * TWO_PI + random(0.5);
+                    const pfDist = mnSize * random(1.1, 1.4);
+                    const pfX = Math.cos(pfAngle) * pfDist;
+                    const pfY = Math.sin(pfAngle) * pfDist;
+                    pg.fill(200, 180, 120, Math.round(180 * mnLimbFactor));
+                    pg.rect(pfX, pfY, bandHeight * 0.8 * mnScale, bandHeight * 0.6 * mnScale);
+                    if (pf % 2 === 0) {
+                        pg.fill(255, 50, 50, Math.round(200 * mnLimbFactor));
+                        pg.ellipse(pfX, pfY, bandHeight * 0.3 * mnScale, bandHeight * 0.3 * mnScale);
+                    }
+                }
+
+                pg.pop();
+            }
+        }
+    }
+
+    _renderMegaStructureAntimatter(pg, r, bufferCenter, featureRand, bandHeight) {
+        if ((featureRand * 97.3) % 1 > 0.78) {
+            const numAntimatter = Math.floor(random(2, 4));
+            for (let am = 0; am < numAntimatter; am++) {
+                const amAngle = (featureRand * (am + 11) * 37.9) % TWO_PI;
+                const amDist = random(r * 0.3, r * 0.65);
+                const amX = Math.cos(amAngle) * amDist;
+                const amY = Math.sin(amAngle) * amDist;
+
+                if (amX * amX + amY * amY > r * r * 0.8) continue;
+
+                const amLimbFactor = this._getLimbFactor(amX, amY);
+                if (amLimbFactor < 0.2) continue;
+                const amScale = random(0.8, 1.2);
+
+                pg.push();
+                pg.translate(bufferCenter + amX, bufferCenter + amY);
+                this._applySphericalProjection(pg, amX, amY, amLimbFactor);
+
+                const amSize = bandHeight * random(8, 12) * amScale;
+
+                // Geometric Cage
+                pg.noFill();
+                pg.stroke(255, 30, 180, Math.round(120 * amLimbFactor));
+                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * amScale));
+
+                pg.beginShape();
+                for (let i = 0; i < 6; i++) {
+                    const a = (i / 6) * TWO_PI;
+                    pg.vertex(Math.cos(a) * amSize * 2.0, Math.sin(a) * amSize * 2.0);
+                }
+                pg.endShape(CLOSE);
+
+                pg.stroke(0, 255, 255, Math.round(150 * amLimbFactor));
+                pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * amScale));
+                pg.push();
+                pg.rotate(PI / 4);
+                pg.rect(-amSize * 1.2, -amSize * 1.2, amSize * 2.4, amSize * 2.4);
+                pg.pop();
+
+                // Core
+                pg.noStroke();
+                pg.fill(255, 240, 255, Math.round(200 * amLimbFactor));
+                pg.ellipse(0, 0, amSize * 0.4, amSize * 0.4);
+                pg.fill(255, 200, 255, Math.round(150 * amLimbFactor));
+                pg.ellipse(0, 0, amSize * 0.6, amSize * 0.6);
+
+                // Warning markers
+                for (let w = 0; w < 6; w++) {
+                    const wAngle = (w / 6) * TWO_PI;
+                    const wx = Math.cos(wAngle) * amSize * 2.0, wy = Math.sin(wAngle) * amSize * 2.0;
+                    pg.fill(w % 2 === 0 ? color(255, 50, 50, Math.round(180 * amLimbFactor)) : color(255, 220, 50, Math.round(160 * amLimbFactor)));
+                    pg.ellipse(wx, wy, bandHeight * 0.6 * amScale, bandHeight * 0.6 * amScale);
+                }
+
+                pg.pop();
+            }
+        }
+    }
+
+    _renderMegaStructureShipyards(pg, r, bufferCenter, featureRand, bandHeight) {
+        if ((featureRand * 103.7) % 1 > 0.74) {
+            const numShipyards = Math.floor(random(1, 4));
+            for (let sy = 0; sy < numShipyards; sy++) {
+                const syAngle = (featureRand * (sy + 13) * 43.1) % TWO_PI;
+                const syDist = random(r * 0.4, r * 0.8);
+                const syX = Math.cos(syAngle) * syDist;
+                const syY = Math.sin(syAngle) * syDist;
+
+                if (syX * syX + syY * syY > r * r * 0.85) continue;
+
+                const syLimbFactor = this._getLimbFactor(syX, syY);
+                if (syLimbFactor < 0.2) continue;
+                const syScale = random(0.8, 1.2);
+
+                pg.push();
+                pg.translate(bufferCenter + syX, bufferCenter + syY);
+                this._applySphericalProjection(pg, syX, syY, syLimbFactor);
+
+                const syWidth = bandHeight * random(14, 20) * syScale;
+                const syHeight = bandHeight * random(6, 9) * syScale;
+
+                // Frame
+                pg.stroke(100, 140, 180, Math.round(180 * syLimbFactor));
+                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * syScale));
+                pg.noFill();
+                pg.rect(-syWidth / 2, -syHeight / 2, syWidth, syHeight);
+                pg.stroke(140, 170, 210, Math.round(160 * syLimbFactor));
+                pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * syScale));
+                pg.rect(-syWidth / 2.3, -syHeight / 2.3, syWidth / 1.15, syHeight / 1.15);
+
+                // Bays
+                const numBays = 4;
+                for (let bay = 0; bay < numBays; bay++) {
+                    const bayX = -syWidth / 2 + (bay + 0.5) * (syWidth / numBays);
+                    pg.stroke(120, 160, 200, Math.round(140 * syLimbFactor));
+                    pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * syScale));
+                    pg.line(bayX, -syHeight / 2, bayX, syHeight / 2);
+
+                    pg.noStroke();
+                    pg.fill(160, 170, 180, Math.round(150 * syLimbFactor));
+                    const shipLen = syHeight * 0.7, shipW = (syWidth / numBays) * 0.4;
+                    pg.ellipse(bayX, 0, shipW, shipLen);
+
+                    if (random() > 0.5) {
+                        pg.fill(255, 150, 50, Math.round(200 * syLimbFactor));
+                        pg.ellipse(bayX + random(-shipW / 3, shipW / 3), random(-shipLen / 3, shipLen / 3), bandHeight * 0.4 * syScale, bandHeight * 0.4 * syScale);
+                    }
+                }
+
+                // Lights
+                pg.noStroke();
+                pg.fill(220, 240, 255, Math.round(180 * syLimbFactor));
+                for (let wl = 0; wl < 15; wl++) pg.ellipse(random(-syWidth / 2.2, syWidth / 2.2), random(-syHeight / 2.2, syHeight / 2.2), bandHeight * 0.4 * syScale, bandHeight * 0.4 * syScale);
+
+                pg.fill(255, 220, 50, Math.round(180 * syLimbFactor));
+                pg.ellipse(-syWidth / 2, -syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
+                pg.ellipse(syWidth / 2, -syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
+                pg.ellipse(-syWidth / 2, syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
+                pg.ellipse(syWidth / 2, syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
+
+                // Cranes
+                pg.stroke(80, 110, 150, Math.round(150 * syLimbFactor));
+                pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * syScale));
+                const craneLen = bandHeight * 4 * syScale;
+                pg.line(-syWidth / 2, 0, -syWidth / 2 - craneLen, -craneLen * 0.4);
+                pg.line(syWidth / 2, 0, syWidth / 2 + craneLen, -craneLen * 0.4);
+                pg.noStroke();
+                pg.fill(255, 140, 40, Math.round(200 * syLimbFactor));
+                pg.ellipse(-syWidth / 2 - craneLen, -craneLen * 0.4, bandHeight * 0.5 * syScale, bandHeight * 0.5 * syScale);
+                pg.ellipse(syWidth / 2 + craneLen, -craneLen * 0.4, bandHeight * 0.5 * syScale, bandHeight * 0.5 * syScale);
+
+                pg.pop();
+            }
+        }
+    }
+
+    _renderMegaStructureScrubbers(pg, r, bufferCenter, featureRand, bandHeight) {
+        if ((featureRand * 109.1) % 1 > 0.74) {
+            const numScrubbers = Math.floor(random(4, 8));
+            for (let as = 0; as < numScrubbers; as++) {
+                const asAngle = (featureRand * (as + 17) * 29.7) % TWO_PI;
+                const asDist = random(r * 0.3, r * 0.8);
+                const asX = Math.cos(asAngle) * asDist, asY = Math.sin(asAngle) * asDist;
+
+                if (asX * asX + asY * asY > r * r * 0.9) continue;
+
+                const asLimbFactor = this._getLimbFactor(asX, asY);
+                if (asLimbFactor < 0.15) continue;
+                const asScale = random(0.8, 1.2);
+
+                pg.push();
+                pg.translate(bufferCenter + asX, bufferCenter + asY);
+                this._applySphericalProjection(pg, asX, asY, asLimbFactor);
+
+                const asHeight = bandHeight * random(3, 5) * asScale, asWidth = bandHeight * 0.8 * asScale;
+                pg.stroke(0, 180, 180, Math.round(180 * asLimbFactor));
+                pg.strokeWeight(Math.max(0.5, asWidth));
+                pg.line(0, 0, 0, -asHeight);
+
+                pg.stroke(50, 220, 200, Math.round(150 * asLimbFactor));
+                pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * asScale));
+                const vaneSpread = bandHeight * 1.5 * asScale;
+                pg.line(-vaneSpread, -asHeight, vaneSpread, -asHeight);
+                pg.line(-vaneSpread * 0.6, -asHeight * 0.7, vaneSpread * 0.6, -asHeight * 0.7);
+
+                pg.noStroke();
+                pg.fill(100, 255, 220, Math.round(120 * asLimbFactor));
+                pg.ellipse(0, -asHeight * 1.2, bandHeight * 2 * asScale, bandHeight * 4 * asScale);
+                pg.fill(0, 150, 160, Math.round(100 * asLimbFactor));
+                pg.ellipse(0, 0, bandHeight * 1.5 * asScale, bandHeight * 1.5 * asScale);
+
+                pg.pop();
+            }
+        }
+    }
+
+    _renderMegaStructureGeothermal(pg, r, bufferCenter, featureRand, bandHeight) {
+        if ((featureRand * 113.9) % 1 > 0.78) {
+            const numGeothermal = Math.floor(random(3, 6));
+            for (let gt = 0; gt < numGeothermal; gt++) {
+                const gtAngle = (featureRand * (gt + 19) * 31.3) % TWO_PI;
+                const gtDist = random(r * 0.4, r * 0.8);
+                const gtX = Math.cos(gtAngle) * gtDist;
+                const gtY = Math.sin(gtAngle) * gtDist;
+
+                if (gtX * gtX + gtY * gtY > r * r * 0.9) continue;
+
+                const gtLimbFactor = this._getLimbFactor(gtX, gtY);
+                if (gtLimbFactor < 0.2) continue;
+                const gtScale = random(0.8, 1.2);
+
+                pg.push();
+                pg.translate(bufferCenter + gtX, bufferCenter + gtY);
+                this._applySphericalProjection(pg, gtX, gtY, gtLimbFactor);
+
+                const gtSize = bandHeight * random(2, 4) * gtScale;
+
+                // Fissure Network
+                pg.noFill();
+                pg.stroke(200, 50, 20, Math.round(150 * gtLimbFactor));
+                pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * gtScale));
+
+                for (let i = 0; i < 3; i++) {
+                    const angle = (i / 3) * TWO_PI + random(0.5);
+                    pg.beginShape();
+                    pg.vertex(0, 0);
+                    pg.vertex(Math.cos(angle) * gtSize * 1.5, Math.sin(angle) * gtSize * 1.5);
+                    pg.vertex(Math.cos(angle + 0.2) * gtSize * 2.5, Math.sin(angle + 0.2) * gtSize * 2.5);
+                    pg.endShape();
+                }
+
+                // Magma glow
+                pg.noStroke();
+                pg.fill(255, 100, 30, Math.round(180 * gtLimbFactor));
+                pg.ellipse(0, 0, gtSize * 1.0, gtSize * 1.0);
+
+                // Extraction pipes
+                pg.stroke(180, 80, 40, Math.round(160 * gtLimbFactor));
+                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * gtScale));
+                for (let ep = 0; ep < 3; ep++) {
+                    const epAngle = (ep / 3) * TWO_PI + PI / 2;
+                    pg.line(
+                        Math.cos(epAngle) * gtSize * 0.2, Math.sin(epAngle) * gtSize * 0.2,
+                        Math.cos(epAngle) * gtSize * 1.8, Math.sin(epAngle) * gtSize * 1.8
+                    );
+                }
+
+                // Steam vents
+                pg.noStroke();
+                pg.fill(255, 150, 100, Math.round(120 * gtLimbFactor));
+                for (let sv = 0; sv < 3; sv++) {
+                    const svAngle = random(0, TWO_PI);
+                    const svDist = gtSize * random(0.8, 1.5);
+                    pg.ellipse(
+                        Math.cos(svAngle) * svDist, Math.sin(svAngle) * svDist,
+                        bandHeight * 0.5 * gtScale, bandHeight * 0.5 * gtScale
+                    );
+                }
+
+                pg.pop();
+            }
+        }
+    }
+
+    _renderMegaStructureColliders(pg, r, bufferCenter, featureRand, bandHeight) {
+        if ((featureRand * 127.3) % 1 > 0.88) {
+            const numColliders = Math.floor(random(1, 3));
+            for (let pc = 0; pc < numColliders; pc++) {
+                const pcAngle = (featureRand * (pc + 23) * 47.1) % TWO_PI;
+                const pcDist = random(r * 0.3, r * 0.6);
+                const pcX = Math.cos(pcAngle) * pcDist;
+                const pcY = Math.sin(pcAngle) * pcDist;
+
+                if (pcX * pcX + pcY * pcY > r * r * 0.75) continue;
+
+                const pcLimbFactor = this._getLimbFactor(pcX, pcY);
+                if (pcLimbFactor < 0.25) continue;
+                const pcScale = random(0.8, 1.2);
+
+                pg.push();
+                pg.translate(bufferCenter + pcX, bufferCenter + pcY);
+                this._applySphericalProjection(pg, pcX, pcY, pcLimbFactor);
+
+                const pcRadius = bandHeight * random(4, 6) * pcScale;
+
+                // accelerator path
+                pg.noFill();
+                pg.stroke(255, 50, 150, Math.round(160 * pcLimbFactor));
+                pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * pcScale));
+
+                pg.beginShape();
+                for (let i = 0; i < 8; i++) {
+                    const a = (i / 8) * TWO_PI;
+                    pg.vertex(Math.cos(a) * pcRadius, Math.sin(a) * pcRadius);
+                }
+                pg.endShape(CLOSE);
+
+                // Inner beam tube
+                pg.stroke(255, 100, 180, Math.round(140 * pcLimbFactor));
+                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * pcScale));
+                pg.beginShape();
+                for (let i = 0; i < 8; i++) {
+                    const a = (i / 8) * TWO_PI;
+                    pg.vertex(Math.cos(a) * pcRadius * 0.8, Math.sin(a) * pcRadius * 0.8);
+                }
+                pg.endShape(CLOSE);
+
+                // Detector stations
+                pg.noStroke();
+                pg.fill(255, 150, 200, Math.round(180 * pcLimbFactor));
+                for (let d = 0; d < 8; d++) {
+                    const dAngle = (d / 8) * TWO_PI;
+                    const dx = Math.cos(dAngle) * pcRadius;
+                    const dy = Math.sin(dAngle) * pcRadius;
+                    pg.ellipse(dx, dy, bandHeight * 0.6 * pcScale, bandHeight * 0.6 * pcScale);
+                }
+
+                // Energy glow
+                pg.fill(255, 80, 180, Math.round(150 * pcLimbFactor));
+                pg.ellipse(0, 0, pcRadius * 0.4, pcRadius * 0.4);
+
+                pg.pop();
+            }
+        }
+    }
+
+    _renderMegaStructureDataCenters(pg, r, bufferCenter, featureRand, bandHeight) {
+        if ((featureRand * 131.7) % 1 > 0.76) {
+            const numDataCenters = Math.floor(random(3, 6));
+            for (let dc = 0; dc < numDataCenters; dc++) {
+                const dcAngle = (featureRand * (dc + 29) * 19.3) % TWO_PI;
+                const dcDist = random(r * 0.35, r * 0.75);
+                const dcX = Math.cos(dcAngle) * dcDist;
+                const dcY = Math.sin(dcAngle) * dcDist;
+
+                if (dcX * dcX + dcY * dcY > r * r * 0.85) continue;
+
+                const dcLimbFactor = this._getLimbFactor(dcX, dcY);
+                if (dcLimbFactor < 0.2) continue;
+                const dcScale = random(0.8, 1.2);
+
+                pg.push();
+                pg.translate(bufferCenter + dcX, bufferCenter + dcY);
+                this._applySphericalProjection(pg, dcX, dcY, dcLimbFactor);
+
+                const dcWidth = bandHeight * random(2, 4) * dcScale;
+                const dcHeight = bandHeight * random(1.5, 2.5) * dcScale;
+
+                pg.stroke(200, 220, 255, Math.round(160 * dcLimbFactor));
+                pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * dcScale));
+                pg.noFill();
+                pg.rect(-dcWidth / 2, -dcHeight / 2, dcWidth, dcHeight);
+
+                // Blinking status lights
+                pg.noStroke();
+                pg.fill(220, 240, 255, Math.round(180 * dcLimbFactor));
+                const numRows = 3;
+                const numCols = 5;
+                for (let row = 0; row < numRows; row++) {
+                    for (let col = 0; col < numCols; col++) {
+                        if (random() > 0.3) {
+                            const lx = -dcWidth / 2.5 + col * (dcWidth / (numCols + 1));
+                            const ly = -dcHeight / 2.5 + row * (dcHeight / (numRows + 1));
+                            pg.ellipse(lx, ly, bandHeight * 0.2 * dcScale, bandHeight * 0.2 * dcScale);
+                        }
+                    }
+                }
+
+                // Cooling tower
+                pg.stroke(180, 200, 240, Math.round(140 * dcLimbFactor));
+                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * dcScale));
+                pg.line(0, -dcHeight / 2, 0, -dcHeight / 2 - bandHeight * 1.5 * dcScale);
+
+                // Data transmission beam
+                pg.stroke(150, 200, 255, Math.round(100 * dcLimbFactor));
+                pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * dcScale));
+                pg.line(0, -dcHeight / 2 - bandHeight * 1.5 * dcScale, 0, -dcHeight / 2 - bandHeight * 4 * dcScale);
+
+                pg.pop();
+            }
+        }
+    }
+
+    _renderMegaStructureSpaceports(pg, r, bufferCenter, featureRand, bandHeight) {
+        if ((featureRand * 137.9) % 1 > 0.72) {
+            const numSpaceports = Math.floor(random(2, 5));
+            for (let sp = 0; sp < numSpaceports; sp++) {
+                const spAngle = (featureRand * (sp + 31) * 53.7) % TWO_PI;
+                const spDist = random(r * 0.4, r * 0.8);
+                const spX = Math.cos(spAngle) * spDist;
+                const spY = Math.sin(spAngle) * spDist;
+
+                if (spX * spX + spY * spY > r * r * 0.9) continue;
+
+                const spLimbFactor = this._getLimbFactor(spX, spY);
+                if (spLimbFactor < 0.2) continue;
+                const spScale = random(0.8, 1.2);
+
+                pg.push();
+                pg.translate(bufferCenter + spX, bufferCenter + spY);
+                this._applySphericalProjection(pg, spX, spY, spLimbFactor);
+
+                const spSize = bandHeight * random(2.5, 4) * spScale;
+
+                // Central terminal
+                pg.noStroke();
+                pg.fill(255, 250, 230, Math.round(200 * spLimbFactor));
+                pg.ellipse(0, 0, spSize, spSize);
+
+                // Landing pads
+                pg.stroke(255, 240, 200, Math.round(160 * spLimbFactor));
+                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * spScale));
+                const numPads = 6;
+                for (let pad = 0; pad < numPads; pad++) {
+                    const padAngle = (pad / numPads) * TWO_PI;
+                    const padDist = spSize * 1.2;
+                    const padX = Math.cos(padAngle) * padDist, padY = Math.sin(padAngle) * padDist;
+                    pg.line(Math.cos(padAngle) * spSize * 0.5, Math.sin(padAngle) * spSize * 0.5, padX, padY);
+                    pg.noStroke();
+                    pg.fill(255, 245, 210, Math.round(180 * spLimbFactor));
+                    pg.ellipse(padX, padY, bandHeight * 0.8 * spScale, bandHeight * 0.8 * spScale);
+                    pg.stroke(255, 240, 200, Math.round(160 * spLimbFactor));
+                    pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * spScale));
+                }
+
+                // Beacon lights
+                pg.noStroke();
+                pg.fill(255, 230, 100, Math.round(220 * spLimbFactor));
+                pg.ellipse(0, 0, bandHeight * 0.5 * spScale, bandHeight * 0.5 * spScale);
+
+                pg.pop();
+            }
+        }
+    }
+
+    _renderMegaStructureArcologyClusters(pg, r, bufferCenter, featureRand, bandHeight, primR, primG, primB, secR, secG, secB, accR, accG, accB) {
+        if ((featureRand * 143.1) % 1 > 0.82) {
+            const numClusters = Math.floor(random(2, 4));
+            for (let cl = 0; cl < numClusters; cl++) {
+                const clAngle = (featureRand * (cl + 37) * 61.9) % TWO_PI;
+                const clDist = random(r * 0.35, r * 0.7);
+                const clX = Math.cos(clAngle) * clDist, clY = Math.sin(clAngle) * clDist;
+
+                if (clX * clX + clY * clY > r * r * 0.8) continue;
+
+                const clLimbFactor = this._getLimbFactor(clX, clY);
+                if (clLimbFactor < 0.25) continue;
+                const clScale = random(0.8, 1.2);
+
+                pg.push();
+                pg.translate(bufferCenter + clX, bufferCenter + clY);
+                this._applySphericalProjection(pg, clX, clY, clLimbFactor);
+
+                // Cluster color logic
+                const colorHue = (featureRand * (cl + 1) * 97) % 360;
+                const clR = Math.floor(128 + 127 * Math.sin(colorHue * PI / 180));
+                const clG = Math.floor(128 + 127 * Math.sin((colorHue + 120) * PI / 180));
+                const clB = Math.floor(128 + 127 * Math.sin((colorHue + 240) * PI / 180));
+
+                const numTowers = Math.floor(random(4, 8));
+                const clusterRadius = bandHeight * random(3, 5) * clScale;
+
+                for (let t = 0; t < numTowers; t++) {
+                    const tAngle = (t / numTowers) * TWO_PI + random(-0.2, 0.2);
+                    const tDist = random(clusterRadius * 0.3, clusterRadius * 0.9);
+                    const tX = Math.cos(tAngle) * tDist, tY = Math.sin(tAngle) * tDist;
+                    const tHeight = bandHeight * random(1.5, 3) * clScale;
+
+                    pg.stroke(clR, clG, clB, Math.round(160 * clLimbFactor));
+                    pg.strokeWeight(Math.max(0.5, bandHeight * 0.4 * clScale));
+                    pg.line(tX, tY, tX, tY - tHeight);
+
+                    pg.noStroke();
+                    pg.fill(clR, clG, clB, Math.round(180 * clLimbFactor));
+                    pg.ellipse(tX, tY - tHeight, bandHeight * 0.5 * clScale, bandHeight * 0.5 * clScale);
+                }
+
+                // Skyways
+                pg.stroke(clR, clG, clB, Math.round(100 * clLimbFactor));
+                pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * clScale));
+                for (let s = 0; s < 5; s++) {
+                    const s1Angle = random(0, TWO_PI), s2Angle = s1Angle + random(1, 2.5);
+                    const s1Dist = random(clusterRadius * 0.3, clusterRadius * 0.8), s2Dist = random(clusterRadius * 0.3, clusterRadius * 0.8);
+                    pg.line(
+                        Math.cos(s1Angle) * s1Dist, Math.sin(s1Angle) * s1Dist - bandHeight * clScale,
+                        Math.cos(s2Angle) * s2Dist, Math.sin(s2Angle) * s2Dist - bandHeight * clScale
+                    );
+                }
+
+                // Central plaza
+                pg.noStroke();
+                pg.fill(clR, clG, clB, Math.round(90 * clLimbFactor));
+                pg.ellipse(0, 0, clusterRadius * 1.5, clusterRadius * 1.5);
+
+                pg.pop();
+            }
+        }
     }
 } // End of Planet Class
