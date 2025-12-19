@@ -145,7 +145,7 @@ function generateSystemDescription(system, env = {}) {
                 const label = mapRoleToLabel(k);
                 agg[label] = (agg[label] || 0) + (Number(v) || 0);
             }
-            labels = Object.entries(agg).sort((a,b) => b[1] - a[1]).map(x => x[0]);
+            labels = Object.entries(agg).sort((a, b) => b[1] - a[1]).map(x => x[0]);
         }
 
         // If spawn probs not available or empty, fall back to currently present enemies
@@ -157,12 +157,12 @@ function generateSystemDescription(system, env = {}) {
                 const label = mapRoleToLabel(raw);
                 counts[label] = (counts[label] || 0) + 1;
             }
-            labels = Object.entries(counts).sort((a,b) => b[1] - a[1]).map(x => x[0]);
+            labels = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(x => x[0]);
         }
 
         if (labels && labels.length > 0) {
             // Convert top labels to readable noun phrases and join succinctly
-            const phrases = labels.slice(0,3).map(l => labelToNoun(l));
+            const phrases = labels.slice(0, 3).map(l => labelToNoun(l));
             if (phrases.length === 1) shipSummary = phrases[0];
             else if (phrases.length === 2) shipSummary = phrases[0] + ' and ' + phrases[1];
             else shipSummary = phrases[0] + ', ' + phrases[1] + ', and others';
@@ -180,7 +180,7 @@ function generateSystemDescription(system, env = {}) {
         'Offworld': 'Exotic imports and niche industries give this system a cosmopolitan, high-end feel.',
         'Tourism': 'Pleasant resorts and entertainment hubs draw visitors from far and wide.',
         'Refinery': 'Processing plants break down raw asteroids into saleable commodities.',
-        'Post Human': 'Unusual technologies and post-human enclaves influence trade and culture.',
+        'Post Human': 'Unusual technologies and Post Human enclaves influence trade and culture.',
         'Service': 'Service industries and logistics dominate, keeping other systems running smoothly.',
         'Separatist': 'Political tension simmers; independent militias and clandestine markets exist.',
         'Imperial': 'Imperial influence is visible in architecture and protocol; law is strict but orderly.'

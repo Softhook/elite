@@ -33,7 +33,7 @@ class Station {
         this.isSecret = isSecret;
         this.stationSubtype = stationSubtype;
         this.discovered = !isSecret; // Only discovered if not secret
-        
+
         // Storage locker - station-specific cargo storage
         this.storage = []; // Array of {name: string, quantity: number}
         // Pre-generate crate field (positions/styles) for richer decoration (cheap per-frame)
@@ -56,7 +56,7 @@ class Station {
         for (let i = 0; i < count; i++) {
             // cluster around one of the main arms or rings
             const arm = Math.floor(random(0, 4));
-            const armBase = arm * PI/2;
+            const armBase = arm * PI / 2;
             const ang = armBase + random(-0.28, 0.28) + random(-0.1, 0.1);
             // radius slightly outside the habitation modules
             const radius = random(0.40, 0.52);
@@ -65,22 +65,22 @@ class Station {
 
             // crate visual properties
             const s = random(this.size * 0.008, this.size * 0.034);
-            const rot = random(-PI/6, PI/6);
-            const strokeW = random([0.5,1,1.5,2,3]); // occasional thicker lines
+            const rot = random(-PI / 6, PI / 6);
+            const strokeW = random([0.5, 1, 1.5, 2, 3]); // occasional thicker lines
             const shading = random() < 0.42; // some crates have shading pattern
             // color by station type with small variance
             let r, g, b;
             switch (this.stationType) {
-                case 'industrial': r=160; g=140; b=120; break;
-                case 'mining': r=170; g=120; b=70; break;
-                case 'refinery': r=200; g=120; b=80; break;
-                case 'agricultural': r=120; g=180; b=100; break;
-                default: r=180; g=180; b=200;
+                case 'industrial': r = 160; g = 140; b = 120; break;
+                case 'mining': r = 170; g = 120; b = 70; break;
+                case 'refinery': r = 200; g = 120; b = 80; break;
+                case 'agricultural': r = 120; g = 180; b = 100; break;
+                default: r = 180; g = 180; b = 200;
             }
             r += random(-20, 20);
             g += random(-20, 20);
             b += random(-20, 20);
-            
+
             let colObj;
             try {
                 colObj = color(r, g, b);
@@ -105,15 +105,15 @@ class Station {
             translate(c.x, c.y);
             const rot = c.rot + sin(this.lightTimer * 0.5 + i) * 0.02;
             rotate(rot);
-            
+
             let col = c.colObj;
             if (Array.isArray(col)) {
-                 // Just in case it was created before p5 was ready
-                 try { col = color(col[0], col[1], col[2]); c.colObj = col; } catch(e) {}
+                // Just in case it was created before p5 was ready
+                try { col = color(col[0], col[1], col[2]); c.colObj = col; } catch (e) { }
             }
-            
+
             const depth = c.s * 0.5;
-            
+
             this._drawBox3D(0, 0, c.s, c.s * 0.9, depth, col, rot);
             pop();
         }
@@ -126,7 +126,7 @@ class Station {
     _setStationAppearance() {
         // Reset rotation speed to default; preserve any size already set (e.g. by constructor/save)
         this.rotationSpeed = 0.0015;
-        
+
         switch (this.systemType) {
             case "Military":
                 this.color = color(100, 120, 140); // Military grey-blue
@@ -162,7 +162,15 @@ class Station {
                 break;
             case "Post Human":
                 this.color = color(100, 180, 230); // Post Human light blue
-                this.stationType = "posthuman";
+                this.stationType = "post human";
+                break;
+            case "Offworld":
+                this.color = color(100, 220, 150); // Offworld mint green
+                this.stationType = "offworld";
+                break;
+            case "Service":
+                this.color = color(180, 220, 255); // Service light blue-grey
+                this.stationType = "service";
                 break;
             case "Imperial":
                 this.color = color(220, 190, 90); // Imperial gold
@@ -178,7 +186,7 @@ class Station {
                 this.stationType = "standard";
                 break;
         }
-        
+
         // Update docking radius to match visual radius (half size) plus a margin
         this.dockingRadius = this.size * 0.5 + Math.max(10, this.size * 0.05);
     }
@@ -191,7 +199,7 @@ class Station {
     updateEconomyType(newEconomyType) {
         this.systemType = newEconomyType;
         this._setStationAppearance();
-        
+
         // Update market to match new economy
         if (this.market) {
             if (typeof this.market.setEconomyType === 'function') {
@@ -220,7 +228,7 @@ class Station {
         // Do NOT modulo here — keep a continuously increasing timer to avoid
         // discontinuities when wrapping, which causes jittery resets.
         this.lightTimer += 0.0012 * (typeof deltaTime !== 'undefined' ? deltaTime : 16) * this.animSpeed;
-        
+
         // Calculate sun angle in local station space for shading
         // Sun is at (0,0). Vector to sun is -this.pos
         // We want the angle of this vector relative to the station's current rotation
@@ -230,7 +238,7 @@ class Station {
         push();
         translate(this.pos.x, this.pos.y);
         rotate(this.angle); // Apply rotation to the entire station
-        
+
         // Select the appropriate drawing method based on station type
         switch (this.stationType) {
             case "military": this._drawMilitaryStation(); break;
@@ -240,16 +248,16 @@ class Station {
             case "mining": this._drawMiningStation(); break;
             case "tourism": this._drawTourismStation(); break;
             case "refinery": this._drawRefineryStation(); break;
-            case "posthuman": this._drawPostHumanStation(); break;
+            case "post human": this._drawPostHumanStation(); break;
             case "imperial": this._drawImperialStation(); break;
             case "separatist": this._drawSeparatistStation(); break;
             default: this._drawStandardStation(); break;
         }
-        
+
         // Walker robots for non-military stations (varied by type)
         if (this.stationType !== 'military') {
             let robotConfigs = [];
-            
+
             switch (this.stationType) {
                 case 'tourism':
                     robotConfigs = [0, 1, 2, 3]; // All types
@@ -269,7 +277,7 @@ class Station {
                 case 'imperial':
                     robotConfigs = [];
                     break;
-                case 'posthuman':
+                case 'post human':
                     robotConfigs = [1, 1, 1, 1]; // Four utility bots
                     break;
                 case 'alien':
@@ -285,7 +293,7 @@ class Station {
                     robotConfigs = [0]; // Default one maintenance bot
                     break;
             }
-            
+
             for (let i = 0; i < robotConfigs.length; i++) {
                 push();
                 rotate(i * PI / 2);
@@ -300,11 +308,11 @@ class Station {
                 pop();
             }
         }
-        
+
         // subtle glint and small rotating glyphs for visual polish (drawn in station space)
-        this._drawGlint(this.size*0.02, -this.size*0.18, 0.9);
+        this._drawGlint(this.size * 0.02, -this.size * 0.18, 0.9);
         // Skip rotating glyph/star pattern for military stations
-        if (this.stationType !== 'military') this._drawRotatingGlyphs(this.size*0.0, -this.size*0.16, 0.6);
+        if (this.stationType !== 'military') this._drawRotatingGlyphs(this.size * 0.0, -this.size * 0.16, 0.6);
         pop();
     }
 
@@ -345,43 +353,43 @@ class Station {
         const dv = this._getDepthVector(depth, extraRotation);
         const angleStep = TWO_PI / sides;
         const lightAngle = (this._localSunAngle || 0) - extraRotation;
-        
+
         strokeWeight(1);
-        
+
         // Draw Bottom Cap
-        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
-        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+        fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5);
+        stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4);
         beginShape();
         for (let i = 0; i < sides; i++) {
-            const ang = i * angleStep - PI/2;
+            const ang = i * angleStep - PI / 2;
             vertex(x + Math.cos(ang) * r + dv.x, y + Math.sin(ang) * r + dv.y);
         }
         endShape(CLOSE);
 
         // Draw sides
         for (let i = 0; i < sides; i++) {
-            const ang = i * angleStep - PI/2;
-            const nextAng = (i + 1) * angleStep - PI/2;
-            
+            const ang = i * angleStep - PI / 2;
+            const nextAng = (i + 1) * angleStep - PI / 2;
+
             // Face normal angle
-            const faceAngle = (i + 0.5) * angleStep - PI/2;
-            
+            const faceAngle = (i + 0.5) * angleStep - PI / 2;
+
             // Back-face culling
             const nx = Math.cos(faceAngle);
             const ny = Math.sin(faceAngle);
             const dot = nx * dv.x + ny * dv.y;
-            
+
             if (dot > 0.001) {
                 const vx = x + Math.cos(ang) * r;
                 const vy = y + Math.sin(ang) * r;
                 const nvx = x + Math.cos(nextAng) * r;
                 const nvy = y + Math.sin(nextAng) * r;
-                
+
                 const diff = faceAngle - lightAngle;
                 const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
-                
-                fill(red(col)*b, green(col)*b, blue(col)*b);
-                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+
+                fill(red(col) * b, green(col) * b, blue(col) * b);
+                stroke(red(col) * b * 0.8, green(col) * b * 0.8, blue(col) * b * 0.8);
 
                 beginShape();
                 vertex(vx + dv.x, vy + dv.y);
@@ -394,10 +402,10 @@ class Station {
 
         // Draw Top
         fill(col);
-        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
+        stroke(red(col) * 0.8, green(col) * 0.8, blue(col) * 0.8);
         beginShape();
         for (let i = 0; i < sides; i++) {
-            const ang = i * angleStep - PI/2;
+            const ang = i * angleStep - PI / 2;
             vertex(x + Math.cos(ang) * r, y + Math.sin(ang) * r);
         }
         endShape(CLOSE);
@@ -417,17 +425,17 @@ class Station {
      */
     _drawBox3D(x, y, w, h, depth, col, extraRotation = 0) {
         const dv = this._getDepthVector(depth, extraRotation);
-        const hw = w/2;
-        const hh = h/2;
-        
-        const faceAngles = [-PI/2, 0, PI/2, PI]; 
+        const hw = w / 2;
+        const hh = h / 2;
+
+        const faceAngles = [-PI / 2, 0, PI / 2, PI];
         const lightAngle = (this._localSunAngle || 0) - extraRotation;
-        
+
         strokeWeight(1);
 
         // Draw Bottom Cap
-        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
-        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+        fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5);
+        stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4);
         beginShape();
         vertex(x - hw + dv.x, y - hh + dv.y);
         vertex(x + hw + dv.x, y - hh + dv.y);
@@ -444,9 +452,9 @@ class Station {
             if (dot > 0.001) {
                 const diff = faceAngles[i] - lightAngle;
                 const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
-                
-                fill(red(col)*b, green(col)*b, blue(col)*b);
-                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+
+                fill(red(col) * b, green(col) * b, blue(col) * b);
+                stroke(red(col) * b * 0.8, green(col) * b * 0.8, blue(col) * b * 0.8);
 
                 beginShape();
                 let x1, y1, x2, y2;
@@ -459,7 +467,7 @@ class Station {
                 } else { // Left: BL -> TL
                     x1 = x - hw; y1 = y + hh; x2 = x - hw; y2 = y - hh;
                 }
-                
+
                 vertex(x1 + dv.x, y1 + dv.y);
                 vertex(x2 + dv.x, y2 + dv.y);
                 vertex(x2, y2);
@@ -467,9 +475,9 @@ class Station {
                 endShape(CLOSE);
             }
         }
-        
+
         fill(col);
-        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
+        stroke(red(col) * 0.8, green(col) * 0.8, blue(col) * 0.8);
         rectMode(CENTER);
         rect(x, y, w, h);
     }
@@ -487,19 +495,19 @@ class Station {
     _drawExtrudedShape(vertices, depth, col, extraRotation = 0, cull = true) {
         const dv = this._getDepthVector(depth, extraRotation);
         const lightAngle = (this._localSunAngle || 0) - extraRotation;
-        
+
         strokeWeight(1);
         const len = vertices.length;
 
         // Draw Bottom Cap
-        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
-        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+        fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5);
+        stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4);
         beginShape();
         for (let i = 0; i < len; i++) {
             vertex(vertices[i].x + dv.x, vertices[i].y + dv.y);
         }
         endShape(CLOSE);
-        
+
         for (let i = 0; i < len; i++) {
             const next = (i + 1) % len;
             const v1 = vertices[i];
@@ -510,7 +518,7 @@ class Station {
             const dy = v2.y - v1.y;
             // Normal is (-dy, dx)
             const faceAngle = Math.atan2(dx, -dy);
-            
+
             // Back-face culling
             const nx = Math.cos(faceAngle);
             const ny = Math.sin(faceAngle);
@@ -519,9 +527,9 @@ class Station {
             if (!cull || dot > 0.001) {
                 const diff = faceAngle - lightAngle;
                 const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
-                
-                fill(red(col)*b, green(col)*b, blue(col)*b);
-                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+
+                fill(red(col) * b, green(col) * b, blue(col) * b);
+                stroke(red(col) * b * 0.8, green(col) * b * 0.8, blue(col) * b * 0.8);
 
                 beginShape();
                 vertex(v1.x + dv.x, v1.y + dv.y);
@@ -531,10 +539,10 @@ class Station {
                 endShape(CLOSE);
             }
         }
-        
+
         // Top
         fill(col);
-        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
+        stroke(red(col) * 0.8, green(col) * 0.8, blue(col) * 0.8);
         beginShape();
         for (let i = 0; i < len; i++) {
             vertex(vertices[i].x, vertices[i].y);
@@ -559,12 +567,12 @@ class Station {
         const dv = this._getDepthVector(depth, extraRotation);
         const angleStep = TWO_PI / sides;
         const lightAngle = (this._localSunAngle || 0) - extraRotation;
-        
+
         strokeWeight(1);
 
         // Draw Bottom Cap
-        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
-        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+        fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5);
+        stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4);
         beginShape();
         // Outer loop
         for (let i = 0; i < sides; i++) {
@@ -579,26 +587,26 @@ class Station {
         }
         endContour();
         endShape(CLOSE);
-        
+
         for (let i = 0; i < sides; i++) {
             const ang = i * angleStep;
             const nextAng = (i + 1) * angleStep;
-            
+
             const c = Math.cos(ang);
             const s = Math.sin(ang);
             const nc = Math.cos(nextAng);
             const ns = Math.sin(nextAng);
-            
+
             const ox1 = x + c * rOuter;
             const oy1 = y + s * rOuter;
             const ox2 = x + nc * rOuter;
             const oy2 = y + ns * rOuter;
-            
+
             const ix1 = x + c * rInner;
             const iy1 = y + s * rInner;
             const ix2 = x + nc * rInner;
             const iy2 = y + ns * rInner;
-            
+
             // Outer face
             const faceAngle = (i + 0.5) * angleStep;
             const nx = Math.cos(faceAngle);
@@ -608,9 +616,9 @@ class Station {
             if (dot > 0.001) {
                 const diff = faceAngle - lightAngle;
                 const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
-                
-                fill(red(col)*b, green(col)*b, blue(col)*b);
-                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+
+                fill(red(col) * b, green(col) * b, blue(col) * b);
+                stroke(red(col) * b * 0.8, green(col) * b * 0.8, blue(col) * b * 0.8);
 
                 beginShape();
                 vertex(ox1 + dv.x, oy1 + dv.y);
@@ -619,7 +627,7 @@ class Station {
                 vertex(ox1, oy1);
                 endShape(CLOSE);
             }
-            
+
             // Inner face
             const innerFaceAngle = faceAngle + PI;
             const nxIn = Math.cos(innerFaceAngle);
@@ -629,9 +637,9 @@ class Station {
             if (dotIn > 0.001) {
                 const diffInner = innerFaceAngle - lightAngle;
                 const bInner = map(Math.cos(diffInner), -1, 1, 0.4, 0.9);
-                
-                fill(red(col)*bInner, green(col)*bInner, blue(col)*bInner);
-                stroke(red(col)*bInner*0.8, green(col)*bInner*0.8, blue(col)*bInner*0.8);
+
+                fill(red(col) * bInner, green(col) * bInner, blue(col) * bInner);
+                stroke(red(col) * bInner * 0.8, green(col) * bInner * 0.8, blue(col) * bInner * 0.8);
 
                 beginShape();
                 vertex(ix1 + dv.x, iy1 + dv.y);
@@ -641,10 +649,10 @@ class Station {
                 endShape(CLOSE);
             }
         }
-        
+
         // Top
         fill(col);
-        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
+        stroke(red(col) * 0.8, green(col) * 0.8, blue(col) * 0.8);
         beginShape();
         // Outer loop
         for (let i = 0; i < sides; i++) {
@@ -674,12 +682,12 @@ class Station {
         const dv = this._getDepthVector(depth, extraRotation);
         const lightAngle = (this._localSunAngle || 0) - extraRotation;
         strokeWeight(1);
-        
+
         const len = outerVerts.length;
 
         // Draw Bottom Cap
-        fill(red(col)*0.5, green(col)*0.5, blue(col)*0.5);
-        stroke(red(col)*0.4, green(col)*0.4, blue(col)*0.4);
+        fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5);
+        stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4);
         beginShape();
         for (let v of outerVerts) vertex(v.x + dv.x, v.y + dv.y);
         beginContour();
@@ -688,27 +696,27 @@ class Station {
         }
         endContour();
         endShape(CLOSE);
-        
+
         // Draw sides
         for (let i = 0; i < len; i++) {
             const next = (i + 1) % len;
-            
+
             // Outer face
             const v1 = outerVerts[i];
             const v2 = outerVerts[next];
             const dx = v2.x - v1.x;
             const dy = v2.y - v1.y;
             const faceAngle = Math.atan2(dx, -dy);
-            
+
             const nx = Math.cos(faceAngle);
             const ny = Math.sin(faceAngle);
             const dot = nx * dv.x + ny * dv.y;
-            
+
             if (dot > 0.001) {
                 const diff = faceAngle - lightAngle;
                 const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
-                fill(red(col)*b, green(col)*b, blue(col)*b);
-                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+                fill(red(col) * b, green(col) * b, blue(col) * b);
+                stroke(red(col) * b * 0.8, green(col) * b * 0.8, blue(col) * b * 0.8);
                 beginShape();
                 vertex(v1.x + dv.x, v1.y + dv.y);
                 vertex(v2.x + dv.x, v2.y + dv.y);
@@ -716,23 +724,23 @@ class Station {
                 vertex(v1.x, v1.y);
                 endShape(CLOSE);
             }
-            
+
             // Inner face
             const iv1 = innerVerts[i];
             const iv2 = innerVerts[next];
             const idx = iv2.x - iv1.x;
             const idy = iv2.y - iv1.y;
             const innerFaceAngle = Math.atan2(idx, -idy) + PI;
-            
+
             const inx = Math.cos(innerFaceAngle);
             const iny = Math.sin(innerFaceAngle);
             const idot = inx * dv.x + iny * dv.y;
-            
+
             if (idot > 0.001) {
                 const diff = innerFaceAngle - lightAngle;
                 const b = map(Math.cos(diff), -1, 1, 0.4, 0.9);
-                fill(red(col)*b, green(col)*b, blue(col)*b);
-                stroke(red(col)*b*0.8, green(col)*b*0.8, blue(col)*b*0.8);
+                fill(red(col) * b, green(col) * b, blue(col) * b);
+                stroke(red(col) * b * 0.8, green(col) * b * 0.8, blue(col) * b * 0.8);
                 beginShape();
                 vertex(iv1.x + dv.x, iv1.y + dv.y);
                 vertex(iv2.x + dv.x, iv2.y + dv.y);
@@ -741,10 +749,10 @@ class Station {
                 endShape(CLOSE);
             }
         }
-        
+
         // Top cap
         fill(col);
-        stroke(red(col)*0.8, green(col)*0.8, blue(col)*0.8);
+        stroke(red(col) * 0.8, green(col) * 0.8, blue(col) * 0.8);
         beginShape();
         for (let v of outerVerts) vertex(v.x, v.y);
         beginContour();
@@ -762,7 +770,7 @@ class Station {
     _drawCentralHub() {
         // Main hub structure - 3D Prism
         this._drawPrism(0, 0, this.size * 0.125, 8, 20, color(100, 100, 120));
-        
+
         // Hub details - airlock/docking ports
         for (let i = 0; i < 8; i++) {
             push();
@@ -781,23 +789,23 @@ class Station {
         for (let i = 0; i < 4; i++) {
             push();
             rotate(i * PI / 2);
-            
+
             // Main arm structure - Extruded Shape
             const armVerts = [
-                {x: -this.size * 0.08, y: 0},
-                {x: -this.size * 0.04, y: -this.size * 0.45},
-                {x: this.size * 0.04, y: -this.size * 0.45},
-                {x: this.size * 0.08, y: 0}
+                { x: -this.size * 0.08, y: 0 },
+                { x: -this.size * 0.04, y: -this.size * 0.45 },
+                { x: this.size * 0.04, y: -this.size * 0.45 },
+                { x: this.size * 0.08, y: 0 }
             ];
             this._drawExtrudedShape(armVerts, 15, color(150, 150, 170), i * PI / 2, false);
-            
+
             // Structural reinforcements along arm
             stroke(100, 100, 120);
             for (let j = 1; j < 5; j++) {
                 let y = -j * this.size * 0.09;
-                line(-this.size * 0.07 + j*0.005, y, this.size * 0.07 - j*0.005, y);
+                line(-this.size * 0.07 + j * 0.005, y, this.size * 0.07 - j * 0.005, y);
             }
-            
+
             // Connection to outer ring
             // Original: rect(-this.size * 0.06, -this.size * 0.47, this.size * 0.12, this.size * 0.04, 3);
             // Center: (0, -0.45)
@@ -809,10 +817,10 @@ class Station {
                 // position the text along the arm (between hub and outer ring)
                 translate(0, -this.size * 0.22);
                 // rotate the text to line up with the arm (90 degrees)
-                rotate(-PI/2);
+                rotate(-PI / 2);
                 // Use global font if available so the name matches the UI
                 if (typeof font !== 'undefined' && font) {
-                    try { textFont(font); } catch (e) {}
+                    try { textFont(font); } catch (e) { }
                 }
                 textStyle(NORMAL);
                 textAlign(CENTER, CENTER);
@@ -835,9 +843,9 @@ class Station {
                 if (slogan) {
                     push();
                     translate(0, -this.size * 0.22);
-                    rotate(-PI/2);
+                    rotate(-PI / 2);
                     if (typeof font !== 'undefined' && font) {
-                        try { textFont(font); } catch (e) {}
+                        try { textFont(font); } catch (e) { }
                     }
                     textStyle(NORMAL);
                     textAlign(CENTER, CENTER);
@@ -851,7 +859,7 @@ class Station {
             }
 
 
-            
+
             pop();
         }
     }
@@ -868,8 +876,9 @@ class Station {
             tourism: 'Dreams Above',
             agricultural: 'The Conquest of Bread',
             refinery: 'Fuel the Future',
-            posthuman: 'More than Flesh',
+            'post human': 'More than Flesh',
             imperial: 'The Emperor Commands',
+            offworld: 'Beyond the Horizon',
             service: 'Cheap labour available',
             standard: 'Welcome Aboard'
         };
@@ -894,7 +903,7 @@ class Station {
         for (let i = 0; i < 16; i++) {
             push();
             rotate(i * TWO_PI / 16);
-            
+
             if (i % 4 === 0) {
                 this._drawDockingBay(i);
             } else {
@@ -922,18 +931,18 @@ class Station {
                 // Reinforced docking bay with curved canopy
                 push();
                 translate(0, outerY + this.size * 0.01);
-                
+
                 // base platform
                 this._drawBox3D(0, -this.size * 0.02, this.size * 0.11, this.size * 0.05, 15, color(200, 200, 200), baseAngle);
-                
+
                 // curved canopy
                 // Approximate ellipse with 8 vertices
                 const canopyVerts = [];
                 const cw = this.size * 0.045; // half width
                 const ch = this.size * 0.02; // half height
-                for(let k=0; k<8; k++) {
+                for (let k = 0; k < 8; k++) {
                     const ang = k * TWO_PI / 8;
-                    canopyVerts.push({x: cos(ang)*cw, y: -this.size * 0.005 + sin(ang)*ch});
+                    canopyVerts.push({ x: cos(ang) * cw, y: -this.size * 0.005 + sin(ang) * ch });
                 }
                 this._drawExtrudedShape(canopyVerts, 5, color(50, 50, 50), baseAngle);
 
@@ -945,26 +954,26 @@ class Station {
                 push();
                 translate(0, outerY);
                 rotate(-0.06 + (i % 3) * 0.02);
-                
+
                 // pod body - extruded
                 const podVerts = [
-                    {x: -this.size * 0.045, y: -this.size * 0.01},
-                    {x: -this.size * 0.03, y: -this.size * 0.035},
-                    {x: this.size * 0.03, y: -this.size * 0.035},
-                    {x: this.size * 0.045, y: -this.size * 0.01},
-                    {x: this.size * 0.03, y: this.size * 0.02},
-                    {x: -this.size * 0.03, y: this.size * 0.02}
+                    { x: -this.size * 0.045, y: -this.size * 0.01 },
+                    { x: -this.size * 0.03, y: -this.size * 0.035 },
+                    { x: this.size * 0.03, y: -this.size * 0.035 },
+                    { x: this.size * 0.045, y: -this.size * 0.01 },
+                    { x: this.size * 0.03, y: this.size * 0.02 },
+                    { x: -this.size * 0.03, y: this.size * 0.02 }
                 ];
                 this._drawExtrudedShape(podVerts, 10, color(100, 100, 100), baseAngle - 0.06 + (i % 3) * 0.02);
 
                 // glowing window stripe - 3D
-                const winCol = color(255, 230, 140, 140 + sin(this.lightTimer*2 + i) * 60);
+                const winCol = color(255, 230, 140, 140 + sin(this.lightTimer * 2 + i) * 60);
                 this._drawBox3D(-this.size * 0.02 + this.size * 0.02, -this.size * 0.008, this.size * 0.04, this.size * 0.008, 2, winCol, baseAngle - 0.06 + (i % 3) * 0.02);
                 pop();
             }
 
             // small accent light to tie into running-lights rhythm - 3D
-            const lightCol = color(255, 200, 120, 160 + sin(this.lightTimer*2 + i) * 80);
+            const lightCol = color(255, 200, 120, 160 + sin(this.lightTimer * 2 + i) * 80);
             this._drawPrism(0, -this.size * 0.475, 1.6, 6, 2, lightCol, baseAngle);
 
             pop();
@@ -980,9 +989,9 @@ class Station {
         // Docking bays at cardinal points
         // Center: (0, -0.45)
         this._drawBox3D(0, -this.size * 0.45, this.size * 0.12, this.size * 0.06, 20, color(80, 80, 100), index * TWO_PI / 16);
-        
+
         // Docking bay lighting (alternating red/green) - 3D
-        const lightCol = sin(this.lightTimer*2 + index) > 0 ? color(0, 200, 0) : color(200, 0, 0);
+        const lightCol = sin(this.lightTimer * 2 + index) > 0 ? color(0, 200, 0) : color(200, 0, 0);
         this._drawBox3D(0, -this.size * 0.45, this.size * 0.06, this.size * 0.02, 2, lightCol, index * TWO_PI / 16);
     }
 
@@ -995,9 +1004,9 @@ class Station {
         // Regular habitation modules
         // Center: (0, -0.45)
         this._drawBox3D(0, -this.size * 0.45, this.size * 0.08, this.size * 0.04, 15, this.color, index * TWO_PI / 16);
-        
+
         // Windows with subtle animation - 3D
-        const winCol = color(200, 200, 100, 150 + sin(this.lightTimer + index)*50);
+        const winCol = color(200, 200, 100, 150 + sin(this.lightTimer + index) * 50);
         for (let w = 0; w < 3; w++) {
             this._drawBox3D(-this.size * 0.03 + w * this.size * 0.03, -this.size * 0.45, this.size * 0.02, this.size * 0.01, 2, winCol, index * TWO_PI / 16);
         }
@@ -1014,10 +1023,10 @@ class Station {
     _drawSingleSolarPanel(panelColor, mountColor, gridColor, extraRotation = 0) {
         // Panel mount
         this._drawBox3D(0, this.size * 0.14, this.size * 0.04, this.size * 0.04, 10, mountColor, extraRotation);
-        
+
         // Panel
         this._drawBox3D(0, this.size * 0.21, this.size * 0.3, this.size * 0.1, 5, panelColor, extraRotation);
-        
+
         // Panel grid lines
         stroke(gridColor, 100);
         strokeWeight(1);
@@ -1057,7 +1066,7 @@ class Station {
         // helmet
         const helmetCol = color(245);
         this._drawPrism(0, -s * 0.6, s * 0.45, 8, s * 0.4, helmetCol, 0);
-        
+
         // visor
         noStroke();
         fill(20, 100, 160, 220);
@@ -1083,9 +1092,9 @@ class Station {
 
         // body
         const bodyVerts = [
-            {x: -s * 0.9, y: s * 0.2},
-            {x: s * 0.9, y: s * 0.0},
-            {x: -s * 0.9, y: -s * 0.2}
+            { x: -s * 0.9, y: s * 0.2 },
+            { x: s * 0.9, y: s * 0.0 },
+            { x: -s * 0.9, y: -s * 0.2 }
         ];
         this._drawExtrudedShape(bodyVerts, s * 0.2, color(200), 0);
 
@@ -1138,7 +1147,7 @@ class Station {
         push(); translate(x, y);
         const s = this.size * 0.035 * scale;
         stroke(90); fill(60);
-        arc(0, 0, s * 1.6, s * 1.6, -PI/3, PI/3, CHORD);
+        arc(0, 0, s * 1.6, s * 1.6, -PI / 3, PI / 3, CHORD);
         // slowly nodding mount
         rotate(sin(this.lightTimer * 0.3 + this.animationOffset) * 0.08);
         rect(-s * 0.08, s * 0.3, s * 0.16, s * 0.4, 2);
@@ -1173,7 +1182,7 @@ class Station {
         translate(sin(this.lightTimer * 0.7 + this.animationOffset) * 2, 0);
         fill(180); stroke(70);
         rect(-s * 0.7, -s * 0.25, s * 1.2, s * 0.5, 2);
-        fill(30,100,180); noStroke(); ellipse(-s * 0.4, 0, s * 0.35, s * 0.25);
+        fill(30, 100, 180); noStroke(); ellipse(-s * 0.4, 0, s * 0.35, s * 0.25);
         pop();
     }
 
@@ -1195,8 +1204,8 @@ class Station {
     _drawHoloBillboard(x = 0, y = 0, w = 1, h = 0.5) {
         push(); translate(x, y);
         const sw = this.size * 0.06 * w, sh = this.size * 0.035 * h;
-        noStroke(); fill(180,120,255,120 + sin(this.lightTimer * 0.7 + this.animationOffset) * 40);
-        rect(-sw/2, -sh/2, sw, sh, 3);
+        noStroke(); fill(180, 120, 255, 120 + sin(this.lightTimer * 0.7 + this.animationOffset) * 40);
+        rect(-sw / 2, -sh / 2, sw, sh, 3);
         pop();
     }
 
@@ -1211,7 +1220,7 @@ class Station {
 
     _drawScannerBeam(x = 0, y = 0, length = 1) {
         push(); translate(x, y);
-        stroke(80,200,255,80);
+        stroke(80, 200, 255, 80);
         strokeWeight(2);
         const ang = sin(this.lightTimer * 0.6 + this.animationOffset) * 0.6;
         rotate(ang);
@@ -1221,63 +1230,63 @@ class Station {
 
     _drawRotatingMiniRing(x = 0, y = 0, scale = 1) {
         push(); translate(x, y);
-        noFill(); stroke(200,180,100,120);
+        noFill(); stroke(200, 180, 100, 120);
         const r = this.size * 0.06 * scale;
         ellipse(0, 0, r, r);
         rotate(this.lightTimer * 0.08 + this.animationOffset * 0.2);
-        stroke(220); line(-r*0.5,0,r*0.5,0);
+        stroke(220); line(-r * 0.5, 0, r * 0.5, 0);
         pop();
     }
 
     _drawDockingPylon(x = 0, y = 0) {
         push(); translate(x, y);
         const col = color(140);
-        this._drawBox3D(0, -this.size*0.03, this.size*0.02, this.size*0.06, this.size*0.02, col, 0);
+        this._drawBox3D(0, -this.size * 0.03, this.size * 0.02, this.size * 0.06, this.size * 0.02, col, 0);
         pop();
     }
 
     _drawTetheredNet(x = 0, y = 0, scale = 1) {
         push(); translate(x, y);
-        stroke(120,90,60,120);
+        stroke(120, 90, 60, 120);
         const s = this.size * 0.045 * scale;
-        for (let i = 0; i < 5; i++) line(-s/2 + i*(s/5), -s/2, -s/2 + i*(s/5), s/2);
+        for (let i = 0; i < 5; i++) line(-s / 2 + i * (s / 5), -s / 2, -s / 2 + i * (s / 5), s / 2);
         pop();
     }
 
     _drawCargoSwing(x = 0, y = 0, swing = 1) {
         push(); translate(x, y + sin(this.lightTimer * 0.9 + this.animationOffset) * 4 * swing);
-        const col = color(160,120,80);
-        this._drawBox3D(0, 0, this.size*0.04, this.size*0.04, this.size*0.02, col, 0);
+        const col = color(160, 120, 80);
+        this._drawBox3D(0, 0, this.size * 0.04, this.size * 0.04, this.size * 0.02, col, 0);
         pop();
     }
 
     _drawMiniCommsArray(x = 0, y = 0, scale = 1) {
         push(); translate(x, y);
         const col = color(120);
-        this._drawBox3D(0, 0, this.size*0.04, this.size*0.06, this.size*0.01, col, 0);
+        this._drawBox3D(0, 0, this.size * 0.04, this.size * 0.06, this.size * 0.01, col, 0);
         pop();
     }
 
     _drawSolarArraySpinner(x = 0, y = 0, scale = 1) {
         push(); translate(x, y);
-        const rot = this.lightTimer * 0.05 * this.animSpeed + this.animationOffset*0.1;
+        const rot = this.lightTimer * 0.05 * this.animSpeed + this.animationOffset * 0.1;
         rotate(rot);
-        const col = color(30,60,120);
-        this._drawBox3D(0, 0, this.size*0.12, this.size*0.02, this.size*0.005, col, rot);
+        const col = color(30, 60, 120);
+        this._drawBox3D(0, 0, this.size * 0.12, this.size * 0.02, this.size * 0.005, col, rot);
         pop();
     }
 
     _drawBeaconRing(x = 0, y = 0, scale = 1) {
         push(); translate(x, y);
-        noFill(); stroke(255,200,60,60 + sin(this.lightTimer*0.6 + this.animationOffset)*60);
-        ellipse(0,0,this.size*0.12*scale,this.size*0.12*scale);
+        noFill(); stroke(255, 200, 60, 60 + sin(this.lightTimer * 0.6 + this.animationOffset) * 60);
+        ellipse(0, 0, this.size * 0.12 * scale, this.size * 0.12 * scale);
         pop();
     }
 
     _drawMaintenancePod(x = 0, y = 0, scale = 1) {
-        push(); translate(x, y + sin(this.lightTimer*0.85 + this.animationOffset)*3);
+        push(); translate(x, y + sin(this.lightTimer * 0.85 + this.animationOffset) * 3);
         fill(200); stroke(90);
-        ellipse(0,0,this.size*0.03*scale,this.size*0.02*scale);
+        ellipse(0, 0, this.size * 0.03 * scale, this.size * 0.02 * scale);
         pop();
     }
 
@@ -1382,8 +1391,8 @@ class Station {
 
     _drawFloatBanner(x = 0, y = 0, textScale = 1) {
         push(); translate(x, y);
-        noStroke(); fill(220,160,60,120);
-        rect(-this.size*0.04, -this.size*0.02, this.size*0.08, this.size*0.03, 3);
+        noStroke(); fill(220, 160, 60, 120);
+        rect(-this.size * 0.04, -this.size * 0.02, this.size * 0.08, this.size * 0.03, 3);
         pop();
     }
 
@@ -1394,7 +1403,7 @@ class Station {
         const s = this.size * 0.08 * scale;
 
         // Hub
-        this._drawPrism(0, 0, s * 0.12, 8, s * 0.08, color(200,200,200));
+        this._drawPrism(0, 0, s * 0.12, 8, s * 0.08, color(200, 200, 200));
 
         // Rotation (fast CCW)
         const wheelSpeed = 1.2;
@@ -1403,7 +1412,7 @@ class Station {
         // Rim as an extruded ring (fewer sides for a low-poly look)
         const rimOuter = s * 1.02;
         const rimInner = s * 0.86;
-        this._drawRing3D(0, 0, rimOuter, rimInner, 18, s * 0.06, color(170,170,180), wheelRot);
+        this._drawRing3D(0, 0, rimOuter, rimInner, 18, s * 0.06, color(170, 170, 180), wheelRot);
 
         // Spokes (thin boxes) connecting hub to rim
         const spokeCount = 8;
@@ -1413,7 +1422,7 @@ class Station {
             rotate(ang);
             const spokeLen = rimInner - s * 0.14;
             // Center the box along the spoke
-            this._drawBox3D(0, -spokeLen * 0.5 - s * 0.06, s * 0.04, spokeLen, s * 0.01, color(110,110,120), ang);
+            this._drawBox3D(0, -spokeLen * 0.5 - s * 0.06, s * 0.04, spokeLen, s * 0.01, color(110, 110, 120), ang);
             pop();
         }
 
@@ -1431,7 +1440,7 @@ class Station {
             const bob = sin(this.lightTimer * 1.6 + i) * (s * 0.03);
             translate(0, bob);
             rotate(-wheelRot + swing);
-            this._drawPrism(0, 0, s * 0.12, 6, s * 0.06, color(220,180,110));
+            this._drawPrism(0, 0, s * 0.12, 6, s * 0.06, color(220, 180, 110));
             pop();
         }
 
@@ -1449,7 +1458,7 @@ class Station {
         const platDepth = s * 0.06;
         const platSides = 14;
         const platformRot = -this.lightTimer * 1.8 + this.animationOffset * 0.3;
-        this._drawRing3D(0, 0, platOuter, platInner, platSides, platDepth, color(180,130,90), platformRot);
+        this._drawRing3D(0, 0, platOuter, platInner, platSides, platDepth, color(180, 130, 90), platformRot);
 
         // Decorative facets (light prisms) around rim
         const ringR = (platOuter + platInner) * 0.5;
@@ -1459,8 +1468,8 @@ class Station {
             const rx = cos(ang) * ringR;
             const ry = sin(ang) * ringR;
             translate(rx, ry);
-            rotate(ang + PI/2);
-            this._drawPrism(0, 0, s * 0.08, 4, s * 0.025, color(200,160,110));
+            rotate(ang + PI / 2);
+            this._drawPrism(0, 0, s * 0.08, 4, s * 0.025, color(200, 160, 110));
             pop();
         }
 
@@ -1476,9 +1485,9 @@ class Station {
             translate(0, bob);
             rotate(-platformRot + sin(this.lightTimer * 1.2 + i) * 0.04);
             // horse as a small extruded box/prism
-            this._drawBox3D(0, 0, s * 0.18, s * 0.12, s * 0.05, color(240,220,190), 0);
+            this._drawBox3D(0, 0, s * 0.18, s * 0.12, s * 0.05, color(240, 220, 190), 0);
             // pole as a thin prism
-            this._drawBox3D(0, -s * 0.18, s * 0.02, s * 0.36, s * 0.02, color(120,90,60), 0);
+            this._drawBox3D(0, -s * 0.18, s * 0.02, s * 0.36, s * 0.02, color(120, 90, 60), 0);
             pop();
         }
 
@@ -1574,7 +1583,7 @@ class Station {
     _drawWalkerRobot(x = 0, y = 0, scale = 1, style = 0) {
         push(); translate(x, y);
         const s = this.size * 0.015 * scale;
-        
+
         switch (style % 4) {
             case 0: // Boxy maintenance bot
                 // Main body
@@ -1593,7 +1602,7 @@ class Station {
                 fill(255, 255, 0, 180); noStroke();
                 ellipse(0, -s * 1.1, s * 0.1, s * 0.1);
                 break;
-                
+
             case 1: // Tall utility bot
                 // Body
                 this._drawBox3D(0, 0, s * 0.8, s * 1.6, s * 0.5, color(110, 110, 130), 0);
@@ -1610,7 +1619,7 @@ class Station {
                 fill(100, 200, 255, 180); noStroke();
                 ellipse(0, -s * 1.3, s * 0.08, s * 0.08);
                 break;
-                
+
             case 2: // Wide cargo bot
                 // Body
                 this._drawBox3D(0, 0, s * 1.6, s, s * 0.8, color(130, 120, 100), 0);
@@ -1628,7 +1637,7 @@ class Station {
                 fill(255, 150, 0, 180); noStroke();
                 ellipse(0, -s * 0.9, s * 0.12, s * 0.12);
                 break;
-                
+
             case 3: // Compact repair bot
                 // Body
                 this._drawBox3D(0, 0, s, s, s * 0.5, color(100, 120, 140), 0);
@@ -1648,7 +1657,7 @@ class Station {
                 ellipse(s * 0.2, -s * 0.9, s * 0.06, s * 0.06);
                 break;
         }
-        
+
         pop();
     }
 
@@ -1658,7 +1667,7 @@ class Station {
             const phase = this.animationOffset * 0.3 + i * TWO_PI / count;
             rotate(phase + this.lightTimer * 0.08 + i * 0.02);
             translate(0, -this.size * radius + sin(this.lightTimer * 0.9 + i) * 3);
-            this._drawTinyShuttle(0,0,0.35 + (i%2)*0.1);
+            this._drawTinyShuttle(0, 0, 0.35 + (i % 2) * 0.1);
             pop();
         }
     }
@@ -1671,8 +1680,8 @@ class Station {
         // Standard panels at 45° and 225°
         for (let i = 0; i < 2; i++) {
             push();
-            rotate(i * PI + PI/4);
-            this._drawSingleSolarPanel(color(20, 30, 100), color(120, 120, 140), color(150, 150, 170), i * PI + PI/4);
+            rotate(i * PI + PI / 4);
+            this._drawSingleSolarPanel(color(20, 30, 100), color(120, 120, 140), color(150, 150, 170), i * PI + PI / 4);
             pop();
         }
         // Extra panels for separatist (if any)
@@ -1696,7 +1705,7 @@ class Station {
             let c = lightFn(i, this.lightTimer);
             if (c) {
                 // 3D light - small cylinder
-                this._drawPrism(0, -this.size * radius, size/2, 6, 2, c, i * TWO_PI / count);
+                this._drawPrism(0, -this.size * radius, size / 2, 6, 2, c, i * TWO_PI / count);
             }
             pop();
         }
@@ -1708,9 +1717,9 @@ class Station {
      */
     _drawStandardRunningLights() {
         this._drawRunningLights((i, t) => {
-            if (i % 8 === 0) return color(255, 30, 30, 100 + sin(t*3 + i) * 100); // Red
-            if (i % 8 === 4) return color(30, 30, 255, 100 + sin(t*3 + i + PI) * 100); // Blue
-            if (i % 2 === 0) return color(255, 255, 100, 100 + sin(t*2 + i*0.3) * 100); // Yellow
+            if (i % 8 === 0) return color(255, 30, 30, 100 + sin(t * 3 + i) * 100); // Red
+            if (i % 8 === 4) return color(30, 30, 255, 100 + sin(t * 3 + i + PI) * 100); // Blue
+            if (i % 2 === 0) return color(255, 255, 100, 100 + sin(t * 2 + i * 0.3) * 100); // Yellow
             return null;
         });
     }
@@ -1733,12 +1742,12 @@ class Station {
         this._drawWeaponTurrets();
         // Draw military running lights
         // Add antennas, repair drones and traffic
-        this._drawAntennaArray(-this.size*0.08, -this.size*0.02, 1);
-        this._drawRepairDrone(this.size*0.06, -this.size*0.05, 0.9);
+        this._drawAntennaArray(-this.size * 0.08, -this.size * 0.02, 1);
+        this._drawRepairDrone(this.size * 0.06, -this.size * 0.05, 0.9);
         this._drawTrafficSwarm(4, 0.42);
         this._drawMilitaryLights();
     }
-    
+
     /**
      * Draws a fortified central hub for the military station.
      * @private
@@ -1746,25 +1755,25 @@ class Station {
     _drawMilitaryCentralHub() {
         // Main hub structure - armored (12 sides)
         this._drawPrism(0, 0, this.size * 0.14, 12, 25, color(80, 90, 100));
-        
+
         // Additional armor plates
         for (let i = 0; i < 8; i++) {
             push();
             rotate(i * PI / 4);
             const plateVerts = [
-                {x: -this.size * 0.09, y: -this.size * 0.06},
-                {x: -this.size * 0.04, y: -this.size * 0.14},
-                {x: this.size * 0.04, y: -this.size * 0.14},
-                {x: this.size * 0.09, y: -this.size * 0.06}
+                { x: -this.size * 0.09, y: -this.size * 0.06 },
+                { x: -this.size * 0.04, y: -this.size * 0.14 },
+                { x: this.size * 0.04, y: -this.size * 0.14 },
+                { x: this.size * 0.09, y: -this.size * 0.06 }
             ];
             this._drawExtrudedShape(plateVerts, 10, color(60, 70, 80), i * PI / 4);
             pop();
         }
-        
+
         // Command center
         this._drawPrism(0, 0, this.size * 0.075, 8, 30, color(50, 60, 70));
     }
-    
+
     /**
      * Draws military-style arms with defensive capabilities.
      * @private
@@ -1774,35 +1783,35 @@ class Station {
         for (let i = 0; i < 4; i++) {
             push();
             rotate(i * PI / 2);
-            
+
             // Main arm structure - more angular, armored look
             const armVerts = [
-                {x: -this.size * 0.09, y: 0},
-                {x: -this.size * 0.06, y: -this.size * 0.15},
-                {x: -this.size * 0.05, y: -this.size * 0.45},
-                {x: this.size * 0.05, y: -this.size * 0.45},
-                {x: this.size * 0.06, y: -this.size * 0.15},
-                {x: this.size * 0.09, y: 0}
+                { x: -this.size * 0.09, y: 0 },
+                { x: -this.size * 0.06, y: -this.size * 0.15 },
+                { x: -this.size * 0.05, y: -this.size * 0.45 },
+                { x: this.size * 0.05, y: -this.size * 0.45 },
+                { x: this.size * 0.06, y: -this.size * 0.15 },
+                { x: this.size * 0.09, y: 0 }
             ];
             this._drawExtrudedShape(armVerts, 20, color(100, 110, 130), i * PI / 2, false);
-            
+
             // Defense turrets along arm
             for (let j = 1; j < 4; j++) {
                 let y = -j * this.size * 0.12;
-                
+
                 // Turret base - reduced depth
                 this._drawPrism(0, y, this.size * 0.025, 6, 8, color(70, 80, 100), i * PI / 2);
-                
+
                 // Turret gun - reduced depth
                 this._drawBox3D(0, y - this.size * 0.02, this.size * 0.02, this.size * 0.04, 10, color(40, 50, 70), i * PI / 2);
             }
-            
+
             // Connection to outer ring - reinforced
             this._drawBox3D(0, -this.size * 0.445, this.size * 0.14, this.size * 0.05, 20, color(90, 100, 120), i * PI / 2);
             pop();
         }
     }
-    
+
     /**
      * Draws military station modules with weapons and defensive structures.
      * @private
@@ -1811,20 +1820,20 @@ class Station {
         for (let i = 0; i < 16; i++) {
             push();
             rotate(i * TWO_PI / 16);
-            
+
             if (i % 4 === 0) {
                 // Launch bays at cardinal points
                 this._drawBox3D(0, -this.size * 0.48, this.size * 0.12, this.size * 0.06, 15, color(60, 70, 90), i * TWO_PI / 16);
-                
+
                 // Warning lights - 3D
-                const lightCol = sin(this.lightTimer*3 + i) > 0 ? color(255, 50, 0) : color(255, 200, 0);
+                const lightCol = sin(this.lightTimer * 3 + i) > 0 ? color(255, 50, 0) : color(255, 200, 0);
                 this._drawBox3D(-this.size * 0.04 + this.size * 0.04, -this.size * 0.46, this.size * 0.08, this.size * 0.02, 2, lightCol, i * TWO_PI / 16);
             } else if (i % 2 === 0) {
                 // Weapon modules
                 // Vary height slightly for greeble effect
                 const h = this.size * 0.04 + (i % 3 === 0 ? 0.01 : 0) * this.size;
                 this._drawBox3D(0, -this.size * 0.47, this.size * 0.1, h, 10, color(70, 80, 100), i * TWO_PI / 16);
-                
+
                 // Weapon barrel
                 this._drawBox3D(0, -this.size * 0.49, this.size * 0.02, this.size * 0.06, 5, color(50, 60, 80), i * TWO_PI / 16);
             } else {
@@ -1832,9 +1841,9 @@ class Station {
                 // Vary height for greeble effect
                 const h = this.size * 0.04 + (i % 3 !== 0 ? 0.015 : -0.005) * this.size;
                 this._drawBox3D(0, -this.size * 0.47, this.size * 0.08, h, 10, this.color, i * TWO_PI / 16);
-                
+
                 // Armored windows - 3D
-                const winCol = color(100, 150, 200, 150 + sin(this.lightTimer + i)*50);
+                const winCol = color(100, 150, 200, 150 + sin(this.lightTimer + i) * 50);
                 for (let w = 0; w < 2; w++) {
                     this._drawBox3D(-this.size * 0.025 + w * this.size * 0.03, -this.size * 0.465, this.size * 0.015, this.size * 0.01, 2, winCol, i * TWO_PI / 16);
                 }
@@ -1842,7 +1851,7 @@ class Station {
             pop();
         }
     }
-    
+
     /**
      * Draws weapon turrets for military stations.
      * @private
@@ -1851,13 +1860,13 @@ class Station {
         for (let i = 0; i < 4; i++) {
             push();
             rotate(i * PI / 2 + PI / 6);
-            
+
             // Turret mount
             this._drawBox3D(0, this.size * 0.15, this.size * 0.06, this.size * 0.06, 15, color(80, 90, 110), i * PI / 2 + PI / 6);
-            
+
             // Main cannon
             this._drawBox3D(0, this.size * 0.19, this.size * 0.04, this.size * 0.14, 10, color(60, 70, 90), i * PI / 2 + PI / 6);
-            
+
             // Cannon details
             stroke(120, 130, 150, 150);
             strokeWeight(1);
@@ -1868,7 +1877,7 @@ class Station {
             pop();
         }
     }
-    
+
     /**
      * Draws military station running lights.
      * @private
@@ -1883,7 +1892,7 @@ class Station {
         for (let i = 0; i < 32; i++) {
             push();
             rotate(i * step);
-            
+
             // Military uses yellow lights
             let lightCol;
             if (i % 8 === 0) {
@@ -1893,15 +1902,15 @@ class Station {
             } else if (i % 2 === 0) {
                 lightCol = color(200, 200, 0, 80 + sin(lt * 3 + i * 0.5) * 80); // Dark yellow
             }
-            
+
             if (lightCol) {
                 this._drawPrism(0, r, 1.75, 6, 2, lightCol, i * step);
             }
-            
+
             pop();
         }
     }
-    
+
     /**
      * Draws an alien station with organic, non-standard design.
      * @private
@@ -1914,11 +1923,11 @@ class Station {
         this._drawEnergyFields();
         this._drawAlienLights();
         // Alien ambient decorations: floating light balls and rotating mini rings
-        this._drawFloatingLightBall(-this.size*0.12, -this.size*0.05, 1.1);
-        this._drawFloatingLightBall(this.size*0.14, -this.size*0.08, 0.9);
-        this._drawRotatingMiniRing(0, this.size*0.18, 0.7);
+        this._drawFloatingLightBall(-this.size * 0.12, -this.size * 0.05, 1.1);
+        this._drawFloatingLightBall(this.size * 0.14, -this.size * 0.08, 0.9);
+        this._drawRotatingMiniRing(0, this.size * 0.18, 0.7);
     }
-    
+
     /**
      * Draws the alien station's central core.
      * @private
@@ -1927,17 +1936,17 @@ class Station {
         // Main core - non-circular, more organic
         // Slightly pulsating core
         let pulseSize = this.size * (0.3 + sin(this.lightTimer) * 0.02);
-        
+
         // Generate vertices for irregular octagonal shape
         const vertices = [];
         for (let i = 0; i < 8; i++) {
             let angle = i * TWO_PI / 8;
             let radius = pulseSize * (1 + (i % 2 === 0 ? 0.1 : -0.1));
-            vertices.push({x: cos(angle) * radius, y: sin(angle) * radius});
+            vertices.push({ x: cos(angle) * radius, y: sin(angle) * radius });
         }
-        
+
         this._drawExtrudedShape(vertices, 25, color(40, 180, 140));
-        
+
         // Inner energy pattern
         push();
         noFill();
@@ -1952,7 +1961,7 @@ class Station {
         endShape(CLOSE);
         pop();
     }
-    
+
     /**
      * Draws alien structural extensions.
      * @private
@@ -1965,40 +1974,40 @@ class Station {
             // Non-uniform rotation
             const rot = i * TWO_PI / 5 + sin(i) * 0.2;
             rotate(rot);
-            
+
             // Curved, organic arm structure approximated as polygon
             const armVerts = [
-                {x: -this.size * 0.05, y: 0},
-                {x: -this.size * 0.07, y: -this.size * 0.2},
-                {x: -this.size * 0.04, y: -this.size * 0.35},
-                {x: -this.size * 0.05, y: -this.size * 0.45},
-                {x: this.size * 0.05, y: -this.size * 0.45},
-                {x: this.size * 0.04, y: -this.size * 0.35},
-                {x: this.size * 0.07, y: -this.size * 0.2},
-                {x: this.size * 0.05, y: 0}
+                { x: -this.size * 0.05, y: 0 },
+                { x: -this.size * 0.07, y: -this.size * 0.2 },
+                { x: -this.size * 0.04, y: -this.size * 0.35 },
+                { x: -this.size * 0.05, y: -this.size * 0.45 },
+                { x: this.size * 0.05, y: -this.size * 0.45 },
+                { x: this.size * 0.04, y: -this.size * 0.35 },
+                { x: this.size * 0.07, y: -this.size * 0.2 },
+                { x: this.size * 0.05, y: 0 }
             ];
-            
+
             this._drawExtrudedShape(armVerts, 15, color(60, 200, 160), rot);
-            
+
             // Organic nodules along arm
             for (let j = 1; j < 4; j++) {
                 let y = -j * this.size * 0.11;
                 let size = this.size * 0.04 * (1 + sin(this.lightTimer * 2 * 0.55 + j + this.animationOffset) * 0.2);
-                this._drawPrism(0, y, size/2, 6, 10, color(30, 160, 120), rot);
+                this._drawPrism(0, y, size / 2, 6, 10, color(30, 160, 120), rot);
             }
-            
+
             // Connection to outer zone - organic shape
             const connVerts = [
-                {x: -this.size * 0.05, y: -this.size * 0.45},
-                {x: -this.size * 0.07, y: -this.size * 0.48},
-                {x: this.size * 0.07, y: -this.size * 0.48},
-                {x: this.size * 0.05, y: -this.size * 0.45}
+                { x: -this.size * 0.05, y: -this.size * 0.45 },
+                { x: -this.size * 0.07, y: -this.size * 0.48 },
+                { x: this.size * 0.07, y: -this.size * 0.48 },
+                { x: this.size * 0.05, y: -this.size * 0.45 }
             ];
             this._drawExtrudedShape(connVerts, 12, color(50, 190, 150), rot);
             pop();
         }
     }
-    
+
     /**
      * Draws alien ring structures.
      * @private
@@ -2012,12 +2021,12 @@ class Station {
             let angle = i * TWO_PI / steps;
             let radius = this.size * (0.48 + sin(angle * 5 + this.lightTimer) * 0.02);
             let innerRadius = radius - this.size * 0.04;
-            ringVerts.push({x: cos(angle) * radius, y: sin(angle) * radius});
-            innerRingVerts.push({x: cos(angle) * innerRadius, y: sin(angle) * innerRadius});
+            ringVerts.push({ x: cos(angle) * radius, y: sin(angle) * radius });
+            innerRingVerts.push({ x: cos(angle) * innerRadius, y: sin(angle) * innerRadius });
         }
-        
+
         this._drawExtrudedRing(ringVerts, innerRingVerts, 10, color(100, 240, 200));
-        
+
         // Inner energy field
         push();
         stroke(60, 220, 180, 100);
@@ -2032,7 +2041,7 @@ class Station {
         endShape(CLOSE);
         pop();
     }
-    
+
     /**
      * Draws alien modules with organic appearances.
      * @private
@@ -2042,11 +2051,11 @@ class Station {
             push();
             const rot = i * TWO_PI / 15 + sin(i * 0.5) * 0.1;
             rotate(rot);
-            
+
             if (i % 5 === 0) {
                 // Transport portals at specific points
                 this._drawPrism(0, -this.size * 0.48, this.size * 0.04, 8, 10, color(20, 120, 100), rot);
-                
+
                 // Portal energy - keep 2D glow
                 fill(100, 255, 200, 150 + sin(this.lightTimer * 3 * 0.55 + i + this.animationOffset) * 100);
                 noStroke();
@@ -2058,23 +2067,23 @@ class Station {
                     let angle = j * TWO_PI / 8;
                     let rx = this.size * 0.04 * (1 + (j % 2 === 0 ? 0.2 : -0.1));
                     let ry = this.size * 0.035 * (1 + (j % 2 === 0 ? -0.1 : 0.2));
-                    podVerts.push({x: cos(angle) * rx, y: sin(angle) * ry - this.size * 0.48});
+                    podVerts.push({ x: cos(angle) * rx, y: sin(angle) * ry - this.size * 0.48 });
                 }
                 this._drawExtrudedShape(podVerts, 12, color(50, 180, 140), rot);
-                
+
                 // Bioluminescent spots - 3D
-                const spotCol = color(120, 255, 220, 180 + sin(this.lightTimer + i*2) * 75);
+                const spotCol = color(120, 255, 220, 180 + sin(this.lightTimer + i * 2) * 75);
                 for (let w = 0; w < 2; w++) {
                     let x = (w - 0.5) * this.size * 0.02;
                     let y = -this.size * 0.48;
                     let size = this.size * 0.01 * (1 + sin(this.lightTimer * 3 * 0.55 + i + w + this.animationOffset) * 0.3);
-                    this._drawPrism(x, y, size/2, 6, 2, spotCol, rot);
+                    this._drawPrism(x, y, size / 2, 6, 2, spotCol, rot);
                 }
             }
             pop();
         }
     }
-    
+
     /**
      * Draws alien energy fields that replace solar panels.
      * @private
@@ -2082,12 +2091,12 @@ class Station {
     _drawEnergyFields() {
         for (let i = 0; i < 3; i++) {
             push();
-            const rot = i * TWO_PI / 3 + PI/6;
+            const rot = i * TWO_PI / 3 + PI / 6;
             rotate(rot);
-            
+
             // Energy field generator
             this._drawPrism(0, this.size * 0.15, this.size * 0.03, 6, 15, color(40, 170, 130), rot);
-            
+
             // Energy field - pulsating
             fill(100, 255, 200, 40 + sin(this.lightTimer * 2 * 0.55 + this.animationOffset) * 30);
             stroke(120, 255, 220, 100 + sin(this.lightTimer) * 50);
@@ -2098,7 +2107,7 @@ class Station {
                 vertex(cos(angle) * radius, sin(angle) * radius + this.size * 0.15);
             }
             endShape(CLOSE);
-            
+
             // Energy tendrils
             stroke(80, 220, 180, 150);
             strokeWeight(1);
@@ -2113,7 +2122,7 @@ class Station {
             pop();
         }
     }
-    
+
     /**
      * Draws alien station lights with unique patterns and colors.
      * @private
@@ -2127,7 +2136,7 @@ class Station {
         for (let i = 0; i < 30; i++) {
             push();
             rotate(i * baseStep + sin(i * 0.2) * 0.1);
-            
+
             // Alien uses teal, purple and green lights
             // Pulsating light size
             const sz = 2 + sin(lt * 3 + i) * 1;
@@ -2139,11 +2148,11 @@ class Station {
             } else if (i % 2 === 0) {
                 lightCol = color(100, 255, 150, 80 + sin(lt * 1.5 + i * 0.4) * 120); // Green
             }
-            
+
             if (lightCol) {
-                this._drawPrism(0, r, sz/2, 6, 2, lightCol, i * baseStep + sin(i * 0.2) * 0.1);
+                this._drawPrism(0, r, sz / 2, 6, 2, lightCol, i * baseStep + sin(i * 0.2) * 0.1);
             }
-            
+
             pop();
         }
     }
@@ -2191,7 +2200,7 @@ class Station {
         s.dockingRadius = data.dockingRadius;
         if (data.stationType) s.stationType = data.stationType;
         if (data.color && typeof color === "function") {
-            try { s.color = color(data.color); } catch {}
+            try { s.color = color(data.color); } catch { }
         }
         s.angle = data.angle;
         s.rotationSpeed = data.rotationSpeed;
@@ -2232,7 +2241,7 @@ class Station {
             if (i % 4 === 0) {
                 // Large greenhouse domes at cardinal points
                 this._drawPrism(0, -this.size * 0.48, this.size * 0.065, 8, 15, color(120, 200, 120), i * TWO_PI / 16);
-                
+
                 // Glow can remain 2D as it's light
                 fill(180, 255, 180, 80 + 40 * sin(this.lightTimer + i));
                 noStroke();
@@ -2240,7 +2249,7 @@ class Station {
             } else {
                 // Standard modules with green windows
                 this._drawBox3D(0, -this.size * 0.45, this.size * 0.08, this.size * 0.04, 15, this.color, i * TWO_PI / 16);
-                
+
                 // Windows - 3D
                 const winCol = color(180, 255, 180, 120 + 40 * sin(this.lightTimer + i));
                 this._drawBox3D(0, -this.size * 0.45, this.size * 0.04, this.size * 0.015, 2, winCol, i * TWO_PI / 16);
@@ -2259,16 +2268,16 @@ class Station {
         }
 
         // Tethered nets, cargo swings and maintenance pods
-        this._drawTetheredNet(this.size*0.05, -this.size*0.46, 0.8);
-        this._drawCargoSwing(-this.size*0.07, -this.size*0.4, 0.9);
-        this._drawMaintenancePod(this.size*0.08, -this.size*0.44, 0.9);
+        this._drawTetheredNet(this.size * 0.05, -this.size * 0.46, 0.8);
+        this._drawCargoSwing(-this.size * 0.07, -this.size * 0.4, 0.9);
+        this._drawMaintenancePod(this.size * 0.08, -this.size * 0.44, 0.9);
 
         // Yellow/green running lights - 3D
         noStroke();
         for (let i = 0; i < 24; i++) {
             push();
             rotate(i * TWO_PI / 24);
-            const lightCol = color(180, 255, 100, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Green-yellow
+            const lightCol = color(180, 255, 100, 100 + sin(this.lightTimer * 2 + i * 0.3) * 100); // Green-yellow
             this._drawPrism(0, -this.size * 0.475, 1.5, 6, 2, lightCol, i * TWO_PI / 24);
             pop();
         }
@@ -2288,17 +2297,17 @@ class Station {
         for (let i = 0; i < 16; i++) {
             push();
             rotate(i * TWO_PI / 16);
-            
+
             // Module
             this._drawBox3D(0, -this.size * 0.4475, this.size * 0.09, this.size * 0.045, 15, this.color, i * TWO_PI / 16);
 
             // Smokestack
             if (i % 4 === 0) {
                 this._drawBox3D(0, -this.size * 0.49, this.size * 0.02, this.size * 0.04, 25, color(80, 80, 80), i * TWO_PI / 16);
-                
+
                 // Smokestack top cap - 3D
                 this._drawPrism(0, -this.size * 0.53, this.size * 0.015, 8, 2, color(60, 60, 60), i * TWO_PI / 16);
-                
+
                 // smoke puff (keep 2D)
                 noStroke();
                 fill(180, 180, 180, 80 + 40 * sin(this.lightTimer + i));
@@ -2325,15 +2334,15 @@ class Station {
         // Maintenance arms and dock pylons
         // Industrial-specific orbiting scrap
         if (this.stationType === 'industrial') this._drawOrbitingCubes(3, 0.32, 0.6);
-        this._drawMaintenanceArm(this.size*0.09, this.size*0.08, 1.8, 1);
-        this._drawDockingPylon(-this.size*0.08, -this.size*0.06);
+        this._drawMaintenanceArm(this.size * 0.09, this.size * 0.08, 1.8, 1);
+        this._drawDockingPylon(-this.size * 0.08, -this.size * 0.06);
 
         // Orange/white running lights - 3D
         noStroke();
         for (let i = 0; i < 24; i++) {
             push();
             rotate(i * TWO_PI / 24);
-            const lightCol = color(255, 180, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Orange
+            const lightCol = color(255, 180, 80, 100 + sin(this.lightTimer * 2 + i * 0.3) * 100); // Orange
             this._drawPrism(0, -this.size * 0.475, 1.5, 6, 2, lightCol, i * TWO_PI / 24);
             pop();
         }
@@ -2365,7 +2374,7 @@ class Station {
         // No solar panels, instead draw mining cranes
         for (let i = 0; i < 2; i++) {
             push();
-            rotate(i * PI + PI/4);
+            rotate(i * PI + PI / 4);
             stroke(120, 100, 80);
             strokeWeight(3);
             line(0, this.size * 0.12, 0, this.size * 0.28);
@@ -2392,17 +2401,17 @@ class Station {
         }
 
         // Mining laser swings and maintenance pods
-        this._drawScannerBeam(0, -this.size*0.02, 1.2);
-        this._drawMaintenancePod(-this.size*0.06, -this.size*0.04, 1);
+        this._drawScannerBeam(0, -this.size * 0.02, 1.2);
+        this._drawMaintenancePod(-this.size * 0.06, -this.size * 0.04, 1);
         // Mining-specific pulsing beacon to indicate loading points
-        if (this.stationType === 'mining') this._drawPulsingBeacon(0, -this.size*0.42, 0.9, color(255,180,80));
+        if (this.stationType === 'mining') this._drawPulsingBeacon(0, -this.size * 0.42, 0.9, color(255, 180, 80));
         // Red/yellow running lights
         noStroke();
         for (let i = 0; i < 24; i++) {
             push();
             rotate(i * TWO_PI / 24);
-            fill(255, 180, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Orange
-            if (i % 3 === 0) fill(255, 80, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Red
+            fill(255, 180, 80, 100 + sin(this.lightTimer * 2 + i * 0.3) * 100); // Orange
+            if (i % 3 === 0) fill(255, 80, 80, 100 + sin(this.lightTimer * 2 + i * 0.3) * 100); // Red
             ellipse(0, -this.size * 0.475, 3, 3);
             pop();
         }
@@ -2428,7 +2437,7 @@ class Station {
             } else {
                 // Standard module
                 this._drawBox3D(0, -this.size * 0.45, this.size * 0.08, this.size * 0.04, 15, this.color, i * TWO_PI / 16);
-                
+
                 fill(255, 200, 255, 120 + 40 * sin(this.lightTimer + i));
                 noStroke();
                 rectMode(CENTER);
@@ -2508,14 +2517,14 @@ class Station {
         }
 
         // Holographic billboards and float banners
-        this._drawHoloBillboard(this.size*0.08, -this.size*0.32, 0.9, 0.5);
-        this._drawFloatBanner(-this.size*0.09, -this.size*0.34, 1);
+        this._drawHoloBillboard(this.size * 0.08, -this.size * 0.32, 0.9, 0.5);
+        this._drawFloatBanner(-this.size * 0.09, -this.size * 0.34, 1);
         // Purple/white running lights
         noStroke();
         for (let i = 0; i < 24; i++) {
             push();
             rotate(i * TWO_PI / 24);
-            fill(200, 160, 255, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Purple
+            fill(200, 160, 255, 100 + sin(this.lightTimer * 2 + i * 0.3) * 100); // Purple
             ellipse(0, -this.size * 0.475, 3, 3);
             pop();
         }
@@ -2582,24 +2591,24 @@ class Station {
             strokeWeight(1.5);
             line(-this.size * 0.03, -this.size * 0.05, -this.size * 0.03, -this.size * 0.42);
             // small maintenance arm near the pipe
-            this._drawMaintenanceArm(-this.size*0.02, -this.size*0.24, 1.6, 0.9);
+            this._drawMaintenanceArm(-this.size * 0.02, -this.size * 0.24, 1.6, 0.9);
             pop();
         }
 
         this._drawSolarPanels();
 
         // Activity indicators: scanner beams, floating light balls and a cargo tug
-        this._drawScannerBeam(-this.size*0.05, -this.size*0.02, 1.1);
-        this._drawFloatingLightBall(this.size*0.07, -this.size*0.03, 1.0);
-        this._drawCargoTug(-this.size*0.09, -this.size*0.28, 0.9);
+        this._drawScannerBeam(-this.size * 0.05, -this.size * 0.02, 1.1);
+        this._drawFloatingLightBall(this.size * 0.07, -this.size * 0.03, 1.0);
+        this._drawCargoTug(-this.size * 0.09, -this.size * 0.28, 0.9);
 
         // Running lights (red/orange) around perimeter - 3D
         noStroke();
         for (let i = 0; i < 24; i++) {
             push();
             rotate(i * TWO_PI / 24);
-            let lightCol = color(255, 80, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Red
-            if (i % 3 === 0) lightCol = color(255, 180, 80, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Orange
+            let lightCol = color(255, 80, 80, 100 + sin(this.lightTimer * 2 + i * 0.3) * 100); // Red
+            if (i % 3 === 0) lightCol = color(255, 180, 80, 100 + sin(this.lightTimer * 2 + i * 0.3) * 100); // Orange
             this._drawPrism(0, -this.size * 0.475, 1.5, 6, 2, lightCol, i * TWO_PI / 24);
             pop();
         }
@@ -2614,13 +2623,13 @@ class Station {
             // pulsing processing beacon near the hub
             push();
             translate(this.size * 0.08, -this.size * 0.06);
-            this._drawPulsingBeacon(0, 0, 0.6, color(255,160,100));
+            this._drawPulsingBeacon(0, 0, 0.6, color(255, 160, 100));
             pop();
         }
     }
 
     /**
-     * Draws a posthuman station with blue/white lights and sleek modules.
+     * Draws a Post Human station with blue/white lights and sleek modules.
      * @private
      */
     _drawPostHumanStation() {
@@ -2631,9 +2640,9 @@ class Station {
         for (let i = 0; i < 16; i++) {
             push();
             rotate(i * TWO_PI / 16);
-            
+
             this._drawBox3D(0, -this.size * 0.47, this.size * 0.08, this.size * 0.04, 15, this.color, i * TWO_PI / 16);
-            
+
             // Windows - 3D
             const winCol = color(200, 255, 255, 120 + 40 * sin(this.lightTimer + i));
             this._drawBox3D(-this.size * 0.02 + this.size * 0.02, -this.size * 0.465, this.size * 0.04, this.size * 0.015, 2, winCol, i * TWO_PI / 16);
@@ -2645,15 +2654,15 @@ class Station {
         for (let i = 0; i < 24; i++) {
             push();
             rotate(i * TWO_PI / 24);
-            let lightCol = color(100, 200, 255, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Blue
-            if (i % 3 === 0) lightCol = color(255, 255, 255, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // White
+            let lightCol = color(100, 200, 255, 100 + sin(this.lightTimer * 2 + i * 0.3) * 100); // Blue
+            if (i % 3 === 0) lightCol = color(255, 255, 255, 100 + sin(this.lightTimer * 2 + i * 0.3) * 100); // White
             this._drawPrism(0, -this.size * 0.475, 1.5, 6, 2, lightCol, i * TWO_PI / 24);
             pop();
         }
 
         // Futuristic rotating mini-rings and holo billboards
-        this._drawRotatingMiniRing(-this.size*0.06, -this.size*0.04, 0.7);
-        this._drawHoloBillboard(this.size*0.1, -this.size*0.28, 0.8, 0.4);
+        this._drawRotatingMiniRing(-this.size * 0.06, -this.size * 0.04, 0.7);
+        this._drawHoloBillboard(this.size * 0.1, -this.size * 0.28, 0.8, 0.4);
 
         // --- Post-Human extras: filaments, drones, holo-arcs, and soft glows ---
         // fiber-optic filaments near the hub (subtle glowing lines)
@@ -2671,25 +2680,25 @@ class Station {
         // small repair/detail drones orbiting the hub
         for (let d = 0; d < 3; d++) {
             push();
-            const ang = this.lightTimer * (0.12 + d*0.02) + d * TWO_PI / 3 + this.animationOffset * 0.1;
+            const ang = this.lightTimer * (0.12 + d * 0.02) + d * TWO_PI / 3 + this.animationOffset * 0.1;
             rotate(ang);
             translate(0, -this.size * (0.22 + 0.03 * d));
-            this._drawRepairDrone(0, 0, 1 - d*0.12);
+            this._drawRepairDrone(0, 0, 1 - d * 0.12);
             pop();
         }
 
         // holographic arc panels intentionally removed (visual cleanup)
 
-        // Additional rotating mini-ring and a subtle beacon for posthuman tech
-        this._drawRotatingMiniRing(this.size*0.08, -this.size*0.06, 0.5);
-        this._drawPulsingBeacon(-this.size*0.08, -this.size*0.02, 0.5, color(140,220,255));
+        // Additional rotating mini-ring and a subtle beacon for Post Human tech
+        this._drawRotatingMiniRing(this.size * 0.08, -this.size * 0.06, 0.5);
+        this._drawPulsingBeacon(-this.size * 0.08, -this.size * 0.02, 0.5, color(140, 220, 255));
 
         // Orbiting micro-spheres for a 'nanofabricator' effect
         this._drawOrbitingCubes(4, 0.28, 0.25);
 
         // small maintenance arm and comms array cluster
-        this._drawMaintenanceArm(this.size*0.06, -this.size*0.12, 1.1, 0.9);
-        this._drawMiniCommsArray(-this.size*0.04, -this.size*0.14, 0.9);
+        this._drawMaintenanceArm(this.size * 0.06, -this.size * 0.12, 1.1, 0.9);
+        this._drawMiniCommsArray(-this.size * 0.04, -this.size * 0.14, 0.9);
 
         // tiny shuttle and translucent crate cluster for added life
         push();
@@ -2698,8 +2707,8 @@ class Station {
         this._drawTinyShuttle(0, 0, 0.6);
         pop();
 
-        if (this.stationType === 'posthuman') {
-            // crates and floating blobby lights removed for cleaner posthuman aesthetic
+        if (this.stationType === 'post human') {
+            // crates and floating blobby lights removed for cleaner Post Human aesthetic
         }
     }
 
@@ -2715,9 +2724,9 @@ class Station {
         for (let i = 0; i < 16; i++) {
             push();
             rotate(i * TWO_PI / 16);
-            
+
             this._drawBox3D(0, -this.size * 0.47, this.size * 0.09, this.size * 0.045, 15, this.color, i * TWO_PI / 16);
-            
+
             if (i % 4 === 0) {
                 this._drawBox3D(0, -this.size * 0.51, this.size * 0.02, this.size * 0.06, 20, color(255, 220, 100), i * TWO_PI / 16);
             }
@@ -2729,12 +2738,12 @@ class Station {
             push();
             rotate(i * TWO_PI / 6 + this.lightTimer * 0.05);
             translate(0, -this.size * 0.52);
-            
+
             // Pennant - 3D
             const pennantVerts = [
-                {x: 0, y: 0},
-                {x: -this.size * 0.02, y: this.size * 0.04},
-                {x: this.size * 0.02, y: this.size * 0.04}
+                { x: 0, y: 0 },
+                { x: -this.size * 0.02, y: this.size * 0.04 },
+                { x: this.size * 0.02, y: this.size * 0.04 }
             ];
             this._drawExtrudedShape(pennantVerts, 2, color(255, 220, 100, 200), i * TWO_PI / 6 + this.lightTimer * 0.05);
             pop();
@@ -2746,23 +2755,23 @@ class Station {
         pop();
 
         // Beacon ring and mini comms arrays
-        this._drawBeaconRing(this.size*0.0, -this.size*0.02, 0.9);
-        this._drawMiniCommsArray(this.size*0.06, -this.size*0.1, 1);
+        this._drawBeaconRing(this.size * 0.0, -this.size * 0.02, 0.9);
+        this._drawMiniCommsArray(this.size * 0.06, -this.size * 0.1, 1);
 
         // Gold/white running lights - 3D
         noStroke();
         for (let i = 0; i < 24; i++) {
             push();
             rotate(i * TWO_PI / 24);
-            let lightCol = color(255, 220, 100, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // Gold
-            if (i % 3 === 0) lightCol = color(255, 255, 255, 100 + sin(this.lightTimer*2 + i*0.3) * 100); // White
+            let lightCol = color(255, 220, 100, 100 + sin(this.lightTimer * 2 + i * 0.3) * 100); // Gold
+            if (i % 3 === 0) lightCol = color(255, 255, 255, 100 + sin(this.lightTimer * 2 + i * 0.3) * 100); // White
             this._drawPrism(0, -this.size * 0.475, 1.5, 6, 2, lightCol, i * TWO_PI / 24);
             pop();
         }
         // refinery crate field (smaller accretion near tanks)
         if (this.stationType === 'refinery') this._drawCrates();
     }
-    
+
     /**
      * Draws a separatist station with extra solar panels and unique features.
      * @private
@@ -2773,21 +2782,21 @@ class Station {
         this._drawRings();
         //this._drawHabitationModules();
         // Draw standard panels plus two extra at 135° and 315°
-        this._drawSolarPanels([PI * 3/4, PI * 7/4]);
+        this._drawSolarPanels([PI * 3 / 4, PI * 7 / 4]);
         // Use a separate habitation layout for separatists
         this._drawSeparatistHabitationModules();
 
         // Draw running lights aligned to the separatist modules
         const separatistLightFn = (i, t) => {
-            if (i % 8 === 0) return color(255, 30, 30, 100 + sin(t*3 + i) * 100);
-            if (i % 8 === 4) return color(30, 30, 255, 100 + sin(t*3 + i + PI) * 100);
-            if (i % 2 === 0) return color(255, 255, 100, 100 + sin(t*2 + i*0.3) * 100);
+            if (i % 8 === 0) return color(255, 30, 30, 100 + sin(t * 3 + i) * 100);
+            if (i % 8 === 4) return color(30, 30, 255, 100 + sin(t * 3 + i + PI) * 100);
+            if (i % 2 === 0) return color(255, 255, 100, 100 + sin(t * 2 + i * 0.3) * 100);
             return null;
         };
         this._drawRunningLights(separatistLightFn, 16, 0.48, 3);
         // Extra comms and rotor spinners for the separatists
-        this._drawMiniCommsArray(-this.size*0.06, -this.size*0.04, 1);
-        this._drawSolarArraySpinner(this.size*0.06, -this.size*0.03, 0.9);
+        this._drawMiniCommsArray(-this.size * 0.06, -this.size * 0.04, 1);
+        this._drawSolarArraySpinner(this.size * 0.06, -this.size * 0.03, 0.9);
 
         // Additional asymmetrical visual elements for separatists
         // Asymmetrical antenna tower on one side
@@ -2806,25 +2815,25 @@ class Station {
         this._drawFloatBanner(0, 0, 1.1);
         // Add a small pennant - 3D
         const pennantVerts = [
-            {x: 0, y: 0},
-            {x: -this.size * 0.015, y: this.size * 0.03},
-            {x: this.size * 0.015, y: this.size * 0.03}
+            { x: 0, y: 0 },
+            { x: -this.size * 0.015, y: this.size * 0.03 },
+            { x: this.size * 0.015, y: this.size * 0.03 }
         ];
         this._drawExtrudedShape(pennantVerts, 2, color(255, 100, 50, 180), -PI / 4);
         pop();
 
         // Asymmetrical extension arm with extra modules
         push();
-        rotate(PI * 5/6); // Another offset angle
+        rotate(PI * 5 / 6); // Another offset angle
         translate(0, -this.size * 0.42);
         // Extra small module
-        this._drawBox3D(0, -this.size * 0.02, this.size * 0.05, this.size * 0.04, 10, color(180, 120, 80), PI * 5/6);
+        this._drawBox3D(0, -this.size * 0.02, this.size * 0.05, this.size * 0.04, 10, color(180, 120, 80), PI * 5 / 6);
         // Add a small antenna on top
         stroke(100, 100, 100);
         strokeWeight(1);
         line(0, -this.size * 0.02, 0, -this.size * 0.05);
         // Antenna light - 3D
-        this._drawPrism(0, -this.size * 0.05, this.size * 0.004, 6, 2, color(255, 200, 100, 150), PI * 5/6);
+        this._drawPrism(0, -this.size * 0.05, this.size * 0.004, 6, 2, color(255, 200, 100, 150), PI * 5 / 6);
         pop();
 
         // Orbiting separatist drones (asymmetrical count)
@@ -2839,7 +2848,7 @@ class Station {
 
         // Unique separatist beacon on one arm
         push();
-        rotate(PI * 3/4);
+        rotate(PI * 3 / 4);
         translate(0, -this.size * 0.3);
         this._drawPulsingBeacon(0, 0, 0.7, color(255, 150, 50));
         pop();
@@ -2879,8 +2888,8 @@ class Station {
         this._drawStandardRunningLights();
 
         // Small comms arrays and solar spinners
-        this._drawMiniCommsArray(-this.size*0.09, -this.size*0.04);
-        this._drawSolarArraySpinner(this.size*0.09, -this.size*0.02, 1);
+        this._drawMiniCommsArray(-this.size * 0.09, -this.size * 0.04);
+        this._drawSolarArraySpinner(this.size * 0.09, -this.size * 0.02, 1);
         // Busy little traffic
         this._drawTrafficSwarm(5, 0.38);
     }

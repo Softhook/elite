@@ -923,8 +923,8 @@ class StarSystem {
 
             // Economy Overrides
             const eco = this.economyType || "Unknown";
-            if (eco === "Post Human") {
-                // Post Human: Full inhabited, high density
+            if (["Post Human", "Offworld"].includes(eco)) {
+                // Post Human/Offworld: Full inhabited, high density
                 inhabitedChance = 0.95;
                 minDens = 0.7;
                 maxDens = 1.0;
@@ -1360,7 +1360,8 @@ class StarSystem {
             imperial: () => this._selectFactionShip(IMPERIAL_SHIPS, SEPARATIST_SHIPS),
             mining: () => this._selectMiningShip(),
             industrial: () => this._selectMiningShip(),
-            refinery: () => this._selectMiningShip()
+            refinery: () => this._selectMiningShip(),
+            'post human': () => this._selectOffworldShip()
         };
 
         const handler = economyHandlers[econ];
@@ -6070,7 +6071,14 @@ class StarSystem {
             'Refinery': ['miningPlatform', 'cargoCluster', 'engineArray', 'satellite', 'relay', 'debris', 'probe', 'asteroidMiner', 'fuelDepot', 'solarFarm', 'wreckage', 'weaponPlatform', 'shieldGenerator', 'energyCollector', 'shipyard'],
             'Mining': ['miningPlatform', 'cargoCluster', 'engineArray', 'satellite', 'relay', 'debris', 'probe', 'asteroidMiner', 'fuelDepot', 'solarFarm', 'wreckage', 'weaponPlatform', 'shieldGenerator', 'energyCollector'],
             'Agricultural': ['orbitalGarden', 'habitat', 'satellite', 'telescope', 'relay', 'probe', 'beacon', 'observatoryDome', 'hydroponicsBay'],
-            'High Tech': ['researchArray', 'solarSail', 'ancientRelic', 'satellite', 'telescope', 'beacon', 'signalFlare', 'outpost', 'commDish', 'iceCrystal', 'nebulaFragment', 'alienArtifact', 'quantumGate', 'shipyard']
+            'Post Human': ['researchArray', 'solarSail', 'satellite', 'telescope', 'beacon', 'signalFlare', 'outpost', 'commDish', 'iceCrystal', 'nebulaFragment', 'alienArtifact', 'quantumGate', 'shipyard', 'ancientRelic', 'advancedResearchStation'],
+            'Offworld': ['habitat', 'outpost', 'solarSail', 'satellite', 'relay', 'beacon', 'commDish', 'quantumGate', 'shipyard', 'researchArray', 'cargoCluster', 'commHub'],
+            'Tourism': ['orbitalGarden', 'habitat', 'satellite', 'telescope', 'observatoryDome', 'solarSail', 'beacon'],
+            'Service': ['habitat', 'relay', 'satellite', 'fuelDepot', 'commDish', 'outpost', 'beacon', 'solarFarm', 'cargoCluster'],
+            'Military': ['weaponPlatform', 'shieldGenerator', 'shipyard', 'satellite', 'relay', 'outpost', 'debris', 'fuelDepot', 'commDish', 'prison'],
+            'Separatist': ['weaponPlatform', 'shieldGenerator', 'shipyard', 'satellite', 'relay', 'outpost', 'debris', 'wreckage', 'miningPlatform'],
+            'Imperial': ['weaponPlatform', 'shieldGenerator', 'shipyard', 'satellite', 'relay', 'outpost', 'debris', 'orbitalGarden'],
+            'Alien': ['alienArtifact', 'nebulaFragment', 'iceCrystal', 'debris', 'signalFlare', 'alienMonolith']
         };
 
         // Default types for other economies (undergroundMarket handled conditionally below)
@@ -6082,7 +6090,7 @@ class StarSystem {
         // Only include underground market in systems where illegal goods CANNOT be traded
         // (i.e., non-Anarchy security levels)
         const isAnarchy = typeof this.securityLevel === 'string' && this.securityLevel.toLowerCase() === 'anarchy';
-        if (!isAnarchy) {
+        if (!isAnarchy && this.economyType !== 'Alien') {
             if (!availableTypes.includes('undergroundMarket')) {
                 availableTypes.push('undergroundMarket');
             }
@@ -6134,6 +6142,34 @@ class StarSystem {
                     } catch (e) {
                         console.error('Failed to create additional SpaceObject', e);
                     }
+                }
+            } else if (this.economyType === 'Post Human') {
+                // Always spawn at least one research-themed object
+                const type = random(['researchArray', 'advancedResearchStation', 'quantumGate']);
+                const angle = random(TWO_PI);
+                const dist = random(planet.size * 0.25, planet.size * 0.65);
+                const x = planet.pos.x + Math.cos(angle) * dist;
+                const y = planet.pos.y + Math.sin(angle) * dist;
+                try {
+                    const obj = new SpaceObject(x, y, type);
+                    obj.planetIndex = correctPlanetIndex;
+                    this.spaceObjects.push(obj);
+                } catch (e) {
+                    console.error('Failed to create Post Human SpaceObject', e);
+                }
+            } else if (this.economyType === 'Offworld') {
+                // Always spawn a habitat or comm structure
+                const type = random(['habitat', 'commHub', 'outpost']);
+                const angle = random(TWO_PI);
+                const dist = random(planet.size * 0.3, planet.size * 0.7);
+                const x = planet.pos.x + Math.cos(angle) * dist;
+                const y = planet.pos.y + Math.sin(angle) * dist;
+                try {
+                    const obj = new SpaceObject(x, y, type);
+                    obj.planetIndex = correctPlanetIndex;
+                    this.spaceObjects.push(obj);
+                } catch (e) {
+                    console.error('Failed to create Offworld SpaceObject', e);
                 }
             } else {
                 // For other systems, spawn 1-3 random objects

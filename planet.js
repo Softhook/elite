@@ -97,8 +97,8 @@ class Planet {
                 this.hasAtmosphere = true;
                 this.atmosphereColor = color(random(100, 140), random(90, 110), random(60, 90), random(100, 160)); // Brownish smog
                 this.noisePersistence = random(0.7, 0.9); // Rugged/messy surface
-            } else if (this.economyType === "Post Human") {
-                // High-tech terraforming
+            } else if (["Post Human", "Offworld"].includes(this.economyType)) {
+                // High-tech terraforming / Cosmopolitan
                 this.hasAtmosphere = true;
                 // Cleaner, maybe slightly unnatural atmosphere colors (gentle cyan/purple hint)
                 if (random() < 0.3) {

@@ -475,6 +475,14 @@ class UIStationMenus {
             return techLevel >= 5
                 ? `${name} Military Yards. We stock everything from patrol craft to heavy destroyers.`
                 : `${name} Military Shipyard, tech ${techLevel}. Solid hardware here—classified vessels require higher clearance.`;
+        } else if (economyType === "Post Human") {
+            return techLevel >= 5
+                ? `Welcome to ${name}. We offer the most advanced transhumanist vessels—clean, efficient, and beyond traditional limits.`
+                : `${name} Transhumanist Works, tech ${techLevel}. Advanced engineering for those seeking the next step in evolution.`;
+        } else if (economyType === "Offworld") {
+            return techLevel >= 5
+                ? `Welcome to ${name}. We specialize in deep-space habitats and orbital-optimized craft—built for life amongst the stars.`
+                : `${name} Orbital Shipyards, tech ${techLevel}. Reliable offworld vessels for pioneers and settlers.`;
         } else {
             if (techLevel <= 2) {
                 return `Welcome to ${name}. We carry basic vessels here—for more advanced ships, try a higher-tech system.`;
@@ -508,6 +516,14 @@ class UIStationMenus {
             return techLevel >= 5
                 ? `${name} Revolutionary Arms. We've got everything you need for the cause.`
                 : `${name} Separatist Armoury, tech ${techLevel}. Solid gear—heavier ordnance at our main bases.`;
+        } else if (economyType === "Post Human") {
+            return techLevel >= 5
+                ? `${name} Synthesis Lab. Our enhancements integrate seamlessly with both ship and pilot.`
+                : `${name} Augmented Systems, tech ${techLevel}. High-precision components for advanced pilots.`;
+        } else if (economyType === "Offworld") {
+            return techLevel >= 5
+                ? `${name} Orbital Outfitting. Premium components designed for the rigors of deep space.`
+                : `${name} Offworld Supplies, tech ${techLevel}. Rugged components for the adventurous explorer.`;
         } else {
             if (techLevel <= 2) {
                 return `${name} weapons dealer. We carry basic armaments—for advanced weapons, try a higher-tech system.`;

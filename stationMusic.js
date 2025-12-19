@@ -23,7 +23,7 @@ class StationMusicManager {
     constructor() {
         this.isPlaying = false;
         this.isInitialized = false;
-        
+
         // Audio components (p5.sound)
         this.osc = null;
         this.osc2 = null; // Secondary oscillator for harmonies/drones
@@ -32,7 +32,7 @@ class StationMusicManager {
         this.reverb = null;
         this.filter = null;
         this.masterGain = null;
-        
+
         // Melody state
         this.melody = [];        // Main melodic phrase (composed, not random)
         this.harmony = [];       // Secondary harmony notes
@@ -41,13 +41,13 @@ class StationMusicManager {
         this.frameCounter = 0;
         this.noteInterval = 30;  // Frames between notes (SLOW - about 0.5 sec at 60fps)
         this.restProbability = 0.15; // Chance of silence for breathing room
-        
+
         // Volume control
         this.baseVolume = 0.5;  // Keep it subtle as background music
         this.currentVolume = 0;
         this.targetVolume = 0;
         this.fadeSpeed = 0.05;
-        
+
         // Default fade-out duration (ms) - single editable variable above
         this.fadeOutMs = STATION_MUSIC_FADE_OUT_MS;
 
@@ -55,7 +55,7 @@ class StationMusicManager {
         this.stationType = 'standard';
         this.theme = null;
     }
-    
+
     /**
      * Musical themes for each station type
      * Each theme defines: scale, motifs, tempo feel, harmonic character
@@ -78,7 +78,7 @@ class StationMusicManager {
                 attackTime: 0.15,
                 releaseTime: 0.8,
             },
-            
+
             // Military: Austere, minor, march-like
             military: {
                 baseNote: 40, // E2
@@ -95,7 +95,7 @@ class StationMusicManager {
                 attackTime: 0.05,
                 releaseTime: 0.4,
             },
-            
+
             // Agricultural: Pastoral, folk-like, pentatonic
             agricultural: {
                 baseNote: 52, // E3
@@ -112,7 +112,7 @@ class StationMusicManager {
                 attackTime: 0.12,
                 releaseTime: 0.6,
             },
-            
+
             // Industrial: Deep, mechanical, repetitive
             industrial: {
                 baseNote: 33, // A1
@@ -129,7 +129,7 @@ class StationMusicManager {
                 attackTime: 0.02,
                 releaseTime: 0.3,
             },
-            
+
             // Mining: Cavernous, sparse, deep echoes
             mining: {
                 baseNote: 28, // E1 - very low
@@ -146,7 +146,7 @@ class StationMusicManager {
                 attackTime: 0.08,
                 releaseTime: 1.2,    // Long echo tail
             },
-            
+
             // Tourism: Bright, welcoming, major arpeggios
             tourism: {
                 baseNote: 55, // G3
@@ -163,7 +163,7 @@ class StationMusicManager {
                 attackTime: 0.08,
                 releaseTime: 0.5,
             },
-            
+
             // Refinery: Harsh, industrial, slightly dissonant
             refinery: {
                 // Shifted to mid-range and opened filter so it's audible
@@ -183,9 +183,9 @@ class StationMusicManager {
                 volumeMultiplier: 1.15, // Slightly louder than other themes
                 envelope2Range: 0.7,    // Stronger harmony/drone for presence
             },
-            
+
             // Post Human: Ethereal, high, glassy textures
-            posthuman: {
+            'post human': {
                 baseNote: 65, // F4 - high register
                 scale: [0, 2, 4, 6, 7, 9, 11], // Lydian (dreamy)
                 motifs: [
@@ -200,7 +200,41 @@ class StationMusicManager {
                 attackTime: 0.2,
                 releaseTime: 1.0,
             },
-            
+
+            // Offworld: Balanced, spacious, optimistic
+            offworld: {
+                baseNote: 50, // D3
+                scale: [0, 2, 4, 7, 9, 12], // Major pentatonic / mixolydian hint
+                motifs: [
+                    [0, 7, 12, 7, 0, -5, 0],      // Spacious leap
+                    [12, 9, 7, 4, 2, 0],          // Gentle horizon
+                    [0, 4, 7, 12, 14, 12, 7, 4],  // Expansive rise
+                    [7, 9, 12, 14, 12, 9, 7],     // Optimistic shimmer
+                ],
+                harmonyInterval: 5, // Perfect fourth
+                noteInterval: 32,   // Balanced tempo
+                filterFreq: 2200,   // Clear and open
+                attackTime: 0.1,
+                releaseTime: 0.7,
+            },
+
+            // Service: Reliable, standard, efficient
+            service: {
+                baseNote: 48, // C3
+                scale: [0, 2, 4, 5, 7, 9], // Major hexatonic
+                motifs: [
+                    [0, 2, 4, 5, 7, 4, 2, 0],     // Reliable cycle
+                    [7, 5, 4, 2, 0],              // Standard descent
+                    [4, 5, 7, 9, 7, 5, 4],        // Efficient pattern
+                    [0, 7, 9, 7, 0],              // Simple service call
+                ],
+                harmonyInterval: 12, // Octave
+                noteInterval: 30,    // Standard pace
+                filterFreq: 1800,    // Balanced
+                attackTime: 0.08,
+                releaseTime: 0.4,
+            },
+
             // Alien: Microtonal feel, otherworldly
             alien: {
                 baseNote: 50, // D3
@@ -217,7 +251,7 @@ class StationMusicManager {
                 attackTime: 0.1,
                 releaseTime: 0.7,
             },
-            
+
             // Separatist: Tense, minor, suspenseful
             separatist: {
                 baseNote: 43, // G2
@@ -234,7 +268,7 @@ class StationMusicManager {
                 attackTime: 0.06,
                 releaseTime: 0.5,
             },
-            
+
             // Standard: Neutral, ambient, calming
             standard: {
                 baseNote: 48, // C3
@@ -253,42 +287,42 @@ class StationMusicManager {
             },
         };
     }
-    
+
     /**
      * Initialize audio components - must be called after p5.sound is ready
      * and after user interaction (to unlock AudioContext)
      */
     init() {
         if (this.isInitialized) return true;
-        
+
         // Check if p5.sound is available
         if (typeof p5 === 'undefined' || typeof p5.SinOsc === 'undefined') {
             console.warn('StationMusicManager: p5.sound not available');
             return false;
         }
-        
+
         try {
             // Create primary oscillator - triangle wave for soft, ambient melody
             this.osc = new p5.TriOsc();
-            
+
             // Create secondary oscillator - sine wave for harmony/drone (even softer)
             this.osc2 = new p5.SinOsc();
-            
+
             // Create envelope with slow attack for smooth melodic notes
             this.envelope = new p5.Envelope();
             this.envelope.setADSR(0.1, 0.15, 0.5, 0.6); // Slow attack, long release
             this.envelope.setRange(1, 0);
-            
+
             // Create secondary envelope for harmony (even slower, more pad-like)
             this.envelope2 = new p5.Envelope();
             this.envelope2.setADSR(0.3, 0.2, 0.6, 0.8); // Very slow, drone-like
             this.envelope2.setRange(0.4, 0); // Quieter than main melody
-            
+
             // Create low-pass filter to soften the sound
             this.filter = new p5.LowPass();
             this.filter.freq(2000);
             this.filter.res(1.5);
-            
+
             // Connect both oscillators to the filter
             this.osc.disconnect();
             this.osc.connect(this.filter);
@@ -306,7 +340,7 @@ class StationMusicManager {
 
             // Start muted until `start()`/update() ramps volume
             try { this.masterGain.amp(0); } catch (e) { /* ignore */ }
-            
+
             this.isInitialized = true;
             console.log('StationMusicManager: Initialized successfully');
             return true;
@@ -315,7 +349,7 @@ class StationMusicManager {
             return false;
         }
     }
-    
+
     /**
      * Generate a melody based on the station's theme
      * Uses composed motifs with subtle variations rather than random notes
@@ -326,17 +360,17 @@ class StationMusicManager {
     generateMelody(options = {}) {
         const stationType = (options.stationType || 'standard').toLowerCase();
         const themes = StationMusicManager.STATION_THEMES;
-        
+
         // Get theme for this station type, fallback to standard
         this.theme = themes[stationType] || themes.standard;
         this.stationType = stationType;
-        
+
         // Set timing and filter based on theme
         this.noteInterval = this.theme.noteInterval;
         if (this.filter) {
             this.filter.freq(this.theme.filterFreq);
         }
-        
+
         // Set envelope characteristics based on theme
         if (this.envelope) {
             this.envelope.setADSR(
@@ -361,25 +395,25 @@ class StationMusicManager {
                 try { this.envelope2.setRange(0.4, 0); } catch (e) { /* ignore */ }
             }
         }
-        
+
         // Build the full melody by selecting and combining motifs
         this.melody = [];
         this.harmony = [];
-        
+
         // Select 2-3 motifs and combine them into a longer phrase
         const numMotifs = 2 + Math.floor(Math.random() * 2);
         const usedMotifs = [];
-        
+
         for (let i = 0; i < numMotifs; i++) {
             // Pick a motif (avoid immediate repetition)
             let motifIndex;
             do {
                 motifIndex = Math.floor(Math.random() * this.theme.motifs.length);
             } while (usedMotifs.length > 0 && motifIndex === usedMotifs[usedMotifs.length - 1] && this.theme.motifs.length > 1);
-            
+
             usedMotifs.push(motifIndex);
             const motif = this.theme.motifs[motifIndex];
-            
+
             // Add each note from the motif, converting scale degrees to MIDI notes
             for (const degree of motif) {
                 if (degree === null) {
@@ -390,20 +424,20 @@ class StationMusicManager {
                     // Convert scale degree to actual note
                     const midiNote = this.scaleToMidi(degree, this.theme.baseNote, this.theme.scale);
                     this.melody.push(midiNote);
-                    
+
                     // Add harmony note (interval below the melody)
                     const harmonyNote = midiNote - this.theme.harmonyInterval;
                     this.harmony.push(harmonyNote);
                 }
             }
-            
+
             // Add a brief rest between motifs (except after last one)
             if (i < numMotifs - 1) {
                 this.melody.push(null);
                 this.harmony.push(null);
             }
         }
-        
+
         // Tech level can add subtle octave doubling on some notes
         const techLevel = options.techLevel || 5;
         if (techLevel > 7) {
@@ -421,14 +455,14 @@ class StationMusicManager {
                 }
             }
         }
-        
+
         // Reset playback position
         this.noteIndex = 0;
         this.phraseIndex = 0;
-        
+
         console.log(`StationMusicManager: Generated ${this.melody.length}-note melody for ${stationType} station`);
     }
-    
+
     /**
      * Convert a scale degree to a MIDI note number
      * @param {number} degree - Scale degree (can be negative or > octave)
@@ -438,14 +472,14 @@ class StationMusicManager {
      */
     scaleToMidi(degree, baseNote, scale) {
         const scaleLength = scale.length;
-        
+
         // Handle octaves
         const octaves = Math.floor(degree / scaleLength);
         const withinOctave = ((degree % scaleLength) + scaleLength) % scaleLength;
-        
+
         return baseNote + (octaves * 12) + scale[withinOctave];
     }
-    
+
     /**
      * Start playing station music
      * @param {object} stationInfo - Information about the current station
@@ -455,15 +489,15 @@ class StationMusicManager {
             console.warn('StationMusicManager: Cannot start - initialization failed');
             return;
         }
-        
+
         if (this.isPlaying) return;
-        
+
         // Generate new melody based on station type
         this.generateMelody({
             stationType: stationInfo.stationType || stationInfo.economyType,
             techLevel: stationInfo.techLevel
         });
-        
+
         // Start oscillators
         try {
             this.osc.start();
@@ -478,7 +512,7 @@ class StationMusicManager {
             console.error('StationMusicManager: Error starting music:', e);
         }
     }
-    
+
     /**
      * Stop playing station music with fade out
      * @param {number} fadeMs - Optional fade-out duration in milliseconds (default 600)
@@ -499,7 +533,7 @@ class StationMusicManager {
             try {
                 this.masterGain.amp(0, fadeSec);
             } catch (e) {
-                try { this.masterGain.amp(0); } catch (_) {}
+                try { this.masterGain.amp(0); } catch (_) { }
             }
         }
 
@@ -522,29 +556,29 @@ class StationMusicManager {
 
         console.log('StationMusicManager: Music stopped (fade ' + fadeMs + 'ms)');
     }
-    
+
     /**
      * Update the music - call this every frame when docked
      */
     update() {
         if (!this.isPlaying || !this.isInitialized) return;
-        
+
         // Smooth volume transitions
         if (this.currentVolume < this.targetVolume) {
             this.currentVolume = Math.min(this.currentVolume + this.fadeSpeed, this.targetVolume);
         } else if (this.currentVolume > this.targetVolume) {
             this.currentVolume = Math.max(this.currentVolume - this.fadeSpeed, this.targetVolume);
         }
-        
+
         // Update master gain
         if (this.masterGain) {
             try {
                 this.masterGain.amp(this.currentVolume, 0.05);
             } catch (e) {
-                try { this.masterGain.amp(this.currentVolume); } catch (_) {}
+                try { this.masterGain.amp(this.currentVolume); } catch (_) { }
             }
         }
-        
+
         // Play notes at interval (slower = more ambient)
         this.frameCounter++;
         if (this.frameCounter >= this.noteInterval) {
@@ -552,21 +586,21 @@ class StationMusicManager {
             this.playNextNote();
         }
     }
-    
+
     /**
      * Play the next note in the melodic sequence
      */
     playNextNote() {
         if (!this.osc || !this.envelope || this.melody.length === 0) return;
-        
+
         try {
             const melodyNote = this.melody[this.noteIndex];
             const harmonyNote = this.harmony[this.noteIndex];
-            
+
             // Handle rests (null notes) - just advance without playing
             if (melodyNote === null) {
                 this.noteIndex = (this.noteIndex + 1) % this.melody.length;
-                
+
                 // When we loop back to start, maybe regenerate for variety
                 if (this.noteIndex === 0) {
                     this.phraseIndex++;
@@ -577,22 +611,22 @@ class StationMusicManager {
                 }
                 return;
             }
-            
+
             // Play the melody note
             const melodyFreq = this.midiToFreq(melodyNote);
             this.osc.freq(melodyFreq);
             this.envelope.play(this.osc, 0, 0.15);
-            
+
             // Play harmony note (if we have the second oscillator and it's not null)
             if (this.osc2 && this.envelope2 && harmonyNote !== null) {
                 const harmonyFreq = this.midiToFreq(harmonyNote);
                 this.osc2.freq(harmonyFreq);
                 this.envelope2.play(this.osc2, 0, 0.1);
             }
-            
+
             // Advance to next note
             this.noteIndex = (this.noteIndex + 1) % this.melody.length;
-            
+
             // When we loop back to start, maybe regenerate for variety
             if (this.noteIndex === 0) {
                 this.phraseIndex++;
@@ -605,7 +639,7 @@ class StationMusicManager {
             console.error('StationMusicManager: Error playing note:', e);
         }
     }
-    
+
     /**
      * Convert MIDI note number to frequency
      * @param {number} midiNote - MIDI note number (0-127)
@@ -618,7 +652,7 @@ class StationMusicManager {
         }
         return 440 * Math.pow(2, (midiNote - 69) / 12);
     }
-    
+
     /**
      * Set the music volume
      * @param {number} volume - Volume level (0-1)
@@ -632,13 +666,13 @@ class StationMusicManager {
             }
         }
     }
-    
+
     /**
      * Clean up all audio resources
      */
     cleanup() {
         this.stop();
-        
+
         try {
             if (this.osc) {
                 this.osc.disconnect();
@@ -657,7 +691,7 @@ class StationMusicManager {
                 this.reverb = null;
             }
             if (this.masterGain) {
-                try { this.masterGain.disconnect(); } catch (_) {}
+                try { this.masterGain.disconnect(); } catch (_) { }
                 this.masterGain = null;
             }
             this.envelope = null;
@@ -665,7 +699,7 @@ class StationMusicManager {
         } catch (e) {
             // Ignore cleanup errors
         }
-        
+
         this.isInitialized = false;
         console.log('StationMusicManager: Cleaned up');
     }

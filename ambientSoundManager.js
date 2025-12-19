@@ -14,10 +14,10 @@ class AmbientSoundManager {
         this.minVolume = 0.01; // Minimum volume threshold
         this.isDocked = false; // Track docked state
         this.dockedVolumeScale = 0.01; // Centralized docked attenuation
-        
+
         this.initAudioContext();
     }
-    
+
     /**
      * Initialize the shared audio context
      */
@@ -25,11 +25,11 @@ class AmbientSoundManager {
         if (typeof window !== 'undefined') {
             // Reuse the same AudioContext from SoundManager
             if (!window._eliteAudioContext) {
-                window._eliteAudioContext = window.AudioContext ? 
+                window._eliteAudioContext = window.AudioContext ?
                     new window.AudioContext() : new window.webkitAudioContext();
             }
             this.audioContext = window._eliteAudioContext;
-            
+
             // Create master gain node for all ambient sounds
             this.masterGain = this.audioContext.createGain();
             this.masterGain.gain.value = this.globalVolume;
@@ -87,7 +87,7 @@ class AmbientSoundManager {
         }
         return impulse;
     }
-    
+
     /**
      * Create a complex ambient sound using multiple oscillators
      * @param {string} sourceId - Unique identifier for this sound source
@@ -96,7 +96,7 @@ class AmbientSoundManager {
      */
     createAmbientSound(sourceId, profile) {
         if (!this.audioContext || !this.enabled) return null;
-        
+
         // Handle AudioContext state
         if (this.audioContext.state === 'suspended') {
             try {
@@ -109,12 +109,12 @@ class AmbientSoundManager {
             console.warn('AudioContext is closed, cannot create ambient sound');
             return null;
         }
-        
+
         // Remove existing sound if it exists
         if (this.activeSources.has(sourceId)) {
             this.removeAmbientSound(sourceId);
         }
-        
+
         const soundConfig = {
             id: sourceId,
             profile: profile,
@@ -129,29 +129,29 @@ class AmbientSoundManager {
             lfoOsc: null,
             modulationGains: []
         };
-        
+
         // Create oscillator layers based on profile
         for (let layer of profile.layers) {
             const osc = this.audioContext.createOscillator();
             const layerGain = this.audioContext.createGain();
-            
+
             osc.type = layer.type || 'sine';
             osc.frequency.value = layer.frequency;
-            
+
             // Add detune if specified
             if (layer.detune) {
                 osc.detune.value = layer.detune;
             }
-            
+
             layerGain.gain.value = layer.volume || 0.3;
-            
+
             // Connect: oscillator -> layer gain -> main gain -> master gain
             osc.connect(layerGain);
             layerGain.connect(soundConfig.mainGain);
-            
+
             soundConfig.oscillators.push(osc);
             soundConfig.gains.push(layerGain);
-            
+
             // Start the oscillator
             osc.start();
         }
@@ -188,7 +188,7 @@ class AmbientSoundManager {
                 console.warn('AmbientSoundManager: failed to create LFO texture', e);
             }
         }
-        
+
         // Connect main gain to master
         soundConfig.mainGain.gain.value = 0; // Start muted, will be updated by distance
         // Routing: main -> panner -> master (dry)
@@ -223,11 +223,11 @@ class AmbientSoundManager {
         } catch (e) {
             soundConfig.delaySend = null;
         }
-        
+
         this.activeSources.set(sourceId, soundConfig);
         return soundConfig;
     }
-    
+
     /**
      * Remove an ambient sound and clean up resources
      * @param {string} sourceId - ID of the sound to remove
@@ -235,7 +235,7 @@ class AmbientSoundManager {
     removeAmbientSound(sourceId) {
         const soundConfig = this.activeSources.get(sourceId);
         if (!soundConfig) return;
-        
+
         try {
             // Stop and disconnect all oscillators
             for (let osc of soundConfig.oscillators) {
@@ -246,7 +246,7 @@ class AmbientSoundManager {
                     // Oscillator may already be stopped
                 }
             }
-            
+
             // Disconnect all gain nodes
             for (let gain of soundConfig.gains) {
                 try {
@@ -255,7 +255,7 @@ class AmbientSoundManager {
                     // Already disconnected
                 }
             }
-            
+
             // Disconnect main gain
             try {
                 soundConfig.mainGain.disconnect();
@@ -267,24 +267,24 @@ class AmbientSoundManager {
                 if (soundConfig.panner) {
                     soundConfig.panner.disconnect();
                 }
-            } catch (e) {}
+            } catch (e) { }
 
             // Disconnect effect sends
             try {
                 if (soundConfig.reverbSend) soundConfig.reverbSend.disconnect();
-            } catch (e) {}
+            } catch (e) { }
             try {
                 if (soundConfig.delaySend) soundConfig.delaySend.disconnect();
-            } catch (e) {}
+            } catch (e) { }
             // Stop and disconnect any LFO texture nodes
             try {
                 if (soundConfig.lfoOsc) {
                     try {
                         soundConfig.lfoOsc.stop();
-                    } catch (e) {}
+                    } catch (e) { }
                     try {
                         soundConfig.lfoOsc.disconnect();
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             } catch (e) {
                 // ignore
@@ -293,34 +293,34 @@ class AmbientSoundManager {
             for (let mg of soundConfig.modulationGains || []) {
                 try {
                     mg.disconnect();
-                } catch (e) {}
+                } catch (e) { }
             }
         } catch (e) {
             console.warn(`Error cleaning up ambient sound ${sourceId}:`, e);
         }
-        
+
         this.activeSources.delete(sourceId);
     }
-    
+
     /**
      * Update all ambient sound volumes based on player position
      * @param {p5.Vector} playerPos - Player's current position
      */
     updateSoundVolumes(playerPos) {
         if (!this.audioContext || !playerPos || !this.enabled) return;
-        
+
         for (let [sourceId, soundConfig] of this.activeSources) {
             if (!soundConfig.position) continue;
-            
+
             const distance = p5.Vector.dist(playerPos, soundConfig.position);
-            
+
             // Calculate volume based on distance with falloff
             let volume = 0;
             if (distance < this.maxDistance) {
                 // Inverse square falloff with minimum threshold
                 const falloff = 1 - (distance / this.maxDistance);
                 volume = soundConfig.baseVolume * Math.pow(falloff, 2);
-                
+
                 // Apply minimum threshold
                 if (volume < this.minVolume) {
                     volume = 0;
@@ -351,7 +351,7 @@ class AmbientSoundManager {
                         panParam.setValueAtTime(panParam.value || 0, t);
                         panParam.linearRampToValueAtTime(pan, t + 0.12);
                     } catch (e) {
-                        try { panParam.value = pan; } catch (_) {}
+                        try { panParam.value = pan; } catch (_) { }
                     }
                 }
             } catch (e) {
@@ -391,7 +391,7 @@ class AmbientSoundManager {
             }
         }
     }
-    
+
     /**
      * Set the docked state (mutes external sounds when docked)
      * @param {boolean} docked - Whether the player is docked
@@ -416,7 +416,7 @@ class AmbientSoundManager {
             this._rampGain(gainParam, targetVolume, rampDuration);
         }
     }
-    
+
     /**
      * Clean up all ambient sounds
      */
@@ -427,7 +427,7 @@ class AmbientSoundManager {
         }
         this.activeSources.clear();
     }
-    
+
     /**
      * Enable or disable ambient sounds
      * @param {boolean} enabled - Whether ambient sounds should be enabled
@@ -438,7 +438,7 @@ class AmbientSoundManager {
             this.cleanup();
         }
     }
-    
+
     /**
      * Get predefined sound profile for a solar system object
      * @param {string} objectType - Type of object (sun, station, planet, jumpgate)
@@ -477,7 +477,7 @@ class AmbientSoundManager {
                         ]
                     };
                 }
-                return { baseVolume: 0.28, layers: [ { type: 'sine', frequency: 90, volume: 0.3 } ] };
+                return { baseVolume: 0.28, layers: [{ type: 'sine', frequency: 90, volume: 0.3 }] };
             }
 
             case 'storm': {
@@ -512,7 +512,7 @@ class AmbientSoundManager {
                         ]
                     };
                 }
-                return { baseVolume: 0.34, layers: [ { type: 'sine', frequency: 120, volume: 0.3 } ] };
+                return { baseVolume: 0.34, layers: [{ type: 'sine', frequency: 120, volume: 0.3 }] };
             }
             case 'sun':
                 return {
@@ -524,7 +524,7 @@ class AmbientSoundManager {
                         { type: 'triangle', frequency: 30, volume: 0.2 } // Sub-bass vibration
                     ]
                 };
-                
+
             case 'station':
                 const stationType = (params.type || 'standard').toLowerCase();
                 switch (stationType) {
@@ -597,7 +597,7 @@ class AmbientSoundManager {
                             layers: [
                                 { type: 'sine', frequency: 110, volume: 0.4 }, // Pleasant ambient
                                 { type: 'triangle', frequency: 150, volume: 0.3, detune: 3 }, // Melodic harmony
-                                { type: 'sine', frequency: 85, volume: 0.35} // Comforting base
+                                { type: 'sine', frequency: 85, volume: 0.35 } // Comforting base
                             ]
                         };
                     case 'refinery':
@@ -612,7 +612,7 @@ class AmbientSoundManager {
                                 { type: 'triangle', frequency: 30, volume: 0.3 } // Low hiss
                             ]
                         };
-                    case 'posthuman':
+                    case 'post human':
                         return {
                             baseVolume: 0.4,
                             texture: true,
@@ -622,6 +622,30 @@ class AmbientSoundManager {
                                 { type: 'sine', frequency: 150, volume: 0.4 }, // Clean electronic
                                 { type: 'triangle', frequency: 300, volume: 0.3, detune: 8 }, // Digital harmonics
                                 { type: 'sine', frequency: 75, volume: 0.35, detune: -5 } // Subtle base
+                            ]
+                        };
+                    case 'offworld':
+                        return {
+                            baseVolume: 0.38,
+                            texture: true,
+                            lfoFreq: 0.5,
+                            lfoDepthFactor: 0.08,
+                            layers: [
+                                { type: 'sine', frequency: 90, volume: 0.4 }, // Open space hum
+                                { type: 'triangle', frequency: 180, volume: 0.3, detune: 4 }, // Structural resonance
+                                { type: 'sine', frequency: 45, volume: 0.35 } // Distant drone
+                            ]
+                        };
+                    case 'service':
+                        return {
+                            baseVolume: 0.35,
+                            texture: true,
+                            lfoFreq: 0.6,
+                            lfoDepthFactor: 0.09,
+                            layers: [
+                                { type: 'sine', frequency: 120, volume: 0.4 }, // Electronic hum
+                                { type: 'triangle', frequency: 60, volume: 0.3, detune: -3 }, // Life support
+                                { type: 'sine', frequency: 180, volume: 0.2, detune: 5 } // High tech whine
                             ]
                         };
                     case 'imperial':
@@ -660,7 +684,7 @@ class AmbientSoundManager {
                             ]
                         };
                 }
-                
+
             case 'jumpgate':
                 return {
                     baseVolume: 0.5,
@@ -671,20 +695,20 @@ class AmbientSoundManager {
                         { type: 'sine', frequency: 450, volume: 0.1, detune: -15 } // High frequency sparkle
                     ]
                 };
-                
+
             case 'planet':
                 // Customize planet sound based on color and rings
                 const hasRings = params.hasRings || false;
                 const colorValue = params.colorValue || 150; // 0-255, affects frequency
-                
+
                 // Map color to frequency range (100-200 Hz)
                 const baseFreq = 100 + (colorValue / 255) * 100;
-                
+
                 const layers = [
                     { type: 'sine', frequency: baseFreq, volume: 0.3 }, // Atmospheric hum
                     { type: 'triangle', frequency: baseFreq * 0.5, volume: 0.2 } // Deep resonance
                 ];
-                
+
                 // Add ring harmonics if planet has rings
                 if (hasRings) {
                     layers.push(
@@ -692,12 +716,12 @@ class AmbientSoundManager {
                         { type: 'sine', frequency: baseFreq * 2, volume: 0.1, detune: -5 }
                     );
                 }
-                
+
                 return {
                     baseVolume: 0.35,
                     layers: layers
                 };
-                
+
             default:
                 return {
                     baseVolume: 0.3,
