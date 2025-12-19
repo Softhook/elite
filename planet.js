@@ -1563,16 +1563,16 @@ class Planet {
             }
         }
 
-        // 7. SOLAR COLLECTOR ARRAYS (Dyson Swarm elements) - GOLDEN YELLOW
-        if ((featureRand * 47.3) % 1 > 0.75) {
-            const numCollectors = Math.floor(random(4, 8));
+        // 7. SOLAR COLLECTOR ARRAYS (Dyson Swarm elements) - GOLD/ORANGE/WHITE
+        if ((featureRand * 47.3) % 1 > 0.7) {
+            const numCollectors = Math.floor(random(3, 6));
             for (let sc = 0; sc < numCollectors; sc++) {
                 const scAngle = (sc / numCollectors) * TWO_PI_CONST + (featureRand * 3.14);
-                const scDist = random(r * 0.4, r * 0.75);
+                const scDist = random(r * 0.3, r * 0.7);
                 const scX = Math.cos(scAngle) * scDist;
                 const scY = Math.sin(scAngle) * scDist;
 
-                if (scX * scX + scY * scY > r * r * 0.85) continue;
+                if (scX * scX + scY * scY > r * r * 0.8) continue;
 
                 const scLimbFactor = this._getLimbFactor(scX, scY);
                 if (scLimbFactor < 0.2) continue;
@@ -1581,47 +1581,76 @@ class Planet {
                 pg.push();
                 pg.translate(bufferCenter + scX, bufferCenter + scY);
 
-                // Golden collector panels - hexagonal arrangement
-                const panelSize = bandHeight * random(1.5, 2.5) * scScale;
-                pg.stroke(255, 200, 50, Math.round(200 * scLimbFactor));
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * scScale));
+                // MUCH LARGER - multi-ring collector array
+                const panelSize = bandHeight * random(6, 10) * scScale;
+
+                // Outer collection ring - bright gold
+                pg.stroke(255, 200, 50, Math.round(220 * scLimbFactor));
+                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * scScale));
                 pg.noFill();
+                pg.ellipse(0, 0, panelSize * 2, panelSize * 2);
 
-                // Draw hexagonal panel
-                pg.beginShape();
-                for (let h = 0; h < 6; h++) {
-                    const hAngle = (h / 6) * TWO_PI_CONST;
-                    pg.vertex(Math.cos(hAngle) * panelSize, Math.sin(hAngle) * panelSize);
+                // Middle ring - orange
+                pg.stroke(255, 140, 30, Math.round(200 * scLimbFactor));
+                pg.strokeWeight(Math.max(0.6, bandHeight * 0.4 * scScale));
+                pg.ellipse(0, 0, panelSize * 1.4, panelSize * 1.4);
+
+                // Inner ring - deep amber
+                pg.stroke(200, 120, 20, Math.round(180 * scLimbFactor));
+                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * scScale));
+                pg.ellipse(0, 0, panelSize * 0.8, panelSize * 0.8);
+
+                // Hexagonal panel array around the rings
+                for (let hp = 0; hp < 6; hp++) {
+                    const hpAngle = (hp / 6) * TWO_PI_CONST;
+                    const hpX = Math.cos(hpAngle) * panelSize * 0.9;
+                    const hpY = Math.sin(hpAngle) * panelSize * 0.9;
+                    const hexSize = bandHeight * 1.5 * scScale;
+
+                    pg.stroke(255, 220, 100, Math.round(180 * scLimbFactor));
+                    pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * scScale));
+                    pg.beginShape();
+                    for (let h = 0; h < 6; h++) {
+                        const hAngle = (h / 6) * TWO_PI_CONST;
+                        pg.vertex(hpX + Math.cos(hAngle) * hexSize, hpY + Math.sin(hAngle) * hexSize);
+                    }
+                    pg.endShape(CLOSE);
                 }
-                pg.endShape(CLOSE);
 
-                // Inner bright core - golden glow
+                // Power conduit lines - white/yellow
+                pg.stroke(255, 255, 200, Math.round(160 * scLimbFactor));
+                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * scScale));
+                for (let v = 0; v < 12; v++) {
+                    const vAngle = (v / 12) * TWO_PI_CONST;
+                    pg.line(
+                        Math.cos(vAngle) * panelSize * 0.3, Math.sin(vAngle) * panelSize * 0.3,
+                        Math.cos(vAngle) * panelSize * 1.1, Math.sin(vAngle) * panelSize * 1.1
+                    );
+                }
+
+                // Central power core - brilliant white
                 pg.noStroke();
-                pg.fill(255, 220, 100, Math.round(180 * scLimbFactor));
-                pg.ellipse(0, 0, panelSize * 0.5, panelSize * 0.5);
+                pg.fill(255, 255, 220, Math.round(250 * scLimbFactor));
+                pg.ellipse(0, 0, panelSize * 0.4, panelSize * 0.4);
 
-                // Collector veins/lines
-                pg.stroke(255, 180, 30, Math.round(140 * scLimbFactor));
-                pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * scScale));
-                for (let v = 0; v < 3; v++) {
-                    const vAngle = (v / 3) * TWO_PI_CONST;
-                    pg.line(0, 0, Math.cos(vAngle) * panelSize * 0.9, Math.sin(vAngle) * panelSize * 0.9);
-                }
+                // Core glow
+                pg.fill(255, 200, 100, Math.round(100 * scLimbFactor));
+                pg.ellipse(0, 0, panelSize * 0.7, panelSize * 0.7);
 
                 pg.pop();
             }
         }
 
-        // 8. ORBITAL DEFENSE PLATFORMS - CYAN/BLUE
-        if ((featureRand * 61.9) % 1 > 0.8) {
-            const numDefense = Math.floor(random(3, 6));
+        // 8. ORBITAL DEFENSE PLATFORMS - CYAN/BLUE/RED/WHITE
+        if ((featureRand * 61.9) % 1 > 0.75) {
+            const numDefense = Math.floor(random(2, 5));
             for (let df = 0; df < numDefense; df++) {
                 const dfAngle = (df / numDefense) * TWO_PI_CONST + random(-0.2, 0.2);
-                const dfDist = random(r * 0.5, r * 0.85);
+                const dfDist = random(r * 0.4, r * 0.8);
                 const dfX = Math.cos(dfAngle) * dfDist;
                 const dfY = Math.sin(dfAngle) * dfDist;
 
-                if (dfX * dfX + dfY * dfY > r * r * 0.9) continue;
+                if (dfX * dfX + dfY * dfY > r * r * 0.85) continue;
 
                 const dfLimbFactor = this._getLimbFactor(dfX, dfY);
                 if (dfLimbFactor < 0.2) continue;
@@ -1630,45 +1659,86 @@ class Planet {
                 pg.push();
                 pg.translate(bufferCenter + dfX, bufferCenter + dfY);
 
-                // Cyan defense platform - triangular shape
-                const dfSize = bandHeight * random(2, 3) * dfScale;
-                pg.stroke(0, 220, 255, Math.round(220 * dfLimbFactor));
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * dfScale));
-                pg.noFill();
+                // MUCH LARGER layered defense complex
+                const dfSize = bandHeight * random(8, 12) * dfScale;
 
-                // Draw triangular defense platform
+                // Outer defensive perimeter - cyan hexagon
+                pg.stroke(0, 220, 255, Math.round(220 * dfLimbFactor));
+                pg.strokeWeight(Math.max(0.7, bandHeight * 0.4 * dfScale));
+                pg.noFill();
                 pg.beginShape();
-                for (let t = 0; t < 3; t++) {
-                    const tAngle = (t / 3) * TWO_PI_CONST - PI / 2;
+                for (let t = 0; t < 6; t++) {
+                    const tAngle = (t / 6) * TWO_PI_CONST;
                     pg.vertex(Math.cos(tAngle) * dfSize, Math.sin(tAngle) * dfSize);
                 }
                 pg.endShape(CLOSE);
 
-                // Bright cyan center
-                pg.noStroke();
-                pg.fill(100, 255, 255, Math.round(200 * dfLimbFactor));
-                pg.ellipse(0, 0, dfSize * 0.4, dfSize * 0.4);
+                // Inner triangle - electric blue
+                pg.stroke(50, 150, 255, Math.round(200 * dfLimbFactor));
+                pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * dfScale));
+                pg.beginShape();
+                for (let t = 0; t < 3; t++) {
+                    const tAngle = (t / 3) * TWO_PI_CONST - PI / 2;
+                    pg.vertex(Math.cos(tAngle) * dfSize * 0.6, Math.sin(tAngle) * dfSize * 0.6);
+                }
+                pg.endShape(CLOSE);
 
-                // Targeting beams extending outward
-                pg.stroke(0, 180, 220, Math.round(100 * dfLimbFactor));
+                // Weapon turrets at vertices - red hot
+                pg.noStroke();
+                for (let wt = 0; wt < 6; wt++) {
+                    const wtAngle = (wt / 6) * TWO_PI_CONST;
+                    const wtX = Math.cos(wtAngle) * dfSize;
+                    const wtY = Math.sin(wtAngle) * dfSize;
+
+                    // Turret base - dark blue
+                    pg.fill(30, 80, 150, Math.round(200 * dfLimbFactor));
+                    pg.ellipse(wtX, wtY, bandHeight * 1.5 * dfScale, bandHeight * 1.5 * dfScale);
+
+                    // Turret glow - red warning
+                    pg.fill(255, 50, 50, Math.round(180 * dfLimbFactor));
+                    pg.ellipse(wtX, wtY, bandHeight * 0.8 * dfScale, bandHeight * 0.8 * dfScale);
+                }
+
+                // Central command - white core
+                pg.fill(200, 240, 255, Math.round(220 * dfLimbFactor));
+                pg.ellipse(0, 0, dfSize * 0.35, dfSize * 0.35);
+
+                pg.fill(100, 255, 255, Math.round(180 * dfLimbFactor));
+                pg.ellipse(0, 0, dfSize * 0.2, dfSize * 0.2);
+
+                // Targeting beams extending outward - red lasers
+                pg.stroke(255, 80, 80, Math.round(150 * dfLimbFactor));
+                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * dfScale));
+                for (let b = 0; b < 3; b++) {
+                    const bAngle = (b / 3) * TWO_PI_CONST - PI / 2;
+                    const bLen = dfSize * 1.8;
+                    pg.line(
+                        Math.cos(bAngle) * dfSize * 0.3, Math.sin(bAngle) * dfSize * 0.3,
+                        Math.cos(bAngle) * bLen, Math.sin(bAngle) * bLen
+                    );
+                }
+
+                // Shield generator rings - cyan pulses
+                pg.noFill();
+                pg.stroke(0, 255, 255, Math.round(80 * dfLimbFactor));
                 pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * dfScale));
-                const beamLen = dfSize * 2.5;
-                pg.line(0, -dfSize, 0, -dfSize - beamLen);
+                pg.ellipse(0, 0, dfSize * 2.2, dfSize * 2.2);
+                pg.ellipse(0, 0, dfSize * 2.5, dfSize * 2.5);
 
                 pg.pop();
             }
         }
 
-        // 9. MASS DRIVER / RAILGUN ARRAYS - VIOLET/PURPLE
-        if ((featureRand * 73.1) % 1 > 0.82) {
-            const numRailguns = Math.floor(random(2, 5));
+        // 9. MASS DRIVER / RAILGUN ARRAYS - VIOLET/PURPLE/CYAN/WHITE
+        if ((featureRand * 73.1) % 1 > 0.78) {
+            const numRailguns = Math.floor(random(2, 4));
             for (let rg = 0; rg < numRailguns; rg++) {
                 const rgAngle = (featureRand * (rg + 1) * 31.7) % TWO_PI_CONST;
-                const rgDist = random(r * 0.5, r * 0.8);
+                const rgDist = random(r * 0.4, r * 0.75);
                 const rgX = Math.cos(rgAngle) * rgDist;
                 const rgY = Math.sin(rgAngle) * rgDist;
 
-                if (rgX * rgX + rgY * rgY > r * r * 0.9) continue;
+                if (rgX * rgX + rgY * rgY > r * r * 0.85) continue;
 
                 const rgLimbFactor = this._getLimbFactor(rgX, rgY);
                 if (rgLimbFactor < 0.2) continue;
@@ -1677,52 +1747,77 @@ class Planet {
                 pg.push();
                 pg.translate(bufferCenter + rgX, bufferCenter + rgY);
 
-                // Violet railgun barrel
-                const rgLen = bandHeight * random(4, 6) * rgScale;
-                const rgWidth = bandHeight * 0.6 * rgScale;
-                const barrelAngle = rgAngle + PI; // Point away from center
+                // MUCH LARGER railgun complex
+                const rgLen = bandHeight * random(12, 18) * rgScale;
+                const rgWidth = bandHeight * 1.5 * rgScale;
+                const barrelAngle = rgAngle + PI;
 
                 pg.push();
                 pg.rotate(barrelAngle);
 
-                // Main barrel - violet
-                pg.stroke(180, 80, 255, Math.round(200 * rgLimbFactor));
-                pg.strokeWeight(Math.max(0.5, rgWidth));
-                pg.line(0, 0, rgLen, 0);
+                // Main barrel - gradient violet to white at tip
+                pg.stroke(140, 60, 200, Math.round(220 * rgLimbFactor));
+                pg.strokeWeight(Math.max(1.0, rgWidth * 1.2));
+                pg.line(0, 0, rgLen * 0.6, 0);
 
-                // Magnetic rings along barrel - bright purple
-                pg.stroke(220, 150, 255, Math.round(180 * rgLimbFactor));
-                pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * rgScale));
-                for (let ring = 1; ring <= 3; ring++) {
-                    const ringX = rgLen * (ring / 4);
-                    pg.line(ringX, -rgWidth * 0.8, ringX, rgWidth * 0.8);
+                pg.stroke(180, 100, 255, Math.round(200 * rgLimbFactor));
+                pg.strokeWeight(Math.max(0.8, rgWidth));
+                pg.line(rgLen * 0.5, 0, rgLen * 0.85, 0);
+
+                pg.stroke(220, 180, 255, Math.round(180 * rgLimbFactor));
+                pg.strokeWeight(Math.max(0.6, rgWidth * 0.7));
+                pg.line(rgLen * 0.8, 0, rgLen, 0);
+
+                // Magnetic acceleration rings - cyan
+                pg.stroke(0, 255, 255, Math.round(200 * rgLimbFactor));
+                pg.strokeWeight(Math.max(0.5, bandHeight * 0.35 * rgScale));
+                for (let ring = 1; ring <= 6; ring++) {
+                    const ringX = rgLen * (ring / 7);
+                    pg.line(ringX, -rgWidth * 1.5, ringX, rgWidth * 1.5);
                 }
+
+                // Energy conduits along barrel - bright purple
+                pg.stroke(200, 100, 255, Math.round(150 * rgLimbFactor));
+                pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * rgScale));
+                pg.line(0, -rgWidth * 0.8, rgLen * 0.9, -rgWidth * 0.8);
+                pg.line(0, rgWidth * 0.8, rgLen * 0.9, rgWidth * 0.8);
 
                 pg.pop();
 
-                // Base structure
+                // Base power station - large complex
                 pg.noStroke();
-                pg.fill(150, 50, 200, Math.round(180 * rgLimbFactor));
-                pg.ellipse(0, 0, bandHeight * 1.2 * rgScale, bandHeight * 1.2 * rgScale);
+                // Outer glow - dark purple
+                pg.fill(100, 40, 150, Math.round(80 * rgLimbFactor));
+                pg.ellipse(0, 0, bandHeight * 6 * rgScale, bandHeight * 6 * rgScale);
 
-                // Charging glow
-                pg.fill(200, 100, 255, Math.round(100 * rgLimbFactor));
-                pg.ellipse(0, 0, bandHeight * 2.0 * rgScale, bandHeight * 2.0 * rgScale);
+                // Main base - medium purple
+                pg.fill(150, 70, 220, Math.round(200 * rgLimbFactor));
+                pg.ellipse(0, 0, bandHeight * 3.5 * rgScale, bandHeight * 3.5 * rgScale);
+
+                // Power core - bright white
+                pg.fill(230, 200, 255, Math.round(250 * rgLimbFactor));
+                pg.ellipse(0, 0, bandHeight * 1.8 * rgScale, bandHeight * 1.8 * rgScale);
+
+                // Muzzle flash at tip - white/cyan
+                pg.fill(200, 255, 255, Math.round(150 * rgLimbFactor));
+                const flashX = Math.cos(barrelAngle) * rgLen;
+                const flashY = Math.sin(barrelAngle) * rgLen;
+                pg.ellipse(flashX, flashY, bandHeight * 2 * rgScale, bandHeight * 2 * rgScale);
 
                 pg.pop();
             }
         }
 
-        // 10. FUSION POWER ARRAYS - BRIGHT ORANGE
-        if ((featureRand * 83.7) % 1 > 0.78) {
-            const numFusion = Math.floor(random(3, 6));
+        // 10. FUSION POWER ARRAYS - ORANGE/YELLOW/WHITE/BLUE
+        if ((featureRand * 83.7) % 1 > 0.72) {
+            const numFusion = Math.floor(random(2, 5));
             for (let fu = 0; fu < numFusion; fu++) {
                 const fuAngle = (featureRand * (fu + 3) * 17.9) % TWO_PI_CONST;
-                const fuDist = random(r * 0.35, r * 0.7);
+                const fuDist = random(r * 0.3, r * 0.65);
                 const fuX = Math.cos(fuAngle) * fuDist;
                 const fuY = Math.sin(fuAngle) * fuDist;
 
-                if (fuX * fuX + fuY * fuY > r * r * 0.85) continue;
+                if (fuX * fuX + fuY * fuY > r * r * 0.8) continue;
 
                 const fuLimbFactor = this._getLimbFactor(fuX, fuY);
                 if (fuLimbFactor < 0.2) continue;
@@ -1731,54 +1826,69 @@ class Planet {
                 pg.push();
                 pg.translate(bufferCenter + fuX, bufferCenter + fuY);
 
-                // Fusion reactor containment - ring shape
-                const fuSize = bandHeight * random(2.5, 4) * fuScale;
+                // MUCH LARGER tokamak fusion reactor
+                const fuSize = bandHeight * random(8, 12) * fuScale;
+
+                // Outer magnetic containment - deep orange
                 pg.noFill();
-                pg.stroke(255, 140, 30, Math.round(220 * fuLimbFactor));
+                pg.stroke(255, 100, 20, Math.round(220 * fuLimbFactor));
+                pg.strokeWeight(Math.max(1.0, bandHeight * 0.6 * fuScale));
+                pg.ellipse(0, 0, fuSize * 2.2, fuSize * 2.2);
+
+                // Secondary containment - bright orange
+                pg.stroke(255, 160, 50, Math.round(200 * fuLimbFactor));
+                pg.strokeWeight(Math.max(0.8, bandHeight * 0.45 * fuScale));
+                pg.ellipse(0, 0, fuSize * 1.6, fuSize * 1.6);
+
+                // Inner plasma ring - yellow
+                pg.stroke(255, 220, 80, Math.round(180 * fuLimbFactor));
                 pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * fuScale));
-                pg.ellipse(0, 0, fuSize * 1.8, fuSize * 1.8);
+                pg.ellipse(0, 0, fuSize * 1.0, fuSize * 1.0);
 
-                // Inner containment ring
-                pg.stroke(255, 180, 80, Math.round(180 * fuLimbFactor));
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * fuScale));
-                pg.ellipse(0, 0, fuSize, fuSize);
-
-                // Plasma core - hot white-orange center
+                // Plasma core - brilliant white with blue tint
                 pg.noStroke();
-                pg.fill(255, 240, 200, Math.round(250 * fuLimbFactor));
-                pg.ellipse(0, 0, fuSize * 0.4, fuSize * 0.4);
+                pg.fill(200, 220, 255, Math.round(100 * fuLimbFactor));
+                pg.ellipse(0, 0, fuSize * 0.8, fuSize * 0.8);
+                pg.fill(255, 250, 240, Math.round(250 * fuLimbFactor));
+                pg.ellipse(0, 0, fuSize * 0.5, fuSize * 0.5);
+                pg.fill(255, 255, 255, Math.round(255 * fuLimbFactor));
+                pg.ellipse(0, 0, fuSize * 0.25, fuSize * 0.25);
 
-                // Heat glow
-                pg.fill(255, 120, 30, Math.round(80 * fuLimbFactor));
-                pg.ellipse(0, 0, fuSize * 2.5, fuSize * 2.5);
-
-                // Power conduits radiating outward
-                pg.stroke(255, 160, 60, Math.round(140 * fuLimbFactor));
-                pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * fuScale));
-                for (let pc = 0; pc < 8; pc++) {
-                    const pcAngle = (pc / 8) * TWO_PI_CONST;
-                    const innerR = fuSize * 0.9;
-                    const outerR = fuSize * 1.5;
+                // Heat radiators - red/orange lines
+                pg.stroke(255, 80, 30, Math.round(160 * fuLimbFactor));
+                pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * fuScale));
+                for (let pc = 0; pc < 12; pc++) {
+                    const pcAngle = (pc / 12) * TWO_PI_CONST;
                     pg.line(
-                        Math.cos(pcAngle) * innerR, Math.sin(pcAngle) * innerR,
-                        Math.cos(pcAngle) * outerR, Math.sin(pcAngle) * outerR
+                        Math.cos(pcAngle) * fuSize * 0.55, Math.sin(pcAngle) * fuSize * 0.55,
+                        Math.cos(pcAngle) * fuSize * 1.3, Math.sin(pcAngle) * fuSize * 1.3
                     );
+                }
+
+                // Cooling stations - blue dots
+                pg.noStroke();
+                pg.fill(80, 180, 255, Math.round(200 * fuLimbFactor));
+                for (let cs = 0; cs < 8; cs++) {
+                    const csAngle = (cs / 8) * TWO_PI_CONST;
+                    const csX = Math.cos(csAngle) * fuSize * 1.1;
+                    const csY = Math.sin(csAngle) * fuSize * 1.1;
+                    pg.ellipse(csX, csY, bandHeight * 0.8 * fuScale, bandHeight * 0.8 * fuScale);
                 }
 
                 pg.pop();
             }
         }
 
-        // 11. BIODOME HABITATS - GREEN
-        if ((featureRand * 91.3) % 1 > 0.72) {
-            const numDomes = Math.floor(random(3, 7));
+        // 11. GEODESIC DOME CLUSTERS - GREEN/BLUE/YELLOW/WHITE
+        if ((featureRand * 91.3) % 1 > 0.68) {
+            const numDomes = Math.floor(random(2, 5));
             for (let bd = 0; bd < numDomes; bd++) {
                 const bdAngle = (featureRand * (bd + 2) * 29.3) % TWO_PI_CONST;
-                const bdDist = random(r * 0.3, r * 0.75);
+                const bdDist = random(r * 0.25, r * 0.7);
                 const bdX = Math.cos(bdAngle) * bdDist;
                 const bdY = Math.sin(bdAngle) * bdDist;
 
-                if (bdX * bdX + bdY * bdY > r * r * 0.85) continue;
+                if (bdX * bdX + bdY * bdY > r * r * 0.8) continue;
 
                 const bdLimbFactor = this._getLimbFactor(bdX, bdY);
                 if (bdLimbFactor < 0.2) continue;
@@ -1787,51 +1897,97 @@ class Planet {
                 pg.push();
                 pg.translate(bufferCenter + bdX, bufferCenter + bdY);
 
-                // Biodome - green tinted glass structure
-                const bdSize = bandHeight * random(2, 4) * bdScale;
+                // Cluster of interconnected geodesic domes
+                const clusterSize = bandHeight * random(10, 16) * bdScale;
 
-                // Dome outline - bright green
-                pg.stroke(80, 255, 120, Math.round(200 * bdLimbFactor));
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * bdScale));
+                // Central large dome - bright green outline with hexagonal pattern
+                const mainDomeR = clusterSize * 0.45;
+                pg.stroke(80, 220, 120, Math.round(220 * bdLimbFactor));
+                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * bdScale));
                 pg.noFill();
-                pg.arc(0, 0, bdSize * 2, bdSize * 2, PI, TWO_PI);
+                pg.ellipse(0, 0, mainDomeR * 2, mainDomeR * 2);
+
+                // Hexagonal glass panels on main dome
+                pg.stroke(100, 255, 150, Math.round(160 * bdLimbFactor));
+                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * bdScale));
+                for (let h = 0; h < 6; h++) {
+                    const hAngle = (h / 6) * TWO_PI_CONST;
+                    const nextAngle = ((h + 1) / 6) * TWO_PI_CONST;
+                    pg.line(
+                        Math.cos(hAngle) * mainDomeR * 0.5, Math.sin(hAngle) * mainDomeR * 0.5,
+                        Math.cos(hAngle) * mainDomeR, Math.sin(hAngle) * mainDomeR
+                    );
+                    pg.line(
+                        Math.cos(hAngle) * mainDomeR * 0.5, Math.sin(hAngle) * mainDomeR * 0.5,
+                        Math.cos(nextAngle) * mainDomeR * 0.5, Math.sin(nextAngle) * mainDomeR * 0.5
+                    );
+                }
 
                 // Interior glow - forest green
                 pg.noStroke();
-                pg.fill(50, 180, 80, Math.round(120 * bdLimbFactor));
-                pg.arc(0, 0, bdSize * 1.8, bdSize * 1.8, PI, TWO_PI);
+                pg.fill(50, 180, 90, Math.round(100 * bdLimbFactor));
+                pg.ellipse(0, 0, mainDomeR * 1.6, mainDomeR * 1.6);
 
-                // Vegetation patterns - darker green dots
-                pg.fill(30, 140, 50, Math.round(160 * bdLimbFactor));
-                const numVeg = Math.floor(random(5, 10));
-                for (let v = 0; v < numVeg; v++) {
-                    const vx = random(-bdSize * 0.8, bdSize * 0.8);
-                    const vy = random(-bdSize * 0.6, 0);
-                    pg.ellipse(vx, vy, bandHeight * 0.3 * bdScale, bandHeight * 0.3 * bdScale);
+                // Central atrium - bright white
+                pg.fill(200, 255, 220, Math.round(200 * bdLimbFactor));
+                pg.ellipse(0, 0, mainDomeR * 0.35, mainDomeR * 0.35);
+
+                // 4 smaller satellite domes around the main one
+                const satelliteR = mainDomeR * 0.5;
+                const satelliteDist = mainDomeR * 1.3;
+                for (let sd = 0; sd < 4; sd++) {
+                    const sdAngle = (sd / 4) * TWO_PI_CONST + PI / 4;
+                    const sdX = Math.cos(sdAngle) * satelliteDist;
+                    const sdY = Math.sin(sdAngle) * satelliteDist;
+
+                    // Satellite dome outline - teal
+                    pg.stroke(60, 200, 160, Math.round(200 * bdLimbFactor));
+                    pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * bdScale));
+                    pg.noFill();
+                    pg.ellipse(sdX, sdY, satelliteR * 2, satelliteR * 2);
+
+                    // Satellite inner glow
+                    pg.noStroke();
+                    pg.fill(70, 190, 130, Math.round(120 * bdLimbFactor));
+                    pg.ellipse(sdX, sdY, satelliteR * 1.5, satelliteR * 1.5);
+
+                    // Satellite core - varies color
+                    if (sd === 0) pg.fill(100, 180, 255, Math.round(180 * bdLimbFactor)); // Blue - water
+                    else if (sd === 1) pg.fill(40, 160, 60, Math.round(180 * bdLimbFactor)); // Dark green - forest
+                    else if (sd === 2) pg.fill(255, 220, 100, Math.round(180 * bdLimbFactor)); // Yellow - agricultural
+                    else pg.fill(180, 220, 200, Math.round(180 * bdLimbFactor)); // Grey-green - residential
+                    pg.ellipse(sdX, sdY, satelliteR * 0.6, satelliteR * 0.6);
+
+                    // Connecting walkway to main dome - white
+                    pg.stroke(180, 220, 190, Math.round(160 * bdLimbFactor));
+                    pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * bdScale));
+                    pg.line(
+                        Math.cos(sdAngle) * mainDomeR, Math.sin(sdAngle) * mainDomeR,
+                        sdX - Math.cos(sdAngle) * satelliteR, sdY - Math.sin(sdAngle) * satelliteR
+                    );
                 }
 
-                // Support struts
-                pg.stroke(100, 200, 120, Math.round(140 * bdLimbFactor));
-                pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * bdScale));
-                for (let s = 0; s < 5; s++) {
-                    const sAngle = PI + (s / 4) * PI;
-                    pg.line(0, 0, Math.cos(sAngle) * bdSize, Math.sin(sAngle) * bdSize);
-                }
+                // Solar collectors on top of main dome - gold
+                pg.noStroke();
+                pg.fill(255, 230, 100, Math.round(200 * bdLimbFactor));
+                pg.ellipse(0, -mainDomeR * 0.3, bandHeight * 1.0 * bdScale, bandHeight * 0.5 * bdScale);
+                pg.ellipse(mainDomeR * 0.4, -mainDomeR * 0.1, bandHeight * 0.6 * bdScale, bandHeight * 0.3 * bdScale);
+                pg.ellipse(-mainDomeR * 0.4, -mainDomeR * 0.1, bandHeight * 0.6 * bdScale, bandHeight * 0.3 * bdScale);
 
                 pg.pop();
             }
         }
 
-        // 12. QUANTUM COMMUNICATION RELAYS - ELECTRIC BLUE
-        if ((featureRand * 67.7) % 1 > 0.83) {
-            const numRelays = Math.floor(random(2, 5));
+        // 12. QUANTUM COMMUNICATION RELAYS - BLUE/PURPLE/WHITE/CYAN
+        if ((featureRand * 67.7) % 1 > 0.78) {
+            const numRelays = Math.floor(random(2, 4));
             for (let qr = 0; qr < numRelays; qr++) {
                 const qrAngle = (featureRand * (qr + 5) * 41.3) % TWO_PI_CONST;
-                const qrDist = random(r * 0.4, r * 0.8);
+                const qrDist = random(r * 0.35, r * 0.75);
                 const qrX = Math.cos(qrAngle) * qrDist;
                 const qrY = Math.sin(qrAngle) * qrDist;
 
-                if (qrX * qrX + qrY * qrY > r * r * 0.9) continue;
+                if (qrX * qrX + qrY * qrY > r * r * 0.85) continue;
 
                 const qrLimbFactor = this._getLimbFactor(qrX, qrY);
                 if (qrLimbFactor < 0.2) continue;
@@ -1840,50 +1996,69 @@ class Planet {
                 pg.push();
                 pg.translate(bufferCenter + qrX, bufferCenter + qrY);
 
-                // Relay tower - vertical line
-                const qrHeight = bandHeight * random(3, 5) * qrScale;
-                pg.stroke(50, 150, 255, Math.round(200 * qrLimbFactor));
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * qrScale));
-                pg.line(0, 0, 0, -qrHeight);
+                // MUCH LARGER relay complex
+                const qrHeight = bandHeight * random(10, 16) * qrScale;
+                const qrBase = bandHeight * 3 * qrScale;
 
-                // Dish at top - electric blue
+                // Main tower structure - gradient blue to purple
+                pg.stroke(40, 100, 200, Math.round(220 * qrLimbFactor));
+                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * qrScale));
+                pg.line(0, 0, 0, -qrHeight * 0.6);
+
+                pg.stroke(80, 80, 220, Math.round(200 * qrLimbFactor));
+                pg.strokeWeight(Math.max(0.6, bandHeight * 0.4 * qrScale));
+                pg.line(0, -qrHeight * 0.5, 0, -qrHeight);
+
+                // Main dish - large cyan parabolic
                 pg.noFill();
-                pg.stroke(100, 180, 255, Math.round(220 * qrLimbFactor));
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * qrScale));
-                pg.arc(0, -qrHeight, bandHeight * 2 * qrScale, bandHeight * 1.5 * qrScale, PI, TWO_PI);
+                pg.stroke(0, 255, 255, Math.round(240 * qrLimbFactor));
+                pg.strokeWeight(Math.max(0.7, bandHeight * 0.4 * qrScale));
+                pg.arc(0, -qrHeight, bandHeight * 5 * qrScale, bandHeight * 3.5 * qrScale, PI, TWO_PI);
 
-                // Transmission beam - bright pulse
-                pg.stroke(150, 220, 255, Math.round(100 * qrLimbFactor));
-                pg.strokeWeight(Math.max(0.3, bandHeight * 0.1 * qrScale));
-                pg.line(0, -qrHeight, 0, -qrHeight - bandHeight * 4 * qrScale);
+                // Secondary dishes - smaller, white
+                pg.stroke(200, 220, 255, Math.round(180 * qrLimbFactor));
+                pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * qrScale));
+                pg.arc(-bandHeight * 2 * qrScale, -qrHeight * 0.7, bandHeight * 2 * qrScale, bandHeight * 1.5 * qrScale, PI, TWO_PI);
+                pg.arc(bandHeight * 2 * qrScale, -qrHeight * 0.7, bandHeight * 2 * qrScale, bandHeight * 1.5 * qrScale, PI, TWO_PI);
 
-                // Base station glow
-                pg.noStroke();
-                pg.fill(80, 160, 255, Math.round(150 * qrLimbFactor));
-                pg.ellipse(0, 0, bandHeight * 1.2 * qrScale, bandHeight * 1.2 * qrScale);
+                // Transmission beams - purple laser
+                pg.stroke(180, 100, 255, Math.round(120 * qrLimbFactor));
+                pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * qrScale));
+                pg.line(0, -qrHeight, 0, -qrHeight - bandHeight * 6 * qrScale);
+                pg.line(0, -qrHeight, -bandHeight * 3 * qrScale, -qrHeight - bandHeight * 5 * qrScale);
+                pg.line(0, -qrHeight, bandHeight * 3 * qrScale, -qrHeight - bandHeight * 5 * qrScale);
 
-                // Signal waves
+                // Signal waves - expanding cyan rings
                 pg.noFill();
-                pg.stroke(100, 200, 255, Math.round(80 * qrLimbFactor));
+                pg.stroke(100, 255, 255, Math.round(60 * qrLimbFactor));
                 pg.strokeWeight(Math.max(0.2, bandHeight * 0.1 * qrScale));
-                for (let w = 1; w <= 3; w++) {
-                    pg.arc(0, -qrHeight, bandHeight * w * 1.2 * qrScale, bandHeight * w * 0.8 * qrScale, PI + 0.5, TWO_PI - 0.5);
+                for (let w = 1; w <= 4; w++) {
+                    pg.arc(0, -qrHeight, bandHeight * w * 2 * qrScale, bandHeight * w * 1.4 * qrScale, PI + 0.3, TWO_PI - 0.3);
                 }
+
+                // Base station complex - multi-level
+                pg.noStroke();
+                pg.fill(60, 100, 180, Math.round(180 * qrLimbFactor));
+                pg.ellipse(0, 0, qrBase * 2, qrBase * 1.5);
+                pg.fill(100, 140, 220, Math.round(200 * qrLimbFactor));
+                pg.ellipse(0, 0, qrBase * 1.4, qrBase * 1.0);
+                pg.fill(150, 180, 255, Math.round(220 * qrLimbFactor));
+                pg.ellipse(0, 0, qrBase * 0.8, qrBase * 0.6);
 
                 pg.pop();
             }
         }
 
-        // 13. MINING EXTRACTION FACILITIES - AMBER/BROWN
-        if ((featureRand * 79.1) % 1 > 0.76) {
-            const numMines = Math.floor(random(3, 6));
+        // 13. MINING EXTRACTION FACILITIES - AMBER/BROWN/ORANGE/RED/WHITE
+        if ((featureRand * 79.1) % 1 > 0.7) {
+            const numMines = Math.floor(random(2, 5));
             for (let mn = 0; mn < numMines; mn++) {
                 const mnAngle = (featureRand * (mn + 7) * 23.7) % TWO_PI_CONST;
-                const mnDist = random(r * 0.5, r * 0.85);
+                const mnDist = random(r * 0.4, r * 0.8);
                 const mnX = Math.cos(mnAngle) * mnDist;
                 const mnY = Math.sin(mnAngle) * mnDist;
 
-                if (mnX * mnX + mnY * mnY > r * r * 0.9) continue;
+                if (mnX * mnX + mnY * mnY > r * r * 0.85) continue;
 
                 const mnLimbFactor = this._getLimbFactor(mnX, mnY);
                 if (mnLimbFactor < 0.2) continue;
@@ -1892,58 +2067,89 @@ class Planet {
                 pg.push();
                 pg.translate(bufferCenter + mnX, bufferCenter + mnY);
 
-                // Main extraction pit - amber circle
-                const mnSize = bandHeight * random(2, 3.5) * mnScale;
-                pg.stroke(200, 150, 50, Math.round(180 * mnLimbFactor));
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * mnScale));
+                // MUCH LARGER mining complex
+                const mnSize = bandHeight * random(10, 15) * mnScale;
+
+                // Outer excavation ring - brown
+                pg.stroke(140, 100, 40, Math.round(200 * mnLimbFactor));
+                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * mnScale));
                 pg.noFill();
                 pg.ellipse(0, 0, mnSize * 2, mnSize * 2);
 
-                // Concentric extraction rings
-                pg.stroke(180, 120, 40, Math.round(140 * mnLimbFactor));
-                pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * mnScale));
-                pg.ellipse(0, 0, mnSize * 1.4, mnSize * 1.4);
-                pg.ellipse(0, 0, mnSize * 0.8, mnSize * 0.8);
+                // Middle extraction ring - amber
+                pg.stroke(200, 150, 50, Math.round(180 * mnLimbFactor));
+                pg.strokeWeight(Math.max(0.6, bandHeight * 0.4 * mnScale));
+                pg.ellipse(0, 0, mnSize * 1.5, mnSize * 1.5);
 
-                // Dark center pit
+                // Inner processing ring - orange
+                pg.stroke(220, 120, 40, Math.round(160 * mnLimbFactor));
+                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * mnScale));
+                pg.ellipse(0, 0, mnSize * 1.0, mnSize * 1.0);
+
+                // Central deep pit - dark gradient
                 pg.noStroke();
-                pg.fill(80, 60, 30, Math.round(200 * mnLimbFactor));
-                pg.ellipse(0, 0, mnSize * 0.5, mnSize * 0.5);
+                pg.fill(60, 40, 20, Math.round(180 * mnLimbFactor));
+                pg.ellipse(0, 0, mnSize * 0.7, mnSize * 0.7);
+                pg.fill(40, 25, 15, Math.round(220 * mnLimbFactor));
+                pg.ellipse(0, 0, mnSize * 0.4, mnSize * 0.4);
 
-                // Processing facilities around edge - amber lights
-                pg.fill(255, 180, 60, Math.round(200 * mnLimbFactor));
-                for (let pf = 0; pf < 6; pf++) {
-                    const pfAngle = (pf / 6) * TWO_PI_CONST;
-                    const pfX = Math.cos(pfAngle) * mnSize;
-                    const pfY = Math.sin(pfAngle) * mnSize;
-                    pg.ellipse(pfX, pfY, bandHeight * 0.5 * mnScale, bandHeight * 0.5 * mnScale);
+                // Magma glow at bottom - red/orange
+                pg.fill(255, 100, 30, Math.round(150 * mnLimbFactor));
+                pg.ellipse(0, 0, mnSize * 0.25, mnSize * 0.25);
+
+                // Processing facilities around edge - bright lights
+                for (let pf = 0; pf < 10; pf++) {
+                    const pfAngle = (pf / 10) * TWO_PI_CONST;
+                    const pfDist = mnSize * random(0.8, 1.0);
+                    const pfX = Math.cos(pfAngle) * pfDist;
+                    const pfY = Math.sin(pfAngle) * pfDist;
+
+                    // Facility building - white/amber
+                    pg.fill(255, 220, 150, Math.round(200 * mnLimbFactor));
+                    pg.ellipse(pfX, pfY, bandHeight * 0.8 * mnScale, bandHeight * 0.8 * mnScale);
+
+                    // Warning lights - red
+                    if (pf % 3 === 0) {
+                        pg.fill(255, 50, 50, Math.round(220 * mnLimbFactor));
+                        pg.ellipse(pfX, pfY, bandHeight * 0.4 * mnScale, bandHeight * 0.4 * mnScale);
+                    }
                 }
 
-                // Conveyor lines
-                pg.stroke(220, 160, 50, Math.round(120 * mnLimbFactor));
-                pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * mnScale));
-                for (let cl = 0; cl < 4; cl++) {
-                    const clAngle = (cl / 4) * TWO_PI_CONST + PI / 8;
+                // Conveyor lines to central - amber
+                pg.stroke(220, 160, 50, Math.round(140 * mnLimbFactor));
+                pg.strokeWeight(Math.max(0.4, bandHeight * 0.2 * mnScale));
+                for (let cl = 0; cl < 8; cl++) {
+                    const clAngle = (cl / 8) * TWO_PI_CONST;
                     pg.line(
-                        Math.cos(clAngle) * mnSize * 0.3, Math.sin(clAngle) * mnSize * 0.3,
-                        Math.cos(clAngle) * mnSize * 1.3, Math.sin(clAngle) * mnSize * 1.3
+                        Math.cos(clAngle) * mnSize * 0.25, Math.sin(clAngle) * mnSize * 0.25,
+                        Math.cos(clAngle) * mnSize * 1.1, Math.sin(clAngle) * mnSize * 1.1
                     );
+                }
+
+                // Ore transport vehicles - moving dots, various colors
+                for (let ot = 0; ot < 6; ot++) {
+                    const otAngle = random(0, TWO_PI_CONST);
+                    const otDist = random(mnSize * 0.4, mnSize * 0.9);
+                    pg.noStroke();
+                    pg.fill(255, 200, 100, Math.round(200 * mnLimbFactor));
+                    pg.ellipse(Math.cos(otAngle) * otDist, Math.sin(otAngle) * otDist,
+                        bandHeight * 0.35 * mnScale, bandHeight * 0.35 * mnScale);
                 }
 
                 pg.pop();
             }
         }
 
-        // 14. ANTIMATTER CONTAINMENT FACILITIES - MAGENTA/PINK
-        if ((featureRand * 97.3) % 1 > 0.84) {
+        // 14. ANTIMATTER CONTAINMENT FACILITIES - MAGENTA/PINK/CYAN/WHITE
+        if ((featureRand * 97.3) % 1 > 0.78) {
             const numAntimatter = Math.floor(random(2, 4));
             for (let am = 0; am < numAntimatter; am++) {
                 const amAngle = (featureRand * (am + 11) * 37.9) % TWO_PI_CONST;
-                const amDist = random(r * 0.4, r * 0.7);
+                const amDist = random(r * 0.3, r * 0.65);
                 const amX = Math.cos(amAngle) * amDist;
                 const amY = Math.sin(amAngle) * amDist;
 
-                if (amX * amX + amY * amY > r * r * 0.85) continue;
+                if (amX * amX + amY * amY > r * r * 0.8) continue;
 
                 const amLimbFactor = this._getLimbFactor(amX, amY);
                 if (amLimbFactor < 0.2) continue;
@@ -1952,52 +2158,82 @@ class Planet {
                 pg.push();
                 pg.translate(bufferCenter + amX, bufferCenter + amY);
 
-                // Containment sphere - magenta
-                const amSize = bandHeight * random(2, 3.5) * amScale;
+                // MUCH LARGER containment complex
+                const amSize = bandHeight * random(8, 12) * amScale;
 
-                // Outer containment field - pulsing magenta
+                // Outer hazard zone - pulsing magenta
                 pg.noFill();
-                pg.stroke(255, 50, 200, Math.round(180 * amLimbFactor));
-                pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * amScale));
-                pg.ellipse(0, 0, amSize * 2.2, amSize * 2.2);
+                pg.stroke(255, 30, 180, Math.round(150 * amLimbFactor));
+                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * amScale));
+                pg.ellipse(0, 0, amSize * 2.6, amSize * 2.6);
 
-                // Inner containment
-                pg.stroke(255, 100, 220, Math.round(200 * amLimbFactor));
-                pg.strokeWeight(Math.max(0.4, bandHeight * 0.25 * amScale));
+                // Primary containment field - bright magenta
+                pg.stroke(255, 80, 220, Math.round(200 * amLimbFactor));
+                pg.strokeWeight(Math.max(0.7, bandHeight * 0.45 * amScale));
+                pg.ellipse(0, 0, amSize * 2.0, amSize * 2.0);
+
+                // Secondary containment - cyan ring
+                pg.stroke(0, 255, 255, Math.round(180 * amLimbFactor));
+                pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * amScale));
                 pg.ellipse(0, 0, amSize * 1.4, amSize * 1.4);
 
-                // Antimatter core - bright white-pink center
+                // Magnetic bottle - inner pink
+                pg.stroke(255, 150, 230, Math.round(160 * amLimbFactor));
+                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * amScale));
+                pg.ellipse(0, 0, amSize * 0.9, amSize * 0.9);
+
+                // Antimatter core - brilliant white center
                 pg.noStroke();
-                pg.fill(255, 200, 255, Math.round(250 * amLimbFactor));
-                pg.ellipse(0, 0, amSize * 0.5, amSize * 0.5);
+                pg.fill(255, 240, 255, Math.round(255 * amLimbFactor));
+                pg.ellipse(0, 0, amSize * 0.4, amSize * 0.4);
 
-                // Hazard glow
-                pg.fill(255, 0, 180, Math.round(60 * amLimbFactor));
-                pg.ellipse(0, 0, amSize * 3, amSize * 3);
+                // Inner glow - hot white-pink
+                pg.fill(255, 200, 255, Math.round(200 * amLimbFactor));
+                pg.ellipse(0, 0, amSize * 0.6, amSize * 0.6);
 
-                // Warning markers - 6 points around
-                pg.fill(255, 80, 200, Math.round(200 * amLimbFactor));
-                for (let w = 0; w < 6; w++) {
-                    const wAngle = (w / 6) * TWO_PI_CONST;
-                    const wx = Math.cos(wAngle) * amSize * 1.1;
-                    const wy = Math.sin(wAngle) * amSize * 1.1;
-                    pg.ellipse(wx, wy, bandHeight * 0.4 * amScale, bandHeight * 0.4 * amScale);
+                // Outer hazard glow
+                pg.fill(255, 0, 180, Math.round(50 * amLimbFactor));
+                pg.ellipse(0, 0, amSize * 3.2, amSize * 3.2);
+
+                // Warning markers - alternating red and yellow
+                for (let w = 0; w < 12; w++) {
+                    const wAngle = (w / 12) * TWO_PI_CONST;
+                    const wx = Math.cos(wAngle) * amSize * 1.0;
+                    const wy = Math.sin(wAngle) * amSize * 1.0;
+
+                    if (w % 2 === 0) {
+                        pg.fill(255, 50, 50, Math.round(220 * amLimbFactor));
+                    } else {
+                        pg.fill(255, 220, 50, Math.round(200 * amLimbFactor));
+                    }
+                    pg.ellipse(wx, wy, bandHeight * 0.6 * amScale, bandHeight * 0.6 * amScale);
+                }
+
+                // Energy conduits - cyan lines radiating
+                pg.stroke(0, 220, 255, Math.round(140 * amLimbFactor));
+                pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * amScale));
+                for (let ec = 0; ec < 8; ec++) {
+                    const ecAngle = (ec / 8) * TWO_PI_CONST;
+                    pg.line(
+                        Math.cos(ecAngle) * amSize * 0.5, Math.sin(ecAngle) * amSize * 0.5,
+                        Math.cos(ecAngle) * amSize * 1.3, Math.sin(ecAngle) * amSize * 1.3
+                    );
                 }
 
                 pg.pop();
             }
         }
 
-        // 15. ORBITAL SHIPYARD FACILITIES - STEEL BLUE/GREY
-        if ((featureRand * 103.7) % 1 > 0.8) {
-            const numShipyards = Math.floor(random(2, 4));
+        // 15. ORBITAL SHIPYARD FACILITIES - STEEL BLUE/ORANGE/YELLOW/WHITE
+        if ((featureRand * 103.7) % 1 > 0.74) {
+            const numShipyards = Math.floor(random(1, 3));
             for (let sy = 0; sy < numShipyards; sy++) {
                 const syAngle = (featureRand * (sy + 13) * 43.1) % TWO_PI_CONST;
-                const syDist = random(r * 0.5, r * 0.85);
+                const syDist = random(r * 0.4, r * 0.8);
                 const syX = Math.cos(syAngle) * syDist;
                 const syY = Math.sin(syAngle) * syDist;
 
-                if (syX * syX + syY * syY > r * r * 0.9) continue;
+                if (syX * syX + syY * syY > r * r * 0.85) continue;
 
                 const syLimbFactor = this._getLimbFactor(syX, syY);
                 if (syLimbFactor < 0.2) continue;
@@ -2006,38 +2242,76 @@ class Planet {
                 pg.push();
                 pg.translate(bufferCenter + syX, bufferCenter + syY);
 
-                // Main shipyard frame - steel blue rectangle
-                const syWidth = bandHeight * random(5, 8) * syScale;
-                const syHeight = bandHeight * random(2, 3) * syScale;
+                // MUCH LARGER shipyard complex
+                const syWidth = bandHeight * random(14, 20) * syScale;
+                const syHeight = bandHeight * random(6, 9) * syScale;
 
-                pg.stroke(120, 160, 200, Math.round(200 * syLimbFactor));
-                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * syScale));
+                // Main structural frame - steel blue
+                pg.stroke(100, 140, 180, Math.round(200 * syLimbFactor));
+                pg.strokeWeight(Math.max(0.8, bandHeight * 0.5 * syScale));
                 pg.noFill();
                 pg.rect(-syWidth / 2, -syHeight / 2, syWidth, syHeight);
 
-                // Drydock bays
-                const numBays = 3;
-                pg.stroke(150, 180, 220, Math.round(160 * syLimbFactor));
-                pg.strokeWeight(Math.max(0.3, bandHeight * 0.2 * syScale));
+                // Inner frame - lighter steel
+                pg.stroke(140, 170, 210, Math.round(180 * syLimbFactor));
+                pg.strokeWeight(Math.max(0.6, bandHeight * 0.35 * syScale));
+                pg.rect(-syWidth / 2.3, -syHeight / 2.3, syWidth / 1.15, syHeight / 1.15);
+
+                // Drydock bays with ships under construction
+                const numBays = 4;
+                pg.stroke(120, 160, 200, Math.round(160 * syLimbFactor));
+                pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * syScale));
                 for (let bay = 0; bay < numBays; bay++) {
                     const bayX = -syWidth / 2 + (bay + 0.5) * (syWidth / numBays);
                     pg.line(bayX, -syHeight / 2, bayX, syHeight / 2);
+
+                    // Ship hull in each bay - grey/silver
+                    pg.noStroke();
+                    pg.fill(160, 170, 180, Math.round(180 * syLimbFactor));
+                    const shipLen = syHeight * 0.7;
+                    const shipW = (syWidth / numBays) * 0.4;
+                    pg.ellipse(bayX, 0, shipW, shipLen);
+
+                    // Ship lights - orange welding
+                    pg.fill(255, 150, 50, Math.round(220 * syLimbFactor));
+                    pg.ellipse(bayX + random(-shipW / 3, shipW / 3), random(-shipLen / 3, shipLen / 3),
+                        bandHeight * 0.4 * syScale, bandHeight * 0.4 * syScale);
+                    pg.stroke(120, 160, 200, Math.round(160 * syLimbFactor));
+                    pg.strokeWeight(Math.max(0.5, bandHeight * 0.3 * syScale));
                 }
 
                 // Work lights - bright white-blue dots
                 pg.noStroke();
-                pg.fill(200, 220, 255, Math.round(220 * syLimbFactor));
-                for (let wl = 0; wl < 8; wl++) {
+                pg.fill(220, 240, 255, Math.round(240 * syLimbFactor));
+                for (let wl = 0; wl < 20; wl++) {
                     const wlX = random(-syWidth / 2.2, syWidth / 2.2);
                     const wlY = random(-syHeight / 2.2, syHeight / 2.2);
-                    pg.ellipse(wlX, wlY, bandHeight * 0.3 * syScale, bandHeight * 0.3 * syScale);
+                    pg.ellipse(wlX, wlY, bandHeight * 0.4 * syScale, bandHeight * 0.4 * syScale);
                 }
 
-                // Crane arms extending
-                pg.stroke(100, 140, 180, Math.round(140 * syLimbFactor));
-                pg.strokeWeight(Math.max(0.3, bandHeight * 0.15 * syScale));
-                pg.line(-syWidth / 2, 0, -syWidth / 2 - bandHeight * 2 * syScale, -bandHeight * syScale);
-                pg.line(syWidth / 2, 0, syWidth / 2 + bandHeight * 2 * syScale, -bandHeight * syScale);
+                // Warning lights - yellow blinking
+                pg.fill(255, 220, 50, Math.round(220 * syLimbFactor));
+                pg.ellipse(-syWidth / 2, -syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
+                pg.ellipse(syWidth / 2, -syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
+                pg.ellipse(-syWidth / 2, syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
+                pg.ellipse(syWidth / 2, syHeight / 2, bandHeight * 0.6 * syScale, bandHeight * 0.6 * syScale);
+
+                // Crane arms extending - dark steel with orange tips
+                pg.stroke(80, 110, 150, Math.round(180 * syLimbFactor));
+                pg.strokeWeight(Math.max(0.5, bandHeight * 0.25 * syScale));
+                const craneLen = bandHeight * 4 * syScale;
+                pg.line(-syWidth / 2, 0, -syWidth / 2 - craneLen, -craneLen * 0.4);
+                pg.line(syWidth / 2, 0, syWidth / 2 + craneLen, -craneLen * 0.4);
+                pg.line(-syWidth / 2, 0, -syWidth / 2 - craneLen, craneLen * 0.4);
+                pg.line(syWidth / 2, 0, syWidth / 2 + craneLen, craneLen * 0.4);
+
+                // Crane tips - orange
+                pg.noStroke();
+                pg.fill(255, 140, 40, Math.round(200 * syLimbFactor));
+                pg.ellipse(-syWidth / 2 - craneLen, -craneLen * 0.4, bandHeight * 0.5 * syScale, bandHeight * 0.5 * syScale);
+                pg.ellipse(syWidth / 2 + craneLen, -craneLen * 0.4, bandHeight * 0.5 * syScale, bandHeight * 0.5 * syScale);
+                pg.ellipse(-syWidth / 2 - craneLen, craneLen * 0.4, bandHeight * 0.5 * syScale, bandHeight * 0.5 * syScale);
+                pg.ellipse(syWidth / 2 + craneLen, craneLen * 0.4, bandHeight * 0.5 * syScale, bandHeight * 0.5 * syScale);
 
                 pg.pop();
             }
