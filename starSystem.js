@@ -914,9 +914,26 @@ class StarSystem {
 
             // Create the planet with the computed world coordinates, system name, and planet index
             let planet = new Planet(px, py, sz, c1, c2, this.name, i + 1); // i+1 since 0 is sun
+
+            // OVerride inhabitance based on Tech Level
+            // Tech Level 1: ~10% inhabited (Rare)
+            // Tech Level 5: ~75% inhabited (Ubiquitous)
+            let techVal = (typeof this.techLevel === 'number') ? this.techLevel : 3;
+            techVal = Math.max(1, Math.min(5, techVal)); // Clamp 1-5
+
+            const inhabitedChance = map(techVal, 1, 5, 0.1, 0.75);
+            planet.isInhabited = random() < inhabitedChance;
+
+            // If inhabited, scale the density of lights by tech level too
+            if (planet.isInhabited) {
+                const minDens = map(techVal, 1, 5, 0.3, 0.6);
+                const maxDens = map(techVal, 1, 5, 0.5, 0.95);
+                planet.cityLightsDensity = random(minDens, maxDens);
+            }
+
             this.planets.push(planet);
 
-            console.log(`Planet ${i}: angle=${angle.toFixed(2)}, orbitRadius=${orbitRadius.toFixed(2)}, px=${px.toFixed(2)}, py=${py.toFixed(2)}`);
+            console.log(`Planet ${i}: angle=${angle.toFixed(2)}, orbitRadius=${orbitRadius.toFixed(2)}, px=${px.toFixed(2)}, py=${py.toFixed(2)}, inhabited=${planet.isInhabited}, density=${planet.cityLightsDensity?.toFixed(2) || 0}`);
         }
 
         // Position the station near a random planet (do not use the star at index 0)
