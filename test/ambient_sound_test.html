@@ -564,6 +564,7 @@
         let dataArray = null;
         let animationId = null;
         let musicUpdateInterval = null;
+        let musicFFT = null; // p5.sound FFT for internal music
 
         // Initialize
         function init() {
@@ -578,7 +579,7 @@
             musicManager = new StationMusicManager();
             musicManager.baseVolume = 0.5;
 
-            // Setup analyzer with ambient manager's context
+            // Setup analyzer with ambient manager's context (for external sounds)
             if (ambientManager.audioContext) {
                 analyser = ambientManager.audioContext.createAnalyser();
                 analyser.fftSize = 2048;
@@ -589,6 +590,9 @@
                     ambientManager.masterGain.connect(analyser);
                 }
             }
+
+            // Create p5 FFT analyzer for internal music (will initialize after user interaction)
+            // p5.FFT automatically analyzes the main p5 sound output
 
             renderStations();
             setupEventListeners();
@@ -720,6 +724,16 @@
                 }
             }
 
+            // Initialize p5 FFT analyzer for music visualization
+            if (!musicFFT && typeof p5 !== 'undefined') {
+                try {
+                    musicFFT = new p5.FFT(0.8, 256);
+                    console.log('Music FFT analyzer initialized');
+                } catch (e) {
+                    console.warn('Could not initialize music FFT:', e);
+                }
+            }
+
             // Start music for this station type
             musicManager.start({
                 stationType: type,
@@ -747,16 +761,6 @@
                     musicManager.update();
                 }
             }, 1000 / 60); // 60fps
-
-            // Try to connect music to our analyzer
-            try {
-                if (musicManager.masterGain && ambientManager.audioContext) {
-                    // The music uses p5.sound which has its own context
-                    // We can't easily cross-connect, but the music will still play
-                }
-            } catch (e) {
-                // Ignore analyzer connection issues
-            }
         }
 
         function stopAll() {
@@ -828,9 +832,24 @@
                 ctx.fillStyle = '#0a0a1a';
                 ctx.fillRect(0, 0, width, height);
 
-                if (!analyser || !dataArray) return;
+                // Get frequency data from appropriate source
+                let freqData = null;
+                let barCount = 128;
 
-                analyser.getByteFrequencyData(dataArray);
+                if (currentMode === 'internal' && musicFFT && currentlyPlaying) {
+                    // Use p5 FFT for internal music
+                    try {
+                        const spectrum = musicFFT.analyze();
+                        freqData = spectrum;
+                        barCount = Math.min(128, spectrum.length);
+                    } catch (e) {
+                        // Fall back to empty if FFT fails
+                    }
+                } else if (currentMode === 'external' && analyser && dataArray) {
+                    // Use Web Audio analyzer for external sounds
+                    analyser.getByteFrequencyData(dataArray);
+                    freqData = dataArray;
+                }
 
                 // Grid
                 ctx.strokeStyle = 'rgba(100, 100, 150, 0.1)';
@@ -842,13 +861,15 @@
                     ctx.stroke();
                 }
 
+                // Early return if no data
+                if (!freqData || freqData.length === 0) return;
+
                 // Frequency bars
-                const barCount = 128;
                 const barWidth = width / barCount;
                 const barGap = 1;
 
                 for (let i = 0; i < barCount; i++) {
-                    const value = dataArray[i];
+                    const value = freqData[i] || 0;
                     const barHeight = (value / 255) * height * 0.9;
                     const x = i * barWidth;
 
@@ -869,10 +890,10 @@
                 ctx.fillStyle = '#6666aa';
                 ctx.font = '10px sans-serif';
                 const freqLabels = [20, 50, 100, 200, 500, 1000, 2000, 5000];
+                const sampleRate = ambientManager?.audioContext?.sampleRate || 44100;
                 freqLabels.forEach(freq => {
-                    const sampleRate = ambientManager?.audioContext?.sampleRate || 44100;
                     const nyquist = sampleRate / 2;
-                    const binFreq = nyquist / analyser.frequencyBinCount;
+                    const binFreq = nyquist / (barCount * 4); // Approximate
                     const binIndex = Math.round(freq / binFreq);
                     const x = (binIndex / barCount) * width;
 
