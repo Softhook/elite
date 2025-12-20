@@ -160,7 +160,7 @@ class UIFactionRecruitment {
         const previewSize = Math.min(leftW, contentH) * 0.5;
 
         // Section title
-        UIComponents.setTextStyle({ fill: themeColors[1], size: 18, align: [CENTER, TOP] });
+        UIComponents.setTextStyle({ fill: themeColors[1], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
         text("Your Assigned Ship", centerX, contentY + 10);
 
         if (factionShip && factionShip.def) {
@@ -168,22 +168,22 @@ class UIFactionRecruitment {
             UIComponents.drawRotatingShip(factionShip.def, centerX, centerY, previewSize, 0.0008);
 
             // Ship name
-            UIComponents.setTextStyle({ fill: [180, 220, 255], size: 20, align: [CENTER, TOP] });
+            UIComponents.setTextStyle({ fill: [180, 220, 255], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
             text(factionShip.name, centerX, centerY + previewSize * 0.55);
 
             // Warning about losing current ship
             const warningY = contentY + contentH - 60;
-            UIComponents.setTextStyle({ fill: [255, 180, 100], size: 16, align: [CENTER, TOP] });
+            UIComponents.setTextStyle({ fill: [255, 180, 100], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
             text("⚠ WARNING", centerX, warningY);
-            UIComponents.setTextStyle({ fill: [255, 150, 100], size: 16, align: [CENTER, TOP] });
+            UIComponents.setTextStyle({ fill: [255, 150, 100], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
             text("Joining will replace your current ship.", centerX, warningY + 18);
             if (player.shipTypeName) {
-                UIComponents.setTextStyle({ fill: [200, 150, 150], size: 16, align: [CENTER, TOP] });
+                UIComponents.setTextStyle({ fill: [200, 150, 150], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
                 text(`Your ${player.shipTypeName} will be lost.`, centerX, warningY + 34);
             }
         } else {
             // Fallback if no ship found
-            UIComponents.setTextStyle({ fill: [150, 150, 150], size: 14, align: [CENTER, CENTER] });
+            UIComponents.setTextStyle({ fill: [150, 150, 150], size: STATION_TEXT_SIZE.SMALL, align: [CENTER, CENTER] });
             text("Ship preview unavailable", centerX, centerY);
         }
     }
@@ -197,7 +197,7 @@ class UIFactionRecruitment {
         const padding = 15;
 
         // Section title
-        UIComponents.setTextStyle({ fill: themeColors[1], size: 18, align: [CENTER, TOP] });
+        UIComponents.setTextStyle({ fill: themeColors[1], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
         text("Faction Intelligence", centerX, contentY + 10);
 
         // Determine which news source this faction sees
@@ -225,7 +225,7 @@ class UIFactionRecruitment {
         const newsWidth = leftW - padding * 2;
 
         if (newsItems.length === 0) {
-            UIComponents.setTextStyle({ fill: [150, 150, 150], size: 14, align: [CENTER, CENTER] });
+            UIComponents.setTextStyle({ fill: [150, 150, 150], size: STATION_TEXT_SIZE.SMALL, align: [CENTER, CENTER] });
             text("No recent intelligence reports.", centerX, contentY + contentH / 2);
         } else {
             for (const item of newsItems.slice(0, 5)) {
@@ -237,7 +237,7 @@ class UIFactionRecruitment {
                 noStroke();
 
                 // Body text with wrapping to show more content
-                UIComponents.setTextStyle({ fill: [200, 200, 220], size: 12, align: [LEFT, TOP] });
+                UIComponents.setTextStyle({ fill: [200, 200, 220], size: STATION_TEXT_SIZE.SMALL, align: [LEFT, TOP] });
                 const body = item.body || item.headline || 'No intel available';
                 const maxLineWidth = newsWidth - 16;
 
@@ -289,18 +289,18 @@ class UIFactionRecruitment {
         let yPos = contentY + 10;
 
         // Faction title
-        UIComponents.setTextStyle({ fill: themeColors[1], size: 20, align: [LEFT, TOP] });
+        UIComponents.setTextStyle({ fill: themeColors[1], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
         text(lore.title, rightX + padding, yPos);
         yPos += 26;
 
         // Slogan
-        UIComponents.setTextStyle({ fill: [180, 180, 200], size: 16, align: [LEFT, TOP] });
+        UIComponents.setTextStyle({ fill: [180, 180, 200], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
         text(lore.slogan, rightX + padding, yPos);
         yPos += 26;
 
         // Description (wrapped text) - use member description if applicable
         const descText = isMember && lore.memberDescription ? lore.memberDescription : lore.description;
-        UIComponents.setTextStyle({ fill: [200, 200, 255], size: 18, align: [LEFT, TOP] });
+        UIComponents.setTextStyle({ fill: [200, 200, 255], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
         const maxDescWidth = rightW - padding * 2;
         const wrappedDesc = this._wrapText(descText, maxDescWidth, 18);
         const descLines = wrappedDesc.split('\n').slice(0, 4); // Limit lines
@@ -318,11 +318,11 @@ class UIFactionRecruitment {
         yPos += 15;
 
         // Benefits section
-        UIComponents.setTextStyle({ fill: themeColors[1], size: 18, align: [LEFT, TOP] });
+        UIComponents.setTextStyle({ fill: themeColors[1], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
         text("BENEFITS", rightX + padding, yPos);
         yPos += 26;
 
-        UIComponents.setTextStyle({ fill: [100, 255, 100], size: 16, align: [LEFT, TOP] });
+        UIComponents.setTextStyle({ fill: [100, 255, 100], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
         for (const benefit of lore.benefits) {
             text("• " + benefit, rightX + padding, yPos);
             yPos += 22;
@@ -331,7 +331,7 @@ class UIFactionRecruitment {
 
         // Warning (for non-members)
         if (!isMember && lore.warning) {
-            UIComponents.setTextStyle({ fill: [255, 180, 100], size: 14, align: [LEFT, TOP] });
+            UIComponents.setTextStyle({ fill: [255, 180, 100], size: STATION_TEXT_SIZE.SMALL, align: [LEFT, TOP] });
             text("⚠ " + lore.warning, rightX + padding, yPos);
             yPos += 25;
         }
@@ -345,23 +345,23 @@ class UIFactionRecruitment {
             noStroke();
             yPos += 15;
 
-            UIComponents.setTextStyle({ fill: themeColors[1], size: 18, align: [LEFT, TOP] });
+            UIComponents.setTextStyle({ fill: themeColors[1], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
             text("YOUR STATUS", rightX + padding, yPos);
             yPos += 26;
 
             // Active member or wanted status first
             if (isWanted) {
-                UIComponents.setTextStyle({ fill: [255, 80, 80], size: 16, align: [LEFT, TOP] });
+                UIComponents.setTextStyle({ fill: [255, 80, 80], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
                 text(`• ⚠ WANTED in ${system?.name || 'this system'}`, rightX + padding, yPos);
                 yPos += 20;
             } else {
-                UIComponents.setTextStyle({ fill: [100, 200, 100], size: 16, align: [LEFT, TOP] });
+                UIComponents.setTextStyle({ fill: [100, 200, 100], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
                 text("• ✓ Active Member", rightX + padding, yPos);
                 yPos += 20;
             }
 
             // Member message
-            UIComponents.setTextStyle({ fill: [100, 200, 255], size: 16, align: [LEFT, TOP] });
+            UIComponents.setTextStyle({ fill: [100, 200, 255], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
             const memberMsg = this._getFactionMemberMessage(factionKey);
             text("• " + memberMsg, rightX + padding, yPos);
             yPos += 20;
@@ -370,7 +370,7 @@ class UIFactionRecruitment {
             try {
                 const progress = player.getFactionKillsProgress && player.getFactionKillsProgress(factionKey);
                 if (progress) {
-                    UIComponents.setTextStyle({ fill: [180, 180, 200], size: 16, align: [LEFT, TOP] });
+                    UIComponents.setTextStyle({ fill: [180, 180, 200], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
                     if (progress.nextThreshold) {
                         text(`• Kills: ${progress.kills} (${progress.killsToNext} to ${progress.nextRank})`, rightX + padding, yPos);
                     } else {
@@ -400,7 +400,7 @@ class UIFactionRecruitment {
             const fineAmount = this.getFactionFineAmount(factionKey, system?.securityLevel, player);
             // Show warning for former police
             if (player.hasBeenPolice && factionKey === 'POLICE') {
-                UIComponents.setTextStyle({ fill: [255, 200, 100], size: 14, align: [CENTER, TOP] });
+                UIComponents.setTextStyle({ fill: [255, 200, 100], size: STATION_TEXT_SIZE.SMALL, align: [CENTER, TOP] });
                 text("Fines tripled for former police officer", btnX + btnW / 2, btnY - 65);
             }
             this.factionRecruitmentButtonAreas.push(
@@ -415,9 +415,9 @@ class UIFactionRecruitment {
             );
         } else if (factionKey === 'POLICE' && player.hasBeenPolice && !isMember) {
             // Former police officers cannot rejoin - show official rejection
-            UIComponents.setTextStyle({ fill: [255, 120, 120], size: 16, align: [CENTER, TOP] });
+            UIComponents.setTextStyle({ fill: [255, 120, 120], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
             text("OFFICIAL NOTICE:", btnX + btnW / 2, btnY + 10);
-            UIComponents.setTextStyle({ fill: [200, 180, 180], size: 16, align: [CENTER, TOP] });
+            UIComponents.setTextStyle({ fill: [200, 180, 180], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
             text("As a former officer dismissed for criminal conduct,", btnX + btnW / 2, btnY + 32);
             text("you are permanently barred from police service.", btnX + btnW / 2, btnY + 52);
         } else if ((player.playerFaction && player.playerFaction !== factionKey) ||
@@ -435,7 +435,7 @@ class UIFactionRecruitment {
                 UIComponents.drawButton(btnX, btnY, btnW, btnH, rejectLabel, [120, 40, 40], [255, 150, 150], 4, { action: 'leave_faction', faction: currentFaction })
             );
         } else if (isWanted) {
-            UIComponents.setTextStyle({ fill: [255, 150, 150], size: 16, align: [CENTER, CENTER] });
+            UIComponents.setTextStyle({ fill: [255, 150, 150], size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
             text("Clear legal status", btnX + btnW / 2, btnY + btnH / 2);
         }
     }

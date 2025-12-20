@@ -72,7 +72,7 @@ function initializeCanvas() {
     createCanvas(windowWidth, windowHeight);
     angleMode(RADIANS);
     textAlign(CENTER, CENTER);
-    textSize(14);
+    textSize(STATION_TEXT_SIZE.SMALL);
     frameRate(144); // Allow high refresh rate monitors to run at native speed (up to 144fps)
     UI_LOG("Setting up Elite MVP...");
 }
@@ -223,7 +223,7 @@ function handleCriticalSetupError(error) {
     console.error("Critical setup error:", error);
     background(0);
     fill(255, 0, 0);
-    textSize(20);
+    textSize(STATION_TEXT_SIZE.BODY);
     text("ERROR: Failed to load game!\nCheck console.", width / 2, height / 2);
     noLoop();
 }
@@ -389,7 +389,7 @@ function renderUI() {
  */
 function showCriticalError(msg) {
     fill(255, 0, 0);
-    textSize(20);
+    textSize(STATION_TEXT_SIZE.BODY);
     textAlign(CENTER, CENTER);
     noStroke();
     text(msg, width / 2, height / 2);

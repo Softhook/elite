@@ -965,7 +965,7 @@ class Planet {
             if (typeof font !== 'undefined' && font) {
                 textFont(font);
             }
-            textSize(18); // Fixed size for all planets
+            textSize(STATION_TEXT_SIZE.BODY); // Fixed size for all planets
             text(this.name, 0, 0);
             pop();
         }

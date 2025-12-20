@@ -2920,7 +2920,7 @@ const SpaceObjectRenderers = {
         endShape(CLOSE);
         fill(0, 0, 0);
         textAlign(CENTER, CENTER);
-        textSize(8);
+        textSize(STATION_TEXT_SIZE.HELPER);
         text('!', -size * 0.35, bob + size * 0.1);
 
         // Status lights (toxic green glow)

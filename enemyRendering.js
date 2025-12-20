@@ -248,7 +248,7 @@ class EnemyRendering {
             push();
             textFont(font);
             textAlign(CENTER, BOTTOM);
-            textSize(20);
+            textSize(STATION_TEXT_SIZE.BODY);
             fill(255);
             noStroke();
 

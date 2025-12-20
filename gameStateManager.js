@@ -1122,7 +1122,7 @@ class GameStateManager {
                 background(255, 0, 0);
                 fill(0);
                 textAlign(CENTER, CENTER);
-                textSize(20);
+                textSize(STATION_TEXT_SIZE.BODY);
                 text(`Error: Unknown game state "${this.currentState}"`, width / 2, height / 2);
                 break;
         }
@@ -1561,7 +1561,7 @@ class GameStateManager {
                 textFont(font);
                 fill(255);
                 textAlign(LEFT, BOTTOM);
-                textSize(20);
+                textSize(STATION_TEXT_SIZE.BODY);
                 text(`Charging Hyperdrive... Target: ${targetName}`, 50, height - 5);
             } catch (e) {
                 console.error("Error drawing jump UI:", e);
@@ -1683,7 +1683,7 @@ class GameStateManager {
                 if (typeof font !== 'undefined') textFont(font);
                 textAlign(CENTER, CENTER);
                 fill(255);
-                textSize(18);
+                textSize(STATION_TEXT_SIZE.BODY);
                 const welcomeY = py + panelH * 0.26;
                 text(`${systemName}   ${economy}   Tech: ${tech}   Security: ${security}`,
                     px + panelW * 0.5, welcomeY - 20);
@@ -1705,7 +1705,7 @@ class GameStateManager {
             if (typeof font !== 'undefined') textFont(font);
             fill(255);
             textAlign(CENTER, CENTER);
-            textSize(18);
+            textSize(STATION_TEXT_SIZE.BODY);
             text(`Creating the System: ${Math.round(pct * 100)}% (${done}/${total})`,
                 width * 0.5, py + panelH * 0.32);
 

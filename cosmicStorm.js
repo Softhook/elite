@@ -262,7 +262,7 @@ class CosmicStorm {
         // Draw debug text
         fill(255);
         noStroke();
-        textSize(16);
+        textSize(STATION_TEXT_SIZE.SMALL);
         textAlign(CENTER);
         text(`${this.type} storm`, this.pos.x, this.pos.y - this.radius - 20);
         text(`Effects: ${this.effectCount}`, this.pos.x, this.pos.y - this.radius - 40);

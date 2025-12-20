@@ -170,7 +170,7 @@ class Nebula {
             // Draw debug text
             fill(255);
             noStroke();
-            textSize(16);
+            textSize(STATION_TEXT_SIZE.SMALL);
             textAlign(CENTER);
             text(`${this.type} nebula`, this.pos.x, this.pos.y - this.radius - 20);
             text(`Affected: ${this.affectedEntities.size}`, this.pos.x, this.pos.y - this.radius - 40);

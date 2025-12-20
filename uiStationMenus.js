@@ -793,7 +793,7 @@ class UIStationMenus {
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
 
         // Draw description
-        UIComponents.setTextStyle({ fill: 220, size: STATION_TEXT_SIZE.BIGHEADER, align: [CENTER, TOP] });
+        UIComponents.setTextStyle({ fill: 220, size: STATION_TEXT_SIZE.HEADER, align: [CENTER, TOP] });
         let descY = pY + headerHeight + 20;
         text("Hire professional security guards to protect you during your travels.", pX + pW / 2, descY);
 
@@ -1266,7 +1266,7 @@ class UIStationMenus {
         }
 
         let currentY = contentY;
-        UIComponents.setTextStyle({ fill: [255, 200, 200], size: STATION_TEXT_SIZE.BIGHEADER, align: [LEFT, TOP] });
+        UIComponents.setTextStyle({ fill: [255, 200, 200], size: STATION_TEXT_SIZE.HEADER, align: [LEFT, TOP] });
         text(`Personal Log: ${totalEntries} entries`, pX + 30, currentY);
         currentY += 35;
 
@@ -1595,7 +1595,7 @@ class UIStationMenus {
         // Ship name at top of preview area
         fill(180, 220, 255);
         noStroke();
-                textSize(STATION_TEXT_SIZE.HEADER);
+        textSize(STATION_TEXT_SIZE.HEADER);
         textAlign(CENTER, TOP);
         text(shipData.shipName, previewCenterX, contentY + 10);
 

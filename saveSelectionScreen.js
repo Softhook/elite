@@ -209,7 +209,7 @@ class SaveSelectionScreen {
         }
 
         // Main title
-        textSize(48);
+        textSize(STATION_TEXT_SIZE.TITLE);
         fill(210, 200, 255); // Slightly brighter purple
 
         // Prefer the global extruded helper if available, otherwise fall back to titleScreen method or plain text
@@ -227,7 +227,7 @@ class SaveSelectionScreen {
         }
 
         // Subtitle
-        textSize(24);
+        textSize(STATION_TEXT_SIZE.HEADER);
         fill(160, 160, 210); // Slightly brighter blue/purple
         // Shadow for subtitle
 
@@ -305,7 +305,7 @@ class SaveSelectionScreen {
         textAlign(LEFT, TOP);
 
         // Title
-        textSize(18); // Slightly smaller for more slots
+        textSize(STATION_TEXT_SIZE.BODY); // Slightly smaller for more slots
         fill(isSelected ? color(150, 200, 255) : color(120, 140, 180));
         text(title, x + 20 + hoverOffset, y + 10); // Adjusted y for title
 
@@ -334,7 +334,7 @@ class SaveSelectionScreen {
 
         if (data) {
             // Show saved game details
-            textSize(20); // Adjusted for smaller slot
+            textSize(STATION_TEXT_SIZE.BODY); // Adjusted for smaller slot
             fill(isSelected ? color(200, 220, 255) : color(100, 120, 150));
 
             const playerData = data.playerData;
@@ -412,14 +412,14 @@ class SaveSelectionScreen {
             if (data.__recovered) {
                 push();
                 textAlign(RIGHT, TOP);
-                textSize(10);
+                textSize(STATION_TEXT_SIZE.HELPER);
                 fill(180, 160, 80);
                 text("recovered", x + w - 10 + hoverOffset, y + 8);
                 pop();
             }
         } else {
             // New game description
-            textSize(20); // Adjusted for smaller slot
+            textSize(STATION_TEXT_SIZE.BODY); // Adjusted for smaller slot
             fill(isSelected ? color(180, 200, 220) : color(100, 120, 140));
             let lineY = y + 35;
             const lineSpacing = 20;
@@ -455,7 +455,7 @@ class SaveSelectionScreen {
         // Button label
         noStroke();
         textAlign(CENTER, CENTER);
-        textSize(14);
+        textSize(STATION_TEXT_SIZE.SMALL);
         fill(isMouseOverBtn ? color(180, 230, 255) : color(150, 190, 220));
         const label = hasSave ? "Start New (Overwrite)" : "Start New";
         text(label, btn.x + btn.w / 2, btn.y + btn.h / 2);
@@ -583,10 +583,10 @@ class SaveSelectionScreen {
         textAlign(CENTER, CENTER);
 
         fill(isSelected ? color(180, 255, 180) : color(120, 180, 120));
-        textSize(18);
+        textSize(STATION_TEXT_SIZE.BODY);
         text("START NEW ROOKIE PILOT", x + w / 2 + hoverOffset, y + h / 2 - 5); // Adjusted for two lines
 
-        textSize(12);
+        textSize(STATION_TEXT_SIZE.HELPER);
         fill(isSelected ? color(150, 200, 150) : color(100, 140, 100));
         text("Sidewinder, 1000 Credits, Fresh Start", x + w / 2 + hoverOffset, y + h / 2 + 15); // Second line (updated to 1000 credits)
 
@@ -602,7 +602,7 @@ class SaveSelectionScreen {
             textFont(font);
         }
 
-        textSize(16);
+        textSize(STATION_TEXT_SIZE.SMALL);
         fill(120, 140, 180);
 
         text("↑↓ Select slot   ENTER Continue   Click 'Start New' to overwrite   ESC Back", width / 2, height * 0.85);

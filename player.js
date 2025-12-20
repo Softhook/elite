@@ -1478,7 +1478,7 @@ class Player {
             const nearY = this.pos.y - (this.size + 18);
             fill(0, 255, 255);
             textAlign(CENTER, CENTER);
-            textSize(14);
+            textSize(STATION_TEXT_SIZE.SMALL);
 
             // Show discovery status in distance text (draw near player)
             const statusText = closestStation.discovered ?

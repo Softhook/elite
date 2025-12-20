@@ -354,7 +354,7 @@ function draw() {
     // Display placeholder text if nothing is loaded/created
     if (!currentShipDef && shapes.length === 0 && currentShipKey !== '--- New Blank ---') {
         pop(); // Revert translate
-        textAlign(CENTER, CENTER); textSize(16); fill(150);
+        textAlign(CENTER, CENTER); textSize(STATION_TEXT_SIZE.SMALL); fill(150);
         text("Select a ship or 'New Blank'", width / 2, height / 2);
         return; // Don't draw anything else
     }
@@ -426,7 +426,7 @@ function draw() {
             }
         }
     } else if (currentShipKey !== '--- New Blank ---') {
-        pop(); textAlign(CENTER, CENTER); textSize(16); fill(150);
+        pop(); textAlign(CENTER, CENTER); textSize(STATION_TEXT_SIZE.SMALL); fill(150);
         text("Select a ship or 'New Blank'", width / 2, height / 2);
     }
 

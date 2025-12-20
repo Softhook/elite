@@ -697,7 +697,7 @@ class TitleScreen {
 
         // Author Credit
         textFont(font);
-        textSize(20);
+        textSize(STATION_TEXT_SIZE.BODY);
         fill(200, 200, 255, this.authorAlpha);
         noStroke();
         textAlign(CENTER, CENTER);
@@ -707,7 +707,7 @@ class TitleScreen {
         // Draw "Click to Continue" Prompt with pulsing effect
         push();
         textAlign(CENTER, CENTER);
-        textSize(30);
+        textSize(STATION_TEXT_SIZE.BIGHEADER);
         const promptY = height * 0.85;
         const pulse = sin(millis() / 300) * 50 + 200;
         fill(pulse, pulse, 255);
@@ -748,19 +748,19 @@ class TitleScreen {
 
         // Left column: Introduction + Controls
         textAlign(LEFT, TOP);
-        textSize(20);
+        textSize(STATION_TEXT_SIZE.BODY);
         fill(200, 200, 255);
         let y = contentTop;
         // Intro paragraph spans the full content width (both columns)
         text("Mashup of SubSpace and Elite. Arcade dogfights meet open-ended world trading and exploration. Explore a procedurally-generated galaxy of a dozen star systems, each with dynamic economies, trading hubs, planetary bodies and faction politics. Pilot 80+ ship types from the starter Sidewinder to heavy traders, outfit dozens of weapons and modules, take assassination missions, trade, smuggle, and fight for freedom or reputation.", leftX, y, maxContentWidth, height);
         y += lineHeight * 3;
 
-        textSize(28);
+        textSize(STATION_TEXT_SIZE.BIGHEADER);
         fill(0, 180, 255);
         text("CONTROLS:", leftX, y);
         y += lineHeight;
 
-        textSize(18);
+        textSize(STATION_TEXT_SIZE.BODY);
         fill(200, 200, 255);
         const controls = [
             "W or UP ARROW - Thrust forward",
@@ -784,13 +784,13 @@ class TitleScreen {
 
         // Right column: Gameplay tips (start aligned with Controls title)
         let ry = contentTop + lineHeight * 3;
-        textSize(28);
+        textSize(STATION_TEXT_SIZE.BIGHEADER);
         fill(0, 180, 255);
         textAlign(LEFT, TOP);
         text("GAMEPLAY:", rightX, ry);
         ry += lineHeight;
 
-        textSize(18);
+        textSize(STATION_TEXT_SIZE.BODY);
         fill(200, 200, 255);
         const tips = [
             "• Dock with stations to trade, upgrade, take missions and save game",
@@ -805,7 +805,7 @@ class TitleScreen {
 
         // Start prompt
         textAlign(CENTER);
-        textSize(28);
+        textSize(STATION_TEXT_SIZE.BIGHEADER);
         const pulse = sin(millis() / 300) * 50 + 200;
         fill(pulse, pulse, 255);
         text("Press SPACE or CLICK to Begin", width / 2, height * 0.85);

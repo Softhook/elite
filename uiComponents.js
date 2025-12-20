@@ -6,12 +6,15 @@
 const STANDARD_PANEL_BG = [20, 20, 40, 220];
 
 // Standardized text sizes for all UI screens
+// Consolidated to 6 essential sizes (plus GAME_OVER)
 const STATION_TEXT_SIZE = {
-    BIGHEADER: 30,
-    HEADER: 24,
-    BODY: 20,
-    HELPER: 10,
-    GAME_OVER: 120
+    TITLE: 48,       // Large titles (save selection screen)
+    BIGHEADER: 30,   // Screen titles, major headings
+    HEADER: 24,      // Section headers
+    BODY: 20,        // Standard body text, descriptions
+    SMALL: 14,       // Secondary info, hints, smaller labels
+    HELPER: 10,      // Smallest helper text, footnotes
+    GAME_OVER: 120   // Game over screen
 };
 
 /**
