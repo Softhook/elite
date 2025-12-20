@@ -726,6 +726,31 @@ class UIHUD {
             }
         }
 
+        // Add space object-specific info
+        if (isSpaceObject) {
+            // Add description if available, with text wrapping for long descriptions
+            if (target.description) {
+                const maxCharsPerLine = Math.floor((panelWidth - padding * 2) / 8); // Approximate chars that fit
+                const desc = target.description;
+                if (desc.length > maxCharsPerLine) {
+                    // Wrap text at word boundaries
+                    const words = desc.split(' ');
+                    let currentLine = '';
+                    for (const word of words) {
+                        if ((currentLine + ' ' + word).trim().length <= maxCharsPerLine) {
+                            currentLine = (currentLine + ' ' + word).trim();
+                        } else {
+                            if (currentLine) infoLines.push(currentLine);
+                            currentLine = word;
+                        }
+                    }
+                    if (currentLine) infoLines.push(currentLine);
+                } else {
+                    infoLines.push(desc);
+                }
+            }
+        }
+
         const cargoEntries = hasShipIdentity ? this._getCargoEntries(target) : [];
         let cargoLines = cargoEntries.length > 0
             ? cargoEntries.map(entry => `${entry.name}: ${entry.quantity}`)
@@ -998,13 +1023,15 @@ class UIHUD {
             }
             // Actively repairing a target
             if (target.repairTarget && !target.repairTarget.destroyed) {
+                const structureType = target.repairTarget.type || 'Structure';
+                const typeName = structureType.charAt(0).toUpperCase() + structureType.slice(1);
                 const distToTarget = target.pos && target.repairTarget.pos
                     ? dist(target.pos.x, target.pos.y, target.repairTarget.pos.x, target.repairTarget.pos.y)
                     : Infinity;
                 if (distToTarget < 80) {
-                    return 'Repairing Structure';
+                    return `Repairing ${typeName}`;
                 }
-                return 'En Route to Damaged Structure';
+                return `En Route to ${typeName}`;
             }
             // Near station waiting
             if (state === AI_STATE.NEAR_STATION) {

@@ -115,6 +115,50 @@ const SPACE_OBJECT_COMMODITIES = {
     default: { produces: [], buys: [] }
 };
 
+// Descriptions for each space object type - provides flavor text for targeting overlay
+const SPACE_OBJECT_DESCRIPTIONS = {
+    satellite: 'Orbital communications and surveillance platform',
+    telescope: 'Deep space observation array scanning distant systems',
+    relay: 'Signal amplification node for long-range communications',
+    habitat: 'Pressurized living quarters for orbital workers',
+    debris: 'Wreckage and scrap metal drifting through space',
+    probe: 'Autonomous sensor drone collecting system data',
+    beacon: 'Navigation marker broadcasting location signals',
+    solarSail: 'Photon-driven propulsion array harnessing stellar radiation',
+    engineArray: 'High-thrust maneuvering system for orbital corrections',
+    cargoCluster: 'Modular freight storage and distribution hub',
+    researchArray: 'Scientific instruments studying cosmic phenomena',
+    orbitalGarden: 'Hydroponic farming module producing fresh supplies',
+    decoyBuoy: 'Electronic countermeasure projecting false signatures',
+    miningPlatform: 'Automated extraction facility processing asteroids',
+    ancientRelic: 'Mysterious artifact of unknown alien origin',
+    signalFlare: 'Emergency distress beacon broadcasting SOS',
+    outpost: 'Self-sufficient frontier installation with basic services',
+    asteroidMiner: 'Mobile drilling rig harvesting mineral deposits',
+    fuelDepot: 'Refueling station storing processed propellants',
+    commDish: 'High-gain antenna for interstellar transmissions',
+    solarFarm: 'Photovoltaic array generating orbital power',
+    iceCrystal: 'Frozen water deposit valuable for life support',
+    nebulaFragment: 'Dense cloud of ionized gas and cosmic dust',
+    alienArtifact: 'Enigmatic object exhibiting unexplained properties',
+    wreckage: 'Salvageable remains of a destroyed spacecraft',
+    observatoryDome: 'Shielded telescope housing for sensitive equipment',
+    hydroponicsBay: 'Industrial-scale food production facility',
+    weaponPlatform: 'Armed defensive emplacement protecting the sector',
+    shieldGenerator: 'Energy projector creating protective barriers',
+    energyCollector: 'Plasma harvester drawing power from stellar winds',
+    quantumGate: 'Experimental teleportation portal under research',
+    prison: 'High-security detention facility for dangerous criminals',
+    drugLab: 'Clandestine pharmaceutical manufacturing operation',
+    labourColony: 'Industrial complex utilizing forced workforce',
+    undergroundMarket: 'Black market trading post for illicit goods',
+    shipyard: 'Vessel construction and repair facility',
+    advancedResearchStation: 'Cutting-edge laboratory for breakthrough discoveries',
+    powerStation: 'Fusion reactor generating megawatts of clean energy',
+    commHub: 'Central routing station for sector communications',
+    alienMonolith: 'Towering structure of clearly non-human construction'
+};
+
 // Animation rate constants for efficient update loop
 // Format: [propertyName, rate] - properties with dynamic speeds use null
 const ANIM_RATES = [
@@ -3544,6 +3588,8 @@ class SpaceObject {
         this.collisionRadius = Math.max(6, (this.size / 2));
         // Cache renderer for performance
         this.renderer = SpaceObjectRenderers[this.type] || SpaceObjectRenderers.default;
+        // Description for targeting overlay
+        this.description = SPACE_OBJECT_DESCRIPTIONS[this.type] || 'Unknown orbital structure';
         // Animation state: initialized per-instance animated properties
         this._anim = {};
         const anim = this._anim;
