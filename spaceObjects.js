@@ -3839,10 +3839,11 @@ class SpaceObject {
         // Map 0->1 to -10° to +60°: range is 70° total, offset by -10°
         this.angle = normalizedSin * (Math.PI * 70 / 180) - (Math.PI * 10 / 180); // -10° to +60°
 
+        const timeScale = dt / 16.67;
         this.bobPhase += 0.0015 * dt;
         if (this.pos && !this.destroyed) {
-            this.pos.x += this._drift.x;
-            this.pos.y += this._drift.y;
+            this.pos.x += this._drift.x * timeScale;
+            this.pos.y += this._drift.y * timeScale;
         }
 
         // Update animations using efficient loop over rate table

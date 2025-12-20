@@ -788,12 +788,13 @@ class Player {
             // Allow the manual input to take effect immediately
         }
 
-        // 1) Rotation
+        // 1) Rotation (frame-rate independent)
+        const rotTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
         if (keyIsDown(LEFT_ARROW) || keyIsDown(81)) {      // Q 
-            this.angle -= this.rotationSpeed;
+            this.angle -= this.rotationSpeed * rotTimeScale;
         }
         if (keyIsDown(RIGHT_ARROW) || keyIsDown(69)) {    // E 
-            this.angle += this.rotationSpeed;
+            this.angle += this.rotationSpeed * rotTimeScale;
         }
 
         // 2) Sideways kiting (strafe)
@@ -1130,11 +1131,12 @@ class Player {
             this.thrustManager.createThrust(this.pos, this.angle, this.size);
         }
 
-        // Position update (optimized NaN check)
+        // Position update (optimized NaN check) - frame-rate independent
         if (isNaN(this.vel.x) || isNaN(this.vel.y)) {
             this.vel.set(0, 0); // Safety net for NaN velocity
         }
-        this.pos.add(this.vel);
+        const moveTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+        this.pos.add(p5.Vector.mult(this.vel, moveTimeScale));
 
         // Update cooldown timer using cached deltaSeconds
         if (this.fireCooldown > 0) {
@@ -2497,12 +2499,13 @@ class Player {
         if (angleDiff < -PI) angleDiff += TWO_PI;
 
         // Rotate towards target - Using FIXED values independent of player's rotation speed
-        const AUTOPILOT_ROTATION_RATE = 0.03; // Fixed rotation speed for autopilot
+        const AUTOPILOT_ROTATION_RATE = 0.03; // Fixed rotation speed for autopilot (per frame at 60fps)
+        const autopilotTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
         if (abs(angleDiff) > 0.05) {
             if (angleDiff > 0) {
-                this.angle += AUTOPILOT_ROTATION_RATE;
+                this.angle += AUTOPILOT_ROTATION_RATE * autopilotTimeScale;
             } else {
-                this.angle -= AUTOPILOT_ROTATION_RATE;
+                this.angle -= AUTOPILOT_ROTATION_RATE * autopilotTimeScale;
             }
         }
 

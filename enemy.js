@@ -674,8 +674,9 @@ class Enemy {
                         this.updateCombatAI(system); // Bounty Hunters use combat AI
                         break;
                     default:
-                        // Default behavior for unknown roles
-                        this.vel.mult(this.drag * 0.95);
+                        // Default behavior for unknown roles (frame-rate independent)
+                        const defaultTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                        this.vel.mult(Math.pow(this.drag * 0.95, defaultTimeScale));
                         break;
                 }
 

@@ -72,8 +72,10 @@ class CosmicStorm {
                 return false;
             }
         }
-        this.pos.add(this.velocity);
-        this.velocity.rotate(random(-0.1, 0.1));
+        // Frame-rate independent storm movement
+        const timeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+        this.pos.add(p5.Vector.mult(this.velocity, timeScale));
+        this.velocity.rotate(random(-0.1, 0.1) * timeScale);
         const posX = this.pos.x;
         const posY = this.pos.y;
         for (let i = 0, len = this.particles.length; i < len; i++) {

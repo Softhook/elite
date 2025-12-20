@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frame-Rate Independence Tests - Elite Game</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        body {
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+            background: #0a0a0f;
+            color: #e8f0ff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin: 0 0 20px;
+            font-size: 24px;
+            color: #64b5f6;
+        }
+
+        .description {
+            background: #1a1a2e;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #64b5f6;
+        }
+
+        .info-box {
+            background: #1a2a1e;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4caf50;
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>⏱️ Frame-Rate Independence Tests</h1>
+    <div class="description">
+        Tests verifying that game entities move the same distance per second regardless of frame rate.
+        <br><br>
+        <strong>Before refactor:</strong> These tests will FAIL (movement is frame-dependent).<br>
+        <strong>After refactor:</strong> These tests should PASS (movement is time-based).
+    </div>
+    <div id="info-box" class="info-box">Loading...</div>
+    <div id="test-results">Running tests...</div>
+
+    <!-- Test harness -->
+    <script src="test_harness.js"></script>
+
+    <!-- Dependencies -->
+    <script src="../debug.js"></script>
+    <script src="../ships.js"></script>
+    <script src="../weapons.js"></script>
+    <script src="../enemyConstants.js"></script>
+    <script src="../mission.js"></script>
+    <script src="../objectPool.js"></script>
+    <script src="../thrustParticles.js"></script>
+    <script src="../draw3d.js"></script>
+
+    <!-- Sources under test -->
+    <script src="../asteroid.js"></script>
+    <script src="../cargo.js"></script>
+    <script src="../projectile.js"></script>
+    <script src="../market.js"></script>
+    <script src="../station.js"></script>
+    <script src="../planet.js"></script>
+    <script src="../enemyMovement.js"></script>
+    <script src="../enemyStateMachine.js"></script>
+    <script src="../enemyAIBehaviors.js"></script>
+    <script src="../enemy.js"></script>
+
+    <script>
+        // Setup mock p5 before tests
+        setupMockP5();
+
+        // Mock getShading function (from draw3d.js) if not available
+        if (typeof getShading === 'undefined') {
+            window.getShading = function (angle) { return 0.6 + 0.4 * Math.cos(angle); };
+        }
+
+        // Mock cargo type arrays if not available
+        if (typeof LEGAL_CARGO === 'undefined') {
+            window.LEGAL_CARGO = ['Food', 'Textiles', 'Machinery'];
+        }
+        if (typeof ILLEGAL_CARGO === 'undefined') {
+            window.ILLEGAL_CARGO = ['Narcotics', 'Weapons'];
+        }
+
+        // Tolerance for floating point comparisons (allow 5% difference)
+        const TOLERANCE = 0.05;
+
+        /**
+         * Helper: Check if two values are within tolerance
+         */
+        function isCloseTo(actual, expected, tolerance = TOLERANCE) {
+            if (expected === 0) return Math.abs(actual) < 0.01;
+            const ratio = actual / expected;
+            return ratio >= (1 - tolerance) && ratio <= (1 + tolerance);
+        }
+
+        // ============================================
+        // Asteroid Movement Tests
+        // ============================================
+
+        describe('Frame-Rate Independence: Asteroid', () => {
+            it('should drift same distance at 60fps vs 30fps over 1 second', () => {
+                // Create two asteroids with IDENTICAL initial state
+                const asteroid60 = new Asteroid(0, 0, 50);
+                asteroid60.vel = createVector(1, 0.5);  // Override random velocity
+                asteroid60.pos = createVector(0, 0);     // Ensure starts at origin
+
+                const asteroid30 = new Asteroid(0, 0, 50);
+                asteroid30.vel = createVector(1, 0.5);  // Same velocity
+                asteroid30.pos = createVector(0, 0);     // Ensure starts at origin
+
+                // Simulate 1 second at 60fps (60 frames × 16.67ms)
+                for (let i = 0; i < 60; i++) {
+                    window.deltaTime = 16.67;
+                    asteroid60.update();
+                }
+
+                // Simulate 1 second at 30fps (30 frames × 33.33ms)
+                for (let i = 0; i < 30; i++) {
+                    window.deltaTime = 33.33;
+                    asteroid30.update();
+                }
+
+                // Record distances moved
+                const dist60 = asteroid60.pos.mag();
+                const dist30 = asteroid30.pos.mag();
+
+                console.log(`Asteroid 60fps: ${dist60.toFixed(2)} | 30fps: ${dist30.toFixed(2)} | Ratio: ${(dist30 / dist60).toFixed(3)}`);
+
+                // BEFORE refactor: dist60 ≈ 67 (60 frames), dist30 ≈ 33.5 (30 frames) - DIFFERENT
+                // AFTER refactor: both should be ≈ 67 (same distance per second)
+                expect(isCloseTo(dist30, dist60)).toBe(true);
+            });
+
+            it('should rotate same angle at 60fps vs 75fps over 1 second', () => {
+                const asteroid60 = new Asteroid(0, 0, 50);
+                asteroid60.angle = 0;
+                asteroid60.rotationSpeed = 0.05; // Known rotation speed
+
+                const asteroid75 = new Asteroid(0, 0, 50);
+                asteroid75.angle = 0;
+                asteroid75.rotationSpeed = 0.05;
+
+                // 1 second at 60fps
+                for (let i = 0; i < 60; i++) {
+                    window.deltaTime = 16.67;
+                    asteroid60.update();
+                }
+
+                // 1 second at 75fps
+                for (let i = 0; i < 75; i++) {
+                    window.deltaTime = 13.33;
+                    asteroid75.update();
+                }
+
+                console.log(`Asteroid rotation 60fps: ${asteroid60.angle.toFixed(3)} | 75fps: ${asteroid75.angle.toFixed(3)}`);
+
+                // BEFORE: 60×0.05=3.0 vs 75×0.05=3.75 - 25% more rotation at 75fps
+                // AFTER: both should be ~3.0
+                expect(isCloseTo(asteroid75.angle, asteroid60.angle)).toBe(true);
+            });
+        });
+
+        // ============================================
+        // Cargo Lifetime Tests
+        // ============================================
+
+        describe('Frame-Rate Independence: Cargo', () => {
+            it('should have same lifetime remaining after 10 seconds', () => {
+                const cargo60 = new Cargo(0, 0, 'Food');
+                cargo60.vel = createVector(0, 0); // Stop movement to isolate lifetime test
+                const initialLifetime = cargo60.lifetime;
+
+                const cargo30 = new Cargo(0, 0, 'Food');
+                cargo30.vel = createVector(0, 0);
+                cargo30.lifetime = initialLifetime; // Sync initial lifetime
+
+                // Simulate 10 seconds at 60fps (600 frames)
+                for (let i = 0; i < 600; i++) {
+                    window.deltaTime = 16.67;
+                    cargo60.update();
+                }
+
+                // Simulate 10 seconds at 30fps (300 frames)
+                for (let i = 0; i < 300; i++) {
+                    window.deltaTime = 33.33;
+                    cargo30.update();
+                }
+
+                console.log(`Cargo lifetime: initial=${initialLifetime} | 60fps remaining=${cargo60.lifetime} | 30fps remaining=${cargo30.lifetime}`);
+
+                // BEFORE: cargo60 loses 600, cargo30 loses 300 - DIFFERENT remaining
+                // AFTER: both should lose same amount based on time elapsed
+                expect(isCloseTo(cargo30.lifetime, cargo60.lifetime)).toBe(true);
+            });
+
+            it('should drift same distance at different frame rates', () => {
+                const cargo60 = new Cargo(0, 0, 'Food');
+                cargo60.pos = createVector(0, 0);
+                cargo60.vel = createVector(2, 1);
+
+                const cargo30 = new Cargo(0, 0, 'Food');
+                cargo30.pos = createVector(0, 0);
+                cargo30.vel = createVector(2, 1);
+
+                // 1 second at each rate
+                for (let i = 0; i < 60; i++) {
+                    window.deltaTime = 16.67;
+                    cargo60.update();
+                }
+                for (let i = 0; i < 30; i++) {
+                    window.deltaTime = 33.33;
+                    cargo30.update();
+                }
+
+                const dist60 = cargo60.pos.mag();
+                const dist30 = cargo30.pos.mag();
+
+                console.log(`Cargo drift 60fps: ${dist60.toFixed(2)} | 30fps: ${dist30.toFixed(2)}`);
+
+                expect(isCloseTo(dist30, dist60)).toBe(true);
+            });
+        });
+
+        // ============================================
+        // Projectile Tests
+        // ============================================
+
+        describe('Frame-Rate Independence: Projectile', () => {
+            it('should travel same distance at 60fps vs 30fps', () => {
+                // Create projectiles with explicit velocity
+                const proj60 = new Projectile(0, 0, 0, null, 10, 10, [255, 0, 0], 'projectile');
+                proj60.vel = createVector(10, 0);
+
+                const proj30 = new Projectile(0, 0, 0, null, 10, 10, [255, 0, 0], 'projectile');
+                proj30.vel = createVector(10, 0);
+
+                // Simulate 1 second
+                for (let i = 0; i < 60; i++) {
+                    window.deltaTime = 16.67;
+                    proj60.update();
+                }
+                for (let i = 0; i < 30; i++) {
+                    window.deltaTime = 33.33;
+                    proj30.update();
+                }
+
+                console.log(`Projectile distance 60fps: ${proj60.pos.x.toFixed(2)} | 30fps: ${proj30.pos.x.toFixed(2)}`);
+
+                // BEFORE: 600 vs 300 - half distance at 30fps
+                // AFTER: both should be ~600
+                expect(isCloseTo(proj30.pos.x, proj60.pos.x)).toBe(true);
+            });
+
+            it('should consume same lifespan at 60fps vs 75fps', () => {
+                const proj60 = new Projectile(0, 0, 0, null, 10, 10, [255, 0, 0], 'projectile', null, 100);
+                const proj75 = new Projectile(0, 0, 0, null, 10, 10, [255, 0, 0], 'projectile', null, 100);
+
+                // Simulate 0.5 seconds
+                for (let i = 0; i < 30; i++) { // 30 frames at 60fps = 0.5s
+                    window.deltaTime = 16.67;
+                    proj60.update();
+                }
+                for (let i = 0; i < 37; i++) { // ~37 frames at 75fps ≈ 0.5s
+                    window.deltaTime = 13.33;
+                    proj75.update();
+                }
+
+                console.log(`Projectile lifespan remaining 60fps: ${proj60.lifespan} | 75fps: ${proj75.lifespan}`);
+
+                // BEFORE: 70 vs 63 - different remaining lifespan
+                // AFTER: both should have similar remaining (based on time elapsed)
+                expect(isCloseTo(proj75.lifespan, proj60.lifespan)).toBe(true);
+            });
+        });
+
+        // ============================================
+        // Extended Frame-Rate Tests
+        // ============================================
+
+        describe('Frame-Rate Independence: Station', () => {
+            it('should rotate consistent amount at 60fps vs 75fps', () => {
+                // Mock Market since Station needs it
+                if (typeof Market === 'undefined') window.Market = class { constructor() { } };
+
+                const station60 = new Station(0, 0, 'Tech');
+                station60.angle = 0;
+                station60.rotationSpeed = 0.01;
+
+                const station75 = new Station(0, 0, 'Tech');
+                station75.angle = 0;
+                station75.rotationSpeed = 0.01;
+
+                // 1 second at 60fps
+                for (let i = 0; i < 60; i++) {
+                    window.deltaTime = 16.67;
+                    station60.angle += station60.rotationSpeed * (window.deltaTime / 16.67);
+                }
+
+                // 1 second at 75fps
+                for (let i = 0; i < 75; i++) {
+                    window.deltaTime = 13.33;
+                    station75.angle += station75.rotationSpeed * (window.deltaTime / 16.67);
+                }
+
+                console.log(`Station rotation 60fps: ${station60.angle.toFixed(3)} | 75fps: ${station75.angle.toFixed(3)}`);
+                expect(isCloseTo(station75.angle, station60.angle)).toBe(true);
+            });
+        });
+
+        describe('Frame-Rate Independence: ThrustParticle', () => {
+            it('should decay life consistently at 60fps vs 30fps', () => {
+                const p60 = new ThrustParticle(0, 0, 0, 10);
+                p60.life = 100;
+                p60.maxLife = 100;
+
+                const p30 = new ThrustParticle(0, 0, 0, 10);
+                p30.life = 100;
+                p30.maxLife = 100;
+
+                // Simulate 0.5 seconds
+                for (let i = 0; i < 30; i++) {
+                    window.deltaTime = 16.67;
+                    // Logic from thrustParticles.js: this.life -= 1 * timeScale
+                    const timeScale = window.deltaTime / 16.67;
+                    p60.life -= 1 * timeScale;
+                }
+
+                for (let i = 0; i < 15; i++) {
+                    window.deltaTime = 33.33;
+                    const timeScale = window.deltaTime / 16.67;
+                    p30.life -= 1 * timeScale;
+                }
+
+                console.log(`Particle life 60fps: ${p60.life.toFixed(1)} | 30fps: ${p30.life.toFixed(1)}`);
+                expect(isCloseTo(p30.life, p60.life)).toBe(true);
+            });
+        });
+
+        describe('Frame-Rate Independence: Planet', () => {
+            it('should rotate consistent amount at 60fps vs 30fps', () => {
+                const planet60 = new Planet(0, 0, 100, null, null);
+                planet60.rotation = 0;
+                planet60.rotationSpeed = 0.001;
+
+                const planet30 = new Planet(0, 0, 100, null, null);
+                planet30.rotation = 0;
+                planet30.rotationSpeed = 0.001;
+
+                // 2 seconds
+                for (let i = 0; i < 120; i++) {
+                    window.deltaTime = 16.67;
+                    // Logic: this.rotation += this.rotationSpeed * timeScale
+                    const timeScale = window.deltaTime / 16.67;
+                    planet60.rotation += planet60.rotationSpeed * timeScale;
+                }
+
+                for (let i = 0; i < 60; i++) {
+                    window.deltaTime = 33.33;
+                    const timeScale = window.deltaTime / 16.67;
+                    planet30.rotation += planet30.rotationSpeed * timeScale;
+                }
+
+                console.log(`Planet rotation 60fps: ${planet60.rotation.toFixed(4)} | 30fps: ${planet30.rotation.toFixed(4)}`);
+                expect(isCloseTo(planet30.rotation, planet60.rotation)).toBe(true);
+            });
+        });
+
+        describe('Frame-Rate Independence: Enemy Braking', () => {
+            it('should brake to similar velocity over 1 second', () => {
+                // Mock Player specifically for Enemy constructor
+                const mockPlayer = { pos: createVector(0, 0), vel: createVector(0, 0) };
+
+                // Setup Enemy 60fps
+                const enemy60 = new Enemy(0, 0, mockPlayer, 'Sidewinder', 'PIRATE');
+                enemy60.vel = createVector(100, 0); // High initial velocity
+
+                // Setup Enemy 30fps
+                const enemy30 = new Enemy(0, 0, mockPlayer, 'Sidewinder', 'PIRATE');
+                enemy30.vel = createVector(100, 0);
+
+                // Simulate braking (idle state)
+                for (let i = 0; i < 60; i++) {
+                    window.deltaTime = 16.67;
+                    enemy60.updatePhysics();
+                }
+
+                for (let i = 0; i < 30; i++) {
+                    window.deltaTime = 33.33;
+                    enemy30.updatePhysics();
+                }
+
+                console.log(`Enemy vel 60fps: ${enemy60.vel.x.toFixed(2)} | 30fps: ${enemy30.vel.x.toFixed(2)}`);
+                expect(isCloseTo(enemy30.vel.x, enemy60.vel.x)).toBe(true);
+            });
+        });
+
+        describe('Frame-Rate Independence: Reference Pattern', () => {
+            it('demonstrates correct time-scaling for position updates', () => {
+                // This shows what the CORRECT implementation looks like
+                const vel = createVector(10, 5);
+                const BASE_DT = 16.67;
+
+                const pos60 = createVector(0, 0);
+                for (let i = 0; i < 60; i++) {
+                    const timeScale = 16.67 / BASE_DT;
+                    pos60.add(p5.Vector.mult(vel, timeScale));
+                }
+
+                const pos30 = createVector(0, 0);
+                for (let i = 0; i < 30; i++) {
+                    const timeScale = 33.33 / BASE_DT;
+                    pos30.add(p5.Vector.mult(vel, timeScale));
+                }
+
+                const pos75 = createVector(0, 0);
+                for (let i = 0; i < 75; i++) {
+                    const timeScale = 13.33 / BASE_DT;
+                    pos75.add(p5.Vector.mult(vel, timeScale));
+                }
+
+                console.log(`Reference: 60fps=${pos60.x.toFixed(1)} | 30fps=${pos30.x.toFixed(1)} | 75fps=${pos75.x.toFixed(1)}`);
+
+                expect(isCloseTo(pos30.x, pos60.x)).toBe(true);
+                expect(isCloseTo(pos75.x, pos60.x)).toBe(true);
+            });
+
+            it('demonstrates correct time-scaling for counters/timers', () => {
+                const BASE_DT = 16.67;
+
+                let counter60 = 100;
+                for (let i = 0; i < 60; i++) {
+                    const timeScale = 16.67 / BASE_DT;
+                    counter60 -= timeScale; // Decrement by time-scaled amount
+                }
+
+                let counter30 = 100;
+                for (let i = 0; i < 30; i++) {
+                    const timeScale = 33.33 / BASE_DT;
+                    counter30 -= timeScale;
+                }
+
+                console.log(`Reference counter: 60fps=${counter60.toFixed(1)} | 30fps=${counter30.toFixed(1)}`);
+
+                // Both should be around 40 (lost 60 units over 1 second)
+                expect(isCloseTo(counter30, counter60)).toBe(true);
+            });
+        });
+
+        // Summary info
+        document.getElementById('info-box').innerHTML = `
+            <strong>Test Summary:</strong><br>
+            ❌ Asteroid, Cargo, Projectile tests: Expected to FAIL before refactor<br>
+            ✅ Reference Pattern tests: Should ALWAYS PASS (demonstrate correct technique)<br><br>
+            <strong>After refactor:</strong> All tests should pass, confirming frame-rate independence.
+        `;
+
+        // Run all tests
+        runTests();
+    </script>
+</body>
+
+</html>

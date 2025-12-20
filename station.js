@@ -222,8 +222,9 @@ class Station {
      * Draws the station relative to its world position.
      */
     draw() {
-        // Update animation values
-        this.angle += this.rotationSpeed;
+        // Update animation values (frame-rate independent)
+        const stationTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+        this.angle += this.rotationSpeed * stationTimeScale;
         // Slow, frame-rate independent timer with per-station speed variation.
         // Do NOT modulo here — keep a continuously increasing timer to avoid
         // discontinuities when wrapping, which causes jittery resets.

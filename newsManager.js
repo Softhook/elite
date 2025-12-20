@@ -1091,10 +1091,13 @@ class NewsManager {
      * Update news manager - call periodically to generate galaxy news
      */
     update(galaxy) {
-        if (galaxy && Math.random() < 0.01) {
+        // Calculate timeScale for probability scaling.
+        const timeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+
+        if (galaxy && Math.random() < 0.01 * timeScale) {
             this.generateGalaxyNews(galaxy);
         }
-        if (Math.random() < 0.002) {
+        if (Math.random() < 0.002 * timeScale) {
             this.generateBackgroundNews();
         }
     }

@@ -50,17 +50,20 @@ class ThrustParticle {
     }
 
     update() {
-        // Update position
-        this.pos.add(this.vel);
+        // Frame-rate independent time scaling
+        const timeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
 
-        // Apply drag
-        this.vel.mult(0.96);
+        // Update position (frame-rate independent)
+        this.pos.add(p5.Vector.mult(this.vel, timeScale));
 
-        // Reduce life
-        this.life--;
+        // Apply drag (frame-rate independent)
+        this.vel.mult(Math.pow(0.96, timeScale));
 
-        // Shrink particle
-        this.size *= this.shrinkRate;
+        // Reduce life (frame-rate independent)
+        this.life -= timeScale;
+
+        // Shrink particle (frame-rate independent)
+        this.size *= Math.pow(this.shrinkRate, timeScale);
 
         // Update color alpha based on remaining life
         const alpha = map(this.life, 0, this.maxLife, 0, 255);

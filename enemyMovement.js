@@ -101,7 +101,8 @@ class EnemyMovement {
                     }
                 } else {
                     // If desiredMovementTargetPos is current position, or very close, try to stay still by braking
-                    this.vel.mult(constrain(SNIPING_BRAKE_FACTOR, 0.6, 0.99));
+                    const snipeTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                    this.vel.mult(Math.pow(constrain(SNIPING_BRAKE_FACTOR, 0.6, 0.99), snipeTimeScale));
                     canThrust = false; // No active thrust, just braking
                 }
             } else if (this.currentState === AI_STATE.REPOSITIONING || this.currentState === AI_STATE.PATROLLING) {
@@ -223,22 +224,26 @@ class EnemyMovement {
         // Skip if destroyed
         if (this.destroyed) return;
 
+        // Calculate timeScale once for all physics operations
+        const physicsTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+
         // --- TANGLE WEAPON EFFECT ---
         if (this.dragMultiplier > 1.0 && this.dragEffectTimer > 0) {
-            // First apply normal drag (always safe)
-            this.vel.mult(this.drag);
+            // First apply normal drag (always safe) - frame-rate independent
+            this.vel.mult(Math.pow(this.drag, physicsTimeScale));
 
             // Then apply the tangle effect with safety bounds
             const safeDragMultiplier = Math.max(this.dragMultiplier, 0.001); // Prevent division by zero
             const tangledSpeedFactor = Math.min(1 / safeDragMultiplier, 1.0); // Can't increase speed
 
-            // Apply tangle effect if values are valid
+            // Apply tangle effect if values are valid - frame-rate independent
             if (isFinite(tangledSpeedFactor) && tangledSpeedFactor > 0) {
-                this.vel.mult(tangledSpeedFactor);
+                this.vel.mult(Math.pow(tangledSpeedFactor, physicsTimeScale));
 
                 // Add slight directional randomness to simulate being caught in energy net
+                // Use time-based trigger instead of frameCount for consistency
                 if (frameCount % 5 === 0) {
-                    this.vel.rotate(random(-0.1, 0.1));
+                    this.vel.rotate(random(-0.1, 0.1) * physicsTimeScale);
                 }
             }
 
@@ -251,29 +256,32 @@ class EnemyMovement {
         }
         // --- STATION PROXIMITY EFFECT ---
         else if (this.currentState === AI_STATE.NEAR_STATION) {
-            // Station braking - stronger effect than normal drag
-            this.vel.mult(this.drag * 0.8);
+            // Station braking - stronger effect than normal drag - frame-rate independent
+            this.vel.mult(Math.pow(this.drag * 0.8, physicsTimeScale));
         }
         // --- DEFAULT DRAG ---
         else {
-            // Normal drag
-            this.vel.mult(this.drag);
+            // Normal drag - frame-rate independent
+            this.vel.mult(Math.pow(this.drag, physicsTimeScale));
         }
 
         // Limit Max Speed Logic (Soft Cap to allow knockback)
         const currentSpeed = this.vel.mag();
         if (currentSpeed > this.maxSpeed) {
-            // If exceeding max speed (likely due to knockback/explosion), apply stronger drag
-            // instead of hard clamping. This allows the ship to "coast" down to normal speed.
-            this.vel.mult(0.9); // Stronger deceleration for overspeed
+            // If exceeding max speed, decay only the excess amount
+            // This is more frame-rate independent than multiplying the whole velocity
+            const excess = currentSpeed - this.maxSpeed;
+            const decayedExcess = excess * Math.pow(0.9, physicsTimeScale);
+            this.vel.setMag(this.maxSpeed + decayedExcess);
         } else {
             // Normal operation - safeguard against thrust accumulation
             this.vel.limit(this.maxSpeed);
         }
 
-        // Update position only if velocity is valid
+        // Update position only if velocity is valid (frame-rate independent)
         if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) {
-            this.pos.add(this.vel);
+            const timeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+            this.pos.add(p5.Vector.mult(this.vel, timeScale));
         } else {
             console.warn(`Invalid velocity detected for ${this.shipTypeName}, resetting`);
             this.vel.set(0, 0);

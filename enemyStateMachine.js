@@ -387,17 +387,19 @@ class EnemyStateMachine {
         if (distToPrincipal > this.guardLeashDistance || distToFormation > (this.size || 1) * 0.5) {
             this.performRotationAndThrust(this._guardFormationTarget);
         } else {
+            // Frame-rate independent velocity matching
+            const guardTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
             if (principal.vel) {
                 this.tempVector.set(principal.vel.x - this.vel.x, principal.vel.y - this.vel.y);
                 const velDiffMagSq = this.tempVector.magSq();
-                this.tempVector.mult(0.25);
+                this.tempVector.mult(0.25 * guardTimeScale);
                 this.vel.add(this.tempVector);
 
                 if (velDiffMagSq < 0.1) {
-                    this.vel.mult(0.99);
+                    this.vel.mult(Math.pow(0.99, guardTimeScale));
                 }
             } else {
-                this.vel.mult(0.985);
+                this.vel.mult(Math.pow(0.985, guardTimeScale));
             }
 
             this.rotateTowards(principalAngle);

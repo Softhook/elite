@@ -833,8 +833,9 @@ class Planet {
      * Updates planet rotation over time
      */
     update() {
-        // Increment rotation based on rotation speed
-        this.currentRotation += this.rotationSpeed;
+        // Increment rotation based on rotation speed (frame-rate independent)
+        const timeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+        this.currentRotation += this.rotationSpeed * timeScale;
 
         // Keep rotation within 0 to TWO_PI for efficiency
         if (this.currentRotation > TWO_PI) {

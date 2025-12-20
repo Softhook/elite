@@ -464,17 +464,20 @@ class TitleScreen {
     updateThrustParticles(ship, deltaTime) {
         if (!ship.thrustParticles) ship.thrustParticles = [];
 
+        // Frame-rate independent time scaling
+        const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
+
         // Update existing particles
         for (let i = ship.thrustParticles.length - 1; i >= 0; i--) {
             const p = ship.thrustParticles[i];
 
-            // Update position
-            p.pos.add(p.vel);
+            // Update position (frame-rate independent)
+            p.pos.add(p5.Vector.mult(p.vel, timeScale));
 
-            // Shrink and fade
-            p.size *= 0.95;
-            p.alpha -= 5;
-            p.lifespan -= 1;
+            // Shrink and fade (frame-rate independent)
+            p.size *= Math.pow(0.95, timeScale);
+            p.alpha -= 5 * timeScale;
+            p.lifespan -= timeScale;
 
             // Remove expired particles
             if (p.lifespan <= 0 || p.alpha <= 0 || p.size < 1) {

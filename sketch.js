@@ -73,6 +73,7 @@ function initializeCanvas() {
     angleMode(RADIANS);
     textAlign(CENTER, CENTER);
     textSize(14);
+    frameRate(144); // Allow high refresh rate monitors to run at native speed (up to 144fps)
     UI_LOG("Setting up Elite MVP...");
 }
 
@@ -234,6 +235,12 @@ function draw() {
     const bg = (typeof STARFIELD_CONFIG !== 'undefined') ? STARFIELD_CONFIG.BACKGROUND_COLOR : { r: 10, g: 15, b: 40 };
     background(bg.r, bg.g, bg.b);
 
+    // Clamp deltaTime to max of 100ms (10fps) to prevent physics explosions on lag spikes
+    // This is crucial for high-FPS configurations to remain stable
+    if (deltaTime > 100) {
+        window.deltaTime = 100;
+    }
+
     if (!validateGameState()) {
         return;
     }
@@ -316,20 +323,29 @@ function updateEventManager() {
 /**
  * Perform periodic background tasks
  */
+let _lastCommunicationCleanup = 0;
+let _lastFactionMessage = 0;
+let _lastNewsUpdate = 0;
+
 function performPeriodicTasks() {
+    const now = millis();
+
     // Communication system cleanup every ~60 seconds
-    if (frameCount % 3600 === 0 && communicationSystem) {
+    if (now - _lastCommunicationCleanup > 60000 && communicationSystem) {
         communicationSystem.performPeriodicCleanup?.();
+        _lastCommunicationCleanup = now;
     }
 
     // Faction motivation messages every ~2 minutes
-    if (frameCount % 7200 === 0 && communicationSystem) {
+    if (now - _lastFactionMessage > 120000 && communicationSystem) {
         communicationSystem.sendFactionMotivationMessage?.();
+        _lastFactionMessage = now;
     }
 
     // Update news manager for galaxy-wide news generation (every ~30 seconds)
-    if (frameCount % 1800 === 0 && GameGlobals.newsManager && galaxy) {
+    if (now - _lastNewsUpdate > 30000 && GameGlobals.newsManager && galaxy) {
         GameGlobals.newsManager.update(galaxy);
+        _lastNewsUpdate = now;
     }
 }
 
@@ -363,7 +379,7 @@ function renderUI() {
         uiManager.checkMarketButtonHeld(player.currentSystem?.station?.getMarket(), player);
     }
 
-    uiManager?.drawFramerate();
+    uiManager?.drawFramerate();    // fps cap removed for frame-rate independence
     uiManager?.drawMessages();
 }
 

@@ -167,6 +167,9 @@ class Projectile {
     }
 
     update() {
+        // Frame-rate independent time scaling
+        const timeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+
         // Homing missile logic (using cached type check)
         if (this._isMissile && this.target && this.target.pos && !this.target.destroyed && (this.target.hull === undefined || this.target.hull > 0)) {
             // Calculate desired direction vector (reuse temp vectors)
@@ -176,17 +179,16 @@ class Projectile {
             // Calculate steering force (reuse steer vector)
             this._steerVec.set(this._tempVec.x - this.vel.x, this._tempVec.y - this.vel.y);
 
-            // Scale turnRate by deltaTime for frame-rate independence
-            this._timeCorrection = deltaTime ? (deltaTime / 16.666667) : 1; // 1000/60 = 16.666667
-            this._steerVec.limit(this.turnRate * this._timeCorrection);
+            // Scale turnRate by timeScale for frame-rate independence
+            this._steerVec.limit(this.turnRate * timeScale);
 
             this.vel.add(this._steerVec);
             this.vel.setMag(this.missileSpeed);
         }
 
-        // Move projectile
-        this.pos.add(this.vel);
-        this.lifespan--;
+        // Move projectile (frame-rate independent)
+        this.pos.add(p5.Vector.mult(this.vel, timeScale));
+        this.lifespan -= timeScale;
     }
 
     /** Apply damage to this projectile (used primarily for missiles/mines)

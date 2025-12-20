@@ -69,9 +69,10 @@ class Cargo {
                 const nx = dx / dist;
                 const ny = dy / dist;
 
-                // Move cargo towards ship
-                this.pos.x += nx * speed;
-                this.pos.y += ny * speed;
+                // Move cargo towards ship (frame-rate independent)
+                const attachTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                this.pos.x += nx * speed * attachTimeScale;
+                this.pos.y += ny * speed * attachTimeScale;
                 this.vel.x = nx * speed;
                 this.vel.y = ny * speed;
 
@@ -126,16 +127,18 @@ class Cargo {
                     }
                 }
                 // decrement lifetime while being pulled (so cargo won't persist forever)
-                this.lifetime--;
+                const pullTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                this.lifetime -= pullTimeScale;
                 return;
             }
         }
 
-        // Default floating behavior
-        this.pos.add(this.vel);
-        this.vel.mult(0.98);
-        this.rotation = (this.rotation + this.rotationSpeed) % TWO_PI;
-        this.lifetime--;
+        // Default floating behavior (frame-rate independent)
+        const timeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+        this.pos.add(p5.Vector.mult(this.vel, timeScale));
+        this.vel.mult(Math.pow(0.98, timeScale)); // Frame-rate independent drag
+        this.rotation = (this.rotation + this.rotationSpeed * timeScale) % TWO_PI;
+        this.lifetime -= timeScale;
     }
 
     draw() {

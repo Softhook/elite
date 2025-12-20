@@ -976,7 +976,10 @@ class EnemyAIBehaviors {
 
             case AI_STATE.NEAR_STATION:
                 this.target = null; // Ensure target is null when near station
-                this.vel.mult(0.8); // Apply braking continuously while near station
+                {
+                    const nearStationTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                    this.vel.mult(Math.pow(0.8, nearStationTimeScale)); // Apply braking continuously (frame-rate independent)
+                }
                 shouldMove = false; // Don't actively thrust, just brake and wait
 
                 if (this.nearStationTimer === undefined || this.nearStationTimer === null) {
@@ -1837,8 +1840,9 @@ class EnemyAIBehaviors {
         if (this._minerInitOffset !== undefined && this._minerElapsedTime !== undefined) {
             this._minerElapsedTime += timerDelta;
             if (this._minerElapsedTime < this._minerInitOffset) {
-                // Still in initialization delay - idle with gentle drift
-                this.vel.mult(0.95);
+                // Still in initialization delay - idle with gentle drift (frame-rate independent)
+                const initTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                this.vel.mult(Math.pow(0.95, initTimeScale));
                 this.updatePhysics();
                 return;
             } else if (this._minerElapsedTime >= this._minerInitOffset && this.currentState === AI_STATE.IDLE) {
@@ -1867,9 +1871,10 @@ class EnemyAIBehaviors {
         if (cargoFull || (cargoAmount > 0 && this.shouldReturnToStation)) {
             // Head to station to sell cargo
             if (!system?.station?.pos) {
-                // No station in system, just idle
+                // No station in system, just idle (frame-rate independent braking)
                 this.changeState(AI_STATE.IDLE);
-                this.vel.mult(0.95);
+                const idleTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                this.vel.mult(Math.pow(0.95, idleTimeScale));
                 this.updatePhysics();
                 return;
             }
@@ -1877,10 +1882,10 @@ class EnemyAIBehaviors {
             const distToStation = dist(this.pos.x, this.pos.y, system.station.pos.x, system.station.pos.y);
 
             if (distToStation < this.stationProximityThreshold) {
-                // At station - idle and wait (will re-check on next update)
-                // Ensure to dock eventually? 
+                // At station - idle and wait (frame-rate independent braking)
                 this.changeState(AI_STATE.NEAR_STATION);
-                this.vel.mult(0.9);
+                const stationTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                this.vel.mult(Math.pow(0.9, stationTimeScale));
 
                 // Count down wait timer using corrected delta
                 if (this.nearStationTimer === undefined) {
@@ -2014,11 +2019,13 @@ class EnemyAIBehaviors {
             while (angleDiff < -PI) angleDiff += TWO_PI;
 
             if (Math.abs(angleDiff) > 0.05) {
-                this.angle += angleDiff * 0.1; // Smooth rotation
+                const minerRotTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                this.angle += angleDiff * 0.1 * minerRotTimeScale; // Smooth rotation (frame-rate independent)
             }
 
-            // Apply strong damping when close - reduces jitter
-            this.vel.mult(0.92);
+            // Apply strong damping when close - reduces jitter (frame-rate independent)
+            const closeTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+            this.vel.mult(Math.pow(0.92, closeTimeScale));
         }
 
         // Fire at asteroid if in range
@@ -2153,7 +2160,8 @@ class EnemyAIBehaviors {
         if (distToPatrolTarget < 50) {
             // Pause to "scan" occasionally
             if (random() < 0.2) {
-                this.vel.mult(0.5); // Slow down
+                const scanTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                this.vel.mult(Math.pow(0.5, scanTimeScale)); // Slow down (frame-rate independent)
                 // Wait a bit before selecting new patrol point
                 if (!this._scanPauseTimer) {
                     this._scanPauseTimer = random(1, 3); // 1-3 seconds
@@ -2318,8 +2326,9 @@ class EnemyAIBehaviors {
         if (this._asteroidAvoidTimer === undefined) this._asteroidAvoidTimer = 0;
         if (this._asteroidAvoidTimer > 0) {
             this._asteroidAvoidTimer = Math.max(0, this._asteroidAvoidTimer - ((typeof deltaTime === 'number') ? (deltaTime / 1000) : 0.016));
-            // Gentle damping (cheap): small multiplier to slow over avoidance window
-            this.vel.mult(0.92);
+            // Gentle damping (frame-rate independent)
+            const avoidTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+            this.vel.mult(Math.pow(0.92, avoidTimeScale));
         }
     }
 
@@ -2383,10 +2392,11 @@ class EnemyAIBehaviors {
             const repairRange = EnemyAIBehaviors.REPAIR_CONFIG.REPAIR_RANGE;
 
             if (distToTarget < repairRange) {
-                // Within range - perform repairs
+                // Within range - perform repairs (frame-rate independent braking)
                 this.changeState(AI_STATE.IDLE);
-                this.performRepair(system, this.repairTarget); // Pass system for throttling check
-                this.vel.mult(0.9);
+                this.performRepair(system, this.repairTarget);
+                const repairTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                this.vel.mult(Math.pow(0.9, repairTimeScale));
 
                 // Check if current target is fully repaired
                 if (!this.isRepairTargetValid(this.repairTarget)) {
@@ -2408,11 +2418,10 @@ class EnemyAIBehaviors {
         }
 
         // Priority 4: Return to station when no work found
-        // Note: We always re-check for work at the start of this function,
-        // so even when idle at station, we'll detect new reconstruction needs
         if (!system?.station?.pos) {
             this.changeState(AI_STATE.IDLE);
-            this.vel.mult(0.95);
+            const noStationTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+            this.vel.mult(Math.pow(0.95, noStationTimeScale));
             this.updatePhysics();
             return;
         }
@@ -2423,9 +2432,10 @@ class EnemyAIBehaviors {
         );
 
         if (distToStation < this.stationProximityThreshold) {
-            // At station - idle and wait (will re-check on next update)
+            // At station - idle and wait (frame-rate independent)
             this.changeState(AI_STATE.NEAR_STATION);
-            this.vel.mult(0.8);
+            const stationTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+            this.vel.mult(Math.pow(0.8, stationTimeScale));
         } else {
             // Move towards station
             this.changeState(AI_STATE.PATROLLING);
@@ -2510,9 +2520,10 @@ class EnemyAIBehaviors {
 
             this._reconstructionTimer -= deltaSeconds;
 
-            // Stop moving during reconstruction
+            // Stop moving during reconstruction (frame-rate independent)
             this.changeState(AI_STATE.IDLE);
-            this.vel.mult(0.85);
+            const reconstructTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+            this.vel.mult(Math.pow(0.85, reconstructTimeScale));
 
             // Spawn construction particles
             if (this._reconstructionTimer > 0) {

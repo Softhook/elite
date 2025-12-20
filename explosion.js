@@ -157,10 +157,10 @@ class Explosion {
         // Update particles
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
-            p.pos.add(p.vel);
-            p.vel.mult(p.drag);
             // Scale decay by deltaTime for consistent animation speed
             const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
+            p.pos.add(p5.Vector.mult(p.vel, timeScale));
+            p.vel.mult(Math.pow(p.drag, timeScale));
             p.opacity -= p.decay * timeScale;
 
             if (p.opacity <= 0) {
@@ -174,10 +174,10 @@ class Explosion {
         // Update debris
         for (let i = this.debris.length - 1; i >= 0; i--) {
             const d = this.debris[i];
-            d.pos.add(d.vel);
-            d.vel.mult(d.drag);
-            d.rotation += d.rotSpeed;
             const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
+            d.pos.add(p5.Vector.mult(d.vel, timeScale));
+            d.vel.mult(Math.pow(d.drag, timeScale));
+            d.rotation += d.rotSpeed * timeScale;
             d.opacity -= d.decay * timeScale;
 
             if (d.opacity <= 0) {

@@ -56,14 +56,17 @@ class Nebula {
     }
 
     update() {
+        // Frame-rate independent time scaling
+        const timeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+
         // Update nebula particles
         const posX = this.pos.x;
         const posY = this.pos.y;
         const maxDist = this.radius * 0.9;
         for (let i = 0, len = this.particles.length; i < len; i++) {
             const particle = this.particles[i];
-            // Move particles slowly
-            particle.pos.add(particle.velocity);
+            // Move particles slowly (frame-rate independent)
+            particle.pos.add(p5.Vector.mult(particle.velocity, timeScale));
 
             // Keep particles within nebula bounds
             const dx = particle.pos.x - posX;
@@ -73,14 +76,14 @@ class Nebula {
             if (distFromCenterSq > maxDistSq) {
                 // Push back toward center
                 const distFromCenter = Math.sqrt(distFromCenterSq);
-                const toCenterX = (posX - particle.pos.x) / distFromCenter * 0.5;
-                const toCenterY = (posY - particle.pos.y) / distFromCenter * 0.5;
+                const toCenterX = (posX - particle.pos.x) / distFromCenter * 0.5 * timeScale;
+                const toCenterY = (posY - particle.pos.y) / distFromCenter * 0.5 * timeScale;
                 particle.velocity.x += toCenterX;
                 particle.velocity.y += toCenterY;
             }
 
-            // Slowly rotate particles
-            particle.angle += 0.01;
+            // Slowly rotate particles (frame-rate independent)
+            particle.angle += 0.01 * timeScale;
         }
     }
 

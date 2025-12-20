@@ -150,8 +150,9 @@ class Asteroid {
 
     update() {
         if (this.destroyed) return;
-        this.pos.add(this.vel);
-        this.angle = (this.angle + this.rotationSpeed) % TWO_PI;
+        const timeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+        this.pos.add(p5.Vector.mult(this.vel, timeScale));
+        this.angle = (this.angle + this.rotationSpeed * timeScale) % TWO_PI;
         if (this.angle < 0) this.angle += TWO_PI;
     }
 

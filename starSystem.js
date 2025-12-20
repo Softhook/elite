@@ -2625,8 +2625,9 @@ class StarSystem {
         for (let i = this.forceWaves.length - 1; i >= 0; i--) {
             const wave = this.forceWaves[i];
 
-            // Expand the wave
-            wave.radius += wave.growRate;
+            // Expand the wave (frame-rate independent)
+            const timeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+            wave.radius += wave.growRate * timeScale;
 
             // First time initialization - find all entities to process
             if (!wave.entitiesToProcess) {
