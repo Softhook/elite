@@ -5,6 +5,15 @@
 // Standard panel background color - used for all menus to ensure consistent appearance
 const STANDARD_PANEL_BG = [20, 20, 40, 220];
 
+// Standardized text sizes for all UI screens
+const STATION_TEXT_SIZE = {
+    BIGHEADER: 30,
+    HEADER: 24,
+    BODY: 20,
+    HELPER: 10,
+    GAME_OVER: 120
+};
+
 /**
  * UIComponents - Static utility class providing common UI drawing operations.
  * All methods are static to allow easy use throughout the UI system without
@@ -107,7 +116,7 @@ class UIComponents {
         fill(255);
         noStroke();
         textAlign(CENTER, CENTER);
-        textSize(22);
+        textSize(STATION_TEXT_SIZE.HEADER);
         text(label, x + w / 2, y + h / 2);
         return Object.assign({ x, y, w, h }, extra);
     }
@@ -270,7 +279,7 @@ class UIComponents {
             fill(disabledReason ? (isBuy ? [255, 150, 150] : 180) : 60);
             noStroke();
             textAlign(CENTER, CENTER);
-            textSize(20);
+            textSize(STATION_TEXT_SIZE.BODY);
             text(disabledReason || label, x + w / 2, y + h / 2);
             return null;
         }
@@ -287,7 +296,7 @@ class UIComponents {
         fill(255);
         noStroke();
         textAlign(CENTER, CENTER);
-        textSize(20);
+        textSize(STATION_TEXT_SIZE.BODY);
         text(label, x + w / 2, y + h / 2);
 
         return { x, y, w, h };
@@ -536,12 +545,12 @@ class UIComponents {
         fill(255);
         noStroke();
         if (typeof font !== 'undefined') textFont(font);
-        textSize(30);
+        textSize(STATION_TEXT_SIZE.BIGHEADER);
         textAlign(CENTER, TOP);
         text(title, panelX + panelW / 2, panelY + 20);
 
         // Location and system (left aligned)
-        textSize(20);
+        textSize(STATION_TEXT_SIZE.BODY);
         textAlign(LEFT, TOP);
         text(`${locationName} - ${systemName}`, panelX + 20, panelY + 20);
 
@@ -956,12 +965,12 @@ class UIComponents {
                 pop();
             } else {
                 fill(255, 50, 50);
-                textSize(12);
+                textSize(STATION_TEXT_SIZE.HELPER + 2);
                 textAlign(CENTER, CENTER);
                 text("OVERHEAT", 0, barY - 15);
 
                 fill(100, 200, 255, 150);
-                textSize(10);
+                textSize(STATION_TEXT_SIZE.HELPER);
                 text("COOLING...", 0, 5);
             }
         }

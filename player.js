@@ -1678,7 +1678,7 @@ class Player {
      */
     addCargo(commodityName, quantity, allowPartial = false) {
         // Validate input
-        if (!commodityName || quantity <= 0) {
+        if (!commodityName || !quantity || quantity <= 0) {
             return { success: false, added: 0 };
         }
 

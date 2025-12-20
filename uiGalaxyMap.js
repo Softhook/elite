@@ -196,7 +196,7 @@ class UIGalaxyMap {
             fill(textColor);
             noStroke();
             textAlign(CENTER, TOP);
-            textSize(20);
+            textSize(STATION_TEXT_SIZE.BODY);
             text(sysData.name, drawX, drawY + nodeR + 5);
 
             // Show crisis markers on ALL affected systems (even unvisited)
@@ -204,14 +204,14 @@ class UIGalaxyMap {
             let crisisLabelY = drawY + nodeR + 25;
             if (plagueAffected.includes(i)) {
                 fill(255, 0, 255); // Magenta for plague
-                textSize(16);
+                textSize(STATION_TEXT_SIZE.BODY);
                 text("☠ PLAGUE", drawX, crisisLabelY);
                 crisisLabelY += 18;
             }
 
             if (famineAffected.includes(i)) {
                 fill(255, 150, 0); // Orange for famine
-                textSize(16);
+                textSize(STATION_TEXT_SIZE.BODY);
                 text("🍂 FAMINE", drawX, crisisLabelY);
                 crisisLabelY += 18;
             }
@@ -221,7 +221,7 @@ class UIGalaxyMap {
                 const system = galaxy.systems[i];
                 const techLevel = system?.techLevel || "?";
 
-                textSize(20);
+                textSize(STATION_TEXT_SIZE.BODY);
                 fill(textColor);
                 text(`(${sysData.type} - Tech ${techLevel})`, drawX, crisisLabelY);
 
@@ -250,7 +250,7 @@ class UIGalaxyMap {
                 fill(255);
                 noStroke();
                 textAlign(CENTER, CENTER);
-                textSize(14);
+                textSize(STATION_TEXT_SIZE.HELPER + 4);
                 text("M", btnX + btnSize / 2, btnY + btnSize / 2);
 
                 this.galaxyMapMarketButtonAreas.push({
@@ -362,7 +362,7 @@ class UIGalaxyMap {
         rect(overlayX, overlayY, overlayW, overlayH, 8);
 
         // Header
-        UIComponents.setTextStyle({ fill: 255, size: 22, align: [CENTER, TOP] });
+        UIComponents.setTextStyle({ fill: 255, size: STATION_TEXT_SIZE.HEADER, align: [CENTER, TOP] });
         if (typeof font !== 'undefined') textFont(font);
         text(`${system.name}`, overlayX + overlayW / 2, overlayY + 10);
 

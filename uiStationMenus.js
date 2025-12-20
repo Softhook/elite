@@ -1,6 +1,7 @@
 // ****** uiStationMenus.js ******
 // Station menu screens: Repairs, Police, Shipyard, Upgrades, Protection, Storage, Record.
 // This file must be loaded BEFORE uiManager.js
+// Note: STATION_TEXT_SIZE is defined in uiComponents.js
 
 /**
  * UIStationMenus - Handles all station menu screen rendering.
@@ -98,7 +99,7 @@ class UIStationMenus {
         const availableHeight = contentH;
 
         if (newsItems.length === 0) {
-            UIComponents.setTextStyle({ fill: 180, size: 16, align: [CENTER, CENTER] });
+            UIComponents.setTextStyle({ fill: 180, size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
             text("No news reports available.", pX + pW / 2, currentY + availableHeight / 2);
         } else {
             // Compact 2-line layout: much smaller item height
@@ -144,7 +145,7 @@ class UIStationMenus {
                     noStroke();
                     rect(pX + 25, itemY + 4, 90, 22, 3);
                     fill(255);
-                    textSize(16);
+                    textSize(STATION_TEXT_SIZE.BODY);
                     textAlign(CENTER, CENTER);
                     textStyle(BOLD);
                     text("BREAKING", pX + 70, itemY + 15);
@@ -155,7 +156,7 @@ class UIStationMenus {
                 // Headline (line 1) - bold, larger
                 const sourceColor = item.sourceColor || [200, 200, 200];
                 fill(255, 230, 120);
-                textSize(20);
+                textSize(STATION_TEXT_SIZE.HEADER);
                 textAlign(LEFT, TOP);
                 textStyle(BOLD);
 
@@ -174,13 +175,13 @@ class UIStationMenus {
 
                 // Source on right side (line 1)
                 fill(sourceColor);
-                textSize(16);
+                textSize(STATION_TEXT_SIZE.BODY);
                 textAlign(RIGHT, TOP);
                 text(item.source || "Echo", pX + pW - 28, itemY + 10);
 
                 // Body text (line 2) - smaller, dimmer, truncated
                 fill(170);
-                textSize(16);
+                textSize(STATION_TEXT_SIZE.BODY);
                 textAlign(LEFT, TOP);
 
                 const bodyText = item.body || "";
@@ -196,7 +197,7 @@ class UIStationMenus {
 
                 // Time ago indicator (bottom right, very subtle)
                 fill(100);
-                textSize(16);
+                textSize(STATION_TEXT_SIZE.HELPER);
                 textAlign(RIGHT, TOP);
                 const ageMs = Date.now() - (item.timestamp || Date.now());
                 const ageMins = Math.floor(ageMs / 60000);
@@ -235,7 +236,7 @@ class UIStationMenus {
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
 
         // Player ship repair section
-        UIComponents.setTextStyle({ fill: 220, size: 20, alignH: CENTER, alignV: TOP });
+        UIComponents.setTextStyle({ fill: 220, size: STATION_TEXT_SIZE.HEADER, alignH: CENTER, alignV: TOP });
         text(`Hull: ${floor(player.hull)} / ${player.maxHull}`, pX + pW / 2, pY + headerHeight + 10);
 
         let missing = player.maxHull - player.hull;
@@ -259,7 +260,7 @@ class UIStationMenus {
             stroke(255, 180, 100);
             line(pX + 50, btnY2 + btnH + 20, pX + pW - 50, btnY2 + btnH + 20);
 
-            UIComponents.setTextStyle({ fill: 220, size: 20, alignH: CENTER, alignV: TOP, noStroke: true });
+            UIComponents.setTextStyle({ fill: 220, size: STATION_TEXT_SIZE.HEADER, alignH: CENTER, alignV: TOP, noStroke: true });
 
             bodyguardsButtonArea = UIComponents.drawButton(
                 btnX, btnY3, btnW, btnH,
@@ -361,10 +362,10 @@ class UIStationMenus {
         const isAnarchySystem = typeof system?.securityLevel === 'string' && system.securityLevel.toLowerCase() === 'anarchy';
 
         if (isAnarchySystem) {
-            UIComponents.setTextStyle({ fill: 220, size: 22, alignH: CENTER, alignV: TOP });
+            UIComponents.setTextStyle({ fill: 220, size: STATION_TEXT_SIZE.HEADER, alignH: CENTER, alignV: TOP });
             const messageY = pY + headerHeight + 20;
             text("This anarchy system has no formal police presence.", pX + pW / 2, messageY);
-            UIComponents.setTextStyle({ fill: [180, 200, 255], size: 18 });
+            UIComponents.setTextStyle({ fill: [180, 200, 255], size: STATION_TEXT_SIZE.BODY });
             text("Local disputes are settled without official intervention.", pX + pW / 2, messageY + 35);
 
             this.policeButtonAreas.push(UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: 'back' }));
@@ -375,18 +376,18 @@ class UIStationMenus {
             return;
         }
 
-        UIComponents.setTextStyle({ fill: 255, size: 20, align: [CENTER, TOP] });
+        UIComponents.setTextStyle({ fill: 255, size: STATION_TEXT_SIZE.HEADER, align: [CENTER, TOP] });
         const isWanted = system?.isPlayerWanted();
         const statusText = isWanted ? "WANTED" : "CLEAN";
         const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
         const contentY = pY + headerHeight + 10;
         text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX + pW / 2, contentY);
-        UIComponents.setTextStyle({ fill: statusColor, size: 24 });
+        UIComponents.setTextStyle({ fill: statusColor, size: STATION_TEXT_SIZE.HEADER });
         text(statusText, pX + pW / 2, contentY + 30);
 
         // Display police bounty information
         if (player.isPolice) {
-            UIComponents.setTextStyle({ fill: [100, 255, 100], size: 18 });
+            UIComponents.setTextStyle({ fill: [100, 255, 100], size: STATION_TEXT_SIZE.BODY });
             text("Active Bounty: 1,000 cr per Pirate killed, 1,000 cr per Alien killed", pX + pW / 2, contentY + 65);
         }
 
@@ -394,7 +395,7 @@ class UIStationMenus {
         try {
             const pk = player.getFactionKillsProgress && player.getFactionKillsProgress('POLICE');
             if (pk) {
-                UIComponents.setTextStyle({ fill: [200], size: 16, align: [CENTER, TOP] });
+                UIComponents.setTextStyle({ fill: [200], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
                 if (pk.nextThreshold) {
                     text(`Police Kills: ${pk.kills} — ${pk.killsToNext} to ${pk.nextRank}`, pX + pW / 2, contentY + 95);
                 } else {
@@ -408,7 +409,7 @@ class UIStationMenus {
         else if (system?.securityLevel === 'Medium') fineAmount = 500;
         if (player.hasBeenPolice) {
             fineAmount *= 3;
-            UIComponents.setTextStyle({ fill: [255, 200, 100], size: 16 });
+            UIComponents.setTextStyle({ fill: [255, 200, 100], size: STATION_TEXT_SIZE.BODY });
             text("Fines tripled for former police officer", pX + pW / 2, contentY + 95);
         }
 
@@ -428,7 +429,7 @@ class UIStationMenus {
                 UIComponents.drawButton(btnX, btnY2, btnW, btnH, "Join Police Force", [50, 50, 180], [100, 100, 255], 5, { action: 'join_police' })
             );
         } else {
-            UIComponents.setTextStyle({ fill: 255, size: 18, align: [CENTER, CENTER] });
+            UIComponents.setTextStyle({ fill: 255, size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
             text("You are a member of the Police Force", pX + pW / 2, btnY2 + btnH / 2);
         }
 
@@ -586,11 +587,11 @@ class UIStationMenus {
         // Draw welcome text (single line)
         const systemName = system?.name || "Unknown";
         const welcomeText = this._getShipyardWelcomeText(systemTechLevel, economyType, systemName);
-        UIComponents.setTextStyle({ fill: [255, 230, 150], size: 16, align: [LEFT, TOP] });
+        UIComponents.setTextStyle({ fill: [255, 230, 150], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
         text(welcomeText, pX + 20, pY + headerHeight);
 
         // Show trade-in info
-        UIComponents.setTextStyle({ fill: [180, 220, 255], size: 16, align: [LEFT, TOP] });
+        UIComponents.setTextStyle({ fill: [180, 220, 255], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
         text(`Your ship: ${currentShipType} (Trade-in: ${currentShipValue} cr)`, pX + 20, pY + headerHeight + 22);
 
         // List ships - adjusted startY for welcome text
@@ -603,7 +604,7 @@ class UIStationMenus {
         // Draw visible ships
         let firstRow = this.shipyardScrollOffset;
         let lastRow = min(firstRow + visibleRows, totalRows);
-        textSize(18);
+        textSize(STATION_TEXT_SIZE.BODY);
 
         for (let i = firstRow; i < lastRow; i++) {
             let [shipKey, ship] = availableShips[i];
@@ -633,21 +634,21 @@ class UIStationMenus {
             if (isCurrentShip) {
                 fill(100, 150, 255);
                 textAlign(LEFT, CENTER);
-                textSize(18);
+                textSize(STATION_TEXT_SIZE.BODY);
                 text(`${ship.name}`, pX + 30, y + rowH / 2);
                 textAlign(RIGHT, CENTER);
-                textSize(16);
+                textSize(STATION_TEXT_SIZE.BODY);
                 fill(150, 180, 255);
                 text(`CURRENT SHIP`, pX + pW - 30, y + rowH / 2);
             } else {
                 textAlign(LEFT, CENTER);
-                textSize(16);
+                textSize(STATION_TEXT_SIZE.BODY);
                 fill(canAfford ? 255 : 120);
                 const leftText = `${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}`;
                 text(leftText, pX + 30, y + rowH / 2);
 
                 textAlign(RIGHT, CENTER);
-                textSize(16);
+                textSize(STATION_TEXT_SIZE.BODY);
                 if (finalPrice > 0) {
                     fill(canAfford ? 255 : 120, canAfford ? 220 : 100, canAfford ? 100 : 50);
                     text(`${finalPrice} cr`, pX + pW - 30, y + rowH / 2);
@@ -718,7 +719,7 @@ class UIStationMenus {
         // Draw welcome text (single line)
         const systemName = system?.name || "Unknown";
         const welcomeText = this._getUpgradesWelcomeText(systemTechLevel, economyType, systemName);
-        UIComponents.setTextStyle({ fill: [255, 200, 150], size: 16, align: [LEFT, TOP] });
+        UIComponents.setTextStyle({ fill: [255, 200, 150], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
         text(welcomeText, pX + 20, pY + headerHeight);
 
         // Continue with upgrade menu drawing
@@ -733,7 +734,7 @@ class UIStationMenus {
         // Draw visible upgrades
         let firstRow = this.upgradeScrollOffset;
         let lastRow = min(firstRow + visibleRows, totalRows);
-        textSize(18);
+        textSize(STATION_TEXT_SIZE.BODY);
 
         for (let i = firstRow; i < lastRow; i++) {
             let upg = availableWeapons[i];
@@ -747,13 +748,13 @@ class UIStationMenus {
 
             noStroke();
             textAlign(LEFT, CENTER);
-            textSize(16);
+            textSize(STATION_TEXT_SIZE.BODY);
             fill(canAfford ? 255 : 120);
             const upgLeft = `${upg.name}  |  Type: ${upg.type}  |  DPS: ${upg.damage}`;
             text(upgLeft, pX + 30, y + rowH / 2);
 
             textAlign(RIGHT, CENTER);
-            textSize(16);
+            textSize(STATION_TEXT_SIZE.BODY);
             fill(canAfford ? 200 : 100, canAfford ? 150 : 80, canAfford ? 255 : 120);
             text(`${upg.price} cr`, pX + pW - 30, y + rowH / 2);
 
@@ -792,12 +793,12 @@ class UIStationMenus {
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
 
         // Draw description
-        UIComponents.setTextStyle({ fill: 220, size: 24, align: [CENTER, TOP] });
+        UIComponents.setTextStyle({ fill: 220, size: STATION_TEXT_SIZE.BIGHEADER, align: [CENTER, TOP] });
         let descY = pY + headerHeight + 20;
         text("Hire professional security guards to protect you during your travels.", pX + pW / 2, descY);
 
         // Show current bodyguard status
-        UIComponents.setTextStyle({ fill: [180, 220, 255], size: 20 });
+        UIComponents.setTextStyle({ fill: [180, 220, 255], size: STATION_TEXT_SIZE.BODY });
         let statusY = descY + 40;
 
         const activeGuardsCount = player.getActiveGuardsCount ? player.getActiveGuardsCount() : 0;
@@ -805,7 +806,7 @@ class UIStationMenus {
         text(`Active bodyguards: ${activeGuardsCount}/${bodyguardLimit}`, pX + pW / 2, statusY);
 
         if (activeGuardsCount < bodyguardLimit) {
-            UIComponents.setTextStyle({ fill: 230, size: 22, align: [LEFT, TOP] });
+            UIComponents.setTextStyle({ fill: 230, size: STATION_TEXT_SIZE.HEADER, align: [LEFT, TOP] });
             text("Available Guards for Hire:", pX + 40, statusY + 40);
 
             const guardOptions = [
@@ -818,7 +819,7 @@ class UIStationMenus {
             const affordableGuards = guardOptions.filter(guard => player.credits >= guard.cost);
 
             if (affordableGuards.length === 0) {
-                UIComponents.setTextStyle({ fill: [255, 150, 150], size: 20, align: [CENTER, CENTER] });
+                UIComponents.setTextStyle({ fill: [255, 150, 150], size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
                 text("You don't have enough credits to hire any guards.", pX + pW / 2, statusY + 80);
             } else {
                 let guardY = statusY + 80;
@@ -836,12 +837,12 @@ class UIStationMenus {
                     rect(btnX, btnY, btnW, btnH, 5);
 
                     noStroke();
-                    textSize(20);
+                    textSize(STATION_TEXT_SIZE.BODY);
                     fill(230);
                     textAlign(LEFT, CENTER);
                     text(`Slot ${i + 1}: ${guard.name} (${guard.ship})`, btnX + 15, btnY + 15);
 
-                    textSize(16);
+                    textSize(STATION_TEXT_SIZE.BODY);
                     text(guard.description, btnX + 15, btnY + 40);
 
                     textAlign(RIGHT, TOP);
@@ -867,7 +868,7 @@ class UIStationMenus {
                 });
             }
         } else {
-            UIComponents.setTextStyle({ fill: [255, 200, 100], size: 20, align: [CENTER, CENTER] });
+            UIComponents.setTextStyle({ fill: [255, 200, 100], size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
             text("Maximum number of bodyguards hired.", pX + pW / 2, statusY + 80);
         }
 
@@ -919,7 +920,7 @@ class UIStationMenus {
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
 
         if (!activeStation) {
-            UIComponents.setTextStyle({ fill: 220, size: 20, align: [CENTER, CENTER] });
+            UIComponents.setTextStyle({ fill: 220, size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
             text("No storage services are available in this location.", pX + pW / 2, pY + pH / 2 - 20);
 
             const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: "BACK" });
@@ -938,22 +939,22 @@ class UIStationMenus {
         });
         activeStation.storage = _sanitizeCargoList(activeStation.storage);
 
-        UIComponents.setTextStyle({ fill: 220, size: 20, align: [CENTER, TOP] });
+        UIComponents.setTextStyle({ fill: 220, size: STATION_TEXT_SIZE.BIGHEADER, align: [CENTER, TOP] });
         const infoY = pY + headerHeight + 10;
         text("Store cargo safely at this station. Stored goods stay here until retrieved.", pX + pW / 2, infoY);
 
         // Station storage contents
-        UIComponents.setTextStyle({ fill: [180, 200, 255], size: 20, align: [LEFT, TOP] });
+        UIComponents.setTextStyle({ fill: [180, 200, 255], size: STATION_TEXT_SIZE.HEADER, align: [LEFT, TOP] });
         text("Station Storage:", pX + 40, infoY + 40);
 
         const storage = activeStation.storage;
         let storageY = infoY + 70;
 
         if (storage.length === 0) {
-            UIComponents.setTextStyle({ fill: 180, size: 18, align: [CENTER, CENTER] });
+            UIComponents.setTextStyle({ fill: 180, size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
             text("Storage is empty", pX + pW / 2, storageY);
         } else {
-            UIComponents.setTextStyle({ align: [LEFT, TOP], size: 20 });
+            UIComponents.setTextStyle({ align: [LEFT, TOP], size: STATION_TEXT_SIZE.BODY });
             for (let i = 0; i < storage.length; i++) {
                 const item = storage[i];
                 const itemY = storageY + i * 40;
@@ -996,7 +997,7 @@ class UIStationMenus {
                     fill(200, 150, 0);
                     rect(pX + 370, itemY + 6, 80, 24, 4); // Moved right
                     fill(20);
-                    textSize(16);
+                    textSize(STATION_TEXT_SIZE.BODY);
                     textAlign(CENTER, CENTER);
                     text("MISSION", pX + 410, itemY + 18);
                     pop();
@@ -1021,17 +1022,17 @@ class UIStationMenus {
 
         // Player cargo section for depositing
         const cargoSectionY = storageY + Math.max(storage.length * 40, 60) + 30;
-        UIComponents.setTextStyle({ fill: [180, 200, 255], size: 22, align: [LEFT, TOP] });
+        UIComponents.setTextStyle({ fill: [180, 200, 255], size: STATION_TEXT_SIZE.HEADER, align: [LEFT, TOP] });
         text("Your Cargo (Tap to deposit):", pX + 40, cargoSectionY);
 
         const playerCargo = _sanitizeCargoList(player.cargo);
         let cargoY = cargoSectionY + 35;
 
         if (playerCargo.length === 0) {
-            UIComponents.setTextStyle({ fill: 180, size: 18, align: [CENTER, CENTER] });
+            UIComponents.setTextStyle({ fill: 180, size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
             text("No cargo in hold", pX + pW / 2, cargoY);
         } else {
-            UIComponents.setTextStyle({ align: [LEFT, TOP], size: 20 });
+            UIComponents.setTextStyle({ align: [LEFT, TOP], size: STATION_TEXT_SIZE.BODY });
             for (let i = 0; i < playerCargo.length; i++) {
                 const item = playerCargo[i];
                 const itemY = cargoY + i * 40;
@@ -1074,7 +1075,7 @@ class UIStationMenus {
                     fill(200, 150, 0);
                     rect(pX + 370, itemY + 6, 80, 24, 4); // Moved right
                     fill(20);
-                    textSize(16);
+                    textSize(STATION_TEXT_SIZE.BODY);
                     textAlign(CENTER, CENTER);
                     text("MISSION", pX + 410, itemY + 18);
                     pop();
@@ -1265,12 +1266,12 @@ class UIStationMenus {
         }
 
         let currentY = contentY;
-        UIComponents.setTextStyle({ fill: [255, 200, 200], size: 24, align: [LEFT, TOP] });
+        UIComponents.setTextStyle({ fill: [255, 200, 200], size: STATION_TEXT_SIZE.BIGHEADER, align: [LEFT, TOP] });
         text(`Personal Log: ${totalEntries} entries`, pX + 30, currentY);
         currentY += 35;
 
         if (totalEntries === 0) {
-            UIComponents.setTextStyle({ fill: 180, size: 16, align: [CENTER, CENTER] });
+            UIComponents.setTextStyle({ fill: 180, size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
             text("No activity recorded yet.", pX + pW / 2, currentY + (contentH - 35) / 2);
         } else {
             const startIndex = this.recordScrollOffset;
@@ -1297,7 +1298,7 @@ class UIStationMenus {
 
             const hasEarlier = startIndex > 0;
             if (hasEarlier && rowsRemaining > 0) {
-                UIComponents.setTextStyle({ fill: 160, size: 14, align: [LEFT, TOP] });
+                UIComponents.setTextStyle({ fill: 160, size: STATION_TEXT_SIZE.HELPER, align: [LEFT, TOP] });
                 text("↑ Earlier entries", pX + 50, currentY);
                 currentY += lineHeight;
                 rowsRemaining--;
@@ -1307,7 +1308,7 @@ class UIStationMenus {
                 const evt = events[i];
                 const col = typeColors[evt.type] || [200, 200, 200];
 
-                UIComponents.setTextStyle({ fill: col, size: 14, align: [LEFT, TOP] });
+                UIComponents.setTextStyle({ fill: col, size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
 
                 const timeStr = formatLogTime(evt.timestamp);
                 const line = `[${timeStr}] ${evt.description}`;
@@ -1319,7 +1320,7 @@ class UIStationMenus {
 
             const hasMore = startIndex + visibleLines < totalEntries;
             if (hasMore && rowsRemaining > 0) {
-                UIComponents.setTextStyle({ fill: 160, size: 14, align: [LEFT, TOP] });
+                UIComponents.setTextStyle({ fill: 160, size: STATION_TEXT_SIZE.HELPER, align: [LEFT, TOP] });
                 text("↓ More entries", pX + 50, currentY);
             }
         }
@@ -1594,7 +1595,7 @@ class UIStationMenus {
         // Ship name at top of preview area
         fill(180, 220, 255);
         noStroke();
-                textSize(20);
+                textSize(STATION_TEXT_SIZE.HEADER);
         textAlign(CENTER, TOP);
         text(shipData.shipName, previewCenterX, contentY + 10);
 
@@ -1617,7 +1618,7 @@ class UIStationMenus {
 
         // Ship description with dynamic height calculation
         fill(200, 200, 255);
-        textSize(18);
+        textSize(STATION_TEXT_SIZE.BODY);
         textAlign(LEFT, TOP);
 
         // Calculate how many lines the description will need
@@ -1625,7 +1626,7 @@ class UIStationMenus {
         const maxDescWidth = rightW - 40; // Extra padding to prevent touching right edge
 
         // Use textLeading to get line spacing, default to textSize * 1.25 if not set
-        const leading = textLeading() || 18 * 1.25;
+        const leading = textLeading() || STATION_TEXT_SIZE.BODY * 1.25;
 
         // Draw the description with proper wrapping
         text(descriptionText, specX, specY, maxDescWidth);
@@ -1641,7 +1642,7 @@ class UIStationMenus {
 
         // Ship role and category header
         fill(255, 200, 100);
-        textSize(20);
+        textSize(STATION_TEXT_SIZE.HEADER);
         text(`${shipDef.role} (${shipDef.sizeCategory})`, specX, specY);
         specY += lineH * 1.2;
 
@@ -1665,7 +1666,7 @@ class UIStationMenus {
      * @param {number} lineH - Line height
      */
     _drawShipStats(shipDef, currentShipDef, specX, rightW, startY, lineH) {
-        textSize(16);
+        textSize(STATION_TEXT_SIZE.BODY);
         textAlign(LEFT, TOP);
         const colW = rightW * 0.5;
         const col2X = specX + colW;
@@ -1726,13 +1727,13 @@ class UIStationMenus {
 
         // Section header
         fill(255, 200, 100);
-        textSize(20);
+        textSize(STATION_TEXT_SIZE.HEADER);
         textAlign(LEFT, TOP);
         text("Armament:", specX, y);
         y += lineH * 0.8;
 
         // Weapon list
-        textSize(16);
+        textSize(STATION_TEXT_SIZE.BODY);
         if (shipDef.armament && shipDef.armament.length > 0) {
             fill(200);
             for (let i = 0; i < shipDef.armament.length; i++) {
@@ -1761,12 +1762,12 @@ class UIStationMenus {
         // Price label
         fill(180, 220, 255);
         noStroke();
-        textSize(16);
+        textSize(STATION_TEXT_SIZE.BODY);
         textAlign(LEFT, TOP);
         text("Price (after trade-in):", x, y);
 
         // Price value with color coding
-        textSize(20);
+        textSize(STATION_TEXT_SIZE.HEADER);
         if (finalPrice > 0) {
             fill(canAfford ? [100, 255, 100] : [255, 150, 150]);
             text(`${finalPrice} cr`, x, y + 20);
@@ -1781,7 +1782,7 @@ class UIStationMenus {
         // Affordability warning
         if (!canAfford && finalPrice > 0) {
             fill(255, 150, 150);
-            textSize(16);
+            textSize(STATION_TEXT_SIZE.BODY);
             textAlign(CENTER, TOP);
             const shortfall = finalPrice - player.credits;
             text(`Need ${shortfall} more cr`, x + rightW / 2, y + 22);
@@ -1819,7 +1820,7 @@ class UIStationMenus {
             fill(80);
             noStroke();
             textAlign(CENTER, CENTER);
-            textSize(16);
+            textSize(STATION_TEXT_SIZE.BODY);
             text("< PREV", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
         }
         currentX += BTN_WIDTH + BTN_SPACING;
@@ -1838,7 +1839,7 @@ class UIStationMenus {
             fill(80);
             noStroke();
             textAlign(CENTER, CENTER);
-            textSize(16);
+            textSize(STATION_TEXT_SIZE.BODY);
             text("NEXT >", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
         }
         currentX += BTN_WIDTH + BTN_SPACING;
@@ -1857,7 +1858,7 @@ class UIStationMenus {
                 fill(100);
                 noStroke();
                 textAlign(CENTER, CENTER);
-                textSize(16);
+                textSize(STATION_TEXT_SIZE.BODY);
                 text("BUY", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
             }
             currentX += BTN_WIDTH + BTN_SPACING;
@@ -2033,7 +2034,7 @@ class UIStationMenus {
         // Weapon name at top of visual area
         fill(180, 220, 255);
         noStroke();
-        textSize(20);
+        textSize(STATION_TEXT_SIZE.HEADER);
         textAlign(CENTER, TOP);
         text(weaponData.weaponDef.name, visualCenterX, contentY + 10);
 
@@ -2051,7 +2052,7 @@ class UIStationMenus {
 
         // Weapon description
         fill(200, 200, 255);
-        textSize(16);
+        textSize(STATION_TEXT_SIZE.BODY);
         textAlign(LEFT, TOP);
         const descriptionText = weaponDef.desc || "No description available.";
         const maxDescWidth = rightW - 60;
@@ -2067,7 +2068,7 @@ class UIStationMenus {
 
         // Stats header
         fill(255, 200, 100);
-        textSize(20);
+        textSize(STATION_TEXT_SIZE.HEADER);
         text("Specifications", specX, specY);
         specY += lineH * 1.2;
 
@@ -2080,7 +2081,7 @@ class UIStationMenus {
      * @private
      */
     _drawWeaponStats(weaponDef, specX, specY, lineH) {
-        textSize(16);
+        textSize(STATION_TEXT_SIZE.BODY);
         textAlign(LEFT, TOP);
         fill(220);
 
@@ -2153,19 +2154,19 @@ class UIStationMenus {
         // Price label
         fill(180, 220, 255);
         noStroke();
-        textSize(16);
+        textSize(STATION_TEXT_SIZE.BODY);
         textAlign(LEFT, TOP);
         text("Price:", x, y);
 
         // Price value with color coding
-        textSize(20);
+        textSize(STATION_TEXT_SIZE.HEADER);
         fill(canAfford ? [100, 255, 100] : [255, 150, 150]);
         text(`${price} cr`, x, y + 20);
 
         // Affordability warning
         if (!canAfford) {
             fill(255, 150, 150);
-            textSize(16);
+            textSize(STATION_TEXT_SIZE.BODY);
             textAlign(CENTER, TOP);
             const shortfall = price - player.credits;
             text(`Need ${shortfall} more cr`, x + rightW / 2, y + 22);
@@ -2197,7 +2198,7 @@ class UIStationMenus {
             fill(80);
             noStroke();
             textAlign(CENTER, CENTER);
-            textSize(16);
+            textSize(STATION_TEXT_SIZE.BODY);
             text("< PREV", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
         }
         currentX += BTN_WIDTH + BTN_SPACING;
@@ -2216,7 +2217,7 @@ class UIStationMenus {
             fill(80);
             noStroke();
             textAlign(CENTER, CENTER);
-            textSize(16);
+            textSize(STATION_TEXT_SIZE.BODY);
             text("NEXT >", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
         }
         currentX += BTN_WIDTH + BTN_SPACING;
@@ -2234,7 +2235,7 @@ class UIStationMenus {
             fill(100);
             noStroke();
             textAlign(CENTER, CENTER);
-            textSize(16);
+            textSize(STATION_TEXT_SIZE.BODY);
             text("BUY", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
         }
         currentX += BTN_WIDTH + BTN_SPACING;
@@ -2273,9 +2274,10 @@ class UIStationMenus {
         fill(200, 220, 255);
         noStroke();
         textAlign(CENTER, TOP);
-        textSize(20);
+
         text("Select Weapon Slot", popupX + popupW / 2, popupY + 15);
 
+        textSize(STATION_TEXT_SIZE.HELPER);
         // Get ship's weapon slots
         const shipDef = typeof SHIP_DEFINITIONS !== 'undefined' ? SHIP_DEFINITIONS[player.shipTypeName] : null;
         const availableSlots = shipDef?.armament?.length || 1;
@@ -2301,21 +2303,15 @@ class UIStationMenus {
             noStroke();
             fill(180, 200, 255);
             textAlign(CENTER, TOP);
-            textSize(20);
+            textSize(STATION_TEXT_SIZE.HELPER);
             text(`Slot ${i + 1}`, slotX + slotBtnW / 2, slotY + 8);
 
             // Current weapon name
-            textSize(16);
+            textSize(STATION_TEXT_SIZE.HELPER);
             fill(150, 170, 200);
             const weaponText = currentWeapon?.name || "Empty";
             text(weaponText, slotX + slotBtnW / 2, slotY + 40);
 
-            // Will replace warning
-            if (currentWeapon) {
-                fill(255, 200, 100);
-                textSize(16);
-                text("(replaces)", slotX + slotBtnW / 2, slotY + 55);
-            }
 
             // Store button area
             this.slotPickerButtons.push({

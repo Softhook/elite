@@ -819,7 +819,7 @@ class UIMinimap {
                     // Try to draw abbreviated label if space allows
                     if (m.label && typeof m.label === 'string') {
                         fill(255);
-                        textSize(9);
+                        textSize(STATION_TEXT_SIZE.HELPER);
                         textAlign(LEFT, TOP);
                         const tx = mapX + 6;
                         const ty = mapY - 6;
@@ -905,7 +905,7 @@ class UIMinimap {
                 // Label above
                 fill(255);
                 textAlign(CENTER, BOTTOM);
-                textSize(10);
+                textSize(STATION_TEXT_SIZE.HELPER);
                 text(label, mapX, mapY - size - 4);
                 pop();
             } else {
@@ -918,7 +918,7 @@ class UIMinimap {
                 noStroke();
                 fill(255); // white label for clarity
                 textAlign(CENTER, CENTER);
-                textSize(12);
+                textSize(STATION_TEXT_SIZE.HELPER + 2);
                 text(label, cX, cY);
                 pop();
             }

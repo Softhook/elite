@@ -17,12 +17,12 @@ class InventoryScreen {
     rect(pX, pY, pW, pH, 8);
 
     textAlign(CENTER, TOP);
-    fill(255); textSize(24);
+    fill(255); textSize(STATION_TEXT_SIZE.HEADER);
     text("Inventory", pX + pW / 2, pY + 10);
 
     // Ship info
     const infoY = pY + 50;
-    textAlign(LEFT, TOP); textSize(18);
+    textAlign(LEFT, TOP); textSize(STATION_TEXT_SIZE.BODY);
     text(`Ship: ${player.shipTypeName}`, pX + 20, infoY);
     text(`Cargo: ${player.getCargoAmount()}/${player.cargoCapacity}`, pX + 20, infoY + 24);
 
@@ -47,7 +47,7 @@ class InventoryScreen {
         fill(255);
       }
       textAlign(LEFT, CENTER);
-      textSize(18);
+      textSize(STATION_TEXT_SIZE.BODY);
 
       let labelText = `${item.name}: ${item.quantity}`;
       if (isMissionCargo) {
@@ -77,7 +77,7 @@ class InventoryScreen {
         // Move badge further right to clear the longer text
         rect(pX + 350, rowY + rowH / 2 - 9, 60, 18, 4);
         fill(20);
-        textSize(11);
+        textSize(STATION_TEXT_SIZE.HELPER);
         textAlign(CENTER, CENTER);
         text("MISSION", pX + 380, rowY + rowH / 2 + 1);
         pop();
@@ -92,7 +92,7 @@ class InventoryScreen {
       // Button text
       fill(255);
       textAlign(CENTER, CENTER);
-      textSize(16);
+      textSize(STATION_TEXT_SIZE.BODY);
       text("Jettison", buttonX + buttonW / 2, buttonY + buttonH / 2);
 
       // Store button area for click detection
@@ -114,7 +114,7 @@ class InventoryScreen {
 
     fill(255);
     textAlign(CENTER, CENTER);
-    textSize(16);
+    textSize(STATION_TEXT_SIZE.BODY);
     text("Close", cx + cw / 2, cy + ch / 2);
     this.closeButton = { x: cx, y: cy, w: cw, h: ch };
 

@@ -75,7 +75,7 @@ class EnemyCargo {
     }
 
     addCargo(commodityName, quantity, allowPartial = false) {
-        if (!commodityName || quantity <= 0) {
+        if (!commodityName || !quantity || quantity <= 0) {
             return { success: false, added: 0 };
         }
 

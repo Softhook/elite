@@ -132,7 +132,7 @@ class UIHUD {
 
         push();
         textFont(font);
-        textSize(14);
+        textSize(STATION_TEXT_SIZE.HELPER + 4);
         textAlign(CENTER, CENTER);
 
         const screenCenterX = width / 2;
@@ -335,7 +335,7 @@ class UIHUD {
         push();
         textAlign(CENTER, TOP);
         textFont(font);
-        textSize(18);
+        textSize(STATION_TEXT_SIZE.BODY);
         noStroke();
 
         // Weapon bar defaults (kept in sync with drawWeaponSelector)
@@ -393,7 +393,7 @@ class UIHUD {
         // Left side - System name with additional info
         fill(255);
         textFont(font);
-        textSize(20);
+        textSize(STATION_TEXT_SIZE.BODY);
         textAlign(LEFT, CENTER);
         const systemType = player.currentSystem?.economyType || 'Unknown';
         const secLevel = player.currentSystem?.securityLevel || 'Unknown';
@@ -474,7 +474,7 @@ class UIHUD {
             noStroke();
             textFont(font);
             textAlign(RIGHT, CENTER);
-            textSize(20);
+            textSize(STATION_TEXT_SIZE.BODY);
             text(`Shield: ${Math.floor(player.shield)}/${player.maxShield}`, barX - 10, barMiddleY - barHeight / 2 - 2);
         }
 
@@ -492,7 +492,7 @@ class UIHUD {
         fill(255);
         noStroke();
         textAlign(RIGHT, CENTER);
-        textSize(20);
+        textSize(STATION_TEXT_SIZE.BODY);
         text(`Hull: ${Math.floor(player.hull)}/${player.maxHull}`, barX - 10, barMiddleY + barHeight / 2 + 2);
 
         this.drawWeaponSelector(player);
@@ -522,7 +522,7 @@ class UIHUD {
         rect(0, weaponBarY, width, weaponBarH);
 
         textAlign(LEFT, CENTER);
-        textSize(20);
+        textSize(STATION_TEXT_SIZE.BODY);
         let xPos = 10;
 
         const weaponIdx = player.weaponIndex;
@@ -577,7 +577,7 @@ class UIHUD {
         if (player.activeMission?.title) {
             const missionText = `Mission: ${player.activeMission.title}`;
             const missionPadding = 10;
-            textSize(20);
+            textSize(STATION_TEXT_SIZE.BODY);
             const missionTextW = textWidth(missionText);
             const missionBoxW = missionTextW + missionPadding * 2;
             const missionBoxX = width - missionBoxW - 10;
@@ -626,7 +626,7 @@ class UIHUD {
             rect(0, autopilotY, width, 20);
 
             textAlign(CENTER, CENTER);
-            textSize(18);
+            textSize(STATION_TEXT_SIZE.BODY);
             fill(255, 255, 100);
             text(`Autopilot Engaged: ${targetLabel} ${hint}`, width / 2, autopilotY + 10);
         }
@@ -1037,7 +1037,7 @@ class UIHUD {
         push();
         textAlign(CENTER, BOTTOM);
         textFont(font);
-        textSize(20);
+        textSize(STATION_TEXT_SIZE.BODY);
         noStroke();
         for (let i = 0; i < toShow.length; i++) {
             const messageItem = toShow[i];
@@ -1094,7 +1094,7 @@ class UIHUD {
         push();
         textAlign(LEFT, TOP);
         textFont(font);
-        textSize(18);
+        textSize(STATION_TEXT_SIZE.BODY);
 
         for (let i = 0; i < toShow.length; i++) {
             const msg = toShow[i];
@@ -1152,7 +1152,7 @@ class UIHUD {
         noStroke();
         textAlign(LEFT, BOTTOM);
         textFont(font);
-        textSize(10);
+        textSize(STATION_TEXT_SIZE.HELPER);
 
         if (fpsAverage >= 50) {
             fill(0, 255, 0);
@@ -1185,12 +1185,12 @@ class UIHUD {
         textFont(font);
         // Prefer the global extruded helper for the GAME OVER header
         if (typeof drawExtrudedText === 'function') {
-            drawExtrudedText("GAME OVER", width / 2, height / 2 - 80, 100, 12, 0, [255, 60, 60]);
+            drawExtrudedText("GAME OVER", width / 2, height / 2 - 80, STATION_TEXT_SIZE.GAME_OVER, 12, 0, [255, 60, 60]);
         } else if (typeof titleScreen !== 'undefined' && typeof titleScreen.drawExtrudedText === 'function') {
-            titleScreen.drawExtrudedText("GAME OVER", width / 2, height / 2 - 80, 100, 12, 0, [255, 60, 60]);
+            titleScreen.drawExtrudedText("GAME OVER", width / 2, height / 2 - 80, STATION_TEXT_SIZE.GAME_OVER, 12, 0, [255, 60, 60]);
         } else {
             fill(255, 60, 60);
-            textSize(100);
+            textSize(STATION_TEXT_SIZE.GAME_OVER);
             text("GAME OVER", width / 2, height / 2 - 80);
         }
 

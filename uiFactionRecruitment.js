@@ -463,7 +463,7 @@ class UIFactionRecruitment {
         let lines = [];
         let currentLine = '';
 
-        textSize(fontSize);
+        textSize(fontSize || STATION_TEXT_SIZE.BODY);
         for (const word of words) {
             const testLine = currentLine ? currentLine + ' ' + word : word;
             if (textWidth(testLine) > maxWidth && currentLine) {

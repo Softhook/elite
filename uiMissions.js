@@ -115,7 +115,7 @@ class UIMissions {
         rect(x + 3, y + 5, 4, h - 10, 2);
 
         // Draw mission text
-        UIComponents.setTextStyle({ fill: textColor, size: 16, align: [LEFT, CENTER] });
+        UIComponents.setTextStyle({ fill: textColor, size: STATION_TEXT_SIZE.BODY, align: [LEFT, CENTER] });
         text(label, x + 15, y + h / 2, w - 25);
 
         pop();
@@ -184,7 +184,7 @@ class UIMissions {
 
                 // Calculate button height based on text
                 const missionText = m.getSummary ? m.getSummary() : 'Unknown mission';
-                textSize(16);
+                textSize(STATION_TEXT_SIZE.BODY);
                 const availableWidth = listW - 40;
                 const minHeight = 35;
                 const heightPerLine = 18;

@@ -4141,6 +4141,9 @@ class StarSystem {
             // or check for specific cargo properties
             if (!cargoItem || !cargoItem.type || typeof cargoItem.checkCollision !== 'function') continue;
             if (cargoItem instanceof SpaceObject || cargoItem instanceof Enemy || cargoItem instanceof Asteroid) continue;
+            // FIX: Explicitly ignore Projectiles and ensure it is a Cargo instance if possible
+            if (typeof Projectile !== 'undefined' && cargoItem instanceof Projectile) continue;
+            if (typeof Cargo !== 'undefined' && !(cargoItem instanceof Cargo)) continue;
 
             // Basic validation (spatial hash might return items that were just fastRemoved from main list but not hash,
             // though hash is rebuilt every frame so it should be consistent)
