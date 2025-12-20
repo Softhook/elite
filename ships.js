@@ -1672,6 +1672,25 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Luxury Goods", "Adv Components", "Computers"], price: 130000, techLevel: 5,
         aiRoles: ["COMBAT", "IMPERIAL"]
     },
+    "ImperialCharger": {
+        name: "Imperial Charger", role: "Light Skirmisher", sizeCategory: "Tiny", size: 20,
+        baseMaxSpeed: 7.5, baseThrust: 0.17, baseTurnRate: 0.085,
+        baseHull: 35, baseShield: 45, shieldRecharge: 1.1, cargoCapacity: 4,
+        armament: ["Pulse Laser"],
+        costCategory: "Low", description: "The Imperial Navy's standardized training vessel—cheap to produce, easy to fly, and expendable enough that admirals don't weep when cadets crash them. That pristine white hull with gold star teaches pilots to look the part before they can fly it. Entry-level speed (7.5) and respectable handling make it perfect for learning. Veterans call it 'the milk carton' but everyone started here.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: -0.7000, y: 0.5000 }, { x: -0.9000, y: 0.0000 }, { x: -0.7000, y: -0.5000 }],
+                fillColor: [230, 235, 245],
+            },
+            {
+                vertexData: [{ x: -0.2000, y: 0.0000 }, { x: -0.3591, y: 0.0588 }, { x: -0.3658, y: 0.2283 }, { x: -0.4709, y: 0.0951 }, { x: -0.6342, y: 0.1411 }, { x: -0.5400, y: 0.0000 }, { x: -0.6342, y: -0.1411 }, { x: -0.4709, y: -0.0951 }, { x: -0.3658, y: -0.2283 }, { x: -0.3591, y: -0.0588 }],
+                fillColor: [220, 200, 80],
+            }
+        ],
+        typicalCargo: [], price: 20000, techLevel: 2,
+        aiRoles: ["COMBAT", "IMPERIAL", "GUARD"]
+    },
     "Thargoid": {
         name: "Thargoid Interceptor", role: "Alien Combat", sizeCategory: "Large", size: 60,
         baseMaxSpeed: 8.0, baseThrust: 0.20, baseTurnRate: 0.10472,
