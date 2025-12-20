@@ -291,16 +291,19 @@ class UIMinimap {
         // Detect scale change
         const scaleChanged = Math.abs(this.scale - (this._lastHazardsScale || 0)) > 0.000001;
 
-        // Only regenerate buffer every 15 frames - hazards move slowly
+        // Only regenerate buffer every 250ms (was 15 frames) - hazards move slowly
         // BUT force regenerate if scale changed
-        const shouldRegenerate = !this._lastHazardsFrame ||
-            (frameCount - this._lastHazardsFrame) >= 15 ||
+        const now = millis();
+        const updateInterval = 250;
+
+        const shouldRegenerate = !this._lastHazardsTime ||
+            (now - this._lastHazardsTime) >= updateInterval ||
             scaleChanged;
 
         if (!this.hazardsBuffer || this._hazardsBufferSize !== this.size) {
             this.hazardsBuffer = createGraphics(this.size, this.size);
             this._hazardsBufferSize = this.size;
-            this._lastHazardsFrame = 0; // Force redraw on size change
+            this._lastHazardsTime = 0; // Force redraw on size change
             this._lastHazardsPlayerX = player.pos.x;
             this._lastHazardsPlayerY = player.pos.y;
         }
@@ -314,7 +317,7 @@ class UIMinimap {
             return;
         }
 
-        this._lastHazardsFrame = frameCount;
+        this._lastHazardsTime = now;
         // Store player position at time of buffer generation
         this._lastHazardsPlayerX = player.pos.x;
         this._lastHazardsPlayerY = player.pos.y;
@@ -887,7 +890,8 @@ class UIMinimap {
             // If on-screen draw pulsing ring + label
             if (isFullyWithinBounds(mapX, mapY, size, size)) {
                 push();
-                const pulse = 1 + 0.15 * sin(frameCount * 0.2);
+                // 0.2 rad/frame * 60 fps = 12 rad/sec → 12/1000 = 0.012
+                const pulse = 1 + 0.15 * sin(millis() * 0.012);
                 noFill();
                 stroke(color[0], color[1], color[2], 220);
                 strokeWeight(1.5);

@@ -402,10 +402,12 @@ class UIHUD {
 
         const statusLineY = 20;
 
-        // Center - LEGAL status (cached every 30 frames for performance)
-        const statusCacheInterval = 30;
+        // Center - LEGAL status (cached every 500ms for performance)
+        const statusCacheIntervalMs = 500;
+        const now = millis();
         const shouldRecalculateStatus = !this._cachedStatusText ||
-            (frameCount - this._statusTextCacheFrame) >= statusCacheInterval;
+            !this._statusTextCacheTime ||
+            (now - this._statusTextCacheTime) >= statusCacheIntervalMs;
 
         if (shouldRecalculateStatus) {
             let factionDisplay = "";
@@ -438,7 +440,7 @@ class UIHUD {
             }
 
             this._cachedStatusText = statusText;
-            this._statusTextCacheFrame = frameCount;
+            this._statusTextCacheTime = now;
         }
 
         fill(this._cachedIsWanted ? color(255, 0, 0) : 255);

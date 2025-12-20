@@ -70,17 +70,23 @@ class EnemyTargeting {
         // --- OFF-SCREEN OPTIMIZATION ---
         if (this._isOnScreen === false) {
             // Periodic Scan Override: Ensure we don't stay "blind" to new nearby enemies forever.
-            // Run full targeting logic once every ~1 second (60 frames).
-            // Use _offScreenOffset (0-2) and ID to spread the load.
-            const scanInterval = 60;
-            // Generate a stable offset if not present
-            if (this._scanOffset === undefined) {
-                // Use ID hash or random if ID is string
-                const idVal = this.id ? (this.id.toString().split('').reduce((a, b) => a + b.charCodeAt(0), 0)) : Math.floor(Math.random() * 60);
-                this._scanOffset = idVal % scanInterval;
+            // Run full targeting logic once every ~1 second.
+            const scanIntervalSeconds = 1.0;
+
+            // Initialize timer if needed
+            if (this.offScreenTargetTimer === undefined) {
+                this.offScreenTargetTimer = Math.random() * scanIntervalSeconds;
             }
 
-            const isScanFrame = (frameCount + this._scanOffset) % scanInterval === 0;
+            // Accumulate time
+            const dt = (typeof deltaTime === 'number') ? deltaTime / 1000 : 0.016;
+            this.offScreenTargetTimer += dt;
+
+            const isScanFrame = this.offScreenTargetTimer >= scanIntervalSeconds;
+
+            if (isScanFrame) {
+                this.offScreenTargetTimer %= scanIntervalSeconds;
+            }
 
             if (!isScanFrame) {
                 // Simplified targeting: Stick to lastAttacker or existing target

@@ -38,8 +38,10 @@ class StationMusicManager {
         this.harmony = [];       // Secondary harmony notes
         this.noteIndex = 0;
         this.phraseIndex = 0;    // Track which phrase variation we're on
-        this.frameCounter = 0;
-        this.noteInterval = 30;  // Frames between notes (SLOW - about 0.5 sec at 60fps)
+        this.noteIndex = 0;
+        this.phraseIndex = 0;    // Track which phrase variation we're on
+        this.lastNoteTime = 0;   // Timestamp of last played note
+        this.noteInterval = 500; // ms between notes (default)
         this.restProbability = 0.15; // Chance of silence for breathing room
 
         // Volume control
@@ -82,7 +84,7 @@ class StationMusicManager {
                     [12, 11, 9, 7, null, 5, 4, 2, 0],        // Grand descent
                 ],
                 harmonyInterval: 7,  // Perfect fifth (stately)
-                noteInterval: 45,    // Very slow, grandioso
+                noteInterval: 750,   // Very slow, grandioso (was 45 frames)
                 filterFreq: 1400,    // Warm brass timbre
                 filterRes: 2.0,      // Slight warmth
                 attackTime: 0.12,
@@ -106,7 +108,7 @@ class StationMusicManager {
                     [0, null, 6, null, 0, null, 5],   // Staccato command
                 ],
                 harmonyInterval: 6,  // Tritone (devil's interval - tension)
-                noteInterval: 22,    // Strict march tempo
+                noteInterval: 366,   // Strict march tempo (was 22 frames)
                 filterFreq: 1800,    // Cutting, cold
                 filterRes: 4.0,      // Resonant edge
                 attackTime: 0.01,    // Very sharp staccato
@@ -131,7 +133,7 @@ class StationMusicManager {
                     [9, 7, 4, 2, 0, 2, 4],        // Peaceful meandering
                 ],
                 harmonyInterval: 12, // Octave drone below
-                noteInterval: 18,    // Lively jig tempo
+                noteInterval: 300,   // Lively jig tempo (was 18 frames)
                 filterFreq: 3500,    // Bright, airy
                 filterRes: 1.0,      // Clean
                 attackTime: 0.03,    // Quick for jig articulation
@@ -155,7 +157,7 @@ class StationMusicManager {
                     [0, 0, 0, 7, 0, 0, 0, 5],         // Heavy kicks
                 ],
                 harmonyInterval: 7,  // Fifth drone
-                noteInterval: 12,    // Fast 16th note feel
+                noteInterval: 200,   // Fast 16th note feel (was 12 frames)
                 filterFreq: 800,     // Dark, muffled
                 filterRes: 8.0,      // Resonant sweep character
                 attackTime: 0.005,   // Punchy transients
@@ -181,7 +183,7 @@ class StationMusicManager {
                     [0, 5, null, 7, null, 5, 0, null], // Dripping echoes
                 ],
                 harmonyInterval: 12, // Octave below (rumble)
-                noteInterval: 50,    // Very slow, cavernous
+                noteInterval: 833,   // Very slow, cavernous (was 50 frames)
                 filterFreq: 600,     // Very dark
                 filterRes: 2.0,      // Warm dark resonance
                 attackTime: 0.08,
@@ -205,7 +207,7 @@ class StationMusicManager {
                     [7, 4, 7, 12, 7, 4, 2, 0],    // Cheerful bounce
                 ],
                 harmonyInterval: 4, // Major third
-                noteInterval: 28,   // Moderate, pleasant
+                noteInterval: 466,   // Moderate, pleasant (was 28 frames)
                 filterFreq: 3000,   // Bright, shimmery
                 filterRes: 1.2,     // Slight shimmer
                 attackTime: 0.08,
@@ -230,7 +232,7 @@ class StationMusicManager {
                     [0, 1, 0, 6, 7, 6, 0],        // Burning process
                 ],
                 harmonyInterval: 7, // Fifth below for stronger presence
-                noteInterval: 24,   // Slightly slower so notes are perceptible
+                noteInterval: 400,   // Slightly slower so notes are perceptible (was 24 frames)
                 filterFreq: 2600,   // Opened up so the mid/high content is audible
                 filterRes: 3.0,     // Some resonance edge
                 attackTime: 0.02,
@@ -256,7 +258,7 @@ class StationMusicManager {
                     [7, 6, 4, null, 2, 0, null, 4],   // Transcendent phrase
                 ],
                 harmonyInterval: 16, // Two octaves down (wide voicing)
-                noteInterval: 55,    // Very slow, floating
+                noteInterval: 916,    // Very slow, floating (was 55 frames)
                 filterFreq: 5000,    // Crystalline highs
                 filterRes: 0.5,      // Very clean, pure
                 attackTime: 0.35,    // Slow fade in - ethereal
@@ -281,7 +283,7 @@ class StationMusicManager {
                     [9, 7, 4, 2, null, 0, null, 0],       // Solitary ending
                 ],
                 harmonyInterval: 7,  // Open 5th (americana sound)
-                noteInterval: 50,    // Slow, contemplative
+                noteInterval: 833,    // Slow, contemplative (was 50 frames)
                 filterFreq: 2000,    // Warm but open
                 filterRes: 1.5,      // Slight twang
                 attackTime: 0.18,    // Slow "twang" attack
@@ -305,7 +307,7 @@ class StationMusicManager {
                     [7, 5, 4, 2, 0, 2],               // Efficient descent
                 ],
                 harmonyInterval: 12, // Safe octave
-                noteInterval: 28,    // Standard tempo
+                noteInterval: 466,    // Standard tempo (was 28 frames)
                 filterFreq: 2000,    // Neutral
                 filterRes: 1.0,      // Clean, unremarkable
                 attackTime: 0.06,    // Standard
@@ -329,7 +331,7 @@ class StationMusicManager {
                     [9, 8, 4, null, 1, 0, 5, 8],     // Strange logic
                 ],
                 harmonyInterval: 8,  // Augmented 5th (eerie)
-                noteInterval: 42,    // Irregular feel
+                noteInterval: 700,    // Irregular feel (was 42 frames)
                 filterFreq: 1800,    // Neither bright nor dark
                 filterRes: 5.0,      // Resonant strangeness
                 attackTime: 0.2,     // Slow emergence
@@ -354,7 +356,7 @@ class StationMusicManager {
                     [5, 3, 1, 0, null, 1, 0, null],   // Pregnant pauses
                 ],
                 harmonyInterval: 3,  // Minor 3rd (dark)
-                noteInterval: 35,    // Measured, deliberate
+                noteInterval: 583,    // Measured, deliberate (was 35 frames)
                 filterFreq: 1300,    // Cold, metallic
                 filterRes: 6.0,      // Harsh edge
                 attackTime: 0.04,    // Sharp
@@ -378,7 +380,7 @@ class StationMusicManager {
                     [9, 7, 4, 2, 0, null, 0],         // Soft landing
                 ],
                 harmonyInterval: 12, // Safe octave
-                noteInterval: 38,    // Calm pace
+                noteInterval: 633,    // Calm pace (was 38 frames)
                 filterFreq: 1900,    // Balanced
                 filterRes: 1.2,      // Warm
                 attackTime: 0.1,     // Gentle
@@ -694,7 +696,7 @@ class StationMusicManager {
             // Apply theme volume multiplier if present so certain themes (e.g. refinery)
             // can be louder to remain audible.
             this.targetVolume = this.baseVolume * (this.theme && this.theme.volumeMultiplier ? this.theme.volumeMultiplier : 1);
-            this.frameCounter = 0;
+            this.lastNoteTime = millis();
             console.log('StationMusicManager: Music started for', this.stationType, 'station');
         } catch (e) {
             console.error('StationMusicManager: Error starting music:', e);
@@ -768,9 +770,9 @@ class StationMusicManager {
         }
 
         // Play notes at interval (slower = more ambient)
-        this.frameCounter++;
-        if (this.frameCounter >= this.noteInterval) {
-            this.frameCounter = 0;
+        const now = millis();
+        if (now - this.lastNoteTime >= this.noteInterval) {
+            this.lastNoteTime = now;
             this.playNextNote();
         }
     }

@@ -400,9 +400,9 @@ class EnemyRendering {
                 strokeWeight(2);
 
                 for (let i = 0; i < 6; i++) {
-                    let angle = frameCount * 0.03 + i * TWO_PI / 6;
+                    let angle = now * 0.0018 + i * TWO_PI / 6; // 0.03 * 60 = 1.8 rad/s -> 0.0018
                     let innerRadius = this.size * 0.6;
-                    let outerRadius = this.size * (1.2 + 0.2 * sin(frameCount * 0.1 + i));
+                    let outerRadius = this.size * (1.2 + 0.2 * sin(now * 0.006 + i)); // 0.1 * 60 = 6 rad/s -> 0.006
 
                     beginShape();
                     for (let j = 0; j < 5; j++) {
@@ -534,7 +534,7 @@ class EnemyRendering {
             translate(this.pos.x, this.pos.y);
             noFill();
             // Pulsating effect for the barrier (mirroring player.js)
-            const barrierPulse = (sin(frameCount * 0.1) + 1) / 2; // Ranges from 0 to 1
+            const barrierPulse = (sin(now * 0.006) + 1) / 2; // Ranges from 0 to 1
             const barrierBaseRadius = this.size * 1.7; // Consistent base size with player
             const barrierRadius = barrierBaseRadius + barrierPulse * this.size * 0.2; // Pulsating outer radius
 

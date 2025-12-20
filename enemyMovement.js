@@ -241,8 +241,11 @@ class EnemyMovement {
                 this.vel.mult(Math.pow(tangledSpeedFactor, physicsTimeScale));
 
                 // Add slight directional randomness to simulate being caught in energy net
-                // Use time-based trigger instead of frameCount for consistency
-                if (frameCount % 5 === 0) {
+                // Timer-based (~80ms interval) for frame rate independence
+                if (!this._tangleJiggleTimer) this._tangleJiggleTimer = 0;
+                this._tangleJiggleTimer += deltaTime / 1000;
+                if (this._tangleJiggleTimer >= 0.08) {
+                    this._tangleJiggleTimer = 0;
                     this.vel.rotate(random(-0.1, 0.1) * physicsTimeScale);
                 }
             }

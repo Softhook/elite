@@ -80,7 +80,7 @@ class CosmicStorm {
         const posY = this.pos.y;
         for (let i = 0, len = this.particles.length; i < len; i++) {
             const particle = this.particles[i];
-            particle.angle += particle.rotationSpeed;
+            particle.angle += particle.rotationSpeed * timeScale;
             const distSpiral = particle.distFromCenter * particle.spiralFactor;
             particle.pos.x = posX + cos(particle.angle) * distSpiral;
             particle.pos.y = posY + sin(particle.angle) * distSpiral;

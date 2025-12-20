@@ -420,14 +420,19 @@ class Enemy {
         const isNearPlayer = system.player && this.distanceTo(system.player) < 1500;
 
         // Ensure we don't skip the periodic scan frame
-        // Reduced from 60 to 30 frames (~0.5 sec) for faster response to off-screen events
-        const scanInterval = 30;
-        if (this._scanOffset === undefined) {
-            const idVal = this.id ? (this.id.toString().split('').reduce((a, b) => a + b.charCodeAt(0), 0)) : Math.floor(Math.random() * 30);
-            this._scanOffset = idVal % scanInterval;
+        // Replaced frame-based scan with time-based scan (every 0.5s)
+        const scanIntervalSeconds = 0.5;
+        if (this.scanTimer === undefined) this.scanTimer = Math.random() * scanIntervalSeconds;
+
+        // Accumulate time (using global deltaTime if available, or approximating)
+        const dtSec = (typeof deltaSeconds === 'number') ? deltaSeconds : (deltaTime / 1000);
+        this.scanTimer += dtSec;
+
+        this.isScanFrame = false;
+        if (this.scanTimer >= scanIntervalSeconds) {
+            this.scanTimer -= scanIntervalSeconds; // Keep remainder to prevent drift
+            this.isScanFrame = true;
         }
-        // Store on instance so behaviors can use it
-        this.isScanFrame = (frameCount + this._scanOffset) % scanInterval === 0;
 
         const forceUpdate = this._isOnScreen || isNearPlayer || this.isScanFrame;
 
@@ -504,31 +509,35 @@ class Enemy {
         // --- END TIMER UPDATES ---
 
         if (!forceUpdate) {
-            if (!this._offScreenOffset) this._offScreenOffset = Math.floor(Math.random() * 3);
-            if ((frameCount + this._offScreenOffset) % 3 !== 0) {
-                // [FIX] Movement Dilation: Re-apply thrust from last active frame logic
-                // This ensures acceleration matches 1x speed even though AI runs at 1/3 speed.
+            // Off-screen throttling: update AI only every ~50ms (was 3 frames)
+            const offScreenInterval = 0.05;
+            if (this.offScreenTimer === undefined) this.offScreenTimer = Math.random() * offScreenInterval;
+
+            this.offScreenTimer += deltaSeconds;
+
+            if (this.offScreenTimer < offScreenInterval) {
+                // Skipping AI update - just maintain physics/thrust
                 if (this._persistedThrust > 0) {
-                    // Pass false to skip particles (CPU calc) since off-screen
                     this.thrustForward(this._persistedThrust, false);
                 }
-                // [FIX] Velocity cap: Prevent over-acceleration from persistent thrust
-                // Cap velocity to maxSpeed to prevent off-screen ships from building up excessive speed
+
+                // Cap velocity to prevent runaway acceleration
                 const speed = this.vel.mag();
                 if (speed > this.maxSpeed) {
                     this.vel.mult(this.maxSpeed / speed);
                 }
 
-                // [FIX] Persistent firing: Re-apply firing from last active frame
-                // This ensures off-screen enemies continue attacking during skipped frames
+                // Persistent firing for off-screen enemies
                 if (this._persistedFiring && this.fireCooldown <= 0 && this.isTargetValid(this.target)) {
                     this.performFiring(system, true, this._persistedFiring.distance, this._persistedFiring.angle);
                 }
 
-                // When we skip, we still need to update physics so the ship moves!
                 this.updatePhysics();
                 return;
             }
+
+            // Reset timer (keep overflow for timing accuracy)
+            this.offScreenTimer -= offScreenInterval;
         }
         // -------------------------------------------------------------------------
 

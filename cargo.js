@@ -241,8 +241,8 @@ class Cargo {
             -this.size * 0.3, -this.size * 0.5
         );
 
-        // Glint
-        if (this.lifetime % 60 < 15) {
+        // Glint effect (every ~1 second, visible for ~250ms)
+        if ((millis() % 1000) < 250) {
             fill(255, 255, 255, 180);
             ellipse(this.size * 0.3, -this.size * 0.3, 2, 2);
         }

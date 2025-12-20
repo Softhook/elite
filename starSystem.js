@@ -2300,9 +2300,12 @@ class StarSystem {
      * @private
      */
     _updateMarketStock() {
-        // Throttle market updates to every 10 frames for performance
+        // Throttle market updates to every ~166ms for performance
         // Market prices don't need per-frame updates
-        if (typeof frameCount !== 'undefined' && frameCount % 10 !== 0) return;
+        if (!this._marketUpdateTimer) this._marketUpdateTimer = 0;
+        const now = millis();
+        if (now - this._marketUpdateTimer < 166) return;
+        this._marketUpdateTimer = now;
 
         const deltaSeconds = (typeof deltaTime === 'number' && Number.isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
         if (deltaSeconds <= 0) return;
@@ -2391,14 +2394,17 @@ class StarSystem {
 
             // Throttle updates for distant asteroids
             if (distSq > THROTTLE_DISTANCE_SQ) {
-                // Initialize offset if not set (stagger updates across asteroids)
-                if (asteroid._throttleOffset === undefined) {
-                    asteroid._throttleOffset = Math.floor(Math.random() * THROTTLE_INTERVAL);
+                // Initialize timer if not set (stagger updates across asteroids)
+                if (asteroid._throttleTimer === undefined) {
+                    asteroid._throttleTimer = Math.random() * 166; // ~10 frames at 60fps in ms
                 }
-                // Skip update on non-throttle frames
-                if ((frameCount + asteroid._throttleOffset) % THROTTLE_INTERVAL !== 0) {
+                // Skip update if not enough time has passed (~166ms)
+                const now = millis();
+                if (!asteroid._lastUpdateTime) asteroid._lastUpdateTime = 0;
+                if (now - asteroid._lastUpdateTime < 166) {
                     continue; // Skip this asteroid's update
                 }
+                asteroid._lastUpdateTime = now;
             }
 
             // Normal update
@@ -2502,9 +2508,14 @@ class StarSystem {
                     const dx = so.pos.x - playerPos.x;
                     const dy = so.pos.y - playerPos.y;
                     const distSq = dx * dx + dy * dy;
-                    // Only update distant objects every 5 frames
-                    if (distSq > viewDistSq && frameCount % 5 !== 0) {
-                        return;
+                    // Only update distant objects every ~83ms (~5 frames at 60fps)
+                    if (distSq > viewDistSq) {
+                        const now = millis();
+                        if (!so._lastUpdateTime) so._lastUpdateTime = Math.random() * 83;
+                        if (now - so._lastUpdateTime < 83) {
+                            return;
+                        }
+                        so._lastUpdateTime = now;
                     }
                 }
                 so.update(this);

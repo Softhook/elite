@@ -446,8 +446,11 @@ class EnemyStateMachine {
         // Note: performRotationAndThrust already applies thrust for FLEEING when aligned,
         // using the correct flee multiplier. Avoid double thrust here.
 
-        //    Occasional random jiggle
-        if (frameCount % 30 === 0) {
+        //    Occasional random jiggle (~0.5 second interval)
+        if (!this._fleeJiggleTimer) this._fleeJiggleTimer = 0;
+        this._fleeJiggleTimer += deltaSeconds;
+        if (this._fleeJiggleTimer >= 0.5) {
+            this._fleeJiggleTimer = 0;
             this.tempVector.set(random(-1, 1), random(-1, 1)).normalize().mult(0.3);
             this.vel.add(this.tempVector);
         }

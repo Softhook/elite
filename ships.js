@@ -2039,8 +2039,9 @@ function drawExtrudedShape(r, vertexData, fillColor, strokeColor, depth, layers 
 function drawThargoid(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let def = SHIP_DEFINITIONS.Thargoid;
-    let pulse = 1.0 + sin(frameCount * 0.1) * 0.05;
-    let rotSpeed = frameCount * 0.02;
+    const now = millis();
+    let pulse = 1.0 + sin(now * 0.006) * 0.05;
+    let rotSpeed = now * 0.0012;
 
     // Draw 3D base using generated petal shape
     if (!def._cache) initShipCache(def);
@@ -2095,7 +2096,7 @@ function drawThargoid(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
 function drawBioFrigate(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let def = SHIP_DEFINITIONS.BioFrigate;
-    let t = frameCount * 0.05;
+    let t = millis() * 0.003;
     let rotAngle = t * 0.1;
 
     push();
@@ -2130,7 +2131,7 @@ function drawBioFrigate(s, thrusting = false, angle = 0, localSunAngle = -0.785)
 function drawGeometricDrone(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let def = SHIP_DEFINITIONS.GeometricDrone;
-    let rotAngle = frameCount * 0.03;
+    let rotAngle = millis() * 0.0018;
 
     // Draw 3D hexagon base from definition using symmetric extrusion
     if (!def._cache) initShipCache(def);
@@ -2184,7 +2185,7 @@ function drawGeometricDrone(s, thrusting = false, angle = 0, localSunAngle = -0.
 function drawObeliskSentinel(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let def = SHIP_DEFINITIONS.ObeliskSentinel;
-    let rotAngle = frameCount * 0.01;
+    let rotAngle = millis() * 0.0006;
 
     push();
     rotate(rotAngle);
@@ -2193,7 +2194,7 @@ function drawObeliskSentinel(s, thrusting = false, angle = 0, localSunAngle = -0
     drawGenericAlienShip(def, s, thrusting, rotAngle, localSunAngle);
 
     // Glowing Runes overlay
-    stroke(255, 255, 255, 150 + sin(frameCount * 0.1) * 100);
+    stroke(255, 255, 255, 150 + sin(millis() * 0.006) * 100);
     strokeWeight(2);
     noFill();
     line(-r * 0.15, -r * 0.4, r * 0.15, -r * 0.4);
@@ -2205,7 +2206,7 @@ function drawObeliskSentinel(s, thrusting = false, angle = 0, localSunAngle = -0
 function drawSpiralWarden(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let def = SHIP_DEFINITIONS.SpiralWarden;
-    let rotAngle = frameCount * -0.05;
+    let rotAngle = millis() * -0.003;
 
     push();
     rotate(rotAngle);
@@ -2236,7 +2237,7 @@ function drawSpiralWarden(s, thrusting = false, angle = 0, localSunAngle = -0.78
 function drawTriadProbe(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let def = SHIP_DEFINITIONS.TriadProbe;
-    let rotAngle = frameCount * 0.05;
+    let rotAngle = millis() * 0.003;
 
     push();
     rotate(rotAngle);
@@ -2254,14 +2255,14 @@ function drawTriadProbe(s, thrusting = false, angle = 0, localSunAngle = -0.785)
 
     // Center pulse
     fill(255, 255, 100, 100);
-    ellipse(0, 0, r * 0.25 * (1 + sin(frameCount * 0.2) * 0.2));
+    ellipse(0, 0, r * 0.25 * (1 + sin(millis() * 0.012) * 0.2));
 }
 
 function drawHexaManta(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let def = SHIP_DEFINITIONS.HexaManta;
-    let wave = sin(frameCount * 0.1) * 0.05;
-    let rotAngle = frameCount * 0.008;
+    let wave = sin(millis() * 0.006) * 0.05;
+    let rotAngle = millis() * 0.00048;
 
     push();
     rotate(rotAngle);
@@ -2281,7 +2282,7 @@ function drawHexaManta(s, thrusting = false, angle = 0, localSunAngle = -0.785) 
 function drawFractalRay(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let def = SHIP_DEFINITIONS.FractalRay;
-    let rotAngle = frameCount * 0.012;
+    let rotAngle = millis() * 0.00072;
 
     // Jittery movement
     push();
@@ -2291,8 +2292,8 @@ function drawFractalRay(s, thrusting = false, angle = 0, localSunAngle = -0.785)
     // Draw 3D base shape with counter-rotated extrusion
     drawGenericAlienShip(def, s, thrusting, rotAngle, localSunAngle);
 
-    // Lightning arcs overlay
-    if (frameCount % 5 === 0) {
+    // Lightning arcs overlay (probability-based, ~12 per second)
+    if (random() < 0.2) {
         stroke(255, 255, 0, 150);
         strokeWeight(2);
         let arcAngle = random(TWO_PI);
@@ -2304,7 +2305,7 @@ function drawFractalRay(s, thrusting = false, angle = 0, localSunAngle = -0.785)
 function drawPetalSpinner(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let def = SHIP_DEFINITIONS.PetalSpinner;
-    let rotAngle = frameCount * 0.15; // Fast spin
+    let rotAngle = millis() * 0.009; // Fast spin
 
     push();
     rotate(rotAngle);
@@ -2322,7 +2323,7 @@ function drawPetalSpinner(s, thrusting = false, angle = 0, localSunAngle = -0.78
 function drawCrescentMarauder(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let def = SHIP_DEFINITIONS.CrescentMarauder;
-    let rotAngle = frameCount * 0.02;
+    let rotAngle = millis() * 0.0012;
 
     push();
     rotate(rotAngle);
@@ -2348,11 +2349,12 @@ function drawCrescentMarauder(s, thrusting = false, angle = 0, localSunAngle = -
 function drawObsidianOrb(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let def = SHIP_DEFINITIONS.ObsidianOrb;
-    let t = frameCount * 0.05;
+    const now = millis();
+    let t = now * 0.003;
 
     // Slow counter-rotating layers
-    let outerRotAngle = frameCount * 0.005;
-    let innerRotAngle = frameCount * -0.008;
+    let outerRotAngle = now * 0.0003;
+    let innerRotAngle = now * -0.00048;
 
     // Pulsing effects
     let corePulse = 1.0 + sin(t * 0.8) * 0.15;
@@ -2416,7 +2418,7 @@ function drawObsidianOrb(s, thrusting = false, angle = 0, localSunAngle = -0.785
 function drawTesseractScout(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let def = SHIP_DEFINITIONS.TesseractScout;
-    let rotAngle = frameCount * 0.03;
+    let rotAngle = millis() * 0.0018;
 
     push();
     rotate(rotAngle);
@@ -2432,7 +2434,7 @@ function drawTesseractScout(s, thrusting = false, angle = 0, localSunAngle = -0.
     rectMode(CENTER);
     rect(0, 0, size, size);
     push();
-    rotate(frameCount * -0.04);
+    rotate(millis() * -0.0024);
     rect(0, 0, size * 0.7, size * 0.7);
     pop();
     pop();
@@ -2441,8 +2443,9 @@ function drawTesseractScout(s, thrusting = false, angle = 0, localSunAngle = -0.
 function drawLotusCarrier(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
     let r = s / 2;
     let def = SHIP_DEFINITIONS.LotusCarrier;
-    let pulse = 1.0 + sin(frameCount * 0.08) * 0.05; // Large slow pulse
-    let rotSpeed = frameCount * 0.01;
+    const now = millis();
+    let pulse = 1.0 + sin(now * 0.0048) * 0.05; // Large slow pulse
+    let rotSpeed = now * 0.0006;
 
     // Draw 3D base using generated petal shape
     if (!def._cache) initShipCache(def);

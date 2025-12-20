@@ -1090,12 +1090,17 @@ class Player {
                 const tangledSpeedFactor = Math.min(1 / Math.max(this.dragMultiplier, 0.001), 1.0);
                 this.vel.mult(tangledSpeedFactor);
 
-                // Reduce visual effect frequency for performance
-                const fc = frameCount;
-                if (fc % 5 === 0) {
+                // Timer-based visual jitter (every ~80ms for rotation, ~100ms for position)
+                if (!this._tangledJitterTimer) this._tangledJitterTimer = 0;
+                this._tangledJitterTimer += deltaSeconds;
+
+                if (this._tangledJitterTimer >= 0.08) {
+                    this._tangledJitterTimer -= 0.08;
                     this.vel.rotate(random(-0.1, 0.1));
-                } else if (fc % 6 === 0) {
-                    this.vel.add(random(-0.03, 0.03), random(-0.03, 0.03));
+                    // Occasional position jitter (every other trigger)
+                    if (Math.random() < 0.5) {
+                        this.vel.add(random(-0.03, 0.03), random(-0.03, 0.03));
+                    }
                 }
             } else {
                 // Normal drag (typically ~0.985)
@@ -1176,22 +1181,26 @@ class Player {
 
         // --- Secret Station Discovery ---
         // Only check for discoveries when we have secret stations and only every
-        // few frames to reduce cost.
-        if (this.currentSystem && this.currentSystem.secretStations && this.currentSystem.secretStations.length > 0 && frameCount % 10 === 0) {
-            for (const station of this.currentSystem.secretStations) {
-                if (!station || station.discovered) continue;
-                // Use squared distance to avoid sqrt cost
-                const dx = this.pos.x - station.pos.x;
-                const dy = this.pos.y - station.pos.y;
-                const distSq = dx * dx + dy * dy;
-                const discoveryDistance = (station.size * 3) || 200; // fallback
-                const discoverySq = discoveryDistance * discoveryDistance;
-                if (distSq < discoverySq) {
-                    station.discovered = true;
-                    if (typeof uiManager !== 'undefined') uiManager.addMessage(`Secret Base Discovered: ${station.name}!`, [0, 255, 255]);
-                    console.log(`Player discovered secret station: ${station.name}`);
-                    // Clear any navigation cache so UI updates immediately
-                    this._cachedNavigation = null;
+        // few frames (now time-based ~150ms) to reduce cost.
+        if (!this._lastSecretCheck || (currentTime - this._lastSecretCheck) > 150) {
+            this._lastSecretCheck = currentTime;
+
+            if (this.currentSystem && this.currentSystem.secretStations && this.currentSystem.secretStations.length > 0) {
+                for (const station of this.currentSystem.secretStations) {
+                    if (!station || station.discovered) continue;
+                    // Use squared distance to avoid sqrt cost
+                    const dx = this.pos.x - station.pos.x;
+                    const dy = this.pos.y - station.pos.y;
+                    const distSq = dx * dx + dy * dy;
+                    const discoveryDistance = (station.size * 3) || 200; // fallback
+                    const discoverySq = discoveryDistance * discoveryDistance;
+                    if (distSq < discoverySq) {
+                        station.discovered = true;
+                        if (typeof uiManager !== 'undefined') uiManager.addMessage(`Secret Base Discovered: ${station.name}!`, [0, 255, 255]);
+                        console.log(`Player discovered secret station: ${station.name}`);
+                        // Clear any navigation cache so UI updates immediately
+                        this._cachedNavigation = null;
+                    }
                 }
             }
         }
@@ -1334,9 +1343,9 @@ class Player {
             strokeWeight(2);
 
             for (let i = 0; i < 6; i++) {
-                let angle = frameCount * 0.03 + i * TWO_PI / 6;
+                let angle = millis() * 0.0018 + i * TWO_PI / 6; // frameCount*0.03 -> millis*0.0018
                 let innerRadius = this.size * 0.6;
-                let outerRadius = this.size * (1.2 + 0.2 * sin(frameCount * 0.1 + i));
+                let outerRadius = this.size * (1.2 + 0.2 * sin(millis() * 0.006 + i)); // frameCount*0.1 -> millis*0.006
 
                 beginShape();
                 for (let j = 0; j < 5; j++) {
@@ -1359,7 +1368,7 @@ class Player {
             translate(this.pos.x, this.pos.y);
             noFill();
             // Pulsating effect for the barrier
-            const barrierPulse = (sin(frameCount * 0.1) + 1) / 2; // Ranges from 0 to 1
+            const barrierPulse = (sin(millis() * 0.006) + 1) / 2; // Ranges from 0 to 1
             const barrierRadius = this.size * (1.7 + barrierPulse * 0.2); // Slightly larger and pulsating
             const barrierAlpha = map(this.barrierDurationTimer, 0, this.currentWeapon?.duration || 5, 50, 150);
 
@@ -1420,8 +1429,9 @@ class Player {
             this.currentSystem.secretStations.length > 0) {
 
             // Cache closest station data to avoid recalculating every frame
-            if (!this._cachedNavigation || frameCount % 30 === 0) {
-                // Only recalculate every 30 frames or if cache is empty
+            const now = millis();
+            if (!this._cachedNavigation || (now - this._cachedNavigation.lastUpdated) > 500) {
+                // Only recalculate every 500ms or if cache is empty
                 let closestStation = this.currentSystem.secretStations[0];
                 let closestDist = Infinity;
 
@@ -1444,7 +1454,7 @@ class Player {
                 this._cachedNavigation = {
                     station: closestStation,
                     distance: closestDist,
-                    lastUpdated: frameCount
+                    lastUpdated: now
                 };
             }
 

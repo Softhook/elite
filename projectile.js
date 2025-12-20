@@ -272,7 +272,8 @@ class Projectile {
             noFill();
 
             // Draw tethers/tendrils (optimized - reduced random calls)
-            const frameOffset = frameCount * 0.1;
+            // Use millis() for frame-rate independent animation
+            const frameOffset = (typeof millis === 'function' ? millis() : Date.now()) * 0.006; // 0.1*60 = 6 rad/s -> 0.006/ms
             const piOver4 = PI / 4;
             // Cache random jitter values (only 4 instead of 64 per frame)
             const jitter1 = random(-1, 1);

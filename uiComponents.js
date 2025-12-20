@@ -981,7 +981,7 @@ class UIComponents {
             const shipSize = playerShip?.size || 30;
 
             // Authentic barrier calculation from player.js lines 1362-1374
-            const barrierPulse = (Math.sin(frameCount * 0.1) + 1) / 2; // Ranges from 0 to 1
+            const barrierPulse = (Math.sin((typeof millis === 'function' ? millis() : Date.now()) * 0.006) + 1) / 2; // Ranges from 0 to 1
             const barrierRadius = shipSize * (1.7 + barrierPulse * 0.2); // Slightly larger and pulsating
 
             // Simulate full alpha (as if barrier just activated)
