@@ -58,45 +58,69 @@ class StationMusicManager {
 
     /**
      * Musical themes for each station type
-     * Each theme defines: scale, motifs, tempo feel, harmonic character
+     * Each theme defines: scale, motifs, tempo feel, harmonic character, oscillator types, and sonic signature
+     * 
+     * New properties for distinctive sound:
+     * - oscType / osc2Type: oscillator waveforms ('sine', 'triangle', 'square', 'sawtooth')
+     * - detune: cents detuning for grit/warmth (0-50)
+     * - noteGlide: portamento time in seconds between notes (0-0.3)
+     * - filterRes: filter resonance for character (0.1-15)
+     * - rhythmVariation: timing variation factor (0 = strict, 0.3 = rubato)
+     * - reverbDecay: reverb tail length multiplier (0.5-3)
+     * - dynamicRange: velocity variation amount (0-0.4)
      */
     static get STATION_THEMES() {
         return {
-            // Imperial: Grand, regal, slow brass-like fanfares
+            // Imperial: Baroque brass fanfares - regal, ceremonial grandeur
             imperial: {
                 baseNote: 48, // C3
                 scale: [0, 2, 4, 5, 7, 9, 11], // Major scale
                 motifs: [
-                    [0, 4, 7, 12, 7, 4],           // Rising major arpeggio, falling back
-                    [7, 5, 4, 2, 0],               // Descending majesty
-                    [0, 2, 4, 7, 9, 7, 4, 2],      // Regal flourish
-                    [12, 11, 9, 7, 5, 4, 2, 0],    // Descending fanfare
+                    [0, null, 4, 7, 12, null, 12, 7, 4],     // Fanfare with pauses
+                    [7, 5, 4, 2, 0, null, 0],                // Descending majesty
+                    [0, 4, 7, 12, 14, 12, 7],                // Regal flourish rising
+                    [12, 11, 9, 7, null, 5, 4, 2, 0],        // Grand descent
                 ],
-                harmonyInterval: 7, // Fifth below
-                noteInterval: 40,   // Very slow, stately
-                filterFreq: 1200,   // Warm, brass-like
-                attackTime: 0.15,
-                releaseTime: 0.8,
+                harmonyInterval: 7,  // Perfect fifth (stately)
+                noteInterval: 45,    // Very slow, grandioso
+                filterFreq: 1400,    // Warm brass timbre
+                filterRes: 2.0,      // Slight warmth
+                attackTime: 0.12,
+                releaseTime: 0.9,
+                oscType: 'triangle',
+                osc2Type: 'sine',
+                detune: 8,           // Slight chorus for fullness
+                noteGlide: 0.05,     // Subtle legato
+                reverbDecay: 1.8,    // Grand hall reverb
+                dynamicRange: 0.15,  // Subtle dynamics for majesty
             },
 
-            // Military: Austere, minor, march-like
+            // Military: Industrial march - harsh, disciplined, cold
             military: {
-                baseNote: 40, // E2
-                scale: [0, 2, 3, 5, 7, 8, 10], // Natural minor
+                baseNote: 38, // D2 - low and aggressive
+                scale: [0, 2, 3, 5, 6, 8, 10], // Minor with tritone
                 motifs: [
-                    [0, 0, 3, 3, 5, 5, 7],        // March rhythm in minor
-                    [7, 5, 3, 0, -2, 0],          // Descending duty
-                    [0, 5, 3, 0, 7, 5, 3, 0],     // Military call
-                    [12, 10, 8, 7, 5, 3, 0],      // Trumpet descent
+                    [0, 0, 0, 6, 0, 0, 0, 5],         // Harsh march with tritone
+                    [0, 3, 5, 6, 5, 3, 0, 0],         // Military tension
+                    [6, 5, 3, 0, 6, 5, 3, 0],         // Grinding repetition
+                    [0, null, 6, null, 0, null, 5],   // Staccato command
                 ],
-                harmonyInterval: 5, // Fourth below
-                noteInterval: 25,   // Steady march tempo
-                filterFreq: 1500,
-                attackTime: 0.05,
-                releaseTime: 0.4,
+                harmonyInterval: 6,  // Tritone (devil's interval - tension)
+                noteInterval: 22,    // Strict march tempo
+                filterFreq: 1800,    // Cutting, cold
+                filterRes: 4.0,      // Resonant edge
+                attackTime: 0.01,    // Very sharp staccato
+                releaseTime: 0.15,   // Short, clipped
+                oscType: 'square',   // Harsh square wave
+                osc2Type: 'sawtooth',
+                detune: 0,           // Cold precision
+                noteGlide: 0,        // No glide - strict
+                reverbDecay: 0.4,    // Minimal - controlled environment
+                dynamicRange: 0.05,  // Uniform volume - discipline
+                volumeMultiplier: 0.9,
             },
 
-            // Agricultural: Pastoral, folk-like, pentatonic
+            // Agricultural: Celtic folk - pastoral jig, pennywhistle feel
             agricultural: {
                 baseNote: 52, // E3
                 scale: [0, 2, 4, 7, 9], // Major pentatonic
@@ -106,31 +130,47 @@ class StationMusicManager {
                     [0, 4, 7, 9, 7, 4, 2, 0],     // Folk melody
                     [9, 7, 4, 2, 0, 2, 4],        // Peaceful meandering
                 ],
-                harmonyInterval: 12, // Octave below (drone)
-                noteInterval: 35,    // Gentle, unhurried
-                filterFreq: 2500,    // Brighter, airy
-                attackTime: 0.12,
-                releaseTime: 0.6,
+                harmonyInterval: 12, // Octave drone below
+                noteInterval: 18,    // Lively jig tempo
+                filterFreq: 3500,    // Bright, airy
+                filterRes: 1.0,      // Clean
+                attackTime: 0.03,    // Quick for jig articulation
+                releaseTime: 0.25,   // Bouncy
+                oscType: 'triangle',
+                osc2Type: 'sine',
+                detune: 5,           // Slight rustic warmth
+                noteGlide: 0.02,     // Light articulation
+                reverbDecay: 1.0,    // Open field
+                dynamicRange: 0.25,  // Natural folk dynamics
             },
 
-            // Industrial: Deep, mechanical, repetitive
+            // Industrial: Techno machinery - polyrhythmic, gritty, pumping
             industrial: {
-                baseNote: 33, // A1
-                scale: [0, 2, 3, 5, 7, 10], // Dorian mode
+                baseNote: 33, // A1 - deep bass
+                scale: [0, 3, 5, 7, 10], // Minor pentatonic
                 motifs: [
-                    [0, 0, 5, 0, 0, 7, 0, 5],     // Mechanical pulse
-                    [0, 3, 5, 3, 0, 3, 5, 7],     // Factory rhythm
-                    [7, 5, 3, 0, 7, 5, 3, 0],     // Repetitive grind
-                    [0, 5, 0, 7, 0, 5, 0, 3],     // Industrial drone
+                    [0, 0, 5, 0, 7, 0, 5, 0],         // Pumping bass pulse
+                    [0, 7, 0, 5, 0, 10, 0, 7],        // Driving rhythm
+                    [5, 0, 5, 7, 5, 0, 5, 10],        // Syncopated grind
+                    [0, 0, 0, 7, 0, 0, 0, 5],         // Heavy kicks
                 ],
-                harmonyInterval: 7, // Fifth
-                noteInterval: 22,   // Steady, mechanical
-                filterFreq: 900,    // Dark, muffled
-                attackTime: 0.02,
-                releaseTime: 0.3,
+                harmonyInterval: 7,  // Fifth drone
+                noteInterval: 12,    // Fast 16th note feel
+                filterFreq: 800,     // Dark, muffled
+                filterRes: 8.0,      // Resonant sweep character
+                attackTime: 0.005,   // Punchy transients
+                releaseTime: 0.2,    // Tight
+                oscType: 'sawtooth', // Gritty sawtooth
+                osc2Type: 'square',
+                detune: 15,          // Thick detuned layer
+                noteGlide: 0,        // No glide - mechanical precision
+                reverbDecay: 0.5,    // Tight industrial space
+                dynamicRange: 0.1,   // Compressed, pounding
+                filterSweep: { min: 400, max: 1400, speed: 0.02 }, // Pumping filter
+                volumeMultiplier: 1.1,
             },
 
-            // Mining: Cavernous, sparse, deep echoes
+            // Mining: Ambient doom - ultra-low drones, cavernous, crushing
             mining: {
                 baseNote: 28, // E1 - very low
                 scale: [0, 3, 5, 7, 10], // Minor pentatonic
@@ -184,108 +224,167 @@ class StationMusicManager {
                 envelope2Range: 0.7,    // Stronger harmony/drone for presence
             },
 
-            // Post Human: Ethereal, high, glassy textures
+            // Post Human: Ambient electronica - crystalline, transcendent, floating
             'post human': {
-                baseNote: 65, // F4 - high register
-                scale: [0, 2, 4, 6, 7, 9, 11], // Lydian (dreamy)
+                baseNote: 72, // C5 - high, ethereal register
+                scale: [0, 2, 4, 6, 7, 11], // Lydian (dreamy #4)
                 motifs: [
-                    [0, 4, 6, 11, 12, 11, 6, 4],  // Floating, ethereal
-                    [12, 11, 9, 7, 6, 4, 2, 0],   // Descending dream
-                    [0, 2, 6, 9, 11, 9, 6, 2],    // Crystalline
-                    [7, 6, 4, 2, 0, 2, 4, 6, 7],  // Transcendent rise
+                    [0, 4, 7, 11, 12, null, 11, 7],   // Floating arpeggios
+                    [12, 11, 7, 6, 4, null, 2, 0],    // Descending dream
+                    [0, null, 6, null, 11, null, 12], // Sparse crystal
+                    [7, 6, 4, null, 2, 0, null, 4],   // Transcendent phrase
                 ],
-                harmonyInterval: 9, // Major sixth (sweet)
-                noteInterval: 45,   // Slow, floating
-                filterFreq: 4000,   // Very bright, glassy
-                attackTime: 0.2,
-                releaseTime: 1.0,
+                harmonyInterval: 16, // Two octaves down (wide voicing)
+                noteInterval: 55,    // Very slow, floating
+                filterFreq: 5000,    // Crystalline highs
+                filterRes: 0.5,      // Very clean, pure
+                attackTime: 0.35,    // Slow fade in - ethereal
+                releaseTime: 1.8,    // Long sustain
+                oscType: 'sine',     // Pure glass tones
+                osc2Type: 'sine',    // Both pure sines
+                detune: 2,           // Almost pure
+                noteGlide: 0.3,      // Long glides - floating
+                reverbDecay: 2.5,    // Vast digital space
+                dynamicRange: 0.1,   // Subtle, consistent
+                rhythmVariation: 0.4, // Rubato - very free timing
             },
 
-            // Offworld: Balanced, spacious, optimistic
+            // Offworld: Frontier americana - vast, lonely, pioneering
             offworld: {
                 baseNote: 50, // D3
-                scale: [0, 2, 4, 7, 9, 12], // Major pentatonic / mixolydian hint
+                scale: [0, 2, 4, 7, 9], // Major pentatonic (americana)
                 motifs: [
-                    [0, 7, 12, 7, 0, -5, 0],      // Spacious leap
-                    [12, 9, 7, 4, 2, 0],          // Gentle horizon
-                    [0, 4, 7, 12, 14, 12, 7, 4],  // Expansive rise
-                    [7, 9, 12, 14, 12, 9, 7],     // Optimistic shimmer
+                    [0, null, 7, null, 12, null, 7, 0],   // Vast open 5ths
+                    [12, 9, 7, null, 4, 2, 0],            // Lonely horizon
+                    [0, 7, 12, 14, null, 12, 7],          // Expansive frontier
+                    [9, 7, 4, 2, null, 0, null, 0],       // Solitary ending
                 ],
-                harmonyInterval: 5, // Perfect fourth
-                noteInterval: 32,   // Balanced tempo
-                filterFreq: 2200,   // Clear and open
-                attackTime: 0.1,
-                releaseTime: 0.7,
+                harmonyInterval: 7,  // Open 5th (americana sound)
+                noteInterval: 50,    // Slow, contemplative
+                filterFreq: 2000,    // Warm but open
+                filterRes: 1.5,      // Slight twang
+                attackTime: 0.18,    // Slow "twang" attack
+                releaseTime: 1.2,    // Long sustain
+                oscType: 'triangle',
+                osc2Type: 'sine',
+                detune: 7,           // Slight warmth
+                noteGlide: 0.15,     // Bending notes
+                reverbDecay: 2.2,    // Vast lonely echo
+                dynamicRange: 0.25,  // Natural dynamics
             },
 
-            // Service: Reliable, standard, efficient
+            // Service: Elevator muzak - safe, predictable, corporate
             service: {
-                baseNote: 48, // C3
-                scale: [0, 2, 4, 5, 7, 9], // Major hexatonic
+                baseNote: 52, // E3
+                scale: [0, 2, 4, 5, 7, 9], // Major hexatonic (safe)
                 motifs: [
-                    [0, 2, 4, 5, 7, 4, 2, 0],     // Reliable cycle
-                    [7, 5, 4, 2, 0],              // Standard descent
-                    [4, 5, 7, 9, 7, 5, 4],        // Efficient pattern
-                    [0, 7, 9, 7, 0],              // Simple service call
+                    [0, 2, 4, 5, 4, 2, 0],            // Cookie-cutter pattern
+                    [5, 4, 2, 0, 2, 4],               // Predictable cycle
+                    [0, 4, 5, 7, 5, 4, 2, 0],         // Standard flourish
+                    [7, 5, 4, 2, 0, 2],               // Efficient descent
                 ],
-                harmonyInterval: 12, // Octave
-                noteInterval: 30,    // Standard pace
-                filterFreq: 1800,    // Balanced
-                attackTime: 0.08,
-                releaseTime: 0.4,
+                harmonyInterval: 12, // Safe octave
+                noteInterval: 28,    // Standard tempo
+                filterFreq: 2000,    // Neutral
+                filterRes: 1.0,      // Clean, unremarkable
+                attackTime: 0.06,    // Standard
+                releaseTime: 0.4,    // Standard
+                oscType: 'triangle', // Inoffensive triangle
+                osc2Type: 'sine',
+                detune: 3,           // Slight warmth
+                noteGlide: 0.02,     // Smooth but minimal
+                reverbDecay: 0.8,    // Standard room
+                dynamicRange: 0.05,  // Flat, compressed muzak
             },
 
-            // Alien: Microtonal feel, otherworldly
+            // Alien: Xenharmonic ambient - microtonal, unpredictable, eerie
             alien: {
-                baseNote: 50, // D3
-                scale: [0, 1, 4, 5, 8, 9], // Augmented/whole-tone hybrid
+                baseNote: 54, // F#3 - unusual starting note
+                scale: [0, 1, 4, 5, 8, 9, 11], // Augmented + extra tensions
                 motifs: [
-                    [0, 4, 8, 9, 8, 4, 1, 0],     // Alien intervals
-                    [0, 1, 5, 8, 5, 1, 0],        // Otherworldly
-                    [9, 8, 5, 4, 1, 0, 1, 4],     // Strange descent
-                    [0, 5, 9, 5, 8, 4, 0],        // Non-human logic
+                    [0, 4, 8, null, 9, 5, 1, 0],      // Non-human intervals
+                    [8, 5, null, 1, 4, null, 0],     // Discontinuous thought
+                    [0, null, 8, 9, null, 4, 1],     // Alien pauses
+                    [9, 8, 4, null, 1, 0, 5, 8],     // Strange logic
                 ],
-                harmonyInterval: 8, // Augmented fifth (eerie)
-                noteInterval: 38,   // Unhurried, mysterious
-                filterFreq: 2000,
-                attackTime: 0.1,
-                releaseTime: 0.7,
+                harmonyInterval: 8,  // Augmented 5th (eerie)
+                noteInterval: 42,    // Irregular feel
+                filterFreq: 1800,    // Neither bright nor dark
+                filterRes: 5.0,      // Resonant strangeness
+                attackTime: 0.2,     // Slow emergence
+                releaseTime: 0.9,    // Lingering
+                oscType: 'sine',     // Pure but detuned
+                osc2Type: 'triangle',
+                detune: 45,          // Heavy microtonal detuning
+                noteGlide: 0.25,     // Quarter-tone bends
+                reverbDecay: 1.8,    // Vast alien space
+                dynamicRange: 0.35,  // Unpredictable dynamics
+                rhythmVariation: 0.35, // Irregular timing
             },
 
-            // Separatist: Tense, minor, suspenseful
+            // Separatist: Soviet-era tension - paranoid, cold, threatening
             separatist: {
-                baseNote: 43, // G2
-                scale: [0, 1, 3, 5, 7, 8, 10], // Harmonic minor
+                baseNote: 41, // F2 - ominous low
+                scale: [0, 1, 3, 5, 7, 8, 11], // Harmonic minor with leading tone
                 motifs: [
-                    [0, 3, 5, 8, 7, 5, 3, 0],     // Tense creeping
-                    [7, 8, 7, 5, 3, 1, 0],        // Suspicious descent
-                    [0, 1, 3, 7, 8, 7, 3, 1, 0],  // Plotting
-                    [5, 3, 1, 0, 1, 3, 5, 7],     // Rising tension
+                    [0, 1, 3, 5, 8, 7, 5, 3],         // Creeping paranoia
+                    [8, 7, 5, 3, 1, 0, 1, 3],         // Suspicious watching
+                    [0, 3, 5, 8, 11, 8, 5, 1],        // Rising threat
+                    [5, 3, 1, 0, null, 1, 0, null],   // Pregnant pauses
                 ],
-                harmonyInterval: 3, // Minor third (dark)
-                noteInterval: 32,   // Moderate, tense
-                filterFreq: 1400,
-                attackTime: 0.06,
-                releaseTime: 0.5,
+                harmonyInterval: 3,  // Minor 3rd (dark)
+                noteInterval: 35,    // Measured, deliberate
+                filterFreq: 1300,    // Cold, metallic
+                filterRes: 6.0,      // Harsh edge
+                attackTime: 0.04,    // Sharp
+                releaseTime: 0.5,    // Medium decay
+                oscType: 'square',   // Cold square wave
+                osc2Type: 'sawtooth',
+                detune: 10,          // Slight unease
+                noteGlide: 0.05,     // Subtle menace
+                reverbDecay: 1.0,    // Cold concrete
+                dynamicRange: 0.3,   // Paranoid dynamics
             },
 
-            // Standard: Neutral, ambient, calming
+            // Standard: Neutral ambient - calming, balanced, safe
             standard: {
                 baseNote: 48, // C3
-                scale: [0, 2, 4, 7, 9], // Major pentatonic (safe)
+                scale: [0, 2, 4, 7, 9], // Major pentatonic (universally safe)
                 motifs: [
-                    [0, 2, 4, 7, 4, 2, 0],        // Simple, calming
-                    [7, 4, 2, 0, 2, 4, 7],        // Gentle wave
-                    [0, 4, 7, 9, 7, 4, 0],        // Neutral ambient
-                    [9, 7, 4, 2, 0, 2, 4],        // Soft descent
+                    [0, 2, 4, 7, null, 4, 2, 0],      // Breathing pattern
+                    [7, 4, 2, 0, 2, 4, 7],            // Gentle wave
+                    [0, null, 4, 7, 9, 7, 4],         // Spacious
+                    [9, 7, 4, 2, 0, null, 0],         // Soft landing
                 ],
-                harmonyInterval: 12, // Octave (neutral)
-                noteInterval: 35,
-                filterFreq: 1800,
-                attackTime: 0.1,
-                releaseTime: 0.6,
+                harmonyInterval: 12, // Safe octave
+                noteInterval: 38,    // Calm pace
+                filterFreq: 1900,    // Balanced
+                filterRes: 1.2,      // Warm
+                attackTime: 0.1,     // Gentle
+                releaseTime: 0.65,   // Smooth
+                oscType: 'triangle',
+                osc2Type: 'sine',
+                detune: 5,           // Slight warmth
+                noteGlide: 0.04,     // Smooth transitions
+                reverbDecay: 1.2,    // Pleasant space
+                dynamicRange: 0.15,  // Subtle variation
             },
         };
+    }
+
+    /**
+     * Create an oscillator of the specified type
+     * @param {string} oscType - 'sine', 'triangle', 'square', or 'sawtooth'
+     * @returns {object} p5 oscillator
+     */
+    createOscillator(oscType) {
+        switch (oscType) {
+            case 'sine': return new p5.SinOsc();
+            case 'square': return new p5.SqrOsc();
+            case 'sawtooth': return new p5.SawOsc();
+            case 'triangle':
+            default: return new p5.TriOsc();
+        }
     }
 
     /**
@@ -302,21 +401,21 @@ class StationMusicManager {
         }
 
         try {
-            // Create primary oscillator - triangle wave for soft, ambient melody
+            // Create default oscillators - will be recreated per-theme in setupOscillators()
             this.osc = new p5.TriOsc();
-
-            // Create secondary oscillator - sine wave for harmony/drone (even softer)
             this.osc2 = new p5.SinOsc();
+            this.currentOscType = 'triangle';
+            this.currentOsc2Type = 'sine';
 
             // Create envelope with slow attack for smooth melodic notes
             this.envelope = new p5.Envelope();
-            this.envelope.setADSR(0.1, 0.15, 0.5, 0.6); // Slow attack, long release
+            this.envelope.setADSR(0.1, 0.15, 0.5, 0.6);
             this.envelope.setRange(1, 0);
 
             // Create secondary envelope for harmony (even slower, more pad-like)
             this.envelope2 = new p5.Envelope();
-            this.envelope2.setADSR(0.3, 0.2, 0.6, 0.8); // Very slow, drone-like
-            this.envelope2.setRange(0.4, 0); // Quieter than main melody
+            this.envelope2.setADSR(0.3, 0.2, 0.6, 0.8);
+            this.envelope2.setRange(0.4, 0);
 
             // Create low-pass filter to soften the sound
             this.filter = new p5.LowPass();
@@ -334,11 +433,15 @@ class StationMusicManager {
             this.filter.disconnect();
             this.filter.connect(this.masterGain);
 
-            // Create reverb for spacey atmosphere and feed it from the master gain
+            // Create reverb for spacey atmosphere (default decay)
             this.reverb = new p5.Reverb();
-            this.reverb.process(this.masterGain, 6, 12); // Long reverb tail
+            this.reverb.process(this.masterGain, 6, 12);
 
-            // Start muted until `start()`/update() ramps volume
+            // State for glide/portamento
+            this.lastMelodyFreq = 0;
+            this.lastHarmonyFreq = 0;
+
+            // Start muted until start()/update() ramps volume
             try { this.masterGain.amp(0); } catch (e) { /* ignore */ }
 
             this.isInitialized = true;
@@ -347,6 +450,47 @@ class StationMusicManager {
         } catch (e) {
             console.error('StationMusicManager: Failed to initialize audio:', e);
             return false;
+        }
+    }
+
+    /**
+     * Setup oscillators for the current theme (switch types if needed)
+     */
+    setupOscillators() {
+        if (!this.theme || !this.isInitialized) return;
+
+        const oscType = this.theme.oscType || 'triangle';
+        const osc2Type = this.theme.osc2Type || 'sine';
+
+        // Only recreate if type changed
+        if (oscType !== this.currentOscType) {
+            try {
+                if (this.osc) {
+                    this.osc.stop();
+                    this.osc.disconnect();
+                }
+                this.osc = this.createOscillator(oscType);
+                this.osc.disconnect();
+                this.osc.connect(this.filter);
+                this.currentOscType = oscType;
+            } catch (e) {
+                console.warn('StationMusicManager: Error switching osc type:', e);
+            }
+        }
+
+        if (osc2Type !== this.currentOsc2Type) {
+            try {
+                if (this.osc2) {
+                    this.osc2.stop();
+                    this.osc2.disconnect();
+                }
+                this.osc2 = this.createOscillator(osc2Type);
+                this.osc2.disconnect();
+                this.osc2.connect(this.filter);
+                this.currentOsc2Type = osc2Type;
+            } catch (e) {
+                console.warn('StationMusicManager: Error switching osc2 type:', e);
+            }
         }
     }
 
@@ -369,7 +513,13 @@ class StationMusicManager {
         this.noteInterval = this.theme.noteInterval;
         if (this.filter) {
             this.filter.freq(this.theme.filterFreq);
+            // Apply filter resonance for distinctive character
+            const res = this.theme.filterRes !== undefined ? this.theme.filterRes : 1.5;
+            this.filter.res(res);
         }
+
+        // Setup oscillators for this theme (switch types if needed)
+        this.setupOscillators();
 
         // Set envelope characteristics based on theme
         if (this.envelope) {
@@ -388,12 +538,20 @@ class StationMusicManager {
                 0.6,
                 this.theme.releaseTime * 1.2
             );
-            // Allow themes to request a stronger harmony level (e.g. refinery)
+            // Allow themes to request a stronger harmony level
             if (typeof this.theme.envelope2Range === 'number') {
                 try { this.envelope2.setRange(this.theme.envelope2Range, 0); } catch (e) { /* ignore */ }
             } else {
                 try { this.envelope2.setRange(0.4, 0); } catch (e) { /* ignore */ }
             }
+        }
+
+        // Update reverb decay if theme specifies
+        if (this.reverb && this.theme.reverbDecay) {
+            try {
+                const decay = 6 * this.theme.reverbDecay; // Scale base decay
+                this.reverb.set(decay, 12);
+            } catch (e) { /* ignore - some p5 versions don't support set */ }
         }
 
         // Build the full melody by selecting and combining motifs
@@ -605,33 +763,71 @@ class StationMusicManager {
                 if (this.noteIndex === 0) {
                     this.phraseIndex++;
                     if (this.phraseIndex >= 3) {
-                        // After 3 loops, generate a new variation
                         this.generateMelody({ stationType: this.stationType });
                     }
                 }
                 return;
             }
 
-            // Play the melody note
-            const melodyFreq = this.midiToFreq(melodyNote);
-            this.osc.freq(melodyFreq);
+            // Calculate base frequencies
+            let melodyFreq = this.midiToFreq(melodyNote);
+            let harmonyFreq = harmonyNote !== null ? this.midiToFreq(harmonyNote) : 0;
+
+            // Apply detuning for grit/warmth (cents to frequency ratio)
+            const detune = this.theme.detune || 0;
+            if (detune > 0) {
+                // Detune the harmony oscillator relative to melody
+                const detuneRatio = Math.pow(2, detune / 1200);
+                harmonyFreq *= detuneRatio;
+            }
+
+            // Apply note glide (portamento)
+            const glideTime = this.theme.noteGlide || 0;
+            if (glideTime > 0 && this.lastMelodyFreq > 0) {
+                // Use p5's freq ramp for smooth glide
+                this.osc.freq(melodyFreq, glideTime);
+            } else {
+                this.osc.freq(melodyFreq);
+            }
+            this.lastMelodyFreq = melodyFreq;
+
+            // Apply dynamic range (velocity variation)
+            const dynamicRange = this.theme.dynamicRange || 0.15;
+            const dynamicMod = 1.0 - (Math.random() * dynamicRange);
+
+            // Play melody with dynamic envelope
+            if (this.envelope) {
+                try {
+                    this.envelope.setRange(dynamicMod, 0);
+                } catch (e) { /* ignore */ }
+            }
             this.envelope.play(this.osc, 0, 0.15);
 
-            // Play harmony note (if we have the second oscillator and it's not null)
+            // Play harmony note with glide if applicable
             if (this.osc2 && this.envelope2 && harmonyNote !== null) {
-                const harmonyFreq = this.midiToFreq(harmonyNote);
-                this.osc2.freq(harmonyFreq);
+                if (glideTime > 0 && this.lastHarmonyFreq > 0) {
+                    this.osc2.freq(harmonyFreq, glideTime);
+                } else {
+                    this.osc2.freq(harmonyFreq);
+                }
+                this.lastHarmonyFreq = harmonyFreq;
                 this.envelope2.play(this.osc2, 0, 0.1);
             }
 
             // Advance to next note
             this.noteIndex = (this.noteIndex + 1) % this.melody.length;
 
+            // Apply rhythm variation (rubato) to next note interval
+            const rhythmVar = this.theme.rhythmVariation || 0;
+            if (rhythmVar > 0) {
+                const variance = 1.0 + (Math.random() * 2 - 1) * rhythmVar;
+                this.noteInterval = Math.round(this.theme.noteInterval * variance);
+            }
+
             // When we loop back to start, maybe regenerate for variety
             if (this.noteIndex === 0) {
                 this.phraseIndex++;
                 if (this.phraseIndex >= 3) {
-                    // After 3 loops, generate a new variation
                     this.generateMelody({ stationType: this.stationType });
                 }
             }
