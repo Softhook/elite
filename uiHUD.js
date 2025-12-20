@@ -665,7 +665,14 @@ class UIHUD {
 
         let pilotName = this._getTargetPilotName(target);
         if (isAsteroid) {
-            pilotName = 'Asteroid';
+            // More descriptive asteroid name based on properties
+            if (target.isComet) {
+                pilotName = 'Comet';
+            } else if (target.isRich) {
+                pilotName = 'Rich Asteroid';
+            } else {
+                pilotName = 'Asteroid';
+            }
         } else if (isSpaceObject) {
             pilotName = (typeof target.getDisplayName === 'function') ? target.getDisplayName() : 'Space Object';
         }
@@ -678,6 +685,7 @@ class UIHUD {
         const shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[target.shipTypeName] : null;
         const rangeLine = this._formatRangeLine(player, target);
         const activityStatus = hasShipIdentity ? this._getActivityStatus(target) : null;
+        const tacticalInfo = hasShipIdentity ? this._getTacticalInfo(target) : [];
         const weaponsList = hasShipIdentity ? this._getTargetWeapons(target) : [];
 
         const infoLines = [];
@@ -685,10 +693,37 @@ class UIHUD {
             infoLines.push(`${shipName}${roleLabel ? ` (${roleLabel})` : ''}`);
         }
         if (activityStatus) {
-            infoLines.push(activityStatus);
+            infoLines.push(`Status: ${activityStatus}`);
         }
         if (rangeLine) {
             infoLines.push(rangeLine);
+        }
+        // Add tactical info lines
+        for (const info of tacticalInfo) {
+            infoLines.push(info);
+        }
+
+        // Add asteroid-specific info
+        if (isAsteroid) {
+            // Size category
+            const size = target.size || 0;
+            let sizeCategory = 'Small';
+            if (size >= 200) {
+                sizeCategory = 'Very Large';
+            } else if (size >= 100) {
+                sizeCategory = 'Large';
+            } else if (size >= 50) {
+                sizeCategory = 'Medium';
+            }
+            infoLines.push(`Size: ${sizeCategory}`);
+
+            // Mineral richness
+            if (target.isRich) {
+                const multiplier = target.mineralMultiplier || 1;
+                infoLines.push(`Ore Quality: Rich (${multiplier}x yield)`);
+            } else {
+                infoLines.push('Ore Quality: Standard');
+            }
         }
 
         const cargoEntries = hasShipIdentity ? this._getCargoEntries(target) : [];
@@ -810,7 +845,15 @@ class UIHUD {
             cursorY += lineHeight;
             fill(210);
             for (let i = 0; i < weaponsList.length; i++) {
-                if (weaponsList[i] === target.currentWeapon?.name) {
+                const isCurrentWeapon = weaponsList[i] === target.currentWeapon?.name;
+                // Check if actively firing (fireCooldown > 0 means recently fired)
+                const isFiring = isCurrentWeapon && target.fireCooldown > 0 && target.fireRate > 0;
+
+                if (isFiring) {
+                    // Red when actively firing
+                    fill(255, 80, 80);
+                } else if (isCurrentWeapon) {
+                    // Yellow for selected weapon
                     fill(255, 255, 0);
                 } else {
                     fill(210);
@@ -934,75 +977,188 @@ class UIHUD {
         // Role-specific activity descriptions
         if (role === AI_ROLE.MINER) {
             if (target.asteroidTarget && !target.asteroidTarget.destroyed) {
-                return 'Activity: Mining Asteroid';
+                return 'Mining Asteroid';
             }
             if (state === AI_STATE.COLLECTING_CARGO) {
-                return 'Activity: Collecting Ore';
+                return 'Collecting Ore';
             }
             if (target.shouldReturnToStation || (target.cargoCapacity > 0 && target.getCargoAmount && target.getCargoAmount() >= target.cargoCapacity)) {
-                return 'Activity: Returning to Station';
+                return 'Returning to Station';
             }
             if (state === AI_STATE.PATROLLING) {
-                return 'Activity: Searching for Asteroids';
+                return 'Searching for Asteroids';
             }
+        }
+
+        // Repair ship status - check activity properties rather than state to avoid flickering
+        if (role === AI_ROLE.REPAIR) {
+            // Actively reconstructing a space object
+            if (target._reconstructionTimer !== null && target._reconstructionTimer > 0) {
+                return 'Reconstructing Structure';
+            }
+            // Actively repairing a target
+            if (target.repairTarget && !target.repairTarget.destroyed) {
+                const distToTarget = target.pos && target.repairTarget.pos
+                    ? dist(target.pos.x, target.pos.y, target.repairTarget.pos.x, target.repairTarget.pos.y)
+                    : Infinity;
+                if (distToTarget < 80) {
+                    return 'Repairing Structure';
+                }
+                return 'En Route to Damaged Structure';
+            }
+            // Near station waiting
+            if (state === AI_STATE.NEAR_STATION) {
+                return 'Awaiting Deployment';
+            }
+            // Default for repair ships
+            return 'On Patrol';
         }
 
         if (role === AI_ROLE.HAULER || role === AI_ROLE.TRANSPORT) {
             if (state === AI_STATE.COLLECTING_CARGO) {
-                return 'Activity: Collecting Cargo';
+                return 'Collecting Cargo';
             }
             if (state === AI_STATE.LEAVING_SYSTEM) {
-                return 'Activity: Jumping to Hyperspace';
+                return 'Travelling to Jumpzone';
             }
             if (state === AI_STATE.TRANSPORTING) {
-                return 'Activity: On Trade Route';
+                return 'On Route';
             }
             if (state === AI_STATE.PATROLLING) {
-                return 'Activity: Trading';
+                return 'On Route';
+            }
+            if (state === AI_STATE.FLEEING) {
+                const hullPct = target.maxHull > 0 ? Math.round((target.hull / target.maxHull) * 100) : 0;
+                return `Fleeing (${hullPct}% hull)`;
             }
         }
 
         if (role === AI_ROLE.POLICE) {
-            if (state === AI_STATE.APPROACHING || state === AI_STATE.ATTACK_PASS || state === AI_STATE.REPOSITIONING) {
+            if (state === AI_STATE.APPROACHING) {
                 if (target.target) {
-                    return 'Activity: Engaging Hostile';
+                    const tgtName = this._getShortTargetName(target.target);
+                    return `Pursuing ${tgtName}`;
                 }
+                return 'Responding to Threat';
+            }
+            if (state === AI_STATE.ATTACK_PASS || state === AI_STATE.REPOSITIONING) {
+                if (target.target) {
+                    const tgtName = this._getShortTargetName(target.target);
+                    return `Engaging ${tgtName}`;
+                }
+                return 'In Combat';
             }
             if (state === AI_STATE.PATROLLING) {
-                return 'Activity: Patrolling System';
+                return 'Patrolling';
             }
         }
 
-        // General combat states
-        if (state === AI_STATE.APPROACHING || state === AI_STATE.ATTACK_PASS || state === AI_STATE.REPOSITIONING || state === AI_STATE.SNIPING) {
+        // General combat states with more detail
+        if (state === AI_STATE.APPROACHING) {
             if (target.target) {
-                const targetName = target.target instanceof Player ? 'You' : (target.target.shipTypeName || 'Target');
-                return `Activity: Engaging ${targetName}`;
+                const tgtName = this._getShortTargetName(target.target);
+                return `Closing on ${tgtName}`;
             }
-            return 'Activity: In Combat';
+            return 'Closing In';
+        }
+
+        if (state === AI_STATE.ATTACK_PASS) {
+            if (target.target) {
+                const tgtName = this._getShortTargetName(target.target);
+                return `Attack Run on ${tgtName}`;
+            }
+            return 'Attack Run';
+        }
+
+        if (state === AI_STATE.REPOSITIONING) {
+            if (target.target) {
+                const tgtName = this._getShortTargetName(target.target);
+                return `Repositioning vs ${tgtName}`;
+            }
+            return 'Repositioning';
+        }
+
+        if (state === AI_STATE.SNIPING) {
+            if (target.target) {
+                const tgtName = this._getShortTargetName(target.target);
+                return `Sniping ${tgtName}`;
+            }
+            return 'Sniping';
         }
 
         if (state === AI_STATE.FLEEING) {
-            return 'Activity: Fleeing';
+            const hullPct = target.maxHull > 0 ? Math.round((target.hull / target.maxHull) * 100) : 0;
+            return `Fleeing (${hullPct}% hull)`;
         }
 
         if (state === AI_STATE.COLLECTING_CARGO) {
-            return 'Activity: Collecting Cargo';
+            return 'Collecting Cargo';
         }
 
         if (state === AI_STATE.PATROLLING) {
-            return 'Activity: Patrolling';
+            return 'Patrolling';
         }
 
         if (state === AI_STATE.GUARDING && target.principal) {
-            return 'Activity: On Guard Duty';
+            const principalName = this._getShortTargetName(target.principal);
+            return `Guarding ${principalName}`;
+        }
+
+        if (state === AI_STATE.GUARDING) {
+            return 'On Guard Duty';
         }
 
         if (state === AI_STATE.IDLE) {
-            return 'Activity: Idle';
+            // Check if stationary or drifting
+            if (target.vel && target.vel.mag && target.vel.mag() > 10) {
+                return 'Drifting';
+            }
+            return 'Idle';
+        }
+
+        if (state === AI_STATE.NEAR_STATION) {
+            return 'Docked';
         }
 
         return null;
+    }
+
+    /**
+     * Gets a shortened name for a target to display in status strings.
+     * @param {Object} target - The target entity
+     * @returns {string} Short display name (ship type)
+     */
+    _getShortTargetName(target) {
+        if (!target) return 'Unknown';
+        if (target instanceof Player) return 'You';
+        // Prioritize ship type over pilot name
+        if (typeof target.shipTypeName === 'string') {
+            return target.shipTypeName;
+        }
+        if (target.constructor && target.constructor.name) {
+            return target.constructor.name;
+        }
+        return 'Target';
+    }
+
+    /**
+     * Gets additional tactical information about the target.
+     * @param {Object} target - The target enemy ship
+     * @returns {Array<string>} Array of tactical info strings
+     */
+    _getTacticalInfo(target) {
+        if (!target) return [];
+        const info = [];
+
+        // Combat target info - show ship type
+        if (target.target && !(target.target instanceof Player)) {
+            const tgtShip = target.target.shipTypeName || 'Unknown';
+            info.push(`Target: ${tgtShip}`);
+        } else if (target.target instanceof Player) {
+            info.push('Target: You');
+        }
+
+        return info;
     }
 
     // Message system methods
