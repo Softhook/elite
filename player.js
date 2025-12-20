@@ -1719,6 +1719,51 @@ class Player {
         return { success: true, added: amountToAdd };
     }
 
+    /** Moves any cargo above capacity into the provided station's storage. */
+    offloadExcessCargoToStorage(station, notifyFn) {
+        if (!station) return { overflow: 0, moved: 0 };
+
+        // Normalize both inventories first
+        this.cargo = Player.sanitizeCargoList(this.cargo, { convertTypeToName: true, mergeDuplicates: true });
+        if (typeof sanitizeStorageList === 'function') {
+            station.storage = sanitizeStorageList(station.storage);
+        } else {
+            station.storage = Array.isArray(station.storage) ? station.storage.filter(e => e?.name && e?.quantity > 0) : [];
+        }
+
+        const overflow = Math.max(0, this.getCargoAmount() - this.cargoCapacity);
+        if (overflow <= 0) return { overflow: 0, moved: 0 };
+
+        let remainingToMove = overflow;
+        for (const item of this.cargo) {
+            if (remainingToMove <= 0) break;
+            if (!item || !item.name || item.quantity <= 0) continue;
+
+            const moveQty = Math.min(item.quantity, remainingToMove);
+            item.quantity -= moveQty;
+            remainingToMove -= moveQty;
+
+            const storageItem = station.storage.find(s => s?.name === item.name);
+            if (storageItem) {
+                storageItem.quantity += moveQty;
+            } else {
+                station.storage.push({ name: item.name, quantity: moveQty });
+            }
+        }
+
+        // Clean zero-qty entries and ensure storage remains valid
+        this.cargo = this.cargo.filter(i => i && i.quantity > 0);
+        if (typeof sanitizeStorageList === 'function') {
+            station.storage = sanitizeStorageList(station.storage);
+        }
+
+        const moved = overflow - remainingToMove;
+        if (moved > 0 && typeof notifyFn === 'function') {
+            notifyFn(`Moved ${moved}t of cargo into station storage due to reduced capacity.`);
+        }
+        return { overflow, moved };
+    }
+
     /**
      * Basic circle-based collision check against another object.
      * @param {object} target - Object with pos {x, y} and size properties.
@@ -1880,6 +1925,33 @@ class Player {
     // SECTION 9: SAVE/LOAD
     // =========================================================================
 
+    static sanitizeCargoList(list, { convertTypeToName = true, mergeDuplicates = true } = {}) {
+        if (!Array.isArray(list)) return [];
+
+        const cleaned = [];
+        for (const entry of list) {
+            const nameFromEntry = (typeof entry?.name === 'string') ? entry.name.trim() : '';
+            const typeFallback = (convertTypeToName && typeof entry?.type === 'string') ? entry.type.trim() : '';
+            const name = nameFromEntry || typeFallback;
+            const qtyNum = Number(entry?.quantity);
+
+            if (!name || !Number.isFinite(qtyNum) || qtyNum <= 0) continue;
+
+            const quantity = Math.floor(qtyNum);
+            if (mergeDuplicates) {
+                const existing = cleaned.find(c => c.name === name);
+                if (existing) {
+                    existing.quantity += quantity;
+                    continue;
+                }
+            }
+
+            cleaned.push({ name, quantity });
+        }
+
+        return cleaned;
+    }
+
     /** Save data for persistence */
     getSaveData() {
         // Normalize angle safely to prevent NaN or Infinity in save data
@@ -1910,6 +1982,9 @@ class Player {
         }
         // ---
 
+        const cleanedCargo = Player.sanitizeCargoList(this.cargo, { convertTypeToName: true, mergeDuplicates: true });
+        this.cargo = cleanedCargo;
+
         // Save all weapons as an array with their full definitions
         const weaponsData = this.weapons.map(weapon => {
             // Only save non-null weapons
@@ -1928,7 +2003,7 @@ class Player {
         return {
             shipTypeName: this.shipTypeName,
             pos: { x: this.pos.x, y: this.pos.y }, vel: { x: this.vel.x, y: this.vel.y }, angle: normalizedAngle,
-            hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(this.cargo)),
+            hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(cleanedCargo)),
             isWanted: this.isWanted,
             isPolice: this.isPolice,
             hasBeenPolice: this.hasBeenPolice,
@@ -2006,6 +2081,7 @@ class Player {
         }
 
         this.cargo = Array.isArray(data.cargo) ? JSON.parse(JSON.stringify(data.cargo)) : [];
+        this.cargo = Player.sanitizeCargoList(this.cargo, { convertTypeToName: true, mergeDuplicates: true });
         this.isWanted = data.isWanted || false;
         this.isPolice = data.isPolice || false;
         this.hasBeenPolice = data.hasBeenPolice || false;

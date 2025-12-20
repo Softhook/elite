@@ -4,6 +4,30 @@
  * Represents a space station in the game.
  * Handles rendering, market interactions, and ship purchasing.
  */
+function sanitizeStorageList(list) {
+    if (!Array.isArray(list)) return [];
+
+    const cleaned = [];
+    for (const entry of list) {
+        const nameFromEntry = (typeof entry?.name === 'string') ? entry.name.trim() : '';
+        const typeFallback = (typeof entry?.type === 'string') ? entry.type.trim() : '';
+        const name = nameFromEntry || typeFallback;
+        const qtyNum = Number(entry?.quantity);
+
+        if (!name || !Number.isFinite(qtyNum) || qtyNum <= 0) continue;
+
+        const quantity = Math.floor(qtyNum);
+        const existing = cleaned.find(c => c.name === name);
+        if (existing) {
+            existing.quantity += quantity;
+        } else {
+            cleaned.push({ name, quantity });
+        }
+    }
+
+    return cleaned;
+}
+
 class Station {
     /**
      * Creates a new station instance.
@@ -14,6 +38,7 @@ class Station {
      * @param {boolean} isSecret - Whether this is a secret station
      * @param {string|null} stationSubtype - Subtype for secret stations (e.g., 'secret_military')
      */
+
     constructor(worldX, worldY, systemType, name = "Station", isSecret = false, stationSubtype = null) {
         this.pos = createVector(worldX, worldY);
         this.name = name;
@@ -2163,6 +2188,9 @@ class Station {
      * @returns {Object} JSON representation of the station
      */
     toJSON() {
+        const cleanedStorage = sanitizeStorageList(this.storage);
+        this.storage = cleanedStorage;
+
         return {
             pos: { x: this.pos.x, y: this.pos.y },
             name: this.name,
@@ -2179,7 +2207,7 @@ class Station {
             isSecret: this.isSecret || false,
             stationSubtype: this.stationSubtype || null,
             discovered: this.discovered || false,
-            storage: this.storage || []
+            storage: cleanedStorage
         };
     }
 
@@ -2209,7 +2237,7 @@ class Station {
             s.market = Market.fromJSON(data.market, s.systemType);
         }
         s.discovered = data.discovered || false;
-        s.storage = Array.isArray(data.storage) ? data.storage : [];
+        s.storage = sanitizeStorageList(data.storage);
         return s;
     }
 
@@ -2222,6 +2250,9 @@ class Station {
         if (player.credits >= area.price) {
             player.spendCredits(area.price);
             player.applyShipDefinition(area.shipType);
+            player.offloadExcessCargoToStorage(this, msg => {
+                if (typeof uiManager !== 'undefined') uiManager.addMessage(msg, [200, 230, 255]);
+            });
             if (typeof saveGame === 'function') saveGame();
             alert(`You bought a ${area.shipType}!`);
         }

@@ -142,20 +142,20 @@ class UIStationMenus {
                     // Draw breaking badge
                     fill(180, 40, 40);
                     noStroke();
-                    rect(pX + 25, itemY + 6, 60, 16, 3);
+                    rect(pX + 25, itemY + 4, 90, 22, 3);
                     fill(255);
-                    textSize(10);
+                    textSize(16);
                     textAlign(CENTER, CENTER);
                     textStyle(BOLD);
-                    text("BREAKING", pX + 55, itemY + 14);
+                    text("BREAKING", pX + 70, itemY + 15);
                     textStyle(NORMAL);
-                    headlineStartX = pX + 92;
+                    headlineStartX = pX + 130;
                 }
 
                 // Headline (line 1) - bold, larger
                 const sourceColor = item.sourceColor || [200, 200, 200];
                 fill(255, 230, 120);
-                textSize(15);
+                textSize(20);
                 textAlign(LEFT, TOP);
                 textStyle(BOLD);
 
@@ -174,13 +174,13 @@ class UIStationMenus {
 
                 // Source on right side (line 1)
                 fill(sourceColor);
-                textSize(11);
+                textSize(16);
                 textAlign(RIGHT, TOP);
                 text(item.source || "Echo", pX + pW - 28, itemY + 10);
 
                 // Body text (line 2) - smaller, dimmer, truncated
                 fill(170);
-                textSize(12);
+                textSize(16);
                 textAlign(LEFT, TOP);
 
                 const bodyText = item.body || "";
@@ -196,7 +196,7 @@ class UIStationMenus {
 
                 // Time ago indicator (bottom right, very subtle)
                 fill(100);
-                textSize(10);
+                textSize(16);
                 textAlign(RIGHT, TOP);
                 const ageMs = Date.now() - (item.timestamp || Date.now());
                 const ageMins = Math.floor(ageMs / 60000);
@@ -919,7 +919,7 @@ class UIStationMenus {
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
 
         if (!activeStation) {
-            UIComponents.setTextStyle({ fill: 220, size: 22, align: [CENTER, CENTER] });
+            UIComponents.setTextStyle({ fill: 220, size: 20, align: [CENTER, CENTER] });
             text("No storage services are available in this location.", pX + pW / 2, pY + pH / 2 - 20);
 
             const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: "BACK" });
@@ -927,17 +927,23 @@ class UIStationMenus {
             return;
         }
 
-        // Ensure the station exposes a mutable storage array
+        // Ensure the station exposes a mutable storage array and prune bad entries
         if (!Array.isArray(activeStation.storage)) {
             activeStation.storage = [];
         }
+        const _sanitizeCargoList = list => (Array.isArray(list) ? list : []).filter(entry => {
+            const nameOk = typeof entry?.name === 'string' && entry.name.trim().length > 0;
+            const qtyOk = Number.isFinite(entry?.quantity) && entry.quantity > 0;
+            return nameOk && qtyOk;
+        });
+        activeStation.storage = _sanitizeCargoList(activeStation.storage);
 
         UIComponents.setTextStyle({ fill: 220, size: 20, align: [CENTER, TOP] });
         const infoY = pY + headerHeight + 10;
         text("Store cargo safely at this station. Stored goods stay here until retrieved.", pX + pW / 2, infoY);
 
         // Station storage contents
-        UIComponents.setTextStyle({ fill: [180, 200, 255], size: 22, align: [LEFT, TOP] });
+        UIComponents.setTextStyle({ fill: [180, 200, 255], size: 20, align: [LEFT, TOP] });
         text("Station Storage:", pX + 40, infoY + 40);
 
         const storage = activeStation.storage;
@@ -988,9 +994,9 @@ class UIStationMenus {
                 if (isMissionItem) {
                     push();
                     fill(200, 150, 0);
-                    rect(pX + 380, itemY + 8, 60, 18, 4); // Moved right
+                    rect(pX + 370, itemY + 6, 80, 24, 4); // Moved right
                     fill(20);
-                    textSize(11);
+                    textSize(16);
                     textAlign(CENTER, CENTER);
                     text("MISSION", pX + 410, itemY + 18);
                     pop();
@@ -1018,7 +1024,7 @@ class UIStationMenus {
         UIComponents.setTextStyle({ fill: [180, 200, 255], size: 22, align: [LEFT, TOP] });
         text("Your Cargo (Tap to deposit):", pX + 40, cargoSectionY);
 
-        const playerCargo = Array.isArray(player.cargo) ? player.cargo : [];
+        const playerCargo = _sanitizeCargoList(player.cargo);
         let cargoY = cargoSectionY + 35;
 
         if (playerCargo.length === 0) {
@@ -1066,9 +1072,9 @@ class UIStationMenus {
                 if (isMissionItem) {
                     push();
                     fill(200, 150, 0);
-                    rect(pX + 380, itemY + 8, 60, 18, 4); // Moved right
+                    rect(pX + 370, itemY + 6, 80, 24, 4); // Moved right
                     fill(20);
-                    textSize(11);
+                    textSize(16);
                     textAlign(CENTER, CENTER);
                     text("MISSION", pX + 410, itemY + 18);
                     pop();
@@ -1588,7 +1594,7 @@ class UIStationMenus {
         // Ship name at top of preview area
         fill(180, 220, 255);
         noStroke();
-        textSize(24);
+                textSize(20);
         textAlign(CENTER, TOP);
         text(shipData.shipName, previewCenterX, contentY + 10);
 
@@ -1755,7 +1761,7 @@ class UIStationMenus {
         // Price label
         fill(180, 220, 255);
         noStroke();
-        textSize(15);
+        textSize(16);
         textAlign(LEFT, TOP);
         text("Price (after trade-in):", x, y);
 
@@ -1775,7 +1781,7 @@ class UIStationMenus {
         // Affordability warning
         if (!canAfford && finalPrice > 0) {
             fill(255, 150, 150);
-            textSize(12);
+            textSize(16);
             textAlign(CENTER, TOP);
             const shortfall = finalPrice - player.credits;
             text(`Need ${shortfall} more cr`, x + rightW / 2, y + 22);
@@ -1813,7 +1819,7 @@ class UIStationMenus {
             fill(80);
             noStroke();
             textAlign(CENTER, CENTER);
-            textSize(14);
+            textSize(16);
             text("< PREV", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
         }
         currentX += BTN_WIDTH + BTN_SPACING;
@@ -1832,7 +1838,7 @@ class UIStationMenus {
             fill(80);
             noStroke();
             textAlign(CENTER, CENTER);
-            textSize(14);
+            textSize(16);
             text("NEXT >", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
         }
         currentX += BTN_WIDTH + BTN_SPACING;
@@ -1886,6 +1892,8 @@ class UIStationMenus {
                 if (player.credits >= finalPrice) {
                     player.spendCredits(finalPrice);
                     player.applyShipDefinition(shipData.shipTypeKey);
+                    const stationForStorage = player.currentSystem?.station;
+                    player.offloadExcessCargoToStorage(stationForStorage, msg => addMessageFn(msg, [200, 230, 255]));
                     player.recordShipPurchase(shipData.shipName, finalPrice, systemName);
                     if (typeof saveGame === 'function') saveGame();
                     addMessageFn("You bought a " + shipData.shipName + "!");
@@ -1903,6 +1911,8 @@ class UIStationMenus {
                 // Player gets a refund or even swap
                 player.addCredits(-finalPrice);
                 player.applyShipDefinition(shipData.shipTypeKey);
+                const stationForStorage = player.currentSystem?.station;
+                player.offloadExcessCargoToStorage(stationForStorage, msg => addMessageFn(msg, [200, 230, 255]));
                 player.recordShipPurchase(shipData.shipName, finalPrice, systemName);
                 if (typeof saveGame === 'function') saveGame();
 
@@ -2023,7 +2033,7 @@ class UIStationMenus {
         // Weapon name at top of visual area
         fill(180, 220, 255);
         noStroke();
-        textSize(24);
+        textSize(20);
         textAlign(CENTER, TOP);
         text(weaponData.weaponDef.name, visualCenterX, contentY + 10);
 
@@ -2143,7 +2153,7 @@ class UIStationMenus {
         // Price label
         fill(180, 220, 255);
         noStroke();
-        textSize(15);
+        textSize(16);
         textAlign(LEFT, TOP);
         text("Price:", x, y);
 
@@ -2155,7 +2165,7 @@ class UIStationMenus {
         // Affordability warning
         if (!canAfford) {
             fill(255, 150, 150);
-            textSize(12);
+            textSize(16);
             textAlign(CENTER, TOP);
             const shortfall = price - player.credits;
             text(`Need ${shortfall} more cr`, x + rightW / 2, y + 22);
@@ -2187,7 +2197,7 @@ class UIStationMenus {
             fill(80);
             noStroke();
             textAlign(CENTER, CENTER);
-            textSize(14);
+            textSize(16);
             text("< PREV", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
         }
         currentX += BTN_WIDTH + BTN_SPACING;
@@ -2206,7 +2216,7 @@ class UIStationMenus {
             fill(80);
             noStroke();
             textAlign(CENTER, CENTER);
-            textSize(14);
+            textSize(16);
             text("NEXT >", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
         }
         currentX += BTN_WIDTH + BTN_SPACING;
@@ -2263,7 +2273,7 @@ class UIStationMenus {
         fill(200, 220, 255);
         noStroke();
         textAlign(CENTER, TOP);
-        textSize(22);
+        textSize(20);
         text("Select Weapon Slot", popupX + popupW / 2, popupY + 15);
 
         // Get ship's weapon slots
@@ -2291,11 +2301,11 @@ class UIStationMenus {
             noStroke();
             fill(180, 200, 255);
             textAlign(CENTER, TOP);
-            textSize(24);
+            textSize(20);
             text(`Slot ${i + 1}`, slotX + slotBtnW / 2, slotY + 8);
 
             // Current weapon name
-            textSize(12);
+            textSize(16);
             fill(150, 170, 200);
             const weaponText = currentWeapon?.name || "Empty";
             text(weaponText, slotX + slotBtnW / 2, slotY + 40);
@@ -2303,7 +2313,7 @@ class UIStationMenus {
             // Will replace warning
             if (currentWeapon) {
                 fill(255, 200, 100);
-                textSize(10);
+                textSize(16);
                 text("(replaces)", slotX + slotBtnW / 2, slotY + 55);
             }
 
@@ -2591,6 +2601,16 @@ class UIStationMenus {
         if (stationForStorage && !Array.isArray(stationForStorage.storage)) {
             stationForStorage.storage = [];
         }
+
+        const sanitizeCargoList = list => (Array.isArray(list) ? list : []).filter(entry => {
+            const nameOk = typeof entry?.name === 'string' && entry.name.trim().length > 0;
+            const qtyOk = Number.isFinite(entry?.quantity) && entry.quantity > 0;
+            return nameOk && qtyOk;
+        });
+        if (stationForStorage) {
+            stationForStorage.storage = sanitizeCargoList(stationForStorage.storage);
+        }
+        player.cargo = sanitizeCargoList(player.cargo);
 
         for (const btn of this.storageButtonAreas) {
             if (!UIComponents.isClickInArea(mx, my, btn)) continue;

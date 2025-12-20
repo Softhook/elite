@@ -430,6 +430,8 @@ class EnemyStateMachine {
             return;
         }
 
+        const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
+
         // 3) Movement: thrust away from attacker (target guaranteed valid here)
         //    Compute escape point
         this.tempVector
