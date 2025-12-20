@@ -68,7 +68,7 @@ function setup() {
  * Initialize the p5.js canvas and rendering settings
  */
 function initializeCanvas() {
-    pixelDensity(1);  // Force 1:1 pixel mapping for consistent performance across displays
+    pixelDensity(displayDensity());  // Use native pixel density for retina/high-DPI displays
     createCanvas(windowWidth, windowHeight);
     angleMode(RADIANS);
     textAlign(CENTER, CENTER);
@@ -1415,7 +1415,7 @@ function resetGame() {
 // --- p5.js windowResized Function ---
 // Called automatically by p5.js when the browser window is resized.
 function windowResized() {
-    pixelDensity(1);  // Maintain 1:1 pixel mapping after resize
+    pixelDensity(displayDensity());  // Maintain native pixel density after resize
     resizeCanvas(windowWidth, windowHeight); // Adjust canvas size
     // Resize save selection screen stars if it exists
     if (saveSelectionScreen && typeof saveSelectionScreen.resize === 'function') {
