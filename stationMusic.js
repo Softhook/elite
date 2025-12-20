@@ -183,8 +183,15 @@ class StationMusicManager {
                 harmonyInterval: 12, // Octave below (rumble)
                 noteInterval: 50,    // Very slow, cavernous
                 filterFreq: 600,     // Very dark
+                filterRes: 2.0,      // Warm dark resonance
                 attackTime: 0.08,
                 releaseTime: 1.2,    // Long echo tail
+                oscType: 'triangle', // Default soft oscillator
+                osc2Type: 'sine',
+                detune: 3,           // Slight detuning
+                noteGlide: 0.1,      // Some glide for drones
+                reverbDecay: 2.0,    // Cavernous
+                dynamicRange: 0.1,   // Subtle dynamics
             },
 
             // Tourism: Bright, welcoming, major arpeggios
@@ -200,8 +207,15 @@ class StationMusicManager {
                 harmonyInterval: 4, // Major third
                 noteInterval: 28,   // Moderate, pleasant
                 filterFreq: 3000,   // Bright, shimmery
+                filterRes: 1.2,     // Slight shimmer
                 attackTime: 0.08,
                 releaseTime: 0.5,
+                oscType: 'triangle', // Warm and pleasant
+                osc2Type: 'sine',
+                detune: 6,           // Slight chorus warmth
+                noteGlide: 0.03,     // Smooth transitions
+                reverbDecay: 1.2,    // Pleasant room
+                dynamicRange: 0.15,  // Natural dynamics
             },
 
             // Refinery: Harsh, industrial, slightly dissonant
@@ -218,8 +232,15 @@ class StationMusicManager {
                 harmonyInterval: 7, // Fifth below for stronger presence
                 noteInterval: 24,   // Slightly slower so notes are perceptible
                 filterFreq: 2600,   // Opened up so the mid/high content is audible
+                filterRes: 3.0,     // Some resonance edge
                 attackTime: 0.02,
                 releaseTime: 0.5,
+                oscType: 'sawtooth', // Harsher industrial sound
+                osc2Type: 'triangle',
+                detune: 12,          // Detuned for grit
+                noteGlide: 0,        // No glide - harsh
+                reverbDecay: 0.6,    // Short metallic
+                dynamicRange: 0.12,  // Some dynamics
                 volumeMultiplier: 1.15, // Slightly louder than other themes
                 envelope2Range: 0.7,    // Stronger harmony/drone for presence
             },
@@ -455,6 +476,8 @@ class StationMusicManager {
 
     /**
      * Setup oscillators for the current theme (switch types if needed)
+     * Only switches oscillator types when NOT playing to avoid audio glitches.
+     * During melody regeneration (which happens while playing), we keep the current oscillators.
      */
     setupOscillators() {
         if (!this.theme || !this.isInitialized) return;
@@ -462,12 +485,14 @@ class StationMusicManager {
         const oscType = this.theme.oscType || 'triangle';
         const osc2Type = this.theme.osc2Type || 'sine';
 
-        // Only recreate if type changed
-        if (oscType !== this.currentOscType) {
+        // CRITICAL: Only switch oscillator types if NOT currently playing
+        // Melody regeneration calls generateMelody() while isPlaying=true,
+        // so we must skip oscillator switching in that case to avoid glitches
+        if (oscType !== this.currentOscType && !this.isPlaying) {
             try {
                 if (this.osc) {
-                    this.osc.stop();
-                    this.osc.disconnect();
+                    try { this.osc.stop(); } catch (e) { /* may already be stopped */ }
+                    try { this.osc.disconnect(); } catch (e) { /* ignore */ }
                 }
                 this.osc = this.createOscillator(oscType);
                 this.osc.disconnect();
@@ -478,11 +503,11 @@ class StationMusicManager {
             }
         }
 
-        if (osc2Type !== this.currentOsc2Type) {
+        if (osc2Type !== this.currentOsc2Type && !this.isPlaying) {
             try {
                 if (this.osc2) {
-                    this.osc2.stop();
-                    this.osc2.disconnect();
+                    try { this.osc2.stop(); } catch (e) { /* may already be stopped */ }
+                    try { this.osc2.disconnect(); } catch (e) { /* ignore */ }
                 }
                 this.osc2 = this.createOscillator(osc2Type);
                 this.osc2.disconnect();
@@ -651,12 +676,13 @@ class StationMusicManager {
         if (this.isPlaying) return;
 
         // Generate new melody based on station type
+        // Note: This also sets up oscillators for the theme BEFORE we set isPlaying
         this.generateMelody({
             stationType: stationInfo.stationType || stationInfo.economyType,
             techLevel: stationInfo.techLevel
         });
 
-        // Start oscillators
+        // Start oscillators (after setupOscillators has run in generateMelody)
         try {
             this.osc.start();
             this.osc2.start();
@@ -749,7 +775,7 @@ class StationMusicManager {
      * Play the next note in the melodic sequence
      */
     playNextNote() {
-        if (!this.osc || !this.envelope || this.melody.length === 0) return;
+        if (!this.osc || !this.envelope || this.melody.length === 0 || !this.theme) return;
 
         try {
             const melodyNote = this.melody[this.noteIndex];
@@ -770,12 +796,12 @@ class StationMusicManager {
             }
 
             // Calculate base frequencies
-            let melodyFreq = this.midiToFreq(melodyNote);
+            const melodyFreq = this.midiToFreq(melodyNote);
             let harmonyFreq = harmonyNote !== null ? this.midiToFreq(harmonyNote) : 0;
 
             // Apply detuning for grit/warmth (cents to frequency ratio)
             const detune = this.theme.detune || 0;
-            if (detune > 0) {
+            if (detune > 0 && harmonyFreq > 0) {
                 // Detune the harmony oscillator relative to melody
                 const detuneRatio = Math.pow(2, detune / 1200);
                 harmonyFreq *= detuneRatio;
@@ -791,20 +817,11 @@ class StationMusicManager {
             }
             this.lastMelodyFreq = melodyFreq;
 
-            // Apply dynamic range (velocity variation)
-            const dynamicRange = this.theme.dynamicRange || 0.15;
-            const dynamicMod = 1.0 - (Math.random() * dynamicRange);
-
-            // Play melody with dynamic envelope
-            if (this.envelope) {
-                try {
-                    this.envelope.setRange(dynamicMod, 0);
-                } catch (e) { /* ignore */ }
-            }
+            // Play melody note - envelope handles attack/release
             this.envelope.play(this.osc, 0, 0.15);
 
             // Play harmony note with glide if applicable
-            if (this.osc2 && this.envelope2 && harmonyNote !== null) {
+            if (this.osc2 && this.envelope2 && harmonyNote !== null && harmonyFreq > 0) {
                 if (glideTime > 0 && this.lastHarmonyFreq > 0) {
                     this.osc2.freq(harmonyFreq, glideTime);
                 } else {
