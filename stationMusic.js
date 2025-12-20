@@ -534,49 +534,53 @@ class StationMusicManager {
         this.theme = themes[stationType] || themes.standard;
         this.stationType = stationType;
 
-        // Set timing and filter based on theme
+        // Set timing based on theme (safe to do anytime)
         this.noteInterval = this.theme.noteInterval;
-        if (this.filter) {
-            this.filter.freq(this.theme.filterFreq);
-            // Apply filter resonance for distinctive character
-            const res = this.theme.filterRes !== undefined ? this.theme.filterRes : 1.5;
-            this.filter.res(res);
-        }
 
-        // Setup oscillators for this theme (switch types if needed)
-        this.setupOscillators();
-
-        // Set envelope characteristics based on theme
-        if (this.envelope) {
-            this.envelope.setADSR(
-                this.theme.attackTime,
-                0.15,
-                0.5,
-                this.theme.releaseTime
-            );
-        }
-        if (this.envelope2) {
-            // Harmony envelope is always slower/smoother
-            this.envelope2.setADSR(
-                this.theme.attackTime * 2,
-                0.2,
-                0.6,
-                this.theme.releaseTime * 1.2
-            );
-            // Allow themes to request a stronger harmony level
-            if (typeof this.theme.envelope2Range === 'number') {
-                try { this.envelope2.setRange(this.theme.envelope2Range, 0); } catch (e) { /* ignore */ }
-            } else {
-                try { this.envelope2.setRange(0.4, 0); } catch (e) { /* ignore */ }
+        // CRITICAL: Only configure audio parameters when NOT playing
+        // During melody regeneration (isPlaying=true), we just rebuild the melody arrays
+        // Changing filter/envelope/reverb mid-playback causes audio glitches
+        if (!this.isPlaying) {
+            // Set filter based on theme
+            if (this.filter) {
+                this.filter.freq(this.theme.filterFreq);
+                const res = this.theme.filterRes !== undefined ? this.theme.filterRes : 1.5;
+                this.filter.res(res);
             }
-        }
 
-        // Update reverb decay if theme specifies
-        if (this.reverb && this.theme.reverbDecay) {
-            try {
-                const decay = 6 * this.theme.reverbDecay; // Scale base decay
-                this.reverb.set(decay, 12);
-            } catch (e) { /* ignore - some p5 versions don't support set */ }
+            // Setup oscillators for this theme (switch types if needed)
+            this.setupOscillators();
+
+            // Set envelope characteristics based on theme
+            if (this.envelope) {
+                this.envelope.setADSR(
+                    this.theme.attackTime,
+                    0.15,
+                    0.5,
+                    this.theme.releaseTime
+                );
+            }
+            if (this.envelope2) {
+                this.envelope2.setADSR(
+                    this.theme.attackTime * 2,
+                    0.2,
+                    0.6,
+                    this.theme.releaseTime * 1.2
+                );
+                if (typeof this.theme.envelope2Range === 'number') {
+                    try { this.envelope2.setRange(this.theme.envelope2Range, 0); } catch (e) { /* ignore */ }
+                } else {
+                    try { this.envelope2.setRange(0.4, 0); } catch (e) { /* ignore */ }
+                }
+            }
+
+            // Update reverb decay if theme specifies
+            if (this.reverb && this.theme.reverbDecay) {
+                try {
+                    const decay = 6 * this.theme.reverbDecay;
+                    this.reverb.set(decay, 12);
+                } catch (e) { /* ignore - some p5 versions don't support set */ }
+            }
         }
 
         // Build the full melody by selecting and combining motifs
