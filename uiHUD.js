@@ -680,6 +680,27 @@ class UIHUD {
         const shipName = this._getTargetShipName(target);
         const roleLabel = this._formatRoleLabel(target.role);
         const wantedLabel = (typeof target.isWanted === 'boolean') ? (target.isWanted ? 'Wanted' : null) : null;
+
+        // Check if this target is a mission target
+        let isMissionTarget = false;
+        if (player.activeMission) {
+            const mission = player.activeMission;
+            // Assassination target - check enemy ID
+            if (mission._targetEnemyId && target.id === mission._targetEnemyId) {
+                isMissionTarget = true;
+            }
+            // Sabotage target - check space object ID
+            if (mission.targetObjectId && target.id === mission.targetObjectId) {
+                isMissionTarget = true;
+            }
+            // Bounty missions - check if target matches role criteria
+            if ((mission.type === MISSION_TYPE?.BOUNTY_PIRATE && target.role === AI_ROLE?.PIRATE) ||
+                (mission.type === MISSION_TYPE?.BOUNTY_POLICE && target.role === AI_ROLE?.POLICE) ||
+                (mission.type === MISSION_TYPE?.BOUNTY_ALIEN && target.role === AI_ROLE?.ALIEN)) {
+                isMissionTarget = true;
+            }
+        }
+
         const hullPercent = this._getStatPercent(target.hull, target.maxHull);
         const shieldPercent = this._getStatPercent(target.shield, target.maxShield);
         const shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[target.shipTypeName] : null;
@@ -691,6 +712,10 @@ class UIHUD {
         const infoLines = [];
         if (hasShipIdentity) {
             infoLines.push(`${shipName}${roleLabel ? ` (${roleLabel})` : ''}`);
+        }
+        // Add mission target indicator prominently
+        if (isMissionTarget) {
+            infoLines.push('★ MISSION TARGET ★');
         }
         if (activityStatus) {
             infoLines.push(`Status: ${activityStatus}`);
