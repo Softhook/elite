@@ -256,7 +256,10 @@ class UIMinimap {
 
             // Remove if expired or too big
             if (ind.alpha <= 0 || ind.size >= ind.maxSize) {
-                this.killIndicators.splice(i, 1);
+                // O(1) swap-and-pop removal (order doesn't matter for indicators)
+                const lastIdx = this.killIndicators.length - 1;
+                if (i !== lastIdx) this.killIndicators[i] = this.killIndicators[lastIdx];
+                this.killIndicators.pop();
                 continue;
             }
 

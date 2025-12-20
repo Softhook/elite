@@ -3000,9 +3000,13 @@ class Player {
         }
         // Clean up in single pass - avoid creating new array if no destroyed guards
         let count = 0;
-        for (let i = this.activeBodyguards.length - 1; i >= 0; i--) {
-            if (this.activeBodyguards[i].destroyed) {
-                this.activeBodyguards.splice(i, 1);
+        const guards = this.activeBodyguards;
+        for (let i = guards.length - 1; i >= 0; i--) {
+            if (guards[i].destroyed) {
+                // O(1) swap-and-pop removal (order doesn't matter for bodyguards)
+                const lastIdx = guards.length - 1;
+                if (i !== lastIdx) guards[i] = guards[lastIdx];
+                guards.pop();
             } else {
                 count++;
             }
@@ -3022,11 +3026,15 @@ class Player {
         // Single pass: filter destroyed and count damaged guards
         let damagedCount = 0;
         let totalCost = 0;
+        const guards = this.activeBodyguards;
 
-        for (let i = this.activeBodyguards.length - 1; i >= 0; i--) {
-            const guard = this.activeBodyguards[i];
+        for (let i = guards.length - 1; i >= 0; i--) {
+            const guard = guards[i];
             if (guard.destroyed) {
-                this.activeBodyguards.splice(i, 1);
+                // O(1) swap-and-pop removal (order doesn't matter for bodyguards)
+                const lastIdx = guards.length - 1;
+                if (i !== lastIdx) guards[i] = guards[lastIdx];
+                guards.pop();
             } else if (this._isBodyguardSpawned(guard) && guard.hull < guard.maxHull) {
                 damagedCount++;
                 totalCost += Math.floor((guard.maxHull - guard.hull) * 7);
@@ -3183,11 +3191,17 @@ class Player {
                 // Sync destroyed status
                 if (guard.enemyRef.destroyed) {
                     guard.destroyed = true;
-                    guards.splice(i, 1);
+                    // O(1) swap-and-pop removal (order doesn't matter for bodyguards)
+                    const lastIdx = guards.length - 1;
+                    if (i !== lastIdx) guards[i] = guards[lastIdx];
+                    guards.pop();
                     lostCount++;
                 }
             } else if (guard.destroyed) {
-                guards.splice(i, 1);
+                // O(1) swap-and-pop removal
+                const lastIdx = guards.length - 1;
+                if (i !== lastIdx) guards[i] = guards[lastIdx];
+                guards.pop();
                 lostCount++;
             }
         }
