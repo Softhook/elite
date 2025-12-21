@@ -3992,15 +3992,19 @@ class StarSystem {
 
                             try {
                                 if (typeof Harpoon !== 'undefined') {
-                                    if (!harpoonExists(owner, target)) {
+                                    // Check for existing harpoon and toggle it (destroy if exists)
+                                    const existingHarpoon = Array.isArray(this.harpoons) ? this.harpoons.find(h => h && !h.broken && h.owner === owner && h.target === target) : null;
+
+                                    if (existingHarpoon) {
+                                        existingHarpoon.break();
+                                        if (typeof window !== 'undefined' && window.HARPOON_DEBUG) console.log('Harpoon toggle: broke existing tether (player->enemy)');
+                                    } else {
                                         const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
                                         if (!this.harpoons) this.harpoons = [];
                                         this.harpoons.push(har);
                                         if (typeof window !== 'undefined' && window.HARPOON_DEBUG) {
                                             console.log('Harpoon spawned (player->enemy)', { owner: owner.constructor ? owner.constructor.name : owner, target: target.constructor ? target.constructor.name : target });
                                         }
-                                    } else {
-                                        if (typeof window !== 'undefined' && window.HARPOON_DEBUG) console.log('Skipped duplicate harpoon (player->enemy)', { owner: owner && (owner.shipTypeName || owner.id), target: target && (target.shipTypeName || target.id) });
                                     }
                                 }
                                 // small impact visual and sound
