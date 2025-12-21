@@ -79,7 +79,7 @@ class MilitaryMissionHandler extends FactionMissionHandler {
         reward = Math.floor(reward * multiplier);
 
         return new Mission({
-            type: 'MILITARY_DEFENSE',
+            type: MISSION_TYPE.MILITARY_DEFENSE,
             title: `System Defense: Neutralize ${targetCount} Hostiles`,
             description: `This sector is under military protection. Eliminate ${targetCount} hostile vessels (pirates, aliens, or other threats) to maintain security. Honor and duty.`,
             originSystem: originSystem.name,

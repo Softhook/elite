@@ -904,7 +904,7 @@ class MissionGenerator {
             const reward = Math.floor((baseReward + random(200, 600)) * rankMultiplier);
 
             return new Mission({
-                type: 'IMPERIAL_PATROL',
+                type: MISSION_TYPE.IMPERIAL_PATROL,
                 title: `Imperial Patrol: Scan ${targetCount} Vessels`,
                 description: `Imperial Command requires patrol duty in this sector. Scan ${targetCount} vessels to ensure compliance with Imperial regulations.`,
                 originSystem: originSystem.name,
@@ -1123,7 +1123,7 @@ class MissionGenerator {
             const reward = Math.floor((baseReward + random(300, 800)) * rankMultiplier);
 
             return new Mission({
-                type: 'MILITARY_DEFENSE',
+                type: MISSION_TYPE.MILITARY_DEFENSE,
                 title: `System Defense: Neutralize ${targetCount} Hostiles`,
                 description: `This sector is under military protection. Eliminate ${targetCount} hostile vessels (pirates, aliens, or other threats) to maintain security.`,
                 originSystem: originSystem.name,

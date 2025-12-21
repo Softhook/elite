@@ -50,7 +50,7 @@ class ImperialMissionHandler extends FactionMissionHandler {
         reward = Math.floor(reward * multiplier);
 
         return new Mission({
-            type: 'IMPERIAL_PATROL',
+            type: MISSION_TYPE.IMPERIAL_PATROL,
             title: `Imperial Patrol: Scan ${targetCount} Vessels`,
             description: `Imperial Command requires patrol duty in this sector. Scan ${targetCount} vessels to ensure compliance with Imperial regulations. Engage any hostiles encountered.`,
             originSystem: originSystem.name,
