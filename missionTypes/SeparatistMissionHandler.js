@@ -119,7 +119,7 @@ class SeparatistMissionHandler extends FactionMissionHandler {
     }
 }
 
-// Register with the registry (commented out until mission system is extended)
-// if (typeof MissionTypeRegistry !== 'undefined') {
-//     MissionTypeRegistry.register(SeparatistMissionHandler);
-// }
+// Register with the registry
+if (typeof MissionTypeRegistry !== 'undefined') {
+    MissionTypeRegistry.register(SeparatistMissionHandler);
+}

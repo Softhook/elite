@@ -111,7 +111,7 @@ class MilitaryMissionHandler extends FactionMissionHandler {
     }
 }
 
-// Register with the registry (commented out until mission system is extended)
-// if (typeof MissionTypeRegistry !== 'undefined') {
-//     MissionTypeRegistry.register(MilitaryMissionHandler);
-// }
+// Register with the registry
+if (typeof MissionTypeRegistry !== 'undefined') {
+    MissionTypeRegistry.register(MilitaryMissionHandler);
+}

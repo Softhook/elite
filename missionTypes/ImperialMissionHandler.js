@@ -112,8 +112,7 @@ class ImperialMissionHandler extends FactionMissionHandler {
     }
 }
 
-// Register with the registry (only if MISSION_TYPE is extended to include these)
-// For now, these are stub implementations showing the pattern
-// if (typeof MissionTypeRegistry !== 'undefined') {
-//     MissionTypeRegistry.register(ImperialMissionHandler);
-// }
+// Register with the registry
+if (typeof MissionTypeRegistry !== 'undefined') {
+    MissionTypeRegistry.register(ImperialMissionHandler);
+}
