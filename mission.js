@@ -102,6 +102,8 @@ class Mission {
 
         // Rewards & constraints
         this.rewardCredits = data.rewardCredits || data.reward || 0;
+        this.prestigeReward = data.prestigeReward || 0;  // Prestige for faction missions
+        this.requiredFaction = data.requiredFaction || null;  // Faction requirement
         this.isIllegal = data.isIllegal || false;
         this.requiredRep = data.requiredRep || 0;
         this.timeLimit = (typeof data.timeLimit === 'number') ? data.timeLimit : null;
@@ -746,7 +748,13 @@ class Mission {
             progressInfo = ` (${this.progressCount}/${this.targetCount})`;
         }
 
-        return `${statusPrefix}${this.title}${progressInfo} - ${this.rewardCredits}cr`;
+        // Reward string with optional prestige
+        let rewardStr = `${this.rewardCredits}cr`;
+        if (this.prestigeReward && this.prestigeReward > 0) {
+            rewardStr += ` +${this.prestigeReward}★`;
+        }
+
+        return `${statusPrefix}${this.title}${progressInfo} - ${rewardStr}`;
     }
 
     /** Returns a detailed multi-line string for the mission details panel. */
@@ -884,7 +892,14 @@ class Mission {
     /** Get reward string for details */
     _getRewardString() {
         const label = this.type === MISSION_TYPE.SABOTAGE ? 'Reward (High)' : 'Reward';
-        return `${label}: ${this.rewardCredits} Credits\n`;
+        let rewardStr = `${label}: ${this.rewardCredits} Credits`;
+
+        // Add prestige reward for faction missions
+        if (this.prestigeReward && this.prestigeReward > 0) {
+            rewardStr += ` + ${this.prestigeReward} Prestige`;
+        }
+
+        return rewardStr + '\n';
     }
 
     /** Get description string for details */
@@ -1010,6 +1025,8 @@ class Mission {
             cargoType: this.cargoType,
             cargoQuantity: this.cargoQuantity,
             rewardCredits: this.rewardCredits,
+            prestigeReward: this.prestigeReward,
+            requiredFaction: this.requiredFaction,
             isIllegal: this.isIllegal,
             requiredRep: this.requiredRep,
             timeLimit: this.timeLimit,

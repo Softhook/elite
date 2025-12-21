@@ -894,6 +894,7 @@ class MissionGenerator {
                 targetDesc: `${targetCount} Separatist vessels`,
                 targetCount: targetCount,
                 rewardCredits: reward,
+                prestigeReward: 3,
                 isIllegal: false,
                 progressCount: 0,
                 requiredFaction: 'IMPERIAL'
@@ -914,6 +915,7 @@ class MissionGenerator {
                 targetDesc: `Scan ${targetCount} vessels`,
                 targetCount: targetCount,
                 rewardCredits: reward,
+                prestigeReward: 1,
                 isIllegal: false,
                 progressCount: 0,
                 requiredFaction: 'IMPERIAL'
@@ -939,6 +941,7 @@ class MissionGenerator {
                 targetDesc: `${targetCount} hostiles in ${destName}`,
                 targetCount: targetCount,
                 rewardCredits: reward,
+                prestigeReward: 4,
                 isIllegal: false,
                 progressCount: 0,
                 requiredFaction: 'IMPERIAL'
@@ -969,6 +972,7 @@ class MissionGenerator {
                 targetObjectType: targetType,
                 targetDesc: `Destroy ${targetType} in ${destSystem.name}`,
                 rewardCredits: reward,
+                prestigeReward: 5,
                 isIllegal: false,
                 progressCount: 0,
                 requiredFaction: 'IMPERIAL'
@@ -1000,6 +1004,7 @@ class MissionGenerator {
                 targetDesc: `${targetCount} Imperial vessels`,
                 targetCount: targetCount,
                 rewardCredits: reward,
+                prestigeReward: 3,
                 isIllegal: false,
                 progressCount: 0,
                 requiredFaction: 'SEPARATIST'
@@ -1029,6 +1034,7 @@ class MissionGenerator {
                 cargoType: cargo,
                 cargoQuantity: quantity,
                 rewardCredits: reward,
+                prestigeReward: 2,
                 isIllegal: true,
                 requiredFaction: 'SEPARATIST'
             });
@@ -1052,6 +1058,7 @@ class MissionGenerator {
                 targetDesc: `${targetCount} Imperial forces in ${destName}`,
                 targetCount: targetCount,
                 rewardCredits: reward,
+                prestigeReward: 4,
                 isIllegal: false,
                 progressCount: 0,
                 requiredFaction: 'SEPARATIST'
@@ -1082,6 +1089,7 @@ class MissionGenerator {
                 targetObjectType: targetType,
                 targetDesc: `Destroy ${targetType} in ${destSystem.name}`,
                 rewardCredits: reward,
+                prestigeReward: 5,
                 isIllegal: true,
                 progressCount: 0,
                 requiredFaction: 'SEPARATIST'
@@ -1113,6 +1121,7 @@ class MissionGenerator {
                 targetDesc: `${targetCount} Alien hostiles`,
                 targetCount: targetCount,
                 rewardCredits: reward,
+                prestigeReward: 4,
                 isIllegal: false,
                 progressCount: 0,
                 requiredFaction: 'MILITARY'
@@ -1133,6 +1142,7 @@ class MissionGenerator {
                 targetDesc: `${targetCount} hostile vessels`,
                 targetCount: targetCount,
                 rewardCredits: reward,
+                prestigeReward: 3,
                 isIllegal: false,
                 progressCount: 0,
                 requiredFaction: 'MILITARY'
@@ -1159,6 +1169,7 @@ class MissionGenerator {
                 targetDesc: `${targetCount} hostiles at ${targetType}`,
                 targetCount: targetCount,
                 rewardCredits: reward,
+                prestigeReward: 5,
                 isIllegal: false,
                 progressCount: 0,
                 requiredFaction: 'MILITARY'
@@ -1189,6 +1200,7 @@ class MissionGenerator {
                 targetObjectType: targetType,
                 targetDesc: `Destroy ${targetType} in ${destSystem.name}`,
                 rewardCredits: reward,
+                prestigeReward: 4,
                 isIllegal: false,
                 progressCount: 0,
                 requiredFaction: 'MILITARY'
