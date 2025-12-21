@@ -439,9 +439,10 @@ class TitleScreen {
         if (!ship.thrustParticles) ship.thrustParticles = [];
 
         // Calculate thrust position (back of ship)
+        // Use -0.65 offset to match in-game ThrustManager (clears the 3D hull)
         const shipSize = ship.def.size * ship.scale;
         const thrustAngle = ship.angle + PI; // Opposite direction of ship
-        const thrustDist = shipSize * 0.5;
+        const thrustDist = shipSize * 0.65;
 
         // Create a new thrust particle
         ship.thrustParticles.push({
@@ -449,7 +450,7 @@ class TitleScreen {
                 ship.pos.x + cos(thrustAngle) * thrustDist,
                 ship.pos.y + sin(thrustAngle) * thrustDist
             ),
-            vel: p5.Vector.fromAngle(thrustAngle + random(-0.3, 0.3)).mult(random(0.5, 1.5)),
+            vel: p5.Vector.fromAngle(thrustAngle + random(-0.2, 0.2)).mult(random(0.5, 2.5)),
             size: random(3, shipSize * 0.3),
             alpha: random(150, 200),
             lifespan: random(20, 40)
@@ -653,7 +654,23 @@ class TitleScreen {
 
         // Draw ships with thrust particles
         for (const ship of this.displayShips) {
-            // Draw thrust particles first
+            // Draw ship first (thrust particles drawn ON TOP after)
+            if (ship.def && typeof ship.def.drawFunction === 'function') {
+                push();
+                translate(ship.pos.x, ship.pos.y);
+
+                // Calculate sun angle for 3D effect (sun at center of screen)
+                const sunAngle = atan2(height / 2 - ship.pos.y, width / 2 - ship.pos.x);
+                const localSunAngle = sunAngle - ship.angle;
+
+                rotate(ship.angle);
+                scale(ship.scale);
+                // Pass angle and localSunAngle for 3D rendering
+                ship.def.drawFunction(ship.def.size, ship.isThrusting, ship.angle, localSunAngle);
+                pop();
+            }
+
+            // Draw thrust particles ON TOP of the ship (after ship drawing)
             if (ship.thrustParticles) {
                 for (const p of ship.thrustParticles) {
                     push();
@@ -663,22 +680,6 @@ class TitleScreen {
                     ellipse(p.pos.x, p.pos.y, p.size, p.size);
                     pop();
                 }
-            }
-
-            // Draw ship - CHANGED: rotate by -HALF_PI instead of +HALF_PI for correct orientation
-            if (ship.def && typeof ship.def.drawFunction === 'function') {
-                push();
-                translate(ship.pos.x, ship.pos.y);
-
-                // Calculate sun angle for 3D effect (sun at center of screen)
-                const sunAngle = atan2(height / 2 - ship.pos.y, width / 2 - ship.pos.x);
-                const localSunAngle = sunAngle - ship.angle;
-
-                rotate(ship.angle); // Changed from + to - to rotate 90 degrees counterclockwise 
-                scale(ship.scale);
-                // Pass angle and localSunAngle for 3D rendering
-                ship.def.drawFunction(ship.def.size, ship.isThrusting, ship.angle, localSunAngle);
-                pop();
             }
         }
 
