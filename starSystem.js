@@ -697,9 +697,16 @@ class StarSystem {
         catch (e) { console.error("Error during createRandomPlanets call:", e); }
 
         // --- Secret Station Generation ---
+        // Secret stations only spawn in faction systems (Imperial, Separatist, Military)
+        // and are guaranteed to spawn (100% rate) if the system has enough planets
         this.secretStations = [];
-        if (this.planets && this.planets.length > 2 && random() < 0.5) { // 50% chance and at least 3 planets (sun + main station planet + 1 more)
-            try { // <<< ADD TRY HERE
+        const economyLower = (this.economyType || "").toLowerCase();
+        const isFactionSystem = economyLower === "imperial" ||
+            economyLower === "separatist" ||
+            economyLower === "military";
+
+        if (isFactionSystem && this.planets && this.planets.length > 2) { // Faction system with at least 3 planets (sun + main station planet + 1 more)
+            try {
                 // We already know which planet the main station is near
                 let mainStationPlanetIndex = this.mainStationPlanetIndex || -1;
 
@@ -736,18 +743,16 @@ class StarSystem {
 
                     // Pick subtype based on system type
                     let subtype = null;
-                    let sysType = (this.economyType || "").toLowerCase();
-                    if (sysType.includes("military")) subtype = "secret_military";
-                    else if (sysType.includes("alien")) subtype = "secret_alien";
-                    else if (sysType.includes("separatist")) subtype = "secret_separatist";
-                    else subtype = "secret_generic";
+                    if (economyLower === "military") subtype = "secret_military";
+                    else if (economyLower === "separatist") subtype = "secret_separatist";
+                    else if (economyLower === "imperial") subtype = "secret_imperial";
 
                     let secretName = `${this.name} Secret Base`;
                     let secretStation = new Station(pos.x, pos.y, this.economyType, secretName, true, subtype);
                     this.secretStations.push(secretStation);
-                    console.log(`         Successfully created Secret Station: ${secretName} near planet index ${planetIdx}`);
+                    console.log(`         Successfully created Secret Station: ${secretName} (${subtype}) near planet index ${planetIdx}`);
                 }
-            } catch (e) { // <<< ADD CATCH HERE
+            } catch (e) {
                 console.error(`Error creating Secret Station for ${this.name}:`, e);
             }
         }
@@ -5656,6 +5661,20 @@ class StarSystem {
             sys.station = Station.fromJSON(data.station);
         } else {
             sys.station = null;
+        }
+
+        // Restore secret stations
+        if (data.secretStations && Array.isArray(data.secretStations) && typeof Station !== "undefined" && typeof Station.fromJSON === "function") {
+            sys.secretStations = data.secretStations.map(stationData => {
+                try {
+                    return Station.fromJSON(stationData);
+                } catch (e) {
+                    console.error('Error restoring secret station:', e);
+                    return null;
+                }
+            }).filter(s => s !== null);
+        } else {
+            sys.secretStations = [];
         }
 
         // Restore Nebulae

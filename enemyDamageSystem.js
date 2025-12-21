@@ -290,6 +290,49 @@ class EnemyDamageSystem {
                     system.player.completeMission(); // <<< Use simpler call for auto-complete
                 }
             }
+            // === FACTION KILL MISSIONS ===
+            // Imperial Elimination/Strike - kill Separatist ships or pirates
+            else if ((attacker.activeMission.type === MISSION_TYPE.IMPERIAL_ELIMINATION ||
+                attacker.activeMission.type === MISSION_TYPE.IMPERIAL_STRIKE) &&
+                (this._isSeparatistShip() || this.role === AI_ROLE.PIRATE)) {
+                attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
+                AI_LOG(`Updated Imperial mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage(`Imperial objective: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`, [255, 215, 0]);
+                }
+                if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
+                    AI_LOG("Imperial mission target count met! Completing mission...");
+                    system.player.completeMission();
+                }
+            }
+            // Separatist Raid/Strike - kill Imperial ships or police
+            else if ((attacker.activeMission.type === MISSION_TYPE.SEPARATIST_RAID ||
+                attacker.activeMission.type === MISSION_TYPE.SEPARATIST_STRIKE) &&
+                (this._isImperialShip() || this.role === AI_ROLE.POLICE)) {
+                attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
+                AI_LOG(`Updated Separatist mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage(`Separatist objective: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`, [100, 200, 100]);
+                }
+                if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
+                    AI_LOG("Separatist mission target count met! Completing mission...");
+                    system.player.completeMission();
+                }
+            }
+            // Military Extermination/Strike - kill Aliens or pirates
+            else if ((attacker.activeMission.type === MISSION_TYPE.MILITARY_EXTERMINATION ||
+                attacker.activeMission.type === MISSION_TYPE.MILITARY_STRIKE) &&
+                (this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.PIRATE)) {
+                attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
+                AI_LOG(`Updated Military mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage(`Military objective: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`, [100, 200, 100]);
+                }
+                if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
+                    AI_LOG("Military mission target count met! Completing mission...");
+                    system.player.completeMission();
+                }
+            }
         }
 
         // Award faction bounties

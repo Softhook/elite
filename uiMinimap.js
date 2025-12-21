@@ -175,8 +175,11 @@ class UIMinimap {
             // Draw event markers from HUD (so mission/event markers appear on minimap)
             this._drawEventMarkersFromHUD(player, system, uiManager, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom);
 
-            // Draw station
+            // Draw main station
             this._drawStation(player, system, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom, isFullyWithinBounds);
+
+            // Draw discovered secret stations
+            this._drawSecretStations(player, system, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom, isFullyWithinBounds);
 
             // Draw planets
             this._drawPlanets(player, system, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom);
@@ -468,6 +471,95 @@ class UIMinimap {
             pop();
 
             ctx.restore();
+        }
+    }
+
+    /**
+     * Draws discovered secret stations on the minimap.
+     * Uses a different color (purple/red) and diamond shape to distinguish from main station.
+     * @private
+     */
+    _drawSecretStations(player, system, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom, isFullyWithinBounds) {
+        if (!Array.isArray(system.secretStations) || system.secretStations.length === 0) return;
+
+        for (const secretStation of system.secretStations) {
+            // Only draw discovered secret stations
+            if (!secretStation || !secretStation.pos || !secretStation.discovered) continue;
+
+            const relX = secretStation.pos.x - player.pos.x;
+            const relY = secretStation.pos.y - player.pos.y;
+            const mapX = mapCenterX + relX * this.scale;
+            const mapY = mapCenterY + relY * this.scale;
+
+            // Smaller icon for secret stations
+            const iconSize = 6;
+
+            // Check if fully outside the minimap bounds
+            const fullyOutside = (
+                mapX + iconSize < mapLeft ||
+                mapX - iconSize > mapRight ||
+                mapY + iconSize < mapTop ||
+                mapY - iconSize > mapBottom
+            );
+
+            // Choose color based on station subtype
+            let stationColor = [200, 100, 200]; // Default purple
+            const subtype = secretStation.stationSubtype || '';
+            if (subtype.includes('imperial')) {
+                stationColor = [255, 215, 0]; // Gold for Imperial
+            } else if (subtype.includes('separatist')) {
+                stationColor = [255, 80, 80]; // Red for Separatist
+            } else if (subtype.includes('military')) {
+                stationColor = [100, 200, 100]; // Green for Military
+            }
+
+            if (fullyOutside) {
+                // Off-screen: draw small indicator at edge
+                push();
+                const inset = 4;
+                const drawX = constrain(mapX, mapLeft + inset, mapRight - inset);
+                const drawY = constrain(mapY, mapTop + inset, mapBottom - inset);
+
+                noStroke();
+                fill(stationColor[0], stationColor[1], stationColor[2]);
+                // Small diamond for off-screen indicator
+                push();
+                translate(drawX, drawY);
+                rotate(PI / 4);
+                rect(-3, -3, 6, 6);
+                pop();
+                pop();
+            } else {
+                // On-screen: draw diamond shape
+                const ctx = drawingContext;
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(this.x, this.y, this.size, this.size);
+                ctx.clip();
+
+                push();
+                translate(mapX, mapY);
+
+                // Draw diamond outline
+                noFill();
+                stroke(stationColor[0], stationColor[1], stationColor[2]);
+                strokeWeight(1.5);
+
+                beginShape();
+                vertex(0, -iconSize);      // Top
+                vertex(iconSize, 0);       // Right
+                vertex(0, iconSize);       // Bottom
+                vertex(-iconSize, 0);      // Left
+                endShape(CLOSE);
+
+                // Add a small filled center dot
+                noStroke();
+                fill(stationColor[0], stationColor[1], stationColor[2]);
+                ellipse(0, 0, 3, 3);
+                pop();
+
+                ctx.restore();
+            }
         }
     }
 
@@ -987,6 +1079,35 @@ class UIMinimap {
                 if (hud) hud.addMessage(`Target locked: ${label}`, [0, 255, 0]);
                 if (typeof soundManager !== 'undefined' && soundManager.playSound) {
                     soundManager.playSound('click');
+                }
+
+                // === PATROL MISSION SCAN PROGRESS ===
+                // If player has a patrol mission and locked onto a ship, count as a scan
+                if (player.activeMission &&
+                    typeof FACTION_PATROL_TYPES !== 'undefined' &&
+                    FACTION_PATROL_TYPES.has(player.activeMission.type) &&
+                    closestEntity.constructor?.name === 'Enemy') {
+
+                    // Track scanned ships to avoid duplicate progress
+                    if (!player.activeMission._scannedShipIds) {
+                        player.activeMission._scannedShipIds = new Set();
+                    }
+
+                    const shipId = closestEntity.id || closestEntity;
+                    if (!player.activeMission._scannedShipIds.has(shipId)) {
+                        player.activeMission._scannedShipIds.add(shipId);
+                        player.activeMission.progressCount = (player.activeMission.progressCount || 0) + 1;
+
+                        const progress = player.activeMission.progressCount;
+                        const target = player.activeMission.targetCount;
+                        if (hud) hud.addMessage(`Vessel scanned: ${progress}/${target}`, [255, 215, 0]);
+
+                        // Check if mission is complete
+                        if (progress >= target) {
+                            if (hud) hud.addMessage('Patrol objective complete! Return for payment.', [100, 255, 100]);
+                            player.completeMission();
+                        }
+                    }
                 }
             }
             return true;

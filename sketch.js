@@ -1004,12 +1004,32 @@ function __buildSaveData() {
             };
         }
 
-        // Persist station docking so we don’t drop the player out of menus after reloads
-        if (state === "DOCKED" && player?.currentSystem?.station) {
-            return {
-                state: "DOCKED",
-                stationName: player.currentSystem.station.name || null
-            };
+        // Persist station docking so we don't drop the player out of menus after reloads
+        // Check if docked at a SECRET station (not the main one)
+        if (state === "DOCKED") {
+            const dockedStation = gameStateManager.currentDockedStation;
+            const mainStation = player?.currentSystem?.station;
+            const secretStations = player?.currentSystem?.secretStations || [];
+            
+            // Check if docked at a secret station
+            const secretIndex = secretStations.findIndex(s => s === dockedStation);
+            if (secretIndex >= 0 && dockedStation) {
+                return {
+                    state: "DOCKED",
+                    isSecretStation: true,
+                    secretStationIndex: secretIndex,
+                    stationName: dockedStation.name || null
+                };
+            }
+            
+            // Docked at main station
+            if (mainStation) {
+                return {
+                    state: "DOCKED",
+                    isSecretStation: false,
+                    stationName: mainStation.name || null
+                };
+            }
         }
 
         return { state: "IN_FLIGHT" };
@@ -1274,13 +1294,36 @@ function loadGame(slotIndex) {
                     }
 
                     // Restore station docking if applicable and space-object restoration did not run
-                    if (!restoredDockState && dockingState.state === "DOCKED" && player.currentSystem.station) {
+                    if (!restoredDockState && dockingState.state === "DOCKED") {
                         gameStateManager.currentDockedSpaceObject = null;
-                        gameStateManager.currentDockedStation = player.currentSystem.station;
-                        if (player.vel?.set) player.vel.set(0, 0); else if (player.vel) { player.vel.x = 0; player.vel.y = 0; }
-                        player.isDockedAndInvulnerable = true;
-                        gameStateManager.setState("DOCKED");
-                        restoredDockState = true;
+                        
+                        // Check if we were docked at a secret station
+                        let dockedStation = null;
+                        if (dockingState.isSecretStation && dockingState.secretStationIndex !== undefined) {
+                            const secretStations = player.currentSystem.secretStations || [];
+                            if (secretStations[dockingState.secretStationIndex]) {
+                                dockedStation = secretStations[dockingState.secretStationIndex];
+                                console.log("Restoring dock at SECRET station:", dockedStation.name);
+                            }
+                        }
+                        
+                        // Fall back to main station if secret station not found
+                        if (!dockedStation && player.currentSystem.station) {
+                            dockedStation = player.currentSystem.station;
+                            console.log("Restoring dock at MAIN station:", dockedStation.name);
+                        }
+                        
+                        if (dockedStation) {
+                            gameStateManager.currentDockedStation = dockedStation;
+                            // Position player at the correct station
+                            if (dockedStation.pos) {
+                                player.pos.set(dockedStation.pos.x, dockedStation.pos.y);
+                            }
+                            if (player.vel?.set) player.vel.set(0, 0); else if (player.vel) { player.vel.x = 0; player.vel.y = 0; }
+                            player.isDockedAndInvulnerable = true;
+                            gameStateManager.setState("DOCKED");
+                            restoredDockState = true;
+                        }
                     }
                 }
 

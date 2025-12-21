@@ -618,6 +618,300 @@
             });
         });
 
+        // ============================================
+        // Faction Mission Type Constants
+        // ============================================
+
+        describe('Faction Mission Type Constants', () => {
+            it('should define Imperial mission types', () => {
+                expect(MISSION_TYPE.IMPERIAL_ELIMINATION).toBe('Imperial Elimination');
+                expect(MISSION_TYPE.IMPERIAL_PATROL).toBe('Imperial Patrol');
+                expect(MISSION_TYPE.IMPERIAL_STRIKE).toBe('Imperial Strike');
+                expect(MISSION_TYPE.IMPERIAL_SABOTAGE).toBe('Imperial Sabotage');
+            });
+
+            it('should define Separatist mission types', () => {
+                expect(MISSION_TYPE.SEPARATIST_RAID).toBe('Separatist Raid');
+                expect(MISSION_TYPE.SEPARATIST_SUPPLY).toBe('Separatist Supply');
+                expect(MISSION_TYPE.SEPARATIST_STRIKE).toBe('Separatist Strike');
+                expect(MISSION_TYPE.SEPARATIST_SABOTAGE).toBe('Separatist Sabotage');
+            });
+
+            it('should define Military mission types', () => {
+                expect(MISSION_TYPE.MILITARY_EXTERMINATION).toBe('Military Extermination');
+                expect(MISSION_TYPE.MILITARY_DEFENSE).toBe('Military Defense');
+                expect(MISSION_TYPE.MILITARY_STRIKE).toBe('Military Strike');
+                expect(MISSION_TYPE.MILITARY_SABOTAGE).toBe('Military Sabotage');
+            });
+        });
+
+        // ============================================
+        // Faction Mission Classification Sets
+        // ============================================
+
+        describe('Faction Mission Classification Sets', () => {
+            it('should define FACTION_KILL_TYPES set', () => {
+                expect(FACTION_KILL_TYPES).toBeDefined();
+                expect(FACTION_KILL_TYPES instanceof Set).toBe(true);
+            });
+
+            it('should include kill missions in FACTION_KILL_TYPES', () => {
+                expect(FACTION_KILL_TYPES.has(MISSION_TYPE.IMPERIAL_ELIMINATION)).toBe(true);
+                expect(FACTION_KILL_TYPES.has(MISSION_TYPE.IMPERIAL_STRIKE)).toBe(true);
+                expect(FACTION_KILL_TYPES.has(MISSION_TYPE.SEPARATIST_RAID)).toBe(true);
+                expect(FACTION_KILL_TYPES.has(MISSION_TYPE.SEPARATIST_STRIKE)).toBe(true);
+                expect(FACTION_KILL_TYPES.has(MISSION_TYPE.MILITARY_EXTERMINATION)).toBe(true);
+                expect(FACTION_KILL_TYPES.has(MISSION_TYPE.MILITARY_STRIKE)).toBe(true);
+            });
+
+            it('should define FACTION_PATROL_TYPES set', () => {
+                expect(FACTION_PATROL_TYPES).toBeDefined();
+                expect(FACTION_PATROL_TYPES instanceof Set).toBe(true);
+            });
+
+            it('should include patrol missions in FACTION_PATROL_TYPES', () => {
+                expect(FACTION_PATROL_TYPES.has(MISSION_TYPE.IMPERIAL_PATROL)).toBe(true);
+                expect(FACTION_PATROL_TYPES.has(MISSION_TYPE.MILITARY_DEFENSE)).toBe(true);
+            });
+
+            it('should define FACTION_SABOTAGE_TYPES set', () => {
+                expect(FACTION_SABOTAGE_TYPES).toBeDefined();
+                expect(FACTION_SABOTAGE_TYPES instanceof Set).toBe(true);
+            });
+
+            it('should include sabotage missions in FACTION_SABOTAGE_TYPES', () => {
+                expect(FACTION_SABOTAGE_TYPES.has(MISSION_TYPE.IMPERIAL_SABOTAGE)).toBe(true);
+                expect(FACTION_SABOTAGE_TYPES.has(MISSION_TYPE.SEPARATIST_SABOTAGE)).toBe(true);
+                expect(FACTION_SABOTAGE_TYPES.has(MISSION_TYPE.MILITARY_SABOTAGE)).toBe(true);
+            });
+
+            it('should define FACTION_DELIVERY_TYPES set', () => {
+                expect(FACTION_DELIVERY_TYPES).toBeDefined();
+                expect(FACTION_DELIVERY_TYPES instanceof Set).toBe(true);
+            });
+
+            it('should include supply missions in FACTION_DELIVERY_TYPES', () => {
+                expect(FACTION_DELIVERY_TYPES.has(MISSION_TYPE.SEPARATIST_SUPPLY)).toBe(true);
+            });
+        });
+
+        // ============================================
+        // Faction Kill Mission Tests
+        // ============================================
+
+        describe('Faction Kill Missions', () => {
+            it('should create Imperial Elimination mission', () => {
+                const mission = new Mission({
+                    id: 100,
+                    title: 'Imperial Order: Eliminate 3 Separatist Vessels',
+                    type: MISSION_TYPE.IMPERIAL_ELIMINATION,
+                    targetCount: 3,
+                    rewardCredits: 5000,
+                    requiredFaction: 'IMPERIAL'
+                });
+                expect(mission.type).toBe(MISSION_TYPE.IMPERIAL_ELIMINATION);
+                expect(mission.targetCount).toBe(3);
+                expect(FACTION_KILL_TYPES.has(mission.type)).toBe(true);
+            });
+
+            it('should track kill progress for faction missions', () => {
+                const mission = new Mission({
+                    id: 101,
+                    title: 'Separatist Raid',
+                    type: MISSION_TYPE.SEPARATIST_RAID,
+                    targetCount: 2,
+                    rewardCredits: 4000
+                });
+                mission.status = 'Active';
+                mission.progressCount = 0;
+
+                // Simulate kills
+                mission.progressCount += 1;
+                expect(mission.progressCount).toBe(1);
+
+                mission.progressCount += 1;
+                expect(mission.progressCount).toBe(2);
+                expect(mission.progressCount >= mission.targetCount).toBe(true);
+            });
+
+            it('should complete Military Extermination when target met', () => {
+                const mission = new Mission({
+                    id: 102,
+                    title: 'Military Extermination',
+                    type: MISSION_TYPE.MILITARY_EXTERMINATION,
+                    targetCount: 3,
+                    rewardCredits: 6000
+                });
+                mission.status = 'Active';
+                mission.progressCount = 3;
+
+                const player = createMockPlayer({ credits: 1000 });
+                mission.complete(player);
+
+                expect(mission.status).toBe('Completed');
+                expect(player.credits).toBe(7000); // 1000 + 6000
+            });
+        });
+
+        // ============================================
+        // Faction Patrol Mission Tests
+        // ============================================
+
+        describe('Faction Patrol Missions', () => {
+            it('should create Imperial Patrol mission', () => {
+                const mission = new Mission({
+                    id: 200,
+                    title: 'Imperial Patrol: Scan 4 Vessels',
+                    type: MISSION_TYPE.IMPERIAL_PATROL,
+                    targetCount: 4,
+                    rewardCredits: 2000,
+                    requiredFaction: 'IMPERIAL'
+                });
+                expect(mission.type).toBe(MISSION_TYPE.IMPERIAL_PATROL);
+                expect(mission.targetCount).toBe(4);
+                expect(FACTION_PATROL_TYPES.has(mission.type)).toBe(true);
+            });
+
+            it('should create Military Defense mission', () => {
+                const mission = new Mission({
+                    id: 201,
+                    title: 'Military Defense: Scan 3 Vessels',
+                    type: MISSION_TYPE.MILITARY_DEFENSE,
+                    targetCount: 3,
+                    rewardCredits: 1800
+                });
+                expect(mission.type).toBe(MISSION_TYPE.MILITARY_DEFENSE);
+                expect(FACTION_PATROL_TYPES.has(mission.type)).toBe(true);
+            });
+
+            it('should track scan progress for patrol missions', () => {
+                const mission = new Mission({
+                    id: 202,
+                    title: 'Imperial Patrol',
+                    type: MISSION_TYPE.IMPERIAL_PATROL,
+                    targetCount: 3,
+                    rewardCredits: 1500
+                });
+                mission.status = 'Active';
+                mission.progressCount = 0;
+                mission._scannedShipIds = new Set();
+
+                // Simulate scans (each unique ship adds progress)
+                mission._scannedShipIds.add('ship1');
+                mission.progressCount++;
+                expect(mission.progressCount).toBe(1);
+
+                mission._scannedShipIds.add('ship2');
+                mission.progressCount++;
+                expect(mission.progressCount).toBe(2);
+
+                mission._scannedShipIds.add('ship3');
+                mission.progressCount++;
+                expect(mission.progressCount).toBe(3);
+
+                expect(mission.progressCount >= mission.targetCount).toBe(true);
+            });
+
+            it('should not count duplicate scans', () => {
+                const mission = new Mission({
+                    id: 203,
+                    title: 'Military Defense',
+                    type: MISSION_TYPE.MILITARY_DEFENSE,
+                    targetCount: 3,
+                    rewardCredits: 1500
+                });
+                mission.status = 'Active';
+                mission.progressCount = 0;
+                mission._scannedShipIds = new Set();
+
+                // Scan same ship twice - should only count once
+                const shipId = 'ship123';
+                if (!mission._scannedShipIds.has(shipId)) {
+                    mission._scannedShipIds.add(shipId);
+                    mission.progressCount++;
+                }
+                expect(mission.progressCount).toBe(1);
+
+                // Try to scan again - should not increment
+                if (!mission._scannedShipIds.has(shipId)) {
+                    mission._scannedShipIds.add(shipId);
+                    mission.progressCount++;
+                }
+                expect(mission.progressCount).toBe(1); // Still 1
+            });
+        });
+
+        // ============================================
+        // Faction Sabotage Mission Tests
+        // ============================================
+
+        describe('Faction Sabotage Missions', () => {
+            it('should create Imperial Sabotage mission', () => {
+                const mission = new Mission({
+                    id: 300,
+                    title: 'Imperial Sabotage: Destroy Comm Relay',
+                    type: MISSION_TYPE.IMPERIAL_SABOTAGE,
+                    rewardCredits: 8000,
+                    targetObjectType: 'Comm Relay',
+                    destinationSystem: 'Rebel System'
+                });
+                expect(mission.type).toBe(MISSION_TYPE.IMPERIAL_SABOTAGE);
+                expect(FACTION_SABOTAGE_TYPES.has(mission.type)).toBe(true);
+            });
+
+            it('should complete faction sabotage when target destroyed', () => {
+                const mission = new Mission({
+                    id: 301,
+                    title: 'Separatist Sabotage',
+                    type: MISSION_TYPE.SEPARATIST_SABOTAGE,
+                    rewardCredits: 7500,
+                    targetObjectType: 'Supply Depot'
+                });
+                mission.status = 'Active';
+                mission.progressCount = 1; // Target destroyed
+
+                const player = createMockPlayer({ credits: 500 });
+                mission.complete(player);
+
+                expect(mission.status).toBe('Completed');
+                expect(player.credits).toBe(8000); // 500 + 7500
+            });
+        });
+
+        // ============================================
+        // Faction Delivery/Supply Mission Tests
+        // ============================================
+
+        describe('Faction Delivery Missions', () => {
+            it('should create Separatist Supply mission', () => {
+                const mission = new Mission({
+                    id: 400,
+                    title: 'Separatist Supply Run',
+                    type: MISSION_TYPE.SEPARATIST_SUPPLY,
+                    cargoType: 'Weapons',
+                    cargoQuantity: 10,
+                    rewardCredits: 5000,
+                    destinationSystem: 'Rebel Base'
+                });
+                expect(mission.type).toBe(MISSION_TYPE.SEPARATIST_SUPPLY);
+                expect(mission.cargoType).toBe('Weapons');
+                expect(FACTION_DELIVERY_TYPES.has(mission.type)).toBe(true);
+            });
+
+            it('should store cargo requirements', () => {
+                const mission = new Mission({
+                    id: 401,
+                    title: 'Supply Mission',
+                    type: MISSION_TYPE.SEPARATIST_SUPPLY,
+                    cargoType: 'Medical Supplies',
+                    cargoQuantity: 15,
+                    rewardCredits: 4000
+                });
+                expect(mission.cargoType).toBe('Medical Supplies');
+                expect(mission.cargoQuantity).toBe(15);
+            });
+        });
+
         // Run all tests
         runTests();
     </script>

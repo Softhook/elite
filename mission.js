@@ -8,12 +8,55 @@ const MISSION_TYPE = {
     BOUNTY_POLICE: 'Bounty',
     BOUNTY_ALIEN: 'Alien Bounty',
     ASSASSINATION: 'Assassination',
-    SABOTAGE: 'Sabotage'
+    SABOTAGE: 'Sabotage',
+    // Imperial faction missions
+    IMPERIAL_ELIMINATION: 'Imperial Elimination',
+    IMPERIAL_PATROL: 'Imperial Patrol',
+    IMPERIAL_STRIKE: 'Imperial Strike',
+    IMPERIAL_SABOTAGE: 'Imperial Sabotage',
+    // Separatist faction missions
+    SEPARATIST_RAID: 'Separatist Raid',
+    SEPARATIST_SUPPLY: 'Separatist Supply',
+    SEPARATIST_STRIKE: 'Separatist Strike',
+    SEPARATIST_SABOTAGE: 'Separatist Sabotage',
+    // Military faction missions
+    MILITARY_EXTERMINATION: 'Military Extermination',
+    MILITARY_DEFENSE: 'Military Defense',
+    MILITARY_STRIKE: 'Military Strike',
+    MILITARY_SABOTAGE: 'Military Sabotage'
 };
 
 // Type classification helpers for cleaner conditional logic
 const BOUNTY_TYPES = new Set([MISSION_TYPE.BOUNTY_PIRATE, MISSION_TYPE.BOUNTY_POLICE, MISSION_TYPE.BOUNTY_ALIEN]);
 const DELIVERY_TYPES = new Set([MISSION_TYPE.DELIVERY_LEGAL, MISSION_TYPE.DELIVERY_ILLEGAL]);
+
+// Faction kill-based missions (target enemies of specific factions)
+const FACTION_KILL_TYPES = new Set([
+    MISSION_TYPE.IMPERIAL_ELIMINATION,
+    MISSION_TYPE.IMPERIAL_STRIKE,
+    MISSION_TYPE.SEPARATIST_RAID,
+    MISSION_TYPE.SEPARATIST_STRIKE,
+    MISSION_TYPE.MILITARY_EXTERMINATION,
+    MISSION_TYPE.MILITARY_STRIKE
+]);
+
+// Faction patrol/scan missions (target lock counts as scan)
+const FACTION_PATROL_TYPES = new Set([
+    MISSION_TYPE.IMPERIAL_PATROL,
+    MISSION_TYPE.MILITARY_DEFENSE
+]);
+
+// Faction sabotage missions (destroy structure)
+const FACTION_SABOTAGE_TYPES = new Set([
+    MISSION_TYPE.IMPERIAL_SABOTAGE,
+    MISSION_TYPE.SEPARATIST_SABOTAGE,
+    MISSION_TYPE.MILITARY_SABOTAGE
+]);
+
+// Faction delivery/supply missions
+const FACTION_DELIVERY_TYPES = new Set([
+    MISSION_TYPE.SEPARATIST_SUPPLY
+]);
 
 class Mission {
     // ═══════════════════════════════════════════════════════════════════════════

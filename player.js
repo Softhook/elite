@@ -521,6 +521,65 @@ class Player {
                 }
             }
 
+            // === FACTION KILL MISSIONS (Imperial Elimination/Strike, Separatist Raid/Strike, Military Extermination/Strike) ===
+            else if (FACTION_KILL_TYPES && FACTION_KILL_TYPES.has(this.activeMission.type)) {
+                console.log(`   Faction Kill Check: Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
+                if (this.activeMission.progressCount >= this.activeMission.targetCount) {
+                    console.log("   Faction Kill Check: Target count met. Allowing completion.");
+                    canComplete = true;
+                } else {
+                    console.warn("   Complete failed: Faction kill target count not met.");
+                    return false;
+                }
+            }
+
+            // === FACTION PATROL MISSIONS (Imperial Patrol, Military Defense) - require scans ===
+            else if (FACTION_PATROL_TYPES && FACTION_PATROL_TYPES.has(this.activeMission.type)) {
+                console.log(`   Faction Patrol Check: Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
+                if (this.activeMission.progressCount >= this.activeMission.targetCount) {
+                    console.log("   Faction Patrol Check: Scan count met. Allowing completion.");
+                    canComplete = true;
+                } else {
+                    console.warn("   Complete failed: Faction patrol scan count not met.");
+                    return false;
+                }
+            }
+
+            // === FACTION SABOTAGE MISSIONS (Imperial/Separatist/Military Sabotage) ===
+            else if (FACTION_SABOTAGE_TYPES && FACTION_SABOTAGE_TYPES.has(this.activeMission.type)) {
+                console.log(`   Faction Sabotage Check: Progress ${this.activeMission.progressCount}, Status ${this.activeMission.status}`);
+                if (this.activeMission.progressCount >= 1 || this.activeMission.status === 'Completable') {
+                    console.log("   Faction Sabotage Check: Target destroyed. Allowing completion.");
+                    canComplete = true;
+                } else {
+                    console.warn("   Complete failed: Faction sabotage target not yet destroyed.");
+                    return false;
+                }
+            }
+
+            // === FACTION DELIVERY MISSIONS (Separatist Supply) ===
+            else if (FACTION_DELIVERY_TYPES && FACTION_DELIVERY_TYPES.has(this.activeMission.type)) {
+                // These require the location context like normal deliveries
+                if (!currentSystem || !currentStation) {
+                    console.warn("   Complete failed: Faction delivery requires docking at destination.");
+                    return false;
+                }
+                // Check we're in the correct system (if specified)
+                if (this.activeMission.destinationSystem && currentSystem.name !== this.activeMission.destinationSystem) {
+                    console.warn("   Complete failed: Not at destination system.");
+                    return false;
+                }
+                // Check cargo if required
+                if (this.activeMission.cargoType && this.activeMission.cargoQuantity > 0) {
+                    if (!this.hasCargo(this.activeMission.cargoType, this.activeMission.cargoQuantity)) {
+                        console.warn("   Complete failed: Missing required cargo.");
+                        return false;
+                    }
+                }
+                console.log("   Faction Delivery Check: All conditions met. Allowing completion.");
+                canComplete = true;
+            }
+
             // --- Add other mission type checks here later ---
             else {
                 console.warn(`   Complete failed: Mission type ${this.activeMission.type} conditions not handled.`);

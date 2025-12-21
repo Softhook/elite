@@ -99,6 +99,10 @@ class GameStateManager {
         this.postLoadFadeOutMs = 900; // fade-out duration in ms
         this.postLoadFadeInMs = 700;  // fade-in duration in ms
         this.pendingPostLoadState = null;
+
+        // Docked entity tracking
+        this.currentDockedStation = null;    // Tracks which station player is docked at (main or secret)
+        this.currentDockedSpaceObject = null; // Tracks docked space object (already exists, ensure initialized)
     }
 
     /**
@@ -312,11 +316,13 @@ class GameStateManager {
         if (prevState !== "IN_FLIGHT") return;
 
         GS_LOG("Entering DOCKED state from IN_FLIGHT. Snapping player position.");
-        const dockStation = galaxy?.getCurrentSystem()?.station;
-        this.currentDockedStation = dockStation || null;
+
+        // Use the docked station that was already set in _checkDocking
+        // This could be either the main station OR a secret station
+        const dockStation = this.currentDockedStation || galaxy?.getCurrentSystem()?.station;
 
         if (player && dockStation?.pos) {
-            player.pos = dockStation.pos.copy() || player.pos;
+            player.pos = dockStation.pos.copy();
             player.vel.mult(0);
             // Mark player as docked and invulnerable so enemies stop targeting them
             player.isDockedAndInvulnerable = true;
@@ -803,14 +809,12 @@ class GameStateManager {
                 } catch (e) { /* ignore malformed station */ }
             }
 
-            // Temporarily replace system.station with secret station
-            if (dockStation && dockStation !== currentSystem.station) {
-                currentSystem._previousStation = currentSystem.station;
-                currentSystem.station = dockStation;
-            }
+            // Track which station we're docking at (don't swap system.station)
+            // This ensures NPCs still travel to the MAIN station
         }
 
         if (dockStation) {
+            this.currentDockedStation = dockStation; // Track the actual docked station
             this.setState("DOCKED");
             this._savegameOnDocking();
             return;
@@ -1004,8 +1008,8 @@ class GameStateManager {
     draw(player) {
         const currentSystem = this._getCurrentSystemIfNeeded();
 
-        // Restore temporarily swapped secret station
-        this._restoreSecretStation();
+        // No longer need to restore swapped station - we now track docked station explicitly
+        // in this.currentDockedStation without modifying currentSystem.station
 
         this._drawStateVisuals(player, currentSystem);
         this._drawInventoryOverlay(player);
@@ -1013,19 +1017,8 @@ class GameStateManager {
         this._drawPlanetBufferProgress();
     }
 
-    /**
-     * Restores temporarily swapped secret station
-     * @private
-     */
-    _restoreSecretStation() {
-        try {
-            const sys = galaxy?.getCurrentSystem();
-            if (sys?._previousStation) {
-                sys.station = sys._previousStation;
-                delete sys._previousStation;
-            }
-        } catch (e) { /* ignore restore errors */ }
-    }
+    // NOTE: _restoreSecretStation removed - we no longer swap stations.
+    // Instead we track the docked station explicitly in this.currentDockedStation.
 
     /**
      * Dispatches draw logic based on current state
@@ -1184,9 +1177,11 @@ class GameStateManager {
     _drawDocked(player, currentSystem) {
         this._drawStationBackground(player, currentSystem);
 
-        if (uiManager && currentSystem?.station && player) {
+        // Use the tracked docked station (could be main station or secret station)
+        const dockedStation = this.currentDockedStation || currentSystem?.station;
+        if (uiManager && dockedStation && player) {
             try {
-                uiManager.drawStationMainMenu(currentSystem.station, player);
+                uiManager.drawStationMainMenu(dockedStation, player);
             } catch (e) {
                 console.error("Error drawing station main menu:", e);
             }
@@ -1399,15 +1394,18 @@ class GameStateManager {
      * @private
      */
     _drawMissions(player, currentSystem) {
+        // Use the docked station (could be main OR secret station)
+        const dockedStation = this.currentDockedStation || currentSystem?.station;
+
         // Fetch missions if not already fetched
         if (!this.currentStationMissions || this.currentStationMissions.length === 0) {
-            const currentStation = currentSystem?.station;
-            if (currentSystem && typeof currentSystem.getAvailableMissions === 'function') {
-                this.currentStationMissions = currentSystem.getAvailableMissions(galaxy, player) || [];
-            } else {
+            // Use MissionGenerator directly with the docked station
+            if (typeof MissionGenerator?.generateMissions === 'function' && dockedStation) {
                 this.currentStationMissions = MissionGenerator.generateMissions(
-                    currentSystem, currentStation, galaxy, player
+                    currentSystem, dockedStation, galaxy, player
                 );
+            } else {
+                this.currentStationMissions = [];
             }
             // Clear inactive mission IDs when new missions are generated
             // This ensures fresh missions aren't incorrectly marked as inactive
@@ -1788,13 +1786,14 @@ class GameStateManager {
     /** Fetches missions for the current station and stores them for display. */
     fetchStationMissions(player) {
         const currentSystem = galaxy?.getCurrentSystem();
-        if (currentSystem?.station && galaxy && player) {
-            MISSION_LOG("[GameStateManager] Fetching missions for", currentSystem?.name, currentSystem?.station?.name);
+        // Use the tracked docked station (which could be main or secret station)
+        const dockedStation = this.currentDockedStation || currentSystem?.station;
+        if (dockedStation && galaxy && player) {
+            MISSION_LOG("[GameStateManager] Fetching missions for", currentSystem?.name, dockedStation?.name);
             try {
-                if (typeof currentSystem.getAvailableMissions === 'function') {
-                    this.currentStationMissions = currentSystem.getAvailableMissions(galaxy, player) || [];
-                } else if (typeof MissionGenerator?.generateMissions === 'function') {
-                    this.currentStationMissions = MissionGenerator.generateMissions(currentSystem, currentSystem.station, galaxy, player);
+                // Use MissionGenerator directly with the docked station
+                if (typeof MissionGenerator?.generateMissions === 'function') {
+                    this.currentStationMissions = MissionGenerator.generateMissions(currentSystem, dockedStation, galaxy, player);
                 } else {
                     this.currentStationMissions = [];
                 }

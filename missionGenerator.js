@@ -181,6 +181,48 @@ class MissionGenerator {
             } catch (e) { console.error('Failed to create assassination mission:', e); }
         }
 
+        // --- Faction-Specific Missions at Secret Bases ---
+        // SECRET BASES ONLY SHOW FACTION MISSIONS - no normal missions
+        if (currentStation.stationSubtype && currentStation.stationSubtype.startsWith('secret_')) {
+            const stationFaction = this._getStationFaction(currentStation.stationSubtype);
+            const playerFaction = player.isPolice ? 'POLICE' : player.playerFaction;
+
+            console.log(`[MissionGenerator] SECRET BASE: ${currentStation.stationSubtype} -> Faction: ${stationFaction}, Player faction: ${playerFaction}`);
+
+            // If player is not in this faction, show empty mission board with message
+            if (!stationFaction || playerFaction !== stationFaction) {
+                console.log(`[MissionGenerator] Access denied - not a member of ${stationFaction}`);
+                // Return empty array - UI should show "no missions available" or similar
+                return [];
+            }
+
+            // Player IS a member - generate ONLY faction missions (4-6 missions)
+            const factionMissionCount = floor(random(4, 7));
+            console.log(`[MissionGenerator] FACTION MEMBER! Generating ${factionMissionCount} exclusive ${stationFaction} missions`);
+
+            const context = {
+                originSystem: currentSystem,
+                originStation: currentStation,
+                galaxy: galaxy,
+                player: player
+            };
+
+            try {
+                for (let f = 0; f < factionMissionCount; f++) {
+                    const factionMission = this._generateFactionMission(stationFaction, context);
+                    if (factionMission) {
+                        console.log(`[MissionGenerator] Created: ${factionMission.type} - ${factionMission.title}`);
+                        availableMissions.push(factionMission);
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to create faction missions:', e);
+            }
+
+            // RETURN EARLY - secret bases ONLY show faction missions
+            return availableMissions;
+        }
+
         // Adjust maxMissions based on whether assassination was added
         let adjustedMaxMissions = hasAssassination ? Math.max(3, maxMissions - 1) : maxMissions;
 
@@ -246,8 +288,8 @@ class MissionGenerator {
                 }
             } catch (error) {
                 console.error(`Error creating mission (Roll: ${missionTypeRoll.toFixed(3)}, Type Slot: ${missionTypeRoll < normLegal ? 'Legal' :
-                        missionTypeRoll < normLegal + normBounty ? 'Bounty' :
-                            missionTypeRoll < normLegal + normBounty + normIllegal ? 'Illegal' : 'Other'
+                    missionTypeRoll < normLegal + normBounty ? 'Bounty' :
+                        missionTypeRoll < normLegal + normBounty + normIllegal ? 'Illegal' : 'Other'
                     }):`, error);
             }
         } // End mission generation loop
@@ -770,6 +812,388 @@ class MissionGenerator {
             isIllegal: false, // Assuming these are sanctioned hunts
             progressCount: 0
         });
+    }
+
+    /**
+     * Maps secret station subtypes to faction keys.
+     * @param {string} stationSubtype - e.g., 'secret_military', 'secret_separatist'
+     * @returns {string|null} Faction key or null
+     */
+    static _getStationFaction(stationSubtype) {
+        if (!stationSubtype) return null;
+        if (stationSubtype.includes('military')) return 'MILITARY';
+        if (stationSubtype.includes('separatist')) return 'SEPARATIST';
+        if (stationSubtype.includes('imperial')) return 'IMPERIAL';
+        if (stationSubtype.includes('police')) return 'POLICE';
+        return null; // 'secret_generic' or 'secret_alien' don't map to player factions
+    }
+
+    /**
+     * Generates a faction-specific mission based on faction type.
+     * Uses registered handlers if available, otherwise creates inline.
+     * @param {string} factionKey - 'IMPERIAL', 'SEPARATIST', 'MILITARY', 'POLICE'
+     * @param {Object} context - Generation context with originSystem, originStation, galaxy, player
+     * @returns {Mission|null}
+     */
+    static _generateFactionMission(factionKey, context) {
+        const { originSystem, originStation, galaxy, player } = context;
+
+        // Try registered handlers first (if MissionTypeRegistry exists)
+        if (typeof MissionTypeRegistry !== 'undefined') {
+            const handlers = MissionTypeRegistry.getHandlersForFaction(factionKey);
+            const factionHandlers = handlers.filter(h => h.requiredFaction === factionKey);
+            if (factionHandlers.length > 0) {
+                const handler = random(factionHandlers);
+                if (handler.canGenerate(context)) {
+                    try {
+                        return handler.create(context);
+                    } catch (e) {
+                        console.warn(`Faction handler ${handler.name} failed:`, e);
+                    }
+                }
+            }
+        }
+
+        // Fallback: Generate inline faction missions
+        const playerRank = player.getFactionRank?.(factionKey) || 0;
+        const rankMultiplier = 1.0 + (playerRank * 0.1); // 10% bonus per rank
+
+        switch (factionKey) {
+            case 'IMPERIAL':
+                return this._createImperialMission(originSystem, originStation, galaxy, player, rankMultiplier);
+            case 'SEPARATIST':
+                return this._createSeparatistMission(originSystem, originStation, galaxy, player, rankMultiplier);
+            case 'MILITARY':
+                return this._createMilitaryMission(originSystem, originStation, galaxy, player, rankMultiplier);
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Creates an Imperial faction mission.
+     * @private
+     */
+    static _createImperialMission(originSystem, originStation, galaxy, player, rankMultiplier) {
+        const missionTypes = ['elimination', 'patrol', 'strike', 'sabotage'];
+        const missionType = random(missionTypes);
+
+        if (missionType === 'elimination') {
+            const targetCount = floor(random(1, 4));
+            const baseReward = 1500 + (originSystem.techLevel || 5) * 100;
+            const reward = Math.floor((baseReward + random(500, 1500)) * rankMultiplier);
+
+            return new Mission({
+                type: 'IMPERIAL_ELIMINATION',
+                title: `Imperial Order: Eliminate ${targetCount} Separatist Vessels`,
+                description: `Intelligence reports Separatist activity in the region. Imperial Command authorizes lethal force against ${targetCount} rebel vessels. Glory to the Empire.`,
+                originSystem: originSystem.name,
+                originStation: originStation.name,
+                destinationSystem: null,
+                destinationStation: null,
+                targetDesc: `${targetCount} Separatist vessels`,
+                targetCount: targetCount,
+                rewardCredits: reward,
+                isIllegal: false,
+                progressCount: 0,
+                requiredFaction: 'IMPERIAL'
+            });
+        } else if (missionType === 'patrol') {
+            const targetCount = floor(random(2, 5));
+            const baseReward = 800 + (originSystem.techLevel || 5) * 50;
+            const reward = Math.floor((baseReward + random(200, 600)) * rankMultiplier);
+
+            return new Mission({
+                type: 'IMPERIAL_PATROL',
+                title: `Imperial Patrol: Scan ${targetCount} Vessels`,
+                description: `Imperial Command requires patrol duty in this sector. Scan ${targetCount} vessels to ensure compliance with Imperial regulations.`,
+                originSystem: originSystem.name,
+                originStation: originStation.name,
+                destinationSystem: null,
+                destinationStation: null,
+                targetDesc: `Scan ${targetCount} vessels`,
+                targetCount: targetCount,
+                rewardCredits: reward,
+                isIllegal: false,
+                progressCount: 0,
+                requiredFaction: 'IMPERIAL'
+            });
+        } else if (missionType === 'strike') {
+            // Strike mission: coordinated attack on multiple targets in a system
+            const targetCount = floor(random(3, 6));
+            const baseReward = 3000 + (originSystem.techLevel || 5) * 200;
+            const reward = Math.floor((baseReward + random(1000, 3000)) * rankMultiplier);
+
+            // Find a separatist or anarchy system to strike
+            const destinationInfo = this.findNearbyDestination(originSystem, galaxy, false, 5);
+            const destName = destinationInfo?.system?.name || 'designated sector';
+
+            return new Mission({
+                type: 'IMPERIAL_STRIKE',
+                title: `Imperial Strike: Assault ${destName}`,
+                description: `High Command has authorized a strike operation against rebel forces in ${destName}. Destroy ${targetCount} enemy vessels and any infrastructure supporting the insurrection. Expect heavy resistance.`,
+                originSystem: originSystem.name,
+                originStation: originStation.name,
+                destinationSystem: destName,
+                destinationStation: null,
+                targetDesc: `${targetCount} hostiles in ${destName}`,
+                targetCount: targetCount,
+                rewardCredits: reward,
+                isIllegal: false,
+                progressCount: 0,
+                requiredFaction: 'IMPERIAL'
+            });
+        } else {
+            // Sabotage mission: destroy rebel infrastructure
+            const destinationInfo = this.findNearbyDestination(originSystem, galaxy, false, 6);
+            if (!destinationInfo) return this._createImperialMission(originSystem, originStation, galaxy, player, rankMultiplier);
+
+            const destSystem = destinationInfo.system;
+            const targetTypes = ['Comm Relay', 'Supply Depot', 'Rebel Beacon', 'Sensor Array', 'Shield Generator'];
+            const targetType = random(targetTypes);
+
+            const baseReward = 4000 + (originSystem.techLevel || 5) * 150;
+            const reward = Math.floor((baseReward + random(1500, 4000)) * rankMultiplier);
+
+            const jumpDistance = galaxy.getJumpDistance?.(originSystem.systemIndex, destSystem.systemIndex) || 3;
+            const jumpText = jumpDistance === 1 ? '1 jump' : `${jumpDistance} jumps`;
+
+            return new Mission({
+                type: 'IMPERIAL_SABOTAGE',
+                title: `Imperial Sabotage: Destroy ${targetType} (${jumpText})`,
+                description: `Intelligence has identified a critical rebel ${targetType} in ${destSystem.name}. Infiltrate the system and destroy this infrastructure to cripple Separatist operations in the region.`,
+                originSystem: originSystem.name,
+                originStation: originStation.name,
+                destinationSystem: destSystem.name,
+                destinationStation: null,
+                targetObjectType: targetType,
+                targetDesc: `Destroy ${targetType} in ${destSystem.name}`,
+                rewardCredits: reward,
+                isIllegal: false,
+                progressCount: 0,
+                requiredFaction: 'IMPERIAL'
+            });
+        }
+    }
+
+    /**
+     * Creates a Separatist faction mission.
+     * @private
+     */
+    static _createSeparatistMission(originSystem, originStation, galaxy, player, rankMultiplier) {
+        const missionTypes = ['raid', 'supply', 'strike', 'sabotage'];
+        const missionType = random(missionTypes);
+
+        if (missionType === 'raid') {
+            const targetCount = floor(random(1, 4));
+            const baseReward = 1200 + (originSystem.techLevel || 5) * 80;
+            const reward = Math.floor((baseReward + random(400, 1200)) * rankMultiplier);
+
+            return new Mission({
+                type: 'SEPARATIST_RAID',
+                title: `Freedom Strike: Destroy ${targetCount} Imperial Ships`,
+                description: `The cause requires action. Eliminate ${targetCount} Imperial vessels to weaken their grip on the sector. For freedom!`,
+                originSystem: originSystem.name,
+                originStation: originStation.name,
+                destinationSystem: null,
+                destinationStation: null,
+                targetDesc: `${targetCount} Imperial vessels`,
+                targetCount: targetCount,
+                rewardCredits: reward,
+                isIllegal: false,
+                progressCount: 0,
+                requiredFaction: 'SEPARATIST'
+            });
+        } else if (missionType === 'supply') {
+            // Supply mission - find a destination
+            const destinationInfo = this.findNearbyDestination(originSystem, galaxy, true, 4);
+            if (!destinationInfo) return this._createSeparatistMission(originSystem, originStation, galaxy, player, rankMultiplier);
+
+            const cargoTypes = ['Weapons', 'Medicine', 'Machinery'];
+            const cargo = random(cargoTypes);
+            const quantity = floor(random(5, 15));
+            const baseReward = 600 + quantity * 50;
+            const reward = Math.floor((baseReward + random(200, 500)) * rankMultiplier);
+
+            const jumpDistance = galaxy.getJumpDistance?.(originSystem.systemIndex, destinationInfo.system.systemIndex) || 2;
+            const jumpText = jumpDistance === 1 ? '1 jump' : `${jumpDistance} jumps`;
+
+            return new Mission({
+                type: 'SEPARATIST_SUPPLY',
+                title: `Supply Run: ${quantity}t ${cargo} to Rebel Cell (${jumpText})`,
+                description: `Our operatives need supplies. Deliver ${quantity}t of ${cargo} to resistance contacts at ${destinationInfo.station.name}. Discretion advised.`,
+                originSystem: originSystem.name,
+                originStation: originStation.name,
+                destinationSystem: destinationInfo.system.name,
+                destinationStation: destinationInfo.station.name,
+                cargoType: cargo,
+                cargoQuantity: quantity,
+                rewardCredits: reward,
+                isIllegal: true,
+                requiredFaction: 'SEPARATIST'
+            });
+        } else if (missionType === 'strike') {
+            // Strike mission: coordinated assault on Imperial forces
+            const targetCount = floor(random(3, 6));
+            const baseReward = 2500 + (originSystem.techLevel || 5) * 150;
+            const reward = Math.floor((baseReward + random(800, 2500)) * rankMultiplier);
+
+            const destinationInfo = this.findNearbyDestination(originSystem, galaxy, false, 5);
+            const destName = destinationInfo?.system?.name || 'Imperial territory';
+
+            return new Mission({
+                type: 'SEPARATIST_STRIKE',
+                title: `Liberation Strike: Attack ${destName}`,
+                description: `Command has authorized a strike operation to liberate ${destName} from Imperial occupation. Destroy ${targetCount} enemy forces and disrupt their control. Strike hard, strike fast!`,
+                originSystem: originSystem.name,
+                originStation: originStation.name,
+                destinationSystem: destName,
+                destinationStation: null,
+                targetDesc: `${targetCount} Imperial forces in ${destName}`,
+                targetCount: targetCount,
+                rewardCredits: reward,
+                isIllegal: false,
+                progressCount: 0,
+                requiredFaction: 'SEPARATIST'
+            });
+        } else {
+            // Sabotage mission: destroy Imperial infrastructure
+            const destinationInfo = this.findNearbyDestination(originSystem, galaxy, false, 6);
+            if (!destinationInfo) return this._createSeparatistMission(originSystem, originStation, galaxy, player, rankMultiplier);
+
+            const destSystem = destinationInfo.system;
+            const targetTypes = ['Imperial Beacon', 'Surveillance Station', 'Propaganda Array', 'Tax Collection Hub', 'Naval Depot'];
+            const targetType = random(targetTypes);
+
+            const baseReward = 3500 + (originSystem.techLevel || 5) * 120;
+            const reward = Math.floor((baseReward + random(1000, 3500)) * rankMultiplier);
+
+            const jumpDistance = galaxy.getJumpDistance?.(originSystem.systemIndex, destSystem.systemIndex) || 3;
+            const jumpText = jumpDistance === 1 ? '1 jump' : `${jumpDistance} jumps`;
+
+            return new Mission({
+                type: 'SEPARATIST_SABOTAGE',
+                title: `Sabotage: Destroy ${targetType} (${jumpText})`,
+                description: `The ${targetType} in ${destSystem.name} is a symbol of Imperial oppression. Destroy it to inspire resistance and disrupt enemy operations. The people are counting on you.`,
+                originSystem: originSystem.name,
+                originStation: originStation.name,
+                destinationSystem: destSystem.name,
+                destinationStation: null,
+                targetObjectType: targetType,
+                targetDesc: `Destroy ${targetType} in ${destSystem.name}`,
+                rewardCredits: reward,
+                isIllegal: true,
+                progressCount: 0,
+                requiredFaction: 'SEPARATIST'
+            });
+        }
+    }
+
+    /**
+     * Creates a Military faction mission.
+     * @private
+     */
+    static _createMilitaryMission(originSystem, originStation, galaxy, player, rankMultiplier) {
+        const missionTypes = ['extermination', 'defense', 'strike', 'sabotage'];
+        const missionType = random(missionTypes);
+
+        if (missionType === 'extermination') {
+            const targetCount = floor(random(2, 5));
+            const baseReward = 2000 + (originSystem.techLevel || 5) * 150;
+            const reward = Math.floor((baseReward + random(500, 2000)) * rankMultiplier);
+
+            return new Mission({
+                type: 'MILITARY_EXTERMINATION',
+                title: `Xeno Command: Exterminate ${targetCount} Alien Threats`,
+                description: `Military Command has declared a xeno-purge operation. Eliminate ${targetCount} alien vessels with extreme prejudice. Humanity's survival depends on vigilance.`,
+                originSystem: originSystem.name,
+                originStation: originStation.name,
+                destinationSystem: null,
+                destinationStation: null,
+                targetDesc: `${targetCount} Alien hostiles`,
+                targetCount: targetCount,
+                rewardCredits: reward,
+                isIllegal: false,
+                progressCount: 0,
+                requiredFaction: 'MILITARY'
+            });
+        } else if (missionType === 'defense') {
+            const targetCount = floor(random(3, 7));
+            const baseReward = 1000 + (originSystem.techLevel || 5) * 75;
+            const reward = Math.floor((baseReward + random(300, 800)) * rankMultiplier);
+
+            return new Mission({
+                type: 'MILITARY_DEFENSE',
+                title: `System Defense: Neutralize ${targetCount} Hostiles`,
+                description: `This sector is under military protection. Eliminate ${targetCount} hostile vessels (pirates, aliens, or other threats) to maintain security.`,
+                originSystem: originSystem.name,
+                originStation: originStation.name,
+                destinationSystem: null,
+                destinationStation: null,
+                targetDesc: `${targetCount} hostile vessels`,
+                targetCount: targetCount,
+                rewardCredits: reward,
+                isIllegal: false,
+                progressCount: 0,
+                requiredFaction: 'MILITARY'
+            });
+        } else if (missionType === 'strike') {
+            // Strike mission: assault on alien hive or pirate stronghold
+            const targetCount = floor(random(4, 8));
+            const baseReward = 4000 + (originSystem.techLevel || 5) * 250;
+            const reward = Math.floor((baseReward + random(1500, 4000)) * rankMultiplier);
+
+            const destinationInfo = this.findNearbyDestination(originSystem, galaxy, false, 5);
+            const destName = destinationInfo?.system?.name || 'hostile territory';
+            const targetTypes = ['Alien Hive', 'Pirate Stronghold', 'Xeno Nest', 'Raider Base'];
+            const targetType = random(targetTypes);
+
+            return new Mission({
+                type: 'MILITARY_STRIKE',
+                title: `Military Strike: Assault ${targetType}`,
+                description: `Intelligence has located a ${targetType} in ${destName}. Deploy to the sector, neutralize ${targetCount} hostiles, and eliminate the threat. This is a high-priority operation.`,
+                originSystem: originSystem.name,
+                originStation: originStation.name,
+                destinationSystem: destName,
+                destinationStation: null,
+                targetDesc: `${targetCount} hostiles at ${targetType}`,
+                targetCount: targetCount,
+                rewardCredits: reward,
+                isIllegal: false,
+                progressCount: 0,
+                requiredFaction: 'MILITARY'
+            });
+        } else {
+            // Sabotage mission: destroy alien tech or pirate infrastructure
+            const destinationInfo = this.findNearbyDestination(originSystem, galaxy, false, 6);
+            if (!destinationInfo) return this._createMilitaryMission(originSystem, originStation, galaxy, player, rankMultiplier);
+
+            const destSystem = destinationInfo.system;
+            const targetTypes = ['Alien Artifact', 'Xeno Tech Cache', 'Pirate Comm Hub', 'Smuggler Depot', 'Contraband Storage'];
+            const targetType = random(targetTypes);
+
+            const baseReward = 3500 + (originSystem.techLevel || 5) * 180;
+            const reward = Math.floor((baseReward + random(1200, 3500)) * rankMultiplier);
+
+            const jumpDistance = galaxy.getJumpDistance?.(originSystem.systemIndex, destSystem.systemIndex) || 3;
+            const jumpText = jumpDistance === 1 ? '1 jump' : `${jumpDistance} jumps`;
+
+            return new Mission({
+                type: 'MILITARY_SABOTAGE',
+                title: `Tactical Sabotage: Destroy ${targetType} (${jumpText})`,
+                description: `A ${targetType} has been identified in ${destSystem.name}. This asset poses a strategic threat and must be eliminated. Infiltrate the system and complete the objective with minimal collateral damage.`,
+                originSystem: originSystem.name,
+                originStation: originStation.name,
+                destinationSystem: destSystem.name,
+                destinationStation: null,
+                targetObjectType: targetType,
+                targetDesc: `Destroy ${targetType} in ${destSystem.name}`,
+                rewardCredits: reward,
+                isIllegal: false,
+                progressCount: 0,
+                requiredFaction: 'MILITARY'
+            });
+        }
     }
 
 } // End MissionGenerator Class
