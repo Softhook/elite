@@ -1264,6 +1264,23 @@ class EventManager {
         return Math.min(validPlayerRankIndex / maxRankIndex, 1);
     }
 
+    /**
+     * Gets diagonal screen distance for spawn offset calculations.
+     * Ensures event spawns happen beyond the visible screen edge.
+     * @returns {number} Diagonal distance from screen center
+     * @private
+     */
+    _getDiagonalDistance() {
+        if (this.starSystem && typeof this.starSystem._getDiagonalDistance === 'function') {
+            return this.starSystem._getDiagonalDistance();
+        }
+        // Fallback if starSystem helper not available
+        if (typeof width !== 'undefined' && typeof height !== 'undefined') {
+            return Math.sqrt((width / 2) ** 2 + (height / 2) ** 2);
+        }
+        return 600; // Reasonable default for a typical screen
+    }
+
     _calculateNumberOfEntities(min, max, useRankFactor, rankFactor) {
         if (useRankFactor) {
             return floor(lerp(min, max, rankFactor) + 0.5);
@@ -1322,7 +1339,7 @@ class EventManager {
         const rankFactor = config.useRankFactorForCount ? this._getEliteRankFactor() : 0;
         const numToSpawn = this._calculateNumberOfEntities(config.minEntities, config.maxEntities, config.useRankFactorForCount, rankFactor);
 
-        const clusterSpawnRadiusFromPlayer = random(config.spawnRadiusMin, config.spawnRadiusMax);
+        const clusterSpawnRadiusFromPlayer = this._getDiagonalDistance() + random(config.spawnRadiusMin, config.spawnRadiusMax);
         const clusterAngleWithPlayer = random(TWO_PI);
 
         const baseSpawnX = this.player.pos.x + cos(clusterAngleWithPlayer) * clusterSpawnRadiusFromPlayer;
@@ -1388,7 +1405,7 @@ class EventManager {
         const shipTypeToSpawn = this._selectShipType(config.shipSelection, rankFactor);
         if (!shipTypeToSpawn) return;
 
-        const baseSpawnRadius = random(config.spawnRadiusMin, config.spawnRadiusMax);
+        const baseSpawnRadius = this._getDiagonalDistance() + random(config.spawnRadiusMin, config.spawnRadiusMax);
         const baseSpawnAngle = random(TWO_PI);
 
         if (typeof EVENT_LOG === 'function') EVENT_LOG(`EventManager: Spawning ${event.type}: ${numToSpawn} ${shipTypeToSpawn}(s)`);
@@ -1440,7 +1457,9 @@ class EventManager {
         const config = event.spawnConfig;
         const numToSpawn = this._calculateNumberOfEntities(config.minEntities, config.maxEntities, config.useRankFactorForCount, 0);
 
-        const spawnRadius = random(config.spawnRadiusMin, config.spawnRadiusMax);
+        // Add storm radius so the edge (not center) spawns beyond view
+        const stormRadius = config.radius || 500;
+        const spawnRadius = this._getDiagonalDistance() + stormRadius + random(config.spawnRadiusMin, config.spawnRadiusMax);
         const spawnAngle = random(TWO_PI);
 
         const spawnX = this.player.pos.x + cos(spawnAngle) * spawnRadius;
@@ -1466,7 +1485,7 @@ class EventManager {
         const config = event.spawnConfig;
         const numToSpawn = this._calculateNumberOfEntities(config.minEntities, config.maxEntities, config.useRankFactorForCount, 0);
 
-        const spawnRadius = random(config.spawnRadiusMin, config.spawnRadiusMax);
+        const spawnRadius = this._getDiagonalDistance() + random(config.spawnRadiusMin, config.spawnRadiusMax);
         const spawnAngle = random(TWO_PI);
 
         const spawnX = this.player.pos.x + cos(spawnAngle) * spawnRadius;

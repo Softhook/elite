@@ -99,8 +99,8 @@
                 this.maxHull = 100;
                 this.hull = 100;
             }
-            calculateRadianProperties() {}
-            initializeColors() {}
+            calculateRadianProperties() { }
+            initializeColors() { }
         }
         window.Enemy = MockEnemy;
 
@@ -357,6 +357,22 @@
                 expect(system.cargo.length).toBe(1);
                 expect(system.cargo[0].type).toBe('Alien Artifact');
             });
+
+            it('should spawn enemies beyond view distance (diagonal + config radius)', () => {
+                // The minimum spawn distance should be diagonal + spawnRadiusMin
+                const diagonalDist = Math.sqrt((width / 2) ** 2 + (height / 2) ** 2);
+                // PIRATE_SWARM: spawnRadiusMin is 1600
+                const minSpawnDist = diagonalDist + 1600;
+
+                em.executeConfiguredEvent('PIRATE_SWARM');
+                expect(system.enemies.length).toBeGreaterThan(0);
+
+                // All enemies should be spawned beyond view distance
+                system.enemies.forEach(enemy => {
+                    const dist = Math.sqrt(enemy.pos.x ** 2 + enemy.pos.y ** 2); // Player at 0,0
+                    expect(dist).toBeGreaterThanOrEqual(minSpawnDist * 0.95); // 5% tolerance for rounding
+                });
+            });
         });
 
         describe('Event Execution - Dynamic Events', () => {
@@ -537,7 +553,7 @@
                 em.initiateEventWarning('ASTEROID_CLUSTER');
                 const event = em.events.find(e => e.type === 'ASTEROID_CLUSTER');
                 expect(event.isWarningActive).toBe(true);
-                expect(event.eventTriggerFrame).toBeGreaterThan(frameCount);
+                expect(event.eventTriggerTime).toBeGreaterThan(millis());
                 expect(ui.messages.length).toBe(1);
             });
 
@@ -548,16 +564,24 @@
             });
 
             it('should trigger event after warning duration', () => {
+                // Save original millis
+                const originalMillis = window.millis;
+                let mockTime = 1000;
+                window.millis = () => mockTime;
+
                 em.initiateEventWarning('ASTEROID_CLUSTER');
                 const event = em.events.find(e => e.type === 'ASTEROID_CLUSTER');
-                
-                // Fast forward frameCount
-                window.frameCount = event.eventTriggerFrame + 1;
-                
+
+                // Fast forward time past the trigger point
+                mockTime = event.eventTriggerTime + 1;
+
                 em.update();
-                
+
                 expect(event.isWarningActive).toBe(false);
                 expect(system.asteroids.length).toBeGreaterThan(0);
+
+                // Restore millis
+                window.millis = originalMillis;
             });
         });
 
