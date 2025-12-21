@@ -208,6 +208,9 @@ class Player {
         this.credits = PLAYER_CONFIG.STARTING_CREDITS;
         this.cargo = [];
 
+        // Secret base storage (separate from normal station storage)
+        this.secretStorage = [];
+
         // System reference
         this.currentSystem = null;
 
@@ -2097,7 +2100,9 @@ class Player {
             missionsCompleted: this.missionsCompleted || [],
             wantedStatusChanges: this.wantedStatusChanges || [],
             shipsPurchased: this.shipsPurchased || [],
-            weaponsUpgraded: this.weaponsUpgraded || []
+            weaponsUpgraded: this.weaponsUpgraded || [],
+            // Secret base storage
+            secretStorage: this.secretStorage || []
             // -----------------------------------------
         };
     }
@@ -2276,6 +2281,9 @@ class Player {
         this.wantedStatusChanges = Array.isArray(data.wantedStatusChanges) ? data.wantedStatusChanges : [];
         this.shipsPurchased = Array.isArray(data.shipsPurchased) ? data.shipsPurchased : [];
         this.weaponsUpgraded = Array.isArray(data.weaponsUpgraded) ? data.weaponsUpgraded : [];
+
+        // Restore secret base storage
+        this.secretStorage = Array.isArray(data.secretStorage) ? data.secretStorage : [];
 
         // Initialize session trade tracking (not saved, always starts fresh)
         this.currentSessionTradedLocations = new Set();

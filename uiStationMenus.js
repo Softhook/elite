@@ -911,10 +911,12 @@ class UIStationMenus {
      * @param {Player} player
      * @param {Object} panelRect - {x, y, w, h}
      * @param {number} headerHeight
+     * @param {boolean} [isSecretBase=false] - If true, use player.secretStorage instead of station.storage
      */
-    drawStorageMenu(station, player, panelRect, headerHeight) {
+    drawStorageMenu(station, player, panelRect, headerHeight, isSecretBase = false) {
         if (!player) return;
         this.storageButtonAreas = [];
+        this._isSecretBase = isSecretBase; // Store for click handler
 
         const activeStation = station || player?.currentSystem?.station || null;
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
@@ -928,26 +930,39 @@ class UIStationMenus {
             return;
         }
 
-        // Ensure the station exposes a mutable storage array and prune bad entries
-        if (!Array.isArray(activeStation.storage)) {
-            activeStation.storage = [];
-        }
+        // Select storage array based on secret base status
         const _sanitizeCargoList = list => (Array.isArray(list) ? list : []).filter(entry => {
             const nameOk = typeof entry?.name === 'string' && entry.name.trim().length > 0;
             const qtyOk = Number.isFinite(entry?.quantity) && entry.quantity > 0;
             return nameOk && qtyOk;
         });
-        activeStation.storage = _sanitizeCargoList(activeStation.storage);
+
+        let storage;
+        if (isSecretBase) {
+            if (!Array.isArray(player.secretStorage)) {
+                player.secretStorage = [];
+            }
+            player.secretStorage = _sanitizeCargoList(player.secretStorage);
+            storage = player.secretStorage;
+        } else {
+            if (!Array.isArray(activeStation.storage)) {
+                activeStation.storage = [];
+            }
+            activeStation.storage = _sanitizeCargoList(activeStation.storage);
+            storage = activeStation.storage;
+        }
 
         UIComponents.setTextStyle({ fill: 220, size: STATION_TEXT_SIZE.BIGHEADER, align: [CENTER, TOP] });
         const infoY = pY + headerHeight + 10;
-        text("Store cargo safely at this station. Stored goods stay here until retrieved.", pX + pW / 2, infoY);
+        const infoText = isSecretBase
+            ? "Access your clandestine storage network. Items stored here can be retrieved from any secret base."
+            : "Store cargo safely at this station. Stored goods stay here until retrieved.";
+        text(infoText, pX + pW / 2, infoY);
 
-        // Station storage contents
+        // Storage contents header
         UIComponents.setTextStyle({ fill: [180, 200, 255], size: STATION_TEXT_SIZE.HEADER, align: [LEFT, TOP] });
-        text("Station Storage:", pX + 40, infoY + 40);
-
-        const storage = activeStation.storage;
+        const storageLabel = isSecretBase ? "Secret Storage:" : "Station Storage:";
+        text(storageLabel, pX + 40, infoY + 40);
         let storageY = infoY + 70;
 
         if (storage.length === 0) {
@@ -2594,7 +2609,14 @@ class UIStationMenus {
         if (!Array.isArray(this.storageButtonAreas)) return false;
 
         const stationForStorage = station || player?.currentSystem?.station || null;
-        if (stationForStorage && !Array.isArray(stationForStorage.storage)) {
+        const isSecretBase = this._isSecretBase || (stationForStorage && stationForStorage.isSecret);
+
+        // Initialize storage arrays
+        if (isSecretBase) {
+            if (!Array.isArray(player.secretStorage)) {
+                player.secretStorage = [];
+            }
+        } else if (stationForStorage && !Array.isArray(stationForStorage.storage)) {
             stationForStorage.storage = [];
         }
 
@@ -2603,8 +2625,17 @@ class UIStationMenus {
             const qtyOk = Number.isFinite(entry?.quantity) && entry.quantity > 0;
             return nameOk && qtyOk;
         });
-        if (stationForStorage) {
+
+        // Get the correct storage reference
+        let storageArray;
+        if (isSecretBase) {
+            player.secretStorage = sanitizeCargoList(player.secretStorage);
+            storageArray = player.secretStorage;
+        } else if (stationForStorage) {
             stationForStorage.storage = sanitizeCargoList(stationForStorage.storage);
+            storageArray = stationForStorage.storage;
+        } else {
+            storageArray = [];
         }
         player.cargo = sanitizeCargoList(player.cargo);
 
@@ -2623,14 +2654,15 @@ class UIStationMenus {
                 }
                 const item = player.cargo.find(c => c.name === btn.commodity);
                 if (item && item.quantity > 0) {
-                    const storageItem = stationForStorage.storage.find(s => s.name === btn.commodity);
+                    const storageItem = storageArray.find(s => s.name === btn.commodity);
                     if (storageItem) {
                         storageItem.quantity += item.quantity;
                     } else {
-                        stationForStorage.storage.push({ name: btn.commodity, quantity: item.quantity });
+                        storageArray.push({ name: btn.commodity, quantity: item.quantity });
                     }
                     player.cargo = player.cargo.filter(c => c.name !== btn.commodity);
-                    addMessageFn(`Deposited ${item.quantity}t of ${btn.commodity} into storage.`, [100, 255, 100]);
+                    const storageType = isSecretBase ? "secret storage" : "storage";
+                    addMessageFn(`Deposited ${item.quantity}t of ${btn.commodity} into ${storageType}.`, [100, 255, 100]);
                     if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
                     if (typeof saveGame === 'function') saveGame();
                 }
@@ -2642,7 +2674,7 @@ class UIStationMenus {
                     if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                     return true;
                 }
-                const storageItem = stationForStorage.storage.find(s => s.name === btn.commodity);
+                const storageItem = storageArray.find(s => s.name === btn.commodity);
                 if (storageItem && storageItem.quantity > 0) {
                     const availableSpace = player.cargoCapacity - player.getCargoAmount();
                     const retrieveAmount = Math.min(storageItem.quantity, availableSpace);
@@ -2651,9 +2683,15 @@ class UIStationMenus {
                         player.addCargo(btn.commodity, retrieveAmount);
                         storageItem.quantity -= retrieveAmount;
                         if (storageItem.quantity <= 0) {
-                            stationForStorage.storage = stationForStorage.storage.filter(s => s.name !== btn.commodity);
+                            // Remove empty item from the correct array
+                            if (isSecretBase) {
+                                player.secretStorage = player.secretStorage.filter(s => s.name !== btn.commodity);
+                            } else {
+                                stationForStorage.storage = stationForStorage.storage.filter(s => s.name !== btn.commodity);
+                            }
                         }
-                        addMessageFn(`Retrieved ${retrieveAmount}t of ${btn.commodity} from storage.`, [100, 255, 100]);
+                        const storageType = isSecretBase ? "secret storage" : "storage";
+                        addMessageFn(`Retrieved ${retrieveAmount}t of ${btn.commodity} from ${storageType}.`, [100, 255, 100]);
                         if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
                         if (typeof saveGame === 'function') saveGame();
                     } else {

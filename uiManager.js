@@ -319,17 +319,24 @@ class UIManager {
             factionOption = { text: "Police Station", state: "VIEWING_POLICE" };
         }
 
-        const menuOpts = [
-            { text: "Commodity Market", state: "VIEWING_MARKET" },
-            { text: "Mission Board", state: "VIEWING_MISSIONS" },
-            { text: "Shipyard", state: "VIEWING_SHIPYARD" },
-            { text: "Upgrades", state: "VIEWING_UPGRADES" },
-            { text: "Repairs", state: "VIEWING_REPAIRS" },
-            { text: "Protection Services", state: "VIEWING_PROTECTION" },
-            { text: "Storage Locker", state: "VIEWING_STORAGE" },
-            { text: "Personal Record", state: "VIEWING_RECORD" },
-            { text: "News", state: "VIEWING_NEWS" }
-        ];
+        const menuOpts = [];
+        // Only show market and protection for non-secret bases
+        if (!station.isSecret) {
+            menuOpts.push({ text: "Commodity Market", state: "VIEWING_MARKET" });
+        }
+
+        menuOpts.push({ text: "Mission Board", state: "VIEWING_MISSIONS" });
+        menuOpts.push({ text: "Shipyard", state: "VIEWING_SHIPYARD" });
+        menuOpts.push({ text: "Upgrades", state: "VIEWING_UPGRADES" });
+        menuOpts.push({ text: "Repairs", state: "VIEWING_REPAIRS" });
+
+        if (!station.isSecret) {
+            menuOpts.push({ text: "Protection Services", state: "VIEWING_PROTECTION" });
+        }
+
+        menuOpts.push({ text: "Storage Locker", state: "VIEWING_STORAGE" });
+        menuOpts.push({ text: "Personal Record", state: "VIEWING_RECORD" });
+        menuOpts.push({ text: "News", state: "VIEWING_NEWS" });
         if (factionOption) {
             menuOpts.push(factionOption);
         }
@@ -1209,16 +1216,24 @@ class UIManager {
             return;
         }
 
-        // Ensure storage array exists
-        if (!Array.isArray(activeStation.storage)) {
-            activeStation.storage = [];
+        // Determine which storage to use: secret bases use player.secretStorage
+        const isSecretBase = activeStation.isSecret;
+        if (isSecretBase) {
+            if (!Array.isArray(player.secretStorage)) {
+                player.secretStorage = [];
+            }
+        } else {
+            if (!Array.isArray(activeStation.storage)) {
+                activeStation.storage = [];
+            }
         }
 
         const system = galaxy?.getCurrentSystem();
-        const headerHeight = this.drawStationHeader("Storage Locker", activeStation, player, system);
+        const headerTitle = isSecretBase ? "Secret Storage" : "Storage Locker";
+        const headerHeight = this.drawStationHeader(headerTitle, activeStation, player, system);
 
-        // Delegate rendering
-        this.stationMenus.drawStorageMenu(activeStation, player, panelRect, headerHeight);
+        // Delegate rendering with isSecretBase flag
+        this.stationMenus.drawStorageMenu(activeStation, player, panelRect, headerHeight, isSecretBase);
 
         // Sync button areas back
         this.storageButtonAreas = this.stationMenus.storageButtonAreas;
