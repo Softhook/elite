@@ -388,7 +388,8 @@ class Planet {
         const ringBufferSize = this.hasRings ? Math.ceil(this.ringOuterRad * 2.2) : 0;
 
         // For inhabited planets with atmosphere, we need a larger buffer to contain the city glow
-        let atmBufferSizeFactor = 1.0 + (5 * 0.04);
+        // Reduce the base factor to reduce halo amount, and ensure buffer extends beyond visible fade
+        let atmBufferSizeFactor = 1.5; // Reduced from 1.2 to limit halo
         if (this.isInhabited) {
             // Ensure atmosphere buffer is big enough to contain the city glow (which is r * 2.1)
             atmBufferSizeFactor = Math.max(atmBufferSizeFactor, 2.1);
@@ -679,29 +680,36 @@ class Planet {
         const ctx = pg.drawingContext;
         const cx = bufferCenter, cy = bufferCenter;
 
-        // Atmosphere extends from planet edge outward
-        const innerR = this.radius * 0.9;  // Start slightly inside planet surface for blending
-        const outerR = this.radius * 1.25;  // Extend outward (25% beyond surface)
+        // Atmosphere extends from planet edge outward (reduced halo size)
+        const innerR = this.radius * 0.92;  // Start slightly inside planet surface for blending
+        const outerR = this.radius * 1.15;  // Reduced from 1.25 to make halo smaller
+        
+        // Ensure gradient extends to buffer edge to prevent hard cutoff
+        const bufferMaxR = Math.min(pg.width, pg.height) * 0.5;
 
         // Get color components
         const atmR = Math.round(red(this.atmosphereColor));
         const atmG = Math.round(green(this.atmosphereColor));
         const atmB = Math.round(blue(this.atmosphereColor));
-        const baseAlpha = alpha(this.atmosphereColor) / 255;  // Convert to 0-1 range
+        const baseAlpha = (alpha(this.atmosphereColor) / 255) * 0.7;  // Reduce overall intensity by 30%
 
-        // Create smooth radial gradient from planet surface outward
-        const grad = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
-        grad.addColorStop(0, `rgba(${atmR},${atmG},${atmB},${Math.min(1, baseAlpha * 0.9)})`);
-        grad.addColorStop(0.2, `rgba(${atmR},${atmG},${atmB},${Math.max(0, baseAlpha * 0.7)})`);
-        grad.addColorStop(0.5, `rgba(${atmR},${atmG},${atmB},${Math.max(0, baseAlpha * 0.4)})`);
-        grad.addColorStop(0.75, `rgba(${atmR},${atmG},${atmB},${Math.max(0, baseAlpha * 0.15)})`);
-        grad.addColorStop(1.0, `rgba(${atmR},${atmG},${atmB},0)`);
+        // Create smooth radial gradient from planet surface outward to buffer edge
+        const grad = ctx.createRadialGradient(cx, cy, innerR, cx, cy, bufferMaxR);
+        grad.addColorStop(0, `rgba(${atmR},${atmG},${atmB},${Math.min(1, baseAlpha * 0.8)})`);
+        
+        // Calculate stop positions relative to visible vs buffer size
+        const visibleRatio = outerR / bufferMaxR;
+        grad.addColorStop(visibleRatio * 0.3, `rgba(${atmR},${atmG},${atmB},${Math.max(0, baseAlpha * 0.5)})`);
+        grad.addColorStop(visibleRatio * 0.6, `rgba(${atmR},${atmG},${atmB},${Math.max(0, baseAlpha * 0.25)})`);
+        grad.addColorStop(visibleRatio * 0.85, `rgba(${atmR},${atmG},${atmB},${Math.max(0, baseAlpha * 0.08)})`);
+        grad.addColorStop(Math.min(1.0, visibleRatio * 1.1), `rgba(${atmR},${atmG},${atmB},0)`);
 
-        // Draw gradient circle
+        // Enable smoothing for better gradient quality
+        ctx.imageSmoothingEnabled = true;
+        
+        // Draw gradient circle filling entire buffer to prevent edge artifacts
         ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillRect(0, 0, pg.width, pg.height);
 
         // Debug: Draw center point and buffer edge markers
         // pg.fill(255, 0, 0);
