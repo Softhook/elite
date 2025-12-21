@@ -64,26 +64,37 @@ class Enemy {
         this.role = role;
         this.displayName = (this.role === AI_ROLE.ALIEN) ? null : generateHumanEnemyName();
 
-        // Assign faction based on role and ship type
+        // Assign faction based on role and ship definition's aiRoles
         this.faction = null; // Default to no faction
         if (this.role === AI_ROLE.POLICE) {
             this.faction = "POLICE";
-        } else if (this.role === AI_ROLE.COMBAT) {
-            // Combat ships can be Military, Imperial, or Separatist based on ship type
-            if (actualShipTypeName.includes("Imperial")) {
-                this.faction = "IMPERIAL";
-            } else if (actualShipTypeName.includes("Separatist")) {
-                this.faction = "SEPARATIST";
-            } else {
-                // Military ships (Vulture, Viper, FederalAssaultShip, etc.)
-                this.faction = "MILITARY";
-            }
         } else if (this.role === AI_ROLE.ALIEN) {
             this.faction = "ALIEN";
+        } else if (this.role === AI_ROLE.COMBAT || this.role === AI_ROLE.GUARD) {
+            // Use ship definition's aiRoles to determine faction - much more reliable than string matching
+            if (shipDef && shipDef.aiRoles) {
+                if (shipDef.aiRoles.includes('IMPERIAL')) {
+                    this.faction = "IMPERIAL";
+                } else if (shipDef.aiRoles.includes('SEPARATIST')) {
+                    this.faction = "SEPARATIST";
+                } else if (shipDef.aiRoles.includes('MILITARY')) {
+                    this.faction = "MILITARY";
+                }
+            }
+            // Fallback to MILITARY for combat ships without specific faction
+            if (this.faction === null) {
+                this.faction = "MILITARY";
+            }
         }
-        // Set faction based on aiRoles if not set
-        if (this.faction === null && shipDef.aiRoles && shipDef.aiRoles.includes("MILITARY")) {
-            this.faction = "MILITARY";
+        // Set faction based on aiRoles if not already set (catches HAULER, TRANSPORT with faction ships)
+        if (this.faction === null && shipDef && shipDef.aiRoles) {
+            if (shipDef.aiRoles.includes('IMPERIAL')) {
+                this.faction = "IMPERIAL";
+            } else if (shipDef.aiRoles.includes('SEPARATIST')) {
+                this.faction = "SEPARATIST";
+            } else if (shipDef.aiRoles.includes('MILITARY')) {
+                this.faction = "MILITARY";
+            }
         }
 
         // Add forced combat timer

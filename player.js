@@ -2508,6 +2508,38 @@ class Player {
                             else if (clickedAsteroid) label = 'Asteroid';
                             uiManager.addMessage(`Target locked: ${label}`, [0, 255, 0]);
                         }
+
+                        // === PATROL MISSION SCAN PROGRESS ===
+                        // If player has a patrol mission and locked onto an enemy, count as a scan
+                        if (clickedEnemy && this.activeMission &&
+                            typeof FACTION_PATROL_TYPES !== 'undefined' &&
+                            FACTION_PATROL_TYPES.has(this.activeMission.type)) {
+
+                            // Track scanned ships to avoid duplicate progress
+                            if (!this.activeMission._scannedShipIds) {
+                                this.activeMission._scannedShipIds = new Set();
+                            }
+
+                            const shipId = clickedEnemy.id || clickedEnemy;
+                            if (!this.activeMission._scannedShipIds.has(shipId)) {
+                                this.activeMission._scannedShipIds.add(shipId);
+                                this.activeMission.progressCount = (this.activeMission.progressCount || 0) + 1;
+
+                                const progress = this.activeMission.progressCount;
+                                const targetCount = this.activeMission.targetCount;
+                                if (typeof uiManager !== 'undefined') {
+                                    uiManager.addMessage(`Vessel scanned: ${progress}/${targetCount}`, [255, 215, 0]);
+                                }
+
+                                // Check if mission is complete
+                                if (progress >= targetCount) {
+                                    if (typeof uiManager !== 'undefined') {
+                                        uiManager.addMessage('Patrol objective complete! Return for payment.', [100, 255, 100]);
+                                    }
+                                    this.completeMission();
+                                }
+                            }
+                        }
                     }
                 } else { // No object was clicked (clicked on background)
                     if (this.target !== null) { // If there was a target, clear it

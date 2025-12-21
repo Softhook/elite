@@ -419,7 +419,10 @@ class EnemyDamageSystem {
      * @returns {boolean}
      */
     _isImperialShip() {
-        // Check if this ship type is in the IMPERIAL_SHIPS array
+        // Check faction property first (set in Enemy constructor)
+        if (this.faction === 'IMPERIAL') return true;
+
+        // Fallback: Check if this ship type is in the IMPERIAL_SHIPS array
         return typeof IMPERIAL_SHIPS !== 'undefined' &&
             Array.isArray(IMPERIAL_SHIPS) &&
             IMPERIAL_SHIPS.includes(this.shipTypeName);
@@ -430,7 +433,10 @@ class EnemyDamageSystem {
      * @returns {boolean}
      */
     _isSeparatistShip() {
-        // Check if this ship type is in the SEPARATIST_SHIPS array
+        // Check faction property first (set in Enemy constructor)
+        if (this.faction === 'SEPARATIST') return true;
+
+        // Fallback: Check if this ship type is in the SEPARATIST_SHIPS array
         return typeof SEPARATIST_SHIPS !== 'undefined' &&
             Array.isArray(SEPARATIST_SHIPS) &&
             SEPARATIST_SHIPS.includes(this.shipTypeName);
