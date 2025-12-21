@@ -14,7 +14,7 @@ const STATION_TEXT_SIZE = {
     BODY: 20,        // Standard body text, descriptions
     SMALL: 14,       // Secondary info, hints, smaller labels
     HELPER: 10,      // Smallest helper text, footnotes
-    GAME_OVER: 120   // Game over screen
+    GAME_OVER: 200   // Game over screen
 };
 
 /**

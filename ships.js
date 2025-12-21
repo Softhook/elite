@@ -2379,59 +2379,54 @@ function drawObsidianOrb(s, thrusting = false, angle = 0, localSunAngle = -0.785
     let corePulse = 1.0 + sin(t * 0.8) * 0.15;
     let ringPulse = sin(t * 1.2) * 0.5 + 0.5;
 
-    // Draw outer layers (rotating slowly)
+    // 1. Draw 3D Armor Base (from vertex definition)
     push();
     rotate(outerRotAngle);
+    // Draw base deeper to sit under the orb
     drawGenericAlienShip(def, s, thrusting, outerRotAngle, localSunAngle);
     pop();
 
-    // Energy rings - multiple concentric rings with varying opacity
-    noFill();
-    strokeWeight(2);
-
+    // 2. 3D Energy Rings (Orbiting the orb)
     // Outer ring - violet glow
-    stroke(120, 80, 200, 80 + ringPulse * 120);
-    ellipse(0, 0, s * 1.15, s * 0.22);
+    let ringCol1 = color(120, 80, 200, 160 + ringPulse * 90);
+    Draw3D.drawRing3D(0, 0, r * 1.2, r * 1.1, 32, s * 0.05, ringCol1, angle, localSunAngle, innerRotAngle);
 
     // Mid ring - purple
-    stroke(100, 60, 180, 60 + ringPulse * 100);
-    ellipse(0, 0, s * 1.08, s * 0.18);
+    let ringCol2 = color(100, 60, 180, 140 + ringPulse * 80);
+    // Tilted ring effect by using different radii or rotation? 
+    // drawRing3D supports 'shapeRotation'. To tilt, we'd need a different primitive or just offset.
+    // For now, concentric flat rings at different depths looks good in this style.
+    Draw3D.drawRing3D(0, 0, r * 0.9, r * 0.8, 24, s * 0.1, ringCol2, angle, localSunAngle, outerRotAngle);
 
-    // Inner ring - deep violet
-    stroke(80, 50, 150, 40 + ringPulse * 80);
-    ellipse(0, 0, s * 1.0, s * 0.14);
+    // 3. Central Obsidian Dome (The Orb)
+    // Draw a dark, shiny globe
+    let orbColor = color(40, 30, 60); // Dark obsidian base
+    // Pulse size slightly
+    let orbSize = r * 0.7 * corePulse;
 
-    // Rotating energy field (counter-rotating ethereal effect)
+    // Draw Dome
+    // Use 'angle' for extrusion direction to match ship orientation
+    Draw3D.drawDome(0, 0, orbSize, 16, orbColor, angle, localSunAngle);
+
+    // 4. Inner Crystalline Glow (smaller dome on top or just visual bloom)
+    let glowColor = color(180, 120, 255, 100);
+    Draw3D.drawDome(0, 0, orbSize * 0.6, 12, glowColor, angle, localSunAngle);
+
+    // 5. Rotating energy field (wireframe sphere effect using rings?)
     push();
     rotate(innerRotAngle);
     strokeWeight(1);
     noFill();
     for (let i = 0; i < 3; i++) {
         let offset = i * TWO_PI / 3;
-        let radius = r * 0.6;
-        stroke(100, 70, 180, 60 - i * 15);
-        circle(cos(offset) * radius * 0.3, sin(offset) * radius * 0.3, r * 0.4);
+        let radius = r * 0.8; // Larger than orb
+        stroke(150, 100, 255, 60);
+        // Draw simple 2D ellipses as "orbiting electron" style paths around the 3D orb
+        let orbX = cos(offset) * radius * 0.3;
+        let orbY = sin(offset) * radius * 0.3;
+        ellipse(orbX, orbY, r * 0.5, r * 0.2);
     }
     pop();
-
-    // Crystalline core highlight - pulsing bright center
-    noStroke();
-
-    // Outer glow
-    fill(150, 100, 220, 40 * corePulse);
-    ellipse(0, 0, r * 0.5 * corePulse);
-
-    // Inner glow
-    fill(180, 120, 255, 60 * corePulse);
-    ellipse(0, 0, r * 0.35 * corePulse);
-
-    // Core highlight (off-center for dimension)
-    fill(220, 180, 255, 80);
-    ellipse(-r * 0.08, -r * 0.08, r * 0.2, r * 0.2);
-
-    // Brightest center point
-    fill(255, 220, 255, 120);
-    ellipse(-r * 0.05, -r * 0.05, r * 0.1, r * 0.1);
 }
 
 function drawTesseractScout(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
