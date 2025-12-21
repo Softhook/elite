@@ -530,7 +530,7 @@ class UIHUD {
             const weapon = player.weapons[index];
             const isSelected = (index === weaponIdx);
             const slotPadding = 10;
-            const slotText = `${index + 1}: ${weapon.name}`;
+            const slotText = weapon ? `${index + 1}: ${weapon.name}` : `${index + 1}:`;
             const textW = textWidth(slotText);
             const slotW = textW + slotPadding * 2;
 

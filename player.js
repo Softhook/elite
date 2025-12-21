@@ -89,6 +89,12 @@ class Player {
             shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS["Sidewinder"] : null;
         }
 
+        // Store ship definition on instance for recalculateStats and other methods
+        this.shipDefinition = shipDef;
+
+        // Initialize installed upgrades tracking (all start at level 0)
+        this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0 };
+
         return shipDef;
     }
 
@@ -163,6 +169,9 @@ class Player {
 
         // Weapons
         this.weapons = [];
+        // Use armament array length as base weapon slots since ships don't have a weaponSlots property
+        this.weaponSlots = (shipDef.armament && shipDef.armament.length) || 1;
+        this.maxWeapons = this.weaponSlots;
         this.weaponIndex = 0;
         this.weaponHeat = {};
         this.currentWeapon = (typeof WEAPON_UPGRADES !== 'undefined')
@@ -572,6 +581,11 @@ class Player {
                     console.warn("   Complete failed: Not at destination system.");
                     return false;
                 }
+                // Check we're at the correct station (if specified)
+                if (this.activeMission.destinationStation && currentStation.name !== this.activeMission.destinationStation) {
+                    console.warn("   Complete failed: Not at destination station.");
+                    return false;
+                }
                 // Check cargo if required
                 if (this.activeMission.cargoType && this.activeMission.cargoQuantity > 0) {
                     if (!this.hasCargo(this.activeMission.cargoType, this.activeMission.cargoQuantity)) {
@@ -665,7 +679,9 @@ class Player {
         this.maxHull = def.baseHull;
         this.hull = def.baseHull;
         this.cargoCapacity = def.cargoCapacity;
-        this.weaponSlots = def.weaponSlots;
+        // Use armament array length as base weapon slots since ships don't have a weaponSlots property
+        this.weaponSlots = (def.armament && def.armament.length) || 1;
+        this.maxWeapons = this.weaponSlots; // Sync maxWeapons for UI compatibility
 
         // Update shield properties
         this.maxShield = def.baseShield || 0;
@@ -676,8 +692,129 @@ class Player {
         this.loadWeaponsFromShipDefinition(shipTypeName);
 
         // Recalculate any derived properties
+        this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0 }; // Reset upgrades on ship change
         this.calculateRadianProperties && this.calculateRadianProperties();
         this.updateShipVisual && this.updateShipVisual();
+    }
+
+    /**
+     * Applies a ship upgrade and recalculates stats.
+     * @param {string} type - 'armor', 'engine', 'cargo', 'hardpoints'
+     * @param {number} level - 1, 2, 3
+     */
+    applyUpgrade(type, level) {
+        if (!this.installedUpgrades) this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0 };
+
+        const oldMaxHull = this.maxHull;
+        const oldMaxShield = this.maxShield;
+
+        // Update state
+        this.installedUpgrades[type] = level;
+
+        // Apply effects
+        this.recalculateStats();
+
+        // For Armor upgrades, increase current hull by the gained amount
+        if (type === 'armor') {
+            const hullDiff = this.maxHull - oldMaxHull;
+            if (hullDiff > 0) {
+                this.hull += hullDiff;
+            }
+        }
+
+        // For Shield upgrades, increase current shield by the gained amount
+        if (type === 'shield') {
+            const shieldDiff = this.maxShield - oldMaxShield;
+            if (shieldDiff > 0) {
+                this.shield += shieldDiff;
+            }
+        }
+
+        // Feedback
+        if (typeof uiManager !== 'undefined') {
+            const upgName = SHIP_UPGRADES.find(u => u.type === type && u.level === level)?.name || "Upgrade";
+            uiManager.addMessage(`Installed: ${upgName}`, [100, 255, 100]);
+        }
+    }
+
+    /**
+     * Recalculates ship stats based on base definition and active upgrades.
+     */
+    recalculateStats() {
+        const def = this.shipDefinition;
+        if (!def) return;
+
+        // Reset to base
+        this.maxHull = def.baseHull;
+        this.baseMaxSpeed = def.baseMaxSpeed;
+        this.thrustForce = def.baseThrust;
+        this.cargoCapacity = def.cargoCapacity;
+        // Weapon slots are tricky, we handle them carefully below
+
+        // 1. Armor Upgrades
+        if (this.installedUpgrades.armor > 0) {
+            const upg = SHIP_UPGRADES.find(u => u.type === 'armor' && u.level === this.installedUpgrades.armor);
+            if (upg) {
+                this.maxHull += upg.hullBonus;
+            }
+        }
+        // Clamp current hull to new max (don't heal implicitly, but cap it)
+        this.hull = Math.min(this.hull, this.maxHull);
+
+        // 2. Engine Upgrades
+        if (this.installedUpgrades.engine > 0) {
+            const upg = SHIP_UPGRADES.find(u => u.type === 'engine' && u.level === this.installedUpgrades.engine);
+            if (upg) {
+                this.baseMaxSpeed *= upg.speedMultiplier;
+                this.thrustForce *= upg.thrustMultiplier;
+            }
+        }
+        // Update derived speed (drag/boost rely on baseMaxSpeed, usually recalculated in update but good to set)
+        this.maxSpeed = this.baseMaxSpeed;
+
+
+        // 3. Cargo Upgrades
+        if (this.installedUpgrades.cargo > 0) {
+            const upg = SHIP_UPGRADES.find(u => u.type === 'cargo' && u.level === this.installedUpgrades.cargo);
+            if (upg) {
+                this.cargoCapacity += upg.cargoBonus;
+            }
+        }
+
+        // 4. Hardpoint Upgrades (Weapon Slots)
+        let totalSlots = (def.armament && def.armament.length) || 1; // Base slots from armament array
+        if (this.installedUpgrades.hardpoints > 0) {
+            const upg = SHIP_UPGRADES.find(u => u.type === 'hardpoints' && u.level === this.installedUpgrades.hardpoints);
+            if (upg) {
+                totalSlots += upg.bonusSlots;
+            }
+        }
+
+        // Apply slot changes
+        if (this.weaponSlots !== totalSlots) {
+            this.maxWeapons = totalSlots; // Sync maxWeapons with totalSlots for UI compatibility
+            this.weaponSlots = totalSlots;
+            // Resize weapons array if needed
+            if (this.weapons.length < totalSlots) {
+                // Expand
+                while (this.weapons.length < totalSlots) {
+                    this.weapons.push(null);
+                }
+            }
+            // Note: We don't truncate on downgrade here to avoid deleting items accidentally.
+            // If we wanted to enforce strict limits on downgrade, we'd need complex logic to decide what to drop.
+        }
+
+        // 5. Shield Upgrades
+        this.maxShield = def.baseShield || 100; // Reset to base
+        if (this.installedUpgrades.shield > 0) {
+            const upg = SHIP_UPGRADES.find(u => u.type === 'shield' && u.level === this.installedUpgrades.shield);
+            if (upg) {
+                this.maxShield += upg.shieldBonus;
+            }
+        }
+        // Clamp current shield
+        this.shield = Math.min(this.shield, this.maxShield);
     }
 
     /** Loads weapons based on ship's standard armament */
@@ -789,7 +926,7 @@ class Player {
 
         const weapon = this.weapons[index];
         if (!weapon) {
-            console.warn(`switchToWeapon: no weapon at index ${index}`);
+            // Silently ignore - user pressed a slot key with no weapon
             return false;
         }
 
@@ -2064,6 +2201,7 @@ class Player {
 
         return {
             shipTypeName: this.shipTypeName,
+            installedUpgrades: this.installedUpgrades || { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0 }, // Save upgrades
             pos: { x: this.pos.x, y: this.pos.y }, vel: { x: this.vel.x, y: this.vel.y }, angle: normalizedAngle,
             hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(cleanedCargo)),
             isWanted: this.isWanted,
@@ -2126,8 +2264,18 @@ class Player {
 
         console.log("Player.loadSaveData: Loading data...");
 
-        // Load ship definition (which will populate weapons array)
-        let typeToLoad = data.shipTypeName || "Sidewinder"; this.applyShipDefinition(typeToLoad);
+        // Apply ship definition based on loaded ship type
+        // This will also initialize weapons if they are not explicitly saved or if ship type changed
+        let typeToLoad = data.shipTypeName || "Sidewinder";
+        this.applyShipDefinition(typeToLoad);
+
+        // RESTORE UPGRADES
+        if (data.installedUpgrades) {
+            this.installedUpgrades = { ...data.installedUpgrades };
+            // Recalculate stats immediately to apply bonuses (hull, slots, etc.)
+            this.recalculateStats();
+        }
+
         this.pos = data.pos ? createVector(data.pos.x, data.pos.y) : createVector(0, 0);
         this.vel = data.vel ? createVector(data.vel.x, data.vel.y) : createVector(0, 0);
         let loadedAngle = data.angle ?? 0; if (typeof loadedAngle !== 'number' || isNaN(loadedAngle)) { this.angle = 0; } else { this.angle = (loadedAngle % TWO_PI + TWO_PI) % TWO_PI; }
@@ -2699,16 +2847,18 @@ class Player {
             return false;
         }
 
-        // Validate required properties
-        const requiredProps = ['name', 'type', 'damage', 'fireRate'];
+        // Validate required properties (barriers use damageReduction instead of damage)
+        const isBarrier = weapon.type === 'barrier';
+        const requiredProps = isBarrier
+            ? ['name', 'type', 'damageReduction', 'fireRate']
+            : ['name', 'type', 'damage', 'fireRate'];
         if (!requiredProps.every(prop => weapon[prop] !== undefined)) {
             console.warn(`Weapon missing required properties: ${JSON.stringify(weapon)}`);
             return false;
         }
 
-        // Get slot count from armament array length
-        const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
-        const availableSlots = shipDef?.armament?.length || 1;
+        // Get slot count (use current capacity which accounts for upgrades)
+        const availableSlots = this.weaponSlots || (SHIP_DEFINITIONS[this.shipTypeName]?.armament?.length || 1);
 
         // Validate slot index
         if (slotIndex < 0 || slotIndex >= availableSlots) {

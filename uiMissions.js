@@ -306,6 +306,18 @@ class UIMissions {
                     canCompleteHere = true;
                 }
 
+                // Check faction delivery missions (e.g., SEPARATIST_SUPPLY)
+                if (typeof FACTION_DELIVERY_TYPES !== 'undefined' &&
+                    FACTION_DELIVERY_TYPES.has(activeMission.type)) {
+                    const atRightSystem = currentSystem && activeMission.destinationSystem === currentSystem.name;
+                    const atRightStation = currentStation && activeMission.destinationStation === currentStation.name;
+                    const hasCargo = player.hasCargo && player.hasCargo(activeMission.cargoType, activeMission.cargoQuantity);
+
+                    if (atRightSystem && atRightStation && hasCargo) {
+                        canCompleteHere = true;
+                    }
+                }
+
                 if (canCompleteHere) {
                     this.missionDetailButtonAreas['complete'] = UIComponents.drawButton(
                         actionBtnX, btnDetailY, btnDetailW, btnDetailH,

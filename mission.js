@@ -4,8 +4,8 @@
 const MISSION_TYPE = {
     DELIVERY_LEGAL: 'Legal delivery',
     DELIVERY_ILLEGAL: 'Illegal delivery',
-    BOUNTY_PIRATE: 'Bounty',
-    BOUNTY_POLICE: 'Bounty',
+    BOUNTY_PIRATE: 'Pirate Bounty',
+    BOUNTY_POLICE: 'Police Bounty',
     BOUNTY_ALIEN: 'Alien Bounty',
     ASSASSINATION: 'Assassination',
     SABOTAGE: 'Sabotage',
@@ -80,11 +80,11 @@ class Mission {
         this.status = data.status || 'Available';
         this.progressCount = data.progressCount || 0;
 
-        // Location data
-        this.originSystem = data.originSystem || 'Unknown';
-        this.originStation = data.originStation || 'Unknown';
-        this.destinationSystem = data.destinationSystem || 'Unknown';
-        this.destinationStation = data.destinationStation || 'Unknown';
+        // Location data - use nullish coalescing to preserve explicit null (for "anywhere" missions)
+        this.originSystem = data.originSystem ?? 'Unknown';
+        this.originStation = data.originStation ?? 'Unknown';
+        this.destinationSystem = data.destinationSystem ?? null;  // null = can complete anywhere
+        this.destinationStation = data.destinationStation ?? null;  // null = can complete at any station
         this.destinationSystemIndex = data.destinationSystemIndex;
         this.spawnSystemIndex = data.spawnSystemIndex ?? data.systemIndex ?? null;
 
@@ -768,36 +768,106 @@ class Mission {
 
     /** Get location string for details */
     _getLocationString() {
-        if (this.type === MISSION_TYPE.SABOTAGE) {
+        // Sabotage missions - show planet/system location
+        if (this.type === MISSION_TYPE.SABOTAGE || FACTION_SABOTAGE_TYPES?.has(this.type)) {
             if (this.targetPlanetName) return `Near ${this.targetPlanetName} in ${this.destinationSystem || 'the target system'}`;
             if (this.destinationSystem) return this.destinationSystem;
+            return 'Target system specified in mission';
         }
 
+        // Strike missions - require specific system
+        if (this.type === MISSION_TYPE.IMPERIAL_STRIKE ||
+            this.type === MISSION_TYPE.SEPARATIST_STRIKE ||
+            this.type === MISSION_TYPE.MILITARY_STRIKE) {
+            if (this.destinationSystem) return `Target: ${this.destinationSystem}`;
+            return 'Designated strike zone';
+        }
+
+        // Delivery/Supply missions - need station and system
+        if (DELIVERY_TYPES?.has(this.type) || FACTION_DELIVERY_TYPES?.has(this.type)) {
+            if (this.destinationSystem && this.destinationStation) {
+                return `${this.destinationStation} (${this.destinationSystem})`;
+            }
+            if (this.destinationSystem) return this.destinationSystem;
+            return 'Destination specified';
+        }
+
+        // Bounty/Elimination/Raid/Defense/Patrol - can complete anywhere
+        if (BOUNTY_TYPES?.has(this.type) ||
+            FACTION_KILL_TYPES?.has(this.type) ||
+            FACTION_PATROL_TYPES?.has(this.type)) {
+            return 'Any System';
+        }
+
+        // Assassination - target spawns in destination system or local space
+        if (this.type === MISSION_TYPE.ASSASSINATION) {
+            if (this.destinationSystem) {
+                return `Target Location: ${this.destinationSystem}`;
+            }
+            return 'Target will appear in local space';
+        }
+
+        // Fallback for missions with explicit destinations
         if (this.destinationSystem) {
             return `${this.destinationStation || 'System Wide'} (${this.destinationSystem})`;
         }
-
-        if (BOUNTY_TYPES.has(this.type)) return 'Any System';
 
         return 'N/A';
     }
 
     /** Get objective string for details */
     _getObjectiveString() {
+        // Normal delivery missions
         if (DELIVERY_TYPES.has(this.type) && this.cargoType) {
             return `Objective: Deliver ${this.cargoQuantity}t ${this.cargoType}\n`;
         }
 
+        // Faction delivery/supply missions
+        if (FACTION_DELIVERY_TYPES?.has(this.type) && this.cargoType) {
+            return `Objective: Deliver ${this.cargoQuantity}t ${this.cargoType}\n`;
+        }
+
+        // Bounty missions (pirates, police, aliens)
         if (BOUNTY_TYPES.has(this.type) && this.targetDesc) {
             return `Objective: ${this.targetDesc}\n`;
         }
 
+        // Faction kill missions (elimination, raid, strike)
+        if (FACTION_KILL_TYPES?.has(this.type)) {
+            if (this.targetDesc) {
+                return `Objective: ${this.targetDesc}\n`;
+            }
+            if (this.targetCount) {
+                return `Objective: Destroy ${this.targetCount} enemy vessels\n`;
+            }
+        }
+
+        // Faction patrol missions (scan/defense)
+        if (FACTION_PATROL_TYPES?.has(this.type)) {
+            if (this.targetDesc) {
+                return `Objective: ${this.targetDesc}\n`;
+            }
+            if (this.targetCount) {
+                return `Objective: Neutralize ${this.targetCount} hostiles\n`;
+            }
+        }
+
+        // Faction sabotage missions
+        if (FACTION_SABOTAGE_TYPES?.has(this.type)) {
+            if (this.targetObjectType) {
+                return `Objective: Destroy ${this.targetObjectType}\n`;
+            }
+            return `Objective: Sabotage enemy infrastructure\n`;
+        }
+
+        // Assassination
         if (this.type === MISSION_TYPE.ASSASSINATION) {
             return this.targetName ?
                 `Objective: Eliminate ${this.targetName}\n` :
                 `Objective: Eliminate designated target\n`;
         }
 
+        // Regular sabotage
         if (this.type === MISSION_TYPE.SABOTAGE) {
             const desc = this.description || '';
             const hasObjective = desc.includes('Sabotage Objective:') ||

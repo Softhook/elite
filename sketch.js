@@ -643,9 +643,17 @@ function handleMapToggle() {
 
 /**
  * Toggle secret base navigation
+ * Only available for Imperial, Separatist, or Military faction members
  */
 function handleSecretBaseNavigation() {
     if (gameStateManager.currentState !== "IN_FLIGHT" || !player) return false;
+
+    // Only Imperial, Separatist, or Military faction members have access to secret bases
+    const allowedFactions = ['IMPERIAL', 'SEPARATIST', 'MILITARY'];
+    const playerFaction = player.playerFaction;
+    if (!playerFaction || !allowedFactions.includes(playerFaction)) {
+        return false;
+    }
 
     const wasActive = player.showSecretBaseNavigation;
     player.showSecretBaseNavigation = !wasActive;
@@ -1010,7 +1018,7 @@ function __buildSaveData() {
             const dockedStation = gameStateManager.currentDockedStation;
             const mainStation = player?.currentSystem?.station;
             const secretStations = player?.currentSystem?.secretStations || [];
-            
+
             // Check if docked at a secret station
             const secretIndex = secretStations.findIndex(s => s === dockedStation);
             if (secretIndex >= 0 && dockedStation) {
@@ -1021,7 +1029,7 @@ function __buildSaveData() {
                     stationName: dockedStation.name || null
                 };
             }
-            
+
             // Docked at main station
             if (mainStation) {
                 return {
@@ -1296,7 +1304,7 @@ function loadGame(slotIndex) {
                     // Restore station docking if applicable and space-object restoration did not run
                     if (!restoredDockState && dockingState.state === "DOCKED") {
                         gameStateManager.currentDockedSpaceObject = null;
-                        
+
                         // Check if we were docked at a secret station
                         let dockedStation = null;
                         if (dockingState.isSecretStation && dockingState.secretStationIndex !== undefined) {
@@ -1306,13 +1314,13 @@ function loadGame(slotIndex) {
                                 console.log("Restoring dock at SECRET station:", dockedStation.name);
                             }
                         }
-                        
+
                         // Fall back to main station if secret station not found
                         if (!dockedStation && player.currentSystem.station) {
                             dockedStation = player.currentSystem.station;
                             console.log("Restoring dock at MAIN station:", dockedStation.name);
                         }
-                        
+
                         if (dockedStation) {
                             gameStateManager.currentDockedStation = dockedStation;
                             // Position player at the correct station

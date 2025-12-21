@@ -912,6 +912,196 @@
             });
         });
 
+        // ============================================
+        // Faction Delivery Mission Completion Tests
+        // ============================================
+
+        describe('Faction Delivery Mission Completion', () => {
+            it('should require destination system for faction delivery', () => {
+                const mission = new Mission({
+                    id: 500,
+                    title: 'Separatist Supply Run',
+                    type: MISSION_TYPE.SEPARATIST_SUPPLY,
+                    cargoType: 'Weapons',
+                    cargoQuantity: 10,
+                    rewardCredits: 5000,
+                    destinationSystem: 'Target System',
+                    destinationStation: 'Target Station'
+                });
+                expect(mission.destinationSystem).toBe('Target System');
+                expect(mission.destinationStation).toBe('Target Station');
+            });
+
+            it('should be in FACTION_DELIVERY_TYPES set', () => {
+                expect(FACTION_DELIVERY_TYPES).toBeDefined();
+                expect(FACTION_DELIVERY_TYPES.has(MISSION_TYPE.SEPARATIST_SUPPLY)).toBe(true);
+            });
+
+            it('should have both system and station for delivery missions', () => {
+                const mission = new Mission({
+                    id: 501,
+                    title: 'Supply Mission',
+                    type: MISSION_TYPE.SEPARATIST_SUPPLY,
+                    cargoType: 'Medicine',
+                    cargoQuantity: 5,
+                    destinationSystem: 'Rebel System',
+                    destinationStation: 'Rebel Base',
+                    rewardCredits: 3000
+                });
+                // Both must be set for proper completion checking
+                expect(mission.destinationSystem).toBeTruthy();
+                expect(mission.destinationStation).toBeTruthy();
+            });
+        });
+
+        // ============================================
+        // Faction Kill Mission Location Tests
+        // ============================================
+
+        describe('Faction Kill Mission Locations', () => {
+            it('IMPERIAL_ELIMINATION should allow completion anywhere (no destination)', () => {
+                const mission = new Mission({
+                    id: 600,
+                    title: 'Imperial Order: Eliminate 3 Separatist Vessels',
+                    type: MISSION_TYPE.IMPERIAL_ELIMINATION,
+                    targetCount: 3,
+                    rewardCredits: 5000,
+                    destinationSystem: null,
+                    destinationStation: null
+                });
+                expect(mission.destinationSystem).toBeNull();
+                expect(FACTION_KILL_TYPES.has(mission.type)).toBe(true);
+            });
+
+            it('SEPARATIST_RAID should allow completion anywhere (no destination)', () => {
+                const mission = new Mission({
+                    id: 601,
+                    title: 'Freedom Strike: Destroy 2 Imperial Ships',
+                    type: MISSION_TYPE.SEPARATIST_RAID,
+                    targetCount: 2,
+                    rewardCredits: 4000,
+                    destinationSystem: null,
+                    destinationStation: null
+                });
+                expect(mission.destinationSystem).toBeNull();
+                expect(FACTION_KILL_TYPES.has(mission.type)).toBe(true);
+            });
+
+            it('MILITARY_EXTERMINATION should allow completion anywhere (no destination)', () => {
+                const mission = new Mission({
+                    id: 602,
+                    title: 'Xeno Command: Exterminate 3 Alien Threats',
+                    type: MISSION_TYPE.MILITARY_EXTERMINATION,
+                    targetCount: 3,
+                    rewardCredits: 6000,
+                    destinationSystem: null,
+                    destinationStation: null
+                });
+                expect(mission.destinationSystem).toBeNull();
+                expect(FACTION_KILL_TYPES.has(mission.type)).toBe(true);
+            });
+
+            it('IMPERIAL_STRIKE should specify destination system', () => {
+                const mission = new Mission({
+                    id: 603,
+                    title: 'Imperial Strike: Assault Rebel Sector',
+                    type: MISSION_TYPE.IMPERIAL_STRIKE,
+                    targetCount: 4,
+                    rewardCredits: 8000,
+                    destinationSystem: 'Rebel Sector'
+                });
+                expect(mission.destinationSystem).toBe('Rebel Sector');
+                expect(FACTION_KILL_TYPES.has(mission.type)).toBe(true);
+            });
+
+            it('SEPARATIST_STRIKE should specify destination system', () => {
+                const mission = new Mission({
+                    id: 604,
+                    title: 'Liberation Strike: Attack Imperial Territory',
+                    type: MISSION_TYPE.SEPARATIST_STRIKE,
+                    targetCount: 4,
+                    rewardCredits: 7500,
+                    destinationSystem: 'Imperial Territory'
+                });
+                expect(mission.destinationSystem).toBe('Imperial Territory');
+                expect(FACTION_KILL_TYPES.has(mission.type)).toBe(true);
+            });
+
+            it('MILITARY_DEFENSE should allow completion anywhere', () => {
+                const mission = new Mission({
+                    id: 605,
+                    title: 'System Defense: Neutralize 5 Hostiles',
+                    type: MISSION_TYPE.MILITARY_DEFENSE,
+                    targetCount: 5,
+                    rewardCredits: 4500,
+                    destinationSystem: null
+                });
+                expect(mission.destinationSystem).toBeNull();
+                expect(FACTION_PATROL_TYPES.has(mission.type)).toBe(true);
+            });
+        });
+
+        // ============================================
+        // MissionGenerator Faction Mission Tests
+        // ============================================
+
+        describe('MissionGenerator Faction Missions', () => {
+            let system;
+            let station;
+            let galaxy;
+            let player;
+
+            beforeEach(() => {
+                galaxy = createMockGalaxy(8);
+                system = galaxy.systems[0];
+                station = system.station;
+                player = createMockPlayer();
+                player.playerFaction = 'SEPARATIST';
+                player.getFactionRank = () => 1;
+            });
+
+            it('should generate supply mission with destinationStation', () => {
+                // Force the random selection to 'supply' type
+                const origRandom = window.random;
+                let callCount = 0;
+                window.random = (arr) => {
+                    if (Array.isArray(arr)) {
+                        // First call selects mission type
+                        if (callCount === 0) {
+                            callCount++;
+                            return 'supply';
+                        }
+                        // Other calls for cargo selection
+                        return arr[0];
+                    }
+                    // For numeric ranges
+                    if (typeof arr === 'number') {
+                        return arr;
+                    }
+                    return origRandom(arr);
+                };
+
+                try {
+                    const context = {
+                        originSystem: system,
+                        originStation: station,
+                        galaxy: galaxy,
+                        player: player
+                    };
+                    // Call the internal method directly
+                    const mission = MissionGenerator._createSeparatistMission(
+                        system, station, galaxy, player, 1.0
+                    );
+                    if (mission && mission.type === MISSION_TYPE.SEPARATIST_SUPPLY) {
+                        expect(mission.destinationSystem).toBeTruthy();
+                        expect(mission.destinationStation).toBeTruthy();
+                    }
+                } finally {
+                    window.random = origRandom;
+                }
+            });
+        });
+
         // Run all tests
         runTests();
     </script>

@@ -815,6 +815,9 @@ class GameStateManager {
 
         if (dockStation) {
             this.currentDockedStation = dockStation; // Track the actual docked station
+            // Clear cached missions so the new station generates its own mission list
+            this.currentStationMissions = null;
+            this.selectedMissionIndex = -1;
             this.setState("DOCKED");
             this._savegameOnDocking();
             return;
@@ -828,6 +831,9 @@ class GameStateManager {
                     typeof spaceObj.canPlayerDock === 'function' &&
                     spaceObj.canPlayerDock(player)) {
                     this.currentDockedSpaceObject = spaceObj;
+                    // Clear cached missions so the new location generates its own mission list
+                    this.currentStationMissions = null;
+                    this.selectedMissionIndex = -1;
                     this.setState("DOCKED_SPACE_OBJECT");
                     // Save on space-object docking (e.g., underground market) just like stations
                     this._savegameOnDocking();

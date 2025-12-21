@@ -1342,4 +1342,105 @@ function getFacetShading(normalX, normalY, sunDirX, sunDirY) {
     return 0.4 + 0.8 * ((dot + 1) / 2);
 }
 
+/**
+ * Draws a 3D visualization for a ship upgrade.
+ * @param {string} type - Upgrade type (armor, engine, cargo, hardpoints)
+ * @param {number} level - Upgrade level (1-3)
+ * @param {number} x - Center X
+ * @param {number} y - Center Y
+ * @param {number} size - Base size unit
+ * @param {number} angle - Rotation angle
+ */
+Draw3D.drawUpgradeModel = function (type, level, x, y, size, angle) {
+    const sunAngle = -Math.PI / 4; // Standard lighting
+    const time = (typeof millis === 'function' ? millis() : 0) / 1000;
+
+    const getLevelColor = (baseCol) => {
+        // Shift hue/sat slightly based on level
+        if (level === 2) return color(red(baseCol) * 0.9, green(baseCol) * 1.1, blue(baseCol) * 1.1);
+        if (level === 3) return color(red(baseCol) * 1.2, green(baseCol) * 0.8, blue(baseCol) * 0.8);
+        return baseCol;
+    };
+
+    if (type === 'armor') {
+        // ARMOR: Nested plates
+        const col = color(100, 100, 110);
+        const plateCount = 2 + level; // 3, 4, 5 plates
+        const depth = size * 0.5;
+
+        for (let i = 0; i < plateCount; i++) {
+            const s = size * (1 - (i * 0.15));
+            const d = depth * (1 - (i * 0.1));
+            const plateCol = color(red(col) - i * 10, green(col) - i * 10, blue(col) - i * 10);
+            this.drawPrism(x, y, s, 6, d, plateCol, angle + i * 0.1 + time * 0.2, sunAngle);
+        }
+
+    } else if (type === 'engine') {
+        // ENGINE: Thruster array
+        const col = color(200, 100, 50);
+        const engAngle = angle + Math.PI; // Pointing left
+
+        // Main Bell
+        this.drawCone(x, y, size * 0.6, size * 0.8, 12, col, engAngle, sunAngle);
+
+        // Auxiliary Bells
+        if (level >= 2) {
+            this.drawCone(x, y - size * 0.4, size * 0.4, size * 0.6, 12, col, engAngle, sunAngle);
+            this.drawCone(x, y + size * 0.4, size * 0.4, size * 0.6, 12, col, engAngle, sunAngle);
+        }
+        if (level >= 3) {
+            this.drawCone(x - size * 0.3, y, size * 0.4, size * 0.6, 12, col, engAngle, sunAngle);
+        }
+
+        // Glow
+        noStroke();
+        fill(100, 200, 255, 150 + Math.sin(time * 10) * 50);
+        ellipse(x - size * 0.4, y, size * 0.4, size * 0.8);
+
+
+    } else if (type === 'cargo') {
+        // CARGO: Stacked containers
+        const col = color(180, 140, 60);
+        const containerH = size * 0.4;
+        const stacks = level;
+
+        for (let i = 0; i < stacks; i++) {
+            const yOff = (i - (stacks - 1) / 2) * containerH * 1.2;
+            const floatOff = Math.sin(time * 2 + i) * 3;
+            this.drawBox3D(x, y - yOff + floatOff, size * 0.9, containerH * 0.7, size, col, angle + time * 0.5, sunAngle);
+        }
+
+    } else if (type === 'hardpoints') {
+        // HARDPOINTS: Weapon mount visuals
+        const col = color(80, 80, 95);
+
+        // Base Unit
+        this.drawBox3D(x, y, size, size * 0.3, size, col, angle, sunAngle);
+
+        // Turret Mounts
+        const mounts = level;
+        for (let i = 0; i < mounts; i++) {
+            const xOff = (i - (mounts - 1) / 2) * size * 0.5;
+            this.drawCylinder(x + xOff, y - size * 0.2, size * 0.2, size * 0.4, 8, color(150, 150, 160), angle, sunAngle);
+        }
+
+    } else if (type === 'shield') {
+        // SHIELD: Generator core with rings
+        const col = color(100, 200, 255); // Cyan/Blue
+
+        // Core
+        this.drawCylinder(x, y, size * 0.3, size * 0.6, 8, color(50, 50, 80), angle, sunAngle);
+
+        // Energy Rings
+        noStroke();
+        fill(100, 200, 255, 100 + Math.sin(time * 5) * 50);
+        ellipse(x, y, size * 1.0, size * 0.3); // Horizontal ring
+        ellipse(x, y, size * 0.3, size * 1.0); // Vertical ring check (2D ellipse not 3D ring, specifically requested static later anyway)
+
+    } else {
+        // Fallback generic box
+        this.drawBox3D(x, y, size, size, size, color(100), angle, sunAngle);
+    }
+};
+
 console.log("draw3d.js - Centralized Faux 3D Rendering System loaded.");

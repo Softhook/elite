@@ -803,6 +803,15 @@ class UIComponents {
         const panelRightEdge = panelWidth !== null ? (panelLeftEdge + panelWidth / scaleFactor) : (size * 0.5 / scaleFactor);
         const effectiveWidth = panelRightEdge - panelLeftEdge;
 
+        // CHECK IF IT IS A SHIP UPGRADE (Armor, Engine, Cargo, Hardpoints)
+        if (['armor', 'engine', 'cargo', 'hardpoints', 'shield'].includes(type) && typeof Draw3D !== 'undefined' && typeof Draw3D.drawUpgradeModel === 'function') {
+            const rotationAngle = 0; // Static valid as requested
+            Draw3D.drawUpgradeModel(type, weaponDef.level || 1, 0, 0, size * 0.08, rotationAngle);
+
+            pop();
+            return;
+        }
+
         if (type !== 'mine' && playerShip && typeof SHIP_DEFINITIONS !== 'undefined') {
             const shipTypeName = playerShip.shipTypeName || 'Sidewinder';
             const shipDef = SHIP_DEFINITIONS[shipTypeName];

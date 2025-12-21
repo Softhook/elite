@@ -713,8 +713,18 @@ class UIStationMenus {
             return weaponTechLevel <= systemTechLevel;
         }) : [];
 
+        // ADD SHIP UPGRADES (Armor, Engine, Cargo, Hardpoints)
+        const availableShipUpgrades = typeof SHIP_UPGRADES !== 'undefined' ? SHIP_UPGRADES.filter(upg => {
+            // Basic tech level check (assume upgrades have techLevel or low default)
+            // Most early upgrades should be available
+            return (upg.level * 2 - 1) <= systemTechLevel; // Level 1->TL1, Level 2->TL3, Level 3->TL5 roughly
+        }) : [];
+
+        // Merge lists - Upgrades first or last? Let's put them AT THE END as requested ("below weapons")
+        const allItems = [...availableWeapons, ...availableShipUpgrades];
+
         // Store full filtered list for navigation (not just visible items)
-        this._fullFilteredWeapons = availableWeapons;
+        this._fullFilteredWeapons = allItems;
 
         // Draw welcome text (single line)
         const systemName = system?.name || "Unknown";
@@ -724,8 +734,9 @@ class UIStationMenus {
 
         // Continue with upgrade menu drawing
         let rowH = 40, startY = pY + headerHeight + 28;
+
         let visibleRows = floor((pH - headerHeight - 80) / rowH);
-        let totalRows = availableWeapons.length;
+        let totalRows = allItems.length;
         let scrollAreaH = visibleRows * rowH;
         this.upgradeScrollMax = max(0, totalRows - visibleRows);
         if (typeof this.upgradeScrollOffset !== "number") this.upgradeScrollOffset = 0;
@@ -737,26 +748,54 @@ class UIStationMenus {
         textSize(STATION_TEXT_SIZE.BODY);
 
         for (let i = firstRow; i < lastRow; i++) {
-            let upg = availableWeapons[i];
+            let upg = allItems[i];
             let y = startY + (i - firstRow) * rowH;
 
-            const canAfford = player.credits >= upg.price;
+            const isShipUpgrade = ['armor', 'engine', 'cargo', 'hardpoints'].includes(upg.type);
+
+            // Check formatted affordability (and specific upgrade constraints if needed)
+            let canAfford = player.credits >= upg.price;
+
+            // Allow re-buying same level? Or strictly upgrades?
+            // Simple check: if installed level >= this level, maybe grey out or show "Installed"?
+            let isInstalled = false;
+            if (isShipUpgrade && player.installedUpgrades) {
+                const currentLevel = player.installedUpgrades[upg.type] || 0;
+                if (currentLevel >= upg.level) isInstalled = true;
+            }
 
             fill(canAfford ? 80 : 40, canAfford ? 60 : 40, canAfford ? 120 : 60);
+            if (isInstalled) fill(40, 60, 40); // Dark green for installed
+
             stroke(canAfford ? 180 : 100, canAfford ? 100 : 60, canAfford ? 255 : 140);
+            if (isInstalled) stroke(100, 200, 100);
+
             rect(pX + 20, y, pW - 40, rowH - 6, 5);
 
             noStroke();
             textAlign(LEFT, CENTER);
             textSize(STATION_TEXT_SIZE.BODY);
             fill(canAfford ? 255 : 120);
-            const upgLeft = `${upg.name}  |  Type: ${upg.type}  |  DPS: ${upg.damage}`;
+            if (isInstalled) fill(150, 255, 150);
+
+            let infoText = "";
+            if (isShipUpgrade) {
+                infoText = `Type: ${upg.type.charAt(0).toUpperCase() + upg.type.slice(1)} L${upg.level}`;
+            } else {
+                infoText = `Type: ${upg.type}  |  DPS: ${upg.damage}`;
+            }
+
+            const upgLeft = `${upg.name}  |  ${infoText}`;
             text(upgLeft, pX + 30, y + rowH / 2);
 
             textAlign(RIGHT, CENTER);
             textSize(STATION_TEXT_SIZE.BODY);
             fill(canAfford ? 200 : 100, canAfford ? 150 : 80, canAfford ? 255 : 120);
-            text(`${upg.price} cr`, pX + pW - 30, y + rowH / 2);
+            if (isInstalled) {
+                text("INSTALLED", pX + pW - 30, y + rowH / 2);
+            } else {
+                text(`${upg.price} cr`, pX + pW - 30, y + rowH / 2);
+            }
 
             this.upgradeListAreas.push({
                 x: pX + 20,
@@ -2101,6 +2140,51 @@ class UIStationMenus {
         fill(220);
 
         let y = specY;
+        const type = weaponDef.type;
+
+        // Check for Ship Upgrade types first
+        if (['armor', 'engine', 'cargo', 'hardpoints', 'shield'].includes(type) || weaponDef.hullBonus || weaponDef.speedMultiplier) {
+
+            // Armor
+            if (weaponDef.hullBonus) {
+                text(`Hull Bonus: +${weaponDef.hullBonus}`, specX, y);
+                y += lineH;
+            }
+
+            // Engine
+            if (weaponDef.speedMultiplier) {
+                const speedPct = Math.round((weaponDef.speedMultiplier - 1) * 100);
+                text(`Speed Boost: +${speedPct}%`, specX, y);
+                y += lineH;
+            }
+            if (weaponDef.thrustMultiplier) {
+                const thrustPct = Math.round((weaponDef.thrustMultiplier - 1) * 100);
+                text(`Thrust Boost: +${thrustPct}%`, specX, y);
+                y += lineH;
+            }
+
+            // Cargo
+            if (weaponDef.cargoBonus) {
+                text(`Cargo Capacity: +${weaponDef.cargoBonus}`, specX, y);
+                y += lineH;
+            }
+
+            // Hardpoints
+            if (weaponDef.bonusSlots) {
+                text(`Bonus Weapon Slots: +${weaponDef.bonusSlots}`, specX, y);
+                y += lineH;
+            }
+
+            // Shield
+            if (weaponDef.shieldBonus) {
+                text(`Shield Bonus: +${weaponDef.shieldBonus}`, specX, y);
+                y += lineH;
+            }
+
+            return; // Done with ship upgrades
+        }
+
+        // Standard Weapon Stats
 
         // Damage (or damageReduction for barriers)
         if (weaponDef.type === 'barrier') {
@@ -2116,7 +2200,6 @@ class UIStationMenus {
         y += lineH;
 
         // Special properties based on weapon type
-        const type = weaponDef.type;
         if (type === 'beam') {
             text(`Max Heat: ${weaponDef.maxHeat || 1.0}`, specX, y);
             y += lineH;
@@ -2294,8 +2377,8 @@ class UIStationMenus {
 
         textSize(STATION_TEXT_SIZE.HELPER);
         // Get ship's weapon slots
-        const shipDef = typeof SHIP_DEFINITIONS !== 'undefined' ? SHIP_DEFINITIONS[player.shipTypeName] : null;
-        const availableSlots = shipDef?.armament?.length || 1;
+        // Get ship's weapon slots (use player's actual maxWeapons to account for upgrades)
+        const availableSlots = player.maxWeapons || 1;
 
         // Draw slot buttons
         this.slotPickerButtons = [];
@@ -2359,115 +2442,7 @@ class UIStationMenus {
      * @param {Function} addMessageFn - Function to add UI messages
      * @returns {boolean} - True if handled
      */
-    handleWeaponDetailClick(mx, my, player, addMessageFn) {
-        // Handle slot picker popup clicks first (if showing)
-        if (this.showingSlotPicker && this.slotPickerButtons.length > 0) {
-            for (const btn of this.slotPickerButtons) {
-                if (!UIComponents.isClickInArea(mx, my, btn)) continue;
 
-                // Cancel button
-                if (btn.action === "CANCEL") {
-                    this.showingSlotPicker = false;
-                    this.pendingWeaponPurchase = null;
-                    if (typeof soundManager !== 'undefined') soundManager.playSound('click');
-                    return true;
-                }
-
-                // Slot selection button
-                if (typeof btn.slotIndex === 'number' && this.pendingWeaponPurchase) {
-                    const weaponDef = this.pendingWeaponPurchase.weaponDef;
-                    const price = this.pendingWeaponPurchase.price;
-                    const slotIndex = btn.slotIndex;
-                    const systemName = (typeof galaxy !== 'undefined' && galaxy?.getCurrentSystem()?.name) || 'Unknown';
-
-                    // Complete the purchase
-                    player.spendCredits(price);
-                    player.installWeaponToSlot(weaponDef, slotIndex);
-
-                    player.recordWeaponUpgrade(
-                        weaponDef.name,
-                        weaponDef.type,
-                        price,
-                        slotIndex,
-                        systemName
-                    );
-
-                    if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
-                    addMessageFn(`Purchased ${weaponDef.name} and installed in Slot ${slotIndex + 1}!`, [100, 255, 100]);
-                    if (typeof saveGame === 'function') saveGame();
-
-                    // Close popup and return to upgrades menu
-                    this.showingSlotPicker = false;
-                    this.pendingWeaponPurchase = null;
-                    if (typeof gameStateManager !== 'undefined') {
-                        gameStateManager.setState('VIEWING_UPGRADES');
-                    }
-                    return true;
-                }
-            }
-            return true; // Consume click if popup is showing
-        }
-
-        if (!this.selectedWeaponForDetail) return false;
-
-        const weaponData = this.selectedWeaponForDetail;
-
-        // Buy button - show slot picker popup
-        if (this.weaponDetailButtons?.buy && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.buy)) {
-            const price = weaponData.price;
-
-            if (player.credits >= price) {
-                // Store weapon data and show slot picker
-                this.pendingWeaponPurchase = {
-                    weaponDef: weaponData.weaponDef,
-                    price: price
-                };
-                this.showingSlotPicker = true;
-                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
-            } else {
-                addMessageFn(`Not enough credits! ${weaponData.weaponDef.name} costs ${price} cr.`, [255, 150, 150]);
-                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
-            }
-            return true;
-        }
-
-        // Previous button - go to previous weapon
-        if (this.weaponDetailButtons?.prev && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.prev)) {
-            if (this.currentWeaponIndex > 0) {
-                this.currentWeaponIndex--;
-                this.selectedWeaponForDetail = this.availableWeaponsList[this.currentWeaponIndex];
-                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
-            }
-            return true;
-        }
-
-        // Next button - go to next weapon
-        if (this.weaponDetailButtons?.next && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.next)) {
-            if (this.currentWeaponIndex < this.availableWeaponsList.length - 1) {
-                this.currentWeaponIndex++;
-                this.selectedWeaponForDetail = this.availableWeaponsList[this.currentWeaponIndex];
-                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
-            }
-            return true;
-        }
-
-        // Back button
-        if (this.weaponDetailButtons?.back && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.back)) {
-            // Clear popup state if showing
-            if (this.showingSlotPicker) {
-                this.showingSlotPicker = false;
-                this.pendingWeaponPurchase = null;
-            }
-
-            // Return to upgrades menu
-            if (typeof gameStateManager !== 'undefined') {
-                gameStateManager.setState('VIEWING_UPGRADES');
-            }
-            return true;
-        }
-
-        return false;
-    }
 
     /**
      * Handles upgrades click events.
@@ -2511,18 +2486,98 @@ class UIStationMenus {
             if (typeof gameStateManager !== 'undefined') gameStateManager.setState(returnState);
             return true;
         }
+
         return false;
     }
 
     /**
-     * Handles police menu click events.
-     * @param {number} mx - Mouse X
-     * @param {number} my - Mouse Y
-     * @param {Player} player - The player object
-     * @param {Function} addMessageFn - Function to add UI messages
-     * @param {Function} processFinePaymentFn - Function to process fine payment
-     * @returns {boolean} - True if handled
+     * Handles clicks on the Weapon Detail screen (now also Upgrade Detail).
      */
+    handleWeaponDetailClick(mx, my, player, addMessageFn) {
+        if (!this.selectedWeaponForDetail) return false;
+
+        const weaponData = this.selectedWeaponForDetail;
+        const def = weaponData.weaponDef;
+        const isShipUpgrade = ['armor', 'engine', 'cargo', 'hardpoints', 'shield'].includes(def.type);
+
+        if (this.weaponDetailButtons) {
+            // Back
+            if (this.weaponDetailButtons.back && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.back)) {
+                if (typeof gameStateManager !== 'undefined') gameStateManager.setState('VIEWING_UPGRADES');
+                return true;
+            }
+
+            // Buy/Install
+            if (this.weaponDetailButtons.buy && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.buy)) {
+                if (player.credits >= def.price) {
+                    if (isShipUpgrade) {
+                        // INSTALL UPGRADE DIRECTLY
+                        player.credits -= def.price;
+                        player.applyUpgrade(def.type, def.level);
+                        addMessageFn(`${def.name} installed!`, [100, 255, 100]);
+                        if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                        if (typeof saveGame === 'function') saveGame();
+
+                        // Go back to list
+                        if (typeof gameStateManager !== 'undefined') gameStateManager.setState('VIEWING_UPGRADES');
+                    } else {
+                        // WEAPON PURCHASE - Show slot picker
+                        this.showingSlotPicker = true;
+                        this.pendingWeaponPurchase = def;
+                    }
+                    return true;
+                } else {
+                    addMessageFn("Insufficient credits!", [255, 100, 100]);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                    return true;
+                }
+            }
+        }
+
+        // Slot Picker Handling (Weapons Only)
+        if (!isShipUpgrade && this.showingSlotPicker) {
+            if (this.slotPickerButtons) {
+                for (let btn of this.slotPickerButtons) {
+                    if (UIComponents.isClickInArea(mx, my, btn)) {
+                        if (btn.action === 'CANCEL') {
+                            this.showingSlotPicker = false;
+                            this.pendingWeaponPurchase = null;
+                            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                        } else if (typeof btn.slotIndex === 'number') {
+                            // Install weapon to slot
+                            const slotIdx = btn.slotIndex;
+                            const weaponDef = this.pendingWeaponPurchase; // pendingWeaponPurchase is the def itself
+                            const price = weaponDef.price;
+                            const systemName = (typeof galaxy !== 'undefined' && galaxy?.getCurrentSystem()?.name) || 'Unknown';
+
+                            player.spendCredits(price);
+                            player.installWeaponToSlot(weaponDef, slotIdx);
+
+                            player.recordWeaponUpgrade(
+                                weaponDef.name,
+                                weaponDef.type,
+                                price,
+                                slotIdx,
+                                systemName
+                            );
+
+                            addMessageFn(`${weaponDef.name} installed in Slot ${slotIdx + 1}`, [100, 255, 100]);
+
+                            this.showingSlotPicker = false;
+                            this.pendingWeaponPurchase = null;
+                            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                            if (typeof saveGame === 'function') saveGame();
+                            if (typeof gameStateManager !== 'undefined') gameStateManager.setState('VIEWING_UPGRADES');
+                        }
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
     handlePoliceClick(mx, my, player, addMessageFn, processFinePaymentFn) {
         for (const area of this.policeButtonAreas) {
             if (!UIComponents.isClickInArea(mx, my, area)) continue;

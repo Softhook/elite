@@ -380,10 +380,12 @@ class UIFactionRecruitment {
                 }
             } catch (e) { /* fail silently */ }
 
-            // Secret base hint
-            yPos += 5;
-            UIComponents.setTextStyle({ fill: [180, 180, 200], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
-            text("Press [B] while flying to find our secret base.", rightX + padding, yPos);
+            // Secret base hint - only for factions that have secret bases (not Police)
+            if (factionKey !== 'POLICE') {
+                yPos += 5;
+                UIComponents.setTextStyle({ fill: [180, 180, 200], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
+                text("Press [B] while flying to find our secret base.", rightX + padding, yPos);
+            }
         }
 
         // Buttons section - positioned at bottom
