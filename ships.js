@@ -743,7 +743,7 @@ const SHIP_DEFINITIONS = {
         costCategory: "Low", description: "Looks like someone tried to build a ship from nightmares and geometry. Those massive wings aren't aerodynamic (space doesn't care) but they do intimidate. Quick, mean, and surprisingly maneuverable. Named 'Bat' because it scares the hell out of people when it shows up on scanners.",
         vertexLayers: [
             {
-                vertexData: [{ x: 0.9752, y: -0.1801 }, { x: 1.1813, y: 0.0000 }, { x: 0.9752, y: 0.1801 }, { x: 0.0000, y: 0.3081 }, { x: 0.3537, y: 1.4732 }, { x: -0.4994, y: 0.9822 }, { x: -0.3861, y: 0.5960 }, { x: -0.9500, y: 0.2000 }, { x: -0.9500, y: -0.2000 }, { x: -0.3861, y: -0.5960 }, { x: -0.4994, y: -0.9822 }, { x: 0.5794, y: -1.4143 }, { x: 0.0000, y: -0.3081 }],
+                vertexData: [{ x: 0.9752, y: -0.1801 }, { x: 1.1813, y: 0.0000 }, { x: 0.9752, y: 0.1801 }, { x: 0.0000, y: 0.3081 }, { x: 0.4666, y: 1.4438 }, { x: -0.4994, y: 0.9822 }, { x: -0.3861, y: 0.5960 }, { x: -0.9500, y: 0.2000 }, { x: -0.9500, y: -0.2000 }, { x: -0.3861, y: -0.5960 }, { x: -0.4994, y: -0.9822 }, { x: 0.4666, y: -1.4438 }, { x: 0.0000, y: -0.3081 }],
                 fillColor: [118, 150, 244],
             },
             {
