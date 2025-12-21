@@ -451,6 +451,11 @@ class Planet {
             this.cityLightsBuffer = null;
         }
 
+        if (this.cityLightsBufferDark) {
+            this.cityLightsBufferDark.remove();
+            this.cityLightsBufferDark = null;
+        }
+
         this.buffersCreated = false;
     }
 
@@ -827,6 +832,20 @@ class Planet {
 
         // Store the city lights buffer
         this.cityLightsBuffer = pg;
+
+        // Create a pre-rendered dark version for the day-side "structures"
+        // This avoids using tint() in the draw loop, which can be CPU intensive in p5.js
+        this.cityLightsBufferDark = createGraphics(bufferSize, bufferSize);
+        this.cityLightsBufferDark.image(pg, 0, 0);
+
+        // Apply the dark tint using composition
+        // We use source-atop to only draw over the existing pixels (the lights)
+        const ctxDark = this.cityLightsBufferDark.drawingContext;
+        ctxDark.globalCompositeOperation = 'source-atop';
+        this.cityLightsBufferDark.fill(30, 30, 30, 160);
+        this.cityLightsBufferDark.noStroke();
+        this.cityLightsBufferDark.rect(0, 0, bufferSize, bufferSize);
+        ctxDark.globalCompositeOperation = 'source-over';
     }
 
     /**
@@ -872,7 +891,7 @@ class Planet {
             image(this.planetBuffer, -halfBuffer, -halfBuffer);
         }
 
-        // Draw city lights before resetting rotation so they rotate with the planet
+        // Draw city lights on the surface
         // For ringed planets, city lights are drawn inside drawRingedPlanet() between planet and front ring
         if (!this.isSun && this.isInhabited && this.cityLightsBuffer && this.shadowOffset && !this.hasRings) {
             // Draw the city lights aligned with the planet's current rotation
@@ -882,22 +901,27 @@ class Planet {
             // This ensures the shadow rotation matches the planet's current rotation
             const rotatedShadowX = this.shadowOffset.x * cos(-this.currentRotation) - this.shadowOffset.y * sin(-this.currentRotation);
             const rotatedShadowY = this.shadowOffset.x * sin(-this.currentRotation) + this.shadowOffset.y * cos(-this.currentRotation);
+            const bufferSize = this.cityLightsBuffer.width;
+            const halfBuffer = bufferSize * 0.5;
 
-            // First, clip to the planet's circular area
+            // 1. Clip to the planet's circular area
             drawingContext.beginPath();
             drawingContext.arc(0, 0, this.radius, 0, TWO_PI);
             drawingContext.clip();
 
-            // Then clip to the shadow area (night side), matching the shadow ellipse
-            // Use pre-calculated shadow radius from computeShadowOffset
+            // 2. Draw "Day side" structures (dim/darkened) - showing infrastructure not lights
+            // Use pre-rendered dark buffer to avoid tint() overhead
+            if (this.cityLightsBufferDark) {
+                image(this.cityLightsBufferDark, -halfBuffer, -halfBuffer);
+            }
+
+            // 3. Intersect clip with the shadow area (night side)
             drawingContext.beginPath();
             drawingContext.arc(rotatedShadowX, rotatedShadowY, this._shadowRadius, 0, TWO_PI);
             drawingContext.clip();
 
-            // Now draw the city lights (already properly rotated with the planet)
-            const bufferSize = this.cityLightsBuffer.width;
-            const halfBuffer = bufferSize * 0.5;
-            image(this.cityLightsBuffer, -halfBuffer, -halfBuffer);
+            // 4. Draw "Night side" lights (bright)
+            image(this.cityLightsBuffer, -halfBuffer, -halfBuffer); // No tint needed
 
             // Restore the drawing context
             drawingContext.restore();
@@ -1043,21 +1067,26 @@ class Planet {
             // Calculate rotated shadow position based on current planet rotation
             const rotatedShadowX = this.shadowOffset.x * Math.cos(-this.currentRotation) - this.shadowOffset.y * Math.sin(-this.currentRotation);
             const rotatedShadowY = this.shadowOffset.x * Math.sin(-this.currentRotation) + this.shadowOffset.y * Math.cos(-this.currentRotation);
+            const bufferSize = this.cityLightsBuffer.width;
+            const halfBuffer = bufferSize * 0.5;
 
-            // Clip to planet circle
+            // 1. Clip to planet circle
             ctx.beginPath();
             ctx.arc(0, 0, this.radius, 0, TWO_PI);
             ctx.clip();
 
-            // Clip to shadow area (night side)
+            // 2. Draw "Day side" structures (dim/darkened)
+            if (this.cityLightsBufferDark) {
+                image(this.cityLightsBufferDark, -halfBuffer, -halfBuffer);
+            }
+
+            // 3. Clip to shadow area (intersects with planet clip)
             ctx.beginPath();
             ctx.arc(rotatedShadowX, rotatedShadowY, this._shadowRadius, 0, TWO_PI);
             ctx.clip();
 
-            // Draw city lights
-            const lightsSize = this.cityLightsBuffer.width;
-            const halfLights = lightsSize * 0.5;
-            image(this.cityLightsBuffer, -halfLights, -halfLights);
+            // 4. Draw "Night side" lights (bright)
+            image(this.cityLightsBuffer, -halfBuffer, -halfBuffer);
 
             ctx.restore();
         }
