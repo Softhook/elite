@@ -238,7 +238,6 @@ if (STARFIELD_CONFIG.WORKER_ENABLED) {
                     STARFIELD_TILE_WORKER = null;
                 };
                 window.addEventListener('beforeunload', _terminateStarfieldWorker);
-                window.addEventListener('unload', _terminateStarfieldWorker);
             }
         } catch (e) { }
     } catch (e) { STARFIELD_TILE_WORKER = null; }
