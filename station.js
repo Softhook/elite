@@ -364,6 +364,18 @@ class Station {
     }
 
     /**
+     * Darkens a color for secret stations.
+     * @param {p5.Color} col - The color to potentially darken
+     * @returns {p5.Color} The darkened color if secret, original otherwise
+     * @private
+     */
+    _applySecretDarkening(col) {
+        if (!this.isSecret) return col;
+        const darkFactor = 0.4;
+        return color(red(col) * darkFactor, green(col) * darkFactor, blue(col) * darkFactor);
+    }
+
+    /**
      * Draws a 3D-style prism (extruded polygon).
      * Optimized to avoid array allocations.
      * @param {number} x - Center X
@@ -376,6 +388,7 @@ class Station {
      * @private
      */
     _drawPrism(x, y, r, sides, depth, col, extraRotation = 0) {
+        col = this._applySecretDarkening(col);
         const dv = this._getDepthVector(depth, extraRotation);
         const angleStep = TWO_PI / sides;
         const lightAngle = (this._localSunAngle || 0) - extraRotation;
@@ -450,6 +463,7 @@ class Station {
      * @private
      */
     _drawBox3D(x, y, w, h, depth, col, extraRotation = 0) {
+        col = this._applySecretDarkening(col);
         const dv = this._getDepthVector(depth, extraRotation);
         const hw = w / 2;
         const hh = h / 2;
@@ -519,6 +533,7 @@ class Station {
      * @private
      */
     _drawExtrudedShape(vertices, depth, col, extraRotation = 0, cull = true) {
+        col = this._applySecretDarkening(col);
         const dv = this._getDepthVector(depth, extraRotation);
         const lightAngle = (this._localSunAngle || 0) - extraRotation;
 
@@ -590,6 +605,7 @@ class Station {
      * @private
      */
     _drawRing3D(x, y, rOuter, rInner, sides, depth, col, extraRotation = 0) {
+        col = this._applySecretDarkening(col);
         const dv = this._getDepthVector(depth, extraRotation);
         const angleStep = TWO_PI / sides;
         const lightAngle = (this._localSunAngle || 0) - extraRotation;
@@ -705,6 +721,7 @@ class Station {
      * @private
      */
     _drawExtrudedRing(outerVerts, innerVerts, depth, col, extraRotation = 0) {
+        col = this._applySecretDarkening(col);
         const dv = this._getDepthVector(depth, extraRotation);
         const lightAngle = (this._localSunAngle || 0) - extraRotation;
         strokeWeight(1);
@@ -1724,6 +1741,8 @@ class Station {
      * @private
      */
     _drawRunningLights(lightFn, count = 24, radius = 0.475, size = 3) {
+        // No running lights on secret stations
+        if (this.isSecret) return;
         noStroke();
         for (let i = 0; i < count; i++) {
             push();
