@@ -603,10 +603,13 @@ class UIHUD {
             try {
                 if (player.autopilotTarget === 'station') {
                     targetLabel = 'Station';
-                    hint = '[J to toggle jump/station | H to cycle planets]';
+                    hint = '[J to cycle targets | H to cycle planets]';
                 } else if (player.autopilotTarget === 'jumpzone') {
                     targetLabel = 'Jump Zone';
-                    hint = '[J to toggle jump/station | H to cycle planets]';
+                    hint = '[J to cycle targets | H to cycle planets]';
+                } else if (player.autopilotTarget === 'secretbase') {
+                    targetLabel = 'Secret Base';
+                    hint = '[J to cycle targets | H to cycle planets]';
                 } else if (player.autopilotTarget && typeof player.autopilotTarget === 'object' && player.autopilotTarget.type === 'planet') {
                     const idx = Number.isFinite(player.autopilotTarget.index) ? player.autopilotTarget.index : player.autopilotPlanetIndex;
                     const planet = player.currentSystem?.planets?.[idx];

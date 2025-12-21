@@ -366,15 +366,16 @@ class UIFactionRecruitment {
             text("• " + memberMsg, rightX + padding, yPos);
             yPos += 20;
 
-            // Kill progress
+            // Progress toward next rank (Prestige for Imperial/Separatist/Military, Kills for Police)
             try {
                 const progress = player.getFactionKillsProgress && player.getFactionKillsProgress(factionKey);
                 if (progress) {
                     UIComponents.setTextStyle({ fill: [180, 180, 200], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
+                    const label = progress.usesPrestige ? 'Prestige' : 'Kills';
                     if (progress.nextThreshold) {
-                        text(`• Kills: ${progress.kills} (${progress.killsToNext} to ${progress.nextRank})`, rightX + padding, yPos);
+                        text(`• ${label}: ${progress.progress} (${progress.toNext} to ${progress.nextRank})`, rightX + padding, yPos);
                     } else {
-                        text(`• Kills: ${progress.kills} — Maximum Rank Achieved`, rightX + padding, yPos);
+                        text(`• ${label}: ${progress.progress} — Maximum Rank Achieved`, rightX + padding, yPos);
                     }
                     yPos += 20;
                 }

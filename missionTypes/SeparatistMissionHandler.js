@@ -59,6 +59,7 @@ class SeparatistMissionHandler extends FactionMissionHandler {
             targetDesc: `${targetCount} Imperial vessels`,
             targetCount: targetCount,
             rewardCredits: reward,
+            prestigeReward: 3, // Raid/kill missions give 3 prestige
             isIllegal: false, // Legal within Separatist space
             progressCount: 0,
             requiredFaction: 'SEPARATIST'
@@ -95,6 +96,7 @@ class SeparatistMissionHandler extends FactionMissionHandler {
             cargoType: cargo,
             cargoQuantity: quantity,
             rewardCredits: reward,
+            prestigeReward: 2, // Delivery missions give 2 prestige
             isIllegal: true, // Supplying rebels is illegal in Imperial space
             requiredFaction: 'SEPARATIST'
         });

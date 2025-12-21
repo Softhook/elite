@@ -720,7 +720,8 @@ function handleWantedToggle() {
 }
 
 /**
- * Handle autopilot key logic for 'h' (station) and 'j' (jump zone)
+ * Handle autopilot key logic for 'h' (station) and 'j' (jump zone/cycle)
+ * J key cycles through: station → jumpzone → secretbase (if discovered)
  * @param {string} autopilotKey - The pressed key, already lowercased
  */
 function handleAutopilot(autopilotKey) {
@@ -739,16 +740,38 @@ function handleAutopilot(autopilotKey) {
             uiManager?.addMessage("No planet autopilot available", [255, 150, 100]);
         }
     } else if (autopilotKey === 'j') {
-        UI_LOG("J key detected - toggle station/jumpzone autopilot");
+        UI_LOG("J key detected - toggle station/jumpzone/secretbase autopilot");
         try {
+            // Check if player has a discovered secret base in current system
+            const hasDiscoveredSecretBase = player.currentSystem?.secretStations?.some(s => s.discovered) || false;
+
+            // Determine the cycle order based on available targets
+            // Base cycle: station → jumpzone
+            // Extended cycle (if secret base discovered): station → jumpzone → secretbase
+            const cycleOrder = hasDiscoveredSecretBase
+                ? ['station', 'jumpzone', 'secretbase']
+                : ['station', 'jumpzone'];
+
             if (!player.autopilotEnabled) {
-                player.toggleAutopilot('jumpzone');
-            } else if (player.autopilotTarget === 'station') {
-                player.toggleAutopilot('jumpzone');
-            } else if (player.autopilotTarget === 'jumpzone') {
+                // Start autopilot with first target (station)
                 player.toggleAutopilot('station');
             } else {
-                player.toggleAutopilot('station');
+                // Find current position in cycle and move to next
+                const currentIndex = cycleOrder.indexOf(player.autopilotTarget);
+                if (currentIndex === -1) {
+                    // Unknown target, start from station
+                    player.toggleAutopilot('station');
+                } else {
+                    const nextIndex = currentIndex + 1;
+                    if (nextIndex >= cycleOrder.length) {
+                        // Completed the cycle, disable autopilot
+                        player.disableAutopilot();
+                        uiManager?.addMessage("Autopilot disengaged");
+                    } else {
+                        // Move to next target in cycle
+                        player.toggleAutopilot(cycleOrder[nextIndex]);
+                    }
+                }
             }
         } catch (e) {
             console.error('Autopilot toggle error:', e);

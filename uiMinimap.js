@@ -952,6 +952,25 @@ class UIMinimap {
                 targetPos = system.jumpZoneCenter;
                 color = [255, 220, 0];
                 label = 'JMP';
+            } else if (target === 'secretbase') {
+                // Find closest discovered secret station
+                const secretStations = system.secretStations || [];
+                const discoveredSecrets = secretStations.filter(s => s.discovered && s.pos);
+                if (discoveredSecrets.length === 0) return;
+
+                let closestStation = discoveredSecrets[0];
+                let closestDist = p5.Vector.dist(player.pos, closestStation.pos);
+                for (let i = 1; i < discoveredSecrets.length; i++) {
+                    const d = p5.Vector.dist(player.pos, discoveredSecrets[i].pos);
+                    if (d < closestDist) {
+                        closestDist = d;
+                        closestStation = discoveredSecrets[i];
+                    }
+                }
+
+                targetPos = closestStation.pos;
+                color = [200, 100, 200]; // Purple for secret base
+                label = 'SEC';
             } else if (typeof target === 'object' && target.type === 'planet') {
                 const idx = Number.isFinite(target.index) ? target.index : player.autopilotPlanetIndex;
                 const planets = system.planets || [];

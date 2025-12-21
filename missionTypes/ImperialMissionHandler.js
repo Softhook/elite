@@ -60,6 +60,7 @@ class ImperialMissionHandler extends FactionMissionHandler {
             targetDesc: `Scan ${targetCount} vessels`,
             targetCount: targetCount,
             rewardCredits: reward,
+            prestigeReward: 1, // Patrol missions give 1 prestige
             isIllegal: false,
             progressCount: 0,
             requiredFaction: 'IMPERIAL'
@@ -90,6 +91,7 @@ class ImperialMissionHandler extends FactionMissionHandler {
             targetDesc: `${targetCount} Separatist vessels`,
             targetCount: targetCount,
             rewardCredits: reward,
+            prestigeReward: 3, // Kill missions give 3 prestige
             isIllegal: false,
             progressCount: 0,
             requiredFaction: 'IMPERIAL'

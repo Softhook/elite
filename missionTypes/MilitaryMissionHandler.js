@@ -59,6 +59,7 @@ class MilitaryMissionHandler extends FactionMissionHandler {
             targetDesc: `${targetCount} Alien hostiles`,
             targetCount: targetCount,
             rewardCredits: reward,
+            prestigeReward: 4, // Extermination missions give 4 prestige
             isIllegal: false,
             progressCount: 0,
             requiredFaction: 'MILITARY'
@@ -89,6 +90,7 @@ class MilitaryMissionHandler extends FactionMissionHandler {
             targetDesc: `${targetCount} hostile vessels`,
             targetCount: targetCount,
             rewardCredits: reward,
+            prestigeReward: 3, // Defense missions give 3 prestige
             isIllegal: false,
             progressCount: 0,
             requiredFaction: 'MILITARY'

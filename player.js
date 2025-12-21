@@ -202,6 +202,14 @@ class Player {
             SEPARATIST: 0
         };
 
+        // Prestige tracking (for faction rank progression - Imperial, Separatist, Military)
+        this.factionPrestige = {
+            POLICE: 0,
+            MILITARY: 0,
+            IMPERIAL: 0,
+            SEPARATIST: 0
+        };
+
         // Damage tracking
         this.lastDamageTime = 0;
         this.lastAttacker = null;
@@ -631,6 +639,12 @@ class Player {
 
             // Record mission completion in personal record
             this.recordMissionCompletion(this.activeMission);
+
+            // Award faction prestige if mission has a prestige reward
+            if (this.activeMission.prestigeReward && this.activeMission.requiredFaction) {
+                console.log(`   Awarding ${this.activeMission.prestigeReward} prestige to ${this.activeMission.requiredFaction}`);
+                this.addFactionPrestige(this.activeMission.requiredFaction, this.activeMission.prestigeReward);
+            }
 
             if (this.activeMission && typeof uiManager !== 'undefined') {
                 uiManager.inactiveMissionIds.add(this.activeMission.id);
@@ -2215,6 +2229,7 @@ class Player {
             shieldRechargeRate: this.shieldRechargeRate,
             kills: this.kills,
             factionKills: this.factionKills || { POLICE: 0, MILITARY: 0, IMPERIAL: 0, SEPARATIST: 0 },
+            factionPrestige: this.factionPrestige || { POLICE: 0, MILITARY: 0, IMPERIAL: 0, SEPARATIST: 0 },
             // --- Save the plain mission data object ---
             activeMission: missionDataToSave,
             weaponIndex: this.weaponIndex, // Save the index instead of just the name
@@ -2322,6 +2337,14 @@ class Player {
         requiredFactions.forEach(faction => {
             if (this.factionKills[faction] === undefined || this.factionKills[faction] === null) {
                 this.factionKills[faction] = 0;
+            }
+        });
+
+        // Load faction prestige with defaults
+        this.factionPrestige = data.factionPrestige || { POLICE: 0, MILITARY: 0, IMPERIAL: 0, SEPARATIST: 0 };
+        requiredFactions.forEach(faction => {
+            if (this.factionPrestige[faction] === undefined || this.factionPrestige[faction] === null) {
+                this.factionPrestige[faction] = 0;
             }
         });
 
@@ -2560,7 +2583,7 @@ class Player {
 
     /**
      * Toggles autopilot to the requested target
-     * @param {string} target - 'station' or 'jumpzone'
+     * @param {string} target - 'station', 'jumpzone', or 'secretbase'
      */
     toggleAutopilot(target) {
         console.log(`toggleAutopilot called with target: ${target}`);
@@ -2582,14 +2605,10 @@ class Player {
                 return;
             }
 
+            // Display target-specific message
+            const targetName = this._getAutopilotTargetName(target);
             console.log(`Autopilot enabled: Flying to ${target}`);
-            if (uiManager) uiManager.addMessage(`Autopilot engaged: ${target === 'station' ? 'Station' : 'Jump Zone'}`);
-            return;
-        }
-
-        // If we've already completed a full cycle, the next press disables autopilot
-        if (this._autopilotWillDisableOnNextToggle) {
-            this.disableAutopilot();
+            if (uiManager) uiManager.addMessage(`Autopilot engaged: ${targetName}`);
             return;
         }
 
@@ -2607,12 +2626,22 @@ class Player {
             this.autopilotVisitedTargets = new Set([this.autopilotTarget, target]);
         }
 
-        // If we've visited both primary autopilot targets, mark that the next press will disable
-        if (this.autopilotVisitedTargets.has('station') && this.autopilotVisitedTargets.has('jumpzone')) {
-            this._autopilotWillDisableOnNextToggle = true;
-            if (uiManager) uiManager.addMessage('Autopilot: one cycle complete — next autopilot press will disable.');
-        } else {
-            if (uiManager) uiManager.addMessage(`Autopilot: now heading to ${target}`);
+        // Display target-specific message
+        const targetName = this._getAutopilotTargetName(target);
+        if (uiManager) uiManager.addMessage(`Autopilot: now heading to ${targetName}`);
+    }
+
+    /**
+     * Gets a display-friendly name for an autopilot target
+     * @param {string} target - 'station', 'jumpzone', or 'secretbase'
+     * @returns {string} Human-readable target name
+     */
+    _getAutopilotTargetName(target) {
+        switch (target) {
+            case 'station': return 'Station';
+            case 'jumpzone': return 'Jump Zone';
+            case 'secretbase': return 'Secret Base';
+            default: return target;
         }
     }
 
@@ -2772,6 +2801,39 @@ class Player {
             if (jumpZoneDistance < this.currentSystem.jumpZoneRadius * 0.8) {
                 this.disableAutopilot();
                 if (uiManager) uiManager.addMessage("Autopilot disengaged: Jump zone reached");
+                return;
+            }
+        }
+        else if (this.autopilotTarget === 'secretbase') {
+            // Target the closest discovered secret station
+            const secretStations = this.currentSystem.secretStations || [];
+            const discoveredSecrets = secretStations.filter(s => s.discovered && s.pos);
+
+            if (discoveredSecrets.length === 0) {
+                this.disableAutopilot();
+                if (uiManager) uiManager.addMessage("Autopilot disengaged: No discovered secret base");
+                return;
+            }
+
+            // Find closest discovered secret station
+            let closestStation = discoveredSecrets[0];
+            let closestDist = p5.Vector.dist(this.pos, closestStation.pos);
+            for (let i = 1; i < discoveredSecrets.length; i++) {
+                const d = p5.Vector.dist(this.pos, discoveredSecrets[i].pos);
+                if (d < closestDist) {
+                    closestDist = d;
+                    closestStation = discoveredSecrets[i];
+                }
+            }
+
+            targetPos = closestStation.pos.copy();
+
+            // Disable if we're very close to the secret station
+            const secretDockRadius = closestStation.dockingRadius ?? (closestStation.size * 0.5);
+            const secretMargin = Math.max(10, secretDockRadius * 0.05);
+            if (closestDist < secretDockRadius + secretMargin) {
+                this.disableAutopilot();
+                if (uiManager) uiManager.addMessage("Autopilot disengaged: Approaching secret base");
                 return;
             }
         }
@@ -3005,16 +3067,24 @@ class Player {
                 }
             }
 
-            // Increment faction kill count and check for rank promotion
+            // Increment faction kill count and award prestige
             // NOTE: Faction bounty credits are awarded centrally by
             // EnemyDamageSystem._awardFactionBounty to avoid duplicate rewards.
             if (factionKillEligible && playerFactionKey) {
+                // Track the kill
                 if (this.factionKills && this.factionKills[playerFactionKey] !== undefined) {
-                    const oldFactionRank = this.getFactionRank(playerFactionKey);
                     this.factionKills[playerFactionKey]++;
-                    const newFactionRank = this.getFactionRank(playerFactionKey);
+                }
 
-                    // Notify player of faction rank change
+                // Award prestige for prestige-based factions (1 prestige per kill)
+                // This will also handle rank-up notifications via addFactionPrestige
+                const cfg = typeof FACTION_RANKS !== 'undefined' ? FACTION_RANKS[playerFactionKey] : null;
+                if (cfg?.usesPrestige) {
+                    this.addFactionPrestige(playerFactionKey, 1);
+                } else {
+                    // For kill-based factions (Police), check for rank change manually
+                    const oldFactionRank = this.getFactionRank(playerFactionKey);
+                    const newFactionRank = this.getFactionRank(playerFactionKey);
                     if (oldFactionRank !== newFactionRank) {
                         const factionDisplayName = this.getFactionDisplayName(playerFactionKey);
                         if (typeof uiManager !== "undefined") {
@@ -3072,7 +3142,7 @@ class Player {
     }
 
     /**
-     * Determines player's faction rank based on faction-specific kills
+     * Determines player's faction rank based on faction-specific prestige or kills
      * @param {string} factionName - The faction name ("POLICE", "MILITARY", "IMPERIAL", "SEPARATIST")
      * @returns {string} The faction rank
      */
@@ -3080,30 +3150,75 @@ class Player {
         const cfg = FACTION_RANKS[factionName];
         if (!cfg) return "Unknown";
 
-        const kills = this.factionKills[factionName] || 0;
+        // Use prestige for prestige-based factions, kills for Police
+        const progress = cfg.usesPrestige
+            ? (this.factionPrestige?.[factionName] || 0)
+            : (this.factionKills?.[factionName] || 0);
+
         // Iterate from highest threshold downwards
         for (let i = cfg.thresholds.length - 1; i >= 0; i--) {
-            if (kills >= cfg.thresholds[i]) return cfg.ranks[i];
+            if (progress >= cfg.thresholds[i]) return cfg.ranks[i];
         }
         return cfg.base;
     }
 
     /**
-     * Returns faction kill stats and progression toward next rank
+     * Returns faction progress stats and progression toward next rank
+     * Uses prestige for Imperial/Separatist/Military, kills for Police
      * @param {string} factionName
-     * @returns {{kills:number, nextThreshold:number|null, killsToNext:number|null, nextRank:string|null}}
+     * @returns {{progress:number, nextThreshold:number|null, toNext:number|null, nextRank:string|null, usesPrestige:boolean}}
      */
     getFactionKillsProgress(factionName) {
         const cfg = FACTION_RANKS[factionName];
-        const kills = this.factionKills && Number.isFinite(this.factionKills[factionName]) ? this.factionKills[factionName] : 0;
-        if (!cfg) return { kills, nextThreshold: null, killsToNext: null, nextRank: null };
+        const usesPrestige = cfg?.usesPrestige || false;
+        const progress = usesPrestige
+            ? (this.factionPrestige?.[factionName] || 0)
+            : (this.factionKills?.[factionName] || 0);
+
+        if (!cfg) return { kills: progress, progress, nextThreshold: null, killsToNext: null, toNext: null, nextRank: null, usesPrestige };
 
         for (let i = 0; i < cfg.thresholds.length; i++) {
-            if (kills < cfg.thresholds[i]) {
-                return { kills, nextThreshold: cfg.thresholds[i], killsToNext: cfg.thresholds[i] - kills, nextRank: cfg.ranks[i] };
+            if (progress < cfg.thresholds[i]) {
+                return {
+                    kills: progress, // backwards compatibility
+                    progress,
+                    nextThreshold: cfg.thresholds[i],
+                    killsToNext: cfg.thresholds[i] - progress, // backwards compatibility
+                    toNext: cfg.thresholds[i] - progress,
+                    nextRank: cfg.ranks[i],
+                    usesPrestige
+                };
             }
         }
-        return { kills, nextThreshold: null, killsToNext: null, nextRank: null };
+        return { kills: progress, progress, nextThreshold: null, killsToNext: null, toNext: null, nextRank: null, usesPrestige };
+    }
+
+    /**
+     * Adds faction prestige and checks for rank promotion
+     * @param {string} factionKey - The faction key
+     * @param {number} amount - Amount of prestige to add
+     */
+    addFactionPrestige(factionKey, amount) {
+        if (!factionKey || !amount || amount <= 0) return;
+        if (!this.factionPrestige) {
+            this.factionPrestige = { POLICE: 0, MILITARY: 0, IMPERIAL: 0, SEPARATIST: 0 };
+        }
+        if (this.factionPrestige[factionKey] === undefined) return;
+
+        const oldRank = this.getFactionRank(factionKey);
+        this.factionPrestige[factionKey] += amount;
+        const newRank = this.getFactionRank(factionKey);
+
+        // Notify player of faction rank change
+        if (oldRank !== newRank) {
+            const factionDisplayName = this.getFactionDisplayName(factionKey);
+            if (typeof uiManager !== "undefined") {
+                uiManager.addMessage(`${factionDisplayName} Rank: ${newRank}!`, [100, 200, 255]);
+            }
+            if (typeof soundManager !== "undefined") {
+                soundManager.playSound("promotion");
+            }
+        }
     }
 
     /**
@@ -3609,21 +3724,25 @@ const FACTION_RANKS = {
     POLICE: {
         base: 'Recruit',
         thresholds: [10, 25, 50, 100, 250, 500, 1000],
-        ranks: ['Constable', 'Officer', 'Corporal', 'Sergeant', 'Inspector', 'Chief Inspector', 'Commissioner']
+        ranks: ['Constable', 'Officer', 'Corporal', 'Sergeant', 'Inspector', 'Chief Inspector', 'Commissioner'],
+        usesPrestige: false // Police uses kills
     },
     MILITARY: {
         base: 'Trainee',
-        thresholds: [5, 12, 25, 50, 125, 250, 500],
-        ranks: ['Cadet', 'Ensign', 'Lieutenant', 'Commander', 'Captain', 'Commodore', 'Admiral']
+        thresholds: [5, 15, 35, 75, 150, 300, 600],
+        ranks: ['Cadet', 'Ensign', 'Lieutenant', 'Commander', 'Captain', 'Commodore', 'Admiral'],
+        usesPrestige: true // Military uses prestige
     },
     IMPERIAL: {
         base: 'Squire',
-        thresholds: [10, 25, 50, 100, 250, 500, 1000],
-        ranks: ['Knight', 'Baron', 'Count', 'Marquis', 'Duke', 'Grand Duke', 'Emperor']
+        thresholds: [10, 30, 70, 150, 300, 600, 1200],
+        ranks: ['Knight', 'Baron', 'Count', 'Marquis', 'Duke', 'Grand Duke', 'Emperor'],
+        usesPrestige: true // Imperial uses prestige
     },
     SEPARATIST: {
         base: 'Initiate',
-        thresholds: [10, 25, 50, 100, 250, 500, 1000],
-        ranks: ["Brawler", "Operative", "Cell Leader", "Collective Coordinator", "Regional Commissar", "Commissar-General", "People's Vanguard"]
+        thresholds: [10, 30, 70, 150, 300, 600, 1200],
+        ranks: ["Brawler", "Operative", "Cell Leader", "Collective Coordinator", "Regional Commissar", "Commissar-General", "People's Vanguard"],
+        usesPrestige: true // Separatist uses prestige
     }
 };
