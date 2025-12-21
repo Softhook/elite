@@ -980,6 +980,103 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Weapons", "Adv Components"], price: 115000, techLevel: 4,
         aiRoles: ["BOUNTY_HUNTER", "PIRATE"]
     },
+    "HarlequinMotley": {
+        name: "Harlequin Motley", role: "Fast Interceptor", sizeCategory: "Small", size: 28,
+        baseMaxSpeed: 8.2, baseThrust: 0.19, baseTurnRate: 0.085,
+        baseHull: 45, baseShield: 75, shieldRecharge: 1.7, cargoCapacity: 8,
+        armament: ["Burst Blaster", "Pulse Laser"],
+        costCategory: "Medium", description: "Speed incarnate wrapped in eye-searing orange and electric blue. The Motley zips through conflict zones like a caffeinated hummingbird with attitude problems. 8.2 speed makes it nearly uncatchable; 45 hull means one mistake and you're confetti. Harlequin pilots call it 'the fool's choice'—but fools who survive learn fast.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.3000, y: 0.3500 }, { x: -0.4000, y: 0.3000 }, { x: -0.9000, y: 0.5000 }, { x: -0.7000, y: 0.0000 }, { x: -0.9000, y: -0.5000 }, { x: -0.4000, y: -0.3000 }, { x: 0.3000, y: -0.3500 }],
+                fillColor: [255, 120, 0]
+            },
+            {
+                vertexData: [{ x: 0.8000, y: -0.0800 }, { x: 0.8000, y: 0.0800 }, { x: -0.3000, y: 0.1500 }, { x: -0.3000, y: -0.1500 }],
+                fillColor: [0, 180, 255]
+            },
+            {
+                vertexData: [{ x: -0.5500, y: 0.3800 }, { x: -0.4000, y: 0.2200 }, { x: -0.7500, y: 0.2200 }],
+                fillColor: [0, 180, 255]
+            },
+            {
+                vertexData: [{ x: -0.5500, y: -0.3800 }, { x: -0.4000, y: -0.2200 }, { x: -0.7500, y: -0.2200 }],
+                fillColor: [0, 180, 255]
+            },
+            {
+                vertexData: [{ x: 0.0500, y: 0.0000 }, { x: -0.0500, y: 0.0866 }, { x: -0.1500, y: 0.0866 }, { x: -0.2500, y: 0.0000 }, { x: -0.1500, y: -0.0866 }, { x: -0.0500, y: -0.0866 }],
+                fillColor: [255, 255, 255]
+            }
+        ],
+        typicalCargo: ["Narcotics", "Computers"], price: 42000, techLevel: 3,
+        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
+    },
+    "HarlequinZanni": {
+        name: "Harlequin Zanni", role: "Heavy Striker", sizeCategory: "Medium", size: 52,
+        baseMaxSpeed: 5.8, baseThrust: 0.13, baseTurnRate: 0.055,
+        baseHull: 180, baseShield: 160, shieldRecharge: 1.1, cargoCapacity: 35,
+        armament: ["Heavy Cannon", "Multi-Cannon", "Beam Laser", "Guardian Missile"],
+        costCategory: "High", description: "Hot pink and toxic lime—the ship equivalent of a poison dart frog screaming 'I am dangerous and have no shame.' That 180 hull absorbs punishment while quad hardpoints dish it back. Harlequin commanders deploy Zannis when they want targets to know embarrassment before annihilation. Kills aren't just combat victories, they're fashion statements.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.2000 }, { x: 0.5000, y: 0.6000 }, { x: -0.3000, y: 0.7000 }, { x: -0.8000, y: 0.5000 }, { x: -0.9000, y: 0.0000 }, { x: -0.8000, y: -0.5000 }, { x: -0.3000, y: -0.7000 }, { x: 0.5000, y: -0.6000 }, { x: 0.9000, y: -0.2000 }],
+                fillColor: [255, 20, 147]
+            },
+            {
+                vertexData: [{ x: 0.7000, y: 0.0000 }, { x: 0.3500, y: 0.4500 }, { x: -0.2000, y: 0.5000 }, { x: -0.6000, y: 0.3000 }, { x: -0.6000, y: -0.3000 }, { x: -0.2000, y: -0.5000 }, { x: 0.3500, y: -0.4500 }],
+                fillColor: [180, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.3000, y: -0.2000 }, { x: -0.3000, y: 0.2000 }, { x: -0.5000, y: 0.2500 }, { x: -0.6500, y: 0.2000 }, { x: -0.7000, y: 0.1000 }, { x: -0.7000, y: -0.1000 }, { x: -0.6500, y: -0.2000 }, { x: -0.5000, y: -0.2500 }],
+                fillColor: [255, 20, 147]
+            },
+            {
+                vertexData: [{ x: 0.2000, y: -0.3000 }, { x: 0.4000, y: -0.2000 }, { x: 0.4000, y: 0.2000 }, { x: 0.2000, y: 0.3000 }],
+                fillColor: [255, 255, 255]
+            },
+            {
+                vertexData: [{ x: -0.4500, y: -0.0400 }, { x: -0.4500, y: 0.0400 }, { x: -0.5500, y: 0.0000 }],
+                fillColor: [0, 0, 0]
+            }
+        ],
+        typicalCargo: ["Weapons", "Slaves", "Luxury Goods"], price: 98000, techLevel: 4,
+        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
+    },
+    "HarlequinPulcinella": {
+        name: "Harlequin Pulcinella", role: "Support/Logistics", sizeCategory: "Medium", size: 48,
+        baseMaxSpeed: 4.5, baseThrust: 0.08, baseTurnRate: 0.05,
+        baseHull: 140, baseShield: 120, shieldRecharge: 1.0, cargoCapacity: 90,
+        armament: ["Mini-Turret", "Twin Pulse"],
+        costCategory: "Medium-High", description: "Coral and turquoise should never work together—yet here we are, staring at cargo ship couture. The Pulcinella ferries 90 tons of questionable goods while looking like a tropical sunset had a midlife crisis. Harlequin logistics crews love it; everyone else questions their life choices when it arrives at the loading bay.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.8000, y: 0.4000 }, { x: 0.4000, y: 0.7000 }, { x: -0.6000, y: 0.7000 }, { x: -0.8000, y: 0.4000 }, { x: -0.8000, y: -0.4000 }, { x: -0.6000, y: -0.7000 }, { x: 0.4000, y: -0.7000 }, { x: 0.8000, y: -0.4000 }],
+                fillColor: [255, 127, 80]
+            },
+            {
+                vertexData: [{ x: 0.6000, y: 0.0000 }, { x: 0.2000, y: 0.5000 }, { x: -0.4000, y: 0.5000 }, { x: -0.6000, y: 0.0000 }, { x: -0.4000, y: -0.5000 }, { x: 0.2000, y: -0.5000 }],
+                fillColor: [64, 224, 208]
+            },
+            {
+                vertexData: [{ x: -0.1000, y: 0.5500 }, { x: 0.1000, y: 0.5500 }, { x: 0.1000, y: 0.6800 }, { x: -0.1000, y: 0.6800 }],
+                fillColor: [255, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.1000, y: -0.5500 }, { x: 0.1000, y: -0.5500 }, { x: 0.1000, y: -0.6800 }, { x: -0.1000, y: -0.6800 }],
+                fillColor: [255, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.2500, y: -0.1500 }, { x: -0.2500, y: 0.1500 }, { x: -0.4000, y: 0.2000 }, { x: -0.5000, y: 0.1500 }, { x: -0.5500, y: 0.0000 }, { x: -0.5000, y: -0.1500 }, { x: -0.4000, y: -0.2000 }],
+                fillColor: [255, 127, 80]
+            },
+            {
+                vertexData: [{ x: 0.5000, y: -0.2500 }, { x: 0.6500, y: 0.0000 }, { x: 0.5000, y: 0.2500 }],
+                fillColor: [200, 200, 220]
+            }
+        ],
+        typicalCargo: ["Narcotics", "Luxury Goods", "Slaves", "Textiles"], price: 72000, techLevel: 3,
+        aiRoles: ["HAULER", "PIRATE"]
+    },
     "LocalHopper": {
         name: "Local Hopper", role: "Light Transport", sizeCategory: "Tiny", size: 18,
         baseMaxSpeed: 3.5, baseThrust: 0.04, baseTurnRate: 0.05,
