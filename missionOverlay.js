@@ -11,9 +11,9 @@ class MissionOverlay {
     draw(player) {
         if (!player) return;
 
-        // Use 80% of screen
-        const pX = width * 0.1, pY = height * 0.1;
-        const pW = width * 0.8, pH = height * 0.8;
+        // Use 60% of screen (Matches Inventory Overlay)
+        const pX = width * 0.2, pY = height * 0.2;
+        const pW = width * 0.6, pH = height * 0.6;
 
         push();
         if (typeof font !== 'undefined') textFont(font);
@@ -25,6 +25,7 @@ class MissionOverlay {
         rect(pX, pY, pW, pH, 8);
 
         // Header
+        noStroke();
         textAlign(CENTER, TOP);
         fill(255, 200, 50);
         textSize(STATION_TEXT_SIZE.BIGHEADER);
@@ -50,6 +51,7 @@ class MissionOverlay {
         rect(cx, cy, cw, ch, 4);
 
         // Close label
+        noStroke();
         fill(255);
         textAlign(CENTER, CENTER);
         textSize(STATION_TEXT_SIZE.BODY);
@@ -57,6 +59,7 @@ class MissionOverlay {
         this.closeButton = { x: cx, y: cy, w: cw, h: ch };
 
         if (!player.activeMission) {
+            noStroke();
             fill(200);
             textAlign(CENTER, CENTER);
             textSize(STATION_TEXT_SIZE.HEADER);
@@ -78,6 +81,7 @@ class MissionOverlay {
             const details = typeof m.getDetails === 'function' ? m.getDetails() : (m.description || "No details available.");
 
             // Draw Title (Fixed)
+            noStroke();
             fill(255, 220, 100);
             textSize(titleSize);
             textAlign(LEFT, TOP);
@@ -108,6 +112,7 @@ class MissionOverlay {
             ctx.clip();
 
             fill(220);
+            noStroke();
             textSize(detailSize);
             textLeading(lineHeight);
             textAlign(LEFT, TOP);
@@ -146,6 +151,7 @@ class MissionOverlay {
             else if (m.status === 'Failed') statusColor = [255, 100, 100];
 
             fill(...statusColor);
+            noStroke();
             textSize(STATION_TEXT_SIZE.BODY);
             textAlign(LEFT, BASELINE);
             text(`Status: ${m.status}`, contentStartX, statusY + 20);

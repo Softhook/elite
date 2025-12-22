@@ -12,16 +12,19 @@ class InventoryScreen {
     const pW = width * 0.6, pH = height * 0.6;
 
     push();
+    if (typeof font !== 'undefined') textFont(font);
     fill(30, 30, 50, 220);
     stroke(100, 150, 255);
     rect(pX, pY, pW, pH, 8);
 
+    noStroke();
     textAlign(CENTER, TOP);
     fill(255); textSize(STATION_TEXT_SIZE.HEADER);
     text("Inventory", pX + pW / 2, pY + 10);
 
     // Ship info
     const infoY = pY + 50;
+    noStroke();
     textAlign(LEFT, TOP); textSize(STATION_TEXT_SIZE.BODY);
     text(`Ship: ${player.shipTypeName}`, pX + 20, infoY);
     text(`Cargo: ${player.getCargoAmount()}/${player.cargoCapacity}`, pX + 20, infoY + 24);
@@ -46,6 +49,7 @@ class InventoryScreen {
       } else {
         fill(255);
       }
+      noStroke();
       textAlign(LEFT, CENTER);
       textSize(STATION_TEXT_SIZE.BODY);
 
@@ -91,6 +95,7 @@ class InventoryScreen {
 
       // Button text
       fill(255);
+      noStroke();
       textAlign(CENTER, CENTER);
       textSize(STATION_TEXT_SIZE.BODY);
       text("Jettison", buttonX + buttonW / 2, buttonY + buttonH / 2);
@@ -113,6 +118,7 @@ class InventoryScreen {
     rect(cx, cy, cw, ch, 4);
 
     fill(255);
+    noStroke();
     textAlign(CENTER, CENTER);
     textSize(STATION_TEXT_SIZE.BODY);
     text("Close", cx + cw / 2, cy + ch / 2);
