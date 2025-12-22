@@ -91,6 +91,15 @@ class EnemyStateMachine {
             return;
         }
 
+        // --- EXIT SNIPING if target is beyond weapon range ---
+        const maxSnipingRange = (this.visualFiringRange || this.firingRange) * SNIPING_EXIT_MAX_FACTOR;
+        if (distanceToTarget > maxSnipingRange) {
+            AI_LOG(`${this.shipTypeName} (SNIPING): Target beyond range (${distanceToTarget.toFixed(0)} > ${maxSnipingRange.toFixed(0)}). Switching to APPROACHING.`);
+            this.changeState(AI_STATE.APPROACHING);
+            return;
+        }
+        // --- END RANGE CHECK ---
+
         // --- Check for significant damage taken (shield + hull) while sniping ---
         if (this.shieldPlusHullAtStateEntry !== null) {
             const totalMaxHealth = this.maxShield + this.maxHull;
