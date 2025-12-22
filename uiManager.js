@@ -1110,6 +1110,13 @@ class UIManager {
 
     /** Handles mouse wheel events for scrolling */
     handleMouseWheel(event, currentState) {
+        // Check mission overlay first (it overlays everything)
+        if (typeof gameStateManager !== 'undefined' && gameStateManager.showingMissionOverlay) {
+            if (typeof missionOverlay !== 'undefined' && typeof missionOverlay.handleWheel === 'function') {
+                if (missionOverlay.handleWheel(event)) return true;
+            }
+        }
+
         const scrollConfigs = {
             "VIEWING_SHIPYARD": ["shipyardScrollOffset", "shipyardScrollMax"],
             "VIEWING_UPGRADES": ["upgradeScrollOffset", "upgradeScrollMax"],
