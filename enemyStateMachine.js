@@ -49,17 +49,49 @@ class EnemyStateMachine {
     /**
      * Handles IDLE state logic
      * Transitions to APPROACHING if target exists, or GUARDING for guards with principal
+     * Also prevents ships from being "sitting ducks" after fleeing
      * @param {boolean} targetExists - Whether a valid target exists
      * @private
      */
     _updateState_IDLE(targetExists) {
         if (targetExists) {
             this.changeState(AI_STATE.APPROACHING);
-        } else if (this.role === AI_ROLE.GUARD && this.principal && this.isTargetValid(this.principal)) {
-            // If idle, is a guard, and has a valid principal, return to GUARDING state.
-            this.changeState(AI_STATE.GUARDING);
+            return;
         }
-        // Otherwise, remains IDLE.
+
+        // Guards should return to guarding
+        if (this.role === AI_ROLE.GUARD && this.principal && this.isTargetValid(this.principal)) {
+            this.changeState(AI_STATE.GUARDING);
+            return;
+        }
+
+        // ANTI-SITTING-DUCK: If we have a lastAttacker that's still valid, react to it
+        if (this.lastAttacker && this.isTargetValid(this.lastAttacker)) {
+            const distToAttacker = this.distanceTo(this.lastAttacker);
+
+            // If attacker is close, we need to do something
+            if (distToAttacker < this.detectionRange) {
+                // Low hull? Flee again
+                if (this.hull < this.maxHull * 0.4) {
+                    this.target = this.lastAttacker;
+                    this.changeState(AI_STATE.FLEEING);
+                    return;
+                }
+                // Otherwise, engage if we're armed
+                if (this.isArmed()) {
+                    this.target = this.lastAttacker;
+                    this.changeState(AI_STATE.APPROACHING);
+                    return;
+                }
+                // Unarmed? Flee
+                this.target = this.lastAttacker;
+                this.changeState(AI_STATE.FLEEING);
+                return;
+            }
+        }
+
+        // Otherwise, remains IDLE but apply gentle drift to avoid being completely static
+        // This makes ships less predictable even when idle
     }
 
     /**
