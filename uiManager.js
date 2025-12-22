@@ -281,6 +281,13 @@ class UIManager {
         this.hud.drawHUD(player);
     }
 
+    /** Draws the mission overlay - delegates to global missionOverlay object */
+    drawMissionOverlay(player) {
+        if (typeof missionOverlay !== 'undefined') {
+            missionOverlay.draw(player);
+        }
+    }
+
     /** Draws the weapon selector UI - delegates to HUD module */
     drawWeaponSelector(player) {
         this.hud.drawWeaponSelector(player);
@@ -599,10 +606,36 @@ class UIManager {
 
         const currentSystem = galaxy?.getCurrentSystem(); const currentStation = currentSystem?.station;
 
+        // --- Handle Mission Overlay Clicks (High Priority) ---
+        if (gameStateManager && gameStateManager.showingMissionOverlay && typeof missionOverlay !== 'undefined') {
+            const result = missionOverlay.handleClick(mx, my);
+            if (result === 'close') {
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
+                gameStateManager.toggleMissionOverlay();
+                return true;
+            } else if (missionOverlay._hit && missionOverlay._hit(mx, my, { x: width * 0.2, y: height * 0.2, w: width * 0.6, h: height * 0.6 })) {
+                // Consume clicks inside the overlay so we don't shoot weapons etc.
+                return true;
+            }
+            // Click outside closes it
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
+            gameStateManager.toggleMissionOverlay();
+            return true;
+        }
+
         // --- Minimap click: target locking (zoom cycling moved to '.' key) ---
         // Always use the expanded size for click region (minimap is always large).
         const minimapActive = currentState === "IN_FLIGHT";
         if (minimapActive) {
+            // Check HUD Mission Display Click (Open Overlay)
+            if (this.hud.checkMissionClick(mx, my)) {
+                if (gameStateManager) {
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                    gameStateManager.toggleMissionOverlay();
+                }
+                return true;
+            }
+
             const curMinimapSize = this.minimapExpandedSize;
             const curMinimapX = width - curMinimapSize - this.minimapMargin;
             const curMinimapY = height - curMinimapSize - this.minimapMargin;

@@ -94,6 +94,7 @@ class GameStateManager {
 
         // UI flags
         this.showingInventory = false;
+        this.showingMissionOverlay = false;
 
         // Post-load transition (used when waiting for planet buffers)
         this.postLoadFadeState = "NONE"; // NONE, FADE_OUT, FADE_IN
@@ -439,6 +440,10 @@ class GameStateManager {
 
         GS_LOG(`Changing state from ${this.previousState} to ${newState}`);
         this.currentState = newState;
+
+        // Force close overlays on state change
+        this.showingMissionOverlay = false;
+        this.showingInventory = false;
 
         // Execute transition handlers
         this._updateAmbientSoundState(newState);
@@ -1137,6 +1142,7 @@ class GameStateManager {
 
         this._drawStateVisuals(player, currentSystem);
         this._drawInventoryOverlay(player);
+        this._drawMissionOverlay(player);
         this._drawPostLoadFade();
         this._drawPlanetBufferProgress();
     }
@@ -1751,6 +1757,16 @@ class GameStateManager {
     }
 
     /**
+     * Draws mission overlay if showing
+     * @private
+     */
+    _drawMissionOverlay(player) {
+        if (this.currentState === "IN_FLIGHT" && this.showingMissionOverlay && uiManager) {
+            uiManager.drawMissionOverlay(player);
+        }
+    }
+
+    /**
      * Draws post-load fade overlay
      * @private
      */
@@ -1979,6 +1995,17 @@ class GameStateManager {
     toggleInventory() {
         if (this.currentState === "IN_FLIGHT") {
             this.showingInventory = !this.showingInventory;
+            if (this.showingInventory) this.showingMissionOverlay = false; // Close mission overlay if opening inventory
+            return true;
+        }
+        return false;
+    }
+
+    // Add a method to toggle the mission overlay screen
+    toggleMissionOverlay() {
+        if (this.currentState === "IN_FLIGHT") {
+            this.showingMissionOverlay = !this.showingMissionOverlay;
+            if (this.showingMissionOverlay) this.showingInventory = false; // Close inventory if opening mission overlay
             return true;
         }
         return false;

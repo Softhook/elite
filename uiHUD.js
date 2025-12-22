@@ -32,6 +32,9 @@ class UIHUD {
         this.persistentMessages = [];
         // Event markers for location-based events (visible on HUD/minimap)
         this.eventMarkers = []; // { id, x, y, label, color, expires }
+
+        // Mission display area for click detection
+        this.missionBoxArea = null;
     }
 
     /**
@@ -594,6 +597,16 @@ class UIHUD {
 
             fill(255, 200, 0);
             circle(missionBoxX + 6, weaponBarY + weaponBarH / 2, 5);
+
+            // Store area for click handling
+            this.missionBoxArea = {
+                x: missionBoxX,
+                y: weaponBarY + 3,
+                w: missionBoxW,
+                h: weaponBarH - 6
+            };
+        } else {
+            this.missionBoxArea = null;
         }
 
         // Autopilot indicator
@@ -1476,6 +1489,19 @@ class UIHUD {
         text("Click anywhere or press any key to start again", width / 2, height / 2 + 20);
 
         pop();
+    }
+    /**
+     * Checks if a click occurred on the mission info box
+     * @param {number} mx - Mouse X
+     * @param {number} my - Mouse Y
+     * @returns {boolean} True if clicked
+     */
+    checkMissionClick(mx, my) {
+        if (!this.missionBoxArea) return false;
+
+        const b = this.missionBoxArea;
+        return (mx >= b.x && mx <= b.x + b.w &&
+            my >= b.y && my <= b.y + b.h);
     }
 }
 

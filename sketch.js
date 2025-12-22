@@ -27,7 +27,7 @@ const GameGlobals = {
 
 // Maintain backward compatibility with existing code
 let player, galaxy, uiManager, gameStateManager, soundManager, ambientSoundManager,
-    titleScreen, font, inventoryScreen, eventManager, communicationSystem, saveSelectionScreen,
+    titleScreen, font, inventoryScreen, missionOverlay, eventManager, communicationSystem, saveSelectionScreen,
     stationMusicManager;
 let loadGameWasSuccessful = false;
 let globalSessionSeed;
@@ -126,6 +126,7 @@ function initializeGameObjects() {
     uiManager = new UIManager();
     titleScreen = new TitleScreen();
     inventoryScreen = new InventoryScreen();
+    missionOverlay = new MissionOverlay();
     saveSelectionScreen = new SaveSelectionScreen();
     communicationSystem = new CommunicationSystem();
     const newsManager = new NewsManager();
@@ -137,6 +138,7 @@ function initializeGameObjects() {
         uiManager,
         titleScreen,
         inventoryScreen,
+        missionOverlay,
         saveSelectionScreen,
         communicationSystem,
         newsManager,
