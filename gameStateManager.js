@@ -109,17 +109,17 @@ class GameStateManager {
 
         // Death zoom effect - dramatic zoom-in when player is destroyed
         this.deathZoomScale = 1.0;           // Current zoom level (1.0 = normal, higher = zoomed in)
-        this.deathZoomTarget = 2.5;          // Target zoom level during death
+        this.deathZoomTarget = 3;          // Target zoom level during death
         this.deathZoomSpeed = 0.012;         // How fast to zoom in per frame
         this.deathZoomActive = false;        // Whether the death zoom is currently active
         this.deathZoomStartTime = 0;         // When the death zoom started (millis)
 
         // Intro zoom effect - zoom out from close-up when first entering space
-        this.introZoomScale = 2.5;           // Starting zoom level (zoomed in)
+        this.introZoomScale = 40;           // Starting zoom level (zoomed in)
         this.introZoomTarget = 1.0;          // Target zoom level (normal view)
         this.introZoomActive = false;        // Whether intro zoom is currently active
         this.introZoomStartTime = 0;         // When intro zoom started
-        this.introZoomDuration = 2000;       // Duration of intro zoom in ms
+        this.introZoomDuration = 10000;       // Duration of intro zoom in ms
         this.introZoomTriggered = false;     // Whether intro zoom has been triggered this session
     }
 
