@@ -944,11 +944,17 @@ class Player {
             return false;
         }
 
+        // Already on this weapon - no action needed (also prevents exploit of spamming same key)
+        if (index === this.weaponIndex) {
+            return true;
+        }
+
         this.weaponIndex = index;
         this.currentWeapon = weapon;
         this.fireRate = weapon.fireRate || 0.5;
-        // Reset cooldown on weapon switch (optional)
-        this.fireCooldown = 0;
+        // EXPLOIT FIX: Preserve existing cooldown when switching weapons
+        // This prevents bypassing fire rate by rapidly switching weapons
+        // The cooldown remains from the previous weapon to prevent instant firing
 
         // Check if switching to an overheated beam and notify player
         if (weapon.type === WEAPON_TYPE.BEAM && typeof WeaponSystem !== 'undefined') {

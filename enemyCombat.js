@@ -263,8 +263,8 @@ class EnemyCombat {
                 this.weaponIndex = newIndex;
                 this.currentWeapon = this.weapons[this.weaponIndex];
                 this.fireRate = this.currentWeapon.fireRate;
-                // Reset cooldown when switching weapons (half normal delay)
-                this.fireCooldown = this.computeCooldown(this.fireRate * 0.5);
+                // EXPLOIT FIX: Preserve existing cooldown when switching weapons
+                // This prevents bypassing fire rate by rapidly switching weapons
 
                 // Log weapon change for debugging
                 if (this.lastWeaponSwitch === undefined ||
