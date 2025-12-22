@@ -781,6 +781,11 @@ class GameStateManager {
             this._checkDocking(player, currentSystem);
             this._checkAutoJump(player, currentSystem);
             this._checkJumpCompletion();
+            
+            // Update quantum gate fade effect if active (runs alongside normal flight)
+            if (this.jumpFadeState !== "NONE" && this.quantumGateTeleportPending) {
+                this._updateJumpFade();
+            }
         } catch (e) {
             console.error(`ERROR during IN_FLIGHT update:`, e);
         }
@@ -1219,6 +1224,15 @@ class GameStateManager {
                     uiManager.drawMinimap(player, currentSystem);
                 }
             } catch (e) { }
+        }
+        
+        // Draw quantum gate fade overlay if active
+        if (this.jumpFadeState !== "NONE" && this.jumpFadeOpacity > 0) {
+            push();
+            fill(255, 255, 255, this.jumpFadeOpacity * 255);
+            noStroke();
+            rect(0, 0, width, height);
+            pop();
         }
     }
 
