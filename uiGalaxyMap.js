@@ -425,8 +425,11 @@ class UIGalaxyMap {
         const listsX = overlayX + 12;
         const listsY = yPos + 12;
 
-        // Map dockable objects by their planetIndex
+        // Map dockable objects and quantum gates by their planetIndex
         const soByPlanet = {};
+        const quantumGatesByPlanet = {};
+        let unassociatedQuantumGates = []; // Gates near jump zone (no planetIndex)
+
         for (let so of dockableObjects) {
             const pIdx = (typeof so.planetIndex === 'number') ? so.planetIndex : null;
             if (pIdx !== null) {
@@ -435,18 +438,74 @@ class UIGalaxyMap {
             }
         }
 
-        UIComponents.setTextStyle({ fill: 230, size: 13, align: [LEFT, TOP] });
+        // Also map quantum gates by planet (they're not in dockableObjects)
+        if (system.spaceObjects && system.spaceObjects.length) {
+            for (let so of system.spaceObjects) {
+                if (so && so.type === 'quantumGate' && !so.destroyed) {
+                    const pIdx = (typeof so.planetIndex === 'number') ? so.planetIndex : null;
+                    if (pIdx !== null) {
+                        if (!quantumGatesByPlanet[pIdx]) quantumGatesByPlanet[pIdx] = [];
+                        quantumGatesByPlanet[pIdx].push(so);
+                    } else {
+                        // Quantum gate near jump zone (no planet association)
+                        unassociatedQuantumGates.push(so);
+                    }
+                }
+            }
+        }
+
+        let lineCount = 0;
         for (let pi = 0; pi < planets.length; pi++) {
             const p = planets[pi];
             if (!p) continue;
             const pname = p.name || (p.getDisplayName ? p.getDisplayName() : `Planet ${p.planetIndex || pi}`);
             const attached = soByPlanet[p.planetIndex] || [];
+            const qgates = quantumGatesByPlanet[p.planetIndex] || [];
             const names = attached.length ? attached.map(s => (typeof s.getDisplayName === 'function' ? s.getDisplayName() : (s.name || s.type || 'Object'))).join(', ') : '';
-            const line = names ? `${pname} :: ${names}` : pname;
-            text(line, listsX, listsY + pi * listLineHeight);
+
+            // Draw planet name and dockable objects in normal color
+            UIComponents.setTextStyle({ fill: 230, size: 13, align: [LEFT, TOP] });
+            const lineY = listsY + lineCount * listLineHeight;
+
+            if (names) {
+                const baseLine = `${pname} :: ${names}`;
+                text(baseLine, listsX, lineY);
+
+                // If there are quantum gates, add them in red after the normal text
+                if (qgates.length > 0) {
+                    const baseWidth = textWidth(baseLine);
+                    fill(255, 50, 50); // Red for quantum gates
+                    const qgateNames = qgates.map(g => 'Quantum Gate').join(', ');
+                    text(`, ${qgateNames}`, listsX + baseWidth, lineY);
+                }
+            } else if (qgates.length > 0) {
+                // Only quantum gates, no other objects
+                text(`${pname} :: `, listsX, lineY);
+                const prefixWidth = textWidth(`${pname} :: `);
+                fill(255, 50, 50); // Red for quantum gates
+                const qgateNames = qgates.map(g => 'Quantum Gate').join(', ');
+                text(qgateNames, listsX + prefixWidth, lineY);
+            } else {
+                // Just the planet name
+                text(pname, listsX, lineY);
+            }
+            lineCount++;
         }
 
-        yPos = listsY + Math.max(1, planets.length) * listLineHeight + 12;
+        // Show unassociated quantum gates (near jump zone) as a separate entry
+        if (unassociatedQuantumGates.length > 0) {
+            const lineY = listsY + lineCount * listLineHeight;
+            UIComponents.setTextStyle({ fill: 230, size: 13, align: [LEFT, TOP] });
+            text("Jump Zone :: ", listsX, lineY);
+            const prefixWidth = textWidth("Jump Zone :: ");
+            fill(255, 50, 50); // Red for quantum gates
+            const qgateCount = unassociatedQuantumGates.length;
+            const qgateText = qgateCount === 1 ? 'Quantum Gate' : `Quantum Gates (${qgateCount})`;
+            text(qgateText, listsX + prefixWidth, lineY);
+            lineCount++;
+        }
+
+        yPos = listsY + Math.max(1, lineCount) * listLineHeight + 12;
 
         // System description
         const cachedDesc = this._marketOverlayDescText || '';
