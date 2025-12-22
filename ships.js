@@ -44,7 +44,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 6.0, baseThrust: 0.10, baseTurnRate: 0.06109,
         baseHull: 120, baseShield: 100, shieldRecharge: 1, cargoCapacity: 44,
         armament: ["Twin Pulse", "Tangle Projector"], // Versatile loadout with defense
-        costCategory: "Medium", description: "The legendary jack-of-all-trades, master of staying employed. With 44 tons of cargo space and weapons for every occasion, it's been hauling goods and kicking ass for three centuries. If ships had résumés, the Cobra's would be 20 pages long.",
+        costCategory: "Medium", description: "Police variant of the legendary Cobra, outfitted for law enforcement duty. Those emergency lights aren't decorative—they're a warning. Fast enough to catch smugglers, tough enough to survive firefights, and roomy enough to haul confiscated cargo back to the station. Criminals see this silhouette and know their day just got worse.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.8867, y: 0.0000 }, { x: 0.1867, y: 0.5270 }, { x: -0.6178, y: 0.5634 }, { x: -0.6133, y: 0.2000 }, { x: -0.8867, y: 0.1770 }, { x: -0.8867, y: -0.1770 }, { x: -0.6133, y: -0.2000 }, { x: -0.6178, y: -0.5634 }, { x: 0.1867, y: -0.5270 }],
@@ -1133,7 +1133,7 @@ const SHIP_DEFINITIONS = {
         name: "Sidewinder", role: "Starter", sizeCategory: "Tiny", size: 20,
         baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.06981,
         baseHull: 50, baseShield: 50, shieldRecharge: 1.0, cargoCapacity: 10,
-        armament: ["Pulse Laser", "Guardian Missile"], // Starter weapon
+        armament: ["Pulse Laser"], // Starter weapon
         costCategory: "N/A", description: "The bargain bin starter ship that new pilots either treasure forever or sell within hours. Balanced 50/50 hull/shields and just enough cargo (10 tons) to learn the hauling trade. Cheap, agile, expendable. Sort of like a puppy, if puppies exploded when shot.",
         vertexData: [{ x: 0.9, y: 0 }, { x: -0.7, y: 0.8 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.8 }],
         fillColor: [180, 100, 20],
@@ -2098,7 +2098,7 @@ const SHIP_DEFINITIONS = {
         name: "Cobra Mk III", role: "Multi-Role", sizeCategory: "Medium", size: 38,
         baseMaxSpeed: 6.0, baseThrust: 0.10, baseTurnRate: 0.06109,
         baseHull: 120, baseShield: 100, shieldRecharge: 1, cargoCapacity: 44,
-        armament: ["Twin Pulse", "Tangle Projector"], // Versatile loadout with defense
+        armament: ["Twin Pulse", "Guardian Missile"], // Versatile loadout
         costCategory: "Medium", description: "The legendary jack-of-all-trades, master of staying employed. With 44 tons of cargo space and weapons for every occasion, it's been hauling goods and kicking ass for three centuries. If ships had résumés, the Cobra's would be 20 pages long.",
         vertexLayers: [
             {
