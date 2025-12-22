@@ -8,6 +8,7 @@
 // Stores base stats AND VERTEX DATA for each ship type.
 // Note: drawFunction is assigned at the bottom of this file.
 const SHIP_DEFINITIONS = {
+    // --- POLICE & SECURITY ---
     "ACAB": {
         name: "ACAB", role: "Police", sizeCategory: "Small", size: 28,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236,
@@ -38,8 +39,8 @@ const SHIP_DEFINITIONS = {
         aiRoles: ["POLICE"],
         techLevel: 1 // Starter
     },
-    "CobraMkIII": {
-        name: "Cobra Mk III", role: "Multi-Role", sizeCategory: "Medium", size: 38,
+    "CobraMkPol": {
+        name: "Cobra Mk Pol", role: "Police", sizeCategory: "Medium", size: 38,
         baseMaxSpeed: 6.0, baseThrust: 0.10, baseTurnRate: 0.06109,
         baseHull: 120, baseShield: 100, shieldRecharge: 1, cargoCapacity: 44,
         armament: ["Twin Pulse", "Tangle Projector"], // Versatile loadout with defense
@@ -71,258 +72,46 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Food"],
         price: 21600,
-        aiRoles: ["POLICE", "HAULER"],
+        aiRoles: ["POLICE"],
         techLevel: 2 // Utility
     },
-    "Adder": {
-        name: "Adder", role: "Trader/Explorer", sizeCategory: "Small", size: 28,
-        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236,
-        baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 30,
-        armament: ["Pulse Laser"],
-        costCategory: "Low", description: "Affordable entry-level freighter beloved by broke cargo runners. Sure, it's slower than a hangover and handles like a drunk elephant, but that 30-ton hold pays bills. First-time pilots either love it or crash it within a week.",
+    "Viper": {
+        name: "Viper", role: "Fighter", sizeCategory: "Small", size: 35,
+        baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRate: 0.07854,
+        baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 15,
+        armament: ["Twin Pulse", "Guardian Missile", "Basic Mine"], // Fast fighter
+        costCategory: "Medium", description: "The cop car of space. Police and bounty hunters love its 7.5 speed and aggressive handling. Shields recharge fast enough to confuse targets who thought they scored a hit. If you hear 'Viper inbound' on comms and you're wanted, it's already too late. Start transmitting your last words.",
         vertexLayers: [
             {
-                vertexData: [{ x: 0.8500, y: 0.0500 }, { x: 0.2500, y: 0.8500 }, { x: -0.8500, y: 0.7500 }, { x: -0.6500, y: 0.0500 }, { x: -0.8500, y: -0.8500 }, { x: 0.1500, y: -0.6500 }],
-                fillColor: [160, 160, 140],
+                vertexData: [{ x: 1.0500, y: 0.0000 }, { x: -0.6500, y: 0.5000 }, { x: -1.0500, y: 0.3000 }, { x: -1.0500, y: -0.3000 }, { x: -0.6500, y: -0.5000 }],
+                fillColor: [210, 210, 220]
             },
             {
-                vertexData: [{ x: 0.3000, y: 0.0000 }, { x: -0.1500, y: 0.2598 }, { x: -0.1500, y: -0.2598 }],
-                fillColor: [101, 171, 236],
+                vertexData: [{ x: -0.1312, y: 0.2187 }, { x: -0.2479, y: 0.1312 }, { x: -0.2479, y: -0.1312 }, { x: -0.1312, y: -0.2187 }, { x: -0.0146, y: -0.1604 }, { x: 0.1312, y: -0.0875 }, { x: 0.2187, y: 0.0000 }, { x: 0.1312, y: 0.0875 }, { x: -0.0146, y: 0.1604 }],
+                fillColor: [133, 193, 249]
             },
-            // Cargo bay marking
+            // Police pursuit lights
             {
-                vertexData: [{ x: -0.3000, y: 0.3500 }, { x: -0.5000, y: 0.4000 }, { x: -0.5000, y: 0.2500 }, { x: -0.3000, y: 0.3000 }],
-                fillColor: [200, 180, 100]
+                vertexData: [{ x: -0.5500, y: 0.4200 }, { x: -0.6300, y: 0.4000 }, { x: -0.5800, y: 0.3600 }],
+                fillColor: [255, 0, 0]
             },
-            // Navigation light port
             {
-                vertexData: [{ x: 0.1500, y: 0.7800 }, { x: 0.0800, y: 0.7500 }, { x: 0.1200, y: 0.7000 }],
-                fillColor: [255, 50, 50]
+                vertexData: [{ x: -0.5500, y: -0.4200 }, { x: -0.6300, y: -0.4000 }, { x: -0.5800, y: -0.3600 }],
+                fillColor: [0, 100, 255]
+            },
+            // Hull chevron
+            {
+                vertexData: [{ x: 0.3000, y: 0.0800 }, { x: 0.1500, y: 0.0000 }, { x: 0.3000, y: -0.0800 }, { x: 0.2500, y: 0.0000 }],
+                fillColor: [180, 180, 200]
             }
         ],
-        typicalCargo: ["Food", "Textiles", "Minerals"],
-        price: 11000,
-        aiRoles: ["HAULER"],
-        techLevel: 1 // Starter
-    },
-    "Anaconda": {
-        name: "Anaconda", role: "Heavy Combat/Multi", sizeCategory: "Very Large", size: 120,
-        baseMaxSpeed: 3.0, baseThrust: 0.05, baseTurnRate: 0.02094,
-        baseHull: 400, baseShield: 350, shieldRecharge: 1, cargoCapacity: 150,
-        armament: ["Force Blaster", "Guardian Missile", "Barrier Field", "Advanced Mine"],
-        costCategory: "Very High", description: "A mobile fortress that laughs at missile strikes with its 400-unit hull. Sure, it turns like a space station having a bad day, but when you're hauling 150 tons of cargo and enough firepower to level a moon, who needs agility? Peak engineering meets peak intimidation.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.1500, y: 0.0000 }, { x: 0.8500, y: 0.3000 }, { x: -0.9500, y: 0.4000 }, { x: -1.1500, y: 0.2000 }, { x: -1.1500, y: -0.2000 }, { x: -0.9500, y: -0.4000 }, { x: 0.8500, y: -0.3000 }],
-                fillColor: [80, 90, 100]
-            },
-            {
-                vertexData: [{ x: 0.6900, y: -0.1980 }, { x: 0.8340, y: -0.0900 }, { x: 0.8340, y: 0.0900 }, { x: 0.6900, y: 0.1980 }, { x: 0.6700, y: 0.0000 }],
-                fillColor: [150, 150, 180]
-            },
-            // Military chevron emblem (gold arrow) - large ship
-            {
-                vertexData: [{ x: 0.5000, y: 0.0000 }, { x: 0.3000, y: 0.1200 }, { x: 0.3800, y: 0.0000 }, { x: 0.3000, y: -0.1200 }],
-                fillColor: [218, 165, 32]
-            },
-            // Hull identification stripe
-            {
-                vertexData: [{ x: 0.2000, y: 0.2600 }, { x: -0.6000, y: 0.3200 }, { x: -0.6000, y: 0.2800 }, { x: 0.2000, y: 0.2200 }],
-                fillColor: [60, 70, 80]
-            },
-            {
-                vertexData: [{ x: 0.2000, y: -0.2600 }, { x: -0.6000, y: -0.3200 }, { x: -0.6000, y: -0.2800 }, { x: 0.2000, y: -0.2200 }],
-                fillColor: [60, 70, 80]
-            },
-            // Port navigation light
-            {
-                vertexData: [{ x: -0.9000, y: 0.3800 }, { x: -0.9700, y: 0.3500 }, { x: -0.9200, y: 0.3200 }],
-                fillColor: [255, 50, 50]
-            },
-            // Starboard navigation light
-            {
-                vertexData: [{ x: -0.9000, y: -0.3800 }, { x: -0.9700, y: -0.3500 }, { x: -0.9200, y: -0.3200 }],
-                fillColor: [50, 255, 50]
-            },
-            // Stern light
-            {
-                vertexData: [{ x: -1.0500, y: 0.0500 }, { x: -1.1200, y: 0.0000 }, { x: -1.0500, y: -0.0500 }],
-                fillColor: [255, 255, 200]
-            }
-        ],
-        typicalCargo: ["Luxury Goods", "Adv Components", "Metals", "Machinery", "Minerals"],
-        price: 53800,
-        aiRoles: ["COMBAT", "MILITARY"],
-        techLevel: 3, // Mid-tier
-        canDualEngage: true // Large ships can engage two targets simultaneously
-    },
-    "AspExplorer": {
-        name: "Asp Explorer", role: "Explorer/Multi-Role", sizeCategory: "Medium", size: 55,
-        baseMaxSpeed: 5.5, baseThrust: 0.09, baseTurnRate: 0.05585,
-        baseHull: 150, baseShield: 180, shieldRecharge: 1.3, cargoCapacity: 80,
-        armament: ["Beam Laser", "Twin Pulse"],
-        costCategory: "Medium-High", description: "The poster child of deep-space exploration. That cockpit visibility isn't just for show—it's saved countless pilots from asteroid faceplants. Respectable cargo hold, decent guns, and shield recharge that'll make combat pilots jealous. Basically a camper van that shoots back.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.3627, y: 0.5133 }, { x: -0.4750, y: 0.8750 }, { x: -0.9500, y: 0.3000 }, { x: -0.9500, y: -0.3000 }, { x: -0.4750, y: -0.8750 }, { x: 0.3627, y: -0.5133 }],
-                fillColor: [200, 180, 80]
-            },
-            {
-                vertexData: [{ x: 0.2400, y: 0.2911 }, { x: 0.2400, y: -0.2911 }, { x: 0.5511, y: 0.0000 }],
-                fillColor: [181, 151, 177]
-            }
-        ],
-        typicalCargo: ["Minerals", "Minerals", "Minerals", "Minerals", "Medicine", "Computers"],
-        price: 23600,
-        aiRoles: ["EXPLORER", "HAULER"],
-        techLevel: 2 // Mid-tier
-    },
-    "CenturionGunship": {
-        name: "Centurion Gunship", role: "Heavy Fighter", sizeCategory: "Large", size: 72,
-        baseMaxSpeed: 4.8, baseThrust: 0.13, baseTurnRate: 0.04538,
-        baseHull: 320, baseShield: 220, shieldRecharge: 1.0, cargoCapacity: 20,
-        armament: ["Quad Pulse", "Beam Laser", "Avenger Missile", "Harpoon Launcher", "Barrier Field", "Heavy Mine"], // Balanced heavy firepower
-        costCategory: "High", description: "A brick with delusions of grandeur and enough guns to make up for its personality. Maxes out at a glacial 4.8 speed but compensates with 320 hull and firepower that could tickle a small moon. Perfect for pilots who believe subtlety is for the weak.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9421, y: 0.0000 }, { x: 0.7579, y: 0.4000 }, { x: 0.0865, y: 0.5048 }, { x: 0.4546, y: 0.6548 }, { x: 0.2506, y: 0.8786 }, { x: -0.5596, y: 0.8810 }, { x: -0.9421, y: 0.6000 }, { x: -0.7690, y: 0.0000 }, { x: -0.9421, y: -0.6000 }, { x: -0.5596, y: -0.8810 }, { x: 0.2506, y: -0.8786 }, { x: 0.4546, y: -0.6548 }, { x: 0.0865, y: -0.5048 }, { x: 0.7579, y: -0.4000 }],
-                fillColor: [100, 105, 115]
-            },
-            {
-                vertexData: [{ x: 0.4097, y: -0.6664 }, { x: 0.2373, y: -0.8540 }, { x: -0.5400, y: -0.8512 }, { x: -0.9068, y: -0.5828 }, { x: -0.3851, y: -0.3522 }],
-                fillColor: [129, 129, 136]
-            },
-            {
-                vertexData: [{ x: -0.0905, y: -0.5240 }, { x: 0.3429, y: -0.6907 }, { x: 0.2096, y: -0.8287 }],
-                fillColor: [182, 182, 185]
-            },
-            {
-                vertexData: [{ x: 0.4097, y: 0.6664 }, { x: 0.2373, y: 0.8540 }, { x: -0.5400, y: 0.8512 }, { x: -0.9068, y: 0.5828 }, { x: -0.3851, y: 0.3522 }],
-                fillColor: [129, 129, 136]
-            },
-            {
-                vertexData: [{ x: -0.0905, y: 0.5240 }, { x: 0.3429, y: 0.6907 }, { x: 0.2096, y: 0.8287 }],
-                fillColor: [182, 182, 185]
-            },
-            // Military chevron emblem (gold arrow)
-            {
-                vertexData: [{ x: 0.4500, y: 0.0000 }, { x: 0.3000, y: 0.1000 }, { x: 0.3500, y: 0.0000 }, { x: 0.3000, y: -0.1000 }],
-                fillColor: [218, 165, 32]
-            },
-            // Hull hash lines (deliberate pattern)
-            {
-                vertexData: [{ x: 0.0000, y: 0.4500 }, { x: 0.0400, y: 0.4700 }, { x: -0.1200, y: 0.4900 }, { x: -0.1600, y: 0.4700 }],
-                fillColor: [80, 85, 95]
-            },
-            {
-                vertexData: [{ x: 0.0000, y: -0.4500 }, { x: 0.0400, y: -0.4700 }, { x: -0.1200, y: -0.4900 }, { x: -0.1600, y: -0.4700 }],
-                fillColor: [80, 85, 95]
-            },
-            // Nav lights
-            {
-                vertexData: [{ x: 0.2000, y: 0.8500 }, { x: 0.1400, y: 0.8200 }, { x: 0.1800, y: 0.7800 }],
-                fillColor: [255, 50, 50]
-            },
-            {
-                vertexData: [{ x: 0.2000, y: -0.8500 }, { x: 0.1400, y: -0.8200 }, { x: 0.1800, y: -0.7800 }],
-                fillColor: [50, 255, 50]
-            }
-        ],
-        typicalCargo: ["Weapons", "Metals", "Machinery"],
-        price: 55600,
-        aiRoles: ["MILITARY"],
+        typicalCargo: ["Computers", "Weapons", "Narcotics"],
+        price: 24500,
+        aiRoles: ["POLICE", "COMBAT", "MILITARY", "BOUNTY_HUNTER", "GUARD"],
         techLevel: 3 // Mid-tier
     },
 
-    "DiamondbackExplorer": {
-        name: "Diamondback Explorer", role: "Explorer/Light Combat", sizeCategory: "Medium", size: 45,
-        baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.05236,
-        baseHull: 130, baseShield: 100, shieldRecharge: 1.1, cargoCapacity: 40,
-        armament: ["Beam Laser", "V Spread"], // Explorer with some punch
-        costCategory: "Medium", description: "The workaholic's explorer—all business, zero flash. Runs cooler than a politician's heart and efficient enough to make accountants weep with joy. Not sexy, but it gets you there and back without spontaneously combusting, which is honestly underrated.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.1500, y: 0.4000 }, { x: -0.5500, y: 0.9000 }, { x: -0.9500, y: 0.5000 }, { x: -0.8500, y: 0.0000 }, { x: -0.9500, y: -0.5000 }, { x: -0.5500, y: -0.9000 }, { x: 0.1500, y: -0.4000 }],
-                fillColor: [100, 110, 90]
-            },
-            {
-                vertexData: [{ x: 0.1400, y: -0.2000 }, { x: 0.3998, y: -0.0500 }, { x: 0.3998, y: 0.0300 }, { x: 0.1400, y: 0.1800 }, { x: -0.1198, y: 0.0300 }, { x: -0.1198, y: -0.0500 }],
-                fillColor: [101, 171, 236]
-            },
-            // Sensor dish (exploration equipment)
-            {
-                vertexData: [{ x: -0.6000, y: 0.8200 }, { x: -0.7000, y: 0.7500 }, { x: -0.6500, y: 0.7000 }],
-                fillColor: [200, 200, 210]
-            },
-            // Scanner array hash marks
-            {
-                vertexData: [{ x: -0.3000, y: 0.6500 }, { x: -0.2500, y: 0.6700 }, { x: -0.4000, y: 0.7500 }, { x: -0.4500, y: 0.7300 }],
-                fillColor: [80, 90, 70]
-            },
-            {
-                vertexData: [{ x: -0.3000, y: -0.6500 }, { x: -0.2500, y: -0.6700 }, { x: -0.4000, y: -0.7500 }, { x: -0.4500, y: -0.7300 }],
-                fillColor: [80, 90, 70]
-            },
-            // Nav lights
-            {
-                vertexData: [{ x: -0.5000, y: 0.8700 }, { x: -0.5700, y: 0.8400 }, { x: -0.5200, y: 0.8000 }],
-                fillColor: [255, 50, 50]
-            },
-            {
-                vertexData: [{ x: -0.5000, y: -0.8700 }, { x: -0.5700, y: -0.8400 }, { x: -0.5200, y: -0.8000 }],
-                fillColor: [50, 255, 50]
-            }
-        ],
-        typicalCargo: ["Minerals", "Metals", "Adv Components"],
-        price: 20800,
-        aiRoles: ["EXPLORER", "HAULER"],
-        techLevel: 3 // Mid-tier
-    },
-    "Destroyer": {
-        name: "Destroyer", role: "Military", sizeCategory: "Large", size: 160,
-        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.02094,
-        baseHull: 800, baseShield: 400, shieldRecharge: 10.0, cargoCapacity: 100,
-        armament: ["Disruptor", "Twin Pulse", "Force Blaster", "Avenger Missile", "Harpoon Launcher", "Barrier Field"],
-        costCategory: "Low", description: "Military-grade intimidation on a budget. With 800 hull and shields that regenerate faster than excuses at a pilot review board, this floating weapons platform makes small fighters reconsider their career choices. Turns like a geriatric whale but nobody's noticed yet.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0832, y: 0.0000 }, { x: 1.0832, y: 0.0000 }, { x: -0.9327, y: 1.0053 }, { x: -1.0832, y: 0.0000 }, { x: -0.9327, y: -1.0053 }, { x: 1.0832, y: 0.0000 }],
-                fillColor: [143, 143, 148],
-            },
-            {
-                vertexData: [{ x: -0.7335, y: 0.6180 }, { x: 0.5918, y: 0.0000 }, { x: -0.7335, y: -0.6180 }, { x: -0.8380, y: 0.0000 }],
-                fillColor: [191, 191, 196],
-            },
-            {
-                vertexData: [{ x: -0.6159, y: 0.1967 }, { x: -0.2833, y: 0.0000 }, { x: -0.6159, y: -0.1967 }],
-                fillColor: [84, 84, 84],
-            },
-            // Military chevron emblem (gold arrow) - large ship gets bigger emblem
-            {
-                vertexData: [{ x: 0.7000, y: 0.0000 }, { x: 0.4500, y: 0.1500 }, { x: 0.5500, y: 0.0000 }, { x: 0.4500, y: -0.1500 }],
-                fillColor: [218, 165, 32]
-            },
-            // Hash lines along hull
-            {
-                vertexData: [{ x: -0.2000, y: 0.6000 }, { x: -0.1500, y: 0.6200 }, { x: -0.4000, y: 0.7500 }, { x: -0.4500, y: 0.7300 }],
-                fillColor: [120, 120, 130]
-            },
-            {
-                vertexData: [{ x: -0.2000, y: -0.6000 }, { x: -0.1500, y: -0.6200 }, { x: -0.4000, y: -0.7500 }, { x: -0.4500, y: -0.7300 }],
-                fillColor: [120, 120, 130]
-            },
-            // Stern warning light
-            {
-                vertexData: [{ x: -1.0000, y: 0.0400 }, { x: -1.0600, y: 0.0000 }, { x: -1.0000, y: -0.0400 }],
-                fillColor: [255, 255, 200]
-            }
-        ],
-        typicalCargo: [],
-        price: 69700,
-        aiRoles: ["MILITARY"],
-        techLevel: 4, // Advanced
-        canDualEngage: true // Large ships can engage two targets simultaneously
-    },
+    // --- FEDERATION MILITARY ---
     "FederalAssaultShip": {
         name: "Federal Assault Ship", role: "Heavy Fighter", sizeCategory: "Large", size: 70,
         baseMaxSpeed: 5.0, baseThrust: 0.12, baseTurnRate: 0.04363,
@@ -368,127 +157,52 @@ const SHIP_DEFINITIONS = {
         aiRoles: ["MILITARY"],
         techLevel: 4 // Advanced
     },
-    "FerDeLance": {
-        name: "Fer-de-Lance", role: "Heavy Combat", sizeCategory: "Large", size: 65,
-        baseMaxSpeed: 6.5, baseThrust: 0.11, baseTurnRate: 0.05236,
-        baseHull: 180, baseShield: 350, shieldRecharge: 1.8, cargoCapacity: 24,
-        armament: ["Sniper Rail", "Force Blaster", "Triple Pulse", "Kalibr Missile", "Harpoon Launcher", "Barrier Field", "Heavy Mine"],
-        costCategory: "Very High", description: "The sports car of death—sleek, expensive, and completely impractical for groceries with only 24 cargo units. Hits 6.5 speed while recharging shields at 1.8x normal rate. Pilots either become legends or make very expensive craters. There is no middle ground.",
+
+    // --- MILITARY (Generic) ---
+    "Destroyer": {
+        name: "Destroyer", role: "Military", sizeCategory: "Large", size: 160,
+        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.02094,
+        baseHull: 800, baseShield: 400, shieldRecharge: 10.0, cargoCapacity: 100,
+        armament: ["Disruptor", "Twin Pulse", "Force Blaster", "Avenger Missile", "Harpoon Launcher", "Barrier Field"],
+        costCategory: "Low", description: "Military-grade intimidation on a budget. With 800 hull and shields that regenerate faster than excuses at a pilot review board, this floating weapons platform makes small fighters reconsider their career choices. Turns like a geriatric whale but nobody's noticed yet.",
         vertexLayers: [
             {
-                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.1000, y: 0.5000 }, { x: -0.7000, y: 0.6000 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.7000, y: -0.6000 }, { x: 0.1000, y: -0.5000 }],
-                fillColor: [60, 65, 70],
+                vertexData: [{ x: 1.0832, y: 0.0000 }, { x: 1.0832, y: 0.0000 }, { x: -0.9327, y: 1.0053 }, { x: -1.0832, y: 0.0000 }, { x: -0.9327, y: -1.0053 }, { x: 1.0832, y: 0.0000 }],
+                fillColor: [143, 143, 148],
             },
             {
-                vertexData: [{ x: -0.9998, y: -0.2009 }, { x: -0.1000, y: -0.2431 }, { x: -0.7013, y: -0.5970 }],
-                fillColor: [150, 150, 180],
+                vertexData: [{ x: -0.7335, y: 0.6180 }, { x: 0.5918, y: 0.0000 }, { x: -0.7335, y: -0.6180 }, { x: -0.8380, y: 0.0000 }],
+                fillColor: [191, 191, 196],
             },
             {
-                vertexData: [{ x: -0.9995, y: 0.2035 }, { x: -0.7020, y: 0.5957 }, { x: -0.1000, y: 0.3052 }],
-                fillColor: [150, 150, 180],
+                vertexData: [{ x: -0.6159, y: 0.1967 }, { x: -0.2833, y: 0.0000 }, { x: -0.6159, y: -0.1967 }],
+                fillColor: [84, 84, 84],
             },
+            // Military chevron emblem (gold arrow) - large ship gets bigger emblem
             {
-                vertexData: [{ x: 0.4349, y: 0.0000 }, { x: 0.1360, y: 0.1505 }, { x: 0.1360, y: -0.1505 }],
-                fillColor: [150, 150, 180],
-            },
-            // Racing stripe
-            {
-                vertexData: [{ x: 0.6000, y: 0.0500 }, { x: 0.0000, y: 0.2000 }, { x: 0.0000, y: 0.1500 }, { x: 0.6000, y: 0.0000 }],
-                fillColor: [255, 200, 0]
-            },
-            {
-                vertexData: [{ x: 0.6000, y: -0.0500 }, { x: 0.0000, y: -0.2000 }, { x: 0.0000, y: -0.1500 }, { x: 0.6000, y: 0.0000 }],
-                fillColor: [255, 200, 0]
-            },
-            // Military chevron emblem
-            {
-                vertexData: [{ x: 0.7000, y: 0.0000 }, { x: 0.5500, y: 0.0800 }, { x: 0.6100, y: 0.0000 }, { x: 0.5500, y: -0.0800 }],
+                vertexData: [{ x: 0.7000, y: 0.0000 }, { x: 0.4500, y: 0.1500 }, { x: 0.5500, y: 0.0000 }, { x: 0.4500, y: -0.1500 }],
                 fillColor: [218, 165, 32]
             },
-            // Nav lights
+            // Hash lines along hull
             {
-                vertexData: [{ x: -0.6500, y: 0.5500 }, { x: -0.7200, y: 0.5200 }, { x: -0.6700, y: 0.4800 }],
-                fillColor: [255, 50, 50]
+                vertexData: [{ x: -0.2000, y: 0.6000 }, { x: -0.1500, y: 0.6200 }, { x: -0.4000, y: 0.7500 }, { x: -0.4500, y: 0.7300 }],
+                fillColor: [120, 120, 130]
             },
             {
-                vertexData: [{ x: -0.6500, y: -0.5500 }, { x: -0.7200, y: -0.5200 }, { x: -0.6700, y: -0.4800 }],
-                fillColor: [50, 255, 50]
+                vertexData: [{ x: -0.2000, y: -0.6000 }, { x: -0.1500, y: -0.6200 }, { x: -0.4000, y: -0.7500 }, { x: -0.4500, y: -0.7300 }],
+                fillColor: [120, 120, 130]
+            },
+            // Stern warning light
+            {
+                vertexData: [{ x: -1.0000, y: 0.0400 }, { x: -1.0600, y: 0.0000 }, { x: -1.0000, y: -0.0400 }],
+                fillColor: [255, 255, 200]
             }
         ],
-        typicalCargo: ["Computers", "Computers", "Computers", "Computers", "Luxury Goods", "Weapons", "Narcotics"],
-        price: 64200,
-        aiRoles: ["MILITARY", "BOUNTY_HUNTER"],
-        techLevel: 4 // Advanced
-    },
-    "GladiusFighter": {
-        name: "Gladius Fighter", role: "Medium Fighter", sizeCategory: "Medium", size: 40,
-        baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
-        baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 12,
-        armament: ["Burst Blaster", "Twin Pulse", "Kalibr Missile"], // Fast attack loadout
-        costCategory: "Medium", description: "Military academies use these as the gold standard for 'how fighters should work.' Nimble 7.0 speed, solid shields, and firepower that makes it clear you're not here to negotiate. The reliable choice when your life expectancy needs extending.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0500, y: 0.0000 }, { x: 0.2500, y: 0.4000 }, { x: -0.2500, y: 0.7000 }, { x: -0.9500, y: 0.5000 }, { x: -1.0500, y: 0.0000 }, { x: -0.9500, y: -0.5000 }, { x: -0.2500, y: -0.7000 }, { x: 0.2500, y: -0.4000 }],
-                fillColor: [190, 195, 200],
-            },
-            // Military chevron emblem
-            {
-                vertexData: [{ x: 0.5500, y: 0.0000 }, { x: 0.4000, y: 0.0800 }, { x: 0.4500, y: 0.0000 }, { x: 0.4000, y: -0.0800 }],
-                fillColor: [218, 165, 32]
-            },
-            // Cockpit canopy
-            {
-                vertexData: [{ x: 0.3000, y: 0.0000 }, { x: 0.1500, y: 0.1200 }, { x: 0.1500, y: -0.1200 }],
-                fillColor: [100, 160, 220]
-            },
-            // Wing hash lines
-            {
-                vertexData: [{ x: -0.4000, y: 0.6000 }, { x: -0.3500, y: 0.6200 }, { x: -0.5500, y: 0.5800 }, { x: -0.6000, y: 0.5600 }],
-                fillColor: [160, 165, 170]
-            },
-            {
-                vertexData: [{ x: -0.4000, y: -0.6000 }, { x: -0.3500, y: -0.6200 }, { x: -0.5500, y: -0.5800 }, { x: -0.6000, y: -0.5600 }],
-                fillColor: [160, 165, 170]
-            },
-            // Nav lights
-            {
-                vertexData: [{ x: -0.3000, y: 0.6800 }, { x: -0.3700, y: 0.6500 }, { x: -0.3200, y: 0.6200 }],
-                fillColor: [255, 50, 50]
-            },
-            {
-                vertexData: [{ x: -0.3000, y: -0.6800 }, { x: -0.3700, y: -0.6500 }, { x: -0.3200, y: -0.6200 }],
-                fillColor: [50, 255, 50]
-            }
-        ],
-        typicalCargo: ["Computers"],
-        price: 28400,
-        aiRoles: ["MILITARY", "BOUNTY_HUNTER", "GUARD"],
-        techLevel: 3 // Mid-tier
-    },
-    "Geister": {
-        name: "Geister", role: "Medium Fighter", sizeCategory: "Medium", size: 40,
-        baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
-        baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 12,
-        armament: ["Burst Blaster", "Beam Laser", "Harpoon Launcher"], // Fast attack loadout
-        costCategory: "Medium", description: "Fast stealth ship favored by operatives with trust issues. That purple hull isn't for show—it's coated in sensor-scattering compounds that cost more than some stations. Quick as a rumor and twice as hard to verify. Perfect for jobs nobody admits ordering.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.7205, y: 0.0000 }, { x: 0.5929, y: 0.4300 }, { x: -0.6050, y: 0.6968 }, { x: -0.3295, y: 0.4865 }, { x: -0.5929, y: 0.4300 }, { x: -0.3295, y: 0.1830 }, { x: -0.7205, y: 0.0000 }, { x: -0.3295, y: -0.1830 }, { x: -0.5929, y: -0.4300 }, { x: -0.3295, y: -0.4865 }, { x: -0.6050, y: -0.6968 }, { x: 0.5929, y: -0.4300 }],
-                fillColor: [65, 48, 197],
-            },
-            {
-                vertexData: [{ x: 0.6165, y: 0.0000 }, { x: 0.3009, y: 0.1809 }, { x: 0.3009, y: -0.1809 }],
-                fillColor: [250, 100, 0],
-            },
-            {
-                vertexData: [{ x: 0.0000, y: 0.1777 }, { x: 0.2510, y: 0.0000 }, { x: 0.0000, y: -0.1777 }],
-                fillColor: [250, 100, 0],
-            }
-        ],
-        typicalCargo: ["Computers"],
-        price: 18400,
-        aiRoles: ["PIRATE"],
-        techLevel: 3 // Mid-tier
+        typicalCargo: [],
+        price: 69700,
+        aiRoles: ["MILITARY"],
+        techLevel: 4, // Advanced
+        canDualEngage: true // Large ships can engage two targets simultaneously
     },
     "GnatInterceptor": { // NEW - Light Fighter 1
         name: "Gnat Interceptor", role: "Light Interceptor", sizeCategory: "Tiny", size: 18,
@@ -526,602 +240,6 @@ const SHIP_DEFINITIONS = {
         price: 10900,
         aiRoles: ["MILITARY", "BOUNTY_HUNTER"],
         techLevel: 1 // Starter
-    },
-    "HammerheadCorvette": { // NEW - Unique 2
-        name: "Hammerhead Corvette", role: "Corvette/Patrol", sizeCategory: "Large", size: 80,
-        baseMaxSpeed: 4.0, baseThrust: 0.09, baseTurnRate: 0.04014,
-        baseHull: 350, baseShield: 280, shieldRecharge: 1.0, cargoCapacity: 60,
-        armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter", "Kalibr Missile", "Harpoon Launcher", "Barrier Field", "Advanced Mine"], // Military loadout
-        costCategory: "High", description: "That bizarre hammerhead design isn't a fashion statement—it's packed with military-grade sensors worth more than most starter ships. Combines 350 hull with the firepower to back up threats. Enemies mock the look right up until they're vaporized.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.8795, y: 0.3500 }, { x: 0.5844, y: 0.4670 }, { x: 0.4207, y: 0.7285 }, { x: 0.1427, y: 0.8587 }, { x: -0.1705, y: 0.5488 }, { x: -0.9254, y: 0.4670 }, { x: -0.9252, y: 0.3625 }, { x: -0.5529, y: 0.1330 }, { x: -0.5529, y: -0.1330 }, { x: -0.9252, y: -0.3625 }, { x: -0.9295, y: -0.4650 }, { x: -0.1705, y: -0.5488 }, { x: 0.1427, y: -0.8587 }, { x: 0.4207, y: -0.7285 }, { x: 0.5885, y: -0.4650 }, { x: 0.8795, y: -0.3500 }, { x: 0.9295, y: 0.0000 }],
-                fillColor: [70, 100, 130],
-            },
-            {
-                vertexData: [{ x: 0.1421, y: -0.7686 }, { x: 0.3536, y: -0.6314 }, { x: -0.0093, y: -0.4986 }, { x: -0.0093, y: -0.4986 }],
-                fillColor: [180, 180, 80],
-            },
-            {
-                vertexData: [{ x: -0.0093, y: 0.4871 }, { x: -0.0093, y: 0.4871 }, { x: 0.3864, y: 0.6086 }, { x: 0.1621, y: 0.7857 }],
-                fillColor: [180, 180, 80],
-            },
-            {
-                vertexData: [{ x: 0.3297, y: 0.2149 }, { x: 0.5680, y: 0.2548 }, { x: 0.7417, y: 0.0000 }, { x: 0.5680, y: -0.2548 }, { x: 0.3297, y: -0.2149 }],
-                fillColor: [180, 180, 80],
-            },
-            // Military chevron emblem
-            {
-                vertexData: [{ x: 0.8500, y: 0.0000 }, { x: 0.7000, y: 0.1000 }, { x: 0.7600, y: 0.0000 }, { x: 0.7000, y: -0.1000 }],
-                fillColor: [218, 165, 32]
-            }
-        ],
-        typicalCargo: ["Machinery", "Metals", "Food", "Metals", "Weapons"],
-        price: 63700,
-        aiRoles: ["MILITARY"],
-        techLevel: 4 // Advanced
-    },
-
-    "JackalMultirole": { // NEW - Multi-role
-        name: "Jackal Multirole", role: "Multi-Role", sizeCategory: "Medium", size: 50,
-        baseMaxSpeed: 5.8, baseThrust: 0.1, baseTurnRate: 0.06283,
-        baseHull: 140, baseShield: 160, shieldRecharge: 1.2, cargoCapacity: 60,
-        armament: ["Multi-Cannon", "Railgun Turret"], // Versatile
-        costCategory: "Medium", description: "The Swiss Army knife of space, if Swiss Army knives were angular and grumpy-looking. Hits the sweet spot between fighter and hauler with 60 cargo tons and enough weapons to discourage pirates. Not amazing at anything, competent at everything—exactly what you want when the galaxy hates you.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.4000, y: 0.5000 }, { x: -0.3000, y: 0.8000 }, { x: -0.9000, y: 0.6000 }, { x: -0.5103, y: 0.1697 }, { x: -0.5103, y: -0.1697 }, { x: -0.9000, y: -0.6000 }, { x: -0.3000, y: -0.8000 }, { x: 0.4000, y: -0.5000 }],
-                fillColor: [170, 160, 150]
-            },
-            {
-                vertexData: [{ x: 0.6400, y: 0.0000 }, { x: 0.5400, y: 0.2132 }, { x: 0.3400, y: 0.2132 }, { x: 0.2400, y: 0.0000 }, { x: 0.3400, y: -0.2132 }, { x: 0.5400, y: -0.2132 }],
-                fillColor: [101, 171, 236]
-            },
-            // Military chevron emblem
-            {
-                vertexData: [{ x: 0.7500, y: 0.0000 }, { x: 0.6000, y: 0.0800 }, { x: 0.6600, y: 0.0000 }, { x: 0.6000, y: -0.0800 }],
-                fillColor: [218, 165, 32]
-            }
-        ],
-        typicalCargo: ["Machinery", "Metals", "Food"],
-        price: 23100,
-        aiRoles: ["COMBAT", "MILITARY"],
-        techLevel: 2 // Utility
-    },
-    "Keelback": {
-        name: "Keelback", role: "Combat Trader", sizeCategory: "Medium", size: 42,
-        baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRate: 0.04363,
-        baseHull: 180, baseShield: 90, shieldRecharge: 0.9, cargoCapacity: 50,
-        armament: ["Twin Pulse", "Railgun Turret"], // Combat trader
-        costCategory: "Medium", description: "Someone looked at the peaceful Type-6 and said 'needs more violence.' The result is this frankenstein trader with guns welded onto every available hardpoint. Still hauls 50 tons but now bites back. Perfect for haulers tired of being everyone's favorite target.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.8168, y: 0.0000 }, { x: 0.6865, y: 0.5114 }, { x: -0.0134, y: 0.6114 }, { x: -0.6135, y: 0.8114 }, { x: -0.8168, y: 0.5917 }, { x: -0.3705, y: 0.2745 }, { x: -0.6039, y: 0.1373 }, { x: -0.5974, y: -0.1373 }, { x: -0.3705, y: -0.2745 }, { x: -0.8168, y: -0.5917 }, { x: -0.6135, y: -0.8114 }, { x: -0.0134, y: -0.6114 }, { x: 0.6865, y: -0.5114 }],
-                fillColor: [180, 150, 80]
-            },
-            {
-                vertexData: [{ x: 0.6600, y: 0.0000 }, { x: 0.5600, y: 0.1732 }, { x: 0.4800, y: 0.1732 }, { x: 0.4800, y: -0.1732 }, { x: 0.5600, y: -0.1732 }],
-                fillColor: [101, 171, 236]
-            }
-        ],
-        typicalCargo: ["Minerals", "Metals", "Machinery"],
-        price: 20600,
-        aiRoles: ["HAULER"],
-        techLevel: 2 // Utility
-    },
-    "KraitMKI": {
-        name: "Krait MKI", role: "Fighter", sizeCategory: "Small", size: 30,
-        baseMaxSpeed: 6.2, baseThrust: 0.15, baseTurnRate: 0.06632,
-        baseHull: 60, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 15,
-        armament: ["Pulse Laser"],
-        costCategory: "High", description: "Pirate darling with shields that regenerate like a sitcom villain. Small (30), fast (6.2), and with enough shield capacity to laugh off police shots while you line up your next heist. Insurance companies charge triple if they see this in your garage.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.5772, y: -0.0058 }, { x: 0.2343, y: 0.4129 }, { x: -0.5772, y: 0.4129 }, { x: -0.5772, y: -0.4129 }, { x: 0.2343, y: -0.4129 }],
-                fillColor: [100, 120, 100]
-            },
-            {
-                vertexData: [{ x: -0.4100, y: -0.3500 }, { x: -0.3600, y: -0.3000 }, { x: 0.0400, y: 0.3000 }, { x: 0.0900, y: 0.3500 }, { x: 0.1200, y: 0.3000 }, { x: -0.4400, y: -0.3000 }],
-                fillColor: [180, 180, 180]
-            },
-            {
-                vertexData: [{ x: -0.4100, y: 0.3500 }, { x: -0.3600, y: 0.3000 }, { x: 0.0400, y: -0.3000 }, { x: 0.0900, y: -0.3500 }, { x: 0.1200, y: -0.3000 }, { x: -0.4400, y: 0.3000 }],
-                fillColor: [180, 180, 180]
-            },
-            {
-                vertexData: [{ x: 0.0900, y: -0.2000 }, { x: 0.0900, y: 0.2000 }, { x: -0.1100, y: 0.2500 }, { x: -0.2600, y: 0.2000 }, { x: -0.3100, y: 0.1000 }, { x: -0.3100, y: -0.1000 }, { x: -0.2600, y: -0.2000 }, { x: -0.1100, y: -0.2500 }],
-                fillColor: [230, 230, 230]
-            },
-            {
-                vertexData: [{ x: -0.3800, y: 0.1500 }, { x: -0.3300, y: 0.1200 }, { x: -0.3500, y: 0.0800 }, { x: -0.3300, y: 0.0400 }, { x: -0.3500, y: -0.0000 }, { x: -0.3300, y: -0.0400 }, { x: -0.3500, y: -0.0800 }, { x: -0.3300, y: -0.1200 }, { x: -0.3800, y: -0.1500 }, { x: -0.4100, y: -0.0800 }, { x: -0.4100, y: 0.0800 }],
-                fillColor: [230, 230, 230]
-            },
-            {
-                vertexData: [{ x: -0.0600, y: -0.1400 }, { x: -0.0600, y: -0.0800 }, { x: -0.1600, y: -0.1100 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.0600, y: 0.0800 }, { x: -0.0600, y: 0.1400 }, { x: -0.1600, y: 0.1100 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.2000, y: -0.0400 }, { x: -0.2000, y: 0.0400 }, { x: -0.2600, y: -0.0000 }],
-                fillColor: [0, 0, 0]
-            }
-        ],
-        typicalCargo: [],
-        price: 14600,
-        aiRoles: ["PIRATE"],
-        techLevel: 2 // Utility
-    },
-
-    "KraitMKII": {
-        name: "Krait MKII", role: "Multi-Role/Fighter", sizeCategory: "Medium", size: 60,
-        baseMaxSpeed: 5.2, baseThrust: 0.11, baseTurnRate: 0.04014,
-        baseHull: 100, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 82,
-        armament: ["Mini-Turret"], // Combat focused Pirate
-        costCategory: "High", description: "The bigger, meaner sibling of the Mk I. With 82 cargo tons and questionable moral fiber built into the hull plating, it's become the ride of choice for pirates who've graduated from petty theft to organized crime. That cockpit design isn't stylish—it's menacing.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.5500, y: 0.5000 }, { x: -0.4500, y: 0.6000 }, { x: -0.9500, y: 0.4000 }, { x: -0.9500, y: -0.4000 }, { x: -0.4500, y: -0.6000 }, { x: 0.5500, y: -0.5000 }],
-                fillColor: [100, 120, 100]
-            },
-            {
-                vertexData: [{ x: -0.6087, y: -0.4235 }, { x: -0.5482, y: -0.3630 }, { x: -0.0642, y: 0.3630 }, { x: -0.0037, y: 0.4235 }, { x: 0.0326, y: 0.3630 }, { x: -0.6450, y: -0.3630 }],
-                fillColor: [180, 180, 180]
-            },
-            {
-                vertexData: [{ x: -0.6087, y: 0.4235 }, { x: -0.5482, y: 0.3630 }, { x: -0.0642, y: -0.3630 }, { x: -0.0037, y: -0.4235 }, { x: 0.0326, y: -0.3630 }, { x: -0.6450, y: 0.3630 }],
-                fillColor: [180, 180, 180]
-            },
-            {
-                vertexData: [{ x: -0.0037, y: -0.2420 }, { x: -0.0037, y: 0.2420 }, { x: -0.2457, y: 0.3025 }, { x: -0.4272, y: 0.2420 }, { x: -0.4877, y: 0.1210 }, { x: -0.4877, y: -0.1210 }, { x: -0.4272, y: -0.2420 }, { x: -0.2457, y: -0.3025 }],
-                fillColor: [230, 230, 230]
-            },
-            {
-                vertexData: [{ x: -0.5724, y: 0.1815 }, { x: -0.5119, y: 0.1452 }, { x: -0.5361, y: 0.0968 }, { x: -0.5119, y: 0.0484 }, { x: -0.5361, y: -0.0000 }, { x: -0.5119, y: -0.0484 }, { x: -0.5361, y: -0.0968 }, { x: -0.5119, y: -0.1452 }, { x: -0.5724, y: -0.1815 }, { x: -0.6087, y: -0.0968 }, { x: -0.6087, y: 0.0968 }],
-                fillColor: [230, 230, 230]
-            },
-            {
-                vertexData: [{ x: -0.1852, y: -0.1694 }, { x: -0.1852, y: -0.0968 }, { x: -0.3062, y: -0.1331 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.1852, y: 0.0968 }, { x: -0.1852, y: 0.1694 }, { x: -0.3062, y: 0.1331 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.3546, y: -0.0484 }, { x: -0.3546, y: 0.0484 }, { x: -0.4272, y: -0.0000 }],
-                fillColor: [0, 0, 0]
-            }
-        ],
-        typicalCargo: ["Food", "Minerals"],
-        price: 17200,
-        aiRoles: ["PIRATE"],
-        techLevel: 2 // Utility
-    },
-    "MantaHauler": { // NEW - Unique 1
-        name: "Manta Hauler", role: "Wide Cargo Hauler", sizeCategory: "Large", size: 85,
-        baseMaxSpeed: 3.5, baseThrust: 0.06, baseTurnRate: 0.02793,
-        baseHull: 250, baseShield: 150, shieldRecharge: 0.7, cargoCapacity: 300,
-        armament: ["Mini-Turret", "Force Blaster", "Barrier Field"], // Defensive
-        costCategory: "Medium-High", description: "This absolute unit waddles through space hauling 300 tons like it's no big deal. Shaped like a manta ray that ate another manta ray. Slow as molasses (3.5 max) but with cargo capacity that makes hauler crews genuflect. Docking this beast requires prayer and skill in equal measure.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.3000, y: 0.3000 }, { x: -0.5000, y: 0.9000 }, { x: -0.8000, y: 0.7000 }, { x: -0.9000, y: 0.0000 }, { x: -0.8000, y: -0.7000 }, { x: -0.5000, y: -0.9000 }, { x: 0.3000, y: -0.3000 }],
-                fillColor: [60, 80, 90],
-            },
-            {
-                vertexData: [{ x: 0.0560, y: 0.1290 }, { x: 0.3195, y: 0.0000 }, { x: 0.0560, y: -0.1290 }],
-                fillColor: [250, 250, 255],
-            }
-        ],
-        typicalCargo: ["Minerals", "Metals", "Machinery", "Food", "Textiles"],
-        price: 34600,
-        aiRoles: ["HAULER"],
-        techLevel: 3 // Mid-tier
-    },
-    "MuleFreighter": { // NEW - Small Transporter
-        name: "Mule Freighter", role: "Local Transport", sizeCategory: "Small", size: 25,
-        baseMaxSpeed: 3.8, baseThrust: 0.05, baseTurnRate: 0.04887,
-        baseHull: 70, baseShield: 0, shieldRecharge: 0.8, cargoCapacity: 20,
-        armament: [],
-        costCategory: "Very Low", description: "The space equivalent of a rusty pickup truck held together with duct tape and optimism. At 4200 credits it's cheaper than some bar tabs, and about as fast (3.8). Zero shields, 70 hull, and the aerodynamics of a filing cabinet. But it floats, mostly.",
-        vertexLayers: [
-            // Main hull - boxy transporter shape
-            {
-                vertexData: [{ x: 0.8000, y: 0.7500 }, { x: -0.6000, y: 0.8500 }, { x: -0.8000, y: 0.4500 }, { x: -0.8000, y: -0.4500 }, { x: -0.5000, y: -0.8500 }, { x: 0.8000, y: -0.7500 }],
-                fillColor: [140, 130, 120],
-            },
-            // Thin rectangular cockpit window (characteristic transporter style)
-            {
-                vertexData: [{ x: 0.7000, y: 0.1200 }, { x: 0.5000, y: 0.1400 }, { x: 0.5000, y: -0.1400 }, { x: 0.7000, y: -0.1200 }],
-                fillColor: [80, 140, 200],
-            },
-            // Cockpit frame
-            {
-                vertexData: [{ x: 0.7200, y: 0.1400 }, { x: 0.4800, y: 0.1600 }, { x: 0.4800, y: 0.1200 }, { x: 0.7200, y: 0.1000 }],
-                fillColor: [60, 55, 50],
-            },
-            {
-                vertexData: [{ x: 0.7200, y: -0.1400 }, { x: 0.4800, y: -0.1600 }, { x: 0.4800, y: -0.1200 }, { x: 0.7200, y: -0.1000 }],
-                fillColor: [60, 55, 50],
-            },
-            // Cargo bay door lines (welded panels)
-            {
-                vertexData: [{ x: 0.2000, y: 0.6500 }, { x: 0.2200, y: 0.6800 }, { x: -0.4000, y: 0.7500 }, { x: -0.4200, y: 0.7200 }],
-                fillColor: [100, 90, 80],
-            },
-            {
-                vertexData: [{ x: 0.2000, y: -0.6500 }, { x: 0.2200, y: -0.6800 }, { x: -0.3500, y: -0.7500 }, { x: -0.3700, y: -0.7200 }],
-                fillColor: [100, 90, 80],
-            },
-            // Rust/weathering patches
-            {
-                vertexData: [{ x: -0.3000, y: 0.5000 }, { x: -0.4500, y: 0.5500 }, { x: -0.4800, y: 0.4500 }, { x: -0.3500, y: 0.4200 }],
-                fillColor: [160, 100, 70],
-            },
-            {
-                vertexData: [{ x: 0.4000, y: -0.4500 }, { x: 0.3000, y: -0.5000 }, { x: 0.3500, y: -0.5800 }, { x: 0.4500, y: -0.5200 }],
-                fillColor: [155, 95, 65],
-            },
-            // Engine housing warning stripes
-            {
-                vertexData: [{ x: -0.6500, y: 0.3500 }, { x: -0.7500, y: 0.3800 }, { x: -0.7500, y: 0.3200 }, { x: -0.6500, y: 0.2900 }],
-                fillColor: [200, 180, 50],
-            },
-            {
-                vertexData: [{ x: -0.6500, y: -0.3500 }, { x: -0.7500, y: -0.3800 }, { x: -0.7500, y: -0.3200 }, { x: -0.6500, y: -0.2900 }],
-                fillColor: [200, 180, 50],
-            },
-            // Port navigation light (red)
-            {
-                vertexData: [{ x: -0.5500, y: 0.8200 }, { x: -0.6200, y: 0.7800 }, { x: -0.5600, y: 0.7400 }],
-                fillColor: [255, 50, 50]
-            },
-            // Starboard navigation light (green)
-            {
-                vertexData: [{ x: -0.4500, y: -0.8200 }, { x: -0.5200, y: -0.7800 }, { x: -0.4600, y: -0.7400 }],
-                fillColor: [50, 255, 50]
-            },
-            // Stern running light
-            {
-                vertexData: [{ x: -0.7700, y: 0.0400 }, { x: -0.7900, y: 0.0000 }, { x: -0.7700, y: -0.0400 }],
-                fillColor: [255, 255, 200]
-            }
-        ],
-        typicalCargo: ["Food", "Machinery", "Metals"],
-        price: 4200,
-        aiRoles: ["TRANSPORT"],
-        techLevel: 1 // Starter
-    },
-    "NomadVoyager": {
-        name: "Nomad Voyager", role: "Deep Space Explorer", sizeCategory: "Medium", size: 58,
-        baseMaxSpeed: 5.2, baseThrust: 0.07, baseTurnRate: 0.05061,
-        baseHull: 180, baseShield: 220, shieldRecharge: 1.5, cargoCapacity: 70,
-        armament: ["Beam Laser", "Mini-Turret"], // Long range exploration
-        costCategory: "High", description: "Built for pilots who think 'civilization is overrated.' Stuffed with life support redundancies and shield generators (220 capacity plus 1.5 recharge). Can survive the void for months on end. Popular with hermits, researchers, and people with outstanding warrants in multiple systems.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.8000, y: 0.5000 }, { x: 0.2000, y: 0.8000 }, { x: -0.7000, y: 0.7000 }, { x: -1.0000, y: 0.0000 }, { x: -0.7000, y: -0.7000 }, { x: 0.2000, y: -0.8000 }, { x: 0.8000, y: -0.5000 }],
-                fillColor: [200, 200, 190],
-            },
-            // Scanner array (exploration equipment)
-            {
-                vertexData: [{ x: 0.0000, y: 0.7500 }, { x: -0.0800, y: 0.7200 }, { x: 0.0000, y: 0.6500 }, { x: 0.0800, y: 0.7200 }],
-                fillColor: [150, 150, 160]
-            },
-            {
-                vertexData: [{ x: 0.0000, y: -0.7500 }, { x: -0.0800, y: -0.7200 }, { x: 0.0000, y: -0.6500 }, { x: 0.0800, y: -0.7200 }],
-                fillColor: [150, 150, 160]
-            },
-            // Deliberate hull hash lines
-            {
-                vertexData: [{ x: -0.4000, y: 0.6000 }, { x: -0.3500, y: 0.6200 }, { x: -0.5500, y: 0.5500 }, { x: -0.6000, y: 0.5300 }],
-                fillColor: [180, 180, 170]
-            },
-            {
-                vertexData: [{ x: -0.4000, y: -0.6000 }, { x: -0.3500, y: -0.6200 }, { x: -0.5500, y: -0.5500 }, { x: -0.6000, y: -0.5300 }],
-                fillColor: [180, 180, 170]
-            },
-            // Cockpit canopy
-            {
-                vertexData: [{ x: 0.5000, y: 0.0000 }, { x: 0.3000, y: 0.1500 }, { x: 0.3000, y: -0.1500 }],
-                fillColor: [100, 160, 220]
-            },
-            // Nav lights
-            {
-                vertexData: [{ x: 0.1500, y: 0.7700 }, { x: 0.0800, y: 0.7400 }, { x: 0.1200, y: 0.7000 }],
-                fillColor: [255, 50, 50]
-            },
-            {
-                vertexData: [{ x: 0.1500, y: -0.7700 }, { x: 0.0800, y: -0.7400 }, { x: 0.1200, y: -0.7000 }],
-                fillColor: [50, 255, 50]
-            }
-        ],
-        typicalCargo: ["Minerals", "Food", "Medicine"],
-        price: 24600,
-        aiRoles: ["EXPLORER", "HAULER"],
-        techLevel: 4 // Advanced
-    },
-    "PathfinderSurvey": {
-        name: "Pathfinder Survey", role: "Long Range Scanner", sizeCategory: "Medium", size: 62,
-        baseMaxSpeed: 5.0, baseThrust: 0.06, baseTurnRate: 0.04363,
-        baseHull: 120, baseShield: 150, shieldRecharge: 1.2, cargoCapacity: 50,
-        armament: [],
-        costCategory: "Medium", description: "For the pilot who wants to know what every rock in the galaxy is made of. Bristling with scanners worth more than the ship itself. Completely unarmed because apparently scientists think 'please don't shoot me' is an effective defense strategy. Spoiler: it's not.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.7000, y: 0.2000 }, { x: -0.6000, y: 0.5000 }, { x: -1.1000, y: 0.3000 }, { x: -1.1000, y: -0.3000 }, { x: -0.6000, y: -0.5000 }, { x: 0.7000, y: -0.2000 }],
-                fillColor: [130, 160, 170],
-            },
-            {
-                vertexData: [{ x: -0.2751, y: -0.5092 }, { x: -0.2751, y: 0.5092 }, { x: -0.1000, y: 0.7714 }, { x: -0.1000, y: -0.7714 }],
-                fillColor: [30, 77, 46],
-            }
-        ],
-        typicalCargo: ["Food", "Food", "Minerals", "Minerals", "Metals"],
-        price: 10200,
-        aiRoles: ["EXPLORER", "HAULER"],
-        techLevel: 3 // Mid-tier
-    },
-    "ProspectorMiner": { // NEW - Miner
-        name: "Prospector Miner", role: "Mining Vessel", sizeCategory: "Medium", size: 48,
-        baseMaxSpeed: 2.5, baseThrust: 0.08, baseTurnRate: 0.03840,
-        baseHull: 200, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 40, // Includes refinery space
-        armament: ["Beam Laser"], // Mining lasers for asteroid destruction
-        costCategory: "Medium", description: "The space excavator nobody respects until they're filthy rich. Top speed of 2.5 means 'chase' isn't in its vocabulary, but that 40-ton hold fills up fast when you're atomizing asteroids. Runs on dreams of profit and the optimistic belief that those rocks contain something valuable.",
-        vertexData: [{ x: 0.6, y: 0 }, { x: 0.4, y: 0.8 }, { x: -0.4, y: 0.9 }, { x: -0.9, y: 0.6 }, { x: -1.0, y: -0.3 }, { x: -0.9, y: -0.6 }, { x: -0.4, y: -0.9 }, { x: 0.4, y: -0.8 }], // Bulky, functional
-        fillColor: [180, 170, 160], // Industrial grey/brown
-        typicalCargo: ["Minerals", "Metals"],
-        price: 8700,
-        aiRoles: ["MINER"],
-        techLevel: 2 // Utility
-    },
-    "Python": {
-        name: "Python", role: "Heavy Multi/Trader", sizeCategory: "Large", size: 75,
-        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.03840,
-        baseHull: 280, baseShield: 250, shieldRecharge: 0.9, cargoCapacity: 220,
-        armament: ["Heavy Cannon", "V Punch", "Mini-Turret", "Kalibr Missile", "Heavy Tangle", "Barrier Field"], // Versatile heavy combat
-        costCategory: "High", description: "The Python is what happens when designers can't decide between cargo ship and gunboat, so they build both. Hauls 220 tons while mounting enough weapons to qualify as a small war. Expensive but worth every credit. The ultimate 'I refuse to choose' spaceship.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.7000, y: 0.7000 }, { x: -0.5000, y: 0.9000 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.5000, y: -0.9000 }, { x: 0.7000, y: -0.7000 }],
-                fillColor: [140, 140, 150]
-            },
-            {
-                vertexData: [{ x: 0.5400, y: -0.3800 }, { x: 0.6800, y: -0.2200 }, { x: 0.6800, y: 0.2200 }, { x: 0.5400, y: 0.3800 }],
-                fillColor: [182, 182, 185]
-            }
-        ],
-        typicalCargo: ["Luxury Goods", "Medicine", "Metals", "Chemicals", "Medicine", "Metals", "Chemicals"],
-        price: 57300,
-        aiRoles: ["HAULER"],
-        techLevel: 4 // Advanced
-    },
-    "ShardInterceptor": {
-        name: "Shard Interceptor", role: "Fighter", sizeCategory: "Small", size: 30,
-        baseMaxSpeed: 8.5, baseThrust: 0.18, baseTurnRate: 0.08727,
-        baseHull: 50, baseShield: 100, shieldRecharge: 1.8, cargoCapacity: 4, // Crystalline structure?
-        armament: ["Disruptor", "Scatter Beam"], // Alien tech
-        costCategory: "N/A", description: "Fast alien fighter that looks like someone tried to build a ship out of broken glass and bad dreams. Incorporates crystalline technology nobody fully understands. Hits 8.5 speed while disrupting sensors. Military techs drool over captured specimens—until they realize reverse-engineering might take decades.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.1741, y: 0.0000 }, { x: 0.5245, y: 0.2433 }, { x: -0.1035, y: 0.1331 }, { x: -0.7045, y: 0.8065 }, { x: -1.1741, y: 0.4935 }, { x: -0.6173, y: 0.0000 }, { x: -1.1741, y: -0.4935 }, { x: -0.7045, y: -0.8065 }, { x: -0.1035, y: -0.1331 }, { x: 0.5245, y: -0.2433 }],
-                fillColor: [180, 180, 240],
-            }
-        ],
-        typicalCargo: [],
-        price: 30400,
-        aiRoles: ["MILITARY", "BOUNTY_HUNTER"],
-        techLevel: 5
-    },
-    "Sidewinder": {
-        name: "Sidewinder", role: "Starter", sizeCategory: "Tiny", size: 20,
-        baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.06981,
-        baseHull: 50, baseShield: 50, shieldRecharge: 1.0, cargoCapacity: 10,
-        armament: ["Pulse Laser", "Guardian Missile"], // Starter weapon
-        costCategory: "N/A", description: "The bargain bin starter ship that new pilots either treasure forever or sell within hours. Balanced 50/50 hull/shields and just enough cargo (10 tons) to learn the hauling trade. Cheap, agile, expendable. Sort of like a puppy, if puppies exploded when shot.",
-        vertexData: [{ x: 0.9, y: 0 }, { x: -0.7, y: 0.8 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.8 }],
-        fillColor: [180, 100, 20],
-        typicalCargo: ["Food"],
-        price: 9800,
-        aiRoles: ["PIRATE"],
-        techLevel: 1 // Starter
-    },
-    "StarlinerCruiser": {
-        name: "Starliner Cruiser", role: "Passenger Transport", sizeCategory: "Large", size: 105,
-        baseMaxSpeed: 5.5, baseThrust: 0.07, baseTurnRate: 0.02443,
-        baseHull: 200, baseShield: 250, shieldRecharge: 1.1, cargoCapacity: 100, // Less cargo, more cabins assumed
-        armament: ["Mini-Turret", "Force Blaster", "Halo"], // Defensive passenger ship
-        costCategory: "High", description: "Sleek luxury cruise liner that ferries pampered passengers between systems while they complain about the amenities. Shields that could stop a war, speed that puts many fighters to shame (5.5), and defensive weapons for pirates dumb enough to threaten the rich. Tickets cost more than most ships.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.1500, y: 0.0000 }, { x: 0.9500, y: 0.2000 }, { x: -0.9500, y: 0.3000 }, { x: -1.1500, y: 0.1000 }, { x: -1.1500, y: -0.1000 }, { x: -0.9500, y: -0.3000 }, { x: 0.9500, y: -0.2000 }],
-                fillColor: [230, 230, 235],
-            },
-            // Luxury stripe
-            {
-                vertexData: [{ x: 0.6000, y: 0.1600 }, { x: -0.6000, y: 0.2200 }, { x: -0.6000, y: 0.1800 }, { x: 0.6000, y: 0.1200 }],
-                fillColor: [200, 170, 100]
-            },
-            {
-                vertexData: [{ x: 0.6000, y: -0.1600 }, { x: -0.6000, y: -0.2200 }, { x: -0.6000, y: -0.1800 }, { x: 0.6000, y: -0.1200 }],
-                fillColor: [200, 170, 100]
-            },
-            // Stern light
-            {
-                vertexData: [{ x: -1.0800, y: 0.0400 }, { x: -1.1300, y: 0.0000 }, { x: -1.0800, y: -0.0400 }],
-                fillColor: [255, 255, 200]
-            }
-        ],
-        typicalCargo: ["Luxury Goods", "Food", "Medicine", "Food", "Medicine"],
-        price: 36000,
-        aiRoles: ["HAULER"],
-        techLevel: 4 // Advanced
-    },
-    "Type6Transporter": {
-        name: "Type-6 Transporter", role: "Trader", sizeCategory: "Medium", size: 40,
-        baseMaxSpeed: 4.2, baseThrust: 0.06, baseTurnRate: 0.03491,
-        baseHull: 150, baseShield: 60, shieldRecharge: 0.8, cargoCapacity: 100,
-        armament: ["Twin Pulse", "Mini-Turret"], // Basic trader defense
-        costCategory: "Low-Medium", description: "Lakon Spaceways' answer to 'how square can we make it?' Ugly as sin but hauls 100 tons reliably. Paper-thin shields (60) mean pirates see you as a pinata full of credits. The pilot seat has indentations from decades of stressed-out traders gripping it during attacks.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.8500, y: 0.3000 }, { x: 0.8500, y: 0.7000 }, { x: -0.6500, y: 0.8000 }, { x: -0.8500, y: 0.6000 }, { x: -0.8500, y: -0.6000 }, { x: -0.6500, y: -0.8000 }, { x: 0.8500, y: -0.7000 }, { x: 0.8500, y: -0.3000 }],
-                fillColor: [210, 160, 70]
-            },
-            {
-                vertexData: [{ x: 0.5600, y: -0.4200 }, { x: 0.6800, y: -0.4200 }, { x: 0.6800, y: 0.4200 }, { x: 0.5600, y: 0.4200 }],
-                fillColor: [150, 150, 180]
-            },
-            // Cargo hazard stripe
-            {
-                vertexData: [{ x: -0.5000, y: 0.7200 }, { x: -0.6000, y: 0.7000 }, { x: -0.6000, y: 0.6000 }, { x: -0.5000, y: 0.6200 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.5000, y: -0.7200 }, { x: -0.6000, y: -0.7000 }, { x: -0.6000, y: -0.6000 }, { x: -0.5000, y: -0.6200 }],
-                fillColor: [0, 0, 0]
-            },
-            // Nav lights
-            {
-                vertexData: [{ x: -0.7000, y: 0.7500 }, { x: -0.7700, y: 0.7200 }, { x: -0.7200, y: 0.6800 }],
-                fillColor: [255, 50, 50]
-            },
-            {
-                vertexData: [{ x: -0.7000, y: -0.7500 }, { x: -0.7700, y: -0.7200 }, { x: -0.7200, y: -0.6800 }],
-                fillColor: [50, 255, 50]
-            }
-        ],
-        typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery"],
-        price: 20100,
-        aiRoles: ["HAULER"],
-        techLevel: 2 // Utility
-    },
-    "Type9Heavy": {
-        name: "Type-9 Heavy", role: "Heavy Trader", sizeCategory: "Very Large", size: 110,
-        baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRate: 0.01396,
-        baseHull: 550, baseShield: 250, shieldRecharge: 0.6, cargoCapacity: 500,
-        armament: ["Mini-Turret", "Force Blaster"], // Defensive cargo hauler
-        costCategory: "High", description: "The final boss of Lakon's trading fleet. Moves like continental drift (2.5 speed, 0.01396 turn rate) but packs 500 tons of pure profit potential. Turning this thing requires filing a flight plan three weeks in advance. Pirates either avoid it because it's too slow to be worth it, or it's too tough (550 hull).",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9104, y: 0.2000 }, { x: 0.7896, y: 0.8000 }, { x: -0.7104, y: 0.9000 }, { x: -0.9104, y: 0.8000 }, { x: -0.9104, y: -0.8000 }, { x: -0.7104, y: -0.9000 }, { x: 0.7896, y: -0.8000 }, { x: 0.9104, y: -0.2000 }],
-                fillColor: [190, 140, 60]
-            },
-            {
-                vertexData: [{ x: 0.5200, y: -0.2200 }, { x: 0.6600, y: -0.2200 }, { x: 0.6600, y: 0.2200 }, { x: 0.5200, y: 0.2200 }],
-                fillColor: [64, 63, 63]
-            },
-            // Container markings (hash pattern)
-            {
-                vertexData: [{ x: -0.2000, y: 0.7500 }, { x: -0.1500, y: 0.7700 }, { x: -0.4000, y: 0.8200 }, { x: -0.4500, y: 0.8000 }],
-                fillColor: [150, 110, 40]
-            },
-            {
-                vertexData: [{ x: -0.2000, y: -0.7500 }, { x: -0.1500, y: -0.7700 }, { x: -0.4000, y: -0.8200 }, { x: -0.4500, y: -0.8000 }],
-                fillColor: [150, 110, 40]
-            },
-            // Cargo bay indicators
-            {
-                vertexData: [{ x: 0.0000, y: 0.8500 }, { x: 0.1000, y: 0.8500 }, { x: 0.1000, y: 0.7500 }, { x: 0.0000, y: 0.7500 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: 0.0000, y: -0.8500 }, { x: 0.1000, y: -0.8500 }, { x: 0.1000, y: -0.7500 }, { x: 0.0000, y: -0.7500 }],
-                fillColor: [0, 0, 0]
-            },
-            // Nav lights
-            {
-                vertexData: [{ x: -0.7500, y: 0.8700 }, { x: -0.8200, y: 0.8400 }, { x: -0.7700, y: 0.8000 }],
-                fillColor: [255, 50, 50]
-            },
-            {
-                vertexData: [{ x: -0.7500, y: -0.8700 }, { x: -0.8200, y: -0.8400 }, { x: -0.7700, y: -0.8000 }],
-                fillColor: [50, 255, 50]
-            }
-        ],
-        typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery", "Chemicals", "Computers"],
-        price: 43100,
-        aiRoles: ["HAULER"],
-        techLevel: 3, // Mid-tier
-        canDualEngage: true
-    },
-    "Viper": {
-        name: "Viper", role: "Fighter", sizeCategory: "Small", size: 35,
-        baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRate: 0.07854,
-        baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 15,
-        armament: ["Twin Pulse", "Guardian Missile", "Basic Mine"], // Fast fighter
-        costCategory: "Medium", description: "The cop car of space. Police and bounty hunters love its 7.5 speed and aggressive handling. Shields recharge fast enough to confuse targets who thought they scored a hit. If you hear 'Viper inbound' on comms and you're wanted, it's already too late. Start transmitting your last words.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0500, y: 0.0000 }, { x: -0.6500, y: 0.5000 }, { x: -1.0500, y: 0.3000 }, { x: -1.0500, y: -0.3000 }, { x: -0.6500, y: -0.5000 }],
-                fillColor: [210, 210, 220]
-            },
-            {
-                vertexData: [{ x: -0.1312, y: 0.2187 }, { x: -0.2479, y: 0.1312 }, { x: -0.2479, y: -0.1312 }, { x: -0.1312, y: -0.2187 }, { x: -0.0146, y: -0.1604 }, { x: 0.1312, y: -0.0875 }, { x: 0.2187, y: 0.0000 }, { x: 0.1312, y: 0.0875 }, { x: -0.0146, y: 0.1604 }],
-                fillColor: [133, 193, 249]
-            },
-            // Police pursuit lights
-            {
-                vertexData: [{ x: -0.5500, y: 0.4200 }, { x: -0.6300, y: 0.4000 }, { x: -0.5800, y: 0.3600 }],
-                fillColor: [255, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.5500, y: -0.4200 }, { x: -0.6300, y: -0.4000 }, { x: -0.5800, y: -0.3600 }],
-                fillColor: [0, 100, 255]
-            },
-            // Hull chevron
-            {
-                vertexData: [{ x: 0.3000, y: 0.0800 }, { x: 0.1500, y: 0.0000 }, { x: 0.3000, y: -0.0800 }, { x: 0.2500, y: 0.0000 }],
-                fillColor: [180, 180, 200]
-            }
-        ],
-        typicalCargo: ["Computers", "Weapons", "Narcotics"],
-        price: 24500,
-        aiRoles: ["POLICE", "COMBAT", "MILITARY", "BOUNTY_HUNTER", "GUARD"],
-        techLevel: 3 // Mid-tier
-    },
-    "Vulture": {
-        name: "Vulture", role: "Heavy Fighter", sizeCategory: "Small", size: 38,
-        baseMaxSpeed: 5.5, baseThrust: 0.14, baseTurnRate: 0.09599,
-        baseHull: 150, baseShield: 250, shieldRecharge: 1.6, cargoCapacity: 15,
-        armament: ["Heavy Cannon", "Burst Blaster", "Loiter Munition", "Basic Mine"], // Aggressive fighter
-        costCategory: "Medium-High", description: "All power, minimal brains. Mounts two huge hardpoints that drain so much energy pilots joke about needing a second reactor. Nimble for a heavy fighter (9.6 turn rate!) and shields that shrug off small-arms fire. Power management is a full-time job. Worth it for the boom-boom sounds.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9001, y: 0.0951 }, { x: -0.0202, y: 0.3805 }, { x: -0.1034, y: 1.0132 }, { x: -0.6000, y: 1.1822 }, { x: -0.6457, y: 0.4692 }, { x: -0.9001, y: 0.2000 }, { x: -0.9001, y: -0.2000 }, { x: -0.6457, y: -0.4692 }, { x: -0.6000, y: -1.1822 }, { x: -0.1034, y: -1.0132 }, { x: -0.0202, y: -0.3805 }, { x: 0.9001, y: -0.0951 }],
-                fillColor: [210, 4, 4],
-            },
-            {
-                vertexData: [{ x: 0.2000, y: 0.0000 }, { x: 0.1000, y: 0.1732 }, { x: -0.1000, y: 0.1732 }, { x: -0.2000, y: 0.0000 }, { x: -0.1000, y: -0.1732 }, { x: 0.1000, y: -0.1732 }],
-                fillColor: [50, 150, 255],
-            },
-            // Wing tip lights
-            {
-                vertexData: [{ x: -0.4500, y: 1.1000 }, { x: -0.5200, y: 1.0600 }, { x: -0.4700, y: 1.0200 }],
-                fillColor: [255, 255, 0]
-            },
-            {
-                vertexData: [{ x: -0.4500, y: -1.1000 }, { x: -0.5200, y: -1.0600 }, { x: -0.4700, y: -1.0200 }],
-                fillColor: [255, 255, 0]
-            },
-            // Kill marking
-            {
-                vertexData: [{ x: 0.5000, y: 0.0300 }, { x: 0.5500, y: 0.0300 }, { x: 0.5500, y: -0.0300 }, { x: 0.5000, y: -0.0300 }],
-                fillColor: [255, 255, 255]
-            },
-            // Military chevron emblem
-            {
-                vertexData: [{ x: 0.6500, y: 0.0000 }, { x: 0.5000, y: 0.0700 }, { x: 0.5600, y: 0.0000 }, { x: 0.5000, y: -0.0700 }],
-                fillColor: [218, 165, 32]
-            }
-        ],
-        typicalCargo: ["Computers", "Computers", "Weapons", "Narcotics", "Slaves"],
-        price: 31300,
-        aiRoles: ["COMBAT", "MILITARY", "BOUNTY_HUNTER", "GUARD"],
-        techLevel: 3 // Mid-tier
     },
     "WaspAssault": {
         name: "Wasp Assault Craft", role: "Assault Fighter", sizeCategory: "Small", size: 26,
@@ -1228,6 +346,1162 @@ const SHIP_DEFINITIONS = {
         aiRoles: ["MILITARY", "BOUNTY_HUNTER", "GUARD"],
         techLevel: 2 // Utility
     },
+    "GladiusFighter": {
+        name: "Gladius Fighter", role: "Medium Fighter", sizeCategory: "Medium", size: 40,
+        baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
+        baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 12,
+        armament: ["Burst Blaster", "Twin Pulse", "Kalibr Missile"], // Fast attack loadout
+        costCategory: "Medium", description: "Military academies use these as the gold standard for 'how fighters should work.' Nimble 7.0 speed, solid shields, and firepower that makes it clear you're not here to negotiate. The reliable choice when your life expectancy needs extending.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0500, y: 0.0000 }, { x: 0.2500, y: 0.4000 }, { x: -0.2500, y: 0.7000 }, { x: -0.9500, y: 0.5000 }, { x: -1.0500, y: 0.0000 }, { x: -0.9500, y: -0.5000 }, { x: -0.2500, y: -0.7000 }, { x: 0.2500, y: -0.4000 }],
+                fillColor: [190, 195, 200],
+            },
+            // Military chevron emblem
+            {
+                vertexData: [{ x: 0.5500, y: 0.0000 }, { x: 0.4000, y: 0.0800 }, { x: 0.4500, y: 0.0000 }, { x: 0.4000, y: -0.0800 }],
+                fillColor: [218, 165, 32]
+            },
+            // Cockpit canopy
+            {
+                vertexData: [{ x: 0.3000, y: 0.0000 }, { x: 0.1500, y: 0.1200 }, { x: 0.1500, y: -0.1200 }],
+                fillColor: [100, 160, 220]
+            },
+            // Wing hash lines
+            {
+                vertexData: [{ x: -0.4000, y: 0.6000 }, { x: -0.3500, y: 0.6200 }, { x: -0.5500, y: 0.5800 }, { x: -0.6000, y: 0.5600 }],
+                fillColor: [160, 165, 170]
+            },
+            {
+                vertexData: [{ x: -0.4000, y: -0.6000 }, { x: -0.3500, y: -0.6200 }, { x: -0.5500, y: -0.5800 }, { x: -0.6000, y: -0.5600 }],
+                fillColor: [160, 165, 170]
+            },
+            // Nav lights
+            {
+                vertexData: [{ x: -0.3000, y: 0.6800 }, { x: -0.3700, y: 0.6500 }, { x: -0.3200, y: 0.6200 }],
+                fillColor: [255, 50, 50]
+            },
+            {
+                vertexData: [{ x: -0.3000, y: -0.6800 }, { x: -0.3700, y: -0.6500 }, { x: -0.3200, y: -0.6200 }],
+                fillColor: [50, 255, 50]
+            }
+        ],
+        typicalCargo: ["Computers"],
+        price: 28400,
+        aiRoles: ["MILITARY", "BOUNTY_HUNTER", "GUARD"],
+        techLevel: 3 // Mid-tier
+    },
+    "Vulture": {
+        name: "Vulture", role: "Heavy Fighter", sizeCategory: "Small", size: 38,
+        baseMaxSpeed: 5.5, baseThrust: 0.14, baseTurnRate: 0.09599,
+        baseHull: 150, baseShield: 250, shieldRecharge: 1.6, cargoCapacity: 15,
+        armament: ["Heavy Cannon", "Burst Blaster", "Loiter Munition", "Basic Mine"], // Aggressive fighter
+        costCategory: "Medium-High", description: "All power, minimal brains. Mounts two huge hardpoints that drain so much energy pilots joke about needing a second reactor. Nimble for a heavy fighter (9.6 turn rate!) and shields that shrug off small-arms fire. Power management is a full-time job. Worth it for the boom-boom sounds.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9001, y: 0.0951 }, { x: -0.0202, y: 0.3805 }, { x: -0.1034, y: 1.0132 }, { x: -0.6000, y: 1.1822 }, { x: -0.6457, y: 0.4692 }, { x: -0.9001, y: 0.2000 }, { x: -0.9001, y: -0.2000 }, { x: -0.6457, y: -0.4692 }, { x: -0.6000, y: -1.1822 }, { x: -0.1034, y: -1.0132 }, { x: -0.0202, y: -0.3805 }, { x: 0.9001, y: -0.0951 }],
+                fillColor: [210, 4, 4],
+            },
+            {
+                vertexData: [{ x: 0.2000, y: 0.0000 }, { x: 0.1000, y: 0.1732 }, { x: -0.1000, y: 0.1732 }, { x: -0.2000, y: 0.0000 }, { x: -0.1000, y: -0.1732 }, { x: 0.1000, y: -0.1732 }],
+                fillColor: [50, 150, 255],
+            },
+            // Wing tip lights
+            {
+                vertexData: [{ x: -0.4500, y: 1.1000 }, { x: -0.5200, y: 1.0600 }, { x: -0.4700, y: 1.0200 }],
+                fillColor: [255, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.4500, y: -1.1000 }, { x: -0.5200, y: -1.0600 }, { x: -0.4700, y: -1.0200 }],
+                fillColor: [255, 255, 0]
+            },
+            // Kill marking
+            {
+                vertexData: [{ x: 0.5000, y: 0.0300 }, { x: 0.5500, y: 0.0300 }, { x: 0.5500, y: -0.0300 }, { x: 0.5000, y: -0.0300 }],
+                fillColor: [255, 255, 255]
+            },
+            // Military chevron emblem
+            {
+                vertexData: [{ x: 0.6500, y: 0.0000 }, { x: 0.5000, y: 0.0700 }, { x: 0.5600, y: 0.0000 }, { x: 0.5000, y: -0.0700 }],
+                fillColor: [218, 165, 32]
+            }
+        ],
+        typicalCargo: ["Computers", "Computers", "Weapons", "Narcotics", "Slaves"],
+        price: 31300,
+        aiRoles: ["COMBAT", "MILITARY", "BOUNTY_HUNTER", "GUARD"],
+        techLevel: 3 // Mid-tier
+    },
+    "CenturionGunship": {
+        name: "Centurion Gunship", role: "Heavy Fighter", sizeCategory: "Large", size: 72,
+        baseMaxSpeed: 4.8, baseThrust: 0.13, baseTurnRate: 0.04538,
+        baseHull: 320, baseShield: 220, shieldRecharge: 1.0, cargoCapacity: 20,
+        armament: ["Quad Pulse", "Beam Laser", "Avenger Missile", "Harpoon Launcher", "Barrier Field", "Heavy Mine"], // Balanced heavy firepower
+        costCategory: "High", description: "A brick with delusions of grandeur and enough guns to make up for its personality. Maxes out at a glacial 4.8 speed but compensates with 320 hull and firepower that could tickle a small moon. Perfect for pilots who believe subtlety is for the weak.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9421, y: 0.0000 }, { x: 0.7579, y: 0.4000 }, { x: 0.0865, y: 0.5048 }, { x: 0.4546, y: 0.6548 }, { x: 0.2506, y: 0.8786 }, { x: -0.5596, y: 0.8810 }, { x: -0.9421, y: 0.6000 }, { x: -0.7690, y: 0.0000 }, { x: -0.9421, y: -0.6000 }, { x: -0.5596, y: -0.8810 }, { x: 0.2506, y: -0.8786 }, { x: 0.4546, y: -0.6548 }, { x: 0.0865, y: -0.5048 }, { x: 0.7579, y: -0.4000 }],
+                fillColor: [100, 105, 115]
+            },
+            {
+                vertexData: [{ x: 0.4097, y: -0.6664 }, { x: 0.2373, y: -0.8540 }, { x: -0.5400, y: -0.8512 }, { x: -0.9068, y: -0.5828 }, { x: -0.3851, y: -0.3522 }],
+                fillColor: [129, 129, 136]
+            },
+            {
+                vertexData: [{ x: -0.0905, y: -0.5240 }, { x: 0.3429, y: -0.6907 }, { x: 0.2096, y: -0.8287 }],
+                fillColor: [182, 182, 185]
+            },
+            {
+                vertexData: [{ x: 0.4097, y: 0.6664 }, { x: 0.2373, y: 0.8540 }, { x: -0.5400, y: 0.8512 }, { x: -0.9068, y: 0.5828 }, { x: -0.3851, y: 0.3522 }],
+                fillColor: [129, 129, 136]
+            },
+            {
+                vertexData: [{ x: -0.0905, y: 0.5240 }, { x: 0.3429, y: 0.6907 }, { x: 0.2096, y: 0.8287 }],
+                fillColor: [182, 182, 185]
+            },
+            // Military chevron emblem (gold arrow)
+            {
+                vertexData: [{ x: 0.4500, y: 0.0000 }, { x: 0.3000, y: 0.1000 }, { x: 0.3500, y: 0.0000 }, { x: 0.3000, y: -0.1000 }],
+                fillColor: [218, 165, 32]
+            },
+            // Hull hash lines (deliberate pattern)
+            {
+                vertexData: [{ x: 0.0000, y: 0.4500 }, { x: 0.0400, y: 0.4700 }, { x: -0.1200, y: 0.4900 }, { x: -0.1600, y: 0.4700 }],
+                fillColor: [80, 85, 95]
+            },
+            {
+                vertexData: [{ x: 0.0000, y: -0.4500 }, { x: 0.0400, y: -0.4700 }, { x: -0.1200, y: -0.4900 }, { x: -0.1600, y: -0.4700 }],
+                fillColor: [80, 85, 95]
+            },
+            // Nav lights
+            {
+                vertexData: [{ x: 0.2000, y: 0.8500 }, { x: 0.1400, y: 0.8200 }, { x: 0.1800, y: 0.7800 }],
+                fillColor: [255, 50, 50]
+            },
+            {
+                vertexData: [{ x: 0.2000, y: -0.8500 }, { x: 0.1400, y: -0.8200 }, { x: 0.1800, y: -0.7800 }],
+                fillColor: [50, 255, 50]
+            }
+        ],
+        typicalCargo: ["Weapons", "Metals", "Machinery"],
+        price: 55600,
+        aiRoles: ["MILITARY"],
+        techLevel: 3 // Mid-tier
+    },
+    "HammerheadCorvette": { // NEW - Unique 2
+        name: "Hammerhead Corvette", role: "Corvette/Patrol", sizeCategory: "Large", size: 80,
+        baseMaxSpeed: 4.0, baseThrust: 0.09, baseTurnRate: 0.04014,
+        baseHull: 350, baseShield: 280, shieldRecharge: 1.0, cargoCapacity: 60,
+        armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter", "Kalibr Missile", "Harpoon Launcher", "Barrier Field", "Advanced Mine"], // Military loadout
+        costCategory: "High", description: "That bizarre hammerhead design isn't a fashion statement—it's packed with military-grade sensors worth more than most starter ships. Combines 350 hull with the firepower to back up threats. Enemies mock the look right up until they're vaporized.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.8795, y: 0.3500 }, { x: 0.5844, y: 0.4670 }, { x: 0.4207, y: 0.7285 }, { x: 0.1427, y: 0.8587 }, { x: -0.1705, y: 0.5488 }, { x: -0.9254, y: 0.4670 }, { x: -0.9252, y: 0.3625 }, { x: -0.5529, y: 0.1330 }, { x: -0.5529, y: -0.1330 }, { x: -0.9252, y: -0.3625 }, { x: -0.9295, y: -0.4650 }, { x: -0.1705, y: -0.5488 }, { x: 0.1427, y: -0.8587 }, { x: 0.4207, y: -0.7285 }, { x: 0.5885, y: -0.4650 }, { x: 0.8795, y: -0.3500 }, { x: 0.9295, y: 0.0000 }],
+                fillColor: [70, 100, 130],
+            },
+            {
+                vertexData: [{ x: 0.1421, y: -0.7686 }, { x: 0.3536, y: -0.6314 }, { x: -0.0093, y: -0.4986 }, { x: -0.0093, y: -0.4986 }],
+                fillColor: [180, 180, 80],
+            },
+            {
+                vertexData: [{ x: -0.0093, y: 0.4871 }, { x: -0.0093, y: 0.4871 }, { x: 0.3864, y: 0.6086 }, { x: 0.1621, y: 0.7857 }],
+                fillColor: [180, 180, 80],
+            },
+            {
+                vertexData: [{ x: 0.3297, y: 0.2149 }, { x: 0.5680, y: 0.2548 }, { x: 0.7417, y: 0.0000 }, { x: 0.5680, y: -0.2548 }, { x: 0.3297, y: -0.2149 }],
+                fillColor: [180, 180, 80],
+            },
+            // Military chevron emblem
+            {
+                vertexData: [{ x: 0.8500, y: 0.0000 }, { x: 0.7000, y: 0.1000 }, { x: 0.7600, y: 0.0000 }, { x: 0.7000, y: -0.1000 }],
+                fillColor: [218, 165, 32]
+            }
+        ],
+        typicalCargo: ["Machinery", "Metals", "Food", "Metals", "Weapons"],
+        price: 63700,
+        aiRoles: ["MILITARY"],
+        techLevel: 4 // Advanced
+    },
+    "FerDeLance": {
+        name: "Fer-de-Lance", role: "Heavy Combat", sizeCategory: "Large", size: 65,
+        baseMaxSpeed: 6.5, baseThrust: 0.11, baseTurnRate: 0.05236,
+        baseHull: 180, baseShield: 350, shieldRecharge: 1.8, cargoCapacity: 24,
+        armament: ["Sniper Rail", "Force Blaster", "Triple Pulse", "Kalibr Missile", "Harpoon Launcher", "Barrier Field", "Heavy Mine"],
+        costCategory: "Very High", description: "The sports car of death—sleek, expensive, and completely impractical for groceries with only 24 cargo units. Hits 6.5 speed while recharging shields at 1.8x normal rate. Pilots either become legends or make very expensive craters. There is no middle ground.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.1000, y: 0.5000 }, { x: -0.7000, y: 0.6000 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.7000, y: -0.6000 }, { x: 0.1000, y: -0.5000 }],
+                fillColor: [60, 65, 70],
+            },
+            {
+                vertexData: [{ x: -0.9998, y: -0.2009 }, { x: -0.1000, y: -0.2431 }, { x: -0.7013, y: -0.5970 }],
+                fillColor: [150, 150, 180],
+            },
+            {
+                vertexData: [{ x: -0.9995, y: 0.2035 }, { x: -0.7020, y: 0.5957 }, { x: -0.1000, y: 0.3052 }],
+                fillColor: [150, 150, 180],
+            },
+            {
+                vertexData: [{ x: 0.4349, y: 0.0000 }, { x: 0.1360, y: 0.1505 }, { x: 0.1360, y: -0.1505 }],
+                fillColor: [150, 150, 180],
+            },
+            // Racing stripe
+            {
+                vertexData: [{ x: 0.6000, y: 0.0500 }, { x: 0.0000, y: 0.2000 }, { x: 0.0000, y: 0.1500 }, { x: 0.6000, y: 0.0000 }],
+                fillColor: [255, 200, 0]
+            },
+            {
+                vertexData: [{ x: 0.6000, y: -0.0500 }, { x: 0.0000, y: -0.2000 }, { x: 0.0000, y: -0.1500 }, { x: 0.6000, y: 0.0000 }],
+                fillColor: [255, 200, 0]
+            },
+            // Military chevron emblem
+            {
+                vertexData: [{ x: 0.7000, y: 0.0000 }, { x: 0.5500, y: 0.0800 }, { x: 0.6100, y: 0.0000 }, { x: 0.5500, y: -0.0800 }],
+                fillColor: [218, 165, 32]
+            },
+            // Nav lights
+            {
+                vertexData: [{ x: -0.6500, y: 0.5500 }, { x: -0.7200, y: 0.5200 }, { x: -0.6700, y: 0.4800 }],
+                fillColor: [255, 50, 50]
+            },
+            {
+                vertexData: [{ x: -0.6500, y: -0.5500 }, { x: -0.7200, y: -0.5200 }, { x: -0.6700, y: -0.4800 }],
+                fillColor: [50, 255, 50]
+            }
+        ],
+        typicalCargo: ["Computers", "Computers", "Computers", "Computers", "Luxury Goods", "Weapons", "Narcotics"],
+        price: 64200,
+        aiRoles: ["MILITARY", "BOUNTY_HUNTER"],
+        techLevel: 4 // Advanced
+    },
+    "JackalMultirole": { // NEW - Multi-role
+        name: "Jackal Multirole", role: "Multi-Role", sizeCategory: "Medium", size: 50,
+        baseMaxSpeed: 5.8, baseThrust: 0.1, baseTurnRate: 0.06283,
+        baseHull: 140, baseShield: 160, shieldRecharge: 1.2, cargoCapacity: 60,
+        armament: ["Multi-Cannon", "Railgun Turret"], // Versatile
+        costCategory: "Medium", description: "The Swiss Army knife of space, if Swiss Army knives were angular and grumpy-looking. Hits the sweet spot between fighter and hauler with 60 cargo tons and enough weapons to discourage pirates. Not amazing at anything, competent at everything—exactly what you want when the galaxy hates you.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.4000, y: 0.5000 }, { x: -0.3000, y: 0.8000 }, { x: -0.9000, y: 0.6000 }, { x: -0.5103, y: 0.1697 }, { x: -0.5103, y: -0.1697 }, { x: -0.9000, y: -0.6000 }, { x: -0.3000, y: -0.8000 }, { x: 0.4000, y: -0.5000 }],
+                fillColor: [170, 160, 150]
+            },
+            {
+                vertexData: [{ x: 0.6400, y: 0.0000 }, { x: 0.5400, y: 0.2132 }, { x: 0.3400, y: 0.2132 }, { x: 0.2400, y: 0.0000 }, { x: 0.3400, y: -0.2132 }, { x: 0.5400, y: -0.2132 }],
+                fillColor: [101, 171, 236]
+            },
+            // Military chevron emblem
+            {
+                vertexData: [{ x: 0.7500, y: 0.0000 }, { x: 0.6000, y: 0.0800 }, { x: 0.6600, y: 0.0000 }, { x: 0.6000, y: -0.0800 }],
+                fillColor: [218, 165, 32]
+            }
+        ],
+        typicalCargo: ["Machinery", "Metals", "Food"],
+        price: 23100,
+        aiRoles: ["COMBAT", "MILITARY"],
+        techLevel: 2 // Utility
+    },
+    "Anaconda": {
+        name: "Anaconda", role: "Heavy Combat/Multi", sizeCategory: "Very Large", size: 120,
+        baseMaxSpeed: 3.0, baseThrust: 0.05, baseTurnRate: 0.02094,
+        baseHull: 400, baseShield: 350, shieldRecharge: 1, cargoCapacity: 150,
+        armament: ["Force Blaster", "Guardian Missile", "Barrier Field", "Advanced Mine"],
+        costCategory: "Very High", description: "A mobile fortress that laughs at missile strikes with its 400-unit hull. Sure, it turns like a space station having a bad day, but when you're hauling 150 tons of cargo and enough firepower to level a moon, who needs agility? Peak engineering meets peak intimidation.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.1500, y: 0.0000 }, { x: 0.8500, y: 0.3000 }, { x: -0.9500, y: 0.4000 }, { x: -1.1500, y: 0.2000 }, { x: -1.1500, y: -0.2000 }, { x: -0.9500, y: -0.4000 }, { x: 0.8500, y: -0.3000 }],
+                fillColor: [80, 90, 100]
+            },
+            {
+                vertexData: [{ x: 0.6900, y: -0.1980 }, { x: 0.8340, y: -0.0900 }, { x: 0.8340, y: 0.0900 }, { x: 0.6900, y: 0.1980 }, { x: 0.6700, y: 0.0000 }],
+                fillColor: [150, 150, 180]
+            },
+            // Military chevron emblem (gold arrow) - large ship
+            {
+                vertexData: [{ x: 0.5000, y: 0.0000 }, { x: 0.3000, y: 0.1200 }, { x: 0.3800, y: 0.0000 }, { x: 0.3000, y: -0.1200 }],
+                fillColor: [218, 165, 32]
+            },
+            // Hull identification stripe
+            {
+                vertexData: [{ x: 0.2000, y: 0.2600 }, { x: -0.6000, y: 0.3200 }, { x: -0.6000, y: 0.2800 }, { x: 0.2000, y: 0.2200 }],
+                fillColor: [60, 70, 80]
+            },
+            {
+                vertexData: [{ x: 0.2000, y: -0.2600 }, { x: -0.6000, y: -0.3200 }, { x: -0.6000, y: -0.2800 }, { x: 0.2000, y: -0.2200 }],
+                fillColor: [60, 70, 80]
+            },
+            // Port navigation light
+            {
+                vertexData: [{ x: -0.9000, y: 0.3800 }, { x: -0.9700, y: 0.3500 }, { x: -0.9200, y: 0.3200 }],
+                fillColor: [255, 50, 50]
+            },
+            // Starboard navigation light
+            {
+                vertexData: [{ x: -0.9000, y: -0.3800 }, { x: -0.9700, y: -0.3500 }, { x: -0.9200, y: -0.3200 }],
+                fillColor: [50, 255, 50]
+            },
+            // Stern light
+            {
+                vertexData: [{ x: -1.0500, y: 0.0500 }, { x: -1.1200, y: 0.0000 }, { x: -1.0500, y: -0.0500 }],
+                fillColor: [255, 255, 200]
+            }
+        ],
+        typicalCargo: ["Luxury Goods", "Adv Components", "Metals", "Machinery", "Minerals"],
+        price: 53800,
+        aiRoles: ["COMBAT", "MILITARY"],
+        techLevel: 3, // Mid-tier
+        canDualEngage: true // Large ships can engage two targets simultaneously
+    },
+    "VanguardCruiser": {
+        name: "Vanguard Cruiser", role: "Fast Attack Cruiser", sizeCategory: "Large", size: 95,
+        baseMaxSpeed: 6.5, baseThrust: 0.12, baseTurnRate: 0.018,
+        baseHull: 380, baseShield: 320, shieldRecharge: 1.3, cargoCapacity: 60,
+        armament: ["Sniper Rail", "Railgun Turret", "Force Blaster", "Kalibr Missile", "Harpoon Launcher", "Barrier Field"],
+        costCategory: "Very High", description: "Fast-attack cruiser that breaks every expectation by hitting 6.5 speed despite its size. Military R&D dumped unlimited funds into making something big move like a fighter. Succeeded brilliantly. Handles like a drunk shopping cart but enemies rarely live long enough to notice. Engineering triumph meets elegant overkill.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.8000, y: 0.2500 }, { x: 0.3000, y: 0.4000 }, { x: -0.6000, y: 0.5000 }, { x: -1.0000, y: 0.3000 }, { x: -1.1000, y: 0.0000 }, { x: -1.0000, y: -0.3000 }, { x: -0.6000, y: -0.5000 }, { x: 0.3000, y: -0.4000 }, { x: 0.8000, y: -0.2500 }],
+                fillColor: [70, 80, 100]
+            },
+            {
+                vertexData: [{ x: 0.7919, y: -0.0075 }, { x: 0.4919, y: 0.1425 }, { x: 0.0919, y: 0.1425 }, { x: 0.0919, y: -0.1575 }, { x: 0.4919, y: -0.1575 }],
+                fillColor: [120, 180, 220]
+            },
+            {
+                vertexData: [{ x: -0.5315, y: 0.2138 }, { x: -0.6915, y: 0.2938 }, { x: -0.8515, y: 0.1738 }, { x: -0.8515, y: -0.1862 }, { x: -0.6915, y: -0.3062 }, { x: -0.5315, y: -0.2262 }, { x: -0.3889, y: -0.1549 }, { x: -0.2869, y: -0.2138 }, { x: -0.0964, y: -0.1038 }, { x: -0.0964, y: 0.1162 }, { x: -0.2869, y: 0.2262 }, { x: -0.4120, y: 0.1540 }],
+                fillColor: [55, 52, 60]
+            },
+            // Military chevron emblem (large cruiser)
+            {
+                vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.7500, y: 0.1200 }, { x: 0.8300, y: 0.0000 }, { x: 0.7500, y: -0.1200 }],
+                fillColor: [218, 165, 32]
+            },
+            // Port nav light
+            {
+                vertexData: [{ x: -0.5500, y: 0.4800 }, { x: -0.6200, y: 0.4500 }, { x: -0.5700, y: 0.4200 }],
+                fillColor: [255, 50, 50]
+            },
+            // Starboard nav light
+            {
+                vertexData: [{ x: -0.5500, y: -0.4800 }, { x: -0.6200, y: -0.4500 }, { x: -0.5700, y: -0.4200 }],
+                fillColor: [50, 255, 50]
+            }
+        ],
+        typicalCargo: ["Weapons", "Adv Components", "Computers"],
+        price: 89500,
+        aiRoles: ["MILITARY", "COMBAT"],
+        techLevel: 4,
+        canDualEngage: true
+    },
+    "ShardInterceptor": {
+        name: "Shard Interceptor", role: "Fighter", sizeCategory: "Small", size: 30,
+        baseMaxSpeed: 8.5, baseThrust: 0.18, baseTurnRate: 0.08727,
+        baseHull: 50, baseShield: 100, shieldRecharge: 1.8, cargoCapacity: 4, // Crystalline structure?
+        armament: ["Disruptor", "Scatter Beam"], // Alien tech
+        costCategory: "N/A", description: "Fast alien fighter that looks like someone tried to build a ship out of broken glass and bad dreams. Incorporates crystalline technology nobody fully understands. Hits 8.5 speed while disrupting sensors. Military techs drool over captured specimens—until they realize reverse-engineering might take decades.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.1741, y: 0.0000 }, { x: 0.5245, y: 0.2433 }, { x: -0.1035, y: 0.1331 }, { x: -0.7045, y: 0.8065 }, { x: -1.1741, y: 0.4935 }, { x: -0.6173, y: 0.0000 }, { x: -1.1741, y: -0.4935 }, { x: -0.7045, y: -0.8065 }, { x: -0.1035, y: -0.1331 }, { x: 0.5245, y: -0.2433 }],
+                fillColor: [180, 180, 240],
+            }
+        ],
+        typicalCargo: [],
+        price: 30400,
+        aiRoles: ["MILITARY", "BOUNTY_HUNTER"],
+        techLevel: 5
+    },
+
+    // --- IMPERIAL ---
+    "ImperialCharger": {
+        name: "Imperial Charger", role: "Light Skirmisher", sizeCategory: "Tiny", size: 20,
+        baseMaxSpeed: 7.5, baseThrust: 0.17, baseTurnRate: 0.085,
+        baseHull: 35, baseShield: 45, shieldRecharge: 1.1, cargoCapacity: 4,
+        armament: ["Pulse Laser"],
+        costCategory: "Low", description: "The Imperial Navy's standardized training vessel—cheap to produce, easy to fly, and expendable enough that admirals don't weep when cadets crash them. That pristine white hull with gold star teaches pilots to look the part before they can fly it. Entry-level speed (7.5) and respectable handling make it perfect for learning. Veterans call it 'the milk carton' but everyone started here.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: -0.7000, y: 0.5000 }, { x: -0.9000, y: 0.0000 }, { x: -0.7000, y: -0.5000 }],
+                fillColor: [230, 235, 245],
+            },
+            {
+                vertexData: [{ x: -0.2000, y: 0.0000 }, { x: -0.3591, y: 0.0588 }, { x: -0.3658, y: 0.2283 }, { x: -0.4709, y: 0.0951 }, { x: -0.6342, y: 0.1411 }, { x: -0.5400, y: 0.0000 }, { x: -0.6342, y: -0.1411 }, { x: -0.4709, y: -0.0951 }, { x: -0.3658, y: -0.2283 }, { x: -0.3591, y: -0.0588 }],
+                fillColor: [160, 80, 200],
+            }
+        ],
+        typicalCargo: [], price: 20000, techLevel: 2,
+        aiRoles: ["COMBAT", "IMPERIAL", "GUARD"]
+    },
+    "ImperialCourier": {
+        name: "Imperial Courier", role: "Light Fighter/Multi", sizeCategory: "Small", size: 32,
+        baseMaxSpeed: 7.8, baseThrust: 0.16, baseTurnRate: 0.07505,
+        baseHull: 70, baseShield: 150, shieldRecharge: 1.7, cargoCapacity: 12,
+        armament: ["Twin Pulse", "Beam Laser"], // Elegant, refined
+        costCategory: "Medium", description: "Imperial's answer to 'what if we made the courier fast AND pretentious?' Hits 7.8 speed while looking down its nose at peasant ships. Shields regenerate at 1.7x because average is for commoners. Only 12 cargo tons because luxury goods don't need much space. Style over substance, but what style!",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.4000, y: 0.3000 }, { x: -0.5000, y: 0.5000 }, { x: -0.9000, y: 0.4000 }, { x: -1.0000, y: 0.0000 }, { x: -0.9000, y: -0.4000 }, { x: -0.5000, y: -0.5000 }, { x: 0.4000, y: -0.3000 }],
+                fillColor: [210, 215, 220],
+            },
+            {
+                vertexData: [{ x: 0.2400, y: 0.0000 }, { x: 0.0809, y: 0.0588 }, { x: 0.0742, y: 0.2283 }, { x: -0.0309, y: 0.0951 }, { x: -0.1942, y: 0.1411 }, { x: -0.1000, y: 0.0000 }, { x: -0.1942, y: -0.1411 }, { x: -0.0309, y: -0.0951 }, { x: 0.0742, y: -0.2283 }, { x: 0.0809, y: -0.0588 }],
+                fillColor: [160, 80, 200],
+            }
+        ],
+        typicalCargo: ["Luxury Goods", "Medicine"],
+        price: 20100,
+        aiRoles: ["IMPERIAL"],
+        techLevel: 2 // Utility
+    },
+    "ImperialEagleMkII": {
+        name: "Imperial Eagle MkII", role: "Superiority Fighter", sizeCategory: "Small", size: 30,
+        baseMaxSpeed: 7.8, baseThrust: 0.18, baseTurnRate: 0.092,
+        baseHull: 60, baseShield: 140, shieldRecharge: 1.7, cargoCapacity: 6,
+        armament: ["Twin Pulse", "Beam Laser"],
+        costCategory: "Medium", description: "Imperial version of the classic Eagle—same idea, more arrogant execution. Faster (7.8), better shielded (140), and painted in colors that scream 'elite pilot aboard.' Only 6 cargo tons because carrying freight is for the help. Exclusively assigned to pilots with more swagger than sense. Both metrics measured high.",
+
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.6000, y: 0.4000 }, { x: -0.9000, y: 0.2000 }, { x: -0.9000, y: -0.2000 }, { x: -0.6000, y: -0.4000 }],
+                fillColor: [230, 230, 245],
+            },
+            {
+                vertexData: [{ x: -0.3680, y: 0.0000 }, { x: -0.5271, y: 0.0588 }, { x: -0.5338, y: 0.2283 }, { x: -0.6389, y: 0.0951 }, { x: -0.8022, y: 0.1411 }, { x: -0.7080, y: 0.0000 }, { x: -0.8022, y: -0.1411 }, { x: -0.6389, y: -0.0951 }, { x: -0.5338, y: -0.2283 }, { x: -0.5271, y: -0.0588 }],
+                fillColor: [160, 80, 200],
+            }
+        ],
+        typicalCargo: [], price: 58000, techLevel: 3,
+        aiRoles: ["COMBAT", "IMPERIAL", "GUARD"]
+    },
+    "ImperialLancer": {
+        name: "Imperial Lancer", role: "Fast Attack Interceptor", sizeCategory: "Small", size: 34,
+        baseMaxSpeed: 8.2, baseThrust: 0.19, baseTurnRate: 0.085,
+        baseHull: 70, baseShield: 130, shieldRecharge: 1.6, cargoCapacity: 8,
+        armament: ["Twin Pulse", "Sniper Rail"],
+        costCategory: "Medium", description: "Built specifically to catch things that run. Insane 8.2 speed means 'escape' isn't in the target's vocabulary. Mounts precision weapons because Imperials believe overkill is gauche. Used for surgical strikes, high-value assassinations, and reminding everyone why the Empire is still in charge. Terrifyingly effective.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.5000, y: 0.3000 }, { x: -1.0000, y: 0.1000 }, { x: -1.0000, y: -0.1000 }, { x: -0.5000, y: -0.3000 }],
+                fillColor: [200, 210, 230],
+            },
+            {
+                vertexData: [{ x: -0.3304, y: 0.0000 }, { x: -0.4895, y: 0.0588 }, { x: -0.4962, y: 0.2283 }, { x: -0.6013, y: 0.0951 }, { x: -0.7645, y: 0.1411 }, { x: -0.6704, y: 0.0000 }, { x: -0.7645, y: -0.1411 }, { x: -0.6013, y: -0.0951 }, { x: -0.4962, y: -0.2283 }, { x: -0.4895, y: -0.0588 }],
+                fillColor: [160, 80, 200],
+            }
+        ],
+        typicalCargo: [], price: 62000, techLevel: 4,
+        aiRoles: ["COMBAT", "IMPERIAL", "GUARD"]
+    },
+    "ImperialGuardian": {
+        name: "Imperial Guardian", role: "System Patrol Cutter", sizeCategory: "Medium", size: 50,
+        baseMaxSpeed: 5.8, baseThrust: 0.1, baseTurnRate: 0.05,
+        baseHull: 160, baseShield: 200, shieldRecharge: 1.5, cargoCapacity: 25,
+        armament: ["Beam Laser", "Twin Pulse", "Mini-Turret"],
+        costCategory: "Medium-High", description: "Imperial system patrol—faster than police cruisers, prettier than military warships, and more condescending than both combined. That 200-shield capacity and 5.8 speed combo makes pirates rethink carreer choices. Gold trim is non-optional. Serves as both intimidation and target practice for rebels.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.5000, y: 0.4000 }, { x: -0.5000, y: 0.7000 }, { x: -1.0000, y: 0.3000 }, { x: -1.0000, y: -0.3000 }, { x: -0.5000, y: -0.7000 }, { x: 0.5000, y: -0.4000 }],
+                fillColor: [220, 220, 240],
+            },
+            {
+                vertexData: [{ x: -0.4091, y: 0.0000 }, { x: -0.5682, y: 0.0588 }, { x: -0.5750, y: 0.2283 }, { x: -0.6800, y: 0.0951 }, { x: -0.8433, y: 0.1411 }, { x: -0.7491, y: 0.0000 }, { x: -0.8433, y: -0.1411 }, { x: -0.6800, y: -0.0951 }, { x: -0.5750, y: -0.2283 }, { x: -0.5682, y: -0.0588 }],
+                fillColor: [160, 80, 200],
+            }
+        ],
+        typicalCargo: ["Slaves", "Narcotics"], price: 85000, techLevel: 4,
+        aiRoles: ["COMBAT", "IMPERIAL"]
+    },
+    "ImperialJusticar": {
+        name: "Imperial Justicar", role: "Heavy Gunboat", sizeCategory: "Medium", size: 62,
+        baseMaxSpeed: 5.0, baseThrust: 0.11, baseTurnRate: 0.042,
+        baseHull: 280, baseShield: 320, shieldRecharge: 1.4, cargoCapacity: 40,
+        armament: ["Quad Pulse", "Railgun Turret", "Beam Laser", "Heavy Tangle", "Barrier Field"],
+        costCategory: "High", description: "The Imperial hammer for when diplomacy has conclusively failed. Square, brutal, and packing 280 hull plus 320 shields. That geometric design isn't artistic—it's optimal for mounting weapons on every surface. Enforces blockades by existing near them. Rebels call these 'nope ships' and avoid accordingly.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.5000 }, { x: 0.5000, y: 0.9000 }, { x: -0.5000, y: 0.9000 }, { x: -0.9000, y: 0.5000 }, { x: -0.9000, y: -0.5000 }, { x: -0.5000, y: -0.9000 }, { x: 0.5000, y: -0.9000 }, { x: 0.9000, y: -0.5000 }],
+                fillColor: [180, 190, 210],
+            },
+            {
+                vertexData: [{ x: -0.7571, y: -0.4875 }, { x: 0.0000, y: -0.3393 }, { x: 0.7571, y: -0.4875 }, { x: -0.3319, y: -0.7334 }],
+                fillColor: [255, 255, 255],
+            },
+            {
+                vertexData: [{ x: -0.3956, y: 0.7037 }, { x: 0.7252, y: 0.4089 }, { x: 0.0000, y: 0.2726 }, { x: -0.7252, y: 0.4089 }],
+                fillColor: [255, 255, 255],
+            },
+            {
+                vertexData: [{ x: -0.3938, y: 0.0000 }, { x: -0.5529, y: 0.0588 }, { x: -0.5596, y: 0.2283 }, { x: -0.6647, y: 0.0951 }, { x: -0.8279, y: 0.1411 }, { x: -0.7338, y: 0.0000 }, { x: -0.8279, y: -0.1411 }, { x: -0.6647, y: -0.0951 }, { x: -0.5596, y: -0.2283 }, { x: -0.5529, y: -0.0588 }],
+                fillColor: [160, 80, 200],
+            }
+        ],
+        typicalCargo: ["Weapons", "Slaves"], price: 125000, techLevel: 4,
+        aiRoles: ["COMBAT", "IMPERIAL"]
+    },
+    "ImperialPaladin": {
+        name: "Imperial Paladin", role: "Heavy Assault Frigate", sizeCategory: "Large", size: 90,
+        baseMaxSpeed: 4.5, baseThrust: 0.09, baseTurnRate: 0.038,
+        baseHull: 350, baseShield: 400, shieldRecharge: 1.7, cargoCapacity: 70,
+        armament: ["Heavy Cannon", "Mini-Turret", "Force Blaster", "Heavy Tangle", "Halo"],
+        costCategory: "High", description: "Imperial heavy hitter designed for 'peacekeeping' (read: subjugation). That pristine white hull with 350 hull and 400 shields broadcasts 'mess around and find out' in six languages. Slow to turn but broadside firepower compensates by erasing problems. Rebels hate it. Imperials love everything about it.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.8444, y: 0.0813 }, { x: 0.3896, y: 0.3191 }, { x: -0.3614, y: 0.3732 }, { x: -0.5719, y: 0.6322 }, { x: -0.8444, y: 0.5000 }, { x: -0.8444, y: -0.5000 }, { x: -0.5719, y: -0.6322 }, { x: -0.3614, y: -0.3732 }, { x: 0.3896, y: -0.3191 }, { x: 0.8444, y: -0.0813 }],
+                fillColor: [240, 240, 250],
+            },
+            {
+                vertexData: [{ x: -0.3352, y: 0.0041 }, { x: -0.4943, y: 0.0629 }, { x: -0.5010, y: 0.2323 }, { x: -0.6061, y: 0.0992 }, { x: -0.7693, y: 0.1452 }, { x: -0.6752, y: 0.0041 }, { x: -0.7693, y: -0.1370 }, { x: -0.6061, y: -0.0910 }, { x: -0.5010, y: -0.2242 }, { x: -0.4943, y: -0.0547 }],
+                fillColor: [160, 80, 200],
+            }
+        ],
+        typicalCargo: ["Weapons", "Luxury Goods"], price: 170000, techLevel: 4,
+        aiRoles: ["COMBAT", "IMPERIAL"],
+        canDualEngage: true // Large ships can engage two targets simultaneously
+    },
+    "ImperialEnvoy": {
+        name: "Imperial Envoy", role: "Diplomatic Transport", sizeCategory: "Large", size: 70,
+        baseMaxSpeed: 6.0, baseThrust: 0.08, baseTurnRate: 0.03,
+        baseHull: 150, baseShield: 250, shieldRecharge: 1.8, cargoCapacity: 50,
+        armament: ["Mini-Turret", "Pulse Laser"],
+        costCategory: "High", description: "Diplomatic transport that's more armed than some destroyers. Shields at 250 because ambassadors refuse to die looking undignified. Speed of 6.0 means it arrives fashionably not-late. The white-and-gold paint scheme costs more than small ships. Attacking one is declaring war while insulting interior design taste.",
+
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.8000, y: 0.3000 }, { x: -0.8000, y: 0.4000 }, { x: -1.1000, y: 0.0000 }, { x: -0.8000, y: -0.4000 }, { x: 0.8000, y: -0.3000 }],
+                fillColor: [250, 250, 255],
+            },
+            {
+                vertexData: [{ x: -0.4994, y: 0.0000 }, { x: -0.6585, y: 0.0588 }, { x: -0.6652, y: 0.2283 }, { x: -0.7703, y: 0.0951 }, { x: -0.9336, y: 0.1411 }, { x: -0.8394, y: 0.0000 }, { x: -0.9336, y: -0.1411 }, { x: -0.7703, y: -0.0951 }, { x: -0.6652, y: -0.2283 }, { x: -0.6585, y: -0.0588 }],
+                fillColor: [160, 80, 200],
+            }
+        ],
+        typicalCargo: ["Luxury Goods"], price: 105000, techLevel: 4,
+        aiRoles: ["IMPERIAL"]
+    },
+    "ImperialSentinel": {
+        name: "Imperial Sentinel", role: "Border Patrol Corvette", sizeCategory: "Large", size: 78,
+        baseMaxSpeed: 5.2, baseThrust: 0.095, baseTurnRate: 0.04,
+        baseHull: 300, baseShield: 350, shieldRecharge: 1.6, cargoCapacity: 60,
+        armament: ["Mini-Turret", "Multi-Cannon", "Twin Pulse"],
+        costCategory: "High", description: "Long-duration patrol corvette designed for border regions where backup is measured in weeks. That 300 hull and 350 shields keeps it alive until reinforcements maybe arrive. Crews serve six-month deployments wondering if headquarters remembers they exist. Spoiler: headquarters does not remember.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.3000 }, { x: 0.4000, y: 0.6000 }, { x: -0.4000, y: 0.8000 }, { x: -1.0000, y: 0.6000 }, { x: -1.0000, y: -0.6000 }, { x: -0.4000, y: -0.8000 }, { x: 0.4000, y: -0.6000 }, { x: 1.0000, y: -0.3000 }],
+                fillColor: [210, 215, 225],
+            },
+            {
+                vertexData: [{ x: -0.3762, y: 0.0000 }, { x: -0.5353, y: 0.0588 }, { x: -0.5420, y: 0.2283 }, { x: -0.6471, y: 0.0951 }, { x: -0.8103, y: 0.1411 }, { x: -0.7162, y: 0.0000 }, { x: -0.8103, y: -0.1411 }, { x: -0.6471, y: -0.0951 }, { x: -0.5420, y: -0.2283 }, { x: -0.5353, y: -0.0588 }],
+                fillColor: [160, 80, 200],
+            }
+        ],
+        typicalCargo: ["Adv Components", "Slaves"], price: 145000, techLevel: 5,
+        aiRoles: ["COMBAT", "IMPERIAL"]
+    },
+    "ImperialClipper": {
+        name: "Imperial Clipper", role: "Multi-Role/Trader", sizeCategory: "Large", size: 95,
+        baseMaxSpeed: 7.0, baseThrust: 0.10, baseTurnRate: 0.02618,
+        baseHull: 180, baseShield: 180, shieldRecharge: 1.4, cargoCapacity: 180,
+        armament: ["V Punch", "Mini-Turret", "Beam Laser", "Heavy Tangle"], // Elegant, balanced
+        costCategory: "High", description: "Imperial elegance meets cargo logistics. Gleaming white hull that screams 'I'm better than you' while hauling 180 tons faster (7.0 speed) than ships half its size. Shields recharge at 1.4x because imperials believe vulnerabilities are for peasants. Docking fees are double just because it exists.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0500, y: 0.0000 }, { x: 0.6500, y: 0.2000 }, { x: 0.0500, y: 0.9000 }, { x: -0.8500, y: 0.8000 }, { x: -1.0500, y: 0.4000 }, { x: -1.0500, y: -0.4000 }, { x: -0.8500, y: -0.8000 }, { x: 0.0500, y: -0.9000 }, { x: 0.6500, y: -0.2000 }],
+                fillColor: [220, 225, 230],
+            },
+            {
+                vertexData: [{ x: 0.4246, y: 0.0632 }, { x: 0.6612, y: 0.0067 }, { x: 0.4246, y: -0.0499 }],
+                fillColor: [150, 150, 180],
+            },
+            {
+                vertexData: [{ x: -0.4673, y: 0.0000 }, { x: -0.6264, y: 0.0588 }, { x: -0.6332, y: 0.2283 }, { x: -0.7382, y: 0.0951 }, { x: -0.9015, y: 0.1411 }, { x: -0.8073, y: 0.0000 }, { x: -0.9015, y: -0.1411 }, { x: -0.7382, y: -0.0951 }, { x: -0.6332, y: -0.2283 }, { x: -0.6264, y: -0.0588 }],
+                fillColor: [160, 80, 200],
+            }
+        ],
+        typicalCargo: ["Luxury Goods", "Medicine", "Textiles", "Textiles", "Textiles"],
+        price: 42900,
+        aiRoles: ["IMPERIAL"],
+        techLevel: 4 // Advanced
+    },
+    "ImperialCutterLite": {
+        name: "Imperial Cutter Lite", role: "Fast Armed Trader", sizeCategory: "Large", size: 80,
+        baseMaxSpeed: 6.5, baseThrust: 0.09, baseTurnRate: 0.028,
+        baseHull: 200, baseShield: 280, shieldRecharge: 1.6, cargoCapacity: 150,
+        armament: ["Beam Laser", "Twin Pulse", "Mini-Turret"],
+        costCategory: "High", description: "A smaller, more agile version of the Cutter, still capable of significant cargo and defense.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.7000, y: 0.2500 }, { x: 0.0000, y: 0.7000 }, { x: -0.9000, y: 0.6000 }, { x: -1.1000, y: 0.3000 }, { x: -1.1000, y: -0.3000 }, { x: -0.9000, y: -0.6000 }, { x: 0.0000, y: -0.7000 }, { x: 0.7000, y: -0.2500 }],
+                fillColor: [225, 230, 240],
+            },
+            {
+                vertexData: [{ x: -0.4765, y: 0.0000 }, { x: -0.6356, y: 0.0588 }, { x: -0.6423, y: 0.2283 }, { x: -0.7474, y: 0.0951 }, { x: -0.9107, y: 0.1411 }, { x: -0.8165, y: 0.0000 }, { x: -0.9107, y: -0.1411 }, { x: -0.7474, y: -0.0951 }, { x: -0.6423, y: -0.2283 }, { x: -0.6356, y: -0.0588 }],
+                fillColor: [160, 80, 200],
+            }
+        ],
+        typicalCargo: ["Luxury Goods", "Adv Components", "Computers"], price: 130000, techLevel: 5,
+        aiRoles: ["COMBAT", "IMPERIAL"]
+    },
+
+    // --- SEPARATIST ---
+    "SeparatistPartisan": {
+        name: "Separatist Partisan", role: "Light Skirmisher", sizeCategory: "Tiny", size: 20,
+        baseMaxSpeed: 7.5, baseThrust: 0.17, baseTurnRate: 0.085,
+        baseHull: 35, baseShield: 45, shieldRecharge: 1.1, cargoCapacity: 4,
+        armament: ["Pulse Laser"],
+        costCategory: "Low", description: "The Separatist militia's sacrificial lamb. Tiny (20), fast (7.5), and piloted by people with more conviction than sense. Massively outgunned in every fight but they keep coming anyway. Military analysts call them 'target practice.' Separatists call them 'heroes.' Both are correct.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: -0.7000, y: 0.5000 }, { x: -0.9000, y: 0.0000 }, { x: -0.7000, y: -0.5000 }],
+                fillColor: [80, 80, 60],
+            },
+            {
+                vertexData: [{ x: -0.2265, y: 0.0000 }, { x: -0.3365, y: 0.1905 }, { x: -0.5565, y: 0.1905 }, { x: -0.6665, y: 0.0000 }, { x: -0.5565, y: -0.1905 }, { x: -0.3365, y: -0.1905 }],
+                fillColor: [182, 17, 17],
+            }
+        ],
+        typicalCargo: [], price: 28000, techLevel: 2,
+        aiRoles: ["COMBAT", "SEPARATIST", "GUARD"]
+    },
+    "SeparatistLiberator": {
+        name: "Separatist Liberator", role: "Assault Fighter", sizeCategory: "Small", size: 36,
+        baseMaxSpeed: 6.5, baseThrust: 0.14, baseTurnRate: 0.07,
+        baseHull: 90, baseShield: 110, shieldRecharge: 1.2, cargoCapacity: 12,
+        armament: ["Multi-Cannon", "Burst Blaster"],
+        costCategory: "Medium", description: "Separatist standard issue fighter—rugged, reliable, and painted in revolutionary red. Not flashy but effective, like the pilots who fly them. That 90 hull means it survives battles that would atomize cheaper ships. Preferred by the kind of people who use words like 'liberation' and 'regime change' unironically.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.6000, y: 0.6000 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.6000, y: -0.6000 }],
+                fillColor: [100, 40, 40],
+            },
+            {
+                vertexData: [{ x: 0.2200, y: 0.0000 }, { x: 0.1100, y: 0.1905 }, { x: -0.1100, y: 0.1905 }, { x: -0.2200, y: 0.0000 }, { x: -0.1100, y: -0.1905 }, { x: 0.1100, y: -0.1905 }],
+                fillColor: [150, 150, 180],
+            },
+            // Revolutionary star emblem
+            {
+                vertexData: [{ x: 0.5000, y: 0.0000 }, { x: 0.4200, y: 0.0600 }, { x: 0.4200, y: -0.0600 }],
+                fillColor: [255, 215, 0]
+            },
+            // Wing stripe
+            {
+                vertexData: [{ x: -0.5000, y: 0.5000 }, { x: -0.7000, y: 0.4000 }, { x: -0.7000, y: 0.3500 }, { x: -0.5000, y: 0.4500 }],
+                fillColor: [180, 60, 60]
+            },
+            {
+                vertexData: [{ x: -0.5000, y: -0.5000 }, { x: -0.7000, y: -0.4000 }, { x: -0.7000, y: -0.3500 }, { x: -0.5000, y: -0.4500 }],
+                fillColor: [180, 60, 60]
+            }
+        ],
+        typicalCargo: ["Weapons", "Food"], price: 52000, techLevel: 3,
+        aiRoles: ["SEPARATIST"]
+    },
+    "SeparatistShadow": {
+        name: "Separatist Shadow", role: "Stealth Infiltrator", sizeCategory: "Small", size: 28,
+        baseMaxSpeed: 6.0, baseThrust: 0.11, baseTurnRate: 0.06,
+        baseHull: 50, baseShield: 70, shieldRecharge: 1.2, cargoCapacity: 10,
+        armament: ["Pulse Laser", "Disruptor"],
+        costCategory: "Medium-High", description: "Painted matte black because Separatist stealth operatives watched too many spy holos. Actually does have basic sensor-dampening tech, but it's temperamental. Fast enough (6.0) to slip past patrols when the stealth works. When it doesn't, that 50 hull won't save you. High risk, high reward, high stupidity.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.3000, y: 0.4000 }, { x: -0.8000, y: 0.1000 }, { x: -0.8000, y: -0.1000 }, { x: -0.3000, y: -0.4000 }],
+                fillColor: [30, 30, 30]
+            },
+            {
+                vertexData: [{ x: -0.1743, y: 0.0000 }, { x: -0.2843, y: 0.1905 }, { x: -0.5043, y: 0.1905 }, { x: -0.6143, y: 0.0000 }, { x: -0.5043, y: -0.1905 }, { x: -0.2843, y: -0.1905 }],
+                fillColor: [114, 3, 3]
+            }
+        ],
+        typicalCargo: ["Adv Components", "Computers"], price: 65000, techLevel: 4,
+        aiRoles: ["PIRATE", "SEPARATIST"]
+    },
+    "SeparatistOutlander": {
+        name: "Separatist Outlander", role: "Long-Range Scout/Raider", sizeCategory: "Medium", size: 50,
+        baseMaxSpeed: 5.5, baseThrust: 0.09, baseTurnRate: 0.05,
+        baseHull: 120, baseShield: 150, shieldRecharge: 1.3, cargoCapacity: 40, // For supplies or loot
+        armament: ["Beam Laser", "Mini-Turret"],
+        costCategory: "Medium", description: "For when your revolution needs supplies from sketchy contacts six jumps away. Balanced stats (120 hull, 150 shields, 40 cargo) make it good at everything, great at nothing—exactly what you want when every system might be hostile. The ship equivalent of a good poker face.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.3000, y: 0.3000 }, { x: -0.2000, y: 0.7000 }, { x: -1.0000, y: 0.3000 }, { x: -1.0000, y: -0.3000 }, { x: -0.2000, y: -0.7000 }, { x: 0.3000, y: -0.3000 }],
+                fillColor: [60, 80, 60],
+            },
+            {
+                vertexData: [{ x: -0.3532, y: 0.0000 }, { x: -0.4632, y: 0.1905 }, { x: -0.6832, y: 0.1905 }, { x: -0.7932, y: 0.0000 }, { x: -0.6832, y: -0.1905 }, { x: -0.4632, y: -0.1905 }],
+                fillColor: [212, 22, 22],
+            }
+        ],
+        typicalCargo: ["Computers", "Adv Components", "Food"], price: 70000, techLevel: 4,
+        aiRoles: ["SEPARATIST", "PIRATE"]
+    },
+    "SeparatistDefiant": {
+        name: "Separatist Defiant", role: "Gunship", sizeCategory: "Medium", size: 58,
+        baseMaxSpeed: 4.8, baseThrust: 0.1, baseTurnRate: 0.04,
+        baseHull: 250, baseShield: 180, shieldRecharge: 0.9, cargoCapacity: 30,
+        armament: ["Heavy Cannon", "Railgun Turret", "Twin Pulse", "Guardian Missile"],
+        costCategory: "Medium-High", description: "Built specifically to break military blockades and ruin admirals' days. That 250 hull isn't for show—it's for absorbing fire while returning tenfold hurt. Separatist engineers crammed every available space with guns and armor. Subtlety died so this gunship could live. Nobody mourns subtlety.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.4000 }, { x: 0.4000, y: 0.8000 }, { x: -0.7765, y: 0.8000 }, { x: -0.9000, y: 0.4000 }, { x: -0.9000, y: -0.4000 }, { x: -0.7765, y: -0.8000 }, { x: 0.4000, y: -0.8000 }, { x: 0.9000, y: -0.4000 }],
+                fillColor: [70, 70, 70]
+            },
+            {
+                vertexData: [{ x: -0.3192, y: 0.0000 }, { x: -0.4292, y: 0.1905 }, { x: -0.6492, y: 0.1905 }, { x: -0.7592, y: 0.0000 }, { x: -0.6492, y: -0.1905 }, { x: -0.4292, y: -0.1905 }],
+                fillColor: [170, 3, 3]
+            },
+            {
+                vertexData: [{ x: -0.6115, y: -0.6230 }, { x: -0.5095, y: -0.5024 }, { x: 0.2554, y: -0.7038 }],
+                fillColor: [113, 14, 39]
+            },
+            {
+                vertexData: [{ x: -0.6115, y: 0.6230 }, { x: -0.5095, y: 0.5024 }, { x: 0.2554, y: 0.7038 }],
+                fillColor: [113, 14, 39]
+            }
+        ],
+        typicalCargo: ["Weapons", "Chemicals"], price: 90000, techLevel: 4,
+        aiRoles: ["SEPARATIST"]
+    },
+    "SeparatistVanguard": {
+        name: "Separatist Vanguard", role: "Heavy Assault Cruiser", sizeCategory: "Large", size: 85,
+        baseMaxSpeed: 4.2, baseThrust: 0.08, baseTurnRate: 0.035,
+        baseHull: 400, baseShield: 300, shieldRecharge: 1.0, cargoCapacity: 80,
+        armament: ["Force Blaster", "Railgun Turret", "Quad Pulse", "Guardian Missile"],
+        costCategory: "High", description: "The Separatist movement's pride and propaganda centerpiece. Bristles with 400 hull and enough weaponry to make empires nervous. When one of these shows up, it's not a raid—it's a statement. Usually reads: 'your government is illegitimate and we brought receipts (in missile form).'",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.2000 }, { x: 0.6000, y: 0.7000 }, { x: -0.6000, y: 0.9000 }, { x: -1.0000, y: 0.5000 }, { x: -1.0000, y: -0.5000 }, { x: -0.6000, y: -0.9000 }, { x: 0.6000, y: -0.7000 }, { x: 1.0000, y: -0.2000 }],
+                fillColor: [52, 65, 64]
+            },
+            {
+                vertexData: [{ x: -0.3477, y: 0.0000 }, { x: -0.4577, y: 0.1905 }, { x: -0.6777, y: 0.1905 }, { x: -0.7877, y: 0.0000 }, { x: -0.6777, y: -0.1905 }, { x: -0.4577, y: -0.1905 }],
+                fillColor: [212, 12, 42]
+            }
+        ],
+        typicalCargo: ["Weapons", "Machinery"], price: 160000, techLevel: 5,
+        aiRoles: ["COMBAT", "SEPARATIST"]
+    },
+    "SeparatistBulwark": {
+        name: "Separatist Bulwark", role: "Mobile Defense Platform", sizeCategory: "Very Large", size: 130,
+        baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRate: 0.015,
+        baseHull: 700, baseShield: 500, shieldRecharge: 0.8, cargoCapacity: 150,
+        armament: ["Railgun Turret", "Mini-Turret", "Wide Scatter", "Avenger Missile", "Barrier Field"],
+        costCategory: "Very High", description: "A flying fortress that moves at the speed of continental drift (2.5 max) but Laughs at conventional weapons with 700 hull and 500 shields. Separatists park these over contested systems and dare anyone to do something about it. Usually, nobody does. Smart. Attacking this is choosing career-end ing violence.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.7000 }, { x: 0.7000, y: 1.0000 }, { x: -0.7000, y: 1.0000 }, { x: -1.0000, y: 0.7000 }, { x: -1.0000, y: -0.7000 }, { x: -0.7000, y: -1.0000 }, { x: 0.7000, y: -1.0000 }, { x: 1.0000, y: -0.7000 }],
+                fillColor: [52, 65, 64]
+            },
+            {
+                vertexData: [{ x: -0.2512, y: -0.1969 }, { x: -0.3612, y: -0.0064 }, { x: -0.5812, y: -0.0064 }, { x: -0.6912, y: -0.1969 }, { x: -0.5812, y: -0.3874 }, { x: -0.3612, y: -0.3874 }],
+                fillColor: [212, 12, 42]
+            },
+            {
+                vertexData: [{ x: -0.2512, y: 0.1969 }, { x: -0.3612, y: 0.0064 }, { x: -0.5812, y: 0.0064 }, { x: -0.6912, y: 0.1969 }, { x: -0.5812, y: 0.3874 }, { x: -0.3612, y: 0.3874 }],
+                fillColor: [212, 12, 42]
+            },
+            {
+                vertexData: [{ x: -0.3497, y: 0.0004 }, { x: -0.2397, y: 0.1910 }, { x: -0.0197, y: 0.1910 }, { x: 0.0903, y: 0.0004 }, { x: -0.0197, y: -0.1901 }, { x: -0.2397, y: -0.1901 }],
+                fillColor: [212, 12, 42]
+            }
+        ],
+        typicalCargo: ["Metals", "Machinery"], price: 250000, techLevel: 5,
+        aiRoles: ["COMBAT", "SEPARATIST"],
+        canDualEngage: true // Large ships can engage two targets simultaneously
+    },
+    "SeparatistSupplyRunner": {
+        name: "Separatist Supply Runner", role: "Armored Transport", sizeCategory: "Medium", size: 52,
+        baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRate: 0.035,
+        baseHull: 180, baseShield: 120, shieldRecharge: 0.8, cargoCapacity: 100,
+        armament: ["Twin Pulse", "Mini-Turret"],
+        costCategory: "Medium", description: "Armored supply runner built like a tank with cargo doors. Hauls 100 tons of revolution-sustaining goods through military zones while absorbing fire with 180 hull. Not fast, not pretty, but essential. Loses one of these and your rebellion starves. Pilots get commendations posthumously or drinks at the cantina. No middle ground.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.6000 }, { x: 0.7000, y: 0.8000 }, { x: -0.7000, y: 0.8000 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.7000, y: -0.8000 }, { x: 0.7000, y: -0.8000 }, { x: 0.9000, y: -0.6000 }],
+                fillColor: [90, 70, 50]
+            },
+            {
+                vertexData: [{ x: -0.3708, y: 0.2585 }, { x: -0.4808, y: 0.4490 }, { x: -0.7008, y: 0.4490 }, { x: -0.8108, y: 0.2585 }, { x: -0.7008, y: 0.0679 }, { x: -0.4808, y: 0.0679 }],
+                fillColor: [133, 0, 57]
+            },
+            {
+                vertexData: [{ x: -0.3708, y: -0.2585 }, { x: -0.4808, y: -0.4490 }, { x: -0.7008, y: -0.4490 }, { x: -0.8108, y: -0.2585 }, { x: -0.7008, y: -0.0679 }, { x: -0.4808, y: -0.0679 }],
+                fillColor: [133, 0, 57]
+            }
+        ],
+        typicalCargo: ["Food", "Medicine", "Weapons", "Chemicals"], price: 48000, techLevel: 3,
+        aiRoles: ["HAULER"]
+    },
+
+    // --- PIRATE ---
+    "Sidewinder": {
+        name: "Sidewinder", role: "Starter", sizeCategory: "Tiny", size: 20,
+        baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.06981,
+        baseHull: 50, baseShield: 50, shieldRecharge: 1.0, cargoCapacity: 10,
+        armament: ["Pulse Laser", "Guardian Missile"], // Starter weapon
+        costCategory: "N/A", description: "The bargain bin starter ship that new pilots either treasure forever or sell within hours. Balanced 50/50 hull/shields and just enough cargo (10 tons) to learn the hauling trade. Cheap, agile, expendable. Sort of like a puppy, if puppies exploded when shot.",
+        vertexData: [{ x: 0.9, y: 0 }, { x: -0.7, y: 0.8 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.8 }],
+        fillColor: [180, 100, 20],
+        typicalCargo: ["Food"],
+        price: 9800,
+        aiRoles: ["PIRATE"],
+        techLevel: 1 // Starter
+    },
+    "KraitMKI": {
+        name: "Krait MKI", role: "Fighter", sizeCategory: "Small", size: 30,
+        baseMaxSpeed: 6.2, baseThrust: 0.15, baseTurnRate: 0.06632,
+        baseHull: 60, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 15,
+        armament: ["Pulse Laser"],
+        costCategory: "High", description: "Pirate darling with shields that regenerate like a sitcom villain. Small (30), fast (6.2), and with enough shield capacity to laugh off police shots while you line up your next heist. Insurance companies charge triple if they see this in your garage.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.5772, y: -0.0058 }, { x: 0.2343, y: 0.4129 }, { x: -0.5772, y: 0.4129 }, { x: -0.5772, y: -0.4129 }, { x: 0.2343, y: -0.4129 }],
+                fillColor: [100, 120, 100]
+            },
+            {
+                vertexData: [{ x: -0.4100, y: -0.3500 }, { x: -0.3600, y: -0.3000 }, { x: 0.0400, y: 0.3000 }, { x: 0.0900, y: 0.3500 }, { x: 0.1200, y: 0.3000 }, { x: -0.4400, y: -0.3000 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.4100, y: 0.3500 }, { x: -0.3600, y: 0.3000 }, { x: 0.0400, y: -0.3000 }, { x: 0.0900, y: -0.3500 }, { x: 0.1200, y: -0.3000 }, { x: -0.4400, y: 0.3000 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: 0.0900, y: -0.2000 }, { x: 0.0900, y: 0.2000 }, { x: -0.1100, y: 0.2500 }, { x: -0.2600, y: 0.2000 }, { x: -0.3100, y: 0.1000 }, { x: -0.3100, y: -0.1000 }, { x: -0.2600, y: -0.2000 }, { x: -0.1100, y: -0.2500 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.3800, y: 0.1500 }, { x: -0.3300, y: 0.1200 }, { x: -0.3500, y: 0.0800 }, { x: -0.3300, y: 0.0400 }, { x: -0.3500, y: -0.0000 }, { x: -0.3300, y: -0.0400 }, { x: -0.3500, y: -0.0800 }, { x: -0.3300, y: -0.1200 }, { x: -0.3800, y: -0.1500 }, { x: -0.4100, y: -0.0800 }, { x: -0.4100, y: 0.0800 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.0600, y: -0.1400 }, { x: -0.0600, y: -0.0800 }, { x: -0.1600, y: -0.1100 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.0600, y: 0.0800 }, { x: -0.0600, y: 0.1400 }, { x: -0.1600, y: 0.1100 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.2000, y: -0.0400 }, { x: -0.2000, y: 0.0400 }, { x: -0.2600, y: -0.0000 }],
+                fillColor: [0, 0, 0]
+            }
+        ],
+        typicalCargo: [],
+        price: 14600,
+        aiRoles: ["PIRATE"],
+        techLevel: 2 // Utility
+    },
+    "KraitMKII": {
+        name: "Krait MKII", role: "Multi-Role/Fighter", sizeCategory: "Medium", size: 60,
+        baseMaxSpeed: 5.2, baseThrust: 0.11, baseTurnRate: 0.04014,
+        baseHull: 100, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 82,
+        armament: ["Mini-Turret"], // Combat focused Pirate
+        costCategory: "High", description: "The bigger, meaner sibling of the Mk I. With 82 cargo tons and questionable moral fiber built into the hull plating, it's become the ride of choice for pirates who've graduated from petty theft to organized crime. That cockpit design isn't stylish—it's menacing.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.5500, y: 0.5000 }, { x: -0.4500, y: 0.6000 }, { x: -0.9500, y: 0.4000 }, { x: -0.9500, y: -0.4000 }, { x: -0.4500, y: -0.6000 }, { x: 0.5500, y: -0.5000 }],
+                fillColor: [100, 120, 100]
+            },
+            {
+                vertexData: [{ x: -0.6087, y: -0.4235 }, { x: -0.5482, y: -0.3630 }, { x: -0.0642, y: 0.3630 }, { x: -0.0037, y: 0.4235 }, { x: 0.0326, y: 0.3630 }, { x: -0.6450, y: -0.3630 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.6087, y: 0.4235 }, { x: -0.5482, y: 0.3630 }, { x: -0.0642, y: -0.3630 }, { x: -0.0037, y: -0.4235 }, { x: 0.0326, y: -0.3630 }, { x: -0.6450, y: 0.3630 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.0037, y: -0.2420 }, { x: -0.0037, y: 0.2420 }, { x: -0.2457, y: 0.3025 }, { x: -0.4272, y: 0.2420 }, { x: -0.4877, y: 0.1210 }, { x: -0.4877, y: -0.1210 }, { x: -0.4272, y: -0.2420 }, { x: -0.2457, y: -0.3025 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.5724, y: 0.1815 }, { x: -0.5119, y: 0.1452 }, { x: -0.5361, y: 0.0968 }, { x: -0.5119, y: 0.0484 }, { x: -0.5361, y: -0.0000 }, { x: -0.5119, y: -0.0484 }, { x: -0.5361, y: -0.0968 }, { x: -0.5119, y: -0.1452 }, { x: -0.5724, y: -0.1815 }, { x: -0.6087, y: -0.0968 }, { x: -0.6087, y: 0.0968 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.1852, y: -0.1694 }, { x: -0.1852, y: -0.0968 }, { x: -0.3062, y: -0.1331 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.1852, y: 0.0968 }, { x: -0.1852, y: 0.1694 }, { x: -0.3062, y: 0.1331 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.3546, y: -0.0484 }, { x: -0.3546, y: 0.0484 }, { x: -0.4272, y: -0.0000 }],
+                fillColor: [0, 0, 0]
+            }
+        ],
+        typicalCargo: ["Food", "Minerals"],
+        price: 17200,
+        aiRoles: ["PIRATE"],
+        techLevel: 2 // Utility
+    },
+    "Geister": {
+        name: "Geister", role: "Medium Fighter", sizeCategory: "Medium", size: 40,
+        baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
+        baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 12,
+        armament: ["Burst Blaster", "Beam Laser", "Harpoon Launcher"], // Fast attack loadout
+        costCategory: "Medium", description: "Fast stealth ship favored by operatives with trust issues. That purple hull isn't for show—it's coated in sensor-scattering compounds that cost more than some stations. Quick as a rumor and twice as hard to verify. Perfect for jobs nobody admits ordering.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.7205, y: 0.0000 }, { x: 0.5929, y: 0.4300 }, { x: -0.6050, y: 0.6968 }, { x: -0.3295, y: 0.4865 }, { x: -0.5929, y: 0.4300 }, { x: -0.3295, y: 0.1830 }, { x: -0.7205, y: 0.0000 }, { x: -0.3295, y: -0.1830 }, { x: -0.5929, y: -0.4300 }, { x: -0.3295, y: -0.4865 }, { x: -0.6050, y: -0.6968 }, { x: 0.5929, y: -0.4300 }],
+                fillColor: [65, 48, 197],
+            },
+            {
+                vertexData: [{ x: 0.6165, y: 0.0000 }, { x: 0.3009, y: 0.1809 }, { x: 0.3009, y: -0.1809 }],
+                fillColor: [250, 100, 0],
+            },
+            {
+                vertexData: [{ x: 0.0000, y: 0.1777 }, { x: 0.2510, y: 0.0000 }, { x: 0.0000, y: -0.1777 }],
+                fillColor: [250, 100, 0],
+            }
+        ],
+        typicalCargo: ["Computers"],
+        price: 18400,
+        aiRoles: ["PIRATE"],
+        techLevel: 3 // Mid-tier
+    },
+    "PirateBrigand": {
+        name: "Pirate Brigand", role: "Fast Cargo Thief", sizeCategory: "Small", size: 30,
+        baseMaxSpeed: 6.8, baseThrust: 0.13, baseTurnRate: 0.065,
+        baseHull: 60, baseShield: 70, shieldRecharge: 1.1, cargoCapacity: 30,
+        armament: ["Pulse Laser", "Mini-Turret"],
+        costCategory: "Medium", description: "The 'hit and run' special—fast enough (6.8) to catch laden haulers, spacious enough (30 cargo) to make the chase worthwhile. Painted in rust-brown camouflage that fools absolutely nobody. Police hate these because by the time they arrive, the Brigand is three systems away spending your credits.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.8000, y: 0.0000 }, { x: 0.2000, y: 0.4000 }, { x: -0.8000, y: 0.4000 }, { x: -0.8000, y: -0.4000 }, { x: 0.2000, y: -0.4000 }],
+                fillColor: [100, 60, 20]
+            },
+            {
+                vertexData: [{ x: -0.5100, y: -0.3500 }, { x: -0.4600, y: -0.3000 }, { x: -0.0600, y: 0.3000 }, { x: -0.0100, y: 0.3500 }, { x: 0.0200, y: 0.3000 }, { x: -0.5400, y: -0.3000 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.5100, y: 0.3500 }, { x: -0.4600, y: 0.3000 }, { x: -0.0600, y: -0.3000 }, { x: -0.0100, y: -0.3500 }, { x: 0.0200, y: -0.3000 }, { x: -0.5400, y: 0.3000 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.0100, y: -0.2000 }, { x: -0.0100, y: 0.2000 }, { x: -0.2100, y: 0.2500 }, { x: -0.3600, y: 0.2000 }, { x: -0.4100, y: 0.1000 }, { x: -0.4100, y: -0.1000 }, { x: -0.3600, y: -0.2000 }, { x: -0.2100, y: -0.2500 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.4800, y: 0.1500 }, { x: -0.4300, y: 0.1200 }, { x: -0.4500, y: 0.0800 }, { x: -0.4300, y: 0.0400 }, { x: -0.4500, y: -0.0000 }, { x: -0.4300, y: -0.0400 }, { x: -0.4500, y: -0.0800 }, { x: -0.4300, y: -0.1200 }, { x: -0.4800, y: -0.1500 }, { x: -0.5100, y: -0.0800 }, { x: -0.5100, y: 0.0800 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.1600, y: -0.1400 }, { x: -0.1600, y: -0.0800 }, { x: -0.2600, y: -0.1100 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.1600, y: 0.0800 }, { x: -0.1600, y: 0.1400 }, { x: -0.2600, y: 0.1100 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.3000, y: -0.0400 }, { x: -0.3000, y: 0.0400 }, { x: -0.3600, y: -0.0000 }],
+                fillColor: [0, 0, 0]
+            }
+        ],
+        typicalCargo: ["Food", "Textiles", "Minerals"], price: 38000, techLevel: 2,
+        aiRoles: ["PIRATE"]
+    },
+    "PirateCutlass": {
+        name: "Pirate Cutlass", role: "Fast Attack Fighter", sizeCategory: "Small", size: 32,
+        baseMaxSpeed: 7.2, baseThrust: 0.16, baseTurnRate: 0.08,
+        baseHull: 70, baseShield: 90, shieldRecharge: 1.3, cargoCapacity: 10,
+        armament: ["Multi-Cannon", "Pulse Laser", "Guardian Missile"],
+        costCategory: "Medium", description: "Pirates looked at budget fighters and said 'how do we make this scary?' Answer: paint it blood-red, add illegal weapons, remove the safety limiters. Hits 7.2 speed and sports enough firepower to make merchants cry. Common, cheap, effective—the AK-47 of pirate craft.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.4000, y: 0.5000 }, { x: -0.8000, y: 0.3000 }, { x: -0.8000, y: -0.3000 }, { x: -0.4000, y: -0.5000 }],
+                fillColor: [80, 20, 20]
+            },
+            {
+                vertexData: [{ x: -0.5840, y: -0.2296 }, { x: -0.5512, y: -0.1968 }, { x: -0.2888, y: 0.1968 }, { x: -0.2560, y: 0.2296 }, { x: -0.2363, y: 0.1968 }, { x: -0.6037, y: -0.1968 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.5840, y: 0.2296 }, { x: -0.5512, y: 0.1968 }, { x: -0.2888, y: -0.1968 }, { x: -0.2560, y: -0.2296 }, { x: -0.2363, y: -0.1968 }, { x: -0.6037, y: 0.1968 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.2560, y: -0.1312 }, { x: -0.2560, y: 0.1312 }, { x: -0.3872, y: 0.1640 }, { x: -0.4856, y: 0.1312 }, { x: -0.5184, y: 0.0656 }, { x: -0.5184, y: -0.0656 }, { x: -0.4856, y: -0.1312 }, { x: -0.3872, y: -0.1640 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.5184, y: -0.0984 }, { x: -0.5512, y: -0.0787 }, { x: -0.5381, y: -0.0525 }, { x: -0.5512, y: -0.0262 }, { x: -0.5381, y: -0.0000 }, { x: -0.5512, y: 0.0262 }, { x: -0.5381, y: 0.0525 }, { x: -0.5512, y: 0.0787 }, { x: -0.5184, y: 0.0984 }, { x: -0.4987, y: 0.0525 }, { x: -0.4987, y: -0.0525 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.3544, y: -0.0919 }, { x: -0.3544, y: -0.0525 }, { x: -0.4200, y: -0.0722 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.3544, y: 0.0525 }, { x: -0.3544, y: 0.0919 }, { x: -0.4200, y: 0.0722 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.4462, y: -0.0262 }, { x: -0.4462, y: 0.0262 }, { x: -0.4856, y: -0.0000 }],
+                fillColor: [0, 0, 0]
+            },
+            // Skull emblem (white circle)
+            {
+                vertexData: [{ x: 0.3000, y: 0.1200 }, { x: 0.2400, y: 0.1800 }, { x: 0.1800, y: 0.1200 }, { x: 0.2400, y: 0.0600 }],
+                fillColor: [255, 255, 255]
+            },
+            // Crossbones
+            {
+                vertexData: [{ x: 0.3200, y: 0.0200 }, { x: 0.1600, y: 0.0200 }, { x: 0.1600, y: -0.0200 }, { x: 0.3200, y: -0.0200 }],
+                fillColor: [255, 255, 255]
+            }
+        ],
+        typicalCargo: ["Adv Components", "Narcotics"], price: 45000, techLevel: 3,
+        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
+    },
+    "PirateInterceptorMKII": {
+        name: "Pirate Interceptor MkII", role: "Heavy Interceptor", sizeCategory: "Medium", size: 42,
+        baseMaxSpeed: 7.0, baseThrust: 0.15, baseTurnRate: 0.075,
+        baseHull: 100, baseShield: 150, shieldRecharge: 1.5, cargoCapacity: 15,
+        armament: ["Beam Laser", "Multi-Cannon", "Disruptor"],
+        costCategory: "Medium-High", description: "The MkI's angrier, better-armed cousin with extra stolen tech bolted to every hardpoint. That suspicious purple paint job screams 'I have warrants in 47 systems.' Shield recharge of 1.5 and 7.0 speed makes it frustratingly hard to catch. Bounty hunters mark these as 'high-value, low-fun' targets.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.3000, y: 0.5000 }, { x: -1.0000, y: 0.5000 }, { x: -0.8000, y: 0.0000 }, { x: -1.0000, y: -0.5000 }, { x: -0.3000, y: -0.5000 }],
+                fillColor: [60, 20, 60]
+            },
+            {
+                vertexData: [{ x: -0.6900, y: -0.3700 }, { x: -0.6400, y: -0.3200 }, { x: -0.2400, y: 0.2800 }, { x: -0.1900, y: 0.3300 }, { x: -0.1600, y: 0.2800 }, { x: -0.7200, y: -0.3200 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.6900, y: 0.3300 }, { x: -0.6400, y: 0.2800 }, { x: -0.2400, y: -0.3200 }, { x: -0.1900, y: -0.3700 }, { x: -0.1600, y: -0.3200 }, { x: -0.7200, y: 0.2800 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.1900, y: -0.2200 }, { x: -0.1900, y: 0.1800 }, { x: -0.3900, y: 0.2300 }, { x: -0.5400, y: 0.1800 }, { x: -0.5900, y: 0.0800 }, { x: -0.5900, y: -0.1200 }, { x: -0.5400, y: -0.2200 }, { x: -0.3900, y: -0.2700 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.6600, y: 0.1300 }, { x: -0.6100, y: 0.1000 }, { x: -0.6300, y: 0.0600 }, { x: -0.6100, y: 0.0200 }, { x: -0.6300, y: -0.0200 }, { x: -0.6100, y: -0.0600 }, { x: -0.6300, y: -0.1000 }, { x: -0.6100, y: -0.1400 }, { x: -0.6600, y: -0.1700 }, { x: -0.6900, y: -0.1000 }, { x: -0.6900, y: 0.0600 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.3400, y: -0.1600 }, { x: -0.3400, y: -0.1000 }, { x: -0.4400, y: -0.1300 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.3400, y: 0.0600 }, { x: -0.3400, y: 0.1200 }, { x: -0.4400, y: 0.0900 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.4800, y: -0.0600 }, { x: -0.4800, y: 0.0200 }, { x: -0.5400, y: -0.0200 }],
+                fillColor: [0, 0, 0]
+            }
+        ],
+        typicalCargo: ["Narcotics", "Weapons"], price: 68000, techLevel: 4,
+        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
+    },
+    "PirateMarauder": {
+        name: "Pirate Marauder", role: "Raider/Boarding Craft", sizeCategory: "Medium", size: 48,
+        baseMaxSpeed: 5.0, baseThrust: 0.09, baseTurnRate: 0.045,
+        baseHull: 150, baseShield: 100, shieldRecharge: 0.8, cargoCapacity: 50,
+        armament: ["Heavy Cannon", "Twin Pulse", "Mini-Turret", "Guardian Missile"],
+        costCategory: "Medium-High", description: "Purpose-built pirate boarding craft with hull thick enough (150) to ram targets if negotiations fail. Cargo hold sized specifically to haul stolen goods (50 tons). Those harpoon launchers aren't decorative—they're for grabbing fleeing merchants. Flying one near a station gets you shot first, questions never.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.3000 }, { x: 0.2000, y: 0.7000 }, { x: -0.9000, y: 0.7000 }, { x: -0.9000, y: -0.7000 }, { x: 0.2000, y: -0.7000 }, { x: 0.9000, y: -0.3000 }],
+                fillColor: [50, 50, 50]
+            },
+            {
+                vertexData: [{ x: -0.6772, y: -0.5073 }, { x: -0.6047, y: -0.4348 }, { x: -0.0249, y: 0.4348 }, { x: 0.0475, y: 0.5073 }, { x: 0.0910, y: 0.4348 }, { x: -0.7207, y: -0.4348 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.6772, y: 0.5073 }, { x: -0.6047, y: 0.4348 }, { x: -0.0249, y: -0.4348 }, { x: 0.0475, y: -0.5073 }, { x: 0.0910, y: -0.4348 }, { x: -0.7207, y: 0.4348 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: 0.0475, y: -0.2899 }, { x: 0.0475, y: 0.2899 }, { x: -0.2424, y: 0.3624 }, { x: -0.4598, y: 0.2899 }, { x: -0.5323, y: 0.1449 }, { x: -0.5323, y: -0.1449 }, { x: -0.4598, y: -0.2899 }, { x: -0.2424, y: -0.3624 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.6337, y: 0.2174 }, { x: -0.5612, y: 0.1739 }, { x: -0.5902, y: 0.1160 }, { x: -0.5612, y: 0.0580 }, { x: -0.5902, y: 0.0000 }, { x: -0.5612, y: -0.0580 }, { x: -0.5902, y: -0.1160 }, { x: -0.5612, y: -0.1739 }, { x: -0.6337, y: -0.2174 }, { x: -0.6772, y: -0.1160 }, { x: -0.6772, y: 0.1160 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.1699, y: -0.2029 }, { x: -0.1699, y: -0.1160 }, { x: -0.3148, y: -0.1594 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.1699, y: 0.1160 }, { x: -0.1699, y: 0.2029 }, { x: -0.3148, y: 0.1594 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.3728, y: -0.0580 }, { x: -0.3728, y: 0.0580 }, { x: -0.4598, y: 0.0000 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: 0.6400, y: -0.2200 }, { x: 0.7400, y: -0.1600 }, { x: 0.7400, y: 0.1600 }, { x: 0.6400, y: 0.2200 }],
+                fillColor: [153, 153, 229]
+            },
+            // Pirate warning stripes
+            {
+                vertexData: [{ x: -0.7500, y: 0.6000 }, { x: -0.8500, y: 0.6000 }, { x: -0.8500, y: 0.5000 }, { x: -0.7500, y: 0.5000 }],
+                fillColor: [255, 200, 0]
+            },
+            {
+                vertexData: [{ x: -0.7500, y: -0.6000 }, { x: -0.8500, y: -0.6000 }, { x: -0.8500, y: -0.5000 }, { x: -0.7500, y: -0.5000 }],
+                fillColor: [255, 200, 0]
+            },
+            // Skull emblem
+            {
+                vertexData: [{ x: 0.4000, y: 0.0800 }, { x: 0.3400, y: 0.1400 }, { x: 0.2800, y: 0.0800 }, { x: 0.3400, y: 0.0200 }],
+                fillColor: [255, 255, 255]
+            }
+        ],
+        typicalCargo: ["Slaves", "Weapons", "Adv Components"], price: 75000, techLevel: 4,
+        aiRoles: ["PIRATE"]
+    },
+    "PirateReaver": {
+        name: "Pirate Reaver", role: "Heavy Pirate Cruiser", sizeCategory: "Large", size: 75,
+        baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRate: 0.03,
+        baseHull: 300, baseShield: 200, shieldRecharge: 0.9, cargoCapacity: 100,
+        armament: ["Multi-Cannon", "Force Blaster", "Mini-Turret", "Railgun Turret", "Guardian Missile"],
+        costCategory: "High", description: "The pirate flagship—300 hull of intimidation and poor life choices. Usually a captured military vessel with enough welded-on weapons to make it unrecognizable. Slow (4.0) but terrifying. When sensors flag one of these, merchant convoys scatter like startled fish. Smart move.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.1000 }, { x: 0.5000, y: 0.6000 }, { x: -0.5000, y: 0.8000 }, { x: -1.0000, y: 0.4000 }, { x: -1.0000, y: -0.4000 }, { x: -0.5000, y: -0.8000 }, { x: 0.5000, y: -0.6000 }, { x: 1.0000, y: -0.1000 }],
+                fillColor: [40, 60, 40]
+            },
+            {
+                vertexData: [{ x: -0.6655, y: -0.4235 }, { x: -0.6050, y: -0.3630 }, { x: -0.1210, y: 0.3630 }, { x: -0.0605, y: 0.4235 }, { x: -0.0242, y: 0.3630 }, { x: -0.7018, y: -0.3630 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.6655, y: 0.4235 }, { x: -0.6050, y: 0.3630 }, { x: -0.1210, y: -0.3630 }, { x: -0.0605, y: -0.4235 }, { x: -0.0242, y: -0.3630 }, { x: -0.7018, y: 0.3630 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.0605, y: -0.2420 }, { x: -0.0605, y: 0.2420 }, { x: -0.3025, y: 0.3025 }, { x: -0.4840, y: 0.2420 }, { x: -0.5445, y: 0.1210 }, { x: -0.5445, y: -0.1210 }, { x: -0.4840, y: -0.2420 }, { x: -0.3025, y: -0.3025 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.6292, y: 0.1815 }, { x: -0.5687, y: 0.1452 }, { x: -0.5929, y: 0.0968 }, { x: -0.5687, y: 0.0484 }, { x: -0.5929, y: 0.0000 }, { x: -0.5687, y: -0.0484 }, { x: -0.5929, y: -0.0968 }, { x: -0.5687, y: -0.1452 }, { x: -0.6292, y: -0.1815 }, { x: -0.6655, y: -0.0968 }, { x: -0.6655, y: 0.0968 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.2420, y: -0.1694 }, { x: -0.2420, y: -0.0968 }, { x: -0.3630, y: -0.1331 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.2420, y: 0.0968 }, { x: -0.2420, y: 0.1694 }, { x: -0.3630, y: 0.1331 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.4114, y: -0.0484 }, { x: -0.4114, y: 0.0484 }, { x: -0.4840, y: 0.0000 }],
+                fillColor: [0, 0, 0]
+            }
+        ],
+        typicalCargo: ["Narcotics", "Slaves", "Weapons"], price: 140000, techLevel: 5,
+        aiRoles: ["PIRATE"]
+    },
+
+    // --- HARLEQUIN ---
     "HarlequinJester": {
         name: "Harlequin Jester", role: "Light Fighter", sizeCategory: "Tiny", size: 22,
         baseMaxSpeed: 8.0, baseThrust: 0.18, baseTurnRate: 0.09,
@@ -1270,6 +1544,187 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: [], price: 32000, techLevel: 2,
         aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
+    },
+    "HarlequinMotley": {
+        name: "Harlequin Motley", role: "Fast Interceptor", sizeCategory: "Small", size: 28,
+        baseMaxSpeed: 8.2, baseThrust: 0.19, baseTurnRate: 0.085,
+        baseHull: 45, baseShield: 55, shieldRecharge: 1.7, cargoCapacity: 8,
+        armament: ["Burst Blaster", "Pulse Laser"],
+        costCategory: "Medium", description: "Speed incarnate wrapped in eye-searing orange and electric blue. The Motley zips through conflict zones like a caffeinated hummingbird with attitude problems. 8.2 speed makes it nearly uncatchable; 45 hull means one mistake and you're confetti. Harlequin pilots call it 'the fool's choice'—but fools who survive learn fast.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.3000, y: 0.3500 }, { x: -0.4000, y: 0.3000 }, { x: -0.9000, y: 0.5000 }, { x: -0.7000, y: 0.0000 }, { x: -0.9000, y: -0.5000 }, { x: -0.4000, y: -0.3000 }, { x: 0.3000, y: -0.3500 }],
+                fillColor: [255, 120, 0]
+            },
+            {
+                vertexData: [{ x: 0.8000, y: -0.0800 }, { x: 0.8000, y: 0.0800 }, { x: -0.3000, y: 0.1500 }, { x: -0.3000, y: -0.1500 }],
+                fillColor: [0, 180, 255]
+            },
+            {
+                vertexData: [{ x: -0.5500, y: 0.3600 }, { x: -0.4000, y: 0.2000 }, { x: -0.7500, y: 0.2000 }],
+                fillColor: [0, 180, 255]
+            },
+            {
+                vertexData: [{ x: -0.5500, y: -0.3600 }, { x: -0.4000, y: -0.2000 }, { x: -0.7500, y: -0.2000 }],
+                fillColor: [0, 180, 255]
+            },
+            {
+                vertexData: [{ x: 0.0500, y: 0.0000 }, { x: -0.0500, y: 0.0866 }, { x: -0.1500, y: 0.0866 }, { x: -0.2500, y: 0.0000 }, { x: -0.1500, y: -0.0866 }, { x: -0.0500, y: -0.0866 }],
+                fillColor: [255, 255, 255]
+            },
+            {
+                vertexData: [{ x: -0.6635, y: -0.1674 }, { x: -0.6395, y: -0.1435 }, { x: -0.4482, y: 0.1435 }, { x: -0.4243, y: 0.1674 }, { x: -0.4100, y: 0.1435 }, { x: -0.6778, y: -0.1435 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.6635, y: 0.1674 }, { x: -0.6395, y: 0.1435 }, { x: -0.4482, y: -0.1435 }, { x: -0.4243, y: -0.1674 }, { x: -0.4100, y: -0.1435 }, { x: -0.6778, y: 0.1435 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.4243, y: -0.0957 }, { x: -0.4243, y: 0.0957 }, { x: -0.5200, y: 0.1196 }, { x: -0.5917, y: 0.0957 }, { x: -0.6156, y: 0.0478 }, { x: -0.6156, y: -0.0478 }, { x: -0.5917, y: -0.0957 }, { x: -0.5200, y: -0.1196 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.6491, y: 0.0717 }, { x: -0.6252, y: 0.0574 }, { x: -0.6348, y: 0.0383 }, { x: -0.6252, y: 0.0191 }, { x: -0.6348, y: -0.0000 }, { x: -0.6252, y: -0.0191 }, { x: -0.6348, y: -0.0383 }, { x: -0.6252, y: -0.0574 }, { x: -0.6491, y: -0.0717 }, { x: -0.6635, y: -0.0383 }, { x: -0.6635, y: 0.0383 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.4961, y: -0.0670 }, { x: -0.4961, y: -0.0383 }, { x: -0.5439, y: -0.0526 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.4961, y: 0.0383 }, { x: -0.4961, y: 0.0670 }, { x: -0.5439, y: 0.0526 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.5630, y: -0.0191 }, { x: -0.5630, y: 0.0191 }, { x: -0.5917, y: -0.0000 }],
+                fillColor: [0, 0, 0]
+            }
+        ],
+        typicalCargo: ["Narcotics", "Computers"], price: 42000, techLevel: 3,
+        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
+    },
+    "HarlequinColumbine": {
+        name: "Harlequin Columbine", role: "Explorer/Scout", sizeCategory: "Small", size: 28,
+        baseMaxSpeed: 6.5, baseThrust: 0.12, baseTurnRate: 0.07,
+        baseHull: 60, baseShield: 90, shieldRecharge: 1.6, cargoCapacity: 20,
+        armament: ["Beam Laser"],
+        costCategory: "Medium", description: "Purple diamond-shaped scout that moves like it's late for something important. Harlequins use these to slip past customs, military blockades, and good taste. Shield recharge of 1.6 means it can take a beating while escaping. Perfect for 'definitely legal' reconnaissance missions nobody talks about later.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.0000, y: 0.7000 }, { x: -0.9000, y: 0.0000 }, { x: 0.0000, y: -0.7000 }],
+                fillColor: [128, 0, 128]
+            },
+            {
+                vertexData: [{ x: 0.2743, y: -0.1886 }, { x: 0.2743, y: 0.2114 }, { x: 0.6743, y: 0.0114 }],
+                fillColor: [251, 255, 0]
+            }
+        ],
+        typicalCargo: ["Luxury Goods", "Computers"], price: 48000, techLevel: 3,
+        aiRoles: ["PIRATE"]
+    },
+    "HarlequinZanni": {
+        name: "Harlequin Zanni", role: "Heavy Striker", sizeCategory: "Medium", size: 52,
+        baseMaxSpeed: 5.8, baseThrust: 0.13, baseTurnRate: 0.055,
+        baseHull: 180, baseShield: 160, shieldRecharge: 1.1, cargoCapacity: 35,
+        armament: ["Heavy Cannon", "Multi-Cannon", "Beam Laser", "Guardian Missile"],
+        costCategory: "High", description: "Hot pink and toxic lime—the ship equivalent of a poison dart frog screaming 'I am dangerous and have no shame.' That 180 hull absorbs punishment while quad hardpoints dish it back. Harlequin commanders deploy Zannis when they want targets to know embarrassment before annihilation. Kills aren't just combat victories, they're fashion statements.",
+
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.2000 }, { x: 0.5000, y: 0.6000 }, { x: -0.3000, y: 0.7000 }, { x: -0.8000, y: 0.5000 }, { x: -0.9000, y: 0.0000 }, { x: -0.8000, y: -0.5000 }, { x: -0.3000, y: -0.7000 }, { x: 0.5000, y: -0.6000 }, { x: 0.9000, y: -0.2000 }],
+                fillColor: [255, 20, 147]
+            },
+            {
+                vertexData: [{ x: 0.7000, y: 0.0000 }, { x: 0.3500, y: 0.4500 }, { x: -0.2000, y: 0.5000 }, { x: -0.6000, y: 0.3000 }, { x: -0.6000, y: -0.3000 }, { x: -0.2000, y: -0.5000 }, { x: 0.3500, y: -0.4500 }],
+                fillColor: [180, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.3000, y: -0.2000 }, { x: -0.3000, y: 0.2000 }, { x: -0.5000, y: 0.2500 }, { x: -0.6500, y: 0.2000 }, { x: -0.7000, y: 0.1000 }, { x: -0.7000, y: -0.1000 }, { x: -0.6500, y: -0.2000 }, { x: -0.5000, y: -0.2500 }],
+                fillColor: [255, 20, 147]
+            },
+            {
+                vertexData: [{ x: 0.2000, y: -0.3000 }, { x: 0.4000, y: -0.2000 }, { x: 0.4000, y: 0.2000 }, { x: 0.2000, y: 0.3000 }],
+                fillColor: [255, 255, 255]
+            },
+            {
+                vertexData: [{ x: -0.7309, y: -0.1860 }, { x: -0.7043, y: -0.1594 }, { x: -0.4917, y: 0.1594 }, { x: -0.4651, y: 0.1860 }, { x: -0.4492, y: 0.1594 }, { x: -0.7468, y: -0.1594 }],
+                fillColor: [180, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.7309, y: 0.1860 }, { x: -0.7043, y: 0.1594 }, { x: -0.4917, y: -0.1594 }, { x: -0.4651, y: -0.1860 }, { x: -0.4492, y: -0.1594 }, { x: -0.7468, y: 0.1594 }],
+                fillColor: [180, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.4651, y: -0.1063 }, { x: -0.4651, y: 0.1063 }, { x: -0.5714, y: 0.1329 }, { x: -0.6511, y: 0.1063 }, { x: -0.6777, y: 0.0531 }, { x: -0.6777, y: -0.0531 }, { x: -0.6511, y: -0.1063 }, { x: -0.5714, y: -0.1329 }],
+                fillColor: [180, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.7149, y: 0.0797 }, { x: -0.6883, y: 0.0638 }, { x: -0.6990, y: 0.0425 }, { x: -0.6883, y: 0.0213 }, { x: -0.6990, y: -0.0000 }, { x: -0.6883, y: -0.0213 }, { x: -0.6990, y: -0.0425 }, { x: -0.6883, y: -0.0638 }, { x: -0.7149, y: -0.0797 }, { x: -0.7309, y: -0.0425 }, { x: -0.7309, y: 0.0425 }],
+                fillColor: [180, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.5449, y: -0.0744 }, { x: -0.5449, y: -0.0425 }, { x: -0.5980, y: -0.0585 }],
+                fillColor: [255, 20, 147]
+            },
+            {
+                vertexData: [{ x: -0.5449, y: 0.0425 }, { x: -0.5449, y: 0.0744 }, { x: -0.5980, y: 0.0585 }],
+                fillColor: [255, 20, 147]
+            },
+            {
+                vertexData: [{ x: -0.6193, y: -0.0213 }, { x: -0.6193, y: 0.0213 }, { x: -0.6511, y: -0.0000 }],
+                fillColor: [255, 20, 147]
+            }
+        ],
+        typicalCargo: ["Weapons", "Slaves", "Luxury Goods"], price: 98000, techLevel: 4,
+        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
+    },
+    "HarlequinScaramouche": {
+        name: "Harlequin Scaramouche", role: "Multi-Role Combat", sizeCategory: "Medium", size: 55,
+        baseMaxSpeed: 5.5, baseThrust: 0.11, baseTurnRate: 0.055,
+        baseHull: 150, baseShield: 180, shieldRecharge: 1.3, cargoCapacity: 40,
+        armament: ["Multi-Cannon", "Beam Laser", "Railgun Turret", "Loiter Munition", "Barrier Field"],
+        costCategory: "High", description: "The Harlequins' war trumpet—versatile, deadly, and painted in colors that hurt to look at directly. Those absurd wing configurations actually serve a tactical purpose: disorienting enemies before the 150-hull brick deletes them. Pilots who fly these either have excellent taste or absolutely none. No middle ground exists.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.5499, y: 1.0647 }, { x: 0.0000, y: 0.4255 }, { x: -0.3751, y: 0.6831 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.3751, y: -0.6831 }, { x: 0.0000, y: -0.4255 }, { x: 0.5499, y: -1.0647 }],
+                fillColor: [150, 219, 0]
+            },
+            {
+                vertexData: [{ x: -0.7773, y: -0.4235 }, { x: -0.7168, y: -0.3630 }, { x: -0.2328, y: 0.3630 }, { x: -0.1723, y: 0.4235 }, { x: -0.1360, y: 0.3630 }, { x: -0.8136, y: -0.3630 }],
+                fillColor: [255, 0, 255]
+            },
+            {
+                vertexData: [{ x: -0.7773, y: 0.4235 }, { x: -0.7168, y: 0.3630 }, { x: -0.2328, y: -0.3630 }, { x: -0.1723, y: -0.4235 }, { x: -0.1360, y: -0.3630 }, { x: -0.8136, y: 0.3630 }],
+                fillColor: [255, 0, 255]
+            },
+            {
+                vertexData: [{ x: -0.1723, y: -0.2420 }, { x: -0.1723, y: 0.2420 }, { x: -0.4143, y: 0.3025 }, { x: -0.5958, y: 0.2420 }, { x: -0.6563, y: 0.1210 }, { x: -0.6563, y: -0.1210 }, { x: -0.5958, y: -0.2420 }, { x: -0.4143, y: -0.3025 }],
+                fillColor: [255, 0, 255]
+            },
+            {
+                vertexData: [{ x: -0.7410, y: 0.1815 }, { x: -0.6805, y: 0.1452 }, { x: -0.7047, y: 0.0968 }, { x: -0.6805, y: 0.0484 }, { x: -0.7047, y: 0.0000 }, { x: -0.6805, y: -0.0484 }, { x: -0.7047, y: -0.0968 }, { x: -0.6805, y: -0.1452 }, { x: -0.7410, y: -0.1815 }, { x: -0.7773, y: -0.0968 }, { x: -0.7773, y: 0.0968 }],
+                fillColor: [255, 0, 255]
+            },
+            {
+                vertexData: [{ x: -0.3538, y: -0.1694 }, { x: -0.3538, y: -0.0968 }, { x: -0.4748, y: -0.1331 }],
+                fillColor: [150, 219, 0]
+            },
+            {
+                vertexData: [{ x: -0.3538, y: 0.0968 }, { x: -0.3538, y: 0.1694 }, { x: -0.4748, y: 0.1331 }],
+                fillColor: [150, 219, 0]
+            },
+            {
+                vertexData: [{ x: -0.5232, y: -0.0484 }, { x: -0.5232, y: 0.0484 }, { x: -0.5958, y: 0.0000 }],
+                fillColor: [150, 219, 0]
+            },
+            {
+                vertexData: [{ x: 0.5600, y: -0.3711 }, { x: 0.7511, y: 0.0000 }, { x: 0.5600, y: 0.3711 }],
+                fillColor: [0, 157, 255]
+            }
+        ],
+        typicalCargo: ["Weapons", "Adv Components"], price: 115000, techLevel: 4,
+        aiRoles: ["BOUNTY_HUNTER", "PIRATE"]
     },
     "HarlequinPierrot": {
         name: "Harlequin Pierrot", role: "Medium Trader", sizeCategory: "Medium", size: 40,
@@ -1338,24 +1793,40 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Luxury Goods", "Narcotics", "Slaves"], price: 55000, techLevel: 3,
         aiRoles: ["HAULER", "PIRATE"]
     },
-    "HarlequinColumbine": {
-        name: "Harlequin Columbine", role: "Explorer/Scout", sizeCategory: "Small", size: 28,
-        baseMaxSpeed: 6.5, baseThrust: 0.12, baseTurnRate: 0.07,
-        baseHull: 60, baseShield: 90, shieldRecharge: 1.6, cargoCapacity: 20,
-        armament: ["Beam Laser"],
-        costCategory: "Medium", description: "Purple diamond-shaped scout that moves like it's late for something important. Harlequins use these to slip past customs, military blockades, and good taste. Shield recharge of 1.6 means it can take a beating while escaping. Perfect for 'definitely legal' reconnaissance missions nobody talks about later.",
+    "HarlequinPulcinella": {
+        name: "Harlequin Pulcinella", role: "Support/Logistics", sizeCategory: "Medium", size: 48,
+        baseMaxSpeed: 4.5, baseThrust: 0.08, baseTurnRate: 0.05,
+        baseHull: 140, baseShield: 120, shieldRecharge: 1.0, cargoCapacity: 90,
+        armament: ["Mini-Turret", "Twin Pulse"],
+        costCategory: "Medium-High", description: "Coral and turquoise should never work together—yet here we are, staring at cargo ship couture. The Pulcinella ferries 90 tons of questionable goods while looking like a tropical sunset had a midlife crisis. Harlequin logistics crews love it; everyone else questions their life choices when it arrives at the loading bay.",
         vertexLayers: [
             {
-                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.0000, y: 0.7000 }, { x: -0.9000, y: 0.0000 }, { x: 0.0000, y: -0.7000 }],
-                fillColor: [128, 0, 128]
+                vertexData: [{ x: 0.8000, y: 0.4000 }, { x: 0.4000, y: 0.7000 }, { x: -0.6000, y: 0.7000 }, { x: -0.8000, y: 0.4000 }, { x: -0.8000, y: -0.4000 }, { x: -0.6000, y: -0.7000 }, { x: 0.4000, y: -0.7000 }, { x: 0.8000, y: -0.4000 }],
+                fillColor: [255, 127, 80]
             },
             {
-                vertexData: [{ x: 0.2743, y: -0.1886 }, { x: 0.2743, y: 0.2114 }, { x: 0.6743, y: 0.0114 }],
-                fillColor: [251, 255, 0]
+                vertexData: [{ x: 0.6000, y: 0.0000 }, { x: 0.2000, y: 0.5000 }, { x: -0.4000, y: 0.5000 }, { x: -0.6000, y: 0.0000 }, { x: -0.4000, y: -0.5000 }, { x: 0.2000, y: -0.5000 }],
+                fillColor: [64, 224, 208]
+            },
+            {
+                vertexData: [{ x: -0.1000, y: 0.5500 }, { x: 0.1000, y: 0.5500 }, { x: 0.1000, y: 0.6800 }, { x: -0.1000, y: 0.6800 }],
+                fillColor: [255, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.1000, y: -0.5500 }, { x: 0.1000, y: -0.5500 }, { x: 0.1000, y: -0.6800 }, { x: -0.1000, y: -0.6800 }],
+                fillColor: [255, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.2500, y: -0.1500 }, { x: -0.2500, y: 0.1500 }, { x: -0.4000, y: 0.2000 }, { x: -0.5000, y: 0.1500 }, { x: -0.5500, y: 0.0000 }, { x: -0.5000, y: -0.1500 }, { x: -0.4000, y: -0.2000 }],
+                fillColor: [255, 127, 80]
+            },
+            {
+                vertexData: [{ x: 0.5000, y: -0.2500 }, { x: 0.6500, y: 0.0000 }, { x: 0.5000, y: 0.2500 }],
+                fillColor: [200, 200, 220]
             }
         ],
-        typicalCargo: ["Luxury Goods", "Computers"], price: 48000, techLevel: 3,
-        aiRoles: ["PIRATE"]
+        typicalCargo: ["Narcotics", "Luxury Goods", "Slaves", "Textiles"], price: 72000, techLevel: 3,
+        aiRoles: ["HAULER", "PIRATE"]
     },
     "HarlequinPantaloon": {
         name: "Harlequin Pantaloon", role: "Heavy Freighter", sizeCategory: "Large", size: 70,
@@ -1408,203 +1879,406 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Slaves", "Narcotics", "Weapons"], price: 95000, techLevel: 4,
         aiRoles: ["HAULER", "PIRATE"]
     },
-    "HarlequinScaramouche": {
-        name: "Harlequin Scaramouche", role: "Multi-Role Combat", sizeCategory: "Medium", size: 55,
-        baseMaxSpeed: 5.5, baseThrust: 0.11, baseTurnRate: 0.055,
-        baseHull: 150, baseShield: 180, shieldRecharge: 1.3, cargoCapacity: 40,
-        armament: ["Multi-Cannon", "Beam Laser", "Railgun Turret", "Loiter Munition", "Barrier Field"],
-        costCategory: "High", description: "The Harlequins' war trumpet—versatile, deadly, and painted in colors that hurt to look at directly. Those absurd wing configurations actually serve a tactical purpose: disorienting enemies before the 150-hull brick deletes them. Pilots who fly these either have excellent taste or absolutely none. No middle ground exists.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.5499, y: 1.0647 }, { x: 0.0000, y: 0.4255 }, { x: -0.3751, y: 0.6831 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.3751, y: -0.6831 }, { x: 0.0000, y: -0.4255 }, { x: 0.5499, y: -1.0647 }],
-                fillColor: [150, 219, 0]
-            },
-            {
-                vertexData: [{ x: -0.7773, y: -0.4235 }, { x: -0.7168, y: -0.3630 }, { x: -0.2328, y: 0.3630 }, { x: -0.1723, y: 0.4235 }, { x: -0.1360, y: 0.3630 }, { x: -0.8136, y: -0.3630 }],
-                fillColor: [255, 0, 255]
-            },
-            {
-                vertexData: [{ x: -0.7773, y: 0.4235 }, { x: -0.7168, y: 0.3630 }, { x: -0.2328, y: -0.3630 }, { x: -0.1723, y: -0.4235 }, { x: -0.1360, y: -0.3630 }, { x: -0.8136, y: 0.3630 }],
-                fillColor: [255, 0, 255]
-            },
-            {
-                vertexData: [{ x: -0.1723, y: -0.2420 }, { x: -0.1723, y: 0.2420 }, { x: -0.4143, y: 0.3025 }, { x: -0.5958, y: 0.2420 }, { x: -0.6563, y: 0.1210 }, { x: -0.6563, y: -0.1210 }, { x: -0.5958, y: -0.2420 }, { x: -0.4143, y: -0.3025 }],
-                fillColor: [255, 0, 255]
-            },
-            {
-                vertexData: [{ x: -0.7410, y: 0.1815 }, { x: -0.6805, y: 0.1452 }, { x: -0.7047, y: 0.0968 }, { x: -0.6805, y: 0.0484 }, { x: -0.7047, y: 0.0000 }, { x: -0.6805, y: -0.0484 }, { x: -0.7047, y: -0.0968 }, { x: -0.6805, y: -0.1452 }, { x: -0.7410, y: -0.1815 }, { x: -0.7773, y: -0.0968 }, { x: -0.7773, y: 0.0968 }],
-                fillColor: [255, 0, 255]
-            },
-            {
-                vertexData: [{ x: -0.3538, y: -0.1694 }, { x: -0.3538, y: -0.0968 }, { x: -0.4748, y: -0.1331 }],
-                fillColor: [150, 219, 0]
-            },
-            {
-                vertexData: [{ x: -0.3538, y: 0.0968 }, { x: -0.3538, y: 0.1694 }, { x: -0.4748, y: 0.1331 }],
-                fillColor: [150, 219, 0]
-            },
-            {
-                vertexData: [{ x: -0.5232, y: -0.0484 }, { x: -0.5232, y: 0.0484 }, { x: -0.5958, y: 0.0000 }],
-                fillColor: [150, 219, 0]
-            },
-            {
-                vertexData: [{ x: 0.5600, y: -0.3711 }, { x: 0.7511, y: 0.0000 }, { x: 0.5600, y: 0.3711 }],
-                fillColor: [0, 157, 255]
-            }
-        ],
-        typicalCargo: ["Weapons", "Adv Components"], price: 115000, techLevel: 4,
-        aiRoles: ["BOUNTY_HUNTER", "PIRATE"]
-    },
-    "HarlequinMotley": {
-        name: "Harlequin Motley", role: "Fast Interceptor", sizeCategory: "Small", size: 28,
-        baseMaxSpeed: 8.2, baseThrust: 0.19, baseTurnRate: 0.085,
-        baseHull: 45, baseShield: 55, shieldRecharge: 1.7, cargoCapacity: 8,
-        armament: ["Burst Blaster", "Pulse Laser"],
-        costCategory: "Medium", description: "Speed incarnate wrapped in eye-searing orange and electric blue. The Motley zips through conflict zones like a caffeinated hummingbird with attitude problems. 8.2 speed makes it nearly uncatchable; 45 hull means one mistake and you're confetti. Harlequin pilots call it 'the fool's choice'—but fools who survive learn fast.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.3000, y: 0.3500 }, { x: -0.4000, y: 0.3000 }, { x: -0.9000, y: 0.5000 }, { x: -0.7000, y: 0.0000 }, { x: -0.9000, y: -0.5000 }, { x: -0.4000, y: -0.3000 }, { x: 0.3000, y: -0.3500 }],
-                fillColor: [255, 120, 0]
-            },
-            {
-                vertexData: [{ x: 0.8000, y: -0.0800 }, { x: 0.8000, y: 0.0800 }, { x: -0.3000, y: 0.1500 }, { x: -0.3000, y: -0.1500 }],
-                fillColor: [0, 180, 255]
-            },
-            {
-                vertexData: [{ x: -0.5500, y: 0.3600 }, { x: -0.4000, y: 0.2000 }, { x: -0.7500, y: 0.2000 }],
-                fillColor: [0, 180, 255]
-            },
-            {
-                vertexData: [{ x: -0.5500, y: -0.3600 }, { x: -0.4000, y: -0.2000 }, { x: -0.7500, y: -0.2000 }],
-                fillColor: [0, 180, 255]
-            },
-            {
-                vertexData: [{ x: 0.0500, y: 0.0000 }, { x: -0.0500, y: 0.0866 }, { x: -0.1500, y: 0.0866 }, { x: -0.2500, y: 0.0000 }, { x: -0.1500, y: -0.0866 }, { x: -0.0500, y: -0.0866 }],
-                fillColor: [255, 255, 255]
-            },
-            {
-                vertexData: [{ x: -0.6635, y: -0.1674 }, { x: -0.6395, y: -0.1435 }, { x: -0.4482, y: 0.1435 }, { x: -0.4243, y: 0.1674 }, { x: -0.4100, y: 0.1435 }, { x: -0.6778, y: -0.1435 }],
-                fillColor: [180, 180, 180]
-            },
-            {
-                vertexData: [{ x: -0.6635, y: 0.1674 }, { x: -0.6395, y: 0.1435 }, { x: -0.4482, y: -0.1435 }, { x: -0.4243, y: -0.1674 }, { x: -0.4100, y: -0.1435 }, { x: -0.6778, y: 0.1435 }],
-                fillColor: [180, 180, 180]
-            },
-            {
-                vertexData: [{ x: -0.4243, y: -0.0957 }, { x: -0.4243, y: 0.0957 }, { x: -0.5200, y: 0.1196 }, { x: -0.5917, y: 0.0957 }, { x: -0.6156, y: 0.0478 }, { x: -0.6156, y: -0.0478 }, { x: -0.5917, y: -0.0957 }, { x: -0.5200, y: -0.1196 }],
-                fillColor: [230, 230, 230]
-            },
-            {
-                vertexData: [{ x: -0.6491, y: 0.0717 }, { x: -0.6252, y: 0.0574 }, { x: -0.6348, y: 0.0383 }, { x: -0.6252, y: 0.0191 }, { x: -0.6348, y: -0.0000 }, { x: -0.6252, y: -0.0191 }, { x: -0.6348, y: -0.0383 }, { x: -0.6252, y: -0.0574 }, { x: -0.6491, y: -0.0717 }, { x: -0.6635, y: -0.0383 }, { x: -0.6635, y: 0.0383 }],
-                fillColor: [230, 230, 230]
-            },
-            {
-                vertexData: [{ x: -0.4961, y: -0.0670 }, { x: -0.4961, y: -0.0383 }, { x: -0.5439, y: -0.0526 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.4961, y: 0.0383 }, { x: -0.4961, y: 0.0670 }, { x: -0.5439, y: 0.0526 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.5630, y: -0.0191 }, { x: -0.5630, y: 0.0191 }, { x: -0.5917, y: -0.0000 }],
-                fillColor: [0, 0, 0]
-            }
-        ],
-        typicalCargo: ["Narcotics", "Computers"], price: 42000, techLevel: 3,
-        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
-    },
-    "HarlequinZanni": {
-        name: "Harlequin Zanni", role: "Heavy Striker", sizeCategory: "Medium", size: 52,
-        baseMaxSpeed: 5.8, baseThrust: 0.13, baseTurnRate: 0.055,
-        baseHull: 180, baseShield: 160, shieldRecharge: 1.1, cargoCapacity: 35,
-        armament: ["Heavy Cannon", "Multi-Cannon", "Beam Laser", "Guardian Missile"],
-        costCategory: "High", description: "Hot pink and toxic lime—the ship equivalent of a poison dart frog screaming 'I am dangerous and have no shame.' That 180 hull absorbs punishment while quad hardpoints dish it back. Harlequin commanders deploy Zannis when they want targets to know embarrassment before annihilation. Kills aren't just combat victories, they're fashion statements.",
 
+    // --- CIVILIAN - TRADERS & HAULERS ---
+    "Adder": {
+        name: "Adder", role: "Trader/Explorer", sizeCategory: "Small", size: 28,
+        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236,
+        baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 30,
+        armament: ["Pulse Laser"],
+        costCategory: "Low", description: "Affordable entry-level freighter beloved by broke cargo runners. Sure, it's slower than a hangover and handles like a drunk elephant, but that 30-ton hold pays bills. First-time pilots either love it or crash it within a week.",
         vertexLayers: [
             {
-                vertexData: [{ x: 0.9000, y: 0.2000 }, { x: 0.5000, y: 0.6000 }, { x: -0.3000, y: 0.7000 }, { x: -0.8000, y: 0.5000 }, { x: -0.9000, y: 0.0000 }, { x: -0.8000, y: -0.5000 }, { x: -0.3000, y: -0.7000 }, { x: 0.5000, y: -0.6000 }, { x: 0.9000, y: -0.2000 }],
-                fillColor: [255, 20, 147]
+                vertexData: [{ x: 0.8500, y: 0.0500 }, { x: 0.2500, y: 0.8500 }, { x: -0.8500, y: 0.7500 }, { x: -0.6500, y: 0.0500 }, { x: -0.8500, y: -0.8500 }, { x: 0.1500, y: -0.6500 }],
+                fillColor: [160, 160, 140],
             },
             {
-                vertexData: [{ x: 0.7000, y: 0.0000 }, { x: 0.3500, y: 0.4500 }, { x: -0.2000, y: 0.5000 }, { x: -0.6000, y: 0.3000 }, { x: -0.6000, y: -0.3000 }, { x: -0.2000, y: -0.5000 }, { x: 0.3500, y: -0.4500 }],
-                fillColor: [180, 255, 0]
+                vertexData: [{ x: 0.3000, y: 0.0000 }, { x: -0.1500, y: 0.2598 }, { x: -0.1500, y: -0.2598 }],
+                fillColor: [101, 171, 236],
             },
+            // Cargo bay marking
             {
-                vertexData: [{ x: -0.3000, y: -0.2000 }, { x: -0.3000, y: 0.2000 }, { x: -0.5000, y: 0.2500 }, { x: -0.6500, y: 0.2000 }, { x: -0.7000, y: 0.1000 }, { x: -0.7000, y: -0.1000 }, { x: -0.6500, y: -0.2000 }, { x: -0.5000, y: -0.2500 }],
-                fillColor: [255, 20, 147]
+                vertexData: [{ x: -0.3000, y: 0.3500 }, { x: -0.5000, y: 0.4000 }, { x: -0.5000, y: 0.2500 }, { x: -0.3000, y: 0.3000 }],
+                fillColor: [200, 180, 100]
             },
+            // Navigation light port
             {
-                vertexData: [{ x: 0.2000, y: -0.3000 }, { x: 0.4000, y: -0.2000 }, { x: 0.4000, y: 0.2000 }, { x: 0.2000, y: 0.3000 }],
-                fillColor: [255, 255, 255]
-            },
-            {
-                vertexData: [{ x: -0.7309, y: -0.1860 }, { x: -0.7043, y: -0.1594 }, { x: -0.4917, y: 0.1594 }, { x: -0.4651, y: 0.1860 }, { x: -0.4492, y: 0.1594 }, { x: -0.7468, y: -0.1594 }],
-                fillColor: [180, 255, 0]
-            },
-            {
-                vertexData: [{ x: -0.7309, y: 0.1860 }, { x: -0.7043, y: 0.1594 }, { x: -0.4917, y: -0.1594 }, { x: -0.4651, y: -0.1860 }, { x: -0.4492, y: -0.1594 }, { x: -0.7468, y: 0.1594 }],
-                fillColor: [180, 255, 0]
-            },
-            {
-                vertexData: [{ x: -0.4651, y: -0.1063 }, { x: -0.4651, y: 0.1063 }, { x: -0.5714, y: 0.1329 }, { x: -0.6511, y: 0.1063 }, { x: -0.6777, y: 0.0531 }, { x: -0.6777, y: -0.0531 }, { x: -0.6511, y: -0.1063 }, { x: -0.5714, y: -0.1329 }],
-                fillColor: [180, 255, 0]
-            },
-            {
-                vertexData: [{ x: -0.7149, y: 0.0797 }, { x: -0.6883, y: 0.0638 }, { x: -0.6990, y: 0.0425 }, { x: -0.6883, y: 0.0213 }, { x: -0.6990, y: -0.0000 }, { x: -0.6883, y: -0.0213 }, { x: -0.6990, y: -0.0425 }, { x: -0.6883, y: -0.0638 }, { x: -0.7149, y: -0.0797 }, { x: -0.7309, y: -0.0425 }, { x: -0.7309, y: 0.0425 }],
-                fillColor: [180, 255, 0]
-            },
-            {
-                vertexData: [{ x: -0.5449, y: -0.0744 }, { x: -0.5449, y: -0.0425 }, { x: -0.5980, y: -0.0585 }],
-                fillColor: [255, 20, 147]
-            },
-            {
-                vertexData: [{ x: -0.5449, y: 0.0425 }, { x: -0.5449, y: 0.0744 }, { x: -0.5980, y: 0.0585 }],
-                fillColor: [255, 20, 147]
-            },
-            {
-                vertexData: [{ x: -0.6193, y: -0.0213 }, { x: -0.6193, y: 0.0213 }, { x: -0.6511, y: -0.0000 }],
-                fillColor: [255, 20, 147]
+                vertexData: [{ x: 0.1500, y: 0.7800 }, { x: 0.0800, y: 0.7500 }, { x: 0.1200, y: 0.7000 }],
+                fillColor: [255, 50, 50]
             }
         ],
-        typicalCargo: ["Weapons", "Slaves", "Luxury Goods"], price: 98000, techLevel: 4,
-        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
+        typicalCargo: ["Food", "Textiles", "Minerals"],
+        price: 11000,
+        aiRoles: ["HAULER"],
+        techLevel: 1 // Starter
     },
-    "HarlequinPulcinella": {
-        name: "Harlequin Pulcinella", role: "Support/Logistics", sizeCategory: "Medium", size: 48,
-        baseMaxSpeed: 4.5, baseThrust: 0.08, baseTurnRate: 0.05,
-        baseHull: 140, baseShield: 120, shieldRecharge: 1.0, cargoCapacity: 90,
-        armament: ["Mini-Turret", "Twin Pulse"],
-        costCategory: "Medium-High", description: "Coral and turquoise should never work together—yet here we are, staring at cargo ship couture. The Pulcinella ferries 90 tons of questionable goods while looking like a tropical sunset had a midlife crisis. Harlequin logistics crews love it; everyone else questions their life choices when it arrives at the loading bay.",
+    "Type6Transporter": {
+        name: "Type-6 Transporter", role: "Trader", sizeCategory: "Medium", size: 40,
+        baseMaxSpeed: 4.2, baseThrust: 0.06, baseTurnRate: 0.03491,
+        baseHull: 150, baseShield: 60, shieldRecharge: 0.8, cargoCapacity: 100,
+        armament: ["Twin Pulse", "Mini-Turret"], // Basic trader defense
+        costCategory: "Low-Medium", description: "Lakon Spaceways' answer to 'how square can we make it?' Ugly as sin but hauls 100 tons reliably. Paper-thin shields (60) mean pirates see you as a pinata full of credits. The pilot seat has indentations from decades of stressed-out traders gripping it during attacks.",
         vertexLayers: [
             {
-                vertexData: [{ x: 0.8000, y: 0.4000 }, { x: 0.4000, y: 0.7000 }, { x: -0.6000, y: 0.7000 }, { x: -0.8000, y: 0.4000 }, { x: -0.8000, y: -0.4000 }, { x: -0.6000, y: -0.7000 }, { x: 0.4000, y: -0.7000 }, { x: 0.8000, y: -0.4000 }],
-                fillColor: [255, 127, 80]
+                vertexData: [{ x: 0.8500, y: 0.3000 }, { x: 0.8500, y: 0.7000 }, { x: -0.6500, y: 0.8000 }, { x: -0.8500, y: 0.6000 }, { x: -0.8500, y: -0.6000 }, { x: -0.6500, y: -0.8000 }, { x: 0.8500, y: -0.7000 }, { x: 0.8500, y: -0.3000 }],
+                fillColor: [210, 160, 70]
             },
             {
-                vertexData: [{ x: 0.6000, y: 0.0000 }, { x: 0.2000, y: 0.5000 }, { x: -0.4000, y: 0.5000 }, { x: -0.6000, y: 0.0000 }, { x: -0.4000, y: -0.5000 }, { x: 0.2000, y: -0.5000 }],
-                fillColor: [64, 224, 208]
+                vertexData: [{ x: 0.5600, y: -0.4200 }, { x: 0.6800, y: -0.4200 }, { x: 0.6800, y: 0.4200 }, { x: 0.5600, y: 0.4200 }],
+                fillColor: [150, 150, 180]
+            },
+            // Cargo hazard stripe
+            {
+                vertexData: [{ x: -0.5000, y: 0.7200 }, { x: -0.6000, y: 0.7000 }, { x: -0.6000, y: 0.6000 }, { x: -0.5000, y: 0.6200 }],
+                fillColor: [0, 0, 0]
             },
             {
-                vertexData: [{ x: -0.1000, y: 0.5500 }, { x: 0.1000, y: 0.5500 }, { x: 0.1000, y: 0.6800 }, { x: -0.1000, y: 0.6800 }],
-                fillColor: [255, 255, 0]
+                vertexData: [{ x: -0.5000, y: -0.7200 }, { x: -0.6000, y: -0.7000 }, { x: -0.6000, y: -0.6000 }, { x: -0.5000, y: -0.6200 }],
+                fillColor: [0, 0, 0]
+            },
+            // Nav lights
+            {
+                vertexData: [{ x: -0.7000, y: 0.7500 }, { x: -0.7700, y: 0.7200 }, { x: -0.7200, y: 0.6800 }],
+                fillColor: [255, 50, 50]
             },
             {
-                vertexData: [{ x: -0.1000, y: -0.5500 }, { x: 0.1000, y: -0.5500 }, { x: 0.1000, y: -0.6800 }, { x: -0.1000, y: -0.6800 }],
-                fillColor: [255, 255, 0]
-            },
-            {
-                vertexData: [{ x: -0.2500, y: -0.1500 }, { x: -0.2500, y: 0.1500 }, { x: -0.4000, y: 0.2000 }, { x: -0.5000, y: 0.1500 }, { x: -0.5500, y: 0.0000 }, { x: -0.5000, y: -0.1500 }, { x: -0.4000, y: -0.2000 }],
-                fillColor: [255, 127, 80]
-            },
-            {
-                vertexData: [{ x: 0.5000, y: -0.2500 }, { x: 0.6500, y: 0.0000 }, { x: 0.5000, y: 0.2500 }],
-                fillColor: [200, 200, 220]
+                vertexData: [{ x: -0.7000, y: -0.7500 }, { x: -0.7700, y: -0.7200 }, { x: -0.7200, y: -0.6800 }],
+                fillColor: [50, 255, 50]
             }
         ],
-        typicalCargo: ["Narcotics", "Luxury Goods", "Slaves", "Textiles"], price: 72000, techLevel: 3,
-        aiRoles: ["HAULER", "PIRATE"]
+        typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery"],
+        price: 20100,
+        aiRoles: ["HAULER"],
+        techLevel: 2 // Utility
     },
+    "Keelback": {
+        name: "Keelback", role: "Combat Trader", sizeCategory: "Medium", size: 42,
+        baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRate: 0.04363,
+        baseHull: 180, baseShield: 90, shieldRecharge: 0.9, cargoCapacity: 50,
+        armament: ["Twin Pulse", "Railgun Turret"], // Combat trader
+        costCategory: "Medium", description: "Someone looked at the peaceful Type-6 and said 'needs more violence.' The result is this frankenstein trader with guns welded onto every available hardpoint. Still hauls 50 tons but now bites back. Perfect for haulers tired of being everyone's favorite target.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.8168, y: 0.0000 }, { x: 0.6865, y: 0.5114 }, { x: -0.0134, y: 0.6114 }, { x: -0.6135, y: 0.8114 }, { x: -0.8168, y: 0.5917 }, { x: -0.3705, y: 0.2745 }, { x: -0.6039, y: 0.1373 }, { x: -0.5974, y: -0.1373 }, { x: -0.3705, y: -0.2745 }, { x: -0.8168, y: -0.5917 }, { x: -0.6135, y: -0.8114 }, { x: -0.0134, y: -0.6114 }, { x: 0.6865, y: -0.5114 }],
+                fillColor: [180, 150, 80]
+            },
+            {
+                vertexData: [{ x: 0.6600, y: 0.0000 }, { x: 0.5600, y: 0.1732 }, { x: 0.4800, y: 0.1732 }, { x: 0.4800, y: -0.1732 }, { x: 0.5600, y: -0.1732 }],
+                fillColor: [101, 171, 236]
+            }
+        ],
+        typicalCargo: ["Minerals", "Metals", "Machinery"],
+        price: 20600,
+        aiRoles: ["HAULER"],
+        techLevel: 2 // Utility
+    },
+    "Type9Heavy": {
+        name: "Type-9 Heavy", role: "Heavy Trader", sizeCategory: "Very Large", size: 110,
+        baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRate: 0.01396,
+        baseHull: 550, baseShield: 250, shieldRecharge: 0.6, cargoCapacity: 500,
+        armament: ["Mini-Turret", "Force Blaster"], // Defensive cargo hauler
+        costCategory: "High", description: "The final boss of Lakon's trading fleet. Moves like continental drift (2.5 speed, 0.01396 turn rate) but packs 500 tons of pure profit potential. Turning this thing requires filing a flight plan three weeks in advance. Pirates either avoid it because it's too slow to be worth it, or it's too tough (550 hull).",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9104, y: 0.2000 }, { x: 0.7896, y: 0.8000 }, { x: -0.7104, y: 0.9000 }, { x: -0.9104, y: 0.8000 }, { x: -0.9104, y: -0.8000 }, { x: -0.7104, y: -0.9000 }, { x: 0.7896, y: -0.8000 }, { x: 0.9104, y: -0.2000 }],
+                fillColor: [190, 140, 60]
+            },
+            {
+                vertexData: [{ x: 0.5200, y: -0.2200 }, { x: 0.6600, y: -0.2200 }, { x: 0.6600, y: 0.2200 }, { x: 0.5200, y: 0.2200 }],
+                fillColor: [64, 63, 63]
+            },
+            // Container markings (hash pattern)
+            {
+                vertexData: [{ x: -0.2000, y: 0.7500 }, { x: -0.1500, y: 0.7700 }, { x: -0.4000, y: 0.8200 }, { x: -0.4500, y: 0.8000 }],
+                fillColor: [150, 110, 40]
+            },
+            {
+                vertexData: [{ x: -0.2000, y: -0.7500 }, { x: -0.1500, y: -0.7700 }, { x: -0.4000, y: -0.8200 }, { x: -0.4500, y: -0.8000 }],
+                fillColor: [150, 110, 40]
+            },
+            // Cargo bay indicators
+            {
+                vertexData: [{ x: 0.0000, y: 0.8500 }, { x: 0.1000, y: 0.8500 }, { x: 0.1000, y: 0.7500 }, { x: 0.0000, y: 0.7500 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: 0.0000, y: -0.8500 }, { x: 0.1000, y: -0.8500 }, { x: 0.1000, y: -0.7500 }, { x: 0.0000, y: -0.7500 }],
+                fillColor: [0, 0, 0]
+            },
+            // Nav lights
+            {
+                vertexData: [{ x: -0.7500, y: 0.8700 }, { x: -0.8200, y: 0.8400 }, { x: -0.7700, y: 0.8000 }],
+                fillColor: [255, 50, 50]
+            },
+            {
+                vertexData: [{ x: -0.7500, y: -0.8700 }, { x: -0.8200, y: -0.8400 }, { x: -0.7700, y: -0.8000 }],
+                fillColor: [50, 255, 50]
+            }
+        ],
+        typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery", "Chemicals", "Computers"],
+        price: 43100,
+        aiRoles: ["HAULER"],
+        techLevel: 3, // Mid-tier
+        canDualEngage: true
+    },
+    "MantaHauler": { // NEW - Unique 1
+        name: "Manta Hauler", role: "Wide Cargo Hauler", sizeCategory: "Large", size: 85,
+        baseMaxSpeed: 3.5, baseThrust: 0.06, baseTurnRate: 0.02793,
+        baseHull: 250, baseShield: 150, shieldRecharge: 0.7, cargoCapacity: 300,
+        armament: ["Mini-Turret", "Force Blaster", "Barrier Field"], // Defensive
+        costCategory: "Medium-High", description: "This absolute unit waddles through space hauling 300 tons like it's no big deal. Shaped like a manta ray that ate another manta ray. Slow as molasses (3.5 max) but with cargo capacity that makes hauler crews genuflect. Docking this beast requires prayer and skill in equal measure.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.3000, y: 0.3000 }, { x: -0.5000, y: 0.9000 }, { x: -0.8000, y: 0.7000 }, { x: -0.9000, y: 0.0000 }, { x: -0.8000, y: -0.7000 }, { x: -0.5000, y: -0.9000 }, { x: 0.3000, y: -0.3000 }],
+                fillColor: [60, 80, 90],
+            },
+            {
+                vertexData: [{ x: 0.0560, y: 0.1290 }, { x: 0.3195, y: 0.0000 }, { x: 0.0560, y: -0.1290 }],
+                fillColor: [250, 250, 255],
+            }
+        ],
+        typicalCargo: ["Minerals", "Metals", "Machinery", "Food", "Textiles"],
+        price: 34600,
+        aiRoles: ["HAULER"],
+        techLevel: 3 // Mid-tier
+    },
+    "Python": {
+        name: "Python", role: "Heavy Multi/Trader", sizeCategory: "Large", size: 75,
+        baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.03840,
+        baseHull: 280, baseShield: 250, shieldRecharge: 0.9, cargoCapacity: 220,
+        armament: ["Heavy Cannon", "V Punch", "Mini-Turret", "Kalibr Missile", "Heavy Tangle", "Barrier Field"], // Versatile heavy combat
+        costCategory: "High", description: "The Python is what happens when designers can't decide between cargo ship and gunboat, so they build both. Hauls 220 tons while mounting enough weapons to qualify as a small war. Expensive but worth every credit. The ultimate 'I refuse to choose' spaceship.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.7000, y: 0.7000 }, { x: -0.5000, y: 0.9000 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.5000, y: -0.9000 }, { x: 0.7000, y: -0.7000 }],
+                fillColor: [140, 140, 150]
+            },
+            {
+                vertexData: [{ x: 0.5400, y: -0.3800 }, { x: 0.6800, y: -0.2200 }, { x: 0.6800, y: 0.2200 }, { x: 0.5400, y: 0.3800 }],
+                fillColor: [182, 182, 185]
+            }
+        ],
+        typicalCargo: ["Luxury Goods", "Medicine", "Metals", "Chemicals", "Medicine", "Metals", "Chemicals"],
+        price: 57300,
+        aiRoles: ["HAULER"],
+        techLevel: 4 // Advanced
+    },
+    "StarlinerCruiser": {
+        name: "Starliner Cruiser", role: "Passenger Transport", sizeCategory: "Large", size: 105,
+        baseMaxSpeed: 5.5, baseThrust: 0.07, baseTurnRate: 0.02443,
+        baseHull: 200, baseShield: 250, shieldRecharge: 1.1, cargoCapacity: 100, // Less cargo, more cabins assumed
+        armament: ["Mini-Turret", "Force Blaster", "Halo"], // Defensive passenger ship
+        costCategory: "High", description: "Sleek luxury cruise liner that ferries pampered passengers between systems while they complain about the amenities. Shields that could stop a war, speed that puts many fighters to shame (5.5), and defensive weapons for pirates dumb enough to threaten the rich. Tickets cost more than most ships.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.1500, y: 0.0000 }, { x: 0.9500, y: 0.2000 }, { x: -0.9500, y: 0.3000 }, { x: -1.1500, y: 0.1000 }, { x: -1.1500, y: -0.1000 }, { x: -0.9500, y: -0.3000 }, { x: 0.9500, y: -0.2000 }],
+                fillColor: [230, 230, 235],
+            },
+            // Luxury stripe
+            {
+                vertexData: [{ x: 0.6000, y: 0.1600 }, { x: -0.6000, y: 0.2200 }, { x: -0.6000, y: 0.1800 }, { x: 0.6000, y: 0.1200 }],
+                fillColor: [200, 170, 100]
+            },
+            {
+                vertexData: [{ x: 0.6000, y: -0.1600 }, { x: -0.6000, y: -0.2200 }, { x: -0.6000, y: -0.1800 }, { x: 0.6000, y: -0.1200 }],
+                fillColor: [200, 170, 100]
+            },
+            // Stern light
+            {
+                vertexData: [{ x: -1.0800, y: 0.0400 }, { x: -1.1300, y: 0.0000 }, { x: -1.0800, y: -0.0400 }],
+                fillColor: [255, 255, 200]
+            }
+        ],
+        typicalCargo: ["Luxury Goods", "Food", "Medicine", "Food", "Medicine"],
+        price: 36000,
+        aiRoles: ["HAULER"],
+        techLevel: 4 // Advanced
+    },
+    "CobraMkIII": {
+        name: "Cobra Mk III", role: "Multi-Role", sizeCategory: "Medium", size: 38,
+        baseMaxSpeed: 6.0, baseThrust: 0.10, baseTurnRate: 0.06109,
+        baseHull: 120, baseShield: 100, shieldRecharge: 1, cargoCapacity: 44,
+        armament: ["Twin Pulse", "Tangle Projector"], // Versatile loadout with defense
+        costCategory: "Medium", description: "The legendary jack-of-all-trades, master of staying employed. With 44 tons of cargo space and weapons for every occasion, it's been hauling goods and kicking ass for three centuries. If ships had résumés, the Cobra's would be 20 pages long.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.8867, y: 0.0000 }, { x: 0.1867, y: 0.5270 }, { x: -0.6178, y: 0.5634 }, { x: -0.6133, y: 0.2000 }, { x: -0.8867, y: 0.1770 }, { x: -0.8867, y: -0.1770 }, { x: -0.6133, y: -0.2000 }, { x: -0.6178, y: -0.5634 }, { x: 0.1867, y: -0.5270 }],
+                fillColor: [113, 109, 10]
+            },
+            {
+                vertexData: [{ x: -0.0793, y: 0.3000 }, { x: -0.2393, y: 0.1800 }, { x: -0.2393, y: -0.1800 }, { x: -0.0793, y: -0.3000 }, { x: 0.0807, y: -0.2200 }, { x: 0.2807, y: -0.1200 }, { x: 0.4007, y: 0.0000 }, { x: 0.2807, y: 0.1200 }, { x: 0.0807, y: 0.2200 }],
+                fillColor: [188, 89, 36]
+            },
+            {
+                vertexData: [{ x: -0.5500, y: 0.5400 }, { x: -0.6200, y: 0.5100 }, { x: -0.5700, y: 0.4700 }],
+                fillColor: [255, 50, 50]
+            },
+            {
+                vertexData: [{ x: -0.5500, y: -0.5400 }, { x: -0.6200, y: -0.5100 }, { x: -0.5700, y: -0.4700 }],
+                fillColor: [50, 255, 50]
+            },
+            {
+                vertexData: [{ x: -0.7500, y: 0.1200 }, { x: -0.8200, y: 0.1200 }, { x: -0.8200, y: -0.1200 }, { x: -0.7500, y: -0.1200 }],
+                fillColor: [80, 80, 100]
+            }
+        ],
+        typicalCargo: ["Food"],
+        price: 21600,
+        aiRoles: ["HAULER"],
+        techLevel: 2 // Utility
+    },
+
+    // --- CIVILIAN - EXPLORERS ---
+    "AspExplorer": {
+        name: "Asp Explorer", role: "Explorer/Multi-Role", sizeCategory: "Medium", size: 55,
+        baseMaxSpeed: 5.5, baseThrust: 0.09, baseTurnRate: 0.05585,
+        baseHull: 150, baseShield: 180, shieldRecharge: 1.3, cargoCapacity: 80,
+        armament: ["Beam Laser", "Twin Pulse"],
+        costCategory: "Medium-High", description: "The poster child of deep-space exploration. That cockpit visibility isn't just for show—it's saved countless pilots from asteroid faceplants. Respectable cargo hold, decent guns, and shield recharge that'll make combat pilots jealous. Basically a camper van that shoots back.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.3627, y: 0.5133 }, { x: -0.4750, y: 0.8750 }, { x: -0.9500, y: 0.3000 }, { x: -0.9500, y: -0.3000 }, { x: -0.4750, y: -0.8750 }, { x: 0.3627, y: -0.5133 }],
+                fillColor: [200, 180, 80]
+            },
+            {
+                vertexData: [{ x: 0.2400, y: 0.2911 }, { x: 0.2400, y: -0.2911 }, { x: 0.5511, y: 0.0000 }],
+                fillColor: [181, 151, 177]
+            }
+        ],
+        typicalCargo: ["Minerals", "Minerals", "Minerals", "Minerals", "Medicine", "Computers"],
+        price: 23600,
+        aiRoles: ["EXPLORER", "HAULER"],
+        techLevel: 2 // Mid-tier
+    },
+    "DiamondbackExplorer": {
+        name: "Diamondback Explorer", role: "Explorer/Light Combat", sizeCategory: "Medium", size: 45,
+        baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.05236,
+        baseHull: 130, baseShield: 100, shieldRecharge: 1.1, cargoCapacity: 40,
+        armament: ["Beam Laser", "V Spread"], // Explorer with some punch
+        costCategory: "Medium", description: "The workaholic's explorer—all business, zero flash. Runs cooler than a politician's heart and efficient enough to make accountants weep with joy. Not sexy, but it gets you there and back without spontaneously combusting, which is honestly underrated.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.1500, y: 0.4000 }, { x: -0.5500, y: 0.9000 }, { x: -0.9500, y: 0.5000 }, { x: -0.8500, y: 0.0000 }, { x: -0.9500, y: -0.5000 }, { x: -0.5500, y: -0.9000 }, { x: 0.1500, y: -0.4000 }],
+                fillColor: [100, 110, 90]
+            },
+            {
+                vertexData: [{ x: 0.1400, y: -0.2000 }, { x: 0.3998, y: -0.0500 }, { x: 0.3998, y: 0.0300 }, { x: 0.1400, y: 0.1800 }, { x: -0.1198, y: 0.0300 }, { x: -0.1198, y: -0.0500 }],
+                fillColor: [101, 171, 236]
+            },
+            // Sensor dish (exploration equipment)
+            {
+                vertexData: [{ x: -0.6000, y: 0.8200 }, { x: -0.7000, y: 0.7500 }, { x: -0.6500, y: 0.7000 }],
+                fillColor: [200, 200, 210]
+            },
+            // Scanner array hash marks
+            {
+                vertexData: [{ x: -0.3000, y: 0.6500 }, { x: -0.2500, y: 0.6700 }, { x: -0.4000, y: 0.7500 }, { x: -0.4500, y: 0.7300 }],
+                fillColor: [80, 90, 70]
+            },
+            {
+                vertexData: [{ x: -0.3000, y: -0.6500 }, { x: -0.2500, y: -0.6700 }, { x: -0.4000, y: -0.7500 }, { x: -0.4500, y: -0.7300 }],
+                fillColor: [80, 90, 70]
+            },
+            // Nav lights
+            {
+                vertexData: [{ x: -0.5000, y: 0.8700 }, { x: -0.5700, y: 0.8400 }, { x: -0.5200, y: 0.8000 }],
+                fillColor: [255, 50, 50]
+            },
+            {
+                vertexData: [{ x: -0.5000, y: -0.8700 }, { x: -0.5700, y: -0.8400 }, { x: -0.5200, y: -0.8000 }],
+                fillColor: [50, 255, 50]
+            }
+        ],
+        typicalCargo: ["Minerals", "Metals", "Adv Components"],
+        price: 20800,
+        aiRoles: ["EXPLORER", "HAULER"],
+        techLevel: 3 // Mid-tier
+    },
+    "NomadVoyager": {
+        name: "Nomad Voyager", role: "Deep Space Explorer", sizeCategory: "Medium", size: 58,
+        baseMaxSpeed: 5.2, baseThrust: 0.07, baseTurnRate: 0.05061,
+        baseHull: 180, baseShield: 220, shieldRecharge: 1.5, cargoCapacity: 70,
+        armament: ["Beam Laser", "Mini-Turret"], // Long range exploration
+        costCategory: "High", description: "Built for pilots who think 'civilization is overrated.' Stuffed with life support redundancies and shield generators (220 capacity plus 1.5 recharge). Can survive the void for months on end. Popular with hermits, researchers, and people with outstanding warrants in multiple systems.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.8000, y: 0.5000 }, { x: 0.2000, y: 0.8000 }, { x: -0.7000, y: 0.7000 }, { x: -1.0000, y: 0.0000 }, { x: -0.7000, y: -0.7000 }, { x: 0.2000, y: -0.8000 }, { x: 0.8000, y: -0.5000 }],
+                fillColor: [200, 200, 190],
+            },
+            // Scanner array (exploration equipment)
+            {
+                vertexData: [{ x: 0.0000, y: 0.7500 }, { x: -0.0800, y: 0.7200 }, { x: 0.0000, y: 0.6500 }, { x: 0.0800, y: 0.7200 }],
+                fillColor: [150, 150, 160]
+            },
+            {
+                vertexData: [{ x: 0.0000, y: -0.7500 }, { x: -0.0800, y: -0.7200 }, { x: 0.0000, y: -0.6500 }, { x: 0.0800, y: -0.7200 }],
+                fillColor: [150, 150, 160]
+            },
+            // Deliberate hull hash lines
+            {
+                vertexData: [{ x: -0.4000, y: 0.6000 }, { x: -0.3500, y: 0.6200 }, { x: -0.5500, y: 0.5500 }, { x: -0.6000, y: 0.5300 }],
+                fillColor: [180, 180, 170]
+            },
+            {
+                vertexData: [{ x: -0.4000, y: -0.6000 }, { x: -0.3500, y: -0.6200 }, { x: -0.5500, y: -0.5500 }, { x: -0.6000, y: -0.5300 }],
+                fillColor: [180, 180, 170]
+            },
+            // Cockpit canopy
+            {
+                vertexData: [{ x: 0.5000, y: 0.0000 }, { x: 0.3000, y: 0.1500 }, { x: 0.3000, y: -0.1500 }],
+                fillColor: [100, 160, 220]
+            },
+            // Nav lights
+            {
+                vertexData: [{ x: 0.1500, y: 0.7700 }, { x: 0.0800, y: 0.7400 }, { x: 0.1200, y: 0.7000 }],
+                fillColor: [255, 50, 50]
+            },
+            {
+                vertexData: [{ x: 0.1500, y: -0.7700 }, { x: 0.0800, y: -0.7400 }, { x: 0.1200, y: -0.7000 }],
+                fillColor: [50, 255, 50]
+            }
+        ],
+        typicalCargo: ["Minerals", "Food", "Medicine"],
+        price: 24600,
+        aiRoles: ["EXPLORER", "HAULER"],
+        techLevel: 4 // Advanced
+    },
+    "PathfinderSurvey": {
+        name: "Pathfinder Survey", role: "Long Range Scanner", sizeCategory: "Medium", size: 62,
+        baseMaxSpeed: 5.0, baseThrust: 0.06, baseTurnRate: 0.04363,
+        baseHull: 120, baseShield: 150, shieldRecharge: 1.2, cargoCapacity: 50,
+        armament: [],
+        costCategory: "Medium", description: "For the pilot who wants to know what every rock in the galaxy is made of. Bristling with scanners worth more than the ship itself. Completely unarmed because apparently scientists think 'please don't shoot me' is an effective defense strategy. Spoiler: it's not.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.7000, y: 0.2000 }, { x: -0.6000, y: 0.5000 }, { x: -1.1000, y: 0.3000 }, { x: -1.1000, y: -0.3000 }, { x: -0.6000, y: -0.5000 }, { x: 0.7000, y: -0.2000 }],
+                fillColor: [130, 160, 170],
+            },
+            {
+                vertexData: [{ x: -0.2751, y: -0.5092 }, { x: -0.2751, y: 0.5092 }, { x: -0.1000, y: 0.7714 }, { x: -0.1000, y: -0.7714 }],
+                fillColor: [30, 77, 46],
+            }
+        ],
+        typicalCargo: ["Food", "Food", "Minerals", "Minerals", "Metals"],
+        price: 10200,
+        aiRoles: ["EXPLORER", "HAULER"],
+        techLevel: 3 // Mid-tier
+    },
+    "ProspectorMiner": { // NEW - Miner
+        name: "Prospector Miner", role: "Mining Vessel", sizeCategory: "Medium", size: 48,
+        baseMaxSpeed: 2.5, baseThrust: 0.08, baseTurnRate: 0.03840,
+        baseHull: 200, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 40, // Includes refinery space
+        armament: ["Beam Laser"], // Mining lasers for asteroid destruction
+        costCategory: "Medium", description: "The space excavator nobody respects until they're filthy rich. Top speed of 2.5 means 'chase' isn't in its vocabulary, but that 40-ton hold fills up fast when you're atomizing asteroids. Runs on dreams of profit and the optimistic belief that those rocks contain something valuable.",
+        vertexData: [{ x: 0.6, y: 0 }, { x: 0.4, y: 0.8 }, { x: -0.4, y: 0.9 }, { x: -0.9, y: 0.6 }, { x: -1.0, y: -0.3 }, { x: -0.9, y: -0.6 }, { x: -0.4, y: -0.9 }, { x: 0.4, y: -0.8 }], // Bulky, functional
+        fillColor: [180, 170, 160], // Industrial grey/brown
+        typicalCargo: ["Minerals", "Metals"],
+        price: 8700,
+        aiRoles: ["MINER"],
+        techLevel: 2 // Utility
+    },
+
+    // --- TRANSPORTS ---
     "LocalHopper": {
         name: "Local Hopper", role: "Light Transport", sizeCategory: "Tiny", size: 18,
         baseMaxSpeed: 3.5, baseThrust: 0.04, baseTurnRate: 0.05,
@@ -1670,6 +2344,80 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Food", "Textiles"], price: 1800, techLevel: 1,
         aiRoles: ["TRANSPORT"]
+    },
+    "MuleFreighter": { // NEW - Small Transporter
+        name: "Mule Freighter", role: "Local Transport", sizeCategory: "Small", size: 25,
+        baseMaxSpeed: 3.8, baseThrust: 0.05, baseTurnRate: 0.04887,
+        baseHull: 70, baseShield: 0, shieldRecharge: 0.8, cargoCapacity: 20,
+        armament: [],
+        costCategory: "Very Low", description: "The space equivalent of a rusty pickup truck held together with duct tape and optimism. At 4200 credits it's cheaper than some bar tabs, and about as fast (3.8). Zero shields, 70 hull, and the aerodynamics of a filing cabinet. But it floats, mostly.",
+        vertexLayers: [
+            // Main hull - boxy transporter shape
+            {
+                vertexData: [{ x: 0.8000, y: 0.7500 }, { x: -0.6000, y: 0.8500 }, { x: -0.8000, y: 0.4500 }, { x: -0.8000, y: -0.4500 }, { x: -0.5000, y: -0.8500 }, { x: 0.8000, y: -0.7500 }],
+                fillColor: [140, 130, 120],
+            },
+            // Thin rectangular cockpit window (characteristic transporter style)
+            {
+                vertexData: [{ x: 0.7000, y: 0.1200 }, { x: 0.5000, y: 0.1400 }, { x: 0.5000, y: -0.1400 }, { x: 0.7000, y: -0.1200 }],
+                fillColor: [80, 140, 200],
+            },
+            // Cockpit frame
+            {
+                vertexData: [{ x: 0.7200, y: 0.1400 }, { x: 0.4800, y: 0.1600 }, { x: 0.4800, y: 0.1200 }, { x: 0.7200, y: 0.1000 }],
+                fillColor: [60, 55, 50],
+            },
+            {
+                vertexData: [{ x: 0.7200, y: -0.1400 }, { x: 0.4800, y: -0.1600 }, { x: 0.4800, y: -0.1200 }, { x: 0.7200, y: -0.1000 }],
+                fillColor: [60, 55, 50],
+            },
+            // Cargo bay door lines (welded panels)
+            {
+                vertexData: [{ x: 0.2000, y: 0.6500 }, { x: 0.2200, y: 0.6800 }, { x: -0.4000, y: 0.7500 }, { x: -0.4200, y: 0.7200 }],
+                fillColor: [100, 90, 80],
+            },
+            {
+                vertexData: [{ x: 0.2000, y: -0.6500 }, { x: 0.2200, y: -0.6800 }, { x: -0.3500, y: -0.7500 }, { x: -0.3700, y: -0.7200 }],
+                fillColor: [100, 90, 80],
+            },
+            // Rust/weathering patches
+            {
+                vertexData: [{ x: -0.3000, y: 0.5000 }, { x: -0.4500, y: 0.5500 }, { x: -0.4800, y: 0.4500 }, { x: -0.3500, y: 0.4200 }],
+                fillColor: [160, 100, 70],
+            },
+            {
+                vertexData: [{ x: 0.4000, y: -0.4500 }, { x: 0.3000, y: -0.5000 }, { x: 0.3500, y: -0.5800 }, { x: 0.4500, y: -0.5200 }],
+                fillColor: [155, 95, 65],
+            },
+            // Engine housing warning stripes
+            {
+                vertexData: [{ x: -0.6500, y: 0.3500 }, { x: -0.7500, y: 0.3800 }, { x: -0.7500, y: 0.3200 }, { x: -0.6500, y: 0.2900 }],
+                fillColor: [200, 180, 50],
+            },
+            {
+                vertexData: [{ x: -0.6500, y: -0.3500 }, { x: -0.7500, y: -0.3800 }, { x: -0.7500, y: -0.3200 }, { x: -0.6500, y: -0.2900 }],
+                fillColor: [200, 180, 50],
+            },
+            // Port navigation light (red)
+            {
+                vertexData: [{ x: -0.5500, y: 0.8200 }, { x: -0.6200, y: 0.7800 }, { x: -0.5600, y: 0.7400 }],
+                fillColor: [255, 50, 50]
+            },
+            // Starboard navigation light (green)
+            {
+                vertexData: [{ x: -0.4500, y: -0.8200 }, { x: -0.5200, y: -0.7800 }, { x: -0.4600, y: -0.7400 }],
+                fillColor: [50, 255, 50]
+            },
+            // Stern running light
+            {
+                vertexData: [{ x: -0.7700, y: 0.0400 }, { x: -0.7900, y: 0.0000 }, { x: -0.7700, y: -0.0400 }],
+                fillColor: [255, 255, 200]
+            }
+        ],
+        typicalCargo: ["Food", "Machinery", "Metals"],
+        price: 4200,
+        aiRoles: ["TRANSPORT"],
+        techLevel: 1 // Starter
     },
     "ErrandRunner": {
         name: "Errand Runner", role: "Light Transport", sizeCategory: "Small", size: 24,
@@ -1931,436 +2679,8 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Machinery", "Metals", "Chemicals"], price: 22000, techLevel: 2,
         aiRoles: ["TRANSPORT"]
     },
-    "PirateCutlass": {
-        name: "Pirate Cutlass", role: "Fast Attack Fighter", sizeCategory: "Small", size: 32,
-        baseMaxSpeed: 7.2, baseThrust: 0.16, baseTurnRate: 0.08,
-        baseHull: 70, baseShield: 90, shieldRecharge: 1.3, cargoCapacity: 10,
-        armament: ["Multi-Cannon", "Pulse Laser", "Guardian Missile"],
-        costCategory: "Medium", description: "Pirates looked at budget fighters and said 'how do we make this scary?' Answer: paint it blood-red, add illegal weapons, remove the safety limiters. Hits 7.2 speed and sports enough firepower to make merchants cry. Common, cheap, effective—the AK-47 of pirate craft.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.4000, y: 0.5000 }, { x: -0.8000, y: 0.3000 }, { x: -0.8000, y: -0.3000 }, { x: -0.4000, y: -0.5000 }],
-                fillColor: [80, 20, 20]
-            },
-            {
-                vertexData: [{ x: -0.5840, y: -0.2296 }, { x: -0.5512, y: -0.1968 }, { x: -0.2888, y: 0.1968 }, { x: -0.2560, y: 0.2296 }, { x: -0.2363, y: 0.1968 }, { x: -0.6037, y: -0.1968 }],
-                fillColor: [180, 180, 180]
-            },
-            {
-                vertexData: [{ x: -0.5840, y: 0.2296 }, { x: -0.5512, y: 0.1968 }, { x: -0.2888, y: -0.1968 }, { x: -0.2560, y: -0.2296 }, { x: -0.2363, y: -0.1968 }, { x: -0.6037, y: 0.1968 }],
-                fillColor: [180, 180, 180]
-            },
-            {
-                vertexData: [{ x: -0.2560, y: -0.1312 }, { x: -0.2560, y: 0.1312 }, { x: -0.3872, y: 0.1640 }, { x: -0.4856, y: 0.1312 }, { x: -0.5184, y: 0.0656 }, { x: -0.5184, y: -0.0656 }, { x: -0.4856, y: -0.1312 }, { x: -0.3872, y: -0.1640 }],
-                fillColor: [230, 230, 230]
-            },
-            {
-                vertexData: [{ x: -0.5184, y: -0.0984 }, { x: -0.5512, y: -0.0787 }, { x: -0.5381, y: -0.0525 }, { x: -0.5512, y: -0.0262 }, { x: -0.5381, y: -0.0000 }, { x: -0.5512, y: 0.0262 }, { x: -0.5381, y: 0.0525 }, { x: -0.5512, y: 0.0787 }, { x: -0.5184, y: 0.0984 }, { x: -0.4987, y: 0.0525 }, { x: -0.4987, y: -0.0525 }],
-                fillColor: [230, 230, 230]
-            },
-            {
-                vertexData: [{ x: -0.3544, y: -0.0919 }, { x: -0.3544, y: -0.0525 }, { x: -0.4200, y: -0.0722 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.3544, y: 0.0525 }, { x: -0.3544, y: 0.0919 }, { x: -0.4200, y: 0.0722 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.4462, y: -0.0262 }, { x: -0.4462, y: 0.0262 }, { x: -0.4856, y: -0.0000 }],
-                fillColor: [0, 0, 0]
-            },
-            // Skull emblem (white circle)
-            {
-                vertexData: [{ x: 0.3000, y: 0.1200 }, { x: 0.2400, y: 0.1800 }, { x: 0.1800, y: 0.1200 }, { x: 0.2400, y: 0.0600 }],
-                fillColor: [255, 255, 255]
-            },
-            // Crossbones
-            {
-                vertexData: [{ x: 0.3200, y: 0.0200 }, { x: 0.1600, y: 0.0200 }, { x: 0.1600, y: -0.0200 }, { x: 0.3200, y: -0.0200 }],
-                fillColor: [255, 255, 255]
-            }
-        ],
-        typicalCargo: ["Adv Components", "Narcotics"], price: 45000, techLevel: 3,
-        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
-    },
-    "PirateMarauder": {
-        name: "Pirate Marauder", role: "Raider/Boarding Craft", sizeCategory: "Medium", size: 48,
-        baseMaxSpeed: 5.0, baseThrust: 0.09, baseTurnRate: 0.045,
-        baseHull: 150, baseShield: 100, shieldRecharge: 0.8, cargoCapacity: 50,
-        armament: ["Heavy Cannon", "Twin Pulse", "Mini-Turret", "Guardian Missile"],
-        costCategory: "Medium-High", description: "Purpose-built pirate boarding craft with hull thick enough (150) to ram targets if negotiations fail. Cargo hold sized specifically to haul stolen goods (50 tons). Those harpoon launchers aren't decorative—they're for grabbing fleeing merchants. Flying one near a station gets you shot first, questions never.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9000, y: 0.3000 }, { x: 0.2000, y: 0.7000 }, { x: -0.9000, y: 0.7000 }, { x: -0.9000, y: -0.7000 }, { x: 0.2000, y: -0.7000 }, { x: 0.9000, y: -0.3000 }],
-                fillColor: [50, 50, 50]
-            },
-            {
-                vertexData: [{ x: -0.6772, y: -0.5073 }, { x: -0.6047, y: -0.4348 }, { x: -0.0249, y: 0.4348 }, { x: 0.0475, y: 0.5073 }, { x: 0.0910, y: 0.4348 }, { x: -0.7207, y: -0.4348 }],
-                fillColor: [180, 180, 180]
-            },
-            {
-                vertexData: [{ x: -0.6772, y: 0.5073 }, { x: -0.6047, y: 0.4348 }, { x: -0.0249, y: -0.4348 }, { x: 0.0475, y: -0.5073 }, { x: 0.0910, y: -0.4348 }, { x: -0.7207, y: 0.4348 }],
-                fillColor: [180, 180, 180]
-            },
-            {
-                vertexData: [{ x: 0.0475, y: -0.2899 }, { x: 0.0475, y: 0.2899 }, { x: -0.2424, y: 0.3624 }, { x: -0.4598, y: 0.2899 }, { x: -0.5323, y: 0.1449 }, { x: -0.5323, y: -0.1449 }, { x: -0.4598, y: -0.2899 }, { x: -0.2424, y: -0.3624 }],
-                fillColor: [230, 230, 230]
-            },
-            {
-                vertexData: [{ x: -0.6337, y: 0.2174 }, { x: -0.5612, y: 0.1739 }, { x: -0.5902, y: 0.1160 }, { x: -0.5612, y: 0.0580 }, { x: -0.5902, y: 0.0000 }, { x: -0.5612, y: -0.0580 }, { x: -0.5902, y: -0.1160 }, { x: -0.5612, y: -0.1739 }, { x: -0.6337, y: -0.2174 }, { x: -0.6772, y: -0.1160 }, { x: -0.6772, y: 0.1160 }],
-                fillColor: [230, 230, 230]
-            },
-            {
-                vertexData: [{ x: -0.1699, y: -0.2029 }, { x: -0.1699, y: -0.1160 }, { x: -0.3148, y: -0.1594 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.1699, y: 0.1160 }, { x: -0.1699, y: 0.2029 }, { x: -0.3148, y: 0.1594 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.3728, y: -0.0580 }, { x: -0.3728, y: 0.0580 }, { x: -0.4598, y: 0.0000 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: 0.6400, y: -0.2200 }, { x: 0.7400, y: -0.1600 }, { x: 0.7400, y: 0.1600 }, { x: 0.6400, y: 0.2200 }],
-                fillColor: [153, 153, 229]
-            },
-            // Pirate warning stripes
-            {
-                vertexData: [{ x: -0.7500, y: 0.6000 }, { x: -0.8500, y: 0.6000 }, { x: -0.8500, y: 0.5000 }, { x: -0.7500, y: 0.5000 }],
-                fillColor: [255, 200, 0]
-            },
-            {
-                vertexData: [{ x: -0.7500, y: -0.6000 }, { x: -0.8500, y: -0.6000 }, { x: -0.8500, y: -0.5000 }, { x: -0.7500, y: -0.5000 }],
-                fillColor: [255, 200, 0]
-            },
-            // Skull emblem
-            {
-                vertexData: [{ x: 0.4000, y: 0.0800 }, { x: 0.3400, y: 0.1400 }, { x: 0.2800, y: 0.0800 }, { x: 0.3400, y: 0.0200 }],
-                fillColor: [255, 255, 255]
-            }
-        ],
-        typicalCargo: ["Slaves", "Weapons", "Adv Components"], price: 75000, techLevel: 4,
-        aiRoles: ["PIRATE"]
-    },
-    "PirateReaver": {
-        name: "Pirate Reaver", role: "Heavy Pirate Cruiser", sizeCategory: "Large", size: 75,
-        baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRate: 0.03,
-        baseHull: 300, baseShield: 200, shieldRecharge: 0.9, cargoCapacity: 100,
-        armament: ["Multi-Cannon", "Force Blaster", "Mini-Turret", "Railgun Turret", "Guardian Missile"],
-        costCategory: "High", description: "The pirate flagship—300 hull of intimidation and poor life choices. Usually a captured military vessel with enough welded-on weapons to make it unrecognizable. Slow (4.0) but terrifying. When sensors flag one of these, merchant convoys scatter like startled fish. Smart move.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0000, y: 0.1000 }, { x: 0.5000, y: 0.6000 }, { x: -0.5000, y: 0.8000 }, { x: -1.0000, y: 0.4000 }, { x: -1.0000, y: -0.4000 }, { x: -0.5000, y: -0.8000 }, { x: 0.5000, y: -0.6000 }, { x: 1.0000, y: -0.1000 }],
-                fillColor: [40, 60, 40]
-            },
-            {
-                vertexData: [{ x: -0.6655, y: -0.4235 }, { x: -0.6050, y: -0.3630 }, { x: -0.1210, y: 0.3630 }, { x: -0.0605, y: 0.4235 }, { x: -0.0242, y: 0.3630 }, { x: -0.7018, y: -0.3630 }],
-                fillColor: [180, 180, 180]
-            },
-            {
-                vertexData: [{ x: -0.6655, y: 0.4235 }, { x: -0.6050, y: 0.3630 }, { x: -0.1210, y: -0.3630 }, { x: -0.0605, y: -0.4235 }, { x: -0.0242, y: -0.3630 }, { x: -0.7018, y: 0.3630 }],
-                fillColor: [180, 180, 180]
-            },
-            {
-                vertexData: [{ x: -0.0605, y: -0.2420 }, { x: -0.0605, y: 0.2420 }, { x: -0.3025, y: 0.3025 }, { x: -0.4840, y: 0.2420 }, { x: -0.5445, y: 0.1210 }, { x: -0.5445, y: -0.1210 }, { x: -0.4840, y: -0.2420 }, { x: -0.3025, y: -0.3025 }],
-                fillColor: [230, 230, 230]
-            },
-            {
-                vertexData: [{ x: -0.6292, y: 0.1815 }, { x: -0.5687, y: 0.1452 }, { x: -0.5929, y: 0.0968 }, { x: -0.5687, y: 0.0484 }, { x: -0.5929, y: 0.0000 }, { x: -0.5687, y: -0.0484 }, { x: -0.5929, y: -0.0968 }, { x: -0.5687, y: -0.1452 }, { x: -0.6292, y: -0.1815 }, { x: -0.6655, y: -0.0968 }, { x: -0.6655, y: 0.0968 }],
-                fillColor: [230, 230, 230]
-            },
-            {
-                vertexData: [{ x: -0.2420, y: -0.1694 }, { x: -0.2420, y: -0.0968 }, { x: -0.3630, y: -0.1331 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.2420, y: 0.0968 }, { x: -0.2420, y: 0.1694 }, { x: -0.3630, y: 0.1331 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.4114, y: -0.0484 }, { x: -0.4114, y: 0.0484 }, { x: -0.4840, y: 0.0000 }],
-                fillColor: [0, 0, 0]
-            }
-        ],
-        typicalCargo: ["Narcotics", "Slaves", "Weapons"], price: 140000, techLevel: 5,
-        aiRoles: ["PIRATE"]
-    },
-    "PirateBrigand": {
-        name: "Pirate Brigand", role: "Fast Cargo Thief", sizeCategory: "Small", size: 30,
-        baseMaxSpeed: 6.8, baseThrust: 0.13, baseTurnRate: 0.065,
-        baseHull: 60, baseShield: 70, shieldRecharge: 1.1, cargoCapacity: 30,
-        armament: ["Pulse Laser", "Mini-Turret"],
-        costCategory: "Medium", description: "The 'hit and run' special—fast enough (6.8) to catch laden haulers, spacious enough (30 cargo) to make the chase worthwhile. Painted in rust-brown camouflage that fools absolutely nobody. Police hate these because by the time they arrive, the Brigand is three systems away spending your credits.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.8000, y: 0.0000 }, { x: 0.2000, y: 0.4000 }, { x: -0.8000, y: 0.4000 }, { x: -0.8000, y: -0.4000 }, { x: 0.2000, y: -0.4000 }],
-                fillColor: [100, 60, 20]
-            },
-            {
-                vertexData: [{ x: -0.5100, y: -0.3500 }, { x: -0.4600, y: -0.3000 }, { x: -0.0600, y: 0.3000 }, { x: -0.0100, y: 0.3500 }, { x: 0.0200, y: 0.3000 }, { x: -0.5400, y: -0.3000 }],
-                fillColor: [180, 180, 180]
-            },
-            {
-                vertexData: [{ x: -0.5100, y: 0.3500 }, { x: -0.4600, y: 0.3000 }, { x: -0.0600, y: -0.3000 }, { x: -0.0100, y: -0.3500 }, { x: 0.0200, y: -0.3000 }, { x: -0.5400, y: 0.3000 }],
-                fillColor: [180, 180, 180]
-            },
-            {
-                vertexData: [{ x: -0.0100, y: -0.2000 }, { x: -0.0100, y: 0.2000 }, { x: -0.2100, y: 0.2500 }, { x: -0.3600, y: 0.2000 }, { x: -0.4100, y: 0.1000 }, { x: -0.4100, y: -0.1000 }, { x: -0.3600, y: -0.2000 }, { x: -0.2100, y: -0.2500 }],
-                fillColor: [230, 230, 230]
-            },
-            {
-                vertexData: [{ x: -0.4800, y: 0.1500 }, { x: -0.4300, y: 0.1200 }, { x: -0.4500, y: 0.0800 }, { x: -0.4300, y: 0.0400 }, { x: -0.4500, y: -0.0000 }, { x: -0.4300, y: -0.0400 }, { x: -0.4500, y: -0.0800 }, { x: -0.4300, y: -0.1200 }, { x: -0.4800, y: -0.1500 }, { x: -0.5100, y: -0.0800 }, { x: -0.5100, y: 0.0800 }],
-                fillColor: [230, 230, 230]
-            },
-            {
-                vertexData: [{ x: -0.1600, y: -0.1400 }, { x: -0.1600, y: -0.0800 }, { x: -0.2600, y: -0.1100 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.1600, y: 0.0800 }, { x: -0.1600, y: 0.1400 }, { x: -0.2600, y: 0.1100 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.3000, y: -0.0400 }, { x: -0.3000, y: 0.0400 }, { x: -0.3600, y: -0.0000 }],
-                fillColor: [0, 0, 0]
-            }
-        ],
-        typicalCargo: ["Food", "Textiles", "Minerals"], price: 38000, techLevel: 2,
-        aiRoles: ["PIRATE"]
-    },
-    "PirateInterceptorMKII": {
-        name: "Pirate Interceptor MkII", role: "Heavy Interceptor", sizeCategory: "Medium", size: 42,
-        baseMaxSpeed: 7.0, baseThrust: 0.15, baseTurnRate: 0.075,
-        baseHull: 100, baseShield: 150, shieldRecharge: 1.5, cargoCapacity: 15,
-        armament: ["Beam Laser", "Multi-Cannon", "Disruptor"],
-        costCategory: "Medium-High", description: "The MkI's angrier, better-armed cousin with extra stolen tech bolted to every hardpoint. That suspicious purple paint job screams 'I have warrants in 47 systems.' Shield recharge of 1.5 and 7.0 speed makes it frustratingly hard to catch. Bounty hunters mark these as 'high-value, low-fun' targets.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.3000, y: 0.5000 }, { x: -1.0000, y: 0.5000 }, { x: -0.8000, y: 0.0000 }, { x: -1.0000, y: -0.5000 }, { x: -0.3000, y: -0.5000 }],
-                fillColor: [60, 20, 60]
-            },
-            {
-                vertexData: [{ x: -0.6900, y: -0.3700 }, { x: -0.6400, y: -0.3200 }, { x: -0.2400, y: 0.2800 }, { x: -0.1900, y: 0.3300 }, { x: -0.1600, y: 0.2800 }, { x: -0.7200, y: -0.3200 }],
-                fillColor: [180, 180, 180]
-            },
-            {
-                vertexData: [{ x: -0.6900, y: 0.3300 }, { x: -0.6400, y: 0.2800 }, { x: -0.2400, y: -0.3200 }, { x: -0.1900, y: -0.3700 }, { x: -0.1600, y: -0.3200 }, { x: -0.7200, y: 0.2800 }],
-                fillColor: [180, 180, 180]
-            },
-            {
-                vertexData: [{ x: -0.1900, y: -0.2200 }, { x: -0.1900, y: 0.1800 }, { x: -0.3900, y: 0.2300 }, { x: -0.5400, y: 0.1800 }, { x: -0.5900, y: 0.0800 }, { x: -0.5900, y: -0.1200 }, { x: -0.5400, y: -0.2200 }, { x: -0.3900, y: -0.2700 }],
-                fillColor: [230, 230, 230]
-            },
-            {
-                vertexData: [{ x: -0.6600, y: 0.1300 }, { x: -0.6100, y: 0.1000 }, { x: -0.6300, y: 0.0600 }, { x: -0.6100, y: 0.0200 }, { x: -0.6300, y: -0.0200 }, { x: -0.6100, y: -0.0600 }, { x: -0.6300, y: -0.1000 }, { x: -0.6100, y: -0.1400 }, { x: -0.6600, y: -0.1700 }, { x: -0.6900, y: -0.1000 }, { x: -0.6900, y: 0.0600 }],
-                fillColor: [230, 230, 230]
-            },
-            {
-                vertexData: [{ x: -0.3400, y: -0.1600 }, { x: -0.3400, y: -0.1000 }, { x: -0.4400, y: -0.1300 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.3400, y: 0.0600 }, { x: -0.3400, y: 0.1200 }, { x: -0.4400, y: 0.0900 }],
-                fillColor: [0, 0, 0]
-            },
-            {
-                vertexData: [{ x: -0.4800, y: -0.0600 }, { x: -0.4800, y: 0.0200 }, { x: -0.5400, y: -0.0200 }],
-                fillColor: [0, 0, 0]
-            }
-        ],
-        typicalCargo: ["Narcotics", "Weapons"], price: 68000, techLevel: 4,
-        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
-    },
-    "SeparatistLiberator": {
-        name: "Separatist Liberator", role: "Assault Fighter", sizeCategory: "Small", size: 36,
-        baseMaxSpeed: 6.5, baseThrust: 0.14, baseTurnRate: 0.07,
-        baseHull: 90, baseShield: 110, shieldRecharge: 1.2, cargoCapacity: 12,
-        armament: ["Multi-Cannon", "Burst Blaster"],
-        costCategory: "Medium", description: "Separatist standard issue fighter—rugged, reliable, and painted in revolutionary red. Not flashy but effective, like the pilots who fly them. That 90 hull means it survives battles that would atomize cheaper ships. Preferred by the kind of people who use words like 'liberation' and 'regime change' unironically.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.6000, y: 0.6000 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.6000, y: -0.6000 }],
-                fillColor: [100, 40, 40],
-            },
-            {
-                vertexData: [{ x: 0.2200, y: 0.0000 }, { x: 0.1100, y: 0.1905 }, { x: -0.1100, y: 0.1905 }, { x: -0.2200, y: 0.0000 }, { x: -0.1100, y: -0.1905 }, { x: 0.1100, y: -0.1905 }],
-                fillColor: [150, 150, 180],
-            },
-            // Revolutionary star emblem
-            {
-                vertexData: [{ x: 0.5000, y: 0.0000 }, { x: 0.4200, y: 0.0600 }, { x: 0.4200, y: -0.0600 }],
-                fillColor: [255, 215, 0]
-            },
-            // Wing stripe
-            {
-                vertexData: [{ x: -0.5000, y: 0.5000 }, { x: -0.7000, y: 0.4000 }, { x: -0.7000, y: 0.3500 }, { x: -0.5000, y: 0.4500 }],
-                fillColor: [180, 60, 60]
-            },
-            {
-                vertexData: [{ x: -0.5000, y: -0.5000 }, { x: -0.7000, y: -0.4000 }, { x: -0.7000, y: -0.3500 }, { x: -0.5000, y: -0.4500 }],
-                fillColor: [180, 60, 60]
-            }
-        ],
-        typicalCargo: ["Weapons", "Food"], price: 52000, techLevel: 3,
-        aiRoles: ["SEPARATIST"]
-    },
-    "SeparatistDefiant": {
-        name: "Separatist Defiant", role: "Gunship", sizeCategory: "Medium", size: 58,
-        baseMaxSpeed: 4.8, baseThrust: 0.1, baseTurnRate: 0.04,
-        baseHull: 250, baseShield: 180, shieldRecharge: 0.9, cargoCapacity: 30,
-        armament: ["Heavy Cannon", "Railgun Turret", "Twin Pulse", "Guardian Missile"],
-        costCategory: "Medium-High", description: "Built specifically to break military blockades and ruin admirals' days. That 250 hull isn't for show—it's for absorbing fire while returning tenfold hurt. Separatist engineers crammed every available space with guns and armor. Subtlety died so this gunship could live. Nobody mourns subtlety.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9000, y: 0.4000 }, { x: 0.4000, y: 0.8000 }, { x: -0.7765, y: 0.8000 }, { x: -0.9000, y: 0.4000 }, { x: -0.9000, y: -0.4000 }, { x: -0.7765, y: -0.8000 }, { x: 0.4000, y: -0.8000 }, { x: 0.9000, y: -0.4000 }],
-                fillColor: [70, 70, 70]
-            },
-            {
-                vertexData: [{ x: -0.3192, y: 0.0000 }, { x: -0.4292, y: 0.1905 }, { x: -0.6492, y: 0.1905 }, { x: -0.7592, y: 0.0000 }, { x: -0.6492, y: -0.1905 }, { x: -0.4292, y: -0.1905 }],
-                fillColor: [170, 3, 3]
-            },
-            {
-                vertexData: [{ x: -0.6115, y: -0.6230 }, { x: -0.5095, y: -0.5024 }, { x: 0.2554, y: -0.7038 }],
-                fillColor: [113, 14, 39]
-            },
-            {
-                vertexData: [{ x: -0.6115, y: 0.6230 }, { x: -0.5095, y: 0.5024 }, { x: 0.2554, y: 0.7038 }],
-                fillColor: [113, 14, 39]
-            }
-        ],
-        typicalCargo: ["Weapons", "Chemicals"], price: 90000, techLevel: 4,
-        aiRoles: ["SEPARATIST"]
-    },
-    "SeparatistOutlander": {
-        name: "Separatist Outlander", role: "Long-Range Scout/Raider", sizeCategory: "Medium", size: 50,
-        baseMaxSpeed: 5.5, baseThrust: 0.09, baseTurnRate: 0.05,
-        baseHull: 120, baseShield: 150, shieldRecharge: 1.3, cargoCapacity: 40, // For supplies or loot
-        armament: ["Beam Laser", "Mini-Turret"],
-        costCategory: "Medium", description: "For when your revolution needs supplies from sketchy contacts six jumps away. Balanced stats (120 hull, 150 shields, 40 cargo) make it good at everything, great at nothing—exactly what you want when every system might be hostile. The ship equivalent of a good poker face.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.3000, y: 0.3000 }, { x: -0.2000, y: 0.7000 }, { x: -1.0000, y: 0.3000 }, { x: -1.0000, y: -0.3000 }, { x: -0.2000, y: -0.7000 }, { x: 0.3000, y: -0.3000 }],
-                fillColor: [60, 80, 60],
-            },
-            {
-                vertexData: [{ x: -0.3532, y: 0.0000 }, { x: -0.4632, y: 0.1905 }, { x: -0.6832, y: 0.1905 }, { x: -0.7932, y: 0.0000 }, { x: -0.6832, y: -0.1905 }, { x: -0.4632, y: -0.1905 }],
-                fillColor: [212, 22, 22],
-            }
-        ],
-        typicalCargo: ["Computers", "Adv Components", "Food"], price: 70000, techLevel: 4,
-        aiRoles: ["SEPARATIST", "PIRATE"]
-    },
-    "SeparatistVanguard": {
-        name: "Separatist Vanguard", role: "Heavy Assault Cruiser", sizeCategory: "Large", size: 85,
-        baseMaxSpeed: 4.2, baseThrust: 0.08, baseTurnRate: 0.035,
-        baseHull: 400, baseShield: 300, shieldRecharge: 1.0, cargoCapacity: 80,
-        armament: ["Force Blaster", "Railgun Turret", "Quad Pulse", "Guardian Missile"],
-        costCategory: "High", description: "The Separatist movement's pride and propaganda centerpiece. Bristles with 400 hull and enough weaponry to make empires nervous. When one of these shows up, it's not a raid—it's a statement. Usually reads: 'your government is illegitimate and we brought receipts (in missile form).'",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0000, y: 0.2000 }, { x: 0.6000, y: 0.7000 }, { x: -0.6000, y: 0.9000 }, { x: -1.0000, y: 0.5000 }, { x: -1.0000, y: -0.5000 }, { x: -0.6000, y: -0.9000 }, { x: 0.6000, y: -0.7000 }, { x: 1.0000, y: -0.2000 }],
-                fillColor: [52, 65, 64]
-            },
-            {
-                vertexData: [{ x: -0.3477, y: 0.0000 }, { x: -0.4577, y: 0.1905 }, { x: -0.6777, y: 0.1905 }, { x: -0.7877, y: 0.0000 }, { x: -0.6777, y: -0.1905 }, { x: -0.4577, y: -0.1905 }],
-                fillColor: [212, 12, 42]
-            }
-        ],
-        typicalCargo: ["Weapons", "Machinery"], price: 160000, techLevel: 5,
-        aiRoles: ["COMBAT", "SEPARATIST"]
-    },
-    "SeparatistPartisan": {
-        name: "Separatist Partisan", role: "Light Skirmisher", sizeCategory: "Tiny", size: 20,
-        baseMaxSpeed: 7.5, baseThrust: 0.17, baseTurnRate: 0.085,
-        baseHull: 35, baseShield: 45, shieldRecharge: 1.1, cargoCapacity: 4,
-        armament: ["Pulse Laser"],
-        costCategory: "Low", description: "The Separatist militia's sacrificial lamb. Tiny (20), fast (7.5), and piloted by people with more conviction than sense. Massively outgunned in every fight but they keep coming anyway. Military analysts call them 'target practice.' Separatists call them 'heroes.' Both are correct.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: -0.7000, y: 0.5000 }, { x: -0.9000, y: 0.0000 }, { x: -0.7000, y: -0.5000 }],
-                fillColor: [80, 80, 60],
-            },
-            {
-                vertexData: [{ x: -0.2265, y: 0.0000 }, { x: -0.3365, y: 0.1905 }, { x: -0.5565, y: 0.1905 }, { x: -0.6665, y: 0.0000 }, { x: -0.5565, y: -0.1905 }, { x: -0.3365, y: -0.1905 }],
-                fillColor: [182, 17, 17],
-            }
-        ],
-        typicalCargo: [], price: 28000, techLevel: 2,
-        aiRoles: ["COMBAT", "SEPARATIST", "GUARD"]
-    },
-    "SeparatistBulwark": {
-        name: "Separatist Bulwark", role: "Mobile Defense Platform", sizeCategory: "Very Large", size: 130,
-        baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRate: 0.015,
-        baseHull: 700, baseShield: 500, shieldRecharge: 0.8, cargoCapacity: 150,
-        armament: ["Railgun Turret", "Mini-Turret", "Wide Scatter", "Avenger Missile", "Barrier Field"],
-        costCategory: "Very High", description: "A flying fortress that moves at the speed of continental drift (2.5 max) but Laughs at conventional weapons with 700 hull and 500 shields. Separatists park these over contested systems and dare anyone to do something about it. Usually, nobody does. Smart. Attacking this is choosing career-end ing violence.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0000, y: 0.7000 }, { x: 0.7000, y: 1.0000 }, { x: -0.7000, y: 1.0000 }, { x: -1.0000, y: 0.7000 }, { x: -1.0000, y: -0.7000 }, { x: -0.7000, y: -1.0000 }, { x: 0.7000, y: -1.0000 }, { x: 1.0000, y: -0.7000 }],
-                fillColor: [52, 65, 64]
-            },
-            {
-                vertexData: [{ x: -0.2512, y: -0.1969 }, { x: -0.3612, y: -0.0064 }, { x: -0.5812, y: -0.0064 }, { x: -0.6912, y: -0.1969 }, { x: -0.5812, y: -0.3874 }, { x: -0.3612, y: -0.3874 }],
-                fillColor: [212, 12, 42]
-            },
-            {
-                vertexData: [{ x: -0.2512, y: 0.1969 }, { x: -0.3612, y: 0.0064 }, { x: -0.5812, y: 0.0064 }, { x: -0.6912, y: 0.1969 }, { x: -0.5812, y: 0.3874 }, { x: -0.3612, y: 0.3874 }],
-                fillColor: [212, 12, 42]
-            },
-            {
-                vertexData: [{ x: -0.3497, y: 0.0004 }, { x: -0.2397, y: 0.1910 }, { x: -0.0197, y: 0.1910 }, { x: 0.0903, y: 0.0004 }, { x: -0.0197, y: -0.1901 }, { x: -0.2397, y: -0.1901 }],
-                fillColor: [212, 12, 42]
-            }
-        ],
-        typicalCargo: ["Metals", "Machinery"], price: 250000, techLevel: 5,
-        aiRoles: ["COMBAT", "SEPARATIST"],
-        canDualEngage: true // Large ships can engage two targets simultaneously
-    },
-    "SeparatistShadow": {
-        name: "Separatist Shadow", role: "Stealth Infiltrator", sizeCategory: "Small", size: 28,
-        baseMaxSpeed: 6.0, baseThrust: 0.11, baseTurnRate: 0.06,
-        baseHull: 50, baseShield: 70, shieldRecharge: 1.2, cargoCapacity: 10,
-        armament: ["Pulse Laser", "Disruptor"],
-        costCategory: "Medium-High", description: "Painted matte black because Separatist stealth operatives watched too many spy holos. Actually does have basic sensor-dampening tech, but it's temperamental. Fast enough (6.0) to slip past patrols when the stealth works. When it doesn't, that 50 hull won't save you. High risk, high reward, high stupidity.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.3000, y: 0.4000 }, { x: -0.8000, y: 0.1000 }, { x: -0.8000, y: -0.1000 }, { x: -0.3000, y: -0.4000 }],
-                fillColor: [30, 30, 30]
-            },
-            {
-                vertexData: [{ x: -0.1743, y: 0.0000 }, { x: -0.2843, y: 0.1905 }, { x: -0.5043, y: 0.1905 }, { x: -0.6143, y: 0.0000 }, { x: -0.5043, y: -0.1905 }, { x: -0.2843, y: -0.1905 }],
-                fillColor: [114, 3, 3]
-            }
-        ],
-        typicalCargo: ["Adv Components", "Computers"], price: 65000, techLevel: 4,
-        aiRoles: ["PIRATE", "SEPARATIST"]
-    },
-    "SeparatistSupplyRunner": {
-        name: "Separatist Supply Runner", role: "Armored Transport", sizeCategory: "Medium", size: 52,
-        baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRate: 0.035,
-        baseHull: 180, baseShield: 120, shieldRecharge: 0.8, cargoCapacity: 100,
-        armament: ["Twin Pulse", "Mini-Turret"],
-        costCategory: "Medium", description: "Armored supply runner built like a tank with cargo doors. Hauls 100 tons of revolution-sustaining goods through military zones while absorbing fire with 180 hull. Not fast, not pretty, but essential. Loses one of these and your rebellion starves. Pilots get commendations posthumously or drinks at the cantina. No middle ground.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9000, y: 0.6000 }, { x: 0.7000, y: 0.8000 }, { x: -0.7000, y: 0.8000 }, { x: -0.9000, y: 0.6000 }, { x: -0.9000, y: -0.6000 }, { x: -0.7000, y: -0.8000 }, { x: 0.7000, y: -0.8000 }, { x: 0.9000, y: -0.6000 }],
-                fillColor: [90, 70, 50]
-            },
-            {
-                vertexData: [{ x: -0.3708, y: 0.2585 }, { x: -0.4808, y: 0.4490 }, { x: -0.7008, y: 0.4490 }, { x: -0.8108, y: 0.2585 }, { x: -0.7008, y: 0.0679 }, { x: -0.4808, y: 0.0679 }],
-                fillColor: [133, 0, 57]
-            },
-            {
-                vertexData: [{ x: -0.3708, y: -0.2585 }, { x: -0.4808, y: -0.4490 }, { x: -0.7008, y: -0.4490 }, { x: -0.8108, y: -0.2585 }, { x: -0.7008, y: -0.0679 }, { x: -0.4808, y: -0.0679 }],
-                fillColor: [133, 0, 57]
-            }
-        ],
-        typicalCargo: ["Food", "Medicine", "Weapons", "Chemicals"], price: 48000, techLevel: 3,
-        aiRoles: ["HAULER"]
-    },
+
+    // --- SUPPORT & REPAIR ---
     "FieldRepairTender": {
         name: "Field Repair Tender", role: "Support/Repair", sizeCategory: "Medium", size: 90,
         baseMaxSpeed: 2, baseThrust: 0.04, baseTurnRate: 0.03491,
@@ -2382,286 +2702,80 @@ const SHIP_DEFINITIONS = {
         aiRoles: ["REPAIR"],
         techLevel: 3
     },
-    "VanguardCruiser": {
-        name: "Vanguard Cruiser", role: "Fast Attack Cruiser", sizeCategory: "Large", size: 95,
-        baseMaxSpeed: 6.5, baseThrust: 0.12, baseTurnRate: 0.018,
-        baseHull: 380, baseShield: 320, shieldRecharge: 1.3, cargoCapacity: 60,
-        armament: ["Sniper Rail", "Railgun Turret", "Force Blaster", "Kalibr Missile", "Harpoon Launcher", "Barrier Field"],
-        costCategory: "Very High", description: "Fast-attack cruiser that breaks every expectation by hitting 6.5 speed despite its size. Military R&D dumped unlimited funds into making something big move like a fighter. Succeeded brilliantly. Handles like a drunk shopping cart but enemies rarely live long enough to notice. Engineering triumph meets elegant overkill.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.8000, y: 0.2500 }, { x: 0.3000, y: 0.4000 }, { x: -0.6000, y: 0.5000 }, { x: -1.0000, y: 0.3000 }, { x: -1.1000, y: 0.0000 }, { x: -1.0000, y: -0.3000 }, { x: -0.6000, y: -0.5000 }, { x: 0.3000, y: -0.4000 }, { x: 0.8000, y: -0.2500 }],
-                fillColor: [70, 80, 100]
-            },
-            {
-                vertexData: [{ x: 0.7919, y: -0.0075 }, { x: 0.4919, y: 0.1425 }, { x: 0.0919, y: 0.1425 }, { x: 0.0919, y: -0.1575 }, { x: 0.4919, y: -0.1575 }],
-                fillColor: [120, 180, 220]
-            },
-            {
-                vertexData: [{ x: -0.5315, y: 0.2138 }, { x: -0.6915, y: 0.2938 }, { x: -0.8515, y: 0.1738 }, { x: -0.8515, y: -0.1862 }, { x: -0.6915, y: -0.3062 }, { x: -0.5315, y: -0.2262 }, { x: -0.3889, y: -0.1549 }, { x: -0.2869, y: -0.2138 }, { x: -0.0964, y: -0.1038 }, { x: -0.0964, y: 0.1162 }, { x: -0.2869, y: 0.2262 }, { x: -0.4120, y: 0.1540 }],
-                fillColor: [55, 52, 60]
-            },
-            // Military chevron emblem (large cruiser)
-            {
-                vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.7500, y: 0.1200 }, { x: 0.8300, y: 0.0000 }, { x: 0.7500, y: -0.1200 }],
-                fillColor: [218, 165, 32]
-            },
-            // Port nav light
-            {
-                vertexData: [{ x: -0.5500, y: 0.4800 }, { x: -0.6200, y: 0.4500 }, { x: -0.5700, y: 0.4200 }],
-                fillColor: [255, 50, 50]
-            },
-            // Starboard nav light
-            {
-                vertexData: [{ x: -0.5500, y: -0.4800 }, { x: -0.6200, y: -0.4500 }, { x: -0.5700, y: -0.4200 }],
-                fillColor: [50, 255, 50]
-            }
-        ],
-        typicalCargo: ["Weapons", "Adv Components", "Computers"],
-        price: 89500,
-        aiRoles: ["MILITARY", "COMBAT"],
-        techLevel: 4,
-        canDualEngage: true
-    },
-    "ImperialClipper": {
-        name: "Imperial Clipper", role: "Multi-Role/Trader", sizeCategory: "Large", size: 95,
-        baseMaxSpeed: 7.0, baseThrust: 0.10, baseTurnRate: 0.02618,
-        baseHull: 180, baseShield: 180, shieldRecharge: 1.4, cargoCapacity: 180,
-        armament: ["V Punch", "Mini-Turret", "Beam Laser", "Heavy Tangle"], // Elegant, balanced
-        costCategory: "High", description: "Imperial elegance meets cargo logistics. Gleaming white hull that screams 'I'm better than you' while hauling 180 tons faster (7.0 speed) than ships half its size. Shields recharge at 1.4x because imperials believe vulnerabilities are for peasants. Docking fees are double just because it exists.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0500, y: 0.0000 }, { x: 0.6500, y: 0.2000 }, { x: 0.0500, y: 0.9000 }, { x: -0.8500, y: 0.8000 }, { x: -1.0500, y: 0.4000 }, { x: -1.0500, y: -0.4000 }, { x: -0.8500, y: -0.8000 }, { x: 0.0500, y: -0.9000 }, { x: 0.6500, y: -0.2000 }],
-                fillColor: [220, 225, 230],
-            },
-            {
-                vertexData: [{ x: 0.4246, y: 0.0632 }, { x: 0.6612, y: 0.0067 }, { x: 0.4246, y: -0.0499 }],
-                fillColor: [150, 150, 180],
-            },
-            {
-                vertexData: [{ x: -0.4673, y: 0.0000 }, { x: -0.6264, y: 0.0588 }, { x: -0.6332, y: 0.2283 }, { x: -0.7382, y: 0.0951 }, { x: -0.9015, y: 0.1411 }, { x: -0.8073, y: 0.0000 }, { x: -0.9015, y: -0.1411 }, { x: -0.7382, y: -0.0951 }, { x: -0.6332, y: -0.2283 }, { x: -0.6264, y: -0.0588 }],
-                fillColor: [160, 80, 200],
-            }
-        ],
-        typicalCargo: ["Luxury Goods", "Medicine", "Textiles", "Textiles", "Textiles"],
-        price: 42900,
-        aiRoles: ["IMPERIAL"],
-        techLevel: 4 // Advanced
-    },
-    "ImperialCourier": {
-        name: "Imperial Courier", role: "Light Fighter/Multi", sizeCategory: "Small", size: 32,
-        baseMaxSpeed: 7.8, baseThrust: 0.16, baseTurnRate: 0.07505,
-        baseHull: 70, baseShield: 150, shieldRecharge: 1.7, cargoCapacity: 12,
-        armament: ["Twin Pulse", "Beam Laser"], // Elegant, refined
-        costCategory: "Medium", description: "Imperial's answer to 'what if we made the courier fast AND pretentious?' Hits 7.8 speed while looking down its nose at peasant ships. Shields regenerate at 1.7x because average is for commoners. Only 12 cargo tons because luxury goods don't need much space. Style over substance, but what style!",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.4000, y: 0.3000 }, { x: -0.5000, y: 0.5000 }, { x: -0.9000, y: 0.4000 }, { x: -1.0000, y: 0.0000 }, { x: -0.9000, y: -0.4000 }, { x: -0.5000, y: -0.5000 }, { x: 0.4000, y: -0.3000 }],
-                fillColor: [210, 215, 220],
-            },
-            {
-                vertexData: [{ x: 0.2400, y: 0.0000 }, { x: 0.0809, y: 0.0588 }, { x: 0.0742, y: 0.2283 }, { x: -0.0309, y: 0.0951 }, { x: -0.1942, y: 0.1411 }, { x: -0.1000, y: 0.0000 }, { x: -0.1942, y: -0.1411 }, { x: -0.0309, y: -0.0951 }, { x: 0.0742, y: -0.2283 }, { x: 0.0809, y: -0.0588 }],
-                fillColor: [160, 80, 200],
-            }
-        ],
-        typicalCargo: ["Luxury Goods", "Medicine"],
-        price: 20100,
-        aiRoles: ["IMPERIAL"],
-        techLevel: 2 // Utility
-    },
-    "ImperialGuardian": {
-        name: "Imperial Guardian", role: "System Patrol Cutter", sizeCategory: "Medium", size: 50,
-        baseMaxSpeed: 5.8, baseThrust: 0.1, baseTurnRate: 0.05,
-        baseHull: 160, baseShield: 200, shieldRecharge: 1.5, cargoCapacity: 25,
-        armament: ["Beam Laser", "Twin Pulse", "Mini-Turret"],
-        costCategory: "Medium-High", description: "Imperial system patrol—faster than police cruisers, prettier than military warships, and more condescending than both combined. That 200-shield capacity and 5.8 speed combo makes pirates rethink carreer choices. Gold trim is non-optional. Serves as both intimidation and target practice for rebels.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.5000, y: 0.4000 }, { x: -0.5000, y: 0.7000 }, { x: -1.0000, y: 0.3000 }, { x: -1.0000, y: -0.3000 }, { x: -0.5000, y: -0.7000 }, { x: 0.5000, y: -0.4000 }],
-                fillColor: [220, 220, 240],
-            },
-            {
-                vertexData: [{ x: -0.4091, y: 0.0000 }, { x: -0.5682, y: 0.0588 }, { x: -0.5750, y: 0.2283 }, { x: -0.6800, y: 0.0951 }, { x: -0.8433, y: 0.1411 }, { x: -0.7491, y: 0.0000 }, { x: -0.8433, y: -0.1411 }, { x: -0.6800, y: -0.0951 }, { x: -0.5750, y: -0.2283 }, { x: -0.5682, y: -0.0588 }],
-                fillColor: [160, 80, 200],
-            }
-        ],
-        typicalCargo: ["Slaves", "Narcotics"], price: 85000, techLevel: 4,
-        aiRoles: ["COMBAT", "IMPERIAL"]
-    },
-    "ImperialPaladin": {
-        name: "Imperial Paladin", role: "Heavy Assault Frigate", sizeCategory: "Large", size: 90,
-        baseMaxSpeed: 4.5, baseThrust: 0.09, baseTurnRate: 0.038,
-        baseHull: 350, baseShield: 400, shieldRecharge: 1.7, cargoCapacity: 70,
-        armament: ["Heavy Cannon", "Mini-Turret", "Force Blaster", "Heavy Tangle", "Halo"],
-        costCategory: "High", description: "Imperial heavy hitter designed for 'peacekeeping' (read: subjugation). That pristine white hull with 350 hull and 400 shields broadcasts 'mess around and find out' in six languages. Slow to turn but broadside firepower compensates by erasing problems. Rebels hate it. Imperials love everything about it.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.8444, y: 0.0813 }, { x: 0.3896, y: 0.3191 }, { x: -0.3614, y: 0.3732 }, { x: -0.5719, y: 0.6322 }, { x: -0.8444, y: 0.5000 }, { x: -0.8444, y: -0.5000 }, { x: -0.5719, y: -0.6322 }, { x: -0.3614, y: -0.3732 }, { x: 0.3896, y: -0.3191 }, { x: 0.8444, y: -0.0813 }],
-                fillColor: [240, 240, 250],
-            },
-            {
-                vertexData: [{ x: -0.3352, y: 0.0041 }, { x: -0.4943, y: 0.0629 }, { x: -0.5010, y: 0.2323 }, { x: -0.6061, y: 0.0992 }, { x: -0.7693, y: 0.1452 }, { x: -0.6752, y: 0.0041 }, { x: -0.7693, y: -0.1370 }, { x: -0.6061, y: -0.0910 }, { x: -0.5010, y: -0.2242 }, { x: -0.4943, y: -0.0547 }],
-                fillColor: [160, 80, 200],
-            }
-        ],
-        typicalCargo: ["Weapons", "Luxury Goods"], price: 170000, techLevel: 4,
-        aiRoles: ["COMBAT", "IMPERIAL"],
-        canDualEngage: true // Large ships can engage two targets simultaneously
-    },
-    "ImperialLancer": {
-        name: "Imperial Lancer", role: "Fast Attack Interceptor", sizeCategory: "Small", size: 34,
-        baseMaxSpeed: 8.2, baseThrust: 0.19, baseTurnRate: 0.085,
-        baseHull: 70, baseShield: 130, shieldRecharge: 1.6, cargoCapacity: 8,
-        armament: ["Twin Pulse", "Sniper Rail"],
-        costCategory: "Medium", description: "Built specifically to catch things that run. Insane 8.2 speed means 'escape' isn't in the target's vocabulary. Mounts precision weapons because Imperials believe overkill is gauche. Used for surgical strikes, high-value assassinations, and reminding everyone why the Empire is still in charge. Terrifyingly effective.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.5000, y: 0.3000 }, { x: -1.0000, y: 0.1000 }, { x: -1.0000, y: -0.1000 }, { x: -0.5000, y: -0.3000 }],
-                fillColor: [200, 210, 230],
-            },
-            {
-                vertexData: [{ x: -0.3304, y: 0.0000 }, { x: -0.4895, y: 0.0588 }, { x: -0.4962, y: 0.2283 }, { x: -0.6013, y: 0.0951 }, { x: -0.7645, y: 0.1411 }, { x: -0.6704, y: 0.0000 }, { x: -0.7645, y: -0.1411 }, { x: -0.6013, y: -0.0951 }, { x: -0.4962, y: -0.2283 }, { x: -0.4895, y: -0.0588 }],
-                fillColor: [160, 80, 200],
-            }
-        ],
-        typicalCargo: [], price: 62000, techLevel: 4,
-        aiRoles: ["COMBAT", "IMPERIAL", "GUARD"]
-    },
-    "ImperialJusticar": {
-        name: "Imperial Justicar", role: "Heavy Gunboat", sizeCategory: "Medium", size: 62,
-        baseMaxSpeed: 5.0, baseThrust: 0.11, baseTurnRate: 0.042,
-        baseHull: 280, baseShield: 320, shieldRecharge: 1.4, cargoCapacity: 40,
-        armament: ["Quad Pulse", "Railgun Turret", "Beam Laser", "Heavy Tangle", "Barrier Field"],
-        costCategory: "High", description: "The Imperial hammer for when diplomacy has conclusively failed. Square, brutal, and packing 280 hull plus 320 shields. That geometric design isn't artistic—it's optimal for mounting weapons on every surface. Enforces blockades by existing near them. Rebels call these 'nope ships' and avoid accordingly.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9000, y: 0.5000 }, { x: 0.5000, y: 0.9000 }, { x: -0.5000, y: 0.9000 }, { x: -0.9000, y: 0.5000 }, { x: -0.9000, y: -0.5000 }, { x: -0.5000, y: -0.9000 }, { x: 0.5000, y: -0.9000 }, { x: 0.9000, y: -0.5000 }],
-                fillColor: [180, 190, 210],
-            },
-            {
-                vertexData: [{ x: -0.7571, y: -0.4875 }, { x: 0.0000, y: -0.3393 }, { x: 0.7571, y: -0.4875 }, { x: -0.3319, y: -0.7334 }],
-                fillColor: [255, 255, 255],
-            },
-            {
-                vertexData: [{ x: -0.3956, y: 0.7037 }, { x: 0.7252, y: 0.4089 }, { x: 0.0000, y: 0.2726 }, { x: -0.7252, y: 0.4089 }],
-                fillColor: [255, 255, 255],
-            },
-            {
-                vertexData: [{ x: -0.3938, y: 0.0000 }, { x: -0.5529, y: 0.0588 }, { x: -0.5596, y: 0.2283 }, { x: -0.6647, y: 0.0951 }, { x: -0.8279, y: 0.1411 }, { x: -0.7338, y: 0.0000 }, { x: -0.8279, y: -0.1411 }, { x: -0.6647, y: -0.0951 }, { x: -0.5596, y: -0.2283 }, { x: -0.5529, y: -0.0588 }],
-                fillColor: [160, 80, 200],
-            }
-        ],
-        typicalCargo: ["Weapons", "Slaves"], price: 125000, techLevel: 4,
-        aiRoles: ["COMBAT", "IMPERIAL"]
-    },
-    "ImperialEnvoy": {
-        name: "Imperial Envoy", role: "Diplomatic Transport", sizeCategory: "Large", size: 70,
-        baseMaxSpeed: 6.0, baseThrust: 0.08, baseTurnRate: 0.03,
-        baseHull: 150, baseShield: 250, shieldRecharge: 1.8, cargoCapacity: 50,
-        armament: ["Mini-Turret", "Pulse Laser"],
-        costCategory: "High", description: "Diplomatic transport that's more armed than some destroyers. Shields at 250 because ambassadors refuse to die looking undignified. Speed of 6.0 means it arrives fashionably not-late. The white-and-gold paint scheme costs more than small ships. Attacking one is declaring war while insulting interior design taste.",
 
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.8000, y: 0.3000 }, { x: -0.8000, y: 0.4000 }, { x: -1.1000, y: 0.0000 }, { x: -0.8000, y: -0.4000 }, { x: 0.8000, y: -0.3000 }],
-                fillColor: [250, 250, 255],
-            },
-            {
-                vertexData: [{ x: -0.4994, y: 0.0000 }, { x: -0.6585, y: 0.0588 }, { x: -0.6652, y: 0.2283 }, { x: -0.7703, y: 0.0951 }, { x: -0.9336, y: 0.1411 }, { x: -0.8394, y: 0.0000 }, { x: -0.9336, y: -0.1411 }, { x: -0.7703, y: -0.0951 }, { x: -0.6652, y: -0.2283 }, { x: -0.6585, y: -0.0588 }],
-                fillColor: [160, 80, 200],
-            }
-        ],
-        typicalCargo: ["Luxury Goods"], price: 105000, techLevel: 4,
-        aiRoles: ["IMPERIAL"]
-    },
-    "ImperialSentinel": {
-        name: "Imperial Sentinel", role: "Border Patrol Corvette", sizeCategory: "Large", size: 78,
-        baseMaxSpeed: 5.2, baseThrust: 0.095, baseTurnRate: 0.04,
-        baseHull: 300, baseShield: 350, shieldRecharge: 1.6, cargoCapacity: 60,
-        armament: ["Mini-Turret", "Multi-Cannon", "Twin Pulse"],
-        costCategory: "High", description: "Long-duration patrol corvette designed for border regions where backup is measured in weeks. That 300 hull and 350 shields keeps it alive until reinforcements maybe arrive. Crews serve six-month deployments wondering if headquarters remembers they exist. Spoiler: headquarters does not remember.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0000, y: 0.3000 }, { x: 0.4000, y: 0.6000 }, { x: -0.4000, y: 0.8000 }, { x: -1.0000, y: 0.6000 }, { x: -1.0000, y: -0.6000 }, { x: -0.4000, y: -0.8000 }, { x: 0.4000, y: -0.6000 }, { x: 1.0000, y: -0.3000 }],
-                fillColor: [210, 215, 225],
-            },
-            {
-                vertexData: [{ x: -0.3762, y: 0.0000 }, { x: -0.5353, y: 0.0588 }, { x: -0.5420, y: 0.2283 }, { x: -0.6471, y: 0.0951 }, { x: -0.8103, y: 0.1411 }, { x: -0.7162, y: 0.0000 }, { x: -0.8103, y: -0.1411 }, { x: -0.6471, y: -0.0951 }, { x: -0.5420, y: -0.2283 }, { x: -0.5353, y: -0.0588 }],
-                fillColor: [160, 80, 200],
-            }
-        ],
-        typicalCargo: ["Adv Components", "Slaves"], price: 145000, techLevel: 5,
-        aiRoles: ["COMBAT", "IMPERIAL"]
-    },
-    "ImperialEagleMkII": {
-        name: "Imperial Eagle MkII", role: "Superiority Fighter", sizeCategory: "Small", size: 30,
-        baseMaxSpeed: 7.8, baseThrust: 0.18, baseTurnRate: 0.092,
-        baseHull: 60, baseShield: 140, shieldRecharge: 1.7, cargoCapacity: 6,
-        armament: ["Twin Pulse", "Beam Laser"],
-        costCategory: "Medium", description: "Imperial version of the classic Eagle—same idea, more arrogant execution. Faster (7.8), better shielded (140), and painted in colors that scream 'elite pilot aboard.' Only 6 cargo tons because carrying freight is for the help. Exclusively assigned to pilots with more swagger than sense. Both metrics measured high.",
-
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.6000, y: 0.4000 }, { x: -0.9000, y: 0.2000 }, { x: -0.9000, y: -0.2000 }, { x: -0.6000, y: -0.4000 }],
-                fillColor: [230, 230, 245],
-            },
-            {
-                vertexData: [{ x: -0.3680, y: 0.0000 }, { x: -0.5271, y: 0.0588 }, { x: -0.5338, y: 0.2283 }, { x: -0.6389, y: 0.0951 }, { x: -0.8022, y: 0.1411 }, { x: -0.7080, y: 0.0000 }, { x: -0.8022, y: -0.1411 }, { x: -0.6389, y: -0.0951 }, { x: -0.5338, y: -0.2283 }, { x: -0.5271, y: -0.0588 }],
-                fillColor: [160, 80, 200],
-            }
-        ],
-        typicalCargo: [], price: 58000, techLevel: 3,
-        aiRoles: ["COMBAT", "IMPERIAL", "GUARD"]
-    },
-    "ImperialCutterLite": {
-        name: "Imperial Cutter Lite", role: "Fast Armed Trader", sizeCategory: "Large", size: 80,
-        baseMaxSpeed: 6.5, baseThrust: 0.09, baseTurnRate: 0.028,
-        baseHull: 200, baseShield: 280, shieldRecharge: 1.6, cargoCapacity: 150,
-        armament: ["Beam Laser", "Twin Pulse", "Mini-Turret"],
-        costCategory: "High", description: "A smaller, more agile version of the Cutter, still capable of significant cargo and defense.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 1.1000, y: 0.0000 }, { x: 0.7000, y: 0.2500 }, { x: 0.0000, y: 0.7000 }, { x: -0.9000, y: 0.6000 }, { x: -1.1000, y: 0.3000 }, { x: -1.1000, y: -0.3000 }, { x: -0.9000, y: -0.6000 }, { x: 0.0000, y: -0.7000 }, { x: 0.7000, y: -0.2500 }],
-                fillColor: [225, 230, 240],
-            },
-            {
-                vertexData: [{ x: -0.4765, y: 0.0000 }, { x: -0.6356, y: 0.0588 }, { x: -0.6423, y: 0.2283 }, { x: -0.7474, y: 0.0951 }, { x: -0.9107, y: 0.1411 }, { x: -0.8165, y: 0.0000 }, { x: -0.9107, y: -0.1411 }, { x: -0.7474, y: -0.0951 }, { x: -0.6423, y: -0.2283 }, { x: -0.6356, y: -0.0588 }],
-                fillColor: [160, 80, 200],
-            }
-        ],
-        typicalCargo: ["Luxury Goods", "Adv Components", "Computers"], price: 130000, techLevel: 5,
-        aiRoles: ["COMBAT", "IMPERIAL"]
-    },
-    "ImperialCharger": {
-        name: "Imperial Charger", role: "Light Skirmisher", sizeCategory: "Tiny", size: 20,
-        baseMaxSpeed: 7.5, baseThrust: 0.17, baseTurnRate: 0.085,
-        baseHull: 35, baseShield: 45, shieldRecharge: 1.1, cargoCapacity: 4,
-        armament: ["Pulse Laser"],
-        costCategory: "Low", description: "The Imperial Navy's standardized training vessel—cheap to produce, easy to fly, and expendable enough that admirals don't weep when cadets crash them. That pristine white hull with gold star teaches pilots to look the part before they can fly it. Entry-level speed (7.5) and respectable handling make it perfect for learning. Veterans call it 'the milk carton' but everyone started here.",
-        vertexLayers: [
-            {
-                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: -0.7000, y: 0.5000 }, { x: -0.9000, y: 0.0000 }, { x: -0.7000, y: -0.5000 }],
-                fillColor: [230, 235, 245],
-            },
-            {
-                vertexData: [{ x: -0.2000, y: 0.0000 }, { x: -0.3591, y: 0.0588 }, { x: -0.3658, y: 0.2283 }, { x: -0.4709, y: 0.0951 }, { x: -0.6342, y: 0.1411 }, { x: -0.5400, y: 0.0000 }, { x: -0.6342, y: -0.1411 }, { x: -0.4709, y: -0.0951 }, { x: -0.3658, y: -0.2283 }, { x: -0.3591, y: -0.0588 }],
-                fillColor: [160, 80, 200],
-            }
-        ],
-        typicalCargo: [], price: 20000, techLevel: 2,
-        aiRoles: ["COMBAT", "IMPERIAL", "GUARD"]
-    },
-    "Thargoid": {
-        name: "Thargoid Interceptor", role: "Alien Combat", sizeCategory: "Large", size: 60,
-        baseMaxSpeed: 8.0, baseThrust: 0.20, baseTurnRate: 0.10472,
-        baseHull: 200, baseShield: 300, shieldRecharge: 2.0, cargoCapacity: 0,
-        armament: ["Force Blaster", "Disruptor", "Scatter Beam"], // Alien arsenal
-        costCategory: "N/A", description: "Hostile alien murder-flower from the void that considers humanity a fascinating pest problem. Hits 8.0 speed while regenerating shields faster than you can damage them. Conventional weapons bounce off its incomprehensible hull. Intelligence suggests talking doesn't work. Intelligence is correct. Run or die. Preferably run then die anyway.",
-        vertexData: [], // Not editable via vertex data in this setup
-        typicalCargo: ["Chemicals", "Weapons", "Narcotics"],
+    // --- ALIEN ---
+    "GeometricDrone": {
+        name: "Geometric Drone (Alien)", role: "Alien Scout?", sizeCategory: "Tiny", size: 15,
+        baseMaxSpeed: 9.0, baseThrust: 0.2, baseTurnRate: 0.13963,
+        baseHull: 20, baseShield: 40, shieldRecharge: 1.5, cargoCapacity: 0,
+        armament: ["Scatter Beam"], // Alien tech
+        costCategory: "N/A", description: "Small, fast, rotating alien drone. Unknown purpose.",
+        vertexData: [{ x: 1, y: 0 }, { x: 0.5, y: 0.87 }, { x: -0.5, y: 0.87 }, { x: -1, y: 0 }, { x: -0.5, y: -0.87 }, { x: 0.5, y: -0.87 }], // Regular Hexagon
+        fillColor: [50, 50, 60], // Dark metallic, light stroke
+        typicalCargo: [],
         price: 999999,
         aiRoles: ["ALIEN"],
-        techLevel: 5 // Alien
+        techLevel: 5 // Cutting-edge
+    },
+    "TriadProbe": {
+        name: "Triad Probe (Alien)", role: "Alien Scout", sizeCategory: "Tiny", size: 16,
+        baseMaxSpeed: 9.0, baseThrust: 0.25, baseTurnRate: 0.15,
+        baseHull: 25, baseShield: 30, shieldRecharge: 1.0, cargoCapacity: 0,
+        armament: ["Scatter Beam"],
+        costCategory: "N/A", description: "Three-lobed alien probe, fast and evasive.",
+        vertexLayers: [
+            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [200, 255, 180] },
+            { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.2, y: 0.0 }, { x: 0.0, y: -0.3 }, { x: -0.2, y: 0.0 }], fillColor: [255, 255, 100] }
+        ],
+        typicalCargo: [], price: 999999, aiRoles: ["ALIEN"]
+    },
+    "TesseractScout": {
+        name: "Tesseract Scout (Alien)", role: "Alien Recon", sizeCategory: "Tiny", size: 18,
+        baseMaxSpeed: 10.0, baseThrust: 0.25, baseTurnRate: 0.15,
+        baseHull: 25, baseShield: 30, shieldRecharge: 1.0, cargoCapacity: 0,
+        armament: ["Scatter Beam"],
+        costCategory: "N/A", description: "Alien scout with a shifting, four-dimensional shape.",
+        vertexLayers: [
+            { vertexData: [{ x: 1.0, y: 1.0 }, { x: 1.0, y: -1.0 }, { x: -1.0, y: -1.0 }, { x: -1.0, y: 1.0 }], fillColor: [200, 255, 255] },
+            { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.7, y: 0.0 }, { x: 0.0, y: -0.7 }, { x: -0.7, y: 0.0 }], fillColor: [0, 255, 255] }
+        ],
+        typicalCargo: [], price: 999999, aiRoles: ["ALIEN"]
+    },
+    "PetalSpinner": {
+        name: "Petal Spinner (Alien)", role: "Alien Fighter", sizeCategory: "Small", size: 26,
+        baseMaxSpeed: 8.2, baseThrust: 0.21, baseTurnRate: 0.12,
+        baseHull: 55, baseShield: 70, shieldRecharge: 1.5, cargoCapacity: 0,
+        armament: ["Scatter Beam"],
+        costCategory: "N/A", description: "Alien ship with spinning, flower-like petals.",
+        vertexLayers: [
+            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [255, 180, 255] },
+            { vertexData: [{ x: 0.0, y: 0.2 }, { x: 0.1, y: 0.0 }, { x: 0.0, y: -0.2 }, { x: -0.1, y: 0.0 }], fillColor: [255, 100, 255] }
+        ],
+        typicalCargo: [], price: 999999, aiRoles: ["ALIEN"]
+    },
+    "SpiralWarden": {
+        name: "Spiral Warden (Alien)", role: "Alien Interceptor", sizeCategory: "Small", size: 28,
+        baseMaxSpeed: 8.0, baseThrust: 0.19, baseTurnRate: 0.11,
+        baseHull: 60, baseShield: 90, shieldRecharge: 1.7, cargoCapacity: 0,
+        armament: ["Scatter Beam"],
+        costCategory: "N/A", description: "Alien ship with spiral, shell-like armor.",
+        vertexLayers: [
+            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.7, y: 0.7 }, { x: 1.0, y: 0.0 }, { x: 0.7, y: -0.7 }, { x: 0.0, y: -1.0 }, { x: -0.7, y: -0.7 }, { x: -1.0, y: 0.0 }, { x: -0.7, y: 0.7 }], fillColor: [180, 255, 220] },
+            { vertexData: [{ x: 0.0, y: 0.5 }, { x: 0.35, y: 0.35 }, { x: 0.5, y: 0.0 }, { x: 0.35, y: -0.35 }, { x: 0.0, y: -0.5 }, { x: -0.35, y: -0.35 }, { x: -0.5, y: 0.0 }, { x: -0.35, y: 0.35 }], fillColor: [100, 255, 200] }
+        ],
+        typicalCargo: ["Chemicals"], price: 999999, aiRoles: ["ALIEN"]
+    },
+    "CrescentMarauder": {
+        name: "Crescent Marauder (Alien)", role: "Alien Raider", sizeCategory: "Medium", size: 38,
+        baseMaxSpeed: 7.5, baseThrust: 0.16, baseTurnRate: 0.10,
+        baseHull: 100, baseShield: 120, shieldRecharge: 1.8, cargoCapacity: 10,
+        armament: ["Disruptor", "Scatter Beam"],
+        costCategory: "N/A", description: "Alien ship with a crescent, blade-like hull.",
+        vertexLayers: [
+            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.8, y: 0.3 }, { x: 1.0, y: 0.0 }, { x: 0.8, y: -0.3 }, { x: 0.0, y: -1.0 }, { x: -0.8, y: -0.3 }, { x: -1.0, y: 0.0 }, { x: -0.8, y: 0.3 }], fillColor: [180, 255, 255] },
+            { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.56, y: 0.21 }, { x: 0.7, y: 0.0 }, { x: 0.56, y: -0.21 }, { x: 0.0, y: -0.7 }, { x: -0.56, y: -0.21 }, { x: -0.7, y: 0.0 }, { x: -0.56, y: 0.21 }], fillColor: [0, 255, 255] }
+        ],
+        typicalCargo: ["Narcotics", "Chemicals"], price: 999999, aiRoles: ["ALIEN"]
     },
     "ObeliskSentinel": {
         name: "Obelisk Sentinel (Alien)", role: "Alien Guardian", sizeCategory: "Medium", size: 40,
@@ -2680,30 +2794,6 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: ["Chemicals", "Metals"], price: 999999, aiRoles: ["ALIEN"]
-    },
-    "SpiralWarden": {
-        name: "Spiral Warden (Alien)", role: "Alien Interceptor", sizeCategory: "Small", size: 28,
-        baseMaxSpeed: 8.0, baseThrust: 0.19, baseTurnRate: 0.11,
-        baseHull: 60, baseShield: 90, shieldRecharge: 1.7, cargoCapacity: 0,
-        armament: ["Scatter Beam"],
-        costCategory: "N/A", description: "Alien ship with spiral, shell-like armor.",
-        vertexLayers: [
-            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.7, y: 0.7 }, { x: 1.0, y: 0.0 }, { x: 0.7, y: -0.7 }, { x: 0.0, y: -1.0 }, { x: -0.7, y: -0.7 }, { x: -1.0, y: 0.0 }, { x: -0.7, y: 0.7 }], fillColor: [180, 255, 220] },
-            { vertexData: [{ x: 0.0, y: 0.5 }, { x: 0.35, y: 0.35 }, { x: 0.5, y: 0.0 }, { x: 0.35, y: -0.35 }, { x: 0.0, y: -0.5 }, { x: -0.35, y: -0.35 }, { x: -0.5, y: 0.0 }, { x: -0.35, y: 0.35 }], fillColor: [100, 255, 200] }
-        ],
-        typicalCargo: ["Chemicals"], price: 999999, aiRoles: ["ALIEN"]
-    },
-    "TriadProbe": {
-        name: "Triad Probe (Alien)", role: "Alien Scout", sizeCategory: "Tiny", size: 16,
-        baseMaxSpeed: 9.0, baseThrust: 0.25, baseTurnRate: 0.15,
-        baseHull: 25, baseShield: 30, shieldRecharge: 1.0, cargoCapacity: 0,
-        armament: ["Scatter Beam"],
-        costCategory: "N/A", description: "Three-lobed alien probe, fast and evasive.",
-        vertexLayers: [
-            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [200, 255, 180] },
-            { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.2, y: 0.0 }, { x: 0.0, y: -0.3 }, { x: -0.2, y: 0.0 }], fillColor: [255, 255, 100] }
-        ],
-        typicalCargo: [], price: 999999, aiRoles: ["ALIEN"]
     },
     "HexaManta": {
         name: "Hexa-Manta (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 70,
@@ -2729,43 +2819,6 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.2, y: 0.0 }, { x: 0.0, y: -0.3 }, { x: -0.2, y: 0.0 }], fillColor: [255, 255, 100] }
         ],
         typicalCargo: ["Weapons", "Chemicals"], price: 999999, aiRoles: ["ALIEN"]
-    },
-    "GeometricDrone": {
-        name: "Geometric Drone (Alien)", role: "Alien Scout?", sizeCategory: "Tiny", size: 15,
-        baseMaxSpeed: 9.0, baseThrust: 0.2, baseTurnRate: 0.13963,
-        baseHull: 20, baseShield: 40, shieldRecharge: 1.5, cargoCapacity: 0,
-        armament: ["Scatter Beam"], // Alien tech
-        costCategory: "N/A", description: "Small, fast, rotating alien drone. Unknown purpose.",
-        vertexData: [{ x: 1, y: 0 }, { x: 0.5, y: 0.87 }, { x: -0.5, y: 0.87 }, { x: -1, y: 0 }, { x: -0.5, y: -0.87 }, { x: 0.5, y: -0.87 }], // Regular Hexagon
-        fillColor: [50, 50, 60], // Dark metallic, light stroke
-        typicalCargo: [],
-        price: 999999,
-        aiRoles: ["ALIEN"],
-        techLevel: 5 // Cutting-edge
-    },
-    "PetalSpinner": {
-        name: "Petal Spinner (Alien)", role: "Alien Fighter", sizeCategory: "Small", size: 26,
-        baseMaxSpeed: 8.2, baseThrust: 0.21, baseTurnRate: 0.12,
-        baseHull: 55, baseShield: 70, shieldRecharge: 1.5, cargoCapacity: 0,
-        armament: ["Scatter Beam"],
-        costCategory: "N/A", description: "Alien ship with spinning, flower-like petals.",
-        vertexLayers: [
-            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [255, 180, 255] },
-            { vertexData: [{ x: 0.0, y: 0.2 }, { x: 0.1, y: 0.0 }, { x: 0.0, y: -0.2 }, { x: -0.1, y: 0.0 }], fillColor: [255, 100, 255] }
-        ],
-        typicalCargo: [], price: 999999, aiRoles: ["ALIEN"]
-    },
-    "CrescentMarauder": {
-        name: "Crescent Marauder (Alien)", role: "Alien Raider", sizeCategory: "Medium", size: 38,
-        baseMaxSpeed: 7.5, baseThrust: 0.16, baseTurnRate: 0.10,
-        baseHull: 100, baseShield: 120, shieldRecharge: 1.8, cargoCapacity: 10,
-        armament: ["Disruptor", "Scatter Beam"],
-        costCategory: "N/A", description: "Alien ship with a crescent, blade-like hull.",
-        vertexLayers: [
-            { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.8, y: 0.3 }, { x: 1.0, y: 0.0 }, { x: 0.8, y: -0.3 }, { x: 0.0, y: -1.0 }, { x: -0.8, y: -0.3 }, { x: -1.0, y: 0.0 }, { x: -0.8, y: 0.3 }], fillColor: [180, 255, 255] },
-            { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.56, y: 0.21 }, { x: 0.7, y: 0.0 }, { x: 0.56, y: -0.21 }, { x: 0.0, y: -0.7 }, { x: -0.56, y: -0.21 }, { x: -0.7, y: 0.0 }, { x: -0.56, y: 0.21 }], fillColor: [0, 255, 255] }
-        ],
-        typicalCargo: ["Narcotics", "Chemicals"], price: 999999, aiRoles: ["ALIEN"]
     },
     "ObsidianOrb": {
         name: "Obsidian Orb (Alien)", role: "Alien Tank", sizeCategory: "Large", size: 90,
@@ -2796,18 +2849,6 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Metals", "Weapons"], price: 999999, aiRoles: ["ALIEN"]
     },
-    "TesseractScout": {
-        name: "Tesseract Scout (Alien)", role: "Alien Recon", sizeCategory: "Tiny", size: 18,
-        baseMaxSpeed: 10.0, baseThrust: 0.25, baseTurnRate: 0.15,
-        baseHull: 25, baseShield: 30, shieldRecharge: 1.0, cargoCapacity: 0,
-        armament: ["Scatter Beam"],
-        costCategory: "N/A", description: "Alien scout with a shifting, four-dimensional shape.",
-        vertexLayers: [
-            { vertexData: [{ x: 1.0, y: 1.0 }, { x: 1.0, y: -1.0 }, { x: -1.0, y: -1.0 }, { x: -1.0, y: 1.0 }], fillColor: [200, 255, 255] },
-            { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.7, y: 0.0 }, { x: 0.0, y: -0.7 }, { x: -0.7, y: 0.0 }], fillColor: [0, 255, 255] }
-        ],
-        typicalCargo: [], price: 999999, aiRoles: ["ALIEN"]
-    },
     "BioFrigate": {
         name: "Bio-Frigate (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 90,
         baseMaxSpeed: 4.0, baseThrust: 0.1, baseTurnRate: 0.03491,
@@ -2825,6 +2866,18 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: ["Metals", "Chemicals", "Adv Components"],
+        price: 999999,
+        aiRoles: ["ALIEN"],
+        techLevel: 5 // Alien
+    },
+    "Thargoid": {
+        name: "Thargoid Interceptor", role: "Alien Combat", sizeCategory: "Large", size: 60,
+        baseMaxSpeed: 8.0, baseThrust: 0.20, baseTurnRate: 0.10472,
+        baseHull: 200, baseShield: 300, shieldRecharge: 2.0, cargoCapacity: 0,
+        armament: ["Force Blaster", "Disruptor", "Scatter Beam"], // Alien arsenal
+        costCategory: "N/A", description: "Hostile alien murder-flower from the void that considers humanity a fascinating pest problem. Hits 8.0 speed while regenerating shields faster than you can damage them. Conventional weapons bounce off its incomprehensible hull. Intelligence suggests talking doesn't work. Intelligence is correct. Run or die. Preferably run then die anyway.",
+        vertexData: [], // Not editable via vertex data in this setup
+        typicalCargo: ["Chemicals", "Weapons", "Narcotics"],
         price: 999999,
         aiRoles: ["ALIEN"],
         techLevel: 5 // Alien
