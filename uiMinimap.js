@@ -33,19 +33,8 @@ class UIMinimap {
         // Track scale to regenerate buffer on zoom
         this._lastHazardsScale = 0;
 
-        // Minimap color mapping by AI role (using centralized color constants)
-        this.roleColors = {};
-        if (typeof AI_ROLE !== 'undefined' && typeof ROLE_COLORS !== 'undefined') {
-            this.roleColors[AI_ROLE.PIRATE] = ROLE_COLORS.PIRATE;
-            this.roleColors[AI_ROLE.POLICE] = ROLE_COLORS.POLICE;
-            this.roleColors[AI_ROLE.HAULER] = ROLE_COLORS.HAULER;
-            this.roleColors[AI_ROLE.TRANSPORT] = ROLE_COLORS.TRANSPORT;
-            this.roleColors[AI_ROLE.MINER] = ROLE_COLORS.MINER;
-            this.roleColors[AI_ROLE.ALIEN] = ROLE_COLORS.ALIEN;
-            this.roleColors[AI_ROLE.BOUNTY_HUNTER] = ROLE_COLORS.BOUNTY_HUNTER;
-            this.roleColors[AI_ROLE.GUARD] = ROLE_COLORS.GUARD;
-            this.roleColors[AI_ROLE.COMBAT] = ROLE_COLORS.COMBAT;
-        }
+        // Note: Minimap colors now read directly from ROLE_COLORS and FACTION_COLORS
+        // in colorConstants.js - no local copy needed
 
         // Active kill indicators
         this.killIndicators = [];
@@ -630,9 +619,12 @@ class UIMinimap {
                         colArr = FACTION_COLORS.MILITARY;
                     }
                 }
-                if (!colArr) {
+                if (!colArr && typeof ROLE_COLORS !== 'undefined') {
                     const roleKey = enemy.role || enemy.aiRole || (enemy.shipTypeName && SHIP_DEFINITIONS[enemy.shipTypeName]?.aiRoles?.[0]);
-                    colArr = this.roleColors[roleKey] || [255, 0, 0];
+                    // Convert roleKey to uppercase to match ROLE_COLORS keys
+                    // (AI_ROLE values are mixed case like 'Police', but ROLE_COLORS uses 'POLICE')
+                    const colorKey = roleKey ? String(roleKey).toUpperCase() : null;
+                    colArr = (colorKey && ROLE_COLORS[colorKey]) || [255, 0, 0];
                 }
 
                 push();

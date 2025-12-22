@@ -5,31 +5,51 @@
 /**
  * Faction Colors
  * Used for both galaxy map system nodes and minimap ship indicators
+ * 
+ * Color Design:
+ * - IMPERIAL: Purple
+ * - SEPARATIST: Olive Green
+ * - MILITARY: Gray
+ * - ALIEN: Green
+ * - POLICE: Blue
  */
 const FACTION_COLORS = {
-    IMPERIAL: [255, 235, 180],      // White gold
-    SEPARATIST: [128, 128, 0],      // Olive
-    MILITARY: [160, 160, 170],      // Neutral gray
-    ALIEN: [50, 205, 50],           // Green
-    POLICE: [30, 144, 255],         // Dodger Blue
+    IMPERIAL: [160, 80, 220],       // Purple
+    SEPARATIST: [140, 150, 60],     // Olive Green
+    MILITARY: [150, 150, 155],      // Gray
+    ALIEN: [50, 220, 80],           // Green
+    POLICE: [60, 140, 255],         // Blue
 };
 
 /**
  * AI Role Colors
  * Used primarily for minimap ship indicators when faction is not specified
+ * 
+ * Color Design:
+ * - POLICE: Blue
+ * - PIRATE: Bright Red  
+ * - ALIEN: Green
+ * - Commercial (Hauler/Transport/Repair): Yellow/Orange/Ochre spectrum
+ * - MILITARY: Gray
+ * - IMPERIAL: Purple
+ * - SEPARATIST: Olive Green
  */
 const ROLE_COLORS = {
-    POLICE: [30, 144, 255],     // Dodger Blue
-    HAULER: [255, 215, 0],      // Gold
-    PIRATE: [220, 20, 20],      // Crimson Red
-    ALIEN: [0, 255, 150],       // Alien Green
-    BOUNTY_HUNTER: [255, 165, 0], // Orange
-    TRANSPORT: [100, 180, 255], // Light Blue
-    MILITARY: [80, 160, 80],    // Military Green
-    IMPERIAL: [200, 50, 50],    // Imperial Red
-    SEPARATIST: [50, 80, 200],  // Separatist Blue
-    MINER: [180, 140, 100],     // Bronze/Copper
-    REPAIR: [100, 255, 200]     // Cyan/Green repair color
+    POLICE: [60, 140, 255],         // Blue
+    PIRATE: [255, 50, 50],          // Bright Red
+    ALIEN: [50, 220, 80],           // Green
+    MILITARY: [150, 150, 155],      // Gray
+    IMPERIAL: [160, 80, 220],       // Purple
+    SEPARATIST: [140, 150, 60],     // Olive Green
+    // Commercial ships: Yellow/Orange/Brown spectrum (spread out)
+    HAULER: [255, 210, 60],         // Bright Yellow
+    TRANSPORT: [255, 150, 80],      // Light Orange
+    REPAIR: [180, 220, 140],        // Light Green-Yellow (distinct from browns)
+    MINER: [160, 120, 80],          // Dark Brown
+    // Combat-adjacent roles
+    BOUNTY_HUNTER: [255, 80, 180],  // Magenta-Pink (distinct from orange)
+    GUARD: [220, 200, 120],         // Light Khaki/Cream
+    COMBAT: [200, 60, 100]          // Dark Pink/Maroon (distinct from pirate red)
 };
 
 /**
