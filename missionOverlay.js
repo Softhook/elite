@@ -154,12 +154,12 @@ class MissionOverlay {
             noStroke();
             textSize(STATION_TEXT_SIZE.BODY);
             textAlign(LEFT, BASELINE);
-            text(`Status: ${m.status}`, contentStartX, statusY + 20);
+            text(`Status: ${m.status}`, contentStartX, statusY + 40);
 
             if (m.rewardCredits) {
                 fill(255, 255, 100);
                 textAlign(RIGHT, BASELINE);
-                text(`Reward: ${m.rewardCredits} CR`, pX + pW - 50, statusY + 20);
+                text(`Reward: ${m.rewardCredits} CR`, pX + pW - 50, statusY + 40);
             }
         }
 

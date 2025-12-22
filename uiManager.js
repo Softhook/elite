@@ -773,15 +773,19 @@ class UIManager {
             else if (this.missionDetailButtonAreas['abandon']
                 && activeMission
                 && this.isClickInArea(mx, my, this.missionDetailButtonAreas['abandon'])) {
+                const abandonedId = activeMission.id;
                 player.abandonMission();
-                // Reset selection so player can select new missions
+
+                // Mark as inactive so it shows as failed/greyed out without refreshing board
+                if (abandonedId) {
+                    this.inactiveMissionIds.add(abandonedId);
+                }
+
+                // Reset selection
                 if (gameStateManager) {
                     gameStateManager.selectedMissionIndex = -1;
-                    // Force mission list refresh on next draw
-                    gameStateManager.currentStationMissions = null;
                 }
-                // Clear inactive IDs since missions will be regenerated
-                this.inactiveMissionIds.clear();
+
                 if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
                 if (typeof saveGame === 'function') saveGame();
                 return true;

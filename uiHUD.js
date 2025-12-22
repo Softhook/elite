@@ -798,7 +798,7 @@ class UIHUD {
         }
         // Add mission target indicator prominently
         if (isMissionTarget) {
-            infoLines.push('★ MISSION TARGET ★');
+            infoLines.push('MISSION TARGET');
         }
         if (activityStatus) {
             infoLines.push(`Status: ${activityStatus}`);
@@ -965,8 +965,15 @@ class UIHUD {
         cursorY += sectionSpacing;
 
         UIComponents.setTextStyle({ fill: 210, size: 18 });
+        noStroke();
         for (let i = 0; i < infoLines.length; i++) {
-            text(infoLines[i], cursorX, cursorY);
+            const line = infoLines[i];
+            if (line === 'MISSION TARGET') {
+                fill(255, 80, 80); // Red for Mission Target
+            } else {
+                fill(210);
+            }
+            text(line, cursorX, cursorY);
             cursorY += lineHeight;
         }
 
