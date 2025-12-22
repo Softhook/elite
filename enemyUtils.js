@@ -139,6 +139,68 @@ class EnemyUtils {
         }
     }
 
+    /**
+     * Applies left strafe thrust (perpendicular to facing direction)
+     * @param {number} [multiplier=0.6] - Thrust multiplier (strafe is weaker than forward)
+     */
+    thrustLeft(multiplier = 0.6) {
+        if (!this.thrustVector) {
+            this.thrustVector = createVector(0, 0);
+        }
+        const strafeAngle = this.angle - HALF_PI; // 90 degrees left
+        this.thrustVector.set(cos(strafeAngle), sin(strafeAngle));
+        this.thrustVector.mult(this.thrustForce * multiplier);
+        this.vel.add(this.thrustVector);
+
+        // Visual particles from right side (opposite to movement direction)
+        const isAlien = typeof AI_ROLE !== 'undefined' && this.role === AI_ROLE.ALIEN;
+        if (this.thrustManager && !isAlien) {
+            this.thrustManager.createThrust(this.pos, this.angle + HALF_PI, this.size * 0.7);
+        }
+    }
+
+    /**
+     * Applies right strafe thrust (perpendicular to facing direction)
+     * @param {number} [multiplier=0.6] - Thrust multiplier (strafe is weaker than forward)
+     */
+    thrustRight(multiplier = 0.6) {
+        if (!this.thrustVector) {
+            this.thrustVector = createVector(0, 0);
+        }
+        const strafeAngle = this.angle + HALF_PI; // 90 degrees right
+        this.thrustVector.set(cos(strafeAngle), sin(strafeAngle));
+        this.thrustVector.mult(this.thrustForce * multiplier);
+        this.vel.add(this.thrustVector);
+
+        // Visual particles from left side (opposite to movement direction)
+        const isAlien = typeof AI_ROLE !== 'undefined' && this.role === AI_ROLE.ALIEN;
+        if (this.thrustManager && !isAlien) {
+            this.thrustManager.createThrust(this.pos, this.angle - HALF_PI, this.size * 0.7);
+        }
+    }
+
+    /**
+     * Applies reverse thrust (backward movement while maintaining facing)
+     * @param {number} [multiplier=0.5] - Thrust multiplier (reverse is weaker than forward)
+     */
+    thrustReverse(multiplier = 0.5) {
+        if (!this.thrustVector) {
+            this.thrustVector = createVector(0, 0);
+        }
+        const reverseAngle = this.angle + PI; // 180 degrees (backward)
+        this.thrustVector.set(cos(reverseAngle), sin(reverseAngle));
+        this.thrustVector.mult(this.thrustForce * multiplier);
+        this.vel.add(this.thrustVector);
+
+        // Visual particles from front (retro-thrusters)
+        const isAlien = typeof AI_ROLE !== 'undefined' && this.role === AI_ROLE.ALIEN;
+        if (this.thrustManager && !isAlien) {
+            // Create thrust particles from front of ship (angled outward like retro rockets)
+            this.thrustManager.createThrust(this.pos, this.angle - PI * 0.25, this.size * 0.6);
+            this.thrustManager.createThrust(this.pos, this.angle + PI * 0.25, this.size * 0.6);
+        }
+    }
+
     /** 
      * Sets a target position far away for Haulers leaving the system.
      * MODIFIED: Now targets the system's jump zone if available.

@@ -88,22 +88,90 @@ class EnemyMovement {
                     canThrust = true;
                 }
             } else if (this.currentState === AI_STATE.SNIPING) {
-                // For sniping, alignment for thrust can be more lenient for minor adjustments
-                const isAlignedForSnipeThrust = abs(angleDifference) < this.angleTolerance * 1.5;
+                // SNIPING: Use strafe thrusters for tactical positioning while maintaining aim
+                // This creates more unpredictable, human-like movement patterns
 
-                // Check if desiredMovementTargetPos is different from current position, indicating a need to adjust
-                if (desiredMovementTargetPos && p5.Vector.dist(this.pos, desiredMovementTargetPos) > this.size * 0.05) { // Small threshold to allow minor drift
-                    if (isAlignedForSnipeThrust) {
-                        effectiveThrustMultiplier = SNIPING_POSITION_ADJUST_THRUST;
-                        canThrust = true;
-                    } else {
-                        canThrust = false; // Don't thrust if not aligned for adjustment
+                if (this.isTargetValid(this.target)) {
+                    const distToTarget = this.distanceTo(this.target);
+                    const targetSize = this.target.size || this.size;
+                    const minSafeDistance = (this.size + targetSize) * 1.5;
+                    const firingRange = this.visualFiringRange || this.firingRange || 400;
+
+                    // Initialize strafe state if needed
+                    if (this._sniperStrafeTimer === undefined) {
+                        this._sniperStrafeTimer = random(1.0, 2.5);
+                        this._sniperStrafeDir = 0; // 0 = none, -1 = left, 1 = right
+                        this._sniperThrustVariance = random(0.8, 1.2); // Per-ship variance
+                        this._sniperReactionDelay = 0; // Reaction delay before executing new direction
                     }
+
+                    const strafeTimeScale = (typeof deltaTime === 'number') ? deltaTime / 1000 : 0.016;
+                    this._sniperStrafeTimer -= strafeTimeScale;
+
+                    // Count down reaction delay if set
+                    if (this._sniperReactionDelay > 0) {
+                        this._sniperReactionDelay -= strafeTimeScale;
+                    }
+
+                    let isActivelyManeuvering = false;
+
+                    // If too close, use reverse thrust to back away while keeping aim
+                    if (distToTarget < minSafeDistance) {
+                        // Human-like: slight hesitation 15% of frames
+                        if (random() > 0.15) {
+                            const reverseStrength = random(0.4, 0.7) * this._sniperThrustVariance;
+                            this.thrustReverse(reverseStrength);
+                            isActivelyManeuvering = true;
+                        }
+                    }
+                    // If at good range, randomly strafe to be unpredictable
+                    else if (this._sniperStrafeTimer <= 0) {
+                        // Make a new strafe decision with reaction delay
+                        this._sniperStrafeTimer = random(0.6, 3.0); // More variable timing
+                        this._sniperReactionDelay = random(0.05, 0.25); // Human reaction time
+                        this._sniperThrustVariance = random(0.7, 1.3); // Re-roll variance
+
+                        // 35% chance left, 35% chance right, 30% chance to pause
+                        const roll = random();
+                        if (roll < 0.35) {
+                            this._sniperStrafeDir = -1;
+                        } else if (roll < 0.70) {
+                            this._sniperStrafeDir = 1;
+                        } else {
+                            this._sniperStrafeDir = 0;
+                        }
+                    }
+
+                    // Apply the strafe (only if reaction delay has passed)
+                    if (this._sniperStrafeDir !== 0 &&
+                        this._sniperReactionDelay <= 0 &&
+                        distToTarget >= minSafeDistance &&
+                        distToTarget < firingRange * 1.1) {
+
+                        // Human-like: occasional hesitation (skip ~10% of frames)
+                        if (random() > 0.10) {
+                            // Variable thrust strength for organic feel
+                            const strafeStrength = random(0.35, 0.65) * this._sniperThrustVariance;
+
+                            if (this._sniperStrafeDir < 0) {
+                                this.thrustLeft(strafeStrength);
+                            } else {
+                                this.thrustRight(strafeStrength);
+                            }
+                            isActivelyManeuvering = true;
+                        }
+                    }
+
+                    // Apply braking - lighter when actively maneuvering so strafe is visible
+                    const snipeTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                    const brakeFactor = isActivelyManeuvering ? 0.96 : SNIPING_BRAKE_FACTOR;
+                    this.vel.mult(Math.pow(constrain(brakeFactor, 0.6, 0.99), snipeTimeScale));
+                    canThrust = false; // Strafe/reverse already handled above
                 } else {
-                    // If desiredMovementTargetPos is current position, or very close, try to stay still by braking
+                    // No valid target - just brake
                     const snipeTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
                     this.vel.mult(Math.pow(constrain(SNIPING_BRAKE_FACTOR, 0.6, 0.99), snipeTimeScale));
-                    canThrust = false; // No active thrust, just braking
+                    canThrust = false;
                 }
             } else if (this.currentState === AI_STATE.REPOSITIONING || this.currentState === AI_STATE.PATROLLING) {
                 // effectiveThrustMultiplier is 1.0 by default
