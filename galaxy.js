@@ -441,24 +441,26 @@ class Galaxy {
     /** 
      * Handles the jump process to a new star system. 
      * @param {number} targetIndex - The index of the target system in the galaxy.
+     * @param {boolean} [bypassConnectionCheck=false] - If true, skip connection validation (for quantum gates).
      * @returns {boolean} True if jump succeeded, false if jump was blocked or failed.
      */
-    jumpToSystem(targetIndex) {
+    jumpToSystem(targetIndex, bypassConnectionCheck = false) {
         // Early exit: prevent attempting to jump to the current system
         if (targetIndex === this.currentSystemIndex) {
             console.warn(`jumpToSystem: Already in system ${targetIndex}. Ignoring duplicate jump request.`);
             return false;
         }
 
-        // Get current system and check connections
-        const currentSystemIndex = this.currentSystemIndex;
-        const reachable = this.getReachableSystems();
+        // Get current system and check connections (unless bypassed for quantum gates)
+        if (!bypassConnectionCheck) {
+            const reachable = this.getReachableSystems();
 
-        // ENFORCE connection check
-        if (!reachable.includes(targetIndex)) {
-            console.warn(`Attempted jump to unconnected system index: ${targetIndex}. Allowed: [${reachable.join(', ')}]`);
-            if (uiManager) uiManager.addMessage("Jump failed: System not in range", [255, 100, 100]);
-            return false; // Add explicit return to prevent jump
+            // ENFORCE connection check
+            if (!reachable.includes(targetIndex)) {
+                console.warn(`Attempted jump to unconnected system index: ${targetIndex}. Allowed: [${reachable.join(', ')}]`);
+                if (uiManager) uiManager.addMessage("Jump failed: System not in range", [255, 100, 100]);
+                return false; // Add explicit return to prevent jump
+            }
         }
 
         if (targetIndex >= 0 && targetIndex < this.systems.length && targetIndex !== this.currentSystemIndex) {
@@ -525,6 +527,46 @@ class Galaxy {
             console.error(`Invalid jump target index: ${targetIndex}`);
             return false;
         }
+    }
+
+    /**
+     * Teleports the player to a random star system via quantum gate.
+     * Bypasses normal connection requirements - the gate can send you anywhere!
+     * Uses the standard jump mechanism but skips the connection check.
+     * @returns {boolean} True if teleportation succeeded, false otherwise.
+     */
+    teleportToRandomSystem() {
+        if (!this.systems || this.systems.length < 2) {
+            console.warn("teleportToRandomSystem: Not enough systems to teleport.");
+            return false;
+        }
+
+        // Build list of valid target systems (exclude current system)
+        const validTargets = [];
+        for (let i = 0; i < this.systems.length; i++) {
+            if (i !== this.currentSystemIndex && this.systems[i]) {
+                validTargets.push(i);
+            }
+        }
+
+        if (validTargets.length === 0) {
+            console.warn("teleportToRandomSystem: No valid target systems found.");
+            return false;
+        }
+
+        // Pick a random target
+        const targetIndex = random(validTargets);
+        const newSystemName = this.systems[targetIndex]?.name || "Unknown";
+
+        console.log(`QUANTUM GATE: Teleporting to random system ${newSystemName} (Index: ${targetIndex})`);
+
+        // Show quantum teleport message before the jump
+        if (typeof uiManager !== 'undefined') {
+            uiManager.addMessage(`QUANTUM TELEPORT: ${newSystemName}`, [200, 100, 255]);
+        }
+
+        // Use the standard jump mechanism with connection check bypassed
+        return this.jumpToSystem(targetIndex, true);
     }
 
 

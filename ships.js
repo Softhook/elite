@@ -1458,7 +1458,7 @@ const SHIP_DEFINITIONS = {
     "HarlequinMotley": {
         name: "Harlequin Motley", role: "Fast Interceptor", sizeCategory: "Small", size: 28,
         baseMaxSpeed: 8.2, baseThrust: 0.19, baseTurnRate: 0.085,
-        baseHull: 45, baseShield: 75, shieldRecharge: 1.7, cargoCapacity: 8,
+        baseHull: 45, baseShield: 55, shieldRecharge: 1.7, cargoCapacity: 8,
         armament: ["Burst Blaster", "Pulse Laser"],
         costCategory: "Medium", description: "Speed incarnate wrapped in eye-searing orange and electric blue. The Motley zips through conflict zones like a caffeinated hummingbird with attitude problems. 8.2 speed makes it nearly uncatchable; 45 hull means one mistake and you're confetti. Harlequin pilots call it 'the fool's choice'—but fools who survive learn fast.",
         vertexLayers: [
@@ -1471,16 +1471,44 @@ const SHIP_DEFINITIONS = {
                 fillColor: [0, 180, 255]
             },
             {
-                vertexData: [{ x: -0.5500, y: 0.3800 }, { x: -0.4000, y: 0.2200 }, { x: -0.7500, y: 0.2200 }],
+                vertexData: [{ x: -0.5500, y: 0.3600 }, { x: -0.4000, y: 0.2000 }, { x: -0.7500, y: 0.2000 }],
                 fillColor: [0, 180, 255]
             },
             {
-                vertexData: [{ x: -0.5500, y: -0.3800 }, { x: -0.4000, y: -0.2200 }, { x: -0.7500, y: -0.2200 }],
+                vertexData: [{ x: -0.5500, y: -0.3600 }, { x: -0.4000, y: -0.2000 }, { x: -0.7500, y: -0.2000 }],
                 fillColor: [0, 180, 255]
             },
             {
                 vertexData: [{ x: 0.0500, y: 0.0000 }, { x: -0.0500, y: 0.0866 }, { x: -0.1500, y: 0.0866 }, { x: -0.2500, y: 0.0000 }, { x: -0.1500, y: -0.0866 }, { x: -0.0500, y: -0.0866 }],
                 fillColor: [255, 255, 255]
+            },
+            {
+                vertexData: [{ x: -0.6635, y: -0.1674 }, { x: -0.6395, y: -0.1435 }, { x: -0.4482, y: 0.1435 }, { x: -0.4243, y: 0.1674 }, { x: -0.4100, y: 0.1435 }, { x: -0.6778, y: -0.1435 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.6635, y: 0.1674 }, { x: -0.6395, y: 0.1435 }, { x: -0.4482, y: -0.1435 }, { x: -0.4243, y: -0.1674 }, { x: -0.4100, y: -0.1435 }, { x: -0.6778, y: 0.1435 }],
+                fillColor: [180, 180, 180]
+            },
+            {
+                vertexData: [{ x: -0.4243, y: -0.0957 }, { x: -0.4243, y: 0.0957 }, { x: -0.5200, y: 0.1196 }, { x: -0.5917, y: 0.0957 }, { x: -0.6156, y: 0.0478 }, { x: -0.6156, y: -0.0478 }, { x: -0.5917, y: -0.0957 }, { x: -0.5200, y: -0.1196 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.6491, y: 0.0717 }, { x: -0.6252, y: 0.0574 }, { x: -0.6348, y: 0.0383 }, { x: -0.6252, y: 0.0191 }, { x: -0.6348, y: -0.0000 }, { x: -0.6252, y: -0.0191 }, { x: -0.6348, y: -0.0383 }, { x: -0.6252, y: -0.0574 }, { x: -0.6491, y: -0.0717 }, { x: -0.6635, y: -0.0383 }, { x: -0.6635, y: 0.0383 }],
+                fillColor: [230, 230, 230]
+            },
+            {
+                vertexData: [{ x: -0.4961, y: -0.0670 }, { x: -0.4961, y: -0.0383 }, { x: -0.5439, y: -0.0526 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.4961, y: 0.0383 }, { x: -0.4961, y: 0.0670 }, { x: -0.5439, y: 0.0526 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.5630, y: -0.0191 }, { x: -0.5630, y: 0.0191 }, { x: -0.5917, y: -0.0000 }],
+                fillColor: [0, 0, 0]
             }
         ],
         typicalCargo: ["Narcotics", "Computers"], price: 42000, techLevel: 3,
@@ -1492,6 +1520,7 @@ const SHIP_DEFINITIONS = {
         baseHull: 180, baseShield: 160, shieldRecharge: 1.1, cargoCapacity: 35,
         armament: ["Heavy Cannon", "Multi-Cannon", "Beam Laser", "Guardian Missile"],
         costCategory: "High", description: "Hot pink and toxic lime—the ship equivalent of a poison dart frog screaming 'I am dangerous and have no shame.' That 180 hull absorbs punishment while quad hardpoints dish it back. Harlequin commanders deploy Zannis when they want targets to know embarrassment before annihilation. Kills aren't just combat victories, they're fashion statements.",
+
         vertexLayers: [
             {
                 vertexData: [{ x: 0.9000, y: 0.2000 }, { x: 0.5000, y: 0.6000 }, { x: -0.3000, y: 0.7000 }, { x: -0.8000, y: 0.5000 }, { x: -0.9000, y: 0.0000 }, { x: -0.8000, y: -0.5000 }, { x: -0.3000, y: -0.7000 }, { x: 0.5000, y: -0.6000 }, { x: 0.9000, y: -0.2000 }],
@@ -1510,8 +1539,32 @@ const SHIP_DEFINITIONS = {
                 fillColor: [255, 255, 255]
             },
             {
-                vertexData: [{ x: -0.4500, y: -0.0400 }, { x: -0.4500, y: 0.0400 }, { x: -0.5500, y: 0.0000 }],
-                fillColor: [0, 0, 0]
+                vertexData: [{ x: -0.7309, y: -0.1860 }, { x: -0.7043, y: -0.1594 }, { x: -0.4917, y: 0.1594 }, { x: -0.4651, y: 0.1860 }, { x: -0.4492, y: 0.1594 }, { x: -0.7468, y: -0.1594 }],
+                fillColor: [180, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.7309, y: 0.1860 }, { x: -0.7043, y: 0.1594 }, { x: -0.4917, y: -0.1594 }, { x: -0.4651, y: -0.1860 }, { x: -0.4492, y: -0.1594 }, { x: -0.7468, y: 0.1594 }],
+                fillColor: [180, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.4651, y: -0.1063 }, { x: -0.4651, y: 0.1063 }, { x: -0.5714, y: 0.1329 }, { x: -0.6511, y: 0.1063 }, { x: -0.6777, y: 0.0531 }, { x: -0.6777, y: -0.0531 }, { x: -0.6511, y: -0.1063 }, { x: -0.5714, y: -0.1329 }],
+                fillColor: [180, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.7149, y: 0.0797 }, { x: -0.6883, y: 0.0638 }, { x: -0.6990, y: 0.0425 }, { x: -0.6883, y: 0.0213 }, { x: -0.6990, y: -0.0000 }, { x: -0.6883, y: -0.0213 }, { x: -0.6990, y: -0.0425 }, { x: -0.6883, y: -0.0638 }, { x: -0.7149, y: -0.0797 }, { x: -0.7309, y: -0.0425 }, { x: -0.7309, y: 0.0425 }],
+                fillColor: [180, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.5449, y: -0.0744 }, { x: -0.5449, y: -0.0425 }, { x: -0.5980, y: -0.0585 }],
+                fillColor: [255, 20, 147]
+            },
+            {
+                vertexData: [{ x: -0.5449, y: 0.0425 }, { x: -0.5449, y: 0.0744 }, { x: -0.5980, y: 0.0585 }],
+                fillColor: [255, 20, 147]
+            },
+            {
+                vertexData: [{ x: -0.6193, y: -0.0213 }, { x: -0.6193, y: 0.0213 }, { x: -0.6511, y: -0.0000 }],
+                fillColor: [255, 20, 147]
             }
         ],
         typicalCargo: ["Weapons", "Slaves", "Luxury Goods"], price: 98000, techLevel: 4,

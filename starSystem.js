@@ -1950,6 +1950,7 @@ class StarSystem {
             this._updateAsteroids();
             this._updatePlanets();
             this._updateSpaceObjects();
+            this._checkQuantumGateProximity(); // Check if player touched a quantum gate
             this._updateProjectiles();
             this._updateCargo();
             this._updateBeams();
@@ -2527,6 +2528,70 @@ class StarSystem {
             (so) => so.destroyed,
             (so) => this._handleSpaceObjectDestruction(so)
         );
+    }
+
+    /**
+     * Checks if the player is touching a quantum gate and triggers teleportation.
+     * When the player touches a quantum gate, they are teleported to a random system!
+     * @private
+     */
+    _checkQuantumGateProximity() {
+        // Only check if player exists, is in flight, and has position
+        if (!this.player || !this.player.pos) return;
+        if (this.player.isDockedAndInvulnerable) return;
+
+        // Cooldown to prevent rapid re-triggering
+        const now = millis();
+        if (this._lastQuantumTeleportTime && now - this._lastQuantumTeleportTime < 3000) return;
+
+        // No space objects? Nothing to check
+        if (!this.spaceObjects || this.spaceObjects.length === 0) return;
+
+        // Check if player is touching any quantum gate
+        for (let i = 0; i < this.spaceObjects.length; i++) {
+            const so = this.spaceObjects[i];
+            if (!so || !so.pos || so.destroyed) continue;
+            if (so.type !== 'quantumGate') continue;
+
+            // Calculate distance between player and quantum gate
+            const dx = this.player.pos.x - so.pos.x;
+            const dy = this.player.pos.y - so.pos.y;
+            const distSq = dx * dx + dy * dy;
+
+            // Touching distance - player must be within the gate's radius
+            const gateRadius = so.size || 100;
+            const playerRadius = this.player.size || 20;
+            const touchDistSq = (gateRadius + playerRadius) * (gateRadius + playerRadius);
+
+            if (distSq <= touchDistSq) {
+                // Player is touching the quantum gate! Trigger teleportation!
+                console.log(`QUANTUM GATE ACTIVATED! Player touched gate at (${so.pos.x.toFixed(0)}, ${so.pos.y.toFixed(0)})`);
+
+                // Show activation message
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage('QUANTUM GATE ACTIVATED!', [200, 100, 255]);
+                }
+
+                // Set cooldown
+                this._lastQuantumTeleportTime = now;
+
+                // Trigger the teleportation via the galaxy
+                if (typeof galaxy !== 'undefined' && galaxy && typeof galaxy.teleportToRandomSystem === 'function') {
+                    // Use setTimeout to allow this frame to complete before teleporting
+                    setTimeout(() => {
+                        try {
+                            galaxy.teleportToRandomSystem();
+                        } catch (e) {
+                            console.error('Error during quantum teleportation:', e);
+                        }
+                    }, 100);
+                } else {
+                    console.warn('Cannot teleport: galaxy.teleportToRandomSystem not available');
+                }
+
+                return; // Only trigger once per frame
+            }
+        }
     }
 
     /**
