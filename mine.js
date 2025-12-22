@@ -36,6 +36,7 @@ class Mine {
         this.destroyed = false;
         this.blinkTimer = 0;
         this.system = null; // Reference to current star system
+        this.isMine = true; // Identifier for collision detection system
     }
 
 
