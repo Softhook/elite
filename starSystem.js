@@ -5225,22 +5225,44 @@ class StarSystem {
      * 17. Player (always on top)
      * 
      * Uses screen-space visibility culling for performance.
+     * @param {number} [zoomScale=1.0] - Optional zoom scale for death zoom effect
      */
-    draw() {
+    draw(zoomScale = 1.0) {
         if (!this.player || !this.player.pos) return;
 
         push();
-        // Calculate translation based on this.player position
+
+        // Calculate translation based on player position
         const tx = width / 2 - this.player.pos.x;
         const ty = height / 2 - this.player.pos.y;
+
+        // For death zoom effect: 
+        // 1. First translate camera to center player on screen
+        // 2. Then zoom around the screen center (which is now the player position)
+        // This order is important - zoom must happen AFTER camera translation to work correctly
         translate(tx, ty);
 
+        if (zoomScale > 1.0) {
+            // Translate to player position (screen center), zoom, translate back
+            // This zooms in centered exactly on the player
+            translate(this.player.pos.x, this.player.pos.y);
+            scale(zoomScale);
+            translate(-this.player.pos.x, -this.player.pos.y);
+        }
+
         // Calculate screen bounds once (with margin) - reuse pre-allocated object
+        // When zoomed, the visible world area is smaller (divided by zoom)
+        // so we need to adjust bounds accordingly for proper culling
+        const invZoom = zoomScale > 1.0 ? 1.0 / zoomScale : 1.0;
+        const marginBase = 100;
+        // Expand margin proportionally to inverse zoom to prevent edge culling
+        const margin = marginBase + (zoomScale > 1.0 ? (width * invZoom) : 0);
+
         const screenBounds = this.screenBounds;
-        screenBounds.left = -tx - 100;
-        screenBounds.right = -tx + width + 100;
-        screenBounds.top = -ty - 100;
-        screenBounds.bottom = -ty + height + 100;
+        screenBounds.left = -tx - margin;
+        screenBounds.right = -tx + width + margin;
+        screenBounds.top = -ty - margin;
+        screenBounds.bottom = -ty + height + margin;
 
         // Cache array lengths for draw loops
         const planetCount = this.planets.length;

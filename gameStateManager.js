@@ -106,6 +106,13 @@ class GameStateManager {
         // Docked entity tracking
         this.currentDockedStation = null;    // Tracks which station player is docked at (main or secret)
         this.currentDockedSpaceObject = null; // Tracks docked space object (already exists, ensure initialized)
+
+        // Death zoom effect - dramatic zoom-in when player is destroyed
+        this.deathZoomScale = 1.0;           // Current zoom level (1.0 = normal, higher = zoomed in)
+        this.deathZoomTarget = 2.5;          // Target zoom level during death
+        this.deathZoomSpeed = 0.012;         // How fast to zoom in per frame
+        this.deathZoomActive = false;        // Whether the death zoom is currently active
+        this.deathZoomStartTime = 0;         // When the death zoom started (millis)
     }
 
     /**
@@ -777,6 +784,24 @@ class GameStateManager {
             try {
                 player.update();
                 currentSystem.update(player);
+
+                // Activate death zoom effect on first dying frame
+                if (!this.deathZoomActive && player.isDying) {
+                    this.deathZoomActive = true;
+                    this.deathZoomStartTime = millis();
+                    this.deathZoomScale = 1.0;
+                }
+
+                // Smoothly zoom in during death animation
+                if (this.deathZoomActive && this.deathZoomScale < this.deathZoomTarget) {
+                    // Ease-out interpolation for smooth zoom that decelerates
+                    const elapsed = millis() - this.deathZoomStartTime;
+                    const duration = 2500; // 2.5 seconds to reach target zoom
+                    const t = Math.min(1.0, elapsed / duration);
+                    // Ease-out cubic for smooth deceleration
+                    const easeOut = 1 - Math.pow(1 - t, 3);
+                    this.deathZoomScale = 1.0 + (this.deathZoomTarget - 1.0) * easeOut;
+                }
             } catch (e) {
                 console.error("ERROR during IN_FLIGHT update (dying):", e);
             }
@@ -1219,19 +1244,28 @@ class GameStateManager {
      * @private
      */
     _drawInFlight(player, currentSystem) {
+        // Check if death zoom is active
+        const isDeathZooming = this.deathZoomActive && this.deathZoomScale > 1.0;
+        const zoomScale = isDeathZooming ? this.deathZoomScale : 1.0;
+
         if (currentSystem && player) {
             try {
-                currentSystem.draw(player);
+                // Pass zoom scale to system draw - it handles the zoom transform internally
+                currentSystem.draw(zoomScale);
             } catch (e) {
                 console.error("Error drawing system:", e);
             }
         }
 
+        // Draw HUD outside of zoom transform so it stays at normal size
         if (uiManager && player) {
             try {
-                uiManager.drawHUD(player);
-                if (currentSystem) {
-                    uiManager.drawMinimap(player, currentSystem);
+                // Hide HUD during death zoom for more cinematic effect
+                if (!isDeathZooming) {
+                    uiManager.drawHUD(player);
+                    if (currentSystem) {
+                        uiManager.drawMinimap(player, currentSystem);
+                    }
                 }
             } catch (e) { }
         }
