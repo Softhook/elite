@@ -86,13 +86,11 @@ const TARGET_SCORE_HULL_DAMAGE_MULT = 20;        // Multiplier for hull damage b
 // -------------------------
 
 // Used by `AI_ROLE.COMBAT` in targeting to prioritize threats/factions
-// Used by `AI_ROLE.COMBAT` in targeting to prioritize threats/factions
 const TARGET_SCORE_COMBAT_VS_ALIEN_BONUS = 500; // Military vs Aliens (High priority)
 const TARGET_SCORE_COMBAT_RIVALRY_BONUS = 500;   // Imperial vs Separatist rivalry (High priority)
 const TARGET_SCORE_COMBAT_STANDARD_ENGAGE = 100;  // Pirates (Medium priority)
 const TARGET_SCORE_COMBAT_LOW_PRIORITY = 0;     // Other ships (generic)
 
-// Faction-based targeting modifier
 // Faction-based targeting modifier
 const TARGET_SCORE_SAME_FACTION_PENALTY = 200;  // Large penalty for targeting same faction (prevents friendly fire)
 

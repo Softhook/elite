@@ -1087,5 +1087,7 @@ function applyEnemyCombatMethods() {
         Enemy.prototype[methodName] = EnemyCombat.prototype[methodName];
     });
 
-    console.log(`Applied ${methodNames.length} combat methods to Enemy prototype:`, methodNames.join(', '));
+    if (typeof DEBUG_AI !== 'undefined' && DEBUG_AI) {
+        AI_LOG(`Applied ${methodNames.length} combat methods to Enemy prototype:`, methodNames.join(', '));
+    }
 }

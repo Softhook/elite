@@ -247,7 +247,7 @@ class Mission {
         const guardCount = this.guardCount || 1;
         if (guardCount <= 0) return;
 
-        console.log(`Spawning ${guardCount} guards for assassination mission.`);
+        MISSION_LOG(`Spawning ${guardCount} guards for assassination mission.`);
 
         for (let g = 0; g < guardCount; g++) {
             const gAngle = baseAngle + (TWO_PI * (g + 1) / (guardCount + 1)) + random(-0.25, 0.25);
@@ -278,7 +278,7 @@ class Mission {
             MISSION_LOG(`  -> Spawned guard: ${guardNPC.shipTypeName} at (${gx.toFixed(0)},${gy.toFixed(0)})`);
         }
 
-        console.log(`Spawned ${guardCount} guards successfully.`);
+        MISSION_LOG(`Spawned ${guardCount} guards successfully.`);
         if (typeof uiManager !== 'undefined') {
             uiManager.addMessage(`${guardCount} escort(s) detected around the target.`);
         }

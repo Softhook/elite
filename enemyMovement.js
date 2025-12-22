@@ -98,7 +98,7 @@ class EnemyMovement {
                     const firingRange = this.visualFiringRange || this.firingRange || 400;
 
                     // Initialize strafe state if needed
-                    if (this._sniperStrafeTimer === undefined) {
+                    if (this._sniperStrafeTimer == null) {
                         this._sniperStrafeTimer = random(1.0, 2.5);
                         this._sniperStrafeDir = 0; // 0 = none, -1 = left, 1 = right
                         this._sniperThrustVariance = random(0.8, 1.2); // Per-ship variance

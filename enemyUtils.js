@@ -14,12 +14,13 @@ class EnemyUtils {
     predictTargetPosition() {
         if (!this.target?.pos || !this.target?.vel) return this.target?.pos || null;
 
-        // Reuse the temp vector instead of creating new ones
+        // Reuse the temp vector for calculation, but return a copy
+        // to prevent corruption if caller stores the result
         this.tempVector.set(this.target.vel.x, this.target.vel.y);
         let pf = this.predictionTime * (deltaTime ? (60 / (1000 / deltaTime)) : 60);
         this.tempVector.mult(pf);
         this.tempVector.add(this.target.pos);
-        return this.tempVector;
+        return this.tempVector.copy();
     }
 
     /** 

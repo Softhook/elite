@@ -422,7 +422,7 @@ class EnemyAIBehaviors {
         const targetPos = (targetExists && this.target?.pos) ? this.target.pos : null;
 
         if (this.coverTarget && this.coverTarget.destroyed) {
-            console.log(`${this.shipTypeName} cover target destroyed, clearing cover`);
+            AI_LOG(`${this.shipTypeName} cover target destroyed, clearing cover`);
             this.coverTarget = null;
             this.repositionTarget = null;
         }
@@ -460,11 +460,11 @@ class EnemyAIBehaviors {
                     const speed = (cover.vel && typeof cover.vel.mag === 'function') ? cover.vel.mag() : Math.hypot(cover.vel?.x || 0, cover.vel?.y || 0);
                     const speedPenalty = Math.min(speed, 3) * 0.4;
 
-                    console.log(`${this.shipTypeName} attempting cover at (${cover.pos.x.toFixed(0)}, ${cover.pos.y.toFixed(0)}) | score:${coverScore.toFixed(2)} dist_tgt:${distanceToTarget.toFixed(0)} hull:${(this.hull / this.maxHull * 100).toFixed(0)}% | ast_r:${r.toFixed(1)} dist_ast:${distToAst.toFixed(1)} sizeF:${sizeFactor.toFixed(2)} distF:${distFactor.toFixed(2)} speedP:${speedPenalty.toFixed(2)} LOS:${blocksLOS ? 'Y' : 'N'}`);
+                    AI_LOG(`${this.shipTypeName} attempting cover at (${cover.pos.x.toFixed(0)}, ${cover.pos.y.toFixed(0)}) | score:${coverScore.toFixed(2)} dist_tgt:${distanceToTarget.toFixed(0)} hull:${(this.hull / this.maxHull * 100).toFixed(0)}% | ast_r:${r.toFixed(1)} dist_ast:${distToAst.toFixed(1)} sizeF:${sizeFactor.toFixed(2)} distF:${distFactor.toFixed(2)} speedP:${speedPenalty.toFixed(2)} LOS:${blocksLOS ? 'Y' : 'N'}`);
                     this.coverTarget = cover;
                     refreshCoverApproachPoint();
                     if (this.currentState !== AI_STATE.REPOSITIONING) {
-                        console.log(`${this.shipTypeName} entering REPOSITIONING to reach cover at (${this.repositionTarget.x.toFixed(0)}, ${this.repositionTarget.y.toFixed(0)})`);
+                        AI_LOG(`${this.shipTypeName} entering REPOSITIONING to reach cover at (${this.repositionTarget.x.toFixed(0)}, ${this.repositionTarget.y.toFixed(0)})`);
                         this.changeState(AI_STATE.REPOSITIONING);
                     }
                 }
@@ -579,8 +579,8 @@ class EnemyAIBehaviors {
         // -------------------------------
 
         // 2. Update targeting (may be overridden by forced combat)
-        let targetExists = this.updateTargeting(system);
-        targetExists = this.isTargetValid(this.target);
+        this.updateTargeting(system);
+        const targetExists = this.isTargetValid(this.target);
 
         // 3. Compute distance to target and angle for firing (with predictive aiming)
         let distanceToTarget = targetExists ? this.distanceTo(this.target) : Infinity;

@@ -328,7 +328,7 @@ class Player {
      * @returns {boolean} Success status
      */
     acceptMission(missionInput) {
-        console.log("--- Player.acceptMission() called ---");
+        MISSION_LOG("--- Player.acceptMission() called ---");
 
         // Check if player already has an active mission
         if (this.activeMission) {
@@ -345,18 +345,18 @@ class Player {
             return false;
         }
 
-        console.log(`   Attempting to accept mission: ${missionInput.title}`);
+        MISSION_LOG(`   Attempting to accept mission: ${missionInput.title}`);
 
         // Handle both Mission objects and mission data objects
         if (missionInput instanceof Mission) {
             // Already a Mission object, use it directly
             this.activeMission = missionInput;
-            console.log(`   Using existing Mission object: ${this.activeMission.title}`);
+            MISSION_LOG(`   Using existing Mission object: ${this.activeMission.title}`);
         } else {
             // Plain mission data object, create new Mission
             try {
                 this.activeMission = new Mission(missionInput);
-                console.log(`   Mission object created: ${this.activeMission.title}`);
+                MISSION_LOG(`   Mission object created: ${this.activeMission.title}`);
             } catch (e) {
                 console.error("   Failed to create Mission object:", e);
                 this.activeMission = null;
@@ -364,12 +364,12 @@ class Player {
             }
         }
 
-        console.log(`   BEFORE activate() call: Mission Title = ${this.activeMission?.title}, Status = ${this.activeMission?.status}`);
+        MISSION_LOG(`   BEFORE activate() call: Mission Title = ${this.activeMission?.title}, Status = ${this.activeMission?.status}`);
 
         try {
-            console.log(`   >>> Calling this.activeMission.activate() <<<`);
+            MISSION_LOG(`   >>> Calling this.activeMission.activate() <<<`);
             const activateResult = this.activeMission.activate(); // <<< EXECUTE THE STATUS CHANGE
-            console.log(`   <<< Finished this.activeMission.activate() >>>`);
+            MISSION_LOG(`   <<< Finished this.activeMission.activate() >>>`);
 
             // Check if activation failed (e.g., not enough cargo space)
             if (activateResult === false) {
@@ -383,11 +383,11 @@ class Player {
             return false; // Indicate failure
         }
 
-        console.log(`   AFTER activate() call: Mission Status = ${this.activeMission?.status}`); // Check status immediately after
+        MISSION_LOG(`   AFTER activate() call: Mission Status = ${this.activeMission?.status}`); // Check status immediately after
         // --- End Activation ---
 
         if (this.activeMission.status === 'Active') {
-            console.log(`--- Mission "${this.activeMission.title}" ACCEPTED & ACTIVATED successfully. ---`);
+            MISSION_LOG(`--- Mission "${this.activeMission.title}" ACCEPTED & ACTIVATED successfully. ---`);
             if (typeof saveGame === 'function') saveGame();
             // Play mission accept sound
             if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
@@ -429,13 +429,13 @@ class Player {
 
     /** Checks if the player has a specific quantity of a commodity. */
     hasCargo(cargoType, quantity) {
-        console.log(`--- Player.hasCargo Check --- Type: ${cargoType}, Qty Needed: ${quantity}`); // Log input
-        if (!cargoType || quantity <= 0) { console.log("   Result: false (Invalid input)"); return false; }
+        MISSION_LOG(`--- Player.hasCargo Check --- Type: ${cargoType}, Qty Needed: ${quantity}`); // Log input
+        if (!cargoType || quantity <= 0) { MISSION_LOG("   Result: false (Invalid input)"); return false; }
         const item = this.cargo.find(i => i?.name === cargoType);
-        console.log(`   Found item in cargo:`, item); // Log the found item object (or undefined)
+        MISSION_LOG(`   Found item in cargo:`, item); // Log the found item object (or undefined)
         // Ensure we always return a boolean, not undefined
         const result = !!(item && item.quantity >= quantity);
-        console.log(`   Result: ${result}`); // Log the boolean result
+        MISSION_LOG(`   Result: ${result}`); // Log the boolean result
         return result;
     }
 
@@ -447,15 +447,15 @@ class Player {
      * @param {Station} [currentStation] - The station the player is docked at (required for station-based completion).
      */
     completeMission(currentSystem, currentStation) { // Keep params for potential station use
-        console.log("--- Attempting Player.completeMission() ---");
+        MISSION_LOG("--- Attempting Player.completeMission() ---");
         if (!this.activeMission) { console.warn("Complete failed: No active mission."); return false; }
 
-        console.log(`   Checking Mission: ${this.activeMission.title}, Status: ${this.activeMission.status}`);
+        MISSION_LOG(`   Checking Mission: ${this.activeMission.title}, Status: ${this.activeMission.status}`);
         // Log location only if provided (it won't be for auto-complete)
         if (currentSystem && currentStation) {
-            console.log(`   Current Location: ${currentStation.name} (${currentSystem.name})`);
+            MISSION_LOG(`   Current Location: ${currentStation.name} (${currentSystem.name})`);
         } else {
-            console.log(`   Completion triggered automatically (in space).`);
+            MISSION_LOG(`   Completion triggered automatically (in space).`);
         }
 
 
@@ -473,14 +473,14 @@ class Player {
                 }
                 // Check location
                 let isAtDestination = (currentSystem.name === this.activeMission.destinationSystem);
-                console.log(`   Delivery Check: Is at destination? ${isAtDestination}`);
+                MISSION_LOG(`   Delivery Check: Is at destination? ${isAtDestination}`);
                 if (!isAtDestination) {
                     console.warn("   Complete failed: Not at destination station.");
                     return false;
                 }
                 // Check cargo
                 let hasGoods = this.hasCargo(this.activeMission.cargoType, this.activeMission.cargoQuantity);
-                console.log(`   Delivery Check: Has required cargo (${this.activeMission.cargoQuantity}t ${this.activeMission.cargoType})? ${hasGoods}`);
+                MISSION_LOG(`   Delivery Check: Has required cargo (${this.activeMission.cargoQuantity}t ${this.activeMission.cargoType})? ${hasGoods}`);
                 if (!hasGoods) {
                     console.warn("   Complete failed: Missing required cargo!");
                     return false;
@@ -491,9 +491,9 @@ class Player {
 
             // --- BOUNTY MISSIONS (Check progress - Location check removed for auto-complete) ---
             else if (this.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE) {
-                console.log(`   Bounty Check: Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
+                MISSION_LOG(`   Bounty Check: Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
                 if (this.activeMission.progressCount >= this.activeMission.targetCount) {
-                    console.log("   Bounty Check: Target count met. Allowing completion.");
+                    MISSION_LOG("   Bounty Check: Target count met. Allowing completion.");
                     canComplete = true; // Allow completion anywhere once count is met
                 } else {
                     console.warn("   Complete failed: Bounty target count not met."); return false;
@@ -502,9 +502,9 @@ class Player {
 
             // --- NEW: COP KILLER BOUNTY MISSIONS (Check progress - Location check removed for auto-complete) ---
             else if (this.activeMission.type === MISSION_TYPE.BOUNTY_POLICE) {
-                console.log(`   Bounty Check (Police): Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
+                MISSION_LOG(`   Bounty Check (Police): Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
                 if (this.activeMission.progressCount >= this.activeMission.targetCount) {
-                    console.log("   Bounty Check (Police): Target count met. Allowing completion.");
+                    MISSION_LOG("   Bounty Check (Police): Target count met. Allowing completion.");
                     canComplete = true; // Allow completion anywhere once count is met
                 } else {
                     console.warn("   Complete failed: Bounty (Police) target count not met."); return false;
@@ -512,9 +512,9 @@ class Player {
             }
             // --- NEW: ALIEN BOUNTY MISSIONS (Check progress - Location check removed for auto-complete) ---
             else if (this.activeMission.type === MISSION_TYPE.BOUNTY_ALIEN) {
-                console.log(`   Bounty Check (Alien): Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
+                MISSION_LOG(`   Bounty Check (Alien): Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
                 if (this.activeMission.progressCount >= this.activeMission.targetCount) {
-                    console.log("   Bounty Check (Alien): Target count met. Allowing completion.");
+                    MISSION_LOG("   Bounty Check (Alien): Target count met. Allowing completion.");
                     canComplete = true; // Allow completion anywhere once count is met
                 } else {
                     console.warn("   Complete failed: Bounty (Alien) target count not met."); return false;
@@ -523,11 +523,11 @@ class Player {
 
             // --- ASSASSINATION MISSIONS (Check if target was destroyed) ---
             else if (this.activeMission.type === MISSION_TYPE.ASSASSINATION) {
-                console.log(`   Assassination Check: Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount || 1}`);
+                MISSION_LOG(`   Assassination Check: Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount || 1}`);
                 // Assassination missions are auto-completed when the target is destroyed (via mission.update)
                 // But we also allow manual completion if progressCount >= 1
                 if (this.activeMission.progressCount >= 1 || this.activeMission.status === 'Completable') {
-                    console.log("   Assassination Check: Target eliminated. Allowing completion.");
+                    MISSION_LOG("   Assassination Check: Target eliminated. Allowing completion.");
                     canComplete = true;
                 } else {
                     console.warn("   Complete failed: Assassination target not yet eliminated.");
@@ -537,11 +537,11 @@ class Player {
 
             // --- SABOTAGE MISSIONS (Check if target object was destroyed) ---
             else if (this.activeMission.type === MISSION_TYPE.SABOTAGE) {
-                console.log(`   Sabotage Check: Progress ${this.activeMission.progressCount}, Status ${this.activeMission.status}`);
+                MISSION_LOG(`   Sabotage Check: Progress ${this.activeMission.progressCount}, Status ${this.activeMission.status}`);
                 // Sabotage missions are auto-completed when the target object is destroyed (via mission.update)
                 // But we also allow manual completion if status is 'Completable' or progressCount >= 1
                 if (this.activeMission.progressCount >= 1 || this.activeMission.status === 'Completable') {
-                    console.log("   Sabotage Check: Target destroyed. Allowing completion.");
+                    MISSION_LOG("   Sabotage Check: Target destroyed. Allowing completion.");
                     canComplete = true;
                 } else {
                     console.warn("   Complete failed: Sabotage target not yet destroyed.");
@@ -551,9 +551,9 @@ class Player {
 
             // === FACTION KILL MISSIONS (Imperial Elimination/Strike, Separatist Raid/Strike, Military Extermination/Strike) ===
             else if (FACTION_KILL_TYPES && FACTION_KILL_TYPES.has(this.activeMission.type)) {
-                console.log(`   Faction Kill Check: Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
+                MISSION_LOG(`   Faction Kill Check: Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
                 if (this.activeMission.progressCount >= this.activeMission.targetCount) {
-                    console.log("   Faction Kill Check: Target count met. Allowing completion.");
+                    MISSION_LOG("   Faction Kill Check: Target count met. Allowing completion.");
                     canComplete = true;
                 } else {
                     console.warn("   Complete failed: Faction kill target count not met.");
@@ -563,9 +563,9 @@ class Player {
 
             // === FACTION PATROL MISSIONS (Imperial Patrol, Military Defense) - require scans ===
             else if (FACTION_PATROL_TYPES && FACTION_PATROL_TYPES.has(this.activeMission.type)) {
-                console.log(`   Faction Patrol Check: Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
+                MISSION_LOG(`   Faction Patrol Check: Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
                 if (this.activeMission.progressCount >= this.activeMission.targetCount) {
-                    console.log("   Faction Patrol Check: Scan count met. Allowing completion.");
+                    MISSION_LOG("   Faction Patrol Check: Scan count met. Allowing completion.");
                     canComplete = true;
                 } else {
                     console.warn("   Complete failed: Faction patrol scan count not met.");
@@ -575,9 +575,9 @@ class Player {
 
             // === FACTION SABOTAGE MISSIONS (Imperial/Separatist/Military Sabotage) ===
             else if (FACTION_SABOTAGE_TYPES && FACTION_SABOTAGE_TYPES.has(this.activeMission.type)) {
-                console.log(`   Faction Sabotage Check: Progress ${this.activeMission.progressCount}, Status ${this.activeMission.status}`);
+                MISSION_LOG(`   Faction Sabotage Check: Progress ${this.activeMission.progressCount}, Status ${this.activeMission.status}`);
                 if (this.activeMission.progressCount >= 1 || this.activeMission.status === 'Completable') {
-                    console.log("   Faction Sabotage Check: Target destroyed. Allowing completion.");
+                    MISSION_LOG("   Faction Sabotage Check: Target destroyed. Allowing completion.");
                     canComplete = true;
                 } else {
                     console.warn("   Complete failed: Faction sabotage target not yet destroyed.");
@@ -609,7 +609,7 @@ class Player {
                         return false;
                     }
                 }
-                console.log("   Faction Delivery Check: All conditions met. Allowing completion.");
+                MISSION_LOG("   Faction Delivery Check: All conditions met. Allowing completion.");
                 canComplete = true;
             }
 
@@ -627,7 +627,7 @@ class Player {
 
         // --- Proceed with Completion ---
         if (canComplete) {
-            console.log(`   Completing mission: ${this.activeMission.title}`);
+            MISSION_LOG(`   Completing mission: ${this.activeMission.title}`);
 
 
 
@@ -635,13 +635,13 @@ class Player {
 
             // Remove cargo ONLY for delivery missions
             if (this.activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || this.activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL) {
-                console.log(`   Removing cargo: ${this.activeMission.cargoQuantity}t ${this.activeMission.cargoType}`);
+                MISSION_LOG(`   Removing cargo: ${this.activeMission.cargoQuantity}t ${this.activeMission.cargoType}`);
                 this.removeCargo(this.activeMission.cargoType, this.activeMission.cargoQuantity);
             }
 
-            console.log(`   Calling addCredits(${reward}). Current Credits: ${this.credits}`);
+            MISSION_LOG(`   Calling addCredits(${reward}). Current Credits: ${this.credits}`);
             this.addCredits(reward);
-            console.log(`   Credits after addCredits call: ${this.credits}`);
+            MISSION_LOG(`   Credits after addCredits call: ${this.credits}`);
 
             this.activeMission.status = 'Completed'; // Mark internal status (though we clear player ref next)
 
@@ -650,21 +650,21 @@ class Player {
 
             // Award faction prestige if mission has a prestige reward
             if (this.activeMission.prestigeReward && this.activeMission.requiredFaction) {
-                console.log(`   Awarding ${this.activeMission.prestigeReward} prestige to ${this.activeMission.requiredFaction}`);
+                MISSION_LOG(`   Awarding ${this.activeMission.prestigeReward} prestige to ${this.activeMission.requiredFaction}`);
                 this.addFactionPrestige(this.activeMission.requiredFaction, this.activeMission.prestigeReward);
             }
 
             if (this.activeMission && typeof uiManager !== 'undefined') {
                 uiManager.inactiveMissionIds.add(this.activeMission.id);
-                console.log(`Added mission ID ${this.activeMission.id} to inactive missions list`);
+                MISSION_LOG(`Added mission ID ${this.activeMission.id} to inactive missions list`);
             }
 
             this.activeMission = null; // Clear active mission from player
-            console.log(`   activeMission is now: ${this.activeMission}`);
+            MISSION_LOG(`   activeMission is now: ${this.activeMission}`);
 
             // --- Provide feedback ---
             //alert(`Mission Complete!\n${completedTitle}\nReward: ${reward} Credits`); // Replace with better UI message later
-            console.log(`!!! Mission Complete: ${completedTitle} | Reward: ${reward}cr !!!`);
+            MISSION_LOG(`!!! Mission Complete: ${completedTitle} | Reward: ${reward}cr !!!`);
             uiManager.addMessage(`Mission Complete: ${completedTitle} | Reward: ${reward}cr`);
 
             // Play mission complete sound
@@ -1267,7 +1267,7 @@ class Player {
 
         // Check if weapons are disabled by EMP nebula
         if (this.weaponsDisabled) {
-            console.log("Weapons disabled by EMP nebula!");
+            PLAYER_LOG("Weapons disabled by EMP nebula!");
             if (typeof uiManager !== 'undefined') { uiManager.addMessage("Weapons Disabled: EMP", [255, 100, 0], 2000); }
             if (typeof soundManager !== 'undefined') { soundManager.playSound('error'); }
             return false;
@@ -1521,7 +1521,7 @@ class Player {
                     if (distSq < discoverySq) {
                         station.discovered = true;
                         if (typeof uiManager !== 'undefined') uiManager.addMessage(`Secret Base Discovered: ${station.name}!`, [0, 255, 255]);
-                        console.log(`Player discovered secret station: ${station.name}`);
+                        PLAYER_LOG(`Player discovered secret station: ${station.name}`);
                         // Clear any navigation cache so UI updates immediately
                         this._cachedNavigation = null;
                     }
@@ -1976,7 +1976,7 @@ class Player {
             const integerAmount = Math.floor(amount); // Ensure amount is an integer
             this.credits += integerAmount;
             this.credits = Math.floor(this.credits); // Ensure total is integer
-            console.log(`Added ${integerAmount} credits. New balance: ${this.credits}`);
+            PLAYER_LOG(`Added ${integerAmount} credits. New balance: ${this.credits}`);
             // Optionally update UI or trigger save
         }
     }
@@ -1988,10 +1988,10 @@ class Player {
             if (this.credits >= integerAmount) {
                 this.credits -= integerAmount;
                 this.credits = Math.floor(this.credits); // Ensure total is integer
-                console.log(`Spent ${integerAmount} credits. Remaining: ${this.credits}`);
+                PLAYER_LOG(`Spent ${integerAmount} credits. Remaining: ${this.credits}`);
                 return true; // Indicate success
             } else {
-                console.log(`Failed to spend ${integerAmount} credits. Insufficient funds (${this.credits}).`);
+                PLAYER_LOG(`Failed to spend ${integerAmount} credits. Insufficient funds (${this.credits}).`);
                 return false; // Indicate failure
             }
         }
@@ -2299,7 +2299,7 @@ class Player {
         // --- Log Active Mission Status BEFORE Saving ---
         let missionDataToSave = null;
         if (this.activeMission) {
-            console.log(`SAVING DATA: Active Mission Title = ${this.activeMission.title}, Status = ${this.activeMission.status}`);
+            SAVE_LOG(`SAVING DATA: Active Mission Title = ${this.activeMission.title}, Status = ${this.activeMission.status}`);
             // Use Mission's toJSON method for proper serialization
             // This excludes runtime references (_targetEnemyRef, _guardRefs) and saves IDs instead
             if (typeof this.activeMission.toJSON === 'function') {
@@ -2310,7 +2310,7 @@ class Player {
                 missionDataToSave = { ...this.activeMission };
             }
         } else {
-            console.log("SAVING DATA: No active mission.");
+            SAVE_LOG("SAVING DATA: No active mission.");
         }
         // ---
 
@@ -2396,7 +2396,7 @@ class Player {
         }
 
 
-        console.log("Player.loadSaveData: Loading data...");
+        SAVE_LOG("Player.loadSaveData: Loading data...");
 
         // Apply ship definition based on loaded ship type
         // This will also initialize weapons if they are not explicitly saved or if ship type changed
@@ -2501,7 +2501,7 @@ class Player {
             if (this.weaponIndex < 0 || this.weaponIndex >= this.weapons.length || !this.weapons[this.weaponIndex]) {
                 const firstValidWeaponIndex = this.weapons.findIndex(w => w !== null);
                 if (firstValidWeaponIndex !== -1) {
-                    console.log(`Saved weaponIndex ${data.weaponIndex} is invalid or points to a null weapon. Setting to first available weapon: ${firstValidWeaponIndex}`);
+                    SAVE_LOG(`Saved weaponIndex ${data.weaponIndex} is invalid or points to a null weapon. Setting to first available weapon: ${firstValidWeaponIndex}`);
                     this.weaponIndex = firstValidWeaponIndex;
                     weaponsRepaired = true;
                 } else {
@@ -2526,19 +2526,19 @@ class Player {
         // --- Load active mission ---
         this.activeMission = null; // Start fresh before loading
         if (data.activeMission) {
-            console.log("   Found activeMission data in save:", data.activeMission);
+            SAVE_LOG("   Found activeMission data in save:", data.activeMission);
             // Re-hydrate using the Mission constructor, passing the saved plain object
             try {
                 this.activeMission = new Mission(data.activeMission); // Pass the loaded object to constructor
                 // --- Log Status AFTER Re-hydration ---
-                console.log(`   LOADED DATA: Active Mission Title = ${this.activeMission?.title}, Status = ${this.activeMission?.status}, Progress = ${this.activeMission?.progressCount}`);
+                SAVE_LOG(`   LOADED DATA: Active Mission Title = ${this.activeMission?.title}, Status = ${this.activeMission?.status}, Progress = ${this.activeMission?.progressCount}`);
                 // ---
             } catch (e) {
                 console.error("   Error re-creating Mission object from saved data:", e);
                 this.activeMission = null; // Clear if creation failed
             }
         } else {
-            console.log("   No active mission found in save data.");
+            SAVE_LOG("   No active mission found in save data.");
         }
         // ----------------------------------
 
@@ -2555,7 +2555,7 @@ class Player {
                     enemyRef: null
                 });
             });
-            console.log(`Restored ${this.activeBodyguards.length} hired bodyguard(s) from save data.`);
+            SAVE_LOG(`Restored ${this.activeBodyguards.length} hired bodyguard(s) from save data.`);
         } else {
             // Ensure property exists for runtime code
             this.activeBodyguards = this.activeBodyguards || [];
@@ -2581,7 +2581,7 @@ class Player {
         // Restore navigation preferences
         this.showSecretBaseNavigation = data.showSecretBaseNavigation || false;
 
-        console.log(`Player data finished loading. Ship: ${this.shipTypeName}, Wanted: ${this.isWanted}, Mission Status: ${this.activeMission?.status || 'None'}`);
+        SAVE_LOG(`Player data finished loading. Ship: ${this.shipTypeName}, Wanted: ${this.isWanted}, Mission Status: ${this.activeMission?.status || 'None'}`);
     }
 
     // Ensure you have a way to set this.target, e.g., via mouse click on an enemy:
@@ -2705,8 +2705,8 @@ class Player {
      * @param {string} target - 'station', 'jumpzone', or 'secretbase'
      */
     toggleAutopilot(target) {
-        console.log(`toggleAutopilot called with target: ${target}`);
-        console.log(`Current autopilot state: ${this.autopilotEnabled ? 'enabled' : 'disabled'}, target: ${this.autopilotTarget || 'none'}`);
+        PLAYER_LOG(`toggleAutopilot called with target: ${target}`);
+        PLAYER_LOG(`Current autopilot state: ${this.autopilotEnabled ? 'enabled' : 'disabled'}, target: ${this.autopilotTarget || 'none'}`);
 
         // If autopilot is not currently enabled -> enable and reset cycle tracking
         if (!this.autopilotEnabled) {
@@ -2726,7 +2726,7 @@ class Player {
 
             // Display target-specific message
             const targetName = this._getAutopilotTargetName(target);
-            console.log(`Autopilot enabled: Flying to ${target}`);
+            PLAYER_LOG(`Autopilot enabled: Flying to ${target}`);
             if (uiManager) uiManager.addMessage(`Autopilot engaged: ${targetName}`);
             return;
         }
@@ -2767,7 +2767,7 @@ class Player {
     /** Disables autopilot - Ensures NO lingering effects */
     disableAutopilot() {
         if (this.autopilotEnabled) {
-            console.log("Autopilot disabled");
+            PLAYER_LOG("Autopilot disabled");
             this.autopilotEnabled = false;
             this.autopilotTarget = null;
             this.autopilotPlanetIndex = -1;
@@ -2800,11 +2800,11 @@ class Player {
 
             // Attempt to reinitialize static elements if they're missing
             if (this.currentSystem && typeof this.currentSystem.initStaticElements === 'function') {
-                console.log('Attempting to reinitialize system static elements...');
+                PLAYER_LOG('Attempting to reinitialize system static elements...');
                 try {
                     this.currentSystem.initStaticElements();
                     if (this.currentSystem.planets && this.currentSystem.planets.length > 0) {
-                        console.log(`Successfully reinitialized ${this.currentSystem.planets.length} planets`);
+                        PLAYER_LOG(`Successfully reinitialized ${this.currentSystem.planets.length} planets`);
                         // Retry the autopilot command
                         return this.cycleAutopilotPlanet();
                     }
@@ -2965,7 +2965,7 @@ class Player {
 
                 // Attempt to reinitialize if planets are missing
                 if ((!planets || planets.length === 0) && this.currentSystem && typeof this.currentSystem.initStaticElements === 'function') {
-                    console.log('Attempting to reinitialize system for autopilot...');
+                    PLAYER_LOG('Attempting to reinitialize system for autopilot...');
                     try {
                         this.currentSystem.initStaticElements();
                         // Don't disable autopilot yet, let it retry on next update
@@ -3377,7 +3377,7 @@ class Player {
                 uiManager.addMessage("Police status revoked due to criminal activity!", [255, 0, 0]);
             }
 
-            console.log("Player's police status revoked, marked as former officer");
+            PLAYER_LOG("Player's police status revoked, marked as former officer");
         }
     }
 
@@ -3458,7 +3458,7 @@ class Player {
             return null;
         }
 
-        console.log(`Cheapest ship for ${factionName}: ${cheapestShip} (price: ${lowestPrice})`);
+        PLAYER_LOG(`Cheapest ship for ${factionName}: ${cheapestShip} (price: ${lowestPrice})`);
         return cheapestShip;
     }
 
@@ -3470,7 +3470,7 @@ class Player {
     joinFaction(factionName) {
         // Validate if can join
         if (!this.canJoinFaction(factionName)) {
-            console.log(`Cannot join faction: ${factionName}`);
+            PLAYER_LOG(`Cannot join faction: ${factionName}`);
             return false;
         }
 
@@ -3513,7 +3513,7 @@ class Player {
         // Record faction joining in personal record
         this.recordFactionJoin(factionName);
 
-        console.log(`Player joined ${factionName} faction and received ${shipType}`);
+        PLAYER_LOG(`Player joined ${factionName} faction and received ${shipType}`);
         return true;
     }
 
@@ -3527,12 +3527,12 @@ class Player {
             this.hasBeenPolice = true;
             this.isPolice = false;
             this.factionShip = null;
-            console.log("Player left POLICE faction");
+            PLAYER_LOG("Player left POLICE faction");
             return true;
         }
 
         if (!this.playerFaction) {
-            console.log("Not currently in any faction");
+            PLAYER_LOG("Not currently in any faction");
             return false;
         }
 
@@ -3540,7 +3540,7 @@ class Player {
         this.playerFaction = null;
         this.factionShip = null;
 
-        console.log(`Player left ${oldFaction} faction`);
+        PLAYER_LOG(`Player left ${oldFaction} faction`);
         return true;
     }
 
@@ -3628,13 +3628,13 @@ class Player {
     hireBodyguard(shipType, cost) {
         // Check if player has space for more bodyguards
         if (this.getActiveGuardsCount() >= this.bodyguardLimit) {
-            console.log("Cannot hire bodyguard: limit reached");
+            PLAYER_LOG("Cannot hire bodyguard: limit reached");
             return false;
         }
 
         // Check if player has enough credits
         if (this.credits < cost) {
-            console.log("Cannot hire bodyguard: not enough credits");
+            PLAYER_LOG("Cannot hire bodyguard: not enough credits");
             return false;
         }
 
@@ -3650,7 +3650,7 @@ class Player {
             enemyRef: null // Reference to the actual Enemy object when spawned
         });
 
-        console.log(`Hired ${shipType} bodyguard for ${cost} credits. Total bodyguards: ${this.activeBodyguards.length}`);
+        PLAYER_LOG(`Hired ${shipType} bodyguard for ${cost} credits. Total bodyguards: ${this.activeBodyguards.length}`);
         return true;
     }
 
@@ -3659,7 +3659,7 @@ class Player {
      */
     dismissBodyguards() {
         if (!this.activeBodyguards || this.activeBodyguards.length === 0) {
-            console.log("No bodyguards to dismiss");
+            PLAYER_LOG("No bodyguards to dismiss");
             return;
         }
 
@@ -3675,7 +3675,7 @@ class Player {
         // Clear the bodyguards array
         const count = this.activeBodyguards.length;
         this.activeBodyguards = [];
-        console.log(`Dismissed ${count} bodyguard(s)`);
+        PLAYER_LOG(`Dismissed ${count} bodyguard(s)`);
     }
 
     /**
@@ -3736,7 +3736,7 @@ class Player {
             // Add to system enemies (use addEnemy for proper Map tracking)
             system.addEnemy(bodyguardEnemy);
 
-            console.log(`Spawned bodyguard ${guard.shipType} at ${spawnX.toFixed(0)}, ${spawnY.toFixed(0)}`);
+            PLAYER_LOG(`Spawned bodyguard ${guard.shipType} at ${spawnX.toFixed(0)}, ${spawnY.toFixed(0)}`);
         });
     }
 
@@ -3779,7 +3779,7 @@ class Player {
         }
 
         if (lostCount > 0) {
-            console.log(`Lost ${lostCount} bodyguard(s) in combat`);
+            PLAYER_LOG(`Lost ${lostCount} bodyguard(s) in combat`);
         }
     }
 
@@ -3791,7 +3791,7 @@ class Player {
     repairBodyguards(cost) {
         // Check if player has enough credits
         if (this.credits < cost) {
-            console.log("Cannot repair bodyguards: not enough credits");
+            PLAYER_LOG("Cannot repair bodyguards: not enough credits");
             return false;
         }
 
@@ -3814,7 +3814,7 @@ class Player {
         // Deduct credits
         this.credits -= cost;
 
-        console.log(`Repaired ${repairedCount} bodyguard(s) for ${cost} credits`);
+        PLAYER_LOG(`Repaired ${repairedCount} bodyguard(s) for ${cost} credits`);
         return true;
     }
 

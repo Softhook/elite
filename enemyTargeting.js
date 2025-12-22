@@ -151,9 +151,9 @@ class EnemyTargeting {
                         if (!isPriority && this.faction === 'MILITARY' && e.role === AI_ROLE.ALIEN) isPriority = true;
 
                         if (isPriority) {
-                            const idx = this.pos.x - e.pos.x;
-                            const idy = this.pos.y - e.pos.y;
-                            const d2 = idx * idx + idy * idy;
+                            const dx = this.pos.x - e.pos.x;
+                            const dy = this.pos.y - e.pos.y;
+                            const d2 = dx * dx + dy * dy;
                             // Switch if this rival is closer than current best (or if current best is the player)
                             // We heavily bias towards Rivals over Player
                             if (!bestOffScreenTarget || bestOffScreenTarget === system.player || d2 < bestOffScreenDistSq) {

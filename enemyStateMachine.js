@@ -825,10 +825,10 @@ class EnemyStateMachine {
             case AI_STATE.SNIPING:
                 this.shieldPlusHullAtStateEntry = null; // Clear stored health
                 this._snipingDecisionTimer = null; // Clear tactical timer
-                this._sniperStrafeTimer = undefined; // Clear strafe decision timer
-                this._sniperStrafeDir = 0; // Reset strafe direction
-                this._sniperThrustVariance = undefined; // Clear per-ship variance
-                this._sniperReactionDelay = 0; // Clear reaction delay
+                this._sniperStrafeTimer = null; // Clear strafe decision timer
+                this._sniperStrafeDir = null; // Reset strafe direction
+                this._sniperThrustVariance = null; // Clear per-ship variance
+                this._sniperReactionDelay = null; // Clear reaction delay
                 break;
         }
     }

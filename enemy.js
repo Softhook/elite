@@ -191,9 +191,6 @@ class Enemy {
         if (this.weapons.length > 0) {
             this.currentWeapon = this.weapons[0];
             this.fireRate = this.currentWeapon.fireRate;
-            if (typeof uiManager !== 'undefined' && uiManager?.addMessage) {
-                uiManager.addMessage(`${this.shipTypeName} detected `);
-            }
         } else {
             // No weapons resolved. Keep ship unarmed. Certain combat-centric roles may receive a safe fallback.
             const combatRole = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.BOUNTY_HUNTER || this.role === AI_ROLE.POLICE || this.role === AI_ROLE.GUARD);
@@ -384,7 +381,6 @@ class Enemy {
     // --- Core Update Logic ---
     // -------------------------
 
-    /** Updates the enemy's state machine, movement, and actions based on role. */
     /** Updates the enemy's state machine, movement, and actions based on role. */
     update(system) {
         // Allow update to continue during jump-fade even if `destroyed` is set,
