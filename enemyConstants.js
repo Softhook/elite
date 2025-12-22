@@ -137,6 +137,7 @@ const ATTACK_PASS_COLLISION_AVOID_RANGE_FACTOR = 0.8; // Factor of combined size
 const ATTACK_PASS_COLLISION_AVOID_THRUST_REDUCTION = 0.3; // Thrust multiplier during emergency avoidance
 const APPROACH_BRAKING_DISTANCE_FACTOR = 1.2; // Multiplier of combined (enemy+target) sizes to start braking in APPROACH
 const APPROACH_CLOSE_THRUST_REDUCTION = 0.25; // Thrust multiplier when very close in APPROACH state
+const APPROACH_PURSUIT_ABANDON_THRESHOLD = 0.25; // Abandon pursuit if health drops 25% while approaching (kiting defense)
 
 // -------------------------
 // --- Sniping Tuning Constants ---

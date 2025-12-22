@@ -155,6 +155,7 @@ class EnemyStateMachine {
     /**
      * Handles APPROACHING state logic
      * Transitions to SNIPING or ATTACK_PASS based on range and weapon capabilities
+     * Also detects "kiting" - abandons pursuit if taking too much damage while chasing
      * @param {boolean} targetExists - Whether a valid target exists
      * @param {number} distanceToTarget - Distance to current target
      * @private
@@ -163,6 +164,20 @@ class EnemyStateMachine {
         if (!targetExists) {
             this.changeState(this._getDefaultStateForRole());
             return;
+        }
+
+        // --- Kiting detection: abandon pursuit if taking heavy damage while chasing ---
+        if (this.shieldPlusHullAtStateEntry !== null) {
+            const totalMaxHealth = this.maxShield + this.maxHull;
+            if (totalMaxHealth > 0) {
+                const abandonThreshold = totalMaxHealth * APPROACH_PURSUIT_ABANDON_THRESHOLD;
+                const currentHealth = this.shield + this.hull;
+                if (currentHealth < this.shieldPlusHullAtStateEntry - abandonThreshold) {
+                    AI_LOG(`${this.shipTypeName} (APPROACHING): Lost ${APPROACH_PURSUIT_ABANDON_THRESHOLD * 100}% health while pursuing. Abandoning pursuit.`);
+                    this.changeState(AI_STATE.FLEEING);
+                    return;
+                }
+            }
         }
 
         // Tactical decision: Snipe (stationary turret) or Attack Pass (dynamic movement)
@@ -576,6 +591,11 @@ class EnemyStateMachine {
      */
     onStateEntry(state, stateData = {}) {
         switch (state) {
+            case AI_STATE.APPROACHING:
+                // Store combined health for kiting detection (low CPU: single assignment)
+                this.shieldPlusHullAtStateEntry = this.shield + this.hull;
+                break;
+
             case AI_STATE.ATTACK_PASS:
                 // Initialize attack pass with timer
                 const basePassDuration = this.passDuration;
@@ -751,6 +771,11 @@ class EnemyStateMachine {
                 // Reset cargo target when leaving collection state
                 this.cargoTarget = null;
                 this.cargoCollectionCooldown = this.role === AI_ROLE.TRANSPORT ? 0.5 : 1.0;
+                break;
+
+            case AI_STATE.APPROACHING:
+                // Clear tracking for kiting detection
+                this.shieldPlusHullAtStateEntry = null;
                 break;
 
             case AI_STATE.NEAR_STATION:
