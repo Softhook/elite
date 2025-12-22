@@ -22,6 +22,15 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: -0.1800, y: 0.3000 }, { x: -0.3400, y: 0.1800 }, { x: -0.3400, y: -0.1800 }, { x: -0.1800, y: -0.3000 }, { x: -0.0200, y: -0.2200 }, { x: 0.1800, y: -0.1200 }, { x: 0.3000, y: -0.0000 }, { x: 0.1800, y: 0.1200 }, { x: -0.0200, y: 0.2200 }],
                 fillColor: [101, 171, 236],
+            },
+            // Police emergency lights
+            {
+                vertexData: [{ x: -0.5000, y: 0.5500 }, { x: -0.5800, y: 0.5200 }, { x: -0.5400, y: 0.4800 }],
+                fillColor: [255, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.5000, y: -0.5500 }, { x: -0.5800, y: -0.5200 }, { x: -0.5400, y: -0.4800 }],
+                fillColor: [0, 100, 255]
             }
         ],
         typicalCargo: [],
@@ -43,6 +52,21 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: -0.0793, y: 0.3000 }, { x: -0.2393, y: 0.1800 }, { x: -0.2393, y: -0.1800 }, { x: -0.0793, y: -0.3000 }, { x: 0.0807, y: -0.2200 }, { x: 0.2807, y: -0.1200 }, { x: 0.4007, y: -0.0000 }, { x: 0.2807, y: 0.1200 }, { x: 0.0807, y: 0.2200 }],
                 fillColor: [101, 171, 236],
+            },
+            // Port navigation light (red)
+            {
+                vertexData: [{ x: -0.5500, y: 0.5400 }, { x: -0.6200, y: 0.5100 }, { x: -0.5700, y: 0.4700 }],
+                fillColor: [255, 50, 50]
+            },
+            // Starboard navigation light (green)
+            {
+                vertexData: [{ x: -0.5500, y: -0.5400 }, { x: -0.6200, y: -0.5100 }, { x: -0.5700, y: -0.4700 }],
+                fillColor: [50, 255, 50]
+            },
+            // Engine housing stripe
+            {
+                vertexData: [{ x: -0.7500, y: 0.1200 }, { x: -0.8200, y: 0.1200 }, { x: -0.8200, y: -0.1200 }, { x: -0.7500, y: -0.1200 }],
+                fillColor: [80, 80, 100]
             }
         ],
         typicalCargo: ["Food"],
@@ -64,6 +88,16 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.3000, y: 0.0000 }, { x: -0.1500, y: 0.2598 }, { x: -0.1500, y: -0.2598 }],
                 fillColor: [101, 171, 236],
+            },
+            // Cargo bay marking
+            {
+                vertexData: [{ x: -0.3000, y: 0.3500 }, { x: -0.5000, y: 0.4000 }, { x: -0.5000, y: 0.2500 }, { x: -0.3000, y: 0.3000 }],
+                fillColor: [200, 180, 100]
+            },
+            // Navigation light port
+            {
+                vertexData: [{ x: 0.1500, y: 0.7800 }, { x: 0.0800, y: 0.7500 }, { x: 0.1200, y: 0.7000 }],
+                fillColor: [255, 50, 50]
             }
         ],
         typicalCargo: ["Food", "Textiles", "Minerals"],
@@ -85,6 +119,35 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.6900, y: -0.1980 }, { x: 0.8340, y: -0.0900 }, { x: 0.8340, y: 0.0900 }, { x: 0.6900, y: 0.1980 }, { x: 0.6700, y: 0.0000 }],
                 fillColor: [150, 150, 180]
+            },
+            // Military chevron emblem (gold arrow) - large ship
+            {
+                vertexData: [{ x: 0.5000, y: 0.0000 }, { x: 0.3000, y: 0.1200 }, { x: 0.3800, y: 0.0000 }, { x: 0.3000, y: -0.1200 }],
+                fillColor: [218, 165, 32]
+            },
+            // Hull identification stripe
+            {
+                vertexData: [{ x: 0.2000, y: 0.2600 }, { x: -0.6000, y: 0.3200 }, { x: -0.6000, y: 0.2800 }, { x: 0.2000, y: 0.2200 }],
+                fillColor: [60, 70, 80]
+            },
+            {
+                vertexData: [{ x: 0.2000, y: -0.2600 }, { x: -0.6000, y: -0.3200 }, { x: -0.6000, y: -0.2800 }, { x: 0.2000, y: -0.2200 }],
+                fillColor: [60, 70, 80]
+            },
+            // Port navigation light
+            {
+                vertexData: [{ x: -0.9000, y: 0.3800 }, { x: -0.9700, y: 0.3500 }, { x: -0.9200, y: 0.3200 }],
+                fillColor: [255, 50, 50]
+            },
+            // Starboard navigation light
+            {
+                vertexData: [{ x: -0.9000, y: -0.3800 }, { x: -0.9700, y: -0.3500 }, { x: -0.9200, y: -0.3200 }],
+                fillColor: [50, 255, 50]
+            },
+            // Stern light
+            {
+                vertexData: [{ x: -1.0500, y: 0.0500 }, { x: -1.1200, y: 0.0000 }, { x: -1.0500, y: -0.0500 }],
+                fillColor: [255, 255, 200]
             }
         ],
         typicalCargo: ["Luxury Goods", "Adv Components", "Metals", "Machinery", "Minerals"],
@@ -140,6 +203,29 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: -0.0905, y: 0.5240 }, { x: 0.3429, y: 0.6907 }, { x: 0.2096, y: 0.8287 }],
                 fillColor: [182, 182, 185]
+            },
+            // Military chevron emblem (gold arrow)
+            {
+                vertexData: [{ x: 0.4500, y: 0.0000 }, { x: 0.3000, y: 0.1000 }, { x: 0.3500, y: 0.0000 }, { x: 0.3000, y: -0.1000 }],
+                fillColor: [218, 165, 32]
+            },
+            // Hull hash lines (deliberate pattern)
+            {
+                vertexData: [{ x: 0.0000, y: 0.4500 }, { x: 0.0400, y: 0.4700 }, { x: -0.1200, y: 0.4900 }, { x: -0.1600, y: 0.4700 }],
+                fillColor: [80, 85, 95]
+            },
+            {
+                vertexData: [{ x: 0.0000, y: -0.4500 }, { x: 0.0400, y: -0.4700 }, { x: -0.1200, y: -0.4900 }, { x: -0.1600, y: -0.4700 }],
+                fillColor: [80, 85, 95]
+            },
+            // Nav lights
+            {
+                vertexData: [{ x: 0.2000, y: 0.8500 }, { x: 0.1400, y: 0.8200 }, { x: 0.1800, y: 0.7800 }],
+                fillColor: [255, 50, 50]
+            },
+            {
+                vertexData: [{ x: 0.2000, y: -0.8500 }, { x: 0.1400, y: -0.8200 }, { x: 0.1800, y: -0.7800 }],
+                fillColor: [50, 255, 50]
             }
         ],
         typicalCargo: ["Weapons", "Metals", "Machinery"],
@@ -162,6 +248,29 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.1400, y: -0.2000 }, { x: 0.3998, y: -0.0500 }, { x: 0.3998, y: 0.0300 }, { x: 0.1400, y: 0.1800 }, { x: -0.1198, y: 0.0300 }, { x: -0.1198, y: -0.0500 }],
                 fillColor: [101, 171, 236]
+            },
+            // Sensor dish (exploration equipment)
+            {
+                vertexData: [{ x: -0.6000, y: 0.8200 }, { x: -0.7000, y: 0.7500 }, { x: -0.6500, y: 0.7000 }],
+                fillColor: [200, 200, 210]
+            },
+            // Scanner array hash marks
+            {
+                vertexData: [{ x: -0.3000, y: 0.6500 }, { x: -0.2500, y: 0.6700 }, { x: -0.4000, y: 0.7500 }, { x: -0.4500, y: 0.7300 }],
+                fillColor: [80, 90, 70]
+            },
+            {
+                vertexData: [{ x: -0.3000, y: -0.6500 }, { x: -0.2500, y: -0.6700 }, { x: -0.4000, y: -0.7500 }, { x: -0.4500, y: -0.7300 }],
+                fillColor: [80, 90, 70]
+            },
+            // Nav lights
+            {
+                vertexData: [{ x: -0.5000, y: 0.8700 }, { x: -0.5700, y: 0.8400 }, { x: -0.5200, y: 0.8000 }],
+                fillColor: [255, 50, 50]
+            },
+            {
+                vertexData: [{ x: -0.5000, y: -0.8700 }, { x: -0.5700, y: -0.8400 }, { x: -0.5200, y: -0.8000 }],
+                fillColor: [50, 255, 50]
             }
         ],
         typicalCargo: ["Minerals", "Metals", "Adv Components"],
@@ -187,6 +296,25 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: -0.6159, y: 0.1967 }, { x: -0.2833, y: 0.0000 }, { x: -0.6159, y: -0.1967 }],
                 fillColor: [84, 84, 84],
+            },
+            // Military chevron emblem (gold arrow) - large ship gets bigger emblem
+            {
+                vertexData: [{ x: 0.7000, y: 0.0000 }, { x: 0.4500, y: 0.1500 }, { x: 0.5500, y: 0.0000 }, { x: 0.4500, y: -0.1500 }],
+                fillColor: [218, 165, 32]
+            },
+            // Hash lines along hull
+            {
+                vertexData: [{ x: -0.2000, y: 0.6000 }, { x: -0.1500, y: 0.6200 }, { x: -0.4000, y: 0.7500 }, { x: -0.4500, y: 0.7300 }],
+                fillColor: [120, 120, 130]
+            },
+            {
+                vertexData: [{ x: -0.2000, y: -0.6000 }, { x: -0.1500, y: -0.6200 }, { x: -0.4000, y: -0.7500 }, { x: -0.4500, y: -0.7300 }],
+                fillColor: [120, 120, 130]
+            },
+            // Stern warning light
+            {
+                vertexData: [{ x: -1.0000, y: 0.0400 }, { x: -1.0600, y: 0.0000 }, { x: -1.0000, y: -0.0400 }],
+                fillColor: [255, 255, 200]
             }
         ],
         typicalCargo: [],
@@ -214,6 +342,25 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: -0.6839, y: 0.3453 }, { x: 0.7905, y: 0.3453 }, { x: -0.5867, y: 0.4955 }],
                 fillColor: [150, 150, 180],
+            },
+            // Federation insignia
+            {
+                vertexData: [{ x: 0.2000, y: 0.1000 }, { x: 0.1400, y: 0.1600 }, { x: 0.0800, y: 0.1000 }, { x: 0.1400, y: 0.0400 }],
+                fillColor: [50, 100, 180]
+            },
+            // Military chevron emblem
+            {
+                vertexData: [{ x: 0.5500, y: 0.0000 }, { x: 0.4000, y: 0.0900 }, { x: 0.4600, y: 0.0000 }, { x: 0.4000, y: -0.0900 }],
+                fillColor: [218, 165, 32]
+            },
+            // Nav lights
+            {
+                vertexData: [{ x: -0.7000, y: 0.7500 }, { x: -0.7700, y: 0.7200 }, { x: -0.7200, y: 0.6800 }],
+                fillColor: [255, 50, 50]
+            },
+            {
+                vertexData: [{ x: -0.7000, y: -0.7500 }, { x: -0.7700, y: -0.7200 }, { x: -0.7200, y: -0.6800 }],
+                fillColor: [50, 255, 50]
             }
         ],
         typicalCargo: ["Computers", "Computers", "Computers", "Weapons", "Metals", "Adv Components"],
@@ -243,6 +390,29 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.4349, y: 0.0000 }, { x: 0.1360, y: 0.1505 }, { x: 0.1360, y: -0.1505 }],
                 fillColor: [150, 150, 180],
+            },
+            // Racing stripe
+            {
+                vertexData: [{ x: 0.6000, y: 0.0500 }, { x: 0.0000, y: 0.2000 }, { x: 0.0000, y: 0.1500 }, { x: 0.6000, y: 0.0000 }],
+                fillColor: [255, 200, 0]
+            },
+            {
+                vertexData: [{ x: 0.6000, y: -0.0500 }, { x: 0.0000, y: -0.2000 }, { x: 0.0000, y: -0.1500 }, { x: 0.6000, y: 0.0000 }],
+                fillColor: [255, 200, 0]
+            },
+            // Military chevron emblem
+            {
+                vertexData: [{ x: 0.7000, y: 0.0000 }, { x: 0.5500, y: 0.0800 }, { x: 0.6100, y: 0.0000 }, { x: 0.5500, y: -0.0800 }],
+                fillColor: [218, 165, 32]
+            },
+            // Nav lights
+            {
+                vertexData: [{ x: -0.6500, y: 0.5500 }, { x: -0.7200, y: 0.5200 }, { x: -0.6700, y: 0.4800 }],
+                fillColor: [255, 50, 50]
+            },
+            {
+                vertexData: [{ x: -0.6500, y: -0.5500 }, { x: -0.7200, y: -0.5200 }, { x: -0.6700, y: -0.4800 }],
+                fillColor: [50, 255, 50]
             }
         ],
         typicalCargo: ["Computers", "Computers", "Computers", "Computers", "Luxury Goods", "Weapons", "Narcotics"],
@@ -260,6 +430,34 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.0500, y: 0.0000 }, { x: 0.2500, y: 0.4000 }, { x: -0.2500, y: 0.7000 }, { x: -0.9500, y: 0.5000 }, { x: -1.0500, y: 0.0000 }, { x: -0.9500, y: -0.5000 }, { x: -0.2500, y: -0.7000 }, { x: 0.2500, y: -0.4000 }],
                 fillColor: [190, 195, 200],
+            },
+            // Military chevron emblem
+            {
+                vertexData: [{ x: 0.5500, y: 0.0000 }, { x: 0.4000, y: 0.0800 }, { x: 0.4500, y: 0.0000 }, { x: 0.4000, y: -0.0800 }],
+                fillColor: [218, 165, 32]
+            },
+            // Cockpit canopy
+            {
+                vertexData: [{ x: 0.3000, y: 0.0000 }, { x: 0.1500, y: 0.1200 }, { x: 0.1500, y: -0.1200 }],
+                fillColor: [100, 160, 220]
+            },
+            // Wing hash lines
+            {
+                vertexData: [{ x: -0.4000, y: 0.6000 }, { x: -0.3500, y: 0.6200 }, { x: -0.5500, y: 0.5800 }, { x: -0.6000, y: 0.5600 }],
+                fillColor: [160, 165, 170]
+            },
+            {
+                vertexData: [{ x: -0.4000, y: -0.6000 }, { x: -0.3500, y: -0.6200 }, { x: -0.5500, y: -0.5800 }, { x: -0.6000, y: -0.5600 }],
+                fillColor: [160, 165, 170]
+            },
+            // Nav lights
+            {
+                vertexData: [{ x: -0.3000, y: 0.6800 }, { x: -0.3700, y: 0.6500 }, { x: -0.3200, y: 0.6200 }],
+                fillColor: [255, 50, 50]
+            },
+            {
+                vertexData: [{ x: -0.3000, y: -0.6800 }, { x: -0.3700, y: -0.6500 }, { x: -0.3200, y: -0.6200 }],
+                fillColor: [50, 255, 50]
             }
         ],
         typicalCargo: ["Computers"],
@@ -298,8 +496,32 @@ const SHIP_DEFINITIONS = {
         baseHull: 30, baseShield: 30, shieldRecharge: 1.2, cargoCapacity: 4,
         armament: ["Twin Pulse"],
         costCategory: "Very Low", description: "Nicknamed 'coffin with an afterburner.' Blazes along at 9.5 speed with shields that couldn't stop harsh language. Only 30 hull means one good hit sends you home in a sandwich bag, but hey, you'll get there really fast!",
-        vertexData: [{ x: 1.1, y: 0 }, { x: -0.8, y: 0.4 }, { x: -1.0, y: 0 }, { x: -0.8, y: -0.4 }],
-        fillColor: [200, 60, 60],
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.1, y: 0 }, { x: -0.8, y: 0.4 }, { x: -1.0, y: 0 }, { x: -0.8, y: -0.4 }],
+                fillColor: [200, 60, 60]
+            },
+            // Military chevron emblem
+            {
+                vertexData: [{ x: 0.6000, y: 0.0000 }, { x: 0.4500, y: 0.0600 }, { x: 0.5100, y: 0.0000 }, { x: 0.4500, y: -0.0600 }],
+                fillColor: [218, 165, 32]
+            },
+            // Cockpit canopy
+            {
+                vertexData: [{ x: 0.3000, y: 0.0000 }, { x: 0.1000, y: 0.0800 }, { x: 0.1000, y: -0.0800 }],
+                fillColor: [100, 160, 220]
+            },
+            // Port nav light
+            {
+                vertexData: [{ x: -0.7500, y: 0.3700 }, { x: -0.8200, y: 0.3400 }, { x: -0.7700, y: 0.3100 }],
+                fillColor: [255, 50, 50]
+            },
+            // Starboard nav light
+            {
+                vertexData: [{ x: -0.7500, y: -0.3700 }, { x: -0.8200, y: -0.3400 }, { x: -0.7700, y: -0.3100 }],
+                fillColor: [50, 255, 50]
+            }
+        ],
         typicalCargo: [],
         price: 10900,
         aiRoles: ["MILITARY", "BOUNTY_HUNTER"],
@@ -327,6 +549,11 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.3297, y: 0.2149 }, { x: 0.5680, y: 0.2548 }, { x: 0.7417, y: 0.0000 }, { x: 0.5680, y: -0.2548 }, { x: 0.3297, y: -0.2149 }],
                 fillColor: [180, 180, 80],
+            },
+            // Military chevron emblem
+            {
+                vertexData: [{ x: 0.8500, y: 0.0000 }, { x: 0.7000, y: 0.1000 }, { x: 0.7600, y: 0.0000 }, { x: 0.7000, y: -0.1000 }],
+                fillColor: [218, 165, 32]
             }
         ],
         typicalCargo: ["Machinery", "Metals", "Food", "Metals", "Weapons"],
@@ -349,6 +576,11 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.6400, y: 0.0000 }, { x: 0.5400, y: 0.2132 }, { x: 0.3400, y: 0.2132 }, { x: 0.2400, y: 0.0000 }, { x: 0.3400, y: -0.2132 }, { x: 0.5400, y: -0.2132 }],
                 fillColor: [101, 171, 236]
+            },
+            // Military chevron emblem
+            {
+                vertexData: [{ x: 0.7500, y: 0.0000 }, { x: 0.6000, y: 0.0800 }, { x: 0.6600, y: 0.0000 }, { x: 0.6000, y: -0.0800 }],
+                fillColor: [218, 165, 32]
             }
         ],
         typicalCargo: ["Machinery", "Metals", "Food"],
@@ -496,13 +728,66 @@ const SHIP_DEFINITIONS = {
         armament: [],
         costCategory: "Very Low", description: "The space equivalent of a rusty pickup truck held together with duct tape and optimism. At 4200 credits it's cheaper than some bar tabs, and about as fast (3.8). Zero shields, 70 hull, and the aerodynamics of a filing cabinet. But it floats, mostly.",
         vertexLayers: [
+            // Main hull - boxy transporter shape
             {
                 vertexData: [{ x: 0.8000, y: 0.7500 }, { x: -0.6000, y: 0.8500 }, { x: -0.8000, y: 0.4500 }, { x: -0.8000, y: -0.4500 }, { x: -0.5000, y: -0.8500 }, { x: 0.8000, y: -0.7500 }],
                 fillColor: [140, 130, 120],
             },
+            // Thin rectangular cockpit window (characteristic transporter style)
             {
-                vertexData: [{ x: 0.1500, y: 0.0000 }, { x: -0.0750, y: 0.1299 }, { x: -0.0750, y: -0.1299 }],
-                fillColor: [101, 171, 236],
+                vertexData: [{ x: 0.7000, y: 0.1200 }, { x: 0.5000, y: 0.1400 }, { x: 0.5000, y: -0.1400 }, { x: 0.7000, y: -0.1200 }],
+                fillColor: [80, 140, 200],
+            },
+            // Cockpit frame
+            {
+                vertexData: [{ x: 0.7200, y: 0.1400 }, { x: 0.4800, y: 0.1600 }, { x: 0.4800, y: 0.1200 }, { x: 0.7200, y: 0.1000 }],
+                fillColor: [60, 55, 50],
+            },
+            {
+                vertexData: [{ x: 0.7200, y: -0.1400 }, { x: 0.4800, y: -0.1600 }, { x: 0.4800, y: -0.1200 }, { x: 0.7200, y: -0.1000 }],
+                fillColor: [60, 55, 50],
+            },
+            // Cargo bay door lines (welded panels)
+            {
+                vertexData: [{ x: 0.2000, y: 0.6500 }, { x: 0.2200, y: 0.6800 }, { x: -0.4000, y: 0.7500 }, { x: -0.4200, y: 0.7200 }],
+                fillColor: [100, 90, 80],
+            },
+            {
+                vertexData: [{ x: 0.2000, y: -0.6500 }, { x: 0.2200, y: -0.6800 }, { x: -0.3500, y: -0.7500 }, { x: -0.3700, y: -0.7200 }],
+                fillColor: [100, 90, 80],
+            },
+            // Rust/weathering patches
+            {
+                vertexData: [{ x: -0.3000, y: 0.5000 }, { x: -0.4500, y: 0.5500 }, { x: -0.4800, y: 0.4500 }, { x: -0.3500, y: 0.4200 }],
+                fillColor: [160, 100, 70],
+            },
+            {
+                vertexData: [{ x: 0.4000, y: -0.4500 }, { x: 0.3000, y: -0.5000 }, { x: 0.3500, y: -0.5800 }, { x: 0.4500, y: -0.5200 }],
+                fillColor: [155, 95, 65],
+            },
+            // Engine housing warning stripes
+            {
+                vertexData: [{ x: -0.6500, y: 0.3500 }, { x: -0.7500, y: 0.3800 }, { x: -0.7500, y: 0.3200 }, { x: -0.6500, y: 0.2900 }],
+                fillColor: [200, 180, 50],
+            },
+            {
+                vertexData: [{ x: -0.6500, y: -0.3500 }, { x: -0.7500, y: -0.3800 }, { x: -0.7500, y: -0.3200 }, { x: -0.6500, y: -0.2900 }],
+                fillColor: [200, 180, 50],
+            },
+            // Port navigation light (red)
+            {
+                vertexData: [{ x: -0.5500, y: 0.8200 }, { x: -0.6200, y: 0.7800 }, { x: -0.5600, y: 0.7400 }],
+                fillColor: [255, 50, 50]
+            },
+            // Starboard navigation light (green)
+            {
+                vertexData: [{ x: -0.4500, y: -0.8200 }, { x: -0.5200, y: -0.7800 }, { x: -0.4600, y: -0.7400 }],
+                fillColor: [50, 255, 50]
+            },
+            // Stern running light
+            {
+                vertexData: [{ x: -0.7700, y: 0.0400 }, { x: -0.7900, y: 0.0000 }, { x: -0.7700, y: -0.0400 }],
+                fillColor: [255, 255, 200]
             }
         ],
         typicalCargo: ["Food", "Machinery", "Metals"],
@@ -520,6 +805,38 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.8000, y: 0.5000 }, { x: 0.2000, y: 0.8000 }, { x: -0.7000, y: 0.7000 }, { x: -1.0000, y: 0.0000 }, { x: -0.7000, y: -0.7000 }, { x: 0.2000, y: -0.8000 }, { x: 0.8000, y: -0.5000 }],
                 fillColor: [200, 200, 190],
+            },
+            // Scanner array (exploration equipment)
+            {
+                vertexData: [{ x: 0.0000, y: 0.7500 }, { x: -0.0800, y: 0.7200 }, { x: 0.0000, y: 0.6500 }, { x: 0.0800, y: 0.7200 }],
+                fillColor: [150, 150, 160]
+            },
+            {
+                vertexData: [{ x: 0.0000, y: -0.7500 }, { x: -0.0800, y: -0.7200 }, { x: 0.0000, y: -0.6500 }, { x: 0.0800, y: -0.7200 }],
+                fillColor: [150, 150, 160]
+            },
+            // Deliberate hull hash lines
+            {
+                vertexData: [{ x: -0.4000, y: 0.6000 }, { x: -0.3500, y: 0.6200 }, { x: -0.5500, y: 0.5500 }, { x: -0.6000, y: 0.5300 }],
+                fillColor: [180, 180, 170]
+            },
+            {
+                vertexData: [{ x: -0.4000, y: -0.6000 }, { x: -0.3500, y: -0.6200 }, { x: -0.5500, y: -0.5500 }, { x: -0.6000, y: -0.5300 }],
+                fillColor: [180, 180, 170]
+            },
+            // Cockpit canopy
+            {
+                vertexData: [{ x: 0.5000, y: 0.0000 }, { x: 0.3000, y: 0.1500 }, { x: 0.3000, y: -0.1500 }],
+                fillColor: [100, 160, 220]
+            },
+            // Nav lights
+            {
+                vertexData: [{ x: 0.1500, y: 0.7700 }, { x: 0.0800, y: 0.7400 }, { x: 0.1200, y: 0.7000 }],
+                fillColor: [255, 50, 50]
+            },
+            {
+                vertexData: [{ x: 0.1500, y: -0.7700 }, { x: 0.0800, y: -0.7400 }, { x: 0.1200, y: -0.7000 }],
+                fillColor: [50, 255, 50]
             }
         ],
         typicalCargo: ["Minerals", "Food", "Medicine"],
@@ -622,6 +939,20 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 1.1500, y: 0.0000 }, { x: 0.9500, y: 0.2000 }, { x: -0.9500, y: 0.3000 }, { x: -1.1500, y: 0.1000 }, { x: -1.1500, y: -0.1000 }, { x: -0.9500, y: -0.3000 }, { x: 0.9500, y: -0.2000 }],
                 fillColor: [230, 230, 235],
+            },
+            // Luxury stripe
+            {
+                vertexData: [{ x: 0.6000, y: 0.1600 }, { x: -0.6000, y: 0.2200 }, { x: -0.6000, y: 0.1800 }, { x: 0.6000, y: 0.1200 }],
+                fillColor: [200, 170, 100]
+            },
+            {
+                vertexData: [{ x: 0.6000, y: -0.1600 }, { x: -0.6000, y: -0.2200 }, { x: -0.6000, y: -0.1800 }, { x: 0.6000, y: -0.1200 }],
+                fillColor: [200, 170, 100]
+            },
+            // Stern light
+            {
+                vertexData: [{ x: -1.0800, y: 0.0400 }, { x: -1.1300, y: 0.0000 }, { x: -1.0800, y: -0.0400 }],
+                fillColor: [255, 255, 200]
             }
         ],
         typicalCargo: ["Luxury Goods", "Food", "Medicine", "Food", "Medicine"],
@@ -643,6 +974,24 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.5600, y: -0.4200 }, { x: 0.6800, y: -0.4200 }, { x: 0.6800, y: 0.4200 }, { x: 0.5600, y: 0.4200 }],
                 fillColor: [150, 150, 180]
+            },
+            // Cargo hazard stripe
+            {
+                vertexData: [{ x: -0.5000, y: 0.7200 }, { x: -0.6000, y: 0.7000 }, { x: -0.6000, y: 0.6000 }, { x: -0.5000, y: 0.6200 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.5000, y: -0.7200 }, { x: -0.6000, y: -0.7000 }, { x: -0.6000, y: -0.6000 }, { x: -0.5000, y: -0.6200 }],
+                fillColor: [0, 0, 0]
+            },
+            // Nav lights
+            {
+                vertexData: [{ x: -0.7000, y: 0.7500 }, { x: -0.7700, y: 0.7200 }, { x: -0.7200, y: 0.6800 }],
+                fillColor: [255, 50, 50]
+            },
+            {
+                vertexData: [{ x: -0.7000, y: -0.7500 }, { x: -0.7700, y: -0.7200 }, { x: -0.7200, y: -0.6800 }],
+                fillColor: [50, 255, 50]
             }
         ],
         typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery"],
@@ -664,6 +1013,33 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.5200, y: -0.2200 }, { x: 0.6600, y: -0.2200 }, { x: 0.6600, y: 0.2200 }, { x: 0.5200, y: 0.2200 }],
                 fillColor: [64, 63, 63]
+            },
+            // Container markings (hash pattern)
+            {
+                vertexData: [{ x: -0.2000, y: 0.7500 }, { x: -0.1500, y: 0.7700 }, { x: -0.4000, y: 0.8200 }, { x: -0.4500, y: 0.8000 }],
+                fillColor: [150, 110, 40]
+            },
+            {
+                vertexData: [{ x: -0.2000, y: -0.7500 }, { x: -0.1500, y: -0.7700 }, { x: -0.4000, y: -0.8200 }, { x: -0.4500, y: -0.8000 }],
+                fillColor: [150, 110, 40]
+            },
+            // Cargo bay indicators
+            {
+                vertexData: [{ x: 0.0000, y: 0.8500 }, { x: 0.1000, y: 0.8500 }, { x: 0.1000, y: 0.7500 }, { x: 0.0000, y: 0.7500 }],
+                fillColor: [0, 0, 0]
+            },
+            {
+                vertexData: [{ x: 0.0000, y: -0.8500 }, { x: 0.1000, y: -0.8500 }, { x: 0.1000, y: -0.7500 }, { x: 0.0000, y: -0.7500 }],
+                fillColor: [0, 0, 0]
+            },
+            // Nav lights
+            {
+                vertexData: [{ x: -0.7500, y: 0.8700 }, { x: -0.8200, y: 0.8400 }, { x: -0.7700, y: 0.8000 }],
+                fillColor: [255, 50, 50]
+            },
+            {
+                vertexData: [{ x: -0.7500, y: -0.8700 }, { x: -0.8200, y: -0.8400 }, { x: -0.7700, y: -0.8000 }],
+                fillColor: [50, 255, 50]
             }
         ],
         typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery", "Chemicals", "Computers"],
@@ -686,6 +1062,20 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: -0.1312, y: 0.2187 }, { x: -0.2479, y: 0.1312 }, { x: -0.2479, y: -0.1312 }, { x: -0.1312, y: -0.2187 }, { x: -0.0146, y: -0.1604 }, { x: 0.1312, y: -0.0875 }, { x: 0.2187, y: 0.0000 }, { x: 0.1312, y: 0.0875 }, { x: -0.0146, y: 0.1604 }],
                 fillColor: [133, 193, 249]
+            },
+            // Police pursuit lights
+            {
+                vertexData: [{ x: -0.5500, y: 0.4200 }, { x: -0.6300, y: 0.4000 }, { x: -0.5800, y: 0.3600 }],
+                fillColor: [255, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.5500, y: -0.4200 }, { x: -0.6300, y: -0.4000 }, { x: -0.5800, y: -0.3600 }],
+                fillColor: [0, 100, 255]
+            },
+            // Hull chevron
+            {
+                vertexData: [{ x: 0.3000, y: 0.0800 }, { x: 0.1500, y: 0.0000 }, { x: 0.3000, y: -0.0800 }, { x: 0.2500, y: 0.0000 }],
+                fillColor: [180, 180, 200]
             }
         ],
         typicalCargo: ["Computers", "Weapons", "Narcotics"],
@@ -707,6 +1097,25 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.2000, y: 0.0000 }, { x: 0.1000, y: 0.1732 }, { x: -0.1000, y: 0.1732 }, { x: -0.2000, y: 0.0000 }, { x: -0.1000, y: -0.1732 }, { x: 0.1000, y: -0.1732 }],
                 fillColor: [50, 150, 255],
+            },
+            // Wing tip lights
+            {
+                vertexData: [{ x: -0.4500, y: 1.1000 }, { x: -0.5200, y: 1.0600 }, { x: -0.4700, y: 1.0200 }],
+                fillColor: [255, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.4500, y: -1.1000 }, { x: -0.5200, y: -1.0600 }, { x: -0.4700, y: -1.0200 }],
+                fillColor: [255, 255, 0]
+            },
+            // Kill marking
+            {
+                vertexData: [{ x: 0.5000, y: 0.0300 }, { x: 0.5500, y: 0.0300 }, { x: 0.5500, y: -0.0300 }, { x: 0.5000, y: -0.0300 }],
+                fillColor: [255, 255, 255]
+            },
+            // Military chevron emblem
+            {
+                vertexData: [{ x: 0.6500, y: 0.0000 }, { x: 0.5000, y: 0.0700 }, { x: 0.5600, y: 0.0000 }, { x: 0.5000, y: -0.0700 }],
+                fillColor: [218, 165, 32]
             }
         ],
         typicalCargo: ["Computers", "Computers", "Weapons", "Narcotics", "Slaves"],
@@ -728,6 +1137,20 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.1500, y: 0.0000 }, { x: 0.0750, y: 0.1299 }, { x: -0.0750, y: 0.1299 }, { x: -0.1500, y: 0.0000 }, { x: -0.0750, y: -0.1299 }, { x: 0.0750, y: -0.1299 }],
                 fillColor: [101, 171, 236],
+            },
+            // Military wing stripe
+            {
+                vertexData: [{ x: -0.3200, y: 0.9400 }, { x: -0.4200, y: 0.9200 }, { x: -0.4200, y: 0.8600 }, { x: -0.3200, y: 0.8800 }],
+                fillColor: [40, 40, 40]
+            },
+            {
+                vertexData: [{ x: -0.3200, y: -0.9400 }, { x: -0.4200, y: -0.9200 }, { x: -0.4200, y: -0.8600 }, { x: -0.3200, y: -0.8800 }],
+                fillColor: [40, 40, 40]
+            },
+            // Military chevron emblem
+            {
+                vertexData: [{ x: 0.5000, y: 0.0000 }, { x: 0.3500, y: 0.0700 }, { x: 0.4000, y: 0.0000 }, { x: 0.3500, y: -0.0700 }],
+                fillColor: [218, 165, 32]
             }
         ],
         typicalCargo: ["Computers"],
@@ -749,6 +1172,20 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.1500, y: 0.0000 }, { x: 0.0750, y: 0.1299 }, { x: -0.0750, y: 0.1299 }, { x: -0.1500, y: 0.0000 }, { x: -0.0750, y: -0.1299 }, { x: 0.0750, y: -0.1299 }],
                 fillColor: [101, 171, 236],
+            },
+            // Wingtip nav lights
+            {
+                vertexData: [{ x: 0.4000, y: 1.3800 }, { x: 0.3500, y: 1.3300 }, { x: 0.4300, y: 1.3000 }],
+                fillColor: [255, 50, 50]
+            },
+            {
+                vertexData: [{ x: 0.4000, y: -1.3800 }, { x: 0.3500, y: -1.3300 }, { x: 0.4300, y: -1.3000 }],
+                fillColor: [50, 255, 50]
+            },
+            // Military chevron emblem
+            {
+                vertexData: [{ x: 0.7000, y: 0.0000 }, { x: 0.5500, y: 0.0700 }, { x: 0.6100, y: 0.0000 }, { x: 0.5500, y: -0.0700 }],
+                fillColor: [218, 165, 32]
             }
         ],
         typicalCargo: ["Computers"],
@@ -770,6 +1207,20 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.1500, y: 0.0000 }, { x: -0.0750, y: 0.1299 }, { x: -0.0750, y: -0.1299 }],
                 fillColor: [50, 255, 100],
+            },
+            // Racing stripe
+            {
+                vertexData: [{ x: 0.5000, y: 0.0300 }, { x: 0.2000, y: 0.0600 }, { x: 0.2000, y: 0.0200 }, { x: 0.5000, y: -0.0100 }],
+                fillColor: [255, 255, 255]
+            },
+            {
+                vertexData: [{ x: 0.5000, y: -0.0300 }, { x: 0.2000, y: -0.0600 }, { x: 0.2000, y: -0.0200 }, { x: 0.5000, y: 0.0100 }],
+                fillColor: [255, 255, 255]
+            },
+            // Military chevron emblem
+            {
+                vertexData: [{ x: 0.6500, y: 0.0000 }, { x: 0.5000, y: 0.0700 }, { x: 0.5600, y: 0.0000 }, { x: 0.5000, y: -0.0700 }],
+                fillColor: [218, 165, 32]
             }
         ],
         typicalCargo: ["Computers"],
@@ -785,12 +1236,36 @@ const SHIP_DEFINITIONS = {
         costCategory: "Low-Medium", description: "A nimble and brightly colored Harlequin skirmisher.",
         vertexLayers: [
             {
-                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.5000, y: 0.6000 }, { x: -0.2000, y: 0.0000 }, { x: -0.5000, y: -0.6000 }],
+                vertexData: [{ x: 0.7500, y: 0.0000 }, { x: -0.7500, y: 0.6000 }, { x: -0.4500, y: 0.0000 }, { x: -0.7500, y: -0.6000 }],
                 fillColor: [255, 0, 0]
             },
             {
-                vertexData: [{ x: -0.2000, y: -0.0400 }, { x: 0.8400, y: -0.0400 }, { x: 0.8400, y: 0.0400 }, { x: -0.2000, y: 0.0400 }],
-                fillColor: [255, 247, 0]
+                vertexData: [{ x: -0.4325, y: -0.2835 }, { x: -0.3920, y: -0.2430 }, { x: -0.0680, y: 0.2430 }, { x: -0.0275, y: 0.2835 }, { x: -0.0032, y: 0.2430 }, { x: -0.4568, y: -0.2430 }],
+                fillColor: [17, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.4325, y: 0.2835 }, { x: -0.3920, y: 0.2430 }, { x: -0.0680, y: -0.2430 }, { x: -0.0275, y: -0.2835 }, { x: -0.0032, y: -0.2430 }, { x: -0.4568, y: 0.2430 }],
+                fillColor: [17, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.0275, y: -0.1620 }, { x: -0.0275, y: 0.1620 }, { x: -0.1895, y: 0.2025 }, { x: -0.3110, y: 0.1620 }, { x: -0.3515, y: 0.0810 }, { x: -0.3515, y: -0.0810 }, { x: -0.3110, y: -0.1620 }, { x: -0.1895, y: -0.2025 }],
+                fillColor: [17, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.4082, y: 0.1215 }, { x: -0.3677, y: 0.0972 }, { x: -0.3839, y: 0.0648 }, { x: -0.3677, y: 0.0324 }, { x: -0.3839, y: -0.0000 }, { x: -0.3677, y: -0.0324 }, { x: -0.3839, y: -0.0648 }, { x: -0.3677, y: -0.0972 }, { x: -0.4082, y: -0.1215 }, { x: -0.4325, y: -0.0648 }, { x: -0.4325, y: 0.0648 }],
+                fillColor: [17, 255, 0]
+            },
+            {
+                vertexData: [{ x: -0.1490, y: -0.1134 }, { x: -0.1490, y: -0.0648 }, { x: -0.2300, y: -0.0891 }],
+                fillColor: [255, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.1490, y: 0.0648 }, { x: -0.1490, y: 0.1134 }, { x: -0.2300, y: 0.0891 }],
+                fillColor: [255, 0, 0]
+            },
+            {
+                vertexData: [{ x: -0.2624, y: -0.0324 }, { x: -0.2624, y: 0.0324 }, { x: -0.3110, y: -0.0000 }],
+                fillColor: [255, 0, 0]
             }
         ],
         typicalCargo: [], price: 32000, techLevel: 2,
@@ -801,7 +1276,7 @@ const SHIP_DEFINITIONS = {
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.04,
         baseHull: 100, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 80,
         armament: ["Mini-Turret"],
-        costCategory: "Medium", description: "The Harlequins' trading flagship, painted like a circus tent and twice as loud. That garish yellow-and-pink striped hull is visible from three systems away. Somehow hauls 80 tons while maintaining the dignity of a drunk clown. Merchants hate it but can't deny it gets the job done profitably.",
+        costCategory: "Medium", description: "The Harlequins' trader, painted like a circus tent and twice as loud. That garish yellow-and-pink striped hull is visible from three systems away. Somehow hauls 80 tons while maintaining the dignity of a drunk clown. Merchants hate it but can't deny it gets the job done profitably.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.8000, y: 0.5000 }, { x: -0.8000, y: 0.5000 }, { x: -0.8000, y: -0.5000 }, { x: 0.8000, y: -0.5000 }],
@@ -1083,8 +1558,63 @@ const SHIP_DEFINITIONS = {
         baseHull: 40, baseShield: 0, shieldRecharge: 0.5, cargoCapacity: 15,
         armament: [],
         costCategory: "Very Low", description: "A cube that aspires to fly but mostly just falls with style. Zero shields, 40 hull, and dreams too big for its 15-ton cargo bay. Used for ultra-short hops nobody else wants to do. Think of it as a space taxi driven by someone who failed pilot school. Twice.",
-        vertexData: [{ x: 0.6, y: 0.6 }, { x: -0.6, y: 0.6 }, { x: -0.6, y: -0.6 }, { x: 0.6, y: -0.6 }],
-        fillColor: [150, 150, 150],
+        vertexLayers: [
+            // Main boxy hull
+            {
+                vertexData: [{ x: 0.6, y: 0.6 }, { x: -0.6, y: 0.6 }, { x: -0.6, y: -0.6 }, { x: 0.6, y: -0.6 }],
+                fillColor: [150, 150, 150]
+            },
+            // Thin rectangular cockpit window (characteristic transporter style)
+            {
+                vertexData: [{ x: 0.5500, y: 0.1000 }, { x: 0.3500, y: 0.1200 }, { x: 0.3500, y: -0.1200 }, { x: 0.5500, y: -0.1000 }],
+                fillColor: [70, 130, 190]
+            },
+            // Cockpit frame top
+            {
+                vertexData: [{ x: 0.5700, y: 0.1200 }, { x: 0.3300, y: 0.1400 }, { x: 0.3300, y: 0.1000 }, { x: 0.5700, y: 0.0800 }],
+                fillColor: [80, 80, 80]
+            },
+            // Cockpit frame bottom
+            {
+                vertexData: [{ x: 0.5700, y: -0.1200 }, { x: 0.3300, y: -0.1400 }, { x: 0.3300, y: -0.1000 }, { x: 0.5700, y: -0.0800 }],
+                fillColor: [80, 80, 80]
+            },
+            // Hull panel divider (horizontal)
+            {
+                vertexData: [{ x: 0.2000, y: 0.0200 }, { x: -0.5500, y: 0.0200 }, { x: -0.5500, y: -0.0200 }, { x: 0.2000, y: -0.0200 }],
+                fillColor: [120, 120, 120]
+            },
+            // Hull panel divider (vertical)
+            {
+                vertexData: [{ x: -0.1800, y: 0.5500 }, { x: -0.2200, y: 0.5500 }, { x: -0.2200, y: -0.5500 }, { x: -0.1800, y: -0.5500 }],
+                fillColor: [120, 120, 120]
+            },
+            // Antenna/sensor mast
+            {
+                vertexData: [{ x: -0.4000, y: 0.5500 }, { x: -0.4200, y: 0.5500 }, { x: -0.4200, y: 0.7500 }, { x: -0.4000, y: 0.7500 }],
+                fillColor: [100, 100, 110]
+            },
+            // Antenna tip light
+            {
+                vertexData: [{ x: -0.4100, y: 0.7500 }, { x: -0.4400, y: 0.7800 }, { x: -0.3800, y: 0.7800 }],
+                fillColor: [255, 100, 100]
+            },
+            // Docking light (front)
+            {
+                vertexData: [{ x: 0.5800, y: 0.0000 }, { x: 0.6200, y: 0.0300 }, { x: 0.6200, y: -0.0300 }],
+                fillColor: [255, 255, 200]
+            },
+            // Port nav light (red)
+            {
+                vertexData: [{ x: -0.5500, y: 0.5500 }, { x: -0.6000, y: 0.5200 }, { x: -0.5600, y: 0.4800 }],
+                fillColor: [255, 50, 50]
+            },
+            // Starboard nav light (green)
+            {
+                vertexData: [{ x: -0.5500, y: -0.5500 }, { x: -0.6000, y: -0.5200 }, { x: -0.5600, y: -0.4800 }],
+                fillColor: [50, 255, 50]
+            }
+        ],
         typicalCargo: ["Food", "Textiles"], price: 1800, techLevel: 1,
         aiRoles: ["TRANSPORT"]
     },
@@ -1094,8 +1624,63 @@ const SHIP_DEFINITIONS = {
         baseHull: 50, baseShield: 10, shieldRecharge: 0.6, cargoCapacity: 25,
         armament: [],
         costCategory: "Low", description: "Slightly less terrible than the Hopper, which isn't saying much. Has shields (barely—10 capacity) and can actually accelerate without wheezing. Perfect for station-to-station milk runs. The 25-ton hold makes it just profitable enough that you won't starve. Probably.",
-        vertexData: [{ x: 0.7, y: 0.4 }, { x: -0.7, y: 0.4 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.4 }, { x: 0.7, y: -0.4 }],
-        fillColor: [130, 140, 150],
+        vertexLayers: [
+            // Main hull - pentagonal shape
+            {
+                vertexData: [{ x: 0.7, y: 0.4 }, { x: -0.7, y: 0.4 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.4 }, { x: 0.7, y: -0.4 }],
+                fillColor: [130, 140, 150]
+            },
+            // Thin rectangular cockpit window
+            {
+                vertexData: [{ x: 0.6500, y: 0.0800 }, { x: 0.4000, y: 0.1000 }, { x: 0.4000, y: -0.1000 }, { x: 0.6500, y: -0.0800 }],
+                fillColor: [75, 135, 195]
+            },
+            // Cockpit frame top
+            {
+                vertexData: [{ x: 0.6700, y: 0.1000 }, { x: 0.3800, y: 0.1200 }, { x: 0.3800, y: 0.0800 }, { x: 0.6700, y: 0.0600 }],
+                fillColor: [70, 75, 80]
+            },
+            // Cockpit frame bottom
+            {
+                vertexData: [{ x: 0.6700, y: -0.1000 }, { x: 0.3800, y: -0.1200 }, { x: 0.3800, y: -0.0800 }, { x: 0.6700, y: -0.0600 }],
+                fillColor: [70, 75, 80]
+            },
+            // Cargo bay hatch outline
+            {
+                vertexData: [{ x: 0.1000, y: 0.2800 }, { x: -0.4000, y: 0.3200 }, { x: -0.4000, y: -0.3200 }, { x: 0.1000, y: -0.2800 }],
+                fillColor: [110, 120, 130]
+            },
+            // Cargo hatch inner
+            {
+                vertexData: [{ x: 0.0500, y: 0.2200 }, { x: -0.3500, y: 0.2600 }, { x: -0.3500, y: -0.2600 }, { x: 0.0500, y: -0.2200 }],
+                fillColor: [140, 150, 160]
+            },
+            // Hull identification stripe
+            {
+                vertexData: [{ x: 0.2000, y: 0.3600 }, { x: -0.5000, y: 0.3800 }, { x: -0.5000, y: 0.3400 }, { x: 0.2000, y: 0.3200 }],
+                fillColor: [180, 160, 80]
+            },
+            // Engine glow housing
+            {
+                vertexData: [{ x: -0.7500, y: 0.2500 }, { x: -0.8500, y: 0.1500 }, { x: -0.8500, y: -0.1500 }, { x: -0.7500, y: -0.2500 }],
+                fillColor: [90, 100, 110]
+            },
+            // Port nav light (red)
+            {
+                vertexData: [{ x: -0.6500, y: 0.3700 }, { x: -0.7200, y: 0.3400 }, { x: -0.6700, y: 0.3100 }],
+                fillColor: [255, 50, 50]
+            },
+            // Starboard nav light (green)
+            {
+                vertexData: [{ x: -0.6500, y: -0.3700 }, { x: -0.7200, y: -0.3400 }, { x: -0.6700, y: -0.3100 }],
+                fillColor: [50, 255, 50]
+            },
+            // Docking light
+            {
+                vertexData: [{ x: 0.6800, y: 0.0000 }, { x: 0.7200, y: 0.0250 }, { x: 0.7200, y: -0.0250 }],
+                fillColor: [255, 255, 180]
+            }
+        ],
         typicalCargo: ["Machinery", "Medicine"], price: 4500, techLevel: 1,
         aiRoles: ["TRANSPORT", "HAULER"]
     },
@@ -1105,8 +1690,87 @@ const SHIP_DEFINITIONS = {
         baseHull: 80, baseShield: 20, shieldRecharge: 0.7, cargoCapacity: 40,
         armament: [],
         costCategory: "Low", description: "The workhorse everyone depends on but nobody respects. Hauls 40 tons at a glacial 3.8 speed with shields that might stop a determined sneeze (20). Operators joke that its best feature is 'it exists and it's cheap.' Station mechanics charge extra for working on these out of pity.",
-        vertexData: [{ x: 0.8, y: 0.5 }, { x: 0.6, y: 0.7 }, { x: -0.8, y: 0.7 }, { x: -0.8, y: -0.7 }, { x: 0.6, y: -0.7 }, { x: 0.8, y: -0.5 }],
-        fillColor: [160, 150, 140],
+        vertexLayers: [
+            // Main hull - blocky shuttle shape
+            {
+                vertexData: [{ x: 0.8, y: 0.5 }, { x: 0.6, y: 0.7 }, { x: -0.8, y: 0.7 }, { x: -0.8, y: -0.7 }, { x: 0.6, y: -0.7 }, { x: 0.8, y: -0.5 }],
+                fillColor: [160, 150, 140]
+            },
+            // Thin rectangular cockpit window
+            {
+                vertexData: [{ x: 0.7500, y: 0.1200 }, { x: 0.5000, y: 0.1500 }, { x: 0.5000, y: -0.1500 }, { x: 0.7500, y: -0.1200 }],
+                fillColor: [70, 130, 200]
+            },
+            // Cockpit frame top
+            {
+                vertexData: [{ x: 0.7700, y: 0.1400 }, { x: 0.4800, y: 0.1700 }, { x: 0.4800, y: 0.1200 }, { x: 0.7700, y: 0.0900 }],
+                fillColor: [90, 85, 80]
+            },
+            // Cockpit frame bottom
+            {
+                vertexData: [{ x: 0.7700, y: -0.1400 }, { x: 0.4800, y: -0.1700 }, { x: 0.4800, y: -0.1200 }, { x: 0.7700, y: -0.0900 }],
+                fillColor: [90, 85, 80]
+            },
+            // Passenger/cargo window row (port side)
+            {
+                vertexData: [{ x: 0.3000, y: 0.6200 }, { x: 0.2000, y: 0.6400 }, { x: 0.2000, y: 0.5400 }, { x: 0.3000, y: 0.5200 }],
+                fillColor: [80, 140, 180]
+            },
+            {
+                vertexData: [{ x: 0.0500, y: 0.6600 }, { x: -0.0500, y: 0.6800 }, { x: -0.0500, y: 0.5800 }, { x: 0.0500, y: 0.5600 }],
+                fillColor: [80, 140, 180]
+            },
+            {
+                vertexData: [{ x: -0.2000, y: 0.6800 }, { x: -0.3000, y: 0.7000 }, { x: -0.3000, y: 0.6000 }, { x: -0.2000, y: 0.5800 }],
+                fillColor: [80, 140, 180]
+            },
+            // Passenger/cargo window row (starboard side)
+            {
+                vertexData: [{ x: 0.3000, y: -0.6200 }, { x: 0.2000, y: -0.6400 }, { x: 0.2000, y: -0.5400 }, { x: 0.3000, y: -0.5200 }],
+                fillColor: [80, 140, 180]
+            },
+            {
+                vertexData: [{ x: 0.0500, y: -0.6600 }, { x: -0.0500, y: -0.6800 }, { x: -0.0500, y: -0.5800 }, { x: 0.0500, y: -0.5600 }],
+                fillColor: [80, 140, 180]
+            },
+            {
+                vertexData: [{ x: -0.2000, y: -0.6800 }, { x: -0.3000, y: -0.7000 }, { x: -0.3000, y: -0.6000 }, { x: -0.2000, y: -0.5800 }],
+                fillColor: [80, 140, 180]
+            },
+            // Hull stripe (company livery)
+            {
+                vertexData: [{ x: 0.5500, y: 0.3500 }, { x: -0.6000, y: 0.4000 }, { x: -0.6000, y: 0.3500 }, { x: 0.5500, y: 0.3000 }],
+                fillColor: [200, 80, 60]
+            },
+            {
+                vertexData: [{ x: 0.5500, y: -0.3500 }, { x: -0.6000, y: -0.4000 }, { x: -0.6000, y: -0.3500 }, { x: 0.5500, y: -0.3000 }],
+                fillColor: [200, 80, 60]
+            },
+            // Engine warning stripes
+            {
+                vertexData: [{ x: -0.7000, y: 0.5000 }, { x: -0.7800, y: 0.5200 }, { x: -0.7800, y: 0.4600 }, { x: -0.7000, y: 0.4400 }],
+                fillColor: [220, 200, 50]
+            },
+            {
+                vertexData: [{ x: -0.7000, y: -0.5000 }, { x: -0.7800, y: -0.5200 }, { x: -0.7800, y: -0.4600 }, { x: -0.7000, y: -0.4400 }],
+                fillColor: [220, 200, 50]
+            },
+            // Port nav light (red)
+            {
+                vertexData: [{ x: 0.5500, y: 0.6800 }, { x: 0.4900, y: 0.6500 }, { x: 0.5300, y: 0.6100 }],
+                fillColor: [255, 50, 50]
+            },
+            // Starboard nav light (green)
+            {
+                vertexData: [{ x: 0.5500, y: -0.6800 }, { x: 0.4900, y: -0.6500 }, { x: 0.5300, y: -0.6100 }],
+                fillColor: [50, 255, 50]
+            },
+            // Stern running light
+            {
+                vertexData: [{ x: -0.7800, y: 0.0400 }, { x: -0.8200, y: 0.0000 }, { x: -0.7800, y: -0.0400 }],
+                fillColor: [255, 255, 200]
+            }
+        ],
         typicalCargo: ["Minerals", "Food", "Machinery"], price: 12000, techLevel: 2,
         aiRoles: ["TRANSPORT"]
     },
@@ -1117,13 +1781,98 @@ const SHIP_DEFINITIONS = {
         armament: [],
         costCategory: "Low-Medium", description: "An engine, a cockpit, and 120 tons of cargo containers held together by hope and prayers to whatever gods tolerate shoddy engineering. Maxes out at 3.0 speed, which is generous considering it's basically a cargo mountain with thrusters. Pilots either love its capacity or hate everything else about it.",
         vertexLayers: [
+            // Main hull - massive cargo container
             {
                 vertexData: [{ x: 1.0000, y: 0.6000 }, { x: 0.8000, y: 0.8000 }, { x: -0.8000, y: 0.8000 }, { x: -1.0000, y: 0.6000 }, { x: -1.0000, y: -0.6000 }, { x: -0.8000, y: -0.8000 }, { x: 0.8000, y: -0.8000 }, { x: 1.0000, y: -0.6000 }],
                 fillColor: [100, 90, 80]
             },
+            // Thin rectangular cockpit window (small relative to cargo)
             {
-                vertexData: [{ x: 0.5741, y: 0.5133 }, { x: 0.7004, y: 0.5109 }, { x: 0.7064, y: -0.5344 }, { x: 0.5746, y: -0.5368 }],
-                fillColor: [150, 150, 180]
+                vertexData: [{ x: 0.9500, y: 0.1500 }, { x: 0.7500, y: 0.1800 }, { x: 0.7500, y: -0.1800 }, { x: 0.9500, y: -0.1500 }],
+                fillColor: [65, 125, 185]
+            },
+            // Cockpit frame top
+            {
+                vertexData: [{ x: 0.9700, y: 0.1700 }, { x: 0.7300, y: 0.2000 }, { x: 0.7300, y: 0.1500 }, { x: 0.9700, y: 0.1200 }],
+                fillColor: [60, 50, 45]
+            },
+            // Cockpit frame bottom
+            {
+                vertexData: [{ x: 0.9700, y: -0.1700 }, { x: 0.7300, y: -0.2000 }, { x: 0.7300, y: -0.1500 }, { x: 0.9700, y: -0.1200 }],
+                fillColor: [60, 50, 45]
+            },
+            // Cargo container division lines (port side)
+            {
+                vertexData: [{ x: 0.4000, y: 0.7800 }, { x: 0.3600, y: 0.7800 }, { x: 0.3600, y: 0.6200 }, { x: 0.4000, y: 0.6200 }],
+                fillColor: [70, 60, 50]
+            },
+            {
+                vertexData: [{ x: 0.0000, y: 0.8000 }, { x: -0.0400, y: 0.8000 }, { x: -0.0400, y: 0.6200 }, { x: 0.0000, y: 0.6200 }],
+                fillColor: [70, 60, 50]
+            },
+            {
+                vertexData: [{ x: -0.4000, y: 0.8000 }, { x: -0.4400, y: 0.8000 }, { x: -0.4400, y: 0.6200 }, { x: -0.4000, y: 0.6200 }],
+                fillColor: [70, 60, 50]
+            },
+            // Cargo container division lines (starboard side)
+            {
+                vertexData: [{ x: 0.4000, y: -0.7800 }, { x: 0.3600, y: -0.7800 }, { x: 0.3600, y: -0.6200 }, { x: 0.4000, y: -0.6200 }],
+                fillColor: [70, 60, 50]
+            },
+            {
+                vertexData: [{ x: 0.0000, y: -0.8000 }, { x: -0.0400, y: -0.8000 }, { x: -0.0400, y: -0.6200 }, { x: 0.0000, y: -0.6200 }],
+                fillColor: [70, 60, 50]
+            },
+            {
+                vertexData: [{ x: -0.4000, y: -0.8000 }, { x: -0.4400, y: -0.8000 }, { x: -0.4400, y: -0.6200 }, { x: -0.4000, y: -0.6200 }],
+                fillColor: [70, 60, 50]
+            },
+            // Container locking mechanism accents
+            {
+                vertexData: [{ x: 0.6000, y: 0.5000 }, { x: 0.5500, y: 0.5200 }, { x: 0.5500, y: 0.4200 }, { x: 0.6000, y: 0.4000 }],
+                fillColor: [180, 80, 60]
+            },
+            {
+                vertexData: [{ x: 0.6000, y: -0.5000 }, { x: 0.5500, y: -0.5200 }, { x: 0.5500, y: -0.4200 }, { x: 0.6000, y: -0.4000 }],
+                fillColor: [180, 80, 60]
+            },
+            // Hazard warning stripes (rear)
+            {
+                vertexData: [{ x: -0.8500, y: 0.7500 }, { x: -0.9500, y: 0.6500 }, { x: -0.9500, y: 0.5500 }, { x: -0.8500, y: 0.6500 }],
+                fillColor: [220, 200, 50]
+            },
+            {
+                vertexData: [{ x: -0.8500, y: -0.7500 }, { x: -0.9500, y: -0.6500 }, { x: -0.9500, y: -0.5500 }, { x: -0.8500, y: -0.6500 }],
+                fillColor: [220, 200, 50]
+            },
+            // Engine exhaust housing
+            {
+                vertexData: [{ x: -0.9000, y: 0.3000 }, { x: -0.9800, y: 0.2500 }, { x: -0.9800, y: -0.2500 }, { x: -0.9000, y: -0.3000 }],
+                fillColor: [50, 45, 40]
+            },
+            // Port nav light (red)
+            {
+                vertexData: [{ x: 0.7500, y: 0.7700 }, { x: 0.6900, y: 0.7400 }, { x: 0.7300, y: 0.7000 }],
+                fillColor: [255, 50, 50]
+            },
+            // Starboard nav light (green)
+            {
+                vertexData: [{ x: 0.7500, y: -0.7700 }, { x: 0.6900, y: -0.7400 }, { x: 0.7300, y: -0.7000 }],
+                fillColor: [50, 255, 50]
+            },
+            // Stern running light
+            {
+                vertexData: [{ x: -0.9800, y: 0.0400 }, { x: -1.0200, y: 0.0000 }, { x: -0.9800, y: -0.0400 }],
+                fillColor: [255, 255, 200]
+            },
+            // Wide-load warning lights (top corners)
+            {
+                vertexData: [{ x: 0.8500, y: 0.7700 }, { x: 0.8200, y: 0.7900 }, { x: 0.7900, y: 0.7700 }],
+                fillColor: [255, 200, 50]
+            },
+            {
+                vertexData: [{ x: 0.8500, y: -0.7700 }, { x: 0.8200, y: -0.7900 }, { x: 0.7900, y: -0.7700 }],
+                fillColor: [255, 200, 50]
             }
         ],
         typicalCargo: ["Machinery", "Metals", "Chemicals"], price: 22000, techLevel: 2,
@@ -1167,6 +1916,16 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: -0.4462, y: -0.0262 }, { x: -0.4462, y: 0.0262 }, { x: -0.4856, y: -0.0000 }],
                 fillColor: [0, 0, 0]
+            },
+            // Skull emblem (white circle)
+            {
+                vertexData: [{ x: 0.3000, y: 0.1200 }, { x: 0.2400, y: 0.1800 }, { x: 0.1800, y: 0.1200 }, { x: 0.2400, y: 0.0600 }],
+                fillColor: [255, 255, 255]
+            },
+            // Crossbones
+            {
+                vertexData: [{ x: 0.3200, y: 0.0200 }, { x: 0.1600, y: 0.0200 }, { x: 0.1600, y: -0.0200 }, { x: 0.3200, y: -0.0200 }],
+                fillColor: [255, 255, 255]
             }
         ],
         typicalCargo: ["Adv Components", "Narcotics"], price: 45000, techLevel: 3,
@@ -1214,6 +1973,20 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.6400, y: -0.2200 }, { x: 0.7400, y: -0.1600 }, { x: 0.7400, y: 0.1600 }, { x: 0.6400, y: 0.2200 }],
                 fillColor: [153, 153, 229]
+            },
+            // Pirate warning stripes
+            {
+                vertexData: [{ x: -0.7500, y: 0.6000 }, { x: -0.8500, y: 0.6000 }, { x: -0.8500, y: 0.5000 }, { x: -0.7500, y: 0.5000 }],
+                fillColor: [255, 200, 0]
+            },
+            {
+                vertexData: [{ x: -0.7500, y: -0.6000 }, { x: -0.8500, y: -0.6000 }, { x: -0.8500, y: -0.5000 }, { x: -0.7500, y: -0.5000 }],
+                fillColor: [255, 200, 0]
+            },
+            // Skull emblem
+            {
+                vertexData: [{ x: 0.4000, y: 0.0800 }, { x: 0.3400, y: 0.1400 }, { x: 0.2800, y: 0.0800 }, { x: 0.3400, y: 0.0200 }],
+                fillColor: [255, 255, 255]
             }
         ],
         typicalCargo: ["Slaves", "Weapons", "Adv Components"], price: 75000, techLevel: 4,
@@ -1362,6 +2135,20 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: 0.2200, y: 0.0000 }, { x: 0.1100, y: 0.1905 }, { x: -0.1100, y: 0.1905 }, { x: -0.2200, y: 0.0000 }, { x: -0.1100, y: -0.1905 }, { x: 0.1100, y: -0.1905 }],
                 fillColor: [150, 150, 180],
+            },
+            // Revolutionary star emblem
+            {
+                vertexData: [{ x: 0.5000, y: 0.0000 }, { x: 0.4200, y: 0.0600 }, { x: 0.4200, y: -0.0600 }],
+                fillColor: [255, 215, 0]
+            },
+            // Wing stripe
+            {
+                vertexData: [{ x: -0.5000, y: 0.5000 }, { x: -0.7000, y: 0.4000 }, { x: -0.7000, y: 0.3500 }, { x: -0.5000, y: 0.4500 }],
+                fillColor: [180, 60, 60]
+            },
+            {
+                vertexData: [{ x: -0.5000, y: -0.5000 }, { x: -0.7000, y: -0.4000 }, { x: -0.7000, y: -0.3500 }, { x: -0.5000, y: -0.4500 }],
+                fillColor: [180, 60, 60]
             }
         ],
         typicalCargo: ["Weapons", "Food"], price: 52000, techLevel: 3,
@@ -1560,6 +2347,21 @@ const SHIP_DEFINITIONS = {
             {
                 vertexData: [{ x: -0.5315, y: 0.2138 }, { x: -0.6915, y: 0.2938 }, { x: -0.8515, y: 0.1738 }, { x: -0.8515, y: -0.1862 }, { x: -0.6915, y: -0.3062 }, { x: -0.5315, y: -0.2262 }, { x: -0.3889, y: -0.1549 }, { x: -0.2869, y: -0.2138 }, { x: -0.0964, y: -0.1038 }, { x: -0.0964, y: 0.1162 }, { x: -0.2869, y: 0.2262 }, { x: -0.4120, y: 0.1540 }],
                 fillColor: [55, 52, 60]
+            },
+            // Military chevron emblem (large cruiser)
+            {
+                vertexData: [{ x: 0.9500, y: 0.0000 }, { x: 0.7500, y: 0.1200 }, { x: 0.8300, y: 0.0000 }, { x: 0.7500, y: -0.1200 }],
+                fillColor: [218, 165, 32]
+            },
+            // Port nav light
+            {
+                vertexData: [{ x: -0.5500, y: 0.4800 }, { x: -0.6200, y: 0.4500 }, { x: -0.5700, y: 0.4200 }],
+                fillColor: [255, 50, 50]
+            },
+            // Starboard nav light
+            {
+                vertexData: [{ x: -0.5500, y: -0.4800 }, { x: -0.6200, y: -0.4500 }, { x: -0.5700, y: -0.4200 }],
+                fillColor: [50, 255, 50]
             }
         ],
         typicalCargo: ["Weapons", "Adv Components", "Computers"],
