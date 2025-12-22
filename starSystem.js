@@ -2567,26 +2567,28 @@ class StarSystem {
                 // Player is touching the quantum gate! Trigger teleportation!
                 console.log(`QUANTUM GATE ACTIVATED! Player touched gate at (${so.pos.x.toFixed(0)}, ${so.pos.y.toFixed(0)})`);
 
-                // Show activation message
-                if (typeof uiManager !== 'undefined') {
-                    uiManager.addMessage('QUANTUM GATE ACTIVATED!', [200, 100, 255]);
-                }
-
                 // Set cooldown
                 this._lastQuantumTeleportTime = now;
 
-                // Trigger the teleportation via the galaxy
-                if (typeof galaxy !== 'undefined' && galaxy && typeof galaxy.teleportToRandomSystem === 'function') {
-                    // Use setTimeout to allow this frame to complete before teleporting
-                    setTimeout(() => {
-                        try {
-                            galaxy.teleportToRandomSystem();
-                        } catch (e) {
-                            console.error('Error during quantum teleportation:', e);
-                        }
-                    }, 100);
+                // Trigger the fade effect through gameStateManager (reuses jump fade)
+                if (typeof gameStateManager !== 'undefined' && gameStateManager &&
+                    typeof gameStateManager.startQuantumGateFade === 'function') {
+                    gameStateManager.startQuantumGateFade();
                 } else {
-                    console.warn('Cannot teleport: galaxy.teleportToRandomSystem not available');
+                    // Fallback: direct teleport if gameStateManager not available
+                    console.warn('gameStateManager.startQuantumGateFade not available, using direct teleport');
+                    if (typeof uiManager !== 'undefined') {
+                        uiManager.addMessage('QUANTUM GATE ACTIVATED!', [200, 100, 255]);
+                    }
+                    if (typeof galaxy !== 'undefined' && galaxy && typeof galaxy.teleportToRandomSystem === 'function') {
+                        setTimeout(() => {
+                            try {
+                                galaxy.teleportToRandomSystem();
+                            } catch (e) {
+                                console.error('Error during quantum teleportation:', e);
+                            }
+                        }, 100);
+                    }
                 }
 
                 return; // Only trigger once per frame

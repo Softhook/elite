@@ -1692,19 +1692,6 @@ class Player {
             // Draw the line
             line(this.pos.x, this.pos.y, closestStation.pos.x, closestStation.pos.y);
 
-            // Draw distance text at a fixed position above the ship (independent of rotation)
-            const nearX = this.pos.x;
-            const nearY = this.pos.y - (this.size + 18);
-            fill(0, 255, 255);
-            textAlign(CENTER, CENTER);
-            textSize(STATION_TEXT_SIZE.SMALL);
-
-            // Show discovery status in distance text (draw near player)
-            const statusText = closestStation.discovered ?
-                `Secret Base: ${Math.floor(closestDist)} units` :
-                `Locate Secret Base: ${Math.floor(closestDist)} units`;
-            text(statusText, nearX, nearY - 10);
-
             // Reset line dash
             drawingContext.setLineDash([]);
             pop();

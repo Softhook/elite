@@ -89,6 +89,9 @@ class GameStateManager {
         this.jumpWhiteHoldTime = 1.0; // seconds
         this.jumpJustCompleted = false;
 
+        // Quantum gate teleportation (uses same fade system as jumps)
+        this.quantumGateTeleportPending = false;
+
         // UI flags
         this.showingInventory = false;
 
@@ -952,22 +955,65 @@ class GameStateManager {
     }
 
     /**
+     * Starts the quantum gate teleportation fade effect.
+     * Uses the same white fade mechanism as hyperdrive jumps.
+     */
+    startQuantumGateFade() {
+        if (this.jumpFadeState !== "NONE") {
+            console.log("Quantum gate fade blocked: already fading");
+            return false;
+        }
+
+        console.log("Starting quantum gate teleportation fade");
+        this.quantumGateTeleportPending = true;
+        this.jumpFadeState = "FADE_OUT";
+        this.jumpFadeOpacity = 0;
+        this.jumpWhiteHoldTimer = 0;
+
+        // Show activation message
+        if (typeof uiManager !== 'undefined') {
+            uiManager.addMessage('QUANTUM GATE ACTIVATED!', [200, 100, 255]);
+        }
+
+        // Play teleportation/jump sound
+        if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+            soundManager.playSound('jump');
+        }
+
+        return true;
+    }
+
+    /**
      * Updates jump fade state machine
+     * Handles both regular hyperdrive jumps and quantum gate teleportation
      * @private
      */
     _updateJumpFade() {
         if (this.jumpFadeState === "FADE_OUT") {
             this.jumpFadeOpacity += 0.03;
             if (this.jumpFadeOpacity >= 1) {
-                // Execute jump during full white
-                galaxy.jumpToSystem(this.jumpTargetSystemIndex);
-                player.currentSystem = galaxy?.getCurrentSystem();
-                player.vel.mult(0.3);
-                this.jumpChargeTimer = 0;
-                this.isJumpCharging = false;
+                // Execute either quantum gate teleport or regular jump during full white
+                if (this.quantumGateTeleportPending) {
+                    // Quantum gate teleportation
+                    if (typeof galaxy !== 'undefined' && galaxy && typeof galaxy.teleportToRandomSystem === 'function') {
+                        galaxy.teleportToRandomSystem();
+                    }
+                    player.currentSystem = galaxy?.getCurrentSystem();
+                    player.vel.mult(0.3);
+                    this.quantumGateTeleportPending = false;
+                    GS_LOG("Quantum gate teleport executed");
+                } else {
+                    // Regular hyperdrive jump
+                    galaxy.jumpToSystem(this.jumpTargetSystemIndex);
+                    player.currentSystem = galaxy?.getCurrentSystem();
+                    player.vel.mult(0.3);
+                    this.jumpChargeTimer = 0;
+                    this.isJumpCharging = false;
+                }
+
                 this.jumpFadeState = "WHITE_HOLD";
 
-                // Clear event markers on jump
+                // Clear event markers on jump/teleport
                 if (typeof uiManager !== 'undefined') {
                     uiManager.clearEventMarkers();
                 }

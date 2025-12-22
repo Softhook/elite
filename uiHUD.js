@@ -634,6 +634,19 @@ class UIHUD {
             text(`Autopilot Engaged: ${targetLabel} ${hint}`, width / 2, autopilotY + 10);
         }
 
+        // Secret Base indicator (when B key navigation is active)
+        if (player.showSecretBaseNavigation) {
+            const secretBaseY = player.autopilotEnabled ? (45 + 24 + 5 + 20 + 5) : (45 + 24 + 5);
+            fill(0, 60, 80, 200);
+            noStroke();
+            rect(0, secretBaseY, width, 20);
+
+            textAlign(CENTER, CENTER);
+            textSize(STATION_TEXT_SIZE.BODY);
+            fill(0, 255, 255);
+            text('Secret Base', width / 2, secretBaseY + 10);
+        }
+
         pop();
     }
 
