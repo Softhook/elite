@@ -113,6 +113,14 @@ class GameStateManager {
         this.deathZoomSpeed = 0.012;         // How fast to zoom in per frame
         this.deathZoomActive = false;        // Whether the death zoom is currently active
         this.deathZoomStartTime = 0;         // When the death zoom started (millis)
+
+        // Intro zoom effect - zoom out from close-up when first entering space
+        this.introZoomScale = 2.5;           // Starting zoom level (zoomed in)
+        this.introZoomTarget = 1.0;          // Target zoom level (normal view)
+        this.introZoomActive = false;        // Whether intro zoom is currently active
+        this.introZoomStartTime = 0;         // When intro zoom started
+        this.introZoomDuration = 2000;       // Duration of intro zoom in ms
+        this.introZoomTriggered = false;     // Whether intro zoom has been triggered this session
     }
 
     /**
@@ -511,6 +519,14 @@ class GameStateManager {
         if (newState !== "VIEWING_MARKET" && this.previousState === "VIEWING_MARKET") {
             this.selectedMarketItemIndex = -1;
         }
+
+        // Trigger intro zoom when first entering IN_FLIGHT (new game or after load)
+        if (newState === "IN_FLIGHT" && !this.introZoomTriggered) {
+            this.introZoomTriggered = true;
+            this.introZoomActive = true;
+            this.introZoomStartTime = millis();
+            this.introZoomScale = 2.5; // Start zoomed in
+        }
     }
 
     /**
@@ -820,6 +836,22 @@ class GameStateManager {
             // Update quantum gate fade effect if active (runs alongside normal flight)
             if (this.jumpFadeState !== "NONE" && this.quantumGateTeleportPending) {
                 this._updateJumpFade();
+            }
+
+            // Update intro zoom effect (zoom out from close-up)
+            if (this.introZoomActive) {
+                const elapsed = millis() - this.introZoomStartTime;
+                const t = Math.min(1.0, elapsed / this.introZoomDuration);
+                // Ease-out cubic for smooth deceleration
+                const easeOut = 1 - Math.pow(1 - t, 3);
+                // Interpolate from starting zoom (2.5) down to target (1.0)
+                this.introZoomScale = 2.5 - (2.5 - this.introZoomTarget) * easeOut;
+
+                // Deactivate when complete
+                if (t >= 1.0) {
+                    this.introZoomActive = false;
+                    this.introZoomScale = 1.0;
+                }
             }
         } catch (e) {
             console.error(`ERROR during IN_FLIGHT update:`, e);
@@ -1246,7 +1278,14 @@ class GameStateManager {
     _drawInFlight(player, currentSystem) {
         // Check if death zoom is active
         const isDeathZooming = this.deathZoomActive && this.deathZoomScale > 1.0;
-        const zoomScale = isDeathZooming ? this.deathZoomScale : 1.0;
+
+        // Determine zoom scale - death zoom takes priority, then intro zoom
+        let zoomScale = 1.0;
+        if (isDeathZooming) {
+            zoomScale = this.deathZoomScale;
+        } else if (this.introZoomActive && this.introZoomScale > 1.0) {
+            zoomScale = this.introZoomScale;
+        }
 
         if (currentSystem && player) {
             try {
@@ -1258,9 +1297,9 @@ class GameStateManager {
         }
 
         // Draw HUD outside of zoom transform so it stays at normal size
+        // Hide HUD only during death zoom (not intro zoom)
         if (uiManager && player) {
             try {
-                // Hide HUD during death zoom for more cinematic effect
                 if (!isDeathZooming) {
                     uiManager.drawHUD(player);
                     if (currentSystem) {
