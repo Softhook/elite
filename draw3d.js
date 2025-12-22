@@ -1437,6 +1437,44 @@ Draw3D.drawUpgradeModel = function (type, level, x, y, size, angle) {
         ellipse(x, y, size * 1.0, size * 0.3); // Horizontal ring
         ellipse(x, y, size * 0.3, size * 1.0); // Vertical ring check (2D ellipse not 3D ring, specifically requested static later anyway)
 
+    } else if (type === 'cloak') {
+        // CLOAK: Phase shift generator with rotating rings
+
+        // Core hexagonal prism
+        this.drawPrism(x, y, size * 0.4, 6, size * 0.3, color(30, 60, 80), angle, sunAngle);
+
+        // Rotating phase rings based on level
+        const ringCount = level;
+        for (let i = 0; i < ringCount; i++) {
+            const ringAngle = angle + time * (1 + i * 0.5) + (i * TWO_PI / ringCount);
+            const ringSize = size * (0.7 + i * 0.15);
+
+            // Phase distortion ring (stylized as offset ellipses)
+            push();
+            noFill();
+            stroke(50, 150 + i * 30, 200 + i * 20, 150 + Math.sin(time * 4 + i) * 50);
+            strokeWeight(2);
+            translate(x, y);
+            rotate(ringAngle);
+            ellipse(0, 0, ringSize, ringSize * 0.3);
+            pop();
+        }
+
+        // Central glow effect
+        noStroke();
+        const glowAlpha = 100 + Math.sin(time * 6) * 50;
+        fill(100, 200, 255, glowAlpha);
+        ellipse(x, y, size * 0.5, size * 0.5);
+
+        // Shimmer particles
+        for (let i = 0; i < level + 2; i++) {
+            const particleAngle = time * 2 + i * TWO_PI / (level + 2);
+            const px = x + Math.cos(particleAngle) * size * 0.6;
+            const py = y + Math.sin(particleAngle) * size * 0.3;
+            fill(200, 230, 255, 150 + Math.sin(time * 8 + i) * 100);
+            ellipse(px, py, 4, 4);
+        }
+
     } else {
         // Fallback generic box
         this.drawBox3D(x, y, size, size, size, color(100), angle, sunAngle);

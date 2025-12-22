@@ -751,7 +751,7 @@ class UIStationMenus {
             let upg = allItems[i];
             let y = startY + (i - firstRow) * rowH;
 
-            const isShipUpgrade = ['armor', 'engine', 'cargo', 'hardpoints'].includes(upg.type);
+            const isShipUpgrade = ['armor', 'engine', 'cargo', 'hardpoints', 'shield', 'cloak'].includes(upg.type);
 
             // Check formatted affordability (and specific upgrade constraints if needed)
             let canAfford = player.credits >= upg.price;
@@ -2181,6 +2181,16 @@ class UIStationMenus {
                 y += lineH;
             }
 
+            // Cloak
+            if (weaponDef.cloakDuration) {
+                text(`Cloak Duration: ${weaponDef.cloakDuration}s`, specX, y);
+                y += lineH;
+            }
+            if (weaponDef.cloakCooldown) {
+                text(`Cooldown: ${weaponDef.cloakCooldown}s`, specX, y);
+                y += lineH;
+            }
+
             return; // Done with ship upgrades
         }
 
@@ -2498,7 +2508,7 @@ class UIStationMenus {
 
         const weaponData = this.selectedWeaponForDetail;
         const def = weaponData.weaponDef;
-        const isShipUpgrade = ['armor', 'engine', 'cargo', 'hardpoints', 'shield'].includes(def.type);
+        const isShipUpgrade = ['armor', 'engine', 'cargo', 'hardpoints', 'shield', 'cloak'].includes(def.type);
 
         if (this.weaponDetailButtons) {
             // Back

@@ -288,6 +288,14 @@ class Player {
         this.rotationBlockMultiplier = 1.0;
         this.rotationBlockTimer = 0;
 
+        // Cloaking device
+        this.isCloaked = false;
+        this.cloakDurationTimer = 0;
+        this.cloakCooldownTimer = 0;
+        this.cloakMaxDuration = 0;
+        this.cloakMaxCooldown = 0;
+        this.cloakActivatedTime = 0;
+
         // Visual effect tracking
         this.lastBeam = null;
         this.lastForceWave = null;
@@ -706,7 +714,7 @@ class Player {
         this.loadWeaponsFromShipDefinition(shipTypeName);
 
         // Recalculate any derived properties
-        this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0 }; // Reset upgrades on ship change
+        this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0 }; // Reset upgrades on ship change
         this.calculateRadianProperties && this.calculateRadianProperties();
         this.updateShipVisual && this.updateShipVisual();
     }
@@ -717,7 +725,7 @@ class Player {
      * @param {number} level - 1, 2, 3
      */
     applyUpgrade(type, level) {
-        if (!this.installedUpgrades) this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0 };
+        if (!this.installedUpgrades) this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0 };
 
         const oldMaxHull = this.maxHull;
         const oldMaxShield = this.maxShield;
@@ -829,6 +837,18 @@ class Player {
         }
         // Clamp current shield
         this.shield = Math.min(this.shield, this.maxShield);
+
+        // 6. Cloaking Device
+        if (this.installedUpgrades.cloak > 0) {
+            const upg = SHIP_UPGRADES.find(u => u.type === 'cloak' && u.level === this.installedUpgrades.cloak);
+            if (upg) {
+                this.cloakMaxDuration = upg.cloakDuration;
+                this.cloakMaxCooldown = upg.cloakCooldown;
+            }
+        } else {
+            this.cloakMaxDuration = 0;
+            this.cloakMaxCooldown = 0;
+        }
     }
 
     /** Loads weapons based on ship's standard armament */
@@ -924,6 +944,67 @@ class Player {
             return baseCooldown;
         }
         return baseCooldown;
+    }
+
+    /**
+     * Activates the cloaking device if installed and off cooldown.
+     * @returns {boolean} Whether cloak was activated
+     */
+    activateCloak() {
+        // Check if cloak is installed
+        if (!this.installedUpgrades?.cloak || this.cloakMaxDuration <= 0) {
+            if (typeof uiManager !== 'undefined') {
+                uiManager.addMessage("No cloaking device installed", [255, 100, 100]);
+            }
+            return false;
+        }
+
+        // Check if already cloaked
+        if (this.isCloaked) {
+            return false;
+        }
+
+        // Check cooldown
+        if (this.cloakCooldownTimer > 0) {
+            if (typeof uiManager !== 'undefined') {
+                uiManager.addMessage(`Cloak recharging: ${this.cloakCooldownTimer.toFixed(1)}s`, [255, 200, 100]);
+            }
+            return false;
+        }
+
+        // Activate cloak
+        this.isCloaked = true;
+        this.cloakDurationTimer = this.cloakMaxDuration;
+        this.cloakActivatedTime = millis();
+
+        if (typeof uiManager !== 'undefined') {
+            uiManager.addMessage("Cloaking device activated", [100, 200, 255]);
+        }
+
+        if (typeof soundManager !== 'undefined') {
+            soundManager.playSound('shieldUp');
+        }
+
+        return true;
+    }
+
+    /**
+     * Deactivates the cloaking device and starts cooldown.
+     */
+    deactivateCloak() {
+        if (!this.isCloaked) return;
+
+        this.isCloaked = false;
+        this.cloakCooldownTimer = this.cloakMaxCooldown;
+        this.cloakDurationTimer = 0;
+
+        if (typeof uiManager !== 'undefined') {
+            uiManager.addMessage("Cloak deactivated", [200, 200, 200]);
+        }
+
+        if (typeof soundManager !== 'undefined') {
+            soundManager.playSound('shieldDown');
+        }
     }
 
     /** Switches to the specified weapon index */
@@ -1236,6 +1317,15 @@ class Player {
         const fired = WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, effectiveTarget);
         if (fired) {
             this.fireCooldown = this.computeCooldown(this.fireRate);
+
+            // Firing breaks cloak
+            if (this.isCloaked) {
+                this.deactivateCloak();
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage("Cloak disrupted by weapons fire!", [255, 150, 100]);
+                }
+            }
+
             return true;
         }
         return false;
@@ -1277,7 +1367,22 @@ class Player {
                 }
             }
         }
+
+        // Update cloak timers
+        if (this.isCloaked) {
+            this.cloakDurationTimer -= deltaSeconds;
+            if (this.cloakDurationTimer <= 0) {
+                this.deactivateCloak();
+            }
+        }
+        if (this.cloakCooldownTimer > 0) {
+            this.cloakCooldownTimer -= deltaSeconds;
+            if (this.cloakCooldownTimer < 0) {
+                this.cloakCooldownTimer = 0;
+            }
+        }
         // ---- End new section ----
+
 
         // --- Speed Burst Thrust & State Management ---
         if (this.isSpeedBursting) {
@@ -1517,8 +1622,21 @@ class Player {
         const sunAngle = atan2(-this.pos.y, -this.pos.x);
         const localSunAngle = sunAngle - this.angle;
 
+        // Apply cloak transparency effect
+        if (this.isCloaked) {
+            const flickerTime = (millis() - this.cloakActivatedTime) * 0.01;
+            const baseAlpha = 0.25; // 25% opacity when cloaked
+            const flickerAmount = 0.1 * sin(flickerTime * 3);
+            drawingContext.globalAlpha = baseAlpha + flickerAmount;
+        }
+
         rotate(this.angle);
         drawFunc(this.size, this.isThrusting, this.angle, localSunAngle);
+
+        // Reset alpha after drawing ship
+        if (this.isCloaked) {
+            drawingContext.globalAlpha = 1.0;
+        }
 
         // Turret drawing removed - bullets fire without visible turret
         pop();
@@ -1718,6 +1836,14 @@ class Player {
         }
 
         if (this.destroyed || amount <= 0) return { damage: 0, shieldHit: false };
+
+        // Taking damage breaks cloak
+        if (this.isCloaked) {
+            this.deactivateCloak();
+            if (typeof uiManager !== 'undefined') {
+                uiManager.addMessage("Cloak disrupted by damage!", [255, 150, 100]);
+            }
+        }
 
         let shieldHit = false;
         let actualDamage = amount;
@@ -2208,7 +2334,7 @@ class Player {
 
         return {
             shipTypeName: this.shipTypeName,
-            installedUpgrades: this.installedUpgrades || { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0 }, // Save upgrades
+            installedUpgrades: this.installedUpgrades || { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0 }, // Save upgrades
             pos: { x: this.pos.x, y: this.pos.y }, vel: { x: this.vel.x, y: this.vel.y }, angle: normalizedAngle,
             hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(cleanedCargo)),
             isWanted: this.isWanted,

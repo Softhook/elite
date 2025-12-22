@@ -523,6 +523,8 @@ function handleSingleKeyActions() {
             return handleMinimapZoomIn();
         case ',':
             return handleMinimapZoomOut();
+        case 'c':
+            return handleCloakActivation();
     }
     return false;
 }
@@ -797,6 +799,26 @@ function handleMinimapZoomOut() {
 function handleMinimapZoomIn() {
     if (gameStateManager.currentState === "IN_FLIGHT" && uiManager) {
         uiManager.cycleInMinimapZoom();
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Handle cloak activation ('C' key)
+ */
+function handleCloakActivation() {
+    if (gameStateManager.currentState !== "IN_FLIGHT" || !player || player.destroyed) {
+        return false;
+    }
+
+    // Don't allow cloak while docked
+    if (player.isDockedAndInvulnerable) {
+        return false;
+    }
+
+    if (typeof player.activateCloak === 'function') {
+        player.activateCloak();
         return true;
     }
     return false;

@@ -1,5 +1,5 @@
 // ****** shipUpgrades.js ******
-// Definitions for ship upgrades (Armor, Engine, Cargo, Hardpoints).
+// Definitions for ship upgrades (Armor, Engine, Cargo, Hardpoints, Shield, Cloak).
 // These upgrades are ship-specific and reset when changing ships.
 
 const SHIP_UPGRADES = [
@@ -143,5 +143,36 @@ const SHIP_UPGRADES = [
         price: 40000,
         shieldBonus: 200,
         desc: "Top-tier prismatic shield technology. Increases maximum shield capacity by 200 units."
+    },
+
+    // -----------------------------
+    // Cloaking Device Upgrades
+    // -----------------------------
+    {
+        type: "cloak",
+        level: 1,
+        name: "Stealth Field Mark I",
+        price: 8000,
+        cloakDuration: 8,      // seconds
+        cloakCooldown: 45,     // seconds
+        desc: "Basic cloaking technology that bends light around your ship. Short duration but effective for evasive maneuvers."
+    },
+    {
+        type: "cloak",
+        level: 2,
+        name: "Shadow Matrix",
+        price: 22000,
+        cloakDuration: 15,     // seconds
+        cloakCooldown: 35,     // seconds
+        desc: "Advanced cloaking system with improved duration. Used by elite reconnaissance units."
+    },
+    {
+        type: "cloak",
+        level: 3,
+        name: "Phantom Drive",
+        price: 55000,
+        cloakDuration: 25,     // seconds
+        cloakCooldown: 25,     // seconds
+        desc: "Military-grade phase shift technology. Complete invisibility with extended duration and rapid recharge."
     }
 ];

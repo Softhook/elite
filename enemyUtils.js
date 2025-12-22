@@ -71,6 +71,10 @@ class EnemyUtils {
         if (target && target.isDockedAndInvulnerable) {
             return false;
         }
+        // Player is not a valid target while cloaked (invisible)
+        if (target && target.isCloaked) {
+            return false;
+        }
         return target && target.pos &&
             ((target.hull !== undefined && target.hull > 0) || target.hull === undefined) &&
             (target.destroyed === undefined || !target.destroyed);

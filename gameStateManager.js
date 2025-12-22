@@ -329,6 +329,11 @@ class GameStateManager {
             player.vel.mult(0);
             // Mark player as docked and invulnerable so enemies stop targeting them
             player.isDockedAndInvulnerable = true;
+            // Deactivate cloak when docking (silently, no cooldown)
+            if (player.isCloaked) {
+                player.isCloaked = false;
+                player.cloakDurationTimer = 0;
+            }
         } else {
             console.error("Could not snap player to station - required objects missing.");
         }
@@ -368,6 +373,11 @@ class GameStateManager {
             player.vel.mult(0);
             // Mark player as docked and invulnerable
             player.isDockedAndInvulnerable = true;
+            // Deactivate cloak when docking (silently, no cooldown)
+            if (player.isCloaked) {
+                player.isCloaked = false;
+                player.cloakDurationTimer = 0;
+            }
             // Save game when docking at space object
             if (typeof saveGame === 'function') {
                 try {
@@ -781,7 +791,7 @@ class GameStateManager {
             this._checkDocking(player, currentSystem);
             this._checkAutoJump(player, currentSystem);
             this._checkJumpCompletion();
-            
+
             // Update quantum gate fade effect if active (runs alongside normal flight)
             if (this.jumpFadeState !== "NONE" && this.quantumGateTeleportPending) {
                 this._updateJumpFade();
@@ -1225,7 +1235,7 @@ class GameStateManager {
                 }
             } catch (e) { }
         }
-        
+
         // Draw quantum gate fade overlay if active
         if (this.jumpFadeState !== "NONE" && this.jumpFadeOpacity > 0) {
             push();

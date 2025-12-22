@@ -647,6 +647,60 @@ class UIHUD {
             text('Secret Base', width / 2, secretBaseY + 10);
         }
 
+        // Cloak status indicator (when cloak is installed)
+        if (player.installedUpgrades?.cloak > 0) {
+            const cloakBarWidth = 120;
+            const cloakBarHeight = 16;
+            const cloakBarX = 10;
+            const cloakBarY = weaponBarY + weaponBarH + 8;
+
+            // Calculate Y offset if autopilot or secret base is shown
+            let yOffset = 0;
+            if (player.autopilotEnabled) yOffset += 25;
+            if (player.showSecretBaseNavigation) yOffset += 25;
+            const adjustedY = cloakBarY + yOffset;
+
+            // Background
+            fill(20, 40, 60, 180);
+            noStroke();
+            rect(cloakBarX, adjustedY, cloakBarWidth, cloakBarHeight, 3);
+
+            if (player.isCloaked) {
+                // Active cloak - show remaining time with cyan bar
+                const remainingPct = player.cloakDurationTimer / player.cloakMaxDuration;
+                fill(50, 180, 220, 200);
+                rect(cloakBarX, adjustedY, cloakBarWidth * remainingPct, cloakBarHeight, 3);
+
+                // Flickering effect
+                const flicker = sin(millis() * 0.02) * 30;
+                fill(100 + flicker, 220 + flicker, 255, 220);
+                textAlign(LEFT, CENTER);
+                textSize(STATION_TEXT_SIZE.HELPER + 2);
+                text(`CLOAKED ${player.cloakDurationTimer.toFixed(1)}s`, cloakBarX + 5, adjustedY + cloakBarHeight / 2);
+            } else if (player.cloakCooldownTimer > 0) {
+                // Cooldown - show recharge progress
+                const rechargePct = 1 - (player.cloakCooldownTimer / player.cloakMaxCooldown);
+                fill(60, 80, 100, 150);
+                rect(cloakBarX, adjustedY, cloakBarWidth, cloakBarHeight, 3);
+                fill(40, 100, 140, 200);
+                rect(cloakBarX, adjustedY, cloakBarWidth * rechargePct, cloakBarHeight, 3);
+
+                fill(150, 180, 200);
+                textAlign(LEFT, CENTER);
+                textSize(STATION_TEXT_SIZE.HELPER + 2);
+                text(`CLOAK ${Math.ceil(player.cloakCooldownTimer)}s`, cloakBarX + 5, adjustedY + cloakBarHeight / 2);
+            } else {
+                // Ready
+                fill(40, 120, 80, 200);
+                rect(cloakBarX, adjustedY, cloakBarWidth, cloakBarHeight, 3);
+
+                fill(100, 255, 150);
+                textAlign(LEFT, CENTER);
+                textSize(STATION_TEXT_SIZE.HELPER + 2);
+                text("CLOAK [C]", cloakBarX + 5, adjustedY + cloakBarHeight / 2);
+            }
+        }
+
         pop();
     }
 
