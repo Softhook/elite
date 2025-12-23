@@ -7,7 +7,7 @@ const LEGAL_CARGO = [
     'Chemicals', 'Computers', 'Medicine', 'Adv Components', 'Luxury Goods'
 ];
 const ILLEGAL_CARGO = ['Narcotics', 'Weapons', 'Slaves']; // Keep separate
-const PIRATE_SHIP_TYPES = ['Krait', 'Adder', 'Viper', 'CobraMkIII'];
+const PIRATE_SHIP_TYPES = ['Krait', 'Adder', 'Sidewinder', 'CobraMkIII'];
 
 // --- Economy-Specific Cargo Biases ---
 // Define preferred cargo *exports* (goods they produce/sell cheaply)

@@ -67,12 +67,12 @@ class EventManager {
         }
 
         // Fallbacks to ensure lists aren't empty
-        if (this.shipGroups.POLICE.length === 0) this.shipGroups.POLICE.push('Viper');
+        if (this.shipGroups.POLICE.length === 0) this.shipGroups.POLICE.push('ViperPol');
         if (this.shipGroups.PIRATE.length === 0) this.shipGroups.PIRATE.push('Sidewinder');
         if (this.shipGroups.TRADER.length === 0) this.shipGroups.TRADER.push('Type6Transporter');
         if (this.shipGroups.ALIEN.length === 0) this.shipGroups.ALIEN.push('Thargoid');
         if (this.shipGroups.MILITARY.length === 0) this.shipGroups.MILITARY.push('Viper');
-        if (this.shipGroups.BOUNTY_HUNTER.length === 0) this.shipGroups.BOUNTY_HUNTER.push('Viper');
+        if (this.shipGroups.BOUNTY_HUNTER.length === 0) this.shipGroups.BOUNTY_HUNTER.push('ViperBH');
         if (this.shipGroups.SEPARATIST.length === 0) this.shipGroups.SEPARATIST.push('Sidewinder');
         if (this.shipGroups.IMPERIAL.length === 0) this.shipGroups.IMPERIAL.push('Viper');
 
@@ -191,7 +191,7 @@ class EventManager {
                     shipSelection: {
                         strategy: 'randomFromList',
                         shipList: this.shipGroups.BOUNTY_HUNTER,
-                        fallbackShip: "Viper"
+                        fallbackShip: "ViperBH"
                     },
                     aiRole: AI_ROLE.BOUNTY_HUNTER,
                     spawnRadiusMin: 1700,
@@ -297,7 +297,7 @@ class EventManager {
                     shipSelection: {
                         strategy: 'randomFromList',
                         shipList: this.shipGroups.POLICE,
-                        fallbackShip: "Viper"
+                        fallbackShip: "ViperPol"
                     },
                     aiRole: AI_ROLE.POLICE,
                     spawnRadiusMin: 1600,

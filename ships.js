@@ -79,36 +79,201 @@ const SHIP_DEFINITIONS = {
         name: "Viper", role: "Fighter", sizeCategory: "Small", size: 35,
         baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRate: 0.07854,
         baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 15,
-        armament: ["Twin Pulse", "Guardian Missile", "Basic Mine"], // Fast fighter
-        costCategory: "Medium", description: "The cop car of space. Police and bounty hunters love its 7.5 speed and aggressive handling. Shields recharge fast enough to confuse targets who thought they scored a hit. If you hear 'Viper inbound' on comms and you're wanted, it's already too late. Start transmitting your last words.",
+        armament: ["Twin Pulse", "Guardian Missile", "Basic Mine"],
+        costCategory: "Medium", description: "Military-spec fast interceptor. Hits 7.5 speed with shields that recharge faster than most pilots can aim. A versatile combat platform favored by military forces across the galaxy.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0500, y: 0.0000 }, { x: -0.6500, y: 0.5000 }, { x: -1.0500, y: 0.3000 }, { x: -1.0500, y: -0.3000 }, { x: -0.6500, y: -0.5000 }],
-                fillColor: [210, 210, 220]
+                fillColor: [150, 155, 160]
             },
             {
                 vertexData: [{ x: -0.1312, y: 0.2187 }, { x: -0.2479, y: 0.1312 }, { x: -0.2479, y: -0.1312 }, { x: -0.1312, y: -0.2187 }, { x: -0.0146, y: -0.1604 }, { x: 0.1312, y: -0.0875 }, { x: 0.2187, y: 0.0000 }, { x: 0.1312, y: 0.0875 }, { x: -0.0146, y: 0.1604 }],
-                fillColor: [133, 193, 249]
+                fillColor: [100, 160, 220]
             },
-            // Police pursuit lights
+            // Military chevron
             {
-                vertexData: [{ x: -0.5500, y: 0.4200 }, { x: -0.6300, y: 0.4000 }, { x: -0.5800, y: 0.3600 }],
-                fillColor: [255, 0, 0]
+                vertexData: [{ x: 0.5000, y: 0.0000 }, { x: 0.3000, y: 0.1000 }, { x: 0.3800, y: 0.0000 }, { x: 0.3000, y: -0.1000 }],
+                fillColor: [218, 165, 32]
             },
+            // Hull stripe - port
             {
-                vertexData: [{ x: -0.5500, y: -0.4200 }, { x: -0.6300, y: -0.4000 }, { x: -0.5800, y: -0.3600 }],
-                fillColor: [0, 100, 255]
+                vertexData: [{ x: 0.2000, y: 0.1500 }, { x: -0.4000, y: 0.3500 }, { x: -0.4000, y: 0.3000 }, { x: 0.2000, y: 0.1000 }],
+                fillColor: [100, 100, 110]
             },
-            // Hull chevron
+            // Hull stripe - starboard
             {
-                vertexData: [{ x: 0.3000, y: 0.0800 }, { x: 0.1500, y: 0.0000 }, { x: 0.3000, y: -0.0800 }, { x: 0.2500, y: 0.0000 }],
-                fillColor: [180, 180, 200]
+                vertexData: [{ x: 0.2000, y: -0.1500 }, { x: -0.4000, y: -0.3500 }, { x: -0.4000, y: -0.3000 }, { x: 0.2000, y: -0.1000 }],
+                fillColor: [100, 100, 110]
+            },
+            // Nav light port
+            {
+                vertexData: [{ x: -0.6000, y: 0.4800 }, { x: -0.6700, y: 0.4500 }, { x: -0.6200, y: 0.4200 }],
+                fillColor: [255, 50, 50]
+            },
+            // Nav light starboard
+            {
+                vertexData: [{ x: -0.6000, y: -0.4800 }, { x: -0.6700, y: -0.4500 }, { x: -0.6200, y: -0.4200 }],
+                fillColor: [50, 255, 50]
             }
         ],
-        typicalCargo: ["Computers", "Weapons", "Narcotics"],
+        typicalCargo: ["Computers", "Weapons"],
         price: 24500,
-        aiRoles: ["POLICE", "COMBAT", "MILITARY", "BOUNTY_HUNTER", "GUARD"],
-        techLevel: 3 // Mid-tier
+        aiRoles: ["MILITARY", "COMBAT"],
+        techLevel: 3
+    },
+    "ViperPol": {
+        name: "Viper Pol", role: "Police Interceptor", sizeCategory: "Small", size: 35,
+        baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRate: 0.07854,
+        baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 15,
+        armament: ["Twin Pulse", "Tangle Projector", "Basic Mine"],
+        costCategory: "Medium", description: "Police variant of the Viper. That distinctive blue hull and flashing lights mean one thing: you're about to have a very bad day. Fast enough to catch smugglers, tough enough to survive firefights.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0500, y: 0.0000 }, { x: -0.6500, y: 0.5000 }, { x: -1.0500, y: 0.3000 }, { x: -1.0500, y: -0.3000 }, { x: -0.6500, y: -0.5000 }],
+                fillColor: [60, 100, 180]
+            },
+            {
+                vertexData: [{ x: -0.1312, y: 0.2187 }, { x: -0.2479, y: 0.1312 }, { x: -0.2479, y: -0.1312 }, { x: -0.1312, y: -0.2187 }, { x: -0.0146, y: -0.1604 }, { x: 0.1312, y: -0.0875 }, { x: 0.2187, y: 0.0000 }, { x: 0.1312, y: 0.0875 }, { x: -0.0146, y: 0.1604 }],
+                fillColor: [80, 140, 220]
+            },
+            // White police stripe - center
+            {
+                vertexData: [{ x: 0.6000, y: 0.0400 }, { x: -0.5000, y: 0.0400 }, { x: -0.5000, y: -0.0400 }, { x: 0.6000, y: -0.0400 }],
+                fillColor: [255, 255, 255]
+            },
+            // Police pursuit light - port (red)
+            {
+                vertexData: [{ x: -0.5500, y: 0.4200 }, { x: -0.6500, y: 0.3800 }, { x: -0.5800, y: 0.3400 }],
+                fillColor: [255, 0, 0]
+            },
+            // Police pursuit light - starboard (blue)
+            {
+                vertexData: [{ x: -0.5500, y: -0.4200 }, { x: -0.6500, y: -0.3800 }, { x: -0.5800, y: -0.3400 }],
+                fillColor: [0, 100, 255]
+            },
+            // Police badge emblem
+            {
+                vertexData: [{ x: 0.3500, y: 0.0000 }, { x: 0.2800, y: 0.0600 }, { x: 0.2000, y: 0.0400 }, { x: 0.2000, y: -0.0400 }, { x: 0.2800, y: -0.0600 }],
+                fillColor: [255, 215, 0]
+            },
+            // Wing tip - port
+            {
+                vertexData: [{ x: -0.7000, y: 0.4600 }, { x: -0.9000, y: 0.3200 }, { x: -0.8500, y: 0.3000 }, { x: -0.6500, y: 0.4300 }],
+                fillColor: [40, 80, 150]
+            },
+            // Wing tip - starboard
+            {
+                vertexData: [{ x: -0.7000, y: -0.4600 }, { x: -0.9000, y: -0.3200 }, { x: -0.8500, y: -0.3000 }, { x: -0.6500, y: -0.4300 }],
+                fillColor: [40, 80, 150]
+            }
+        ],
+        typicalCargo: [],
+        price: 25500,
+        aiRoles: ["POLICE"],
+        techLevel: 3
+    },
+    "ViperBH": {
+        name: "Viper BH", role: "Bounty Hunter", sizeCategory: "Small", size: 35,
+        baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRate: 0.07854,
+        baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 15,
+        armament: ["Twin Pulse", "Guardian Missile", "Harpoon Launcher"],
+        costCategory: "Medium", description: "Bounty hunter variant painted in aggressive red. When this appears on your scanner, someone's collecting on your head. Harpoon launcher ensures targets don't escape.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0500, y: 0.0000 }, { x: -0.6500, y: 0.5000 }, { x: -1.0500, y: 0.3000 }, { x: -1.0500, y: -0.3000 }, { x: -0.6500, y: -0.5000 }],
+                fillColor: [160, 40, 40]
+            },
+            {
+                vertexData: [{ x: -0.1312, y: 0.2187 }, { x: -0.2479, y: 0.1312 }, { x: -0.2479, y: -0.1312 }, { x: -0.1312, y: -0.2187 }, { x: -0.0146, y: -0.1604 }, { x: 0.1312, y: -0.0875 }, { x: 0.2187, y: 0.0000 }, { x: 0.1312, y: 0.0875 }, { x: -0.0146, y: 0.1604 }],
+                fillColor: [200, 80, 80]
+            },
+            // Skull/crosshair emblem
+            {
+                vertexData: [{ x: 0.4000, y: 0.0000 }, { x: 0.3000, y: 0.0800 }, { x: 0.2000, y: 0.0000 }, { x: 0.3000, y: -0.0800 }],
+                fillColor: [30, 30, 30]
+            },
+            // Black racing stripe - port
+            {
+                vertexData: [{ x: 0.5000, y: 0.0800 }, { x: -0.5000, y: 0.3500 }, { x: -0.5000, y: 0.3000 }, { x: 0.5000, y: 0.0300 }],
+                fillColor: [20, 20, 20]
+            },
+            // Black racing stripe - starboard
+            {
+                vertexData: [{ x: 0.5000, y: -0.0800 }, { x: -0.5000, y: -0.3500 }, { x: -0.5000, y: -0.3000 }, { x: 0.5000, y: -0.0300 }],
+                fillColor: [20, 20, 20]
+            },
+            // Kill marks
+            {
+                vertexData: [{ x: -0.3000, y: 0.2200 }, { x: -0.2600, y: 0.2200 }, { x: -0.2600, y: 0.2600 }, { x: -0.3000, y: 0.2600 }],
+                fillColor: [255, 255, 255]
+            },
+            {
+                vertexData: [{ x: -0.3500, y: 0.2300 }, { x: -0.3100, y: 0.2300 }, { x: -0.3100, y: 0.2700 }, { x: -0.3500, y: 0.2700 }],
+                fillColor: [255, 255, 255]
+            },
+            // Orange warning lights
+            {
+                vertexData: [{ x: -0.6000, y: 0.4800 }, { x: -0.6700, y: 0.4500 }, { x: -0.6200, y: 0.4200 }],
+                fillColor: [255, 150, 0]
+            },
+            {
+                vertexData: [{ x: -0.6000, y: -0.4800 }, { x: -0.6700, y: -0.4500 }, { x: -0.6200, y: -0.4200 }],
+                fillColor: [255, 150, 0]
+            }
+        ],
+        typicalCargo: ["Weapons", "Narcotics"],
+        price: 26500,
+        aiRoles: ["BOUNTY_HUNTER"],
+        techLevel: 3
+    },
+    "ViperGuard": {
+        name: "Viper Guard", role: "Escort Fighter", sizeCategory: "Small", size: 35,
+        baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRate: 0.07854,
+        baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 15,
+        armament: ["Twin Pulse", "Guardian Missile", "Barrier Field"],
+        costCategory: "Medium", description: "Escort variant in gold livery. Hired to protect VIPs and valuable cargo. The barrier field helps keep principals alive while the pilot deals with threats.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0500, y: 0.0000 }, { x: -0.6500, y: 0.5000 }, { x: -1.0500, y: 0.3000 }, { x: -1.0500, y: -0.3000 }, { x: -0.6500, y: -0.5000 }],
+                fillColor: [180, 160, 60]
+            },
+            {
+                vertexData: [{ x: -0.1312, y: 0.2187 }, { x: -0.2479, y: 0.1312 }, { x: -0.2479, y: -0.1312 }, { x: -0.1312, y: -0.2187 }, { x: -0.0146, y: -0.1604 }, { x: 0.1312, y: -0.0875 }, { x: 0.2187, y: 0.0000 }, { x: 0.1312, y: 0.0875 }, { x: -0.0146, y: 0.1604 }],
+                fillColor: [220, 200, 100]
+            },
+            // Shield emblem (guard symbol)
+            {
+                vertexData: [{ x: 0.4000, y: 0.0000 }, { x: 0.3200, y: 0.0800 }, { x: 0.3200, y: -0.0800 }],
+                fillColor: [255, 255, 220]
+            },
+            {
+                vertexData: [{ x: 0.3200, y: 0.0800 }, { x: 0.2400, y: 0.0600 }, { x: 0.2400, y: -0.0600 }, { x: 0.3200, y: -0.0800 }],
+                fillColor: [140, 120, 40]
+            },
+            // Brown accent stripe - port
+            {
+                vertexData: [{ x: 0.3000, y: 0.1200 }, { x: -0.4500, y: 0.3800 }, { x: -0.4500, y: 0.3300 }, { x: 0.3000, y: 0.0700 }],
+                fillColor: [120, 90, 40]
+            },
+            // Brown accent stripe - starboard
+            {
+                vertexData: [{ x: 0.3000, y: -0.1200 }, { x: -0.4500, y: -0.3800 }, { x: -0.4500, y: -0.3300 }, { x: 0.3000, y: -0.0700 }],
+                fillColor: [120, 90, 40]
+            },
+            // Warm nav lights
+            {
+                vertexData: [{ x: -0.6000, y: 0.4800 }, { x: -0.6700, y: 0.4500 }, { x: -0.6200, y: 0.4200 }],
+                fillColor: [255, 220, 100]
+            },
+            {
+                vertexData: [{ x: -0.6000, y: -0.4800 }, { x: -0.6700, y: -0.4500 }, { x: -0.6200, y: -0.4200 }],
+                fillColor: [255, 220, 100]
+            }
+        ],
+        typicalCargo: [],
+        price: 27500,
+        aiRoles: ["GUARD"],
+        techLevel: 3
     },
 
     // --- FEDERATION MILITARY ---
@@ -1009,7 +1174,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: ["Adv Components", "Computers"], price: 65000, techLevel: 4,
-        aiRoles: ["PIRATE", "SEPARATIST"]
+        aiRoles: ["SEPARATIST"]
     },
     "SeparatistOutlander": {
         name: "Separatist Outlander", role: "Long-Range Scout/Raider", sizeCategory: "Medium", size: 50,
@@ -1028,7 +1193,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: ["Computers", "Adv Components", "Food"], price: 70000, techLevel: 4,
-        aiRoles: ["SEPARATIST", "PIRATE"]
+        aiRoles: ["SEPARATIST"]
     },
     "SeparatistDefiant": {
         name: "Separatist Defiant", role: "Gunship", sizeCategory: "Medium", size: 58,

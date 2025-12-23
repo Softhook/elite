@@ -852,7 +852,7 @@ class UIStationMenus {
                 { ship: "GladiusFighter", name: "Gladius Security", cost: 8000, description: "Standard security escort" },
                 { ship: "Vulture", name: "Vulture Protector", cost: 12000, description: "Heavy combat protection" },
                 { ship: "WaspAssault", name: "Wasp Security", cost: 6000, description: "Fast response protection" },
-                { ship: "Viper", name: "Viper Guardian", cost: 10000, description: "Agile defender" }
+                { ship: "ViperGuard", name: "Viper Guardian", cost: 10000, description: "Agile defender" }
             ];
 
             const affordableGuards = guardOptions.filter(guard => player.credits >= guard.cost);

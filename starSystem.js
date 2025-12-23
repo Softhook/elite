@@ -1418,7 +1418,7 @@ class StarSystem {
     _selectMilitaryShip() {
         // Check for police spawn (50% of normal probability - military has law enforcement)
         if (this._shouldSpawnPolice(0.5)) {
-            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["Viper"]) };
+            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["ViperPol"]) };
         }
 
         const rand = random();
@@ -1440,7 +1440,7 @@ class StarSystem {
     _selectAlienShip() {
         // Check for police spawn (20% of normal probability - aliens suppress law enforcement)
         if (this._shouldSpawnPolice(0.2)) {
-            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["Viper"]) };
+            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["ViperPol"]) };
         }
 
         if (random() < 0.8 && ALIEN_SHIPS.length > 0) {
@@ -1461,7 +1461,7 @@ class StarSystem {
     _selectMiningShip() {
         // Check for police spawn (40% of normal probability - industrial law enforcement)
         if (this._shouldSpawnPolice(0.4)) {
-            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["Viper"]) };
+            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["ViperPol"]) };
         }
 
         const rand = random();
@@ -1481,7 +1481,7 @@ class StarSystem {
     _selectOffworldShip() {
         // Check for police spawn (30% of normal probability - frontier law enforcement)
         if (this._shouldSpawnPolice(0.3)) {
-            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["Viper"]) };
+            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["ViperPol"]) };
         }
 
         const rand = random();
@@ -1498,7 +1498,7 @@ class StarSystem {
     _selectFactionShip(primaryFaction, secondaryFaction) {
         // Check for police spawn (60% of normal probability - factions have organized law enforcement)
         if (this._shouldSpawnPolice(0.6)) {
-            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["Viper"]) };
+            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["ViperPol"]) };
         }
 
         const rand = random();
@@ -1526,7 +1526,7 @@ class StarSystem {
 
         const roleToShip = {
             [AI_ROLE.PIRATE]: () => random(PIRATE_SHIPS.length > 0 ? PIRATE_SHIPS : ["Krait"]),
-            [AI_ROLE.POLICE]: () => random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["Viper"]),
+            [AI_ROLE.POLICE]: () => random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["ViperPol"]),
             [AI_ROLE.HAULER]: () => random(HAULER_SHIPS.length > 0 ? HAULER_SHIPS : ["CobraMkIII"])
         };
 
@@ -1563,7 +1563,7 @@ class StarSystem {
         const slotsLeft = this.maxEnemies - this.enemies.length;
         if (slotsLeft <= 0) return;
 
-        const defaultGuardShips = ["Viper", "GladiusFighter"];
+        const defaultGuardShips = ["ViperGuard", "GladiusFighter"];
         const numGuards = hauler.size > 100 ? min(2, slotsLeft) : (random() < 0.6 ? 1 : 0);
 
         for (let g = 0; g < numGuards; g++) {
@@ -1572,7 +1572,7 @@ class StarSystem {
             else if (MILITARY_SHIPS.length > 0) guardShipTypeName = random(MILITARY_SHIPS);
             else guardShipTypeName = random(defaultGuardShips);
 
-            if (!guardShipTypeName) guardShipTypeName = "Viper";
+            if (!guardShipTypeName) guardShipTypeName = "ViperGuard";
 
             const offsetAngle = TWO_PI * (g / numGuards);
             const spawnDist = hauler.size / 2 + 30;
