@@ -972,8 +972,64 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Computers", "Computers", "Computers", "Computers", "Luxury Goods", "Weapons", "Narcotics"],
         price: 64200,
-        aiRoles: ["MILITARY", "BOUNTY_HUNTER"],
+        aiRoles: ["MILITARY"],
         techLevel: 4 // Advanced
+    },
+    "FerDeLanceBH": {
+        name: "Fer-de-Lance BH", role: "Bounty Hunter", sizeCategory: "Large", size: 65,
+        baseMaxSpeed: 6.5, baseThrust: 0.11, baseTurnRate: 0.05236,
+        baseHull: 180, baseShield: 350, shieldRecharge: 1.8, cargoCapacity: 24,
+        armament: ["Sniper Rail", "Force Blaster", "Triple Pulse", "Harpoon Launcher", "Barrier Field"],
+        costCategory: "Very High", description: "The bounty hunter's ultimate status symbol. That blood-red hull with kill marks says 'your bounty will be collected.' When this shows on scanner, smart criminals surrender. Others become another mark on the fuselage.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0000, y: 0.0000 }, { x: 0.1000, y: 0.5000 }, { x: -0.7000, y: 0.6000 }, { x: -1.0000, y: 0.2000 }, { x: -1.0000, y: -0.2000 }, { x: -0.7000, y: -0.6000 }, { x: 0.1000, y: -0.5000 }],
+                fillColor: [140, 30, 30]
+            },
+            {
+                vertexData: [{ x: -0.9998, y: -0.2009 }, { x: -0.1000, y: -0.2431 }, { x: -0.7013, y: -0.5970 }],
+                fillColor: [180, 80, 80]
+            },
+            {
+                vertexData: [{ x: -0.9995, y: 0.2035 }, { x: -0.7020, y: 0.5957 }, { x: -0.1000, y: 0.3052 }],
+                fillColor: [180, 80, 80]
+            },
+            {
+                vertexData: [{ x: 0.4349, y: 0.0000 }, { x: 0.1360, y: 0.1505 }, { x: 0.1360, y: -0.1505 }],
+                fillColor: [200, 100, 100]
+            },
+            // Black racing stripes
+            {
+                vertexData: [{ x: 0.6000, y: 0.0500 }, { x: 0.0000, y: 0.2000 }, { x: 0.0000, y: 0.1500 }, { x: 0.6000, y: 0.0000 }],
+                fillColor: [20, 20, 20]
+            },
+            {
+                vertexData: [{ x: 0.6000, y: -0.0500 }, { x: 0.0000, y: -0.2000 }, { x: 0.0000, y: -0.1500 }, { x: 0.6000, y: 0.0000 }],
+                fillColor: [20, 20, 20]
+            },
+            // Skull/crosshair emblem
+            {
+                vertexData: [{ x: 0.7000, y: 0.0000 }, { x: 0.5500, y: 0.0800 }, { x: 0.4500, y: 0.0000 }, { x: 0.5500, y: -0.0800 }],
+                fillColor: [30, 30, 30]
+            },
+            // Kill marks
+            { vertexData: [{ x: -0.3000, y: 0.3500 }, { x: -0.2600, y: 0.3500 }, { x: -0.2600, y: 0.3900 }, { x: -0.3000, y: 0.3900 }], fillColor: [255, 255, 255] },
+            { vertexData: [{ x: -0.3500, y: 0.3600 }, { x: -0.3100, y: 0.3600 }, { x: -0.3100, y: 0.4000 }, { x: -0.3500, y: 0.4000 }], fillColor: [255, 255, 255] },
+            { vertexData: [{ x: -0.4000, y: 0.3700 }, { x: -0.3600, y: 0.3700 }, { x: -0.3600, y: 0.4100 }, { x: -0.4000, y: 0.4100 }], fillColor: [255, 255, 255] },
+            // Orange warning lights
+            {
+                vertexData: [{ x: -0.6500, y: 0.5500 }, { x: -0.7200, y: 0.5200 }, { x: -0.6700, y: 0.4800 }],
+                fillColor: [255, 150, 0]
+            },
+            {
+                vertexData: [{ x: -0.6500, y: -0.5500 }, { x: -0.7200, y: -0.5200 }, { x: -0.6700, y: -0.4800 }],
+                fillColor: [255, 150, 0]
+            }
+        ],
+        typicalCargo: ["Weapons", "Narcotics", "Slaves"],
+        price: 68200,
+        aiRoles: ["BOUNTY_HUNTER"],
+        techLevel: 4
     },
     "JackalMultirole": { // NEW - Multi-role
         name: "Jackal Multirole", role: "Multi-Role", sizeCategory: "Medium", size: 50,
