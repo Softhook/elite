@@ -849,9 +849,9 @@ class UIStationMenus {
             text("Available Guards for Hire:", pX + 40, statusY + 40);
 
             const guardOptions = [
-                { ship: "GladiusFighter", name: "Gladius Security", cost: 8000, description: "Standard security escort" },
-                { ship: "Vulture", name: "Vulture Protector", cost: 12000, description: "Heavy combat protection" },
-                { ship: "WaspAssault", name: "Wasp Security", cost: 6000, description: "Fast response protection" },
+                { ship: "GladiusFighterGuard", name: "Gladius Security", cost: 8000, description: "Standard security escort" },
+                { ship: "VultureGuard", name: "Vulture Protector", cost: 12000, description: "Heavy combat protection" },
+                { ship: "WaspAssaultGuard", name: "Wasp Security", cost: 6000, description: "Fast response protection" },
                 { ship: "ViperGuard", name: "Viper Guardian", cost: 10000, description: "Agile defender" }
             ];
 

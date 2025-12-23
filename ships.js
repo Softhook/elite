@@ -438,8 +438,60 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Computers"],
         price: 12500,
-        aiRoles: ["MILITARY", "BOUNTY_HUNTER", "GUARD"],
+        aiRoles: ["MILITARY"],
         techLevel: 2 // Utility
+    },
+    "WaspAssaultBH": {
+        name: "Wasp BH", role: "Bounty Hunter", sizeCategory: "Small", size: 26,
+        baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
+        baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
+        armament: ["Burst Blaster", "Harpoon Launcher"],
+        costCategory: "Low", description: "Bounty hunter variant of the Wasp. That blood-red paintjob and skull markings aren't for show - this pilot collects heads for a living. Fast enough to chase down runners, armed to finish them.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9500, y: 0.0000 }, { x: -0.0973, y: 0.3081 }, { x: -0.2646, y: 0.9825 }, { x: -0.4994, y: 0.9822 }, { x: -0.9500, y: 0.2000 }, { x: -0.9500, y: -0.2000 }, { x: -0.4994, y: -0.9822 }, { x: -0.2646, y: -0.9825 }, { x: -0.0973, y: -0.3081 }],
+                fillColor: [160, 40, 40]
+            },
+            {
+                vertexData: [{ x: 0.1500, y: 0.0000 }, { x: 0.0750, y: 0.1299 }, { x: -0.0750, y: 0.1299 }, { x: -0.1500, y: 0.0000 }, { x: -0.0750, y: -0.1299 }, { x: 0.0750, y: -0.1299 }],
+                fillColor: [200, 100, 100]
+            },
+            { vertexData: [{ x: -0.3200, y: 0.9400 }, { x: -0.4200, y: 0.9200 }, { x: -0.4200, y: 0.8600 }, { x: -0.3200, y: 0.8800 }], fillColor: [20, 20, 20] },
+            { vertexData: [{ x: -0.3200, y: -0.9400 }, { x: -0.4200, y: -0.9200 }, { x: -0.4200, y: -0.8600 }, { x: -0.3200, y: -0.8800 }], fillColor: [20, 20, 20] },
+            { vertexData: [{ x: 0.4000, y: 0.0000 }, { x: 0.3000, y: 0.0600 }, { x: 0.2000, y: 0.0000 }, { x: 0.3000, y: -0.0600 }], fillColor: [30, 30, 30] },
+            { vertexData: [{ x: -0.6000, y: 0.9500 }, { x: -0.6700, y: 0.9200 }, { x: -0.6200, y: 0.8900 }], fillColor: [255, 150, 0] },
+            { vertexData: [{ x: -0.6000, y: -0.9500 }, { x: -0.6700, y: -0.9200 }, { x: -0.6200, y: -0.8900 }], fillColor: [255, 150, 0] }
+        ],
+        typicalCargo: ["Weapons"],
+        price: 13500,
+        aiRoles: ["BOUNTY_HUNTER"],
+        techLevel: 2
+    },
+    "WaspAssaultGuard": {
+        name: "Wasp Guard", role: "Escort Fighter", sizeCategory: "Small", size: 26,
+        baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
+        baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
+        armament: ["Burst Blaster", "Barrier Field"],
+        costCategory: "Low", description: "Guard variant of the Wasp in professional gold livery. Hired to escort VIPs and valuable convoys. The barrier field protects the principal while this agile defender deals with threats.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9500, y: 0.0000 }, { x: -0.0973, y: 0.3081 }, { x: -0.2646, y: 0.9825 }, { x: -0.4994, y: 0.9822 }, { x: -0.9500, y: 0.2000 }, { x: -0.9500, y: -0.2000 }, { x: -0.4994, y: -0.9822 }, { x: -0.2646, y: -0.9825 }, { x: -0.0973, y: -0.3081 }],
+                fillColor: [180, 160, 60]
+            },
+            {
+                vertexData: [{ x: 0.1500, y: 0.0000 }, { x: 0.0750, y: 0.1299 }, { x: -0.0750, y: 0.1299 }, { x: -0.1500, y: 0.0000 }, { x: -0.0750, y: -0.1299 }, { x: 0.0750, y: -0.1299 }],
+                fillColor: [220, 200, 100]
+            },
+            { vertexData: [{ x: -0.3200, y: 0.9400 }, { x: -0.4200, y: 0.9200 }, { x: -0.4200, y: 0.8600 }, { x: -0.3200, y: 0.8800 }], fillColor: [120, 90, 40] },
+            { vertexData: [{ x: -0.3200, y: -0.9400 }, { x: -0.4200, y: -0.9200 }, { x: -0.4200, y: -0.8600 }, { x: -0.3200, y: -0.8800 }], fillColor: [120, 90, 40] },
+            { vertexData: [{ x: 0.4000, y: 0.0000 }, { x: 0.3200, y: 0.0700 }, { x: 0.3200, y: -0.0700 }], fillColor: [255, 255, 220] },
+            { vertexData: [{ x: -0.6000, y: 0.9500 }, { x: -0.6700, y: 0.9200 }, { x: -0.6200, y: 0.8900 }], fillColor: [255, 220, 100] },
+            { vertexData: [{ x: -0.6000, y: -0.9500 }, { x: -0.6700, y: -0.9200 }, { x: -0.6200, y: -0.8900 }], fillColor: [255, 220, 100] }
+        ],
+        typicalCargo: [],
+        price: 13500,
+        aiRoles: ["GUARD"],
+        techLevel: 2
     },
     "Bat": {
         name: "Bat Assault", role: "Assault Fighter", sizeCategory: "Small", size: 26,
@@ -473,8 +525,56 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Computers"],
         price: 12500,
-        aiRoles: ["MILITARY", "BOUNTY_HUNTER", "GUARD"],
+        aiRoles: ["MILITARY"],
         techLevel: 2 // Utility
+    },
+    "BatBH": {
+        name: "Bat BH", role: "Bounty Hunter", sizeCategory: "Small", size: 26,
+        baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
+        baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
+        armament: ["Burst Blaster", "Harpoon Launcher"],
+        costCategory: "Low", description: "Bounty hunter Bat in crimson red. Those nightmare wings cut through space hunting wanted criminals. When this shows up on your scanner, someone put a price on your head.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9752, y: -0.1801 }, { x: 1.1813, y: 0.0000 }, { x: 0.9752, y: 0.1801 }, { x: 0.0000, y: 0.3081 }, { x: 0.4666, y: 1.4438 }, { x: -0.4994, y: 0.9822 }, { x: -0.3861, y: 0.5960 }, { x: -0.9500, y: 0.2000 }, { x: -0.9500, y: -0.2000 }, { x: -0.3861, y: -0.5960 }, { x: -0.4994, y: -0.9822 }, { x: 0.4666, y: -1.4438 }, { x: 0.0000, y: -0.3081 }],
+                fillColor: [160, 40, 40]
+            },
+            {
+                vertexData: [{ x: 0.1500, y: 0.0000 }, { x: 0.0750, y: 0.1299 }, { x: -0.0750, y: 0.1299 }, { x: -0.1500, y: 0.0000 }, { x: -0.0750, y: -0.1299 }, { x: 0.0750, y: -0.1299 }],
+                fillColor: [200, 100, 100]
+            },
+            { vertexData: [{ x: 0.4000, y: 1.3800 }, { x: 0.3500, y: 1.3300 }, { x: 0.4300, y: 1.3000 }], fillColor: [255, 150, 0] },
+            { vertexData: [{ x: 0.4000, y: -1.3800 }, { x: 0.3500, y: -1.3300 }, { x: 0.4300, y: -1.3000 }], fillColor: [255, 150, 0] },
+            { vertexData: [{ x: 0.6000, y: 0.0000 }, { x: 0.4500, y: 0.0600 }, { x: 0.3500, y: 0.0000 }, { x: 0.4500, y: -0.0600 }], fillColor: [30, 30, 30] }
+        ],
+        typicalCargo: ["Weapons"],
+        price: 13500,
+        aiRoles: ["BOUNTY_HUNTER"],
+        techLevel: 2
+    },
+    "BatGuard": {
+        name: "Bat Guard", role: "Escort Fighter", sizeCategory: "Small", size: 26,
+        baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
+        baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
+        armament: ["Burst Blaster", "Barrier Field"],
+        costCategory: "Low", description: "Guard Bat in golden livery. Those intimidating wings now protect VIP convoys. The barrier field keeps principals safe while these agile fighters deal with threats.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9752, y: -0.1801 }, { x: 1.1813, y: 0.0000 }, { x: 0.9752, y: 0.1801 }, { x: 0.0000, y: 0.3081 }, { x: 0.4666, y: 1.4438 }, { x: -0.4994, y: 0.9822 }, { x: -0.3861, y: 0.5960 }, { x: -0.9500, y: 0.2000 }, { x: -0.9500, y: -0.2000 }, { x: -0.3861, y: -0.5960 }, { x: -0.4994, y: -0.9822 }, { x: 0.4666, y: -1.4438 }, { x: 0.0000, y: -0.3081 }],
+                fillColor: [180, 160, 60]
+            },
+            {
+                vertexData: [{ x: 0.1500, y: 0.0000 }, { x: 0.0750, y: 0.1299 }, { x: -0.0750, y: 0.1299 }, { x: -0.1500, y: 0.0000 }, { x: -0.0750, y: -0.1299 }, { x: 0.0750, y: -0.1299 }],
+                fillColor: [220, 200, 100]
+            },
+            { vertexData: [{ x: 0.4000, y: 1.3800 }, { x: 0.3500, y: 1.3300 }, { x: 0.4300, y: 1.3000 }], fillColor: [255, 220, 100] },
+            { vertexData: [{ x: 0.4000, y: -1.3800 }, { x: 0.3500, y: -1.3300 }, { x: 0.4300, y: -1.3000 }], fillColor: [255, 220, 100] },
+            { vertexData: [{ x: 0.5500, y: 0.0000 }, { x: 0.4500, y: 0.0700 }, { x: 0.4500, y: -0.0700 }], fillColor: [255, 255, 220] }
+        ],
+        typicalCargo: [],
+        price: 13500,
+        aiRoles: ["GUARD"],
+        techLevel: 2
     },
     "HummingBird": {
         name: "Humming Bird", role: "Assault Fighter", sizeCategory: "Small", size: 26,
@@ -508,8 +608,54 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Computers"],
         price: 17500,
-        aiRoles: ["MILITARY", "BOUNTY_HUNTER", "GUARD"],
-        techLevel: 2 // Utility
+        aiRoles: ["MILITARY"],
+        techLevel: 2
+    },
+    "HummingBirdBH": {
+        name: "Hummingbird BH", role: "Bounty Hunter", sizeCategory: "Small", size: 26,
+        baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
+        baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
+        armament: ["Burst Blaster", "Harpoon Launcher"],
+        costCategory: "Low", description: "Bounty hunter Hummingbird in blood-red. When this asymmetric nightmare appears on scanner, someone's bounty is about to be collected. Fast, aggressive, and utterly relentless.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.7893, y: 0.0000 }, { x: -0.2224, y: 0.3805 }, { x: -0.2224, y: 1.0132 }, { x: -0.7107, y: 1.1822 }, { x: -0.4976, y: 0.3415 }, { x: -0.7893, y: 0.2472 }, { x: -0.7893, y: -0.2472 }, { x: -0.4976, y: -0.3415 }, { x: -0.7107, y: -1.1822 }, { x: -0.2224, y: -1.0132 }, { x: -0.2224, y: -0.3805 }, { x: 0.7893, y: 0.0000 }],
+                fillColor: [160, 40, 40]
+            },
+            { vertexData: [{ x: 0.1500, y: 0.0000 }, { x: -0.0750, y: 0.1299 }, { x: -0.0750, y: -0.1299 }], fillColor: [200, 100, 100] },
+            { vertexData: [{ x: 0.5000, y: 0.0300 }, { x: 0.2000, y: 0.0600 }, { x: 0.2000, y: 0.0200 }, { x: 0.5000, y: -0.0100 }], fillColor: [20, 20, 20] },
+            { vertexData: [{ x: 0.5000, y: -0.0300 }, { x: 0.2000, y: -0.0600 }, { x: 0.2000, y: -0.0200 }, { x: 0.5000, y: 0.0100 }], fillColor: [20, 20, 20] },
+            { vertexData: [{ x: 0.6000, y: 0.0000 }, { x: 0.4500, y: 0.0600 }, { x: 0.3500, y: 0.0000 }, { x: 0.4500, y: -0.0600 }], fillColor: [30, 30, 30] },
+            { vertexData: [{ x: -0.6500, y: 1.1200 }, { x: -0.7200, y: 1.0800 }, { x: -0.6700, y: 1.0400 }], fillColor: [255, 150, 0] },
+            { vertexData: [{ x: -0.6500, y: -1.1200 }, { x: -0.7200, y: -1.0800 }, { x: -0.6700, y: -1.0400 }], fillColor: [255, 150, 0] }
+        ],
+        typicalCargo: ["Weapons"],
+        price: 18500,
+        aiRoles: ["BOUNTY_HUNTER"],
+        techLevel: 2
+    },
+    "HummingBirdGuard": {
+        name: "Hummingbird Guard", role: "Escort Fighter", sizeCategory: "Small", size: 26,
+        baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
+        baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
+        armament: ["Burst Blaster", "Barrier Field"],
+        costCategory: "Low", description: "Guard Hummingbird in professional gold. Those asymmetric wings now protect VIP convoys. The barrier field keeps principals safe while this agile guardian intercepts threats.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.7893, y: 0.0000 }, { x: -0.2224, y: 0.3805 }, { x: -0.2224, y: 1.0132 }, { x: -0.7107, y: 1.1822 }, { x: -0.4976, y: 0.3415 }, { x: -0.7893, y: 0.2472 }, { x: -0.7893, y: -0.2472 }, { x: -0.4976, y: -0.3415 }, { x: -0.7107, y: -1.1822 }, { x: -0.2224, y: -1.0132 }, { x: -0.2224, y: -0.3805 }, { x: 0.7893, y: 0.0000 }],
+                fillColor: [180, 160, 60]
+            },
+            { vertexData: [{ x: 0.1500, y: 0.0000 }, { x: -0.0750, y: 0.1299 }, { x: -0.0750, y: -0.1299 }], fillColor: [220, 200, 100] },
+            { vertexData: [{ x: 0.5000, y: 0.0300 }, { x: 0.2000, y: 0.0600 }, { x: 0.2000, y: 0.0200 }, { x: 0.5000, y: -0.0100 }], fillColor: [120, 90, 40] },
+            { vertexData: [{ x: 0.5000, y: -0.0300 }, { x: 0.2000, y: -0.0600 }, { x: 0.2000, y: -0.0200 }, { x: 0.5000, y: 0.0100 }], fillColor: [120, 90, 40] },
+            { vertexData: [{ x: 0.5500, y: 0.0000 }, { x: 0.4500, y: 0.0600 }, { x: 0.4500, y: -0.0600 }], fillColor: [255, 255, 220] },
+            { vertexData: [{ x: -0.6500, y: 1.1200 }, { x: -0.7200, y: 1.0800 }, { x: -0.6700, y: 1.0400 }], fillColor: [255, 220, 100] },
+            { vertexData: [{ x: -0.6500, y: -1.1200 }, { x: -0.7200, y: -1.0800 }, { x: -0.6700, y: -1.0400 }], fillColor: [255, 220, 100] }
+        ],
+        typicalCargo: [],
+        price: 18500,
+        aiRoles: ["GUARD"],
+        techLevel: 2
     },
     "GladiusFighter": {
         name: "Gladius Fighter", role: "Medium Fighter", sizeCategory: "Medium", size: 40,
@@ -553,8 +699,54 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Computers"],
         price: 28400,
-        aiRoles: ["MILITARY", "BOUNTY_HUNTER", "GUARD"],
-        techLevel: 3 // Mid-tier
+        aiRoles: ["MILITARY"],
+        techLevel: 3
+    },
+    "GladiusFighterBH": {
+        name: "Gladius BH", role: "Bounty Hunter", sizeCategory: "Medium", size: 40,
+        baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
+        baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 12,
+        armament: ["Burst Blaster", "Twin Pulse", "Harpoon Launcher"],
+        costCategory: "Medium", description: "Bounty hunter Gladius in aggressive red. This hunter has the firepower to take down dangerous targets and the harpoon to make sure they don't escape. A professional's choice for high-value bounties.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0500, y: 0.0000 }, { x: 0.2500, y: 0.4000 }, { x: -0.2500, y: 0.7000 }, { x: -0.9500, y: 0.5000 }, { x: -1.0500, y: 0.0000 }, { x: -0.9500, y: -0.5000 }, { x: -0.2500, y: -0.7000 }, { x: 0.2500, y: -0.4000 }],
+                fillColor: [160, 40, 40]
+            },
+            { vertexData: [{ x: 0.5000, y: 0.0000 }, { x: 0.3500, y: 0.0700 }, { x: 0.2500, y: 0.0000 }, { x: 0.3500, y: -0.0700 }], fillColor: [30, 30, 30] },
+            { vertexData: [{ x: 0.3000, y: 0.0000 }, { x: 0.1500, y: 0.1200 }, { x: 0.1500, y: -0.1200 }], fillColor: [200, 100, 100] },
+            { vertexData: [{ x: -0.4000, y: 0.6000 }, { x: -0.3500, y: 0.6200 }, { x: -0.5500, y: 0.5800 }, { x: -0.6000, y: 0.5600 }], fillColor: [20, 20, 20] },
+            { vertexData: [{ x: -0.4000, y: -0.6000 }, { x: -0.3500, y: -0.6200 }, { x: -0.5500, y: -0.5800 }, { x: -0.6000, y: -0.5600 }], fillColor: [20, 20, 20] },
+            { vertexData: [{ x: -0.3000, y: 0.6800 }, { x: -0.3700, y: 0.6500 }, { x: -0.3200, y: 0.6200 }], fillColor: [255, 150, 0] },
+            { vertexData: [{ x: -0.3000, y: -0.6800 }, { x: -0.3700, y: -0.6500 }, { x: -0.3200, y: -0.6200 }], fillColor: [255, 150, 0] }
+        ],
+        typicalCargo: ["Weapons"],
+        price: 29400,
+        aiRoles: ["BOUNTY_HUNTER"],
+        techLevel: 3
+    },
+    "GladiusFighterGuard": {
+        name: "Gladius Guard", role: "Escort Fighter", sizeCategory: "Medium", size: 40,
+        baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
+        baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 12,
+        armament: ["Burst Blaster", "Twin Pulse", "Barrier Field"],
+        costCategory: "Medium", description: "Guard Gladius in professional gold livery. The gold standard for escort duties, literally. Barrier field keeps VIPs safe while solid firepower deals with any threats.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 1.0500, y: 0.0000 }, { x: 0.2500, y: 0.4000 }, { x: -0.2500, y: 0.7000 }, { x: -0.9500, y: 0.5000 }, { x: -1.0500, y: 0.0000 }, { x: -0.9500, y: -0.5000 }, { x: -0.2500, y: -0.7000 }, { x: 0.2500, y: -0.4000 }],
+                fillColor: [180, 160, 60]
+            },
+            { vertexData: [{ x: 0.5000, y: 0.0000 }, { x: 0.3800, y: 0.0700 }, { x: 0.3800, y: -0.0700 }], fillColor: [255, 255, 220] },
+            { vertexData: [{ x: 0.3000, y: 0.0000 }, { x: 0.1500, y: 0.1200 }, { x: 0.1500, y: -0.1200 }], fillColor: [220, 200, 100] },
+            { vertexData: [{ x: -0.4000, y: 0.6000 }, { x: -0.3500, y: 0.6200 }, { x: -0.5500, y: 0.5800 }, { x: -0.6000, y: 0.5600 }], fillColor: [120, 90, 40] },
+            { vertexData: [{ x: -0.4000, y: -0.6000 }, { x: -0.3500, y: -0.6200 }, { x: -0.5500, y: -0.5800 }, { x: -0.6000, y: -0.5600 }], fillColor: [120, 90, 40] },
+            { vertexData: [{ x: -0.3000, y: 0.6800 }, { x: -0.3700, y: 0.6500 }, { x: -0.3200, y: 0.6200 }], fillColor: [255, 220, 100] },
+            { vertexData: [{ x: -0.3000, y: -0.6800 }, { x: -0.3700, y: -0.6500 }, { x: -0.3200, y: -0.6200 }], fillColor: [255, 220, 100] }
+        ],
+        typicalCargo: [],
+        price: 29400,
+        aiRoles: ["GUARD"],
+        techLevel: 3
     },
     "Vulture": {
         name: "Vulture", role: "Heavy Fighter", sizeCategory: "Small", size: 38,
@@ -593,8 +785,53 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Computers", "Computers", "Weapons", "Narcotics", "Slaves"],
         price: 31300,
-        aiRoles: ["COMBAT", "MILITARY", "BOUNTY_HUNTER", "GUARD"],
-        techLevel: 3 // Mid-tier
+        aiRoles: ["MILITARY"],
+        techLevel: 3
+    },
+    "VultureBH": {
+        name: "Vulture BH", role: "Bounty Hunter", sizeCategory: "Small", size: 38,
+        baseMaxSpeed: 5.5, baseThrust: 0.14, baseTurnRate: 0.09599,
+        baseHull: 150, baseShield: 250, shieldRecharge: 1.6, cargoCapacity: 15,
+        armament: ["Heavy Cannon", "Burst Blaster", "Harpoon Launcher"],
+        costCategory: "Medium-High", description: "Bounty hunter Vulture in blood-crimson. When this heavy fighter shows up, someone's about to have a very bad day. The harpoon ensures targets don't escape while the heavy cannon delivers justice.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9001, y: 0.0951 }, { x: -0.0202, y: 0.3805 }, { x: -0.1034, y: 1.0132 }, { x: -0.6000, y: 1.1822 }, { x: -0.6457, y: 0.4692 }, { x: -0.9001, y: 0.2000 }, { x: -0.9001, y: -0.2000 }, { x: -0.6457, y: -0.4692 }, { x: -0.6000, y: -1.1822 }, { x: -0.1034, y: -1.0132 }, { x: -0.0202, y: -0.3805 }, { x: 0.9001, y: -0.0951 }],
+                fillColor: [140, 20, 20]
+            },
+            { vertexData: [{ x: 0.2000, y: 0.0000 }, { x: 0.1000, y: 0.1732 }, { x: -0.1000, y: 0.1732 }, { x: -0.2000, y: 0.0000 }, { x: -0.1000, y: -0.1732 }, { x: 0.1000, y: -0.1732 }], fillColor: [200, 100, 100] },
+            { vertexData: [{ x: -0.4500, y: 1.1000 }, { x: -0.5200, y: 1.0600 }, { x: -0.4700, y: 1.0200 }], fillColor: [255, 150, 0] },
+            { vertexData: [{ x: -0.4500, y: -1.1000 }, { x: -0.5200, y: -1.0600 }, { x: -0.4700, y: -1.0200 }], fillColor: [255, 150, 0] },
+            { vertexData: [{ x: 0.5000, y: 0.0300 }, { x: 0.5500, y: 0.0300 }, { x: 0.5500, y: -0.0300 }, { x: 0.5000, y: -0.0300 }], fillColor: [255, 255, 255] },
+            { vertexData: [{ x: 0.4400, y: 0.0300 }, { x: 0.4900, y: 0.0300 }, { x: 0.4900, y: -0.0300 }, { x: 0.4400, y: -0.0300 }], fillColor: [255, 255, 255] },
+            { vertexData: [{ x: 0.6500, y: 0.0000 }, { x: 0.5000, y: 0.0700 }, { x: 0.4000, y: 0.0000 }, { x: 0.5000, y: -0.0700 }], fillColor: [30, 30, 30] }
+        ],
+        typicalCargo: ["Weapons", "Narcotics"],
+        price: 32300,
+        aiRoles: ["BOUNTY_HUNTER"],
+        techLevel: 3
+    },
+    "VultureGuard": {
+        name: "Vulture Guard", role: "Escort Fighter", sizeCategory: "Small", size: 38,
+        baseMaxSpeed: 5.5, baseThrust: 0.14, baseTurnRate: 0.09599,
+        baseHull: 150, baseShield: 250, shieldRecharge: 1.6, cargoCapacity: 15,
+        armament: ["Heavy Cannon", "Burst Blaster", "Barrier Field"],
+        costCategory: "Medium-High", description: "Guard Vulture in golden livery. Heavy shields and heavy firepower make this the premium escort choice. The barrier field protects VIPs while those two huge hardpoints discourage any attacker.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9001, y: 0.0951 }, { x: -0.0202, y: 0.3805 }, { x: -0.1034, y: 1.0132 }, { x: -0.6000, y: 1.1822 }, { x: -0.6457, y: 0.4692 }, { x: -0.9001, y: 0.2000 }, { x: -0.9001, y: -0.2000 }, { x: -0.6457, y: -0.4692 }, { x: -0.6000, y: -1.1822 }, { x: -0.1034, y: -1.0132 }, { x: -0.0202, y: -0.3805 }, { x: 0.9001, y: -0.0951 }],
+                fillColor: [180, 160, 60]
+            },
+            { vertexData: [{ x: 0.2000, y: 0.0000 }, { x: 0.1000, y: 0.1732 }, { x: -0.1000, y: 0.1732 }, { x: -0.2000, y: 0.0000 }, { x: -0.1000, y: -0.1732 }, { x: 0.1000, y: -0.1732 }], fillColor: [220, 200, 100] },
+            { vertexData: [{ x: -0.4500, y: 1.1000 }, { x: -0.5200, y: 1.0600 }, { x: -0.4700, y: 1.0200 }], fillColor: [255, 220, 100] },
+            { vertexData: [{ x: -0.4500, y: -1.1000 }, { x: -0.5200, y: -1.0600 }, { x: -0.4700, y: -1.0200 }], fillColor: [255, 220, 100] },
+            { vertexData: [{ x: 0.6000, y: 0.0000 }, { x: 0.4800, y: 0.0700 }, { x: 0.4800, y: -0.0700 }], fillColor: [255, 255, 220] },
+            { vertexData: [{ x: 0.4800, y: 0.0700 }, { x: 0.3800, y: 0.0500 }, { x: 0.3800, y: -0.0500 }, { x: 0.4800, y: -0.0700 }], fillColor: [140, 120, 40] }
+        ],
+        typicalCargo: [],
+        price: 32300,
+        aiRoles: ["GUARD"],
+        techLevel: 3
     },
     "CenturionGunship": {
         name: "Centurion Gunship", role: "Heavy Fighter", sizeCategory: "Large", size: 72,

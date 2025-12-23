@@ -1563,7 +1563,7 @@ class StarSystem {
         const slotsLeft = this.maxEnemies - this.enemies.length;
         if (slotsLeft <= 0) return;
 
-        const defaultGuardShips = ["ViperGuard", "GladiusFighter"];
+        const defaultGuardShips = ["ViperGuard", "GladiusFighterGuard"];
         const numGuards = hauler.size > 100 ? min(2, slotsLeft) : (random() < 0.6 ? 1 : 0);
 
         for (let g = 0; g < numGuards; g++) {
