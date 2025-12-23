@@ -403,7 +403,7 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: [],
         price: 10900,
-        aiRoles: ["MILITARY", "BOUNTY_HUNTER"],
+        aiRoles: ["MILITARY"],
         techLevel: 1 // Starter
     },
     "WaspAssault": {
@@ -1163,7 +1163,7 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: [],
         price: 30400,
-        aiRoles: ["MILITARY", "BOUNTY_HUNTER"],
+        aiRoles: ["MILITARY"],
         techLevel: 5
     },
 
@@ -1809,7 +1809,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: ["Adv Components", "Narcotics"], price: 45000, techLevel: 3,
-        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
+        aiRoles: ["PIRATE"]
     },
     "PirateInterceptorMKII": {
         name: "Pirate Interceptor MkII", role: "Heavy Interceptor", sizeCategory: "Medium", size: 42,
@@ -1852,7 +1852,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: ["Narcotics", "Weapons"], price: 68000, techLevel: 4,
-        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
+        aiRoles: ["PIRATE"]
     },
     "PirateMarauder": {
         name: "Pirate Marauder", role: "Raider/Boarding Craft", sizeCategory: "Medium", size: 48,
@@ -2001,7 +2001,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: [], price: 32000, techLevel: 2,
-        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
+        aiRoles: ["PIRATE"]
     },
     "HarlequinMotley": {
         name: "Harlequin Motley", role: "Fast Interceptor", sizeCategory: "Small", size: 28,
@@ -2060,7 +2060,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: ["Narcotics", "Computers"], price: 42000, techLevel: 3,
-        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
+        aiRoles: ["PIRATE"]
     },
     "HarlequinColumbine": {
         name: "Harlequin Columbine", role: "Explorer/Scout", sizeCategory: "Small", size: 28,
@@ -2135,7 +2135,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: ["Weapons", "Slaves", "Luxury Goods"], price: 98000, techLevel: 4,
-        aiRoles: ["PIRATE", "BOUNTY_HUNTER"]
+        aiRoles: ["PIRATE"]
     },
     "HarlequinScaramouche": {
         name: "Harlequin Scaramouche", role: "Multi-Role Combat", sizeCategory: "Medium", size: 55,
@@ -2182,14 +2182,14 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: ["Weapons", "Adv Components"], price: 115000, techLevel: 4,
-        aiRoles: ["BOUNTY_HUNTER", "PIRATE"]
+        aiRoles: ["PIRATE"]
     },
     "HarlequinPierrot": {
-        name: "Harlequin Pierrot", role: "Medium Trader", sizeCategory: "Medium", size: 40,
+        name: "Harlequin Pierrot", role: "Multi-Purpose", sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.04,
         baseHull: 100, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 80,
         armament: ["Mini-Turret"],
-        costCategory: "Medium", description: "The Harlequins' trader, painted like a circus tent and twice as loud. That garish yellow-and-pink striped hull is visible from three systems away. Somehow hauls 80 tons while maintaining the dignity of a drunk clown. Merchants hate it but can't deny it gets the job done profitably.",
+        costCategory: "Medium", description: "The Harlequins' multi-purpose ship, painted like a circus tent and twice as loud. That garish yellow-and-pink striped hull is visible from three systems away. Somehow hauls 80 tons while maintaining the dignity of a drunk clown. Merchants hate it but can't deny it gets the job done profitably.",
         vertexLayers: [
             {
                 vertexData: [{ x: 0.8000, y: 0.5000 }, { x: -0.8000, y: 0.5000 }, { x: -0.8000, y: -0.5000 }, { x: 0.8000, y: -0.5000 }],
@@ -2249,7 +2249,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: ["Luxury Goods", "Narcotics", "Slaves"], price: 55000, techLevel: 3,
-        aiRoles: ["HAULER", "PIRATE"]
+        aiRoles: ["PIRATE"]
     },
     "HarlequinPulcinella": {
         name: "Harlequin Pulcinella", role: "Support/Logistics", sizeCategory: "Medium", size: 48,
@@ -2284,7 +2284,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: ["Narcotics", "Luxury Goods", "Slaves", "Textiles"], price: 72000, techLevel: 3,
-        aiRoles: ["HAULER", "PIRATE"]
+        aiRoles: ["PIRATE"]
     },
     "HarlequinPantaloon": {
         name: "Harlequin Pantaloon", role: "Heavy Freighter", sizeCategory: "Large", size: 70,
@@ -2335,7 +2335,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: ["Slaves", "Narcotics", "Weapons"], price: 95000, techLevel: 4,
-        aiRoles: ["HAULER", "PIRATE"]
+        aiRoles: ["PIRATE"]
     },
 
     // --- CIVILIAN - TRADERS & HAULERS ---
@@ -2941,7 +2941,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: ["Machinery", "Medicine"], price: 4500, techLevel: 1,
-        aiRoles: ["TRANSPORT", "HAULER"]
+        aiRoles: ["HAULER"]
     },
     "SystemShuttle": {
         name: "System Shuttle", role: "Medium Transport", sizeCategory: "Small", size: 30,
