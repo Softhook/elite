@@ -2147,7 +2147,7 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Minerals", "Minerals", "Minerals", "Minerals", "Medicine", "Computers"],
         price: 23600,
-        aiRoles: ["EXPLORER", "HAULER"],
+        aiRoles: ["HAULER"],
         techLevel: 2 // Mid-tier
     },
     "DiamondbackExplorer": {
@@ -2191,7 +2191,7 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Minerals", "Metals", "Adv Components"],
         price: 20800,
-        aiRoles: ["EXPLORER", "HAULER"],
+        aiRoles: ["HAULER"],
         techLevel: 3 // Mid-tier
     },
     "NomadVoyager": {
@@ -2240,7 +2240,7 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Minerals", "Food", "Medicine"],
         price: 24600,
-        aiRoles: ["EXPLORER", "HAULER"],
+        aiRoles: ["HAULER"],
         techLevel: 4 // Advanced
     },
     "PathfinderSurvey": {
@@ -2261,7 +2261,7 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Food", "Food", "Minerals", "Minerals", "Metals"],
         price: 10200,
-        aiRoles: ["EXPLORER", "HAULER"],
+        aiRoles: ["HAULER"],
         techLevel: 3 // Mid-tier
     },
     "ProspectorMiner": { // NEW - Miner

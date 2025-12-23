@@ -85,7 +85,6 @@ const buildShipRoleArrays = () => {
         TRANSPORT_SHIPS: [],
         MILITARY_SHIPS: [],
         ALIEN_SHIPS: [],
-        EXPLORER_SHIPS: [],
         BOUNTY_HUNTER_SHIPS: [],
         GUARD_SHIPS: [],
         IMPERIAL_SHIPS: [],
@@ -119,7 +118,6 @@ const {
     TRANSPORT_SHIPS,
     MILITARY_SHIPS,
     ALIEN_SHIPS,
-    EXPLORER_SHIPS,
     BOUNTY_HUNTER_SHIPS,
     GUARD_SHIPS,
     IMPERIAL_SHIPS,
@@ -138,7 +136,6 @@ if (STAR_SYSTEM_DEBUG) {
     console.log("TRANSPORT_SHIPS:", TRANSPORT_SHIPS);
     console.log("MILITARY_SHIPS:", MILITARY_SHIPS);
     console.log("ALIEN_SHIPS:", ALIEN_SHIPS);
-    console.log("EXPLORER_SHIPS:", EXPLORER_SHIPS);
     console.log("BOUNTY_HUNTER_SHIPS:", BOUNTY_HUNTER_SHIPS);
     console.log("GUARD_SHIPS:", GUARD_SHIPS);
     console.log("IMPERIAL_SHIPS:", IMPERIAL_SHIPS);
@@ -1488,8 +1485,8 @@ class StarSystem {
         }
 
         const rand = random();
-        if (rand < 0.30 && EXPLORER_SHIPS.length > 0) {
-            return { role: AI_ROLE.HAULER, ship: random(EXPLORER_SHIPS) };
+        if (rand < 0.30 && HAULER_SHIPS.length > 0) {
+            return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
         } else if (rand < 0.50 && COMBAT_SHIPS.length > 0) {
             return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
         } else if (rand < 0.65 && PIRATE_SHIPS.length > 0) {
