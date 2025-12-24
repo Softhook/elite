@@ -553,23 +553,88 @@ class EnemyTargeting {
                 //console.log(`%c🔍 DEBUG: ${enemy.shipTypeName} evaluating player - starting score calculation`, 'color:purple');
             }
 
-            // Check if target is attacker
-            let isAttacker = target === enemy.lastAttacker;
-            if (!isAttacker && isPlayer && enemy.lastAttacker instanceof Player) {
+            // Check if target is in our attacker history (any past attacker, not just the last one)
+            // This allows ships to retaliate against multiple attackers with "grudge" scaling
+            let isAttacker = false;
+            let attackTimestamp = null;
+            let hitCount = 0; // Number of times this attacker has hit us (grudge level)
+
+            if (enemy.attackerHistory && enemy.attackerHistory.has(target)) {
+                const entry = enemy.attackerHistory.get(target);
                 isAttacker = true;
-                if (isPlayer) {
-                    //console.log(`%c🔍 PLAYER MATCH: ${enemy.shipTypeName} identified Player as attacker`, 'color:blue; font-weight:bold');
+                // Handle both old format (timestamp only) and new format ({timestamp, hitCount})
+                if (typeof entry === 'object' && entry.timestamp) {
+                    attackTimestamp = entry.timestamp;
+                    hitCount = entry.hitCount || 1;
+                } else {
+                    attackTimestamp = entry; // Old format fallback
+                    hitCount = 1;
                 }
+            } else if (target === enemy.lastAttacker) {
+                // Fallback for backwards compatibility
+                isAttacker = true;
+                attackTimestamp = enemy.lastAttackTime;
+                hitCount = 1;
             }
 
-            // Add attacker bonus
-            if (isAttacker && isPlayer) {
-                _score += TARGET_SCORE_RETALIATION_PIRATE;
-                _interesting = true;
-                //console.log(`%c🔍 PLAYER RETALIATION: ${enemy.shipTypeName} responding to player attack: +${TARGET_SCORE_RETALIATION_PIRATE}, score now ${_score}`, 'color:green; font-weight:bold');
-            } else if (isAttacker) {
-                _score += TARGET_SCORE_RETALIATION_PIRATE;
-                _interesting = true;
+            // Special case: Player might be stored differently
+            if (!isAttacker && isPlayer && enemy.lastAttacker instanceof Player) {
+                isAttacker = true;
+                attackTimestamp = enemy.lastAttackTime;
+                hitCount = 1;
+            }
+
+            // Add attacker bonus - with "grudge" scaling based on hit count
+            // More hits = stronger desire to retaliate
+            if (isAttacker) {
+                // Base retaliation + grudge bonus (capped at 3x for 5+ hits)
+                const grudgeMultiplier = Math.min(1 + (hitCount - 1) * 0.5, 3.0);
+                let retaliationBonus = TARGET_SCORE_RETALIATION_PIRATE * grudgeMultiplier;
+
+                // Apply time-based decay for non-hostile attackers
+                // This allows initial retaliation but ships will eventually give up chasing neutrals
+                if (enemy._getShipFaction && attackTimestamp) {
+                    const myFaction = enemy._getShipFaction(enemy);
+                    const targetFaction = (target instanceof Player)
+                        ? (target.playerFaction || 'UNKNOWN')
+                        : (enemy._getShipFaction ? enemy._getShipFaction(target) : 'UNKNOWN');
+
+                    // Check if target is a legitimate hostile for this ship
+                    const isHostileRole = target.role === AI_ROLE.PIRATE || target.role === AI_ROLE.ALIEN;
+                    const isFactionRival = (myFaction === 'IMPERIAL' && targetFaction === 'SEPARATIST') ||
+                        (myFaction === 'SEPARATIST' && targetFaction === 'IMPERIAL') ||
+                        (myFaction === 'MILITARY' && target.role === AI_ROLE.ALIEN);
+
+                    // Police consider pirates and aliens as hostile
+                    const isPoliceHostile = enemy.role === AI_ROLE.POLICE &&
+                        (target.role === AI_ROLE.PIRATE || target.role === AI_ROLE.ALIEN);
+
+                    // Combined hostile check
+                    const isHostileTarget = isPlayer || isHostileRole || isFactionRival || isPoliceHostile;
+
+                    // Only apply decay for non-hostile targets
+                    if (!isHostileTarget) {
+                        const timeSinceAttack = millis() - attackTimestamp;
+                        const RETALIATION_TIMEOUT_MS = 10000; // 10 seconds before giving up on neutrals
+
+                        if (timeSinceAttack > RETALIATION_TIMEOUT_MS) {
+                            // Timeout expired - no retaliation bonus for neutral targets
+                            retaliationBonus = 0;
+                        } else {
+                            // Decay retaliation bonus over time (full bonus for first 5s, then linear decay)
+                            const decayStart = 5000;
+                            if (timeSinceAttack > decayStart) {
+                                const decayProgress = (timeSinceAttack - decayStart) / (RETALIATION_TIMEOUT_MS - decayStart);
+                                retaliationBonus = TARGET_SCORE_RETALIATION_PIRATE * (1 - decayProgress);
+                            }
+                        }
+                    }
+                }
+
+                if (retaliationBonus > 0) {
+                    _score += retaliationBonus;
+                    _interesting = true;
+                }
             }
 
             // --- FACTION CHECK: Apply large penalty for same-faction targeting ---
@@ -682,16 +747,13 @@ class EnemyTargeting {
                         _score += TARGET_SCORE_COMBAT_RIVALRY_BONUS; // Strong bonus for faction rivalry
                         _interesting = true;
                     }
-                    // General combat engagement - only target pirates, not players
-                    else if (target.role === AI_ROLE.PIRATE) {
+                    // Standard combat targets - Pirates and Aliens are always valid targets
+                    else if (target.role === AI_ROLE.PIRATE || target.role === AI_ROLE.ALIEN) {
                         _score += TARGET_SCORE_COMBAT_STANDARD_ENGAGE; // Standard combat priority
                         _interesting = true;
                     }
-                    // Lower priority for other targets
-                    else {
-                        _score += TARGET_SCORE_COMBAT_LOW_PRIORITY; // Low priority for other ships
-                        _interesting = true;
-                    }
+                    // IMPORTANT: Don't mark other ships (Police, Haulers, Transports, etc) as interesting
+                    // Combat ships should only engage specific threats, not neutral traffic
                     break;
             }
 

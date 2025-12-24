@@ -81,8 +81,40 @@ class EnemyDamageSystem {
             }
 
             if (!isNonCombatObject && !isFriendlyFire) {
+                // Initialize attacker history Map if needed: attacker → {timestamp, hitCount}
+                if (!this.attackerHistory) {
+                    this.attackerHistory = new Map();
+                }
+
+                // Clean up old entries (> 30 seconds) to prevent memory growth
+                const now = millis();
+                const GRUDGE_MEMORY_MS = 30000; // 30 second memory
+                for (const [oldAttacker, data] of this.attackerHistory) {
+                    if (now - data.timestamp > GRUDGE_MEMORY_MS) {
+                        this.attackerHistory.delete(oldAttacker);
+                    }
+                }
+
+                // Check if this is someone we're already fighting (to avoid resetting timer during combat)
+                const isCurrentTarget = this.target === attacker;
+                const existingEntry = this.attackerHistory.get(attacker);
+
+                // Update attacker history with hit count for "grudge" system
+                if (existingEntry) {
+                    // Repeat attacker - increase grudge (hit count), optionally refresh timer
+                    existingEntry.hitCount++;
+                    if (!isCurrentTarget) {
+                        existingEntry.timestamp = now; // Refresh timer only if not actively fighting
+                    }
+                } else {
+                    // New attacker
+                    this.attackerHistory.set(attacker, { timestamp: now, hitCount: 1 });
+                }
+
+                // Maintain lastAttacker for backwards compatibility
                 this.lastAttacker = attacker;
-                this.lastAttackTime = millis();
+                const entry = this.attackerHistory.get(attacker);
+                this.lastAttackTime = entry ? entry.timestamp : now;
             }
 
             // Debug log for tracking
