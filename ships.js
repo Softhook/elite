@@ -3375,13 +3375,20 @@ function ensureClockwise(vertices) {
 // Initialize Cache for Ship Drawing (Optimization)
 function initShipCache(def) {
     def._cache = {
-        layers: []
+        layers: [],
+        collisionHull: null  // Pre-computed collision polygon for accurate collision detection
     };
 
     let layers = def.vertexLayers || [{
         vertexData: def.vertexData,
         fillColor: def.fillColor,
     }];
+
+    // Cache first layer vertices as collision hull (main ship outline)
+    // IMPORTANT: Deep copy vertices to avoid corruption if original vertexData is modified
+    if (layers.length > 0 && layers[0].vertexData && layers[0].vertexData.length >= 3) {
+        def._cache.collisionHull = layers[0].vertexData.map(v => ({ x: v.x, y: v.y }));
+    }
 
     for (let layer of layers) {
         // 1. Ensure Winding Order (CW)

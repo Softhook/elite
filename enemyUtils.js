@@ -280,14 +280,52 @@ class EnemyUtils {
 
     /**
      * Checks for collision with target entity
+     * Uses circle broadphase for fast rejection, then polygon narrowphase for on-screen accuracy
      * @param {Object} target - Entity to check collision with
      * @return {boolean} Whether collision occurred
      */
     checkCollision(target) {
         if (!target?.pos || target.size === undefined) return false;
-        let dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y);
-        let sumRadii = (target.size / 2) + (this.size / 2);
-        return dSq < sq(sumRadii);
+
+        // Broadphase: Quick circle check first
+        const dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y);
+        const sumRadii = (target.size / 2) + (this.size / 2);
+        if (dSq >= sq(sumRadii)) return false; // Fast rejection - no collision possible
+
+        // Narrowphase: Polygon collision if on-screen (for visual accuracy)
+        if (typeof CollisionUtils !== 'undefined') {
+            // Check if either entity is on-screen
+            // Note: Asteroids don't have _isOnScreen, so check with CollisionUtils.isOnScreen
+            let eitherOnScreen = this._isOnScreen || target.isPlayer;
+            if (!eitherOnScreen && target._isOnScreen !== undefined) {
+                eitherOnScreen = target._isOnScreen;
+            } else if (!eitherOnScreen && target.vertices) {
+                // Target is an asteroid - check screen visibility
+                eitherOnScreen = CollisionUtils.isOnScreen(target.pos);
+            }
+
+            if (eitherOnScreen) {
+                // Get polygon for this ship
+                const polyA = CollisionUtils.getShipPolygon(this);
+
+                // Get polygon for target (could be ship or asteroid)
+                let polyB = null;
+                if (target.vertices) {
+                    // Target is an asteroid
+                    polyB = CollisionUtils.getAsteroidPolygon(target);
+                } else if (target.shipDef) {
+                    // Target is a ship
+                    polyB = CollisionUtils.getShipPolygon(target);
+                }
+
+                if (polyA && polyB) {
+                    return CollisionUtils.polygonsCollide(polyA, polyB);
+                }
+            }
+        }
+
+        // Fallback: Broadphase already passed, assume collision
+        return true;
     }
 
     /**

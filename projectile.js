@@ -321,11 +321,12 @@ class Projectile {
         }
     }
 
-    // Optimized collision check (inline distance calculation)
+    // Collision check with polygon narrowphase for on-screen accuracy
+    // Uses circle broadphase for fast rejection, then circle-polygon check for visible targets
     checkCollision(target) {
         if (!target || !target.pos || typeof target.size !== 'number') return false;
 
-        // Inline distance calculation (avoid p5.js dist() function call overhead)
+        // Broadphase: Inline distance calculation (avoid p5.js dist() function call overhead)
         const dx = this.pos.x - target.pos.x;
         const dy = this.pos.y - target.pos.y;
         const distSq = dx * dx + dy * dy;
@@ -334,7 +335,44 @@ class Projectile {
         const combinedRadius = (target.size * 0.5) + this.size;
         const combinedRadiusSq = combinedRadius * combinedRadius;
 
-        return distSq < combinedRadiusSq;
+        // Fast rejection - no collision possible
+        if (distSq >= combinedRadiusSq) return false;
+
+        // Narrowphase: Circle-polygon for on-screen targets (visual accuracy)
+        if (typeof CollisionUtils !== 'undefined') {
+            // Check if target is on-screen (asteroids use isOnScreen(), ships use _isOnScreen)
+            let isOnScreen = target.isPlayer; // Player always visible
+            if (!isOnScreen && target._isOnScreen !== undefined) {
+                isOnScreen = target._isOnScreen;
+            } else if (!isOnScreen && target.vertices) {
+                // Asteroid - check with isOnScreen
+                isOnScreen = CollisionUtils.isOnScreen(target.pos);
+            } else if (!isOnScreen && target._isOnScreen === undefined && target.shipDef) {
+                // Ship without _isOnScreen tracking, assume visible
+                isOnScreen = true;
+            }
+
+            if (isOnScreen) {
+                // Get polygon for target (could be ship or asteroid)
+                let polygon = null;
+                if (target.vertices) {
+                    // Target is an asteroid
+                    polygon = CollisionUtils.getAsteroidPolygon(target);
+                } else if (target.shipDef) {
+                    // Target is a ship
+                    polygon = CollisionUtils.getShipPolygon(target);
+                }
+
+                if (polygon) {
+                    return CollisionUtils.circlePolygonCollide(
+                        this.pos.x, this.pos.y, this.size, polygon
+                    );
+                }
+            }
+        }
+
+        // Fallback: Broadphase already passed, assume collision
+        return true;
     }
 
     isOffScreen() {

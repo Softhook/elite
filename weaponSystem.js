@@ -764,13 +764,58 @@ class WeaponSystem {
 
             if (projLength <= 0 || projLength > minDist) return;
 
+            // Broadphase: Circle check
             const radialSq = relX * relX + relY * relY - projLength * projLength;
             const radiusSq = radius * radius;
 
             if (radialSq <= radiusSq) {
-                minDist = projLength;
-                hitTarget = target;
-                hitPoint.set(startX + dirX * projLength, startY + dirY * projLength);
+                // Narrowphase: Polygon check for on-screen ships/asteroids
+                let usedPolygon = false;
+
+                if (typeof CollisionUtils !== 'undefined') {
+                    const isOnScreen = target._isOnScreen !== false || target.isPlayer;
+
+                    if (isOnScreen) {
+                        // Get polygon for target
+                        let polygon = null;
+                        if (target.vertices) {
+                            // Asteroid
+                            polygon = CollisionUtils.getAsteroidPolygon(target);
+                        } else if (target.shipDef) {
+                            // Ship
+                            polygon = CollisionUtils.getShipPolygon(target);
+                        }
+
+                        if (polygon) {
+                            usedPolygon = true;
+                            // Line-polygon intersection for accurate hit
+                            // Use beamLength for the full line, not minDist (which may be shortened)
+                            const beamEnd = { x: startX + dirX * beamLength, y: startY + dirY * beamLength };
+                            const hit = CollisionUtils.linePolygonIntersect(
+                                startX, startY, beamEnd.x, beamEnd.y, polygon
+                            );
+
+                            if (hit) {
+                                // Polygon hit - use exact intersection point
+                                const actualDist = hit.t * beamLength;
+                                if (actualDist < minDist && actualDist > 0) {
+                                    minDist = actualDist;
+                                    hitTarget = target;
+                                    hitPoint.set(hit.x, hit.y);
+                                }
+                            }
+                            // If polygon check fails (no hit), don't register this target
+                            // The beam visually missed the ship's actual shape
+                        }
+                    }
+                }
+
+                // Fallback: Circle hit (for off-screen or non-polygon targets)
+                if (!usedPolygon) {
+                    minDist = projLength;
+                    hitTarget = target;
+                    hitPoint.set(startX + dirX * projLength, startY + dirY * projLength);
+                }
             }
         };
 

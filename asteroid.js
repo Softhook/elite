@@ -342,16 +342,42 @@ class Asteroid {
     }
 
     /**
-     * Improved collision: use maxRadius to cover all rotations.
+     * Collision detection with polygon narrowphase for on-screen accuracy.
+     * Uses circle broadphase (maxRadius) for fast rejection, then polygon SAT for visible collisions.
      * @param {object} target - Object with pos {x, y} and size properties.
-     * @returns {boolean} True if collision detected based on overlapping circular bounds.
+     * @returns {boolean} True if collision detected.
      */
     checkCollision(target) {
         if (!target || !target.pos || typeof target.size !== 'number') return false;
+
+        // Broadphase: Circle check using maxRadius (covers all rotations)
         const dSq = sq(this.pos.x - target.pos.x) + sq(this.pos.y - target.pos.y);
         const targetRadius = target.size / 2;
         const sumRadii = targetRadius + this.maxRadius;
-        return dSq < sq(sumRadii);
+        if (dSq >= sq(sumRadii)) return false; // Fast rejection
+
+        // Narrowphase: Polygon collision if on-screen (for visual accuracy)
+        if (typeof CollisionUtils !== 'undefined' && CollisionUtils.isOnScreen(this.pos)) {
+            // Get polygon for this asteroid
+            const polyA = CollisionUtils.getAsteroidPolygon(this);
+
+            // Get polygon for target (could be ship or asteroid)
+            let polyB = null;
+            if (target.vertices) {
+                // Target is an asteroid
+                polyB = CollisionUtils.getAsteroidPolygon(target);
+            } else if (target.shipDef) {
+                // Target is a ship
+                polyB = CollisionUtils.getShipPolygon(target);
+            }
+
+            if (polyA && polyB) {
+                return CollisionUtils.polygonsCollide(polyA, polyB);
+            }
+        }
+
+        // Fallback: Broadphase already passed, assume collision
+        return true;
     }
 
     toJSON() {
