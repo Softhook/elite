@@ -141,8 +141,7 @@ function initializeGameObjects() {
         missionOverlay,
         saveSelectionScreen,
         communicationSystem,
-        newsManager,
-        communicationSystem
+        newsManager
     });
 }
 
@@ -404,14 +403,14 @@ function showCriticalError(msg) {
  */
 function keyPressed() {
     if (handleGameOverInput()) return false;
-    if (handleInstructionsInput()) return;
-    if (handleSaveSelectionInput()) return;
+    if (handleInstructionsInput()) return false;
+    if (handleSaveSelectionInput()) return false;
     if (handleSpacebarFiring()) return false;
     if (handleWeaponSwitching()) return false;
-    if (handleSingleKeyActions()) return;
-    if (handleMissionNavigation()) return;
-    if (handleDetailScreenNavigation()) return;
-    if (handleEscapeKey()) return;
+    if (handleSingleKeyActions()) return false;
+    if (handleMissionNavigation()) return false;
+    if (handleDetailScreenNavigation()) return false;
+    if (handleEscapeKey()) return false;
 }
 
 /**
@@ -437,11 +436,8 @@ function handleGameOverInput() {
     }
 
     // Toggle inventory with “I”
-    if ((key === 'i' || key === 'I') && gameStateManager.currentState === "IN_FLIGHT") {
-        const opening = !gameStateManager.showingInventory;
-        gameStateManager.showingInventory = opening;
-        soundManager?.playSound(opening ? 'mapOpen' : 'mapClose');
-        return true;
+    if (key === 'i' || key === 'I') {
+        return handleInventoryToggle();
     }
     return false;
 }
@@ -555,9 +551,7 @@ function handleMissionNavigation() {
     }
 
     gameStateManager.selectedMissionIndex = idx;
-    if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
-        soundManager.playSound('click');
-    }
+    soundManager?.playSound('click');
     return true;
 }
 
@@ -587,12 +581,12 @@ function handleDetailScreenNavigation() {
         if (keyCode === LEFT_ARROW && idx > 0) {
             stationMenus.currentShipIndex--;
             stationMenus.selectedShipForDetail = shipList[stationMenus.currentShipIndex];
-            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+            soundManager?.playSound('click');
             return true;
         } else if (keyCode === RIGHT_ARROW && idx < shipList.length - 1) {
             stationMenus.currentShipIndex++;
             stationMenus.selectedShipForDetail = shipList[stationMenus.currentShipIndex];
-            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+            soundManager?.playSound('click');
             return true;
         }
     }
@@ -607,12 +601,12 @@ function handleDetailScreenNavigation() {
         if (keyCode === LEFT_ARROW && idx > 0) {
             stationMenus.currentWeaponIndex--;
             stationMenus.selectedWeaponForDetail = weaponList[stationMenus.currentWeaponIndex];
-            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+            soundManager?.playSound('click');
             return true;
         } else if (keyCode === RIGHT_ARROW && idx < weaponList.length - 1) {
             stationMenus.currentWeaponIndex++;
             stationMenus.selectedWeaponForDetail = weaponList[stationMenus.currentWeaponIndex];
-            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+            soundManager?.playSound('click');
             return true;
         }
     }
