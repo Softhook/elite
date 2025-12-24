@@ -258,79 +258,83 @@ class EnemyDamageSystem {
         AI_LOG(`AFTER: Player kills = ${system.player.kills}, Rating: ${system.player.getEliteRating()}`);
 
 
-        // Update mission progress
+        // Update mission progress using helper to reduce code duplication
         if (attacker.activeMission) {
-            // Pirate bounty missions
-            if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE &&
-                this.role === AI_ROLE.PIRATE) {
-                attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
-                AI_LOG(`Updated pirate bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
-                if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
-                    AI_LOG("Pirate bounty mission target count met! Completing mission...");
-                    system.player.completeMission(); // <<< Use simpler call for auto-complete
+            const mission = attacker.activeMission;
+            const missionType = mission.type;
+
+            // Define mission-to-target mappings for automatic progress tracking
+            const missionTargetMap = {
+                // Standard bounty missions
+                [MISSION_TYPE.BOUNTY_PIRATE]: {
+                    validRoles: [AI_ROLE.PIRATE],
+                    logName: 'pirate bounty'
+                },
+                [MISSION_TYPE.BOUNTY_POLICE]: {
+                    validRoles: [AI_ROLE.POLICE],
+                    logName: 'police bounty'
+                },
+                [MISSION_TYPE.BOUNTY_ALIEN]: {
+                    validRoles: [AI_ROLE.ALIEN],
+                    logName: 'alien bounty'
+                },
+                // Faction kill missions
+                [MISSION_TYPE.IMPERIAL_ELIMINATION]: {
+                    checkFn: () => this._isSeparatistShip() || this.role === AI_ROLE.PIRATE,
+                    logName: 'Imperial',
+                    msgColor: [255, 215, 0]
+                },
+                [MISSION_TYPE.IMPERIAL_STRIKE]: {
+                    checkFn: () => this._isSeparatistShip() || this.role === AI_ROLE.PIRATE,
+                    logName: 'Imperial',
+                    msgColor: [255, 215, 0]
+                },
+                [MISSION_TYPE.SEPARATIST_RAID]: {
+                    checkFn: () => this._isImperialShip() || this.role === AI_ROLE.POLICE,
+                    logName: 'Separatist',
+                    msgColor: [100, 200, 100]
+                },
+                [MISSION_TYPE.SEPARATIST_STRIKE]: {
+                    checkFn: () => this._isImperialShip() || this.role === AI_ROLE.POLICE,
+                    logName: 'Separatist',
+                    msgColor: [100, 200, 100]
+                },
+                [MISSION_TYPE.MILITARY_EXTERMINATION]: {
+                    validRoles: [AI_ROLE.ALIEN, AI_ROLE.PIRATE],
+                    logName: 'Military',
+                    msgColor: [100, 200, 100]
+                },
+                [MISSION_TYPE.MILITARY_STRIKE]: {
+                    validRoles: [AI_ROLE.ALIEN, AI_ROLE.PIRATE],
+                    logName: 'Military',
+                    msgColor: [100, 200, 100]
                 }
-            }
-            // Police bounty missions
-            else if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_POLICE &&
-                this.role === AI_ROLE.POLICE) {
-                attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
-                AI_LOG(`Updated police bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
-                if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
-                    AI_LOG("Police bounty mission target count met! Completing mission...");
-                    system.player.completeMission(); // <<< Use simpler call for auto-complete
-                }
-            }
-            // Alien bounty missions
-            else if (attacker.activeMission.type === MISSION_TYPE.BOUNTY_ALIEN &&
-                this.role === AI_ROLE.ALIEN) {
-                attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
-                AI_LOG(`Updated alien bounty mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
-                if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
-                    AI_LOG("Alien bounty mission target count met! Completing mission...");
-                    system.player.completeMission(); // <<< Use simpler call for auto-complete
-                }
-            }
-            // === FACTION KILL MISSIONS ===
-            // Imperial Elimination/Strike - kill Separatist ships or pirates
-            else if ((attacker.activeMission.type === MISSION_TYPE.IMPERIAL_ELIMINATION ||
-                attacker.activeMission.type === MISSION_TYPE.IMPERIAL_STRIKE) &&
-                (this._isSeparatistShip() || this.role === AI_ROLE.PIRATE)) {
-                attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
-                AI_LOG(`Updated Imperial mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
-                if (typeof uiManager !== 'undefined') {
-                    uiManager.addMessage(`Imperial objective: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`, [255, 215, 0]);
-                }
-                if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
-                    AI_LOG("Imperial mission target count met! Completing mission...");
-                    system.player.completeMission();
-                }
-            }
-            // Separatist Raid/Strike - kill Imperial ships or police
-            else if ((attacker.activeMission.type === MISSION_TYPE.SEPARATIST_RAID ||
-                attacker.activeMission.type === MISSION_TYPE.SEPARATIST_STRIKE) &&
-                (this._isImperialShip() || this.role === AI_ROLE.POLICE)) {
-                attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
-                AI_LOG(`Updated Separatist mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
-                if (typeof uiManager !== 'undefined') {
-                    uiManager.addMessage(`Separatist objective: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`, [100, 200, 100]);
-                }
-                if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
-                    AI_LOG("Separatist mission target count met! Completing mission...");
-                    system.player.completeMission();
-                }
-            }
-            // Military Extermination/Strike - kill Aliens or pirates
-            else if ((attacker.activeMission.type === MISSION_TYPE.MILITARY_EXTERMINATION ||
-                attacker.activeMission.type === MISSION_TYPE.MILITARY_STRIKE) &&
-                (this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.PIRATE)) {
-                attacker.activeMission.progressCount = (attacker.activeMission.progressCount || 0) + 1;
-                AI_LOG(`Updated Military mission progress: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`);
-                if (typeof uiManager !== 'undefined') {
-                    uiManager.addMessage(`Military objective: ${attacker.activeMission.progressCount}/${attacker.activeMission.targetCount}`, [100, 200, 100]);
-                }
-                if (attacker.activeMission.progressCount >= attacker.activeMission.targetCount) {
-                    AI_LOG("Military mission target count met! Completing mission...");
-                    system.player.completeMission();
+            };
+
+            const missionConfig = missionTargetMap[missionType];
+            if (missionConfig) {
+                // Check if this kill counts toward the mission
+                const countsForMission = missionConfig.checkFn
+                    ? missionConfig.checkFn()
+                    : (missionConfig.validRoles && missionConfig.validRoles.includes(this.role));
+
+                if (countsForMission) {
+                    mission.progressCount = (mission.progressCount || 0) + 1;
+                    AI_LOG(`Updated ${missionConfig.logName} mission progress: ${mission.progressCount}/${mission.targetCount}`);
+
+                    // Show UI message for faction missions
+                    if (missionConfig.msgColor && typeof uiManager !== 'undefined') {
+                        uiManager.addMessage(
+                            `${missionConfig.logName} objective: ${mission.progressCount}/${mission.targetCount}`,
+                            missionConfig.msgColor
+                        );
+                    }
+
+                    // Auto-complete when target count is met
+                    if (mission.progressCount >= mission.targetCount) {
+                        AI_LOG(`${missionConfig.logName} mission target count met! Completing mission...`);
+                        system.player.completeMission();
+                    }
                 }
             }
         }

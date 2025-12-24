@@ -243,7 +243,7 @@ class EnemyMovement {
 
             case AI_STATE.SNIPING:
                 // Turret mode with subtle forward drift toward target (no standoff maintenance)
-                if (this.isTargetValid && this.isTargetValid(this.target)) {
+                if (this.isTargetValid(this.target)) {
                     // Compute distance using provided argument when possible to avoid recomputing
                     let safeDistance = (typeof distanceToTarget === 'number' && isFinite(distanceToTarget))
                         ? distanceToTarget

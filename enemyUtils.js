@@ -2,6 +2,28 @@
 // Enemy Utility Methods
 // Common utility functions used by Enemy class
 
+// -------------------------
+// --- Time Scaling Utilities ---
+// -------------------------
+// These functions reduce code duplication across the enemy AI files
+
+/**
+ * Gets delta time in seconds with safety checks
+ * @returns {number} Delta time in seconds (defaults to ~60fps if unavailable)
+ */
+function getDeltaSeconds() {
+    return (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0.016;
+}
+
+/**
+ * Gets frame-rate independent time scale (for multiplying per-frame values)
+ * Based on 60fps baseline (16.67ms per frame)
+ * @returns {number} Time scale multiplier
+ */
+function getTimeScale() {
+    return (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 16.67) : 1;
+}
+
 /**
  * Enemy utility methods as a mixin class
  * These methods can be added to the Enemy prototype

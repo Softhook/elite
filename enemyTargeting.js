@@ -427,7 +427,7 @@ class EnemyTargeting {
                     // Special handling for guards: set engagement lock when acquiring principal's attacker
                     if (this.role === AI_ROLE.GUARD && this.principal &&
                         bestTarget === this.principal.lastAttacker) {
-                        this.guardEngagementLock = 3.0; // Lock for 3 seconds minimum
+                        this.guardEngagementLock = GUARD_ENGAGEMENT_LOCK_DURATION; // Lock for engagement
                     }
                     return true;
                 } else if (this.targetSwitchCooldown <= 0 && bestScore > currentTargetScore + scoreThresholdForChange) {
@@ -441,7 +441,7 @@ class EnemyTargeting {
                     // Special handling for guards: set engagement lock when acquiring principal's attacker
                     if (this.role === AI_ROLE.GUARD && this.principal &&
                         bestTarget === this.principal.lastAttacker) {
-                        this.guardEngagementLock = 3.0; // Lock for 3 seconds minimum
+                        this.guardEngagementLock = GUARD_ENGAGEMENT_LOCK_DURATION; // Lock for engagement
                     }
                     return true;
                 }

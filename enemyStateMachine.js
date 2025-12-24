@@ -40,7 +40,7 @@ class EnemyStateMachine {
                 this._updateState_GUARDING();
                 break;
             default:
-                // States like TRANSPORTING, COLLECTING_CARGO, NEAR_STATION, LEAVING_SYSTEM
+                // Non-combat states (TRANSPORTING, COLLECTING_CARGO, NEAR_STATION, LEAVING_SYSTEM)
                 // are handled by their respective role AI methods, not the combat state machine
                 break;
         }
@@ -72,7 +72,7 @@ class EnemyStateMachine {
             // If attacker is close, we need to do something
             if (distToAttacker < this.detectionRange) {
                 // Low hull? Flee again
-                if (this.hull < this.maxHull * 0.4) {
+                if (this.hull < this.maxHull * IDLE_FLEE_HULL_THRESHOLD) {
                     this.target = this.lastAttacker;
                     this.changeState(AI_STATE.FLEEING);
                     return;
@@ -149,7 +149,7 @@ class EnemyStateMachine {
         // --- END NEW ---
 
         // Flee if damaged
-        if (this.hull < this.maxHull * 0.3) {
+        if (this.hull < this.maxHull * SNIPING_FLEE_HULL_THRESHOLD) {
             this.changeState(AI_STATE.FLEEING);
             return;
         }
@@ -165,8 +165,8 @@ class EnemyStateMachine {
             this._snipingDecisionTimer = random(2.0, 4.0);
 
             // Random chance to switch to more aggressive tactics
-            if (random() < 0.15) { // 15% chance every 2-4 seconds
-                if (random() < 0.4) {
+            if (random() < SNIPING_TACTIC_CHANGE_CHANCE) {
+                if (random() < SNIPING_REPOSITION_CHANCE) {
                     // 40% of the time, reposition to a new angle
                     let stateData = {};
                     let v = p5.Vector.sub(this.pos, this.target.pos);
@@ -214,8 +214,7 @@ class EnemyStateMachine {
 
         // Tactical decision: Snipe (stationary turret) or Attack Pass (dynamic movement)
         // Choose sniping if we have suitable weapons and a random tactical choice
-        const shouldSnipe = this.hasGoodSnipingWeapon &&
-            this.hasGoodSnipingWeapon() &&
+        const shouldSnipe = this.hasGoodSnipingWeapon() &&
             random() < 0.6; // 60% chance to choose sniping over attack pass
 
         if (distanceToTarget < this.engageDistance) {
@@ -285,8 +284,7 @@ class EnemyStateMachine {
         // Reached repositioning point - choose next tactic
         if (distToRepo < 50 || distanceToTarget > this.repositionDistance * 0.9) {
             // Tactical choice: snipe or approach for another pass
-            const shouldSnipe = this.hasGoodSnipingWeapon &&
-                this.hasGoodSnipingWeapon() &&
+            const shouldSnipe = this.hasGoodSnipingWeapon() &&
                 random() < 0.5; // 50% chance after repositioning
 
             if (shouldSnipe) {
@@ -379,16 +377,16 @@ class EnemyStateMachine {
             principalAttacker &&
             principalAttacker !== this &&
             this.isTargetValid(principalAttacker) &&
-            timeSincePrincipalAttack < 5000) {
+            timeSincePrincipalAttack < GUARD_PRINCIPAL_ATTACK_WINDOW_MS) {
 
             const distToAttacker = this.distanceTo(principalAttacker);
             if (distToAttacker < this.guardEngageRange) {
                 AI_LOG(`${this.shipTypeName} (Guard): Principal under attack! Engaging ${principalAttacker.shipTypeName || 'attacker'}.`);
                 this.target = principalAttacker;
                 // Maintain a short engagement lock to prevent target/idle flicker
-                this.guardEngagementLock = Math.max(this.guardEngagementLock || 0, 3.0);
+                this.guardEngagementLock = Math.max(this.guardEngagementLock || 0, GUARD_ENGAGEMENT_LOCK_DURATION);
                 this.changeState(AI_STATE.APPROACHING);
-                this.guardReactionTime = 5.0;
+                this.guardReactionTime = GUARD_REACTION_COOLDOWN;
                 return;
             }
         }
@@ -403,7 +401,7 @@ class EnemyStateMachine {
                 // Only switch to APPROACHING if we don't already have an active engagement lock
                 // This prevents rapid state switching (jitter) when we're already engaged
                 if (this.guardEngagementLock <= 0) {
-                    this.guardEngagementLock = 3.0; // Set engagement lock when switching
+                    this.guardEngagementLock = GUARD_ENGAGEMENT_LOCK_DURATION; // Set engagement lock when switching
                     this.changeState(AI_STATE.APPROACHING);
                 }
                 return;
@@ -829,6 +827,7 @@ class EnemyStateMachine {
                 this._sniperStrafeDir = null; // Reset strafe direction
                 this._sniperThrustVariance = null; // Clear per-ship variance
                 this._sniperReactionDelay = null; // Clear reaction delay
+                this._snipingDriftTarget = null; // Clear drift target vector
                 break;
         }
     }

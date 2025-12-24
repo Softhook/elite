@@ -354,7 +354,6 @@ class EnemyCombat {
         // OPTIMIZATION: Skip LOS checks for off-screen enemies (trust they can hit)
         if (this._isOnScreen === false) return true;
 
-        // Quiet LOS test (no console spam) to avoid firing into asteroids or friendlies between us and the target.
         const p1x = this.pos?.x;
         const p1y = this.pos?.y;
         const p2x = targetPos.x;
@@ -366,18 +365,10 @@ class EnemyCombat {
         const segLenSq = segDx * segDx + segDy * segDy;
         if (segLenSq === 0) return true;
 
-        for (const ast of system.asteroids) {
-            if (!ast || ast.destroyed) continue;
-            const cx = ast.pos?.x; const cy = ast.pos?.y;
-            if (cx === undefined || cy === undefined) continue;
-
-            // Use maxRadius if available for better accuracy with irregular asteroids
-            const radius = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
-            if (!radius || radius < 6) continue; // ignore tiny debris
-
-            // Skip far asteroids to keep checks light
-            const distToAstSq = (cx - p1x) * (cx - p1x) + (cy - p1y) * (cy - p1y);
-            if (distToAstSq > maxCheckDistSq + radius * radius) continue;
+        // Helper to check if a single entity blocks the line of fire
+        const isBlockedBy = (cx, cy, radius) => {
+            const distToEntitySq = (cx - p1x) * (cx - p1x) + (cy - p1y) * (cy - p1y);
+            if (distToEntitySq > maxCheckDistSq + radius * radius) return false;
 
             const t = ((cx - p1x) * segDx + (cy - p1y) * segDy) / segLenSq;
             const clampedT = Math.max(0, Math.min(1, t));
@@ -385,35 +376,30 @@ class EnemyCombat {
             const projY = p1y + clampedT * segDy;
             const closestDistSq = (projX - cx) * (projX - cx) + (projY - cy) * (projY - cy);
             const blockThreshold = (radius + Math.max(6, this.size * 0.15 || 0)) ** 2;
-            if (closestDistSq <= blockThreshold) {
-                return false;
-            }
+            return closestDistSq <= blockThreshold;
+        };
+
+        // Check asteroids
+        for (const ast of system.asteroids) {
+            if (!ast || ast.destroyed) continue;
+            const cx = ast.pos?.x;
+            const cy = ast.pos?.y;
+            if (cx === undefined || cy === undefined) continue;
+            const radius = ast.maxRadius || (ast.size ? ast.size * 0.5 : 0);
+            if (!radius || radius < 6) continue;
+            if (isBlockedBy(cx, cy, radius)) return false;
         }
 
-        // Friendly-fire guard: do not shoot through allies in the same faction.
+        // Friendly-fire guard: do not shoot through allies in the same faction
         const ourFaction = this.faction || (typeof this._getShipFaction === 'function' ? this._getShipFaction(this) : null);
         if (ourFaction && Array.isArray(system.enemies)) {
             for (const ally of system.enemies) {
-                if (!ally || ally === this || ally === this.target) continue;
-                if (ally.destroyed) continue;
+                if (!ally || ally === this || ally === this.target || ally.destroyed) continue;
                 if (!ally.pos || ally.pos.x === undefined || ally.pos.y === undefined) continue;
                 const allyFaction = ally.faction || (typeof ally._getShipFaction === 'function' ? ally._getShipFaction(ally) : null);
                 if (!allyFaction || allyFaction !== ourFaction) continue;
-
-                const cx = ally.pos.x; const cy = ally.pos.y;
                 const radius = ally.size ? ally.size * 0.5 : (ally.maxRadius || 0) || 12;
-                const distToAllySq = (cx - p1x) * (cx - p1x) + (cy - p1y) * (cy - p1y);
-                if (distToAllySq > maxCheckDistSq + radius * radius) continue;
-
-                const t = ((cx - p1x) * segDx + (cy - p1y) * segDy) / segLenSq;
-                const clampedT = Math.max(0, Math.min(1, t));
-                const projX = p1x + clampedT * segDx;
-                const projY = p1y + clampedT * segDy;
-                const closestDistSq = (projX - cx) * (projX - cx) + (projY - cy) * (projY - cy);
-                const blockThreshold = (radius + Math.max(6, this.size * 0.15 || 0)) ** 2;
-                if (closestDistSq <= blockThreshold) {
-                    return false;
-                }
+                if (isBlockedBy(ally.pos.x, ally.pos.y, radius)) return false;
             }
         }
         return true;
@@ -454,14 +440,7 @@ class EnemyCombat {
         const targetingPlayer = this.target instanceof Player;
 
         // Check if Hauler is in a valid combat state to fire
-        const isHaulerInValidCombatState = this.role !== AI_ROLE.HAULER ||
-            (this.currentState === AI_STATE.APPROACHING ||
-                this.currentState === AI_STATE.ATTACK_PASS ||
-                this.currentState === AI_STATE.REPOSITIONING ||
-                this.currentState === AI_STATE.SNIPING);
-
-        // Don't proceed with firing logic if Hauler is not in valid combat state
-        if (!isHaulerInValidCombatState) {
+        if (!this._isInCombatState()) {
             return;
         }
 
@@ -556,16 +535,22 @@ class EnemyCombat {
         }
     }
 
+    /**
+     * Check if this ship is in a valid combat state for attacking.
+     * Haulers have special rules - they only attack in specific states.
+     * @return {boolean} Whether the ship can engage in combat
+     */
+    _isInCombatState() {
+        if (this.role !== AI_ROLE.HAULER) return true;
+        return this.currentState === AI_STATE.APPROACHING ||
+            this.currentState === AI_STATE.ATTACK_PASS ||
+            this.currentState === AI_STATE.REPOSITIONING ||
+            this.currentState === AI_STATE.SNIPING;
+    }
+
     /** Creates and adds a projectile aimed in the specified direction (radians). */
     fire(system, fireAngleRadians) {
-        // Allow haulers to fire if they're in a defensive combat mode
-        if (this.role === AI_ROLE.HAULER &&
-            !(this.currentState === AI_STATE.APPROACHING ||
-                this.currentState === AI_STATE.ATTACK_PASS ||
-                this.currentState === AI_STATE.REPOSITIONING ||
-                this.currentState === AI_STATE.SNIPING)) {
-            return; // Only block firing when not in combat states
-        }
+        if (!this._isInCombatState()) return;
 
         if (!system) { return; }
         if (isNaN(this.angle) || isNaN(fireAngleRadians)) { return; }

@@ -156,6 +156,23 @@ const SNIPING_POSITION_ADJUST_THRUST = 0.2;   // Gentle thrust for minor positio
 const SNIPING_STANDOFF_TOLERANCE_FACTOR = 0.1; // Allow 10% deviation from ideal range before adjusting
 const SNIPING_HULL_DROP_EXIT_PERCENT = 0.15;  // Exit sniping if hull drops by 15% of maxHull since entering state
 
+// -------------------------
+// --- State Transition Thresholds ---
+// -------------------------
+
+const IDLE_FLEE_HULL_THRESHOLD = 0.4;         // Flee from IDLE if hull below 40%
+const SNIPING_FLEE_HULL_THRESHOLD = 0.3;      // Flee from SNIPING if hull below 30%
+const SNIPING_REPOSITION_CHANCE = 0.4;        // 40% chance to reposition vs attack pass when changing tactics
+const SNIPING_TACTIC_CHANGE_CHANCE = 0.15;    // 15% chance to change tactics every decision cycle
+
+// -------------------------
+// --- Guard Behavior Constants ---
+// -------------------------
+
+const GUARD_PRINCIPAL_ATTACK_WINDOW_MS = 5000; // React to attacks on principal within 5 seconds
+const GUARD_ENGAGEMENT_LOCK_DURATION = 3.0;    // Lock engagement with target for 3 seconds
+const GUARD_REACTION_COOLDOWN = 5.0;           // Cooldown between guard reactions
+
 // Debug flags/helpers moved to debug.js (loaded early).
 // If needed, you can still check or toggle via the global Debug API:
 //   Debug.get(), Debug.set({ DEBUG_AI: true }), Debug.enable('DEBUG_TARGETING')
