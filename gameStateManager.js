@@ -839,7 +839,9 @@ class GameStateManager {
             this._checkJumpCompletion();
 
             // Update quantum gate fade effect if active (runs alongside normal flight)
-            if (this.jumpFadeState !== "NONE" && this.quantumGateTeleportPending) {
+            // Must continue updating fade even after quantumGateTeleportPending is cleared,
+            // otherwise the fade gets stuck at WHITE_HOLD or FADE_IN and never completes
+            if (this.jumpFadeState !== "NONE") {
                 this._updateJumpFade();
             }
 

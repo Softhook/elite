@@ -160,17 +160,33 @@ class UIStationMenus {
                 textAlign(LEFT, TOP);
                 textStyle(BOLD);
 
-                // Truncate headline if too long
+                // Check for icon token at start of headline
                 const headline = item.headline || item.title || "News Update";
-                const maxHeadlineWidth = pW - (headlineStartX - pX) - 100;
                 let displayHeadline = headline;
-                if (textWidth(headline) > maxHeadlineWidth) {
+                let iconOffset = 0;
+
+                // Detect and draw icon if present
+                if (typeof NewsIcons !== 'undefined') {
+                    const iconType = NewsIcons.getIconToken(headline);
+                    if (iconType) {
+                        // Draw the icon
+                        const iconSize = 16;
+                        NewsIcons.draw(iconType, headlineStartX + iconSize / 2, itemY + 8 + iconSize / 2, iconSize);
+                        iconOffset = iconSize + 6; // Icon width + spacing
+                        // Remove the token from display text
+                        displayHeadline = NewsIcons.stripIconToken(headline);
+                    }
+                }
+
+                // Truncate headline if too long
+                const maxHeadlineWidth = pW - (headlineStartX - pX) - 100 - iconOffset;
+                if (textWidth(displayHeadline) > maxHeadlineWidth) {
                     while (textWidth(displayHeadline + "...") > maxHeadlineWidth && displayHeadline.length > 10) {
                         displayHeadline = displayHeadline.slice(0, -1);
                     }
                     displayHeadline += "...";
                 }
-                text(displayHeadline, headlineStartX, itemY + 8);
+                text(displayHeadline, headlineStartX + iconOffset, itemY + 8);
                 textStyle(NORMAL);
 
                 // Source on right side (line 1)

@@ -172,44 +172,44 @@ const HEADLINE_TEMPLATES = {
 
     // --- War Event Headlines ---
     WAR_SKIRMISH: [
-        "⚔️ Military skirmish erupts in {SYSTEM}",
-        "⚔️ Armed conflict breaks out near {SYSTEM}",
-        "⚔️ Faction forces clash in {SYSTEM} sector",
-        "⚔️ Border skirmish reported in {SYSTEM}",
-        "⚔️ Hostile engagement detected in {SYSTEM}"
+        "[SWORDS] Military skirmish erupts in {SYSTEM}",
+        "[SWORDS] Armed conflict breaks out near {SYSTEM}",
+        "[SWORDS] Faction forces clash in {SYSTEM} sector",
+        "[SWORDS] Border skirmish reported in {SYSTEM}",
+        "[SWORDS] Hostile engagement detected in {SYSTEM}"
     ],
     WAR_FULL: [
-        "🔥 Full scale war erupts in {SYSTEM}",
-        "🔥 All-out conflict engulfs {SYSTEM}",
-        "🔥 Massive battle underway in {SYSTEM}",
-        "🔥 War declared in {SYSTEM} sector",
-        "🔥 Sector-wide hostilities begin in {SYSTEM}"
+        "[FIRE] Full scale war erupts in {SYSTEM}",
+        "[FIRE] All-out conflict engulfs {SYSTEM}",
+        "[FIRE] Massive battle underway in {SYSTEM}",
+        "[FIRE] War declared in {SYSTEM} sector",
+        "[FIRE] Sector-wide hostilities begin in {SYSTEM}"
     ],
 
     // --- Crisis Event Headlines ---
     CRISIS_PLAGUE: [
-        "☠️ Deadly plague outbreak in {SYSTEM}",
-        "☠️ Contagion spreads across {SYSTEM}",
-        "☠️ Medical emergency: Plague ravages {SYSTEM}",
-        "☠️ Quarantine declared in {SYSTEM}",
-        "☠️ Disease outbreak overwhelms {SYSTEM} hospitals"
+        "[SKULL] Deadly plague outbreak in {SYSTEM}",
+        "[SKULL] Contagion spreads across {SYSTEM}",
+        "[SKULL] Medical emergency: Plague ravages {SYSTEM}",
+        "[SKULL] Quarantine declared in {SYSTEM}",
+        "[SKULL] Disease outbreak overwhelms {SYSTEM} hospitals"
     ],
     CRISIS_FAMINE: [
-        "🍂 Severe famine grips {SYSTEM}",
-        "🍂 Food crisis devastates {SYSTEM}",
-        "🍂 Crop failures cause mass starvation in {SYSTEM}",
-        "🍂 Food shortage emergency in {SYSTEM}",
-        "🍂 Hunger crisis spreads across {SYSTEM}"
+        "[FAMINE] Severe famine grips {SYSTEM}",
+        "[FAMINE] Food crisis devastates {SYSTEM}",
+        "[FAMINE] Crop failures cause mass starvation in {SYSTEM}",
+        "[FAMINE] Food shortage emergency in {SYSTEM}",
+        "[FAMINE] Hunger crisis spreads across {SYSTEM}"
     ],
     CRISIS_PLAGUE_DISTANT: [
-        "☠️ Plague outbreak spreads to {SYSTEM}",
-        "☠️ Neighboring system {SYSTEM} affected by contagion",
-        "☠️ Disease reaches {SYSTEM} from nearby outbreak"
+        "[SKULL] Plague outbreak spreads to {SYSTEM}",
+        "[SKULL] Neighboring system {SYSTEM} affected by contagion",
+        "[SKULL] Disease reaches {SYSTEM} from nearby outbreak"
     ],
     CRISIS_FAMINE_DISTANT: [
-        "🍂 Famine conditions worsen in {SYSTEM}",
-        "🍂 Food crisis spreads to {SYSTEM}",
-        "🍂 {SYSTEM} suffers from regional crop failures"
+        "[FAMINE] Famine conditions worsen in {SYSTEM}",
+        "[FAMINE] Food crisis spreads to {SYSTEM}",
+        "[FAMINE] {SYSTEM} suffers from regional crop failures"
     ],
 
     // --- Combat Report Headlines ---
@@ -241,24 +241,24 @@ const HEADLINE_TEMPLATES = {
 
     // --- Hero Headlines ---
     HERO_IMPERIAL: [
-        "🏅 Hero of the Imperium: {NAME} claims {COUNT} kills in {SYSTEM}",
-        "🏅 Imperial ace {NAME} devastates enemies in {SYSTEM}",
-        "🏅 Decorated pilot {NAME} dominates {SYSTEM} skies"
+        "[MEDAL] Hero of the Imperium: {NAME} claims {COUNT} kills in {SYSTEM}",
+        "[MEDAL] Imperial ace {NAME} devastates enemies in {SYSTEM}",
+        "[MEDAL] Decorated pilot {NAME} dominates {SYSTEM} skies"
     ],
     HERO_SEPARATIST: [
-        "✊ Hero of the Resistance: {NAME} strikes back in {SYSTEM}",
-        "✊ Freedom fighter {NAME} downs {COUNT} Imperial craft",
-        "✊ Rebel ace {NAME} terrorizes Imperial forces"
+        "[FIST] Hero of the Resistance: {NAME} strikes back in {SYSTEM}",
+        "[FIST] Freedom fighter {NAME} downs {COUNT} Imperial craft",
+        "[FIST] Rebel ace {NAME} terrorizes Imperial forces"
     ],
     HERO_POLICE: [
-        "🛡️ Police hero: Officer {NAME} neutralizes {COUNT} threats",
-        "🛡️ Deputy {NAME} clears {SYSTEM} of pirate menace",
-        "🛡️ Law enforcement ace {NAME} keeps the peace"
+        "[SHIELD] Police hero: Officer {NAME} neutralizes {COUNT} threats",
+        "[SHIELD] Deputy {NAME} clears {SYSTEM} of pirate menace",
+        "[SHIELD] Law enforcement ace {NAME} keeps the peace"
     ],
     HERO_MILITARY: [
-        "⭐ Military ace {NAME} racks up {COUNT} victories",
-        "⭐ Decorated pilot {NAME} dominates {SYSTEM}",
-        "⭐ Combat legend {NAME} adds to kill count"
+        "[STAR] Military ace {NAME} racks up {COUNT} victories",
+        "[STAR] Decorated pilot {NAME} dominates {SYSTEM}",
+        "[STAR] Combat legend {NAME} adds to kill count"
     ]
 };
 
