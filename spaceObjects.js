@@ -2964,7 +2964,7 @@ const SpaceObjectRenderers = {
         endShape(CLOSE);
         fill(0, 0, 0);
         textAlign(CENTER, CENTER);
-        textSize(STATION_TEXT_SIZE.HELPER);
+        textSize((typeof STATION_TEXT_SIZE !== 'undefined' && STATION_TEXT_SIZE.HELPER) || 10);
         text('!', -size * 0.35, bob + size * 0.1);
 
         // Status lights (toxic green glow)
