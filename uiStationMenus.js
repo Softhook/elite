@@ -780,19 +780,30 @@ class UIStationMenus {
                 if (currentLevel >= upg.level) isInstalled = true;
             }
 
-            fill(canAfford ? 80 : 40, canAfford ? 60 : 40, canAfford ? 120 : 60);
-            if (isInstalled) fill(40, 60, 40); // Dark green for installed
-
-            stroke(canAfford ? 180 : 100, canAfford ? 100 : 60, canAfford ? 255 : 140);
-            if (isInstalled) stroke(100, 200, 100);
+            // Different colors for ship upgrades (green) vs weapons (purple/blue)
+            if (isShipUpgrade) {
+                // Green color scheme for ship upgrades
+                fill(canAfford ? 40 : 30, canAfford ? 80 : 40, canAfford ? 60 : 40);
+                if (isInstalled) fill(40, 60, 40); // Darker green for installed
+                stroke(canAfford ? 100 : 60, canAfford ? 200 : 100, canAfford ? 120 : 80);
+                if (isInstalled) stroke(100, 200, 100);
+            } else {
+                // Purple/blue color scheme for weapons
+                fill(canAfford ? 80 : 40, canAfford ? 60 : 40, canAfford ? 120 : 60);
+                stroke(canAfford ? 180 : 100, canAfford ? 100 : 60, canAfford ? 255 : 140);
+            }
 
             rect(pX + 20, y, pW - 40, rowH - 6, 5);
 
             noStroke();
             textAlign(LEFT, CENTER);
             textSize(STATION_TEXT_SIZE.BODY);
-            fill(canAfford ? 255 : 120);
-            if (isInstalled) fill(150, 255, 150);
+            if (isShipUpgrade) {
+                fill(canAfford ? [150, 255, 150] : [80, 120, 80]);
+                if (isInstalled) fill(150, 255, 150);
+            } else {
+                fill(canAfford ? 255 : 120);
+            }
 
             let infoText = "";
             if (isShipUpgrade) {
@@ -2159,7 +2170,7 @@ class UIStationMenus {
         const type = weaponDef.type;
 
         // Check for Ship Upgrade types first
-        if (['armor', 'engine', 'cargo', 'hardpoints', 'shield'].includes(type) || weaponDef.hullBonus || weaponDef.speedMultiplier) {
+        if (['armor', 'engine', 'cargo', 'hardpoints', 'shield', 'cloak'].includes(type) || weaponDef.hullBonus || weaponDef.speedMultiplier) {
 
             // Armor
             if (weaponDef.hullBonus) {

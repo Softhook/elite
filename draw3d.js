@@ -1363,20 +1363,20 @@ Draw3D.drawUpgradeModel = function (type, level, x, y, size, angle) {
     };
 
     if (type === 'armor') {
-        // ARMOR: Nested plates
+        // ARMOR: Hexagon blobs - one per level
         const col = color(100, 100, 110);
-        const plateCount = 2 + level; // 3, 4, 5 plates
         const depth = size * 0.5;
+        const blobCount = level; // 1, 2, or 3 hexagons
+        const hexSize = size * 0.6;
+        const spacing = hexSize * 1.1;
 
-        for (let i = 0; i < plateCount; i++) {
-            const s = size * (1 - (i * 0.15));
-            const d = depth * (1 - (i * 0.1));
-            const plateCol = color(red(col) - i * 10, green(col) - i * 10, blue(col) - i * 10);
-            this.drawPrism(x, y, s, 6, d, plateCol, angle + i * 0.1 + time * 0.2, sunAngle);
+        for (let i = 0; i < blobCount; i++) {
+            const xOff = (i - (blobCount - 1) / 2) * spacing;
+            this.drawPrism(x + xOff, y, hexSize, 6, depth, col, angle, sunAngle);
         }
 
     } else if (type === 'engine') {
-        // ENGINE: Thruster array
+        // ENGINE: Thruster array (static)
         const col = color(200, 100, 50);
         const engAngle = angle + Math.PI; // Pointing left
 
@@ -1399,15 +1399,15 @@ Draw3D.drawUpgradeModel = function (type, level, x, y, size, angle) {
 
 
     } else if (type === 'cargo') {
-        // CARGO: Stacked containers
+        // CARGO: Stacked containers (static at 45 degree angle)
         const col = color(180, 140, 60);
         const containerH = size * 0.4;
         const stacks = level;
+        const fixedAngle = Math.PI / 4; // 45 degrees
 
         for (let i = 0; i < stacks; i++) {
             const yOff = (i - (stacks - 1) / 2) * containerH * 1.2;
-            const floatOff = Math.sin(time * 2 + i) * 3;
-            this.drawBox3D(x, y - yOff + floatOff, size * 0.9, containerH * 0.7, size, col, angle + time * 0.5, sunAngle);
+            this.drawBox3D(x, y - yOff, size * 0.9, containerH * 0.7, size, col, fixedAngle, sunAngle);
         }
 
     } else if (type === 'hardpoints') {
@@ -1425,17 +1425,30 @@ Draw3D.drawUpgradeModel = function (type, level, x, y, size, angle) {
         }
 
     } else if (type === 'shield') {
-        // SHIELD: Generator core with rings
-        const col = color(100, 200, 255); // Cyan/Blue
+        // SHIELD: Generator core with rings - different colors per level
+        let ringCol, coreCol;
+        if (level === 1) {
+            // Level 1: Cyan/Blue
+            ringCol = color(100, 200, 255);
+            coreCol = color(50, 50, 80);
+        } else if (level === 2) {
+            // Level 2: Green
+            ringCol = color(100, 255, 150);
+            coreCol = color(50, 80, 50);
+        } else {
+            // Level 3: Purple/Magenta
+            ringCol = color(200, 100, 255);
+            coreCol = color(80, 50, 80);
+        }
 
         // Core
-        this.drawCylinder(x, y, size * 0.3, size * 0.6, 8, color(50, 50, 80), angle, sunAngle);
+        this.drawCylinder(x, y, size * 0.3, size * 0.6, 8, coreCol, angle, sunAngle);
 
         // Energy Rings
         noStroke();
-        fill(100, 200, 255, 100 + Math.sin(time * 5) * 50);
+        fill(red(ringCol), green(ringCol), blue(ringCol), 100 + Math.sin(time * 5) * 50);
         ellipse(x, y, size * 1.0, size * 0.3); // Horizontal ring
-        ellipse(x, y, size * 0.3, size * 1.0); // Vertical ring check (2D ellipse not 3D ring, specifically requested static later anyway)
+        ellipse(x, y, size * 0.3, size * 1.0); // Vertical ring
 
     } else if (type === 'cloak') {
         // CLOAK: Phase shift generator with rotating rings

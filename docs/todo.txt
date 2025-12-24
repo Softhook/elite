@@ -4,17 +4,9 @@
 
 enemy Ship docking distance at stations should be the same as player docking distance. 
 
-Add faction decals onto the ships 
-
-Make the quantum gate. Teleport the player to a random star system 
-
 Make the war state affect the enemy behavior 
 
 war event change sapwn drencency
-
-ship ship collision
-
-event text on map
 
 make events less often
 
