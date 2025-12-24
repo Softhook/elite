@@ -757,7 +757,18 @@ class EnemyAIBehaviors {
             }
 
             if (!this.patrolTargetPos) {
-                this.patrolTargetPos = system?.station?.pos?.copy() || createVector(random(-500, 500), random(-500, 500));
+                // Set initial patrol target to random point within station radius
+                if (system?.station?.pos) {
+                    const stationRadius = system.station.dockingRadius || system.station.size * 0.5 || 200;
+                    const angle = random(TWO_PI);
+                    const offsetDist = random(stationRadius * 0.3, stationRadius * 0.9);
+                    this.patrolTargetPos = createVector(
+                        system.station.pos.x + cos(angle) * offsetDist,
+                        system.station.pos.y + sin(angle) * offsetDist
+                    );
+                } else {
+                    this.patrolTargetPos = createVector(random(-500, 500), random(-500, 500));
+                }
             }
 
             let desiredMovementTargetPos = this.patrolTargetPos;
@@ -765,11 +776,57 @@ class EnemyAIBehaviors {
                 ? dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y)
                 : Infinity;
 
+            // Check if near station for potential repair pause
+            const nearStation = system?.station?.pos &&
+                dist(this.pos.x, this.pos.y, system.station.pos.x, system.station.pos.y) < this.stationProximityThreshold;
+
+            // Time delta for repairs
+            const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : 0.016);
+            const isOffScreenFar = !this._isOnScreen && (!system?.player || this.distanceTo(system.player) >= 1500);
+            const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
+
             if (distToPatrolTarget < 50) {
+                // If near station and damaged, pause for repairs
+                if (nearStation && this.hull < this.maxHull) {
+                    // Initialize repair pause timer
+                    if (!this._policeRepairTimer) {
+                        const missingHullPercent = (this.maxHull - this.hull) / this.maxHull;
+                        this._policeRepairTimer = 2 + (missingHullPercent * 6); // 2-8 seconds
+                    }
+
+                    // Gradual repair
+                    if (this.hull < this.maxHull) {
+                        const repairRate = this.maxHull * 0.10 * timerDelta; // 10% per second
+                        this.hull = Math.min(this.maxHull, this.hull + repairRate);
+                    }
+                    if (this.shield < this.maxShield) {
+                        const shieldRepairRate = this.maxShield * 0.15 * timerDelta; // 15% per second
+                        this.shield = Math.min(this.maxShield, this.shield + shieldRepairRate);
+                    }
+
+                    // Brake while repairing
+                    const brakeTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                    this.vel.mult(Math.pow(0.8, brakeTimeScale));
+
+                    this._policeRepairTimer -= timerDelta;
+                    if (this._policeRepairTimer <= 0) {
+                        this._policeRepairTimer = null;
+                        // Fall through to select new patrol target
+                    } else {
+                        return; // Still repairing, don't move yet
+                    }
+                }
+
                 // Select a new patrol target - sometimes station, sometimes elsewhere
                 if (system?.station?.pos) {
-                    if (random() < 0.2) { //20% chance to patrol back to station
-                        this.patrolTargetPos = system.station.pos.copy();
+                    if (random() < 0.2) { //20% chance to patrol near station (random point within radius)
+                        const stationRadius = system.station.dockingRadius || system.station.size * 0.5 || 200;
+                        const angle = random(TWO_PI);
+                        const offsetDist = random(stationRadius * 0.3, stationRadius * 0.9);
+                        this.patrolTargetPos = createVector(
+                            system.station.pos.x + cos(angle) * offsetDist,
+                            system.station.pos.y + sin(angle) * offsetDist
+                        );
                     } else {
                         // 80% chance to patrol elsewhere in the system
                         const patrolRange = 2000; // Area to patrol within
@@ -987,10 +1044,34 @@ class EnemyAIBehaviors {
                     HAULER_LOG(`Hauler ${this.shipTypeName} starting pause near station for ${this.nearStationTimer.toFixed(1)}s`);
                 }
 
+                // --- Repair pause for damaged ships ---
+                // If damaged and hasn't set up repair pause yet, extend timer based on damage
+                if (!this.hasRepairedAtStation && this.hull < this.maxHull) {
+                    const missingHullPercent = (this.maxHull - this.hull) / this.maxHull;
+                    const repairDuration = 2 + (missingHullPercent * 8); // 2-10 seconds based on damage
+                    this.nearStationTimer = Math.max(this.nearStationTimer, repairDuration);
+                    this.hasRepairedAtStation = true; // Mark that we've set up the repair pause
+                    HAULER_LOG(`Hauler ${this.shipTypeName} repairing at station for ${repairDuration.toFixed(1)}s (${(missingHullPercent * 100).toFixed(0)}% hull damage)`);
+                }
+
+                // Gradual repair while at station - heal 10% max hull per second
+                // This allows ships to continue healing even if damaged during repair
+                if (this.hull < this.maxHull) {
+                    const repairRate = this.maxHull * 0.10 * timerDelta; // 10% per second
+                    this.hull = Math.min(this.maxHull, this.hull + repairRate);
+                }
+                // Also repair shields gradually
+                if (this.shield < this.maxShield) {
+                    const shieldRepairRate = this.maxShield * 0.15 * timerDelta; // 15% per second
+                    this.shield = Math.min(this.maxShield, this.shield + shieldRepairRate);
+                }
+                // --- End repair pause ---
+
                 this.nearStationTimer -= timerDelta;
 
                 if (this.nearStationTimer <= 0) {
                     HAULER_LOG(`Hauler ${this.shipTypeName} finished pause, preparing to leave.`);
+                    this.hasRepairedAtStation = false; // Reset for next station visit
                     this.changeState(AI_STATE.LEAVING_SYSTEM);
                     // Movement target will be set by onStateEntry(LEAVING_SYSTEM) next frame
                 }
@@ -1889,8 +1970,25 @@ class EnemyAIBehaviors {
 
                 // Count down wait timer using corrected delta
                 if (this.nearStationTimer === undefined) {
-                    this.nearStationTimer = 5.0; // Wait 5 seconds
+                    // Extend timer if damaged
+                    if (this.hull < this.maxHull) {
+                        const missingHullPercent = (this.maxHull - this.hull) / this.maxHull;
+                        this.nearStationTimer = 5.0 + (missingHullPercent * 8); // 5-13 seconds based on damage
+                    } else {
+                        this.nearStationTimer = 5.0; // Wait 5 seconds
+                    }
                 }
+
+                // Gradual repair while at station
+                if (this.hull < this.maxHull) {
+                    const repairRate = this.maxHull * 0.10 * timerDelta; // 10% per second
+                    this.hull = Math.min(this.maxHull, this.hull + repairRate);
+                }
+                if (this.shield < this.maxShield) {
+                    const shieldRepairRate = this.maxShield * 0.15 * timerDelta; // 15% per second
+                    this.shield = Math.min(this.maxShield, this.shield + shieldRepairRate);
+                }
+
                 this.nearStationTimer -= timerDelta;
 
                 if (this.nearStationTimer <= 0) {
@@ -1901,9 +1999,16 @@ class EnemyAIBehaviors {
                     // (Logic continues to next phase)
                 }
             } else {
-                // Move toward station
+                // Move toward random point within station radius
                 this.changeState(AI_STATE.PATROLLING);
-                this.performSafeRotationAndThrust(system, system.station.pos);
+                const stationRadius = system.station.dockingRadius || system.station.size * 0.5 || 200;
+                const angle = random(TWO_PI);
+                const offsetDist = random(stationRadius * 0.3, stationRadius * 0.9);
+                const patrolTarget = createVector(
+                    system.station.pos.x + cos(angle) * offsetDist,
+                    system.station.pos.y + sin(angle) * offsetDist
+                );
+                this.performSafeRotationAndThrust(system, patrolTarget);
             }
             this.updatePhysics();
             return;
@@ -2138,9 +2243,15 @@ class EnemyAIBehaviors {
 
         // Similar to police patrol but occasionally dock at station
         if (!this.patrolTargetPos) {
-            // Random patrol behavior: sometimes station, sometimes random point
+            // Random patrol behavior: sometimes near station (random point within radius), sometimes random point
             if (system?.station?.pos && random() < 0.3) {
-                this.patrolTargetPos = system.station.pos.copy();
+                const stationRadius = system.station.dockingRadius || system.station.size * 0.5 || 200;
+                const angle = random(TWO_PI);
+                const offsetDist = random(stationRadius * 0.3, stationRadius * 0.9);
+                this.patrolTargetPos = createVector(
+                    system.station.pos.x + cos(angle) * offsetDist,
+                    system.station.pos.y + sin(angle) * offsetDist
+                );
             } else {
                 const patrolRange = 2000;
                 const patrolAngle = random(TWO_PI);
@@ -2162,9 +2273,26 @@ class EnemyAIBehaviors {
             if (random() < 0.2) {
                 const scanTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
                 this.vel.mult(Math.pow(0.5, scanTimeScale)); // Slow down (frame-rate independent)
+
+                // Gradual repair while pausing (combat ships can repair during scan pauses)
+                if (this.hull < this.maxHull) {
+                    const repairRate = this.maxHull * 0.10 * timerDelta; // 10% per second
+                    this.hull = Math.min(this.maxHull, this.hull + repairRate);
+                }
+                if (this.shield < this.maxShield) {
+                    const shieldRepairRate = this.maxShield * 0.15 * timerDelta; // 15% per second
+                    this.shield = Math.min(this.maxShield, this.shield + shieldRepairRate);
+                }
+
                 // Wait a bit before selecting new patrol point
                 if (!this._scanPauseTimer) {
-                    this._scanPauseTimer = random(1, 3); // 1-3 seconds
+                    // Extend pause if damaged
+                    if (this.hull < this.maxHull) {
+                        const missingHullPercent = (this.maxHull - this.hull) / this.maxHull;
+                        this._scanPauseTimer = random(1, 3) + (missingHullPercent * 5); // 1-8 seconds
+                    } else {
+                        this._scanPauseTimer = random(1, 3); // 1-3 seconds
+                    }
                 } else {
                     this._scanPauseTimer -= timerDelta;
                     if (this._scanPauseTimer <= 0) {
@@ -2177,7 +2305,13 @@ class EnemyAIBehaviors {
 
             // Select new patrol target
             if (system?.station?.pos && random() < 0.25) {
-                this.patrolTargetPos = system.station.pos.copy();
+                const stationRadius = system.station.dockingRadius || system.station.size * 0.5 || 200;
+                const angle = random(TWO_PI);
+                const offsetDist = random(stationRadius * 0.3, stationRadius * 0.9);
+                this.patrolTargetPos = createVector(
+                    system.station.pos.x + cos(angle) * offsetDist,
+                    system.station.pos.y + sin(angle) * offsetDist
+                );
             } else {
                 const patrolRange = 2000;
                 const patrolAngle = random(TWO_PI);
@@ -2431,15 +2565,37 @@ class EnemyAIBehaviors {
             system.station.pos.x, system.station.pos.y
         );
 
+        // Base delta time for timers
+        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : 0.016);
+        const isOffScreenFar = !this._isOnScreen && (!system?.player || this.distanceTo(system.player) >= 1500);
+        const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
+
         if (distToStation < this.stationProximityThreshold) {
             // At station - idle and wait (frame-rate independent)
             this.changeState(AI_STATE.NEAR_STATION);
             const stationTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
             this.vel.mult(Math.pow(0.8, stationTimeScale));
+
+            // Gradual self-repair while at station
+            if (this.hull < this.maxHull) {
+                const repairRate = this.maxHull * 0.10 * timerDelta; // 10% per second
+                this.hull = Math.min(this.maxHull, this.hull + repairRate);
+            }
+            if (this.shield < this.maxShield) {
+                const shieldRepairRate = this.maxShield * 0.15 * timerDelta; // 15% per second
+                this.shield = Math.min(this.maxShield, this.shield + shieldRepairRate);
+            }
         } else {
-            // Move towards station
+            // Move towards random point within station radius
             this.changeState(AI_STATE.PATROLLING);
-            this.performRotationAndThrust(system.station.pos);
+            const stationRadius = system.station.dockingRadius || system.station.size * 0.5 || 200;
+            const angle = random(TWO_PI);
+            const offsetDist = random(stationRadius * 0.3, stationRadius * 0.9);
+            const patrolTarget = createVector(
+                system.station.pos.x + cos(angle) * offsetDist,
+                system.station.pos.y + sin(angle) * offsetDist
+            );
+            this.performRotationAndThrust(patrolTarget);
         }
 
         this.updatePhysics();
