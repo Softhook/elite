@@ -381,6 +381,25 @@ class EnemyUtils {
 
         return 'UNKNOWN';
     }
+
+    /**
+     * Gets the grudge level (hit count) against a specific target
+     * Higher grudge = more aggressive behavior
+     * @param {Object} target - The target to check grudge against
+     * @returns {number} - Grudge level (0 = no grudge, 1+ = number of times hit by target)
+     */
+    _getGrudgeLevel(target) {
+        if (!target || !this.attackerHistory) return 0;
+
+        const entry = this.attackerHistory.get(target);
+        if (!entry) return 0;
+
+        // Handle both old format (timestamp only) and new format ({timestamp, hitCount})
+        if (typeof entry === 'object' && entry.hitCount) {
+            return entry.hitCount;
+        }
+        return 1; // Old format fallback
+    }
 }
 
 // Apply utility methods to Enemy prototype

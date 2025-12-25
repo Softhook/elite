@@ -609,20 +609,37 @@ class EnemyTargeting {
                     const isPoliceHostile = enemy.role === AI_ROLE.POLICE &&
                         (target.role === AI_ROLE.PIRATE || target.role === AI_ROLE.ALIEN);
 
-                    // Combined hostile check
-                    const isHostileTarget = isPlayer || isHostileRole || isFactionRival || isPoliceHostile;
+                    // Player-specific hostility checks:
+                    // - Player is wanted (always hostile to law-abiding ships)
+                    // - Player has a rival faction to this ship
+                    // - This ship is an aggressive role (pirates/aliens/bounty hunters attack players on sight)
+                    let isPlayerHostile = false;
+                    if (isPlayer) {
+                        const playerIsWanted = target.isWanted || (system && system.isPlayerWanted && system.isPlayerWanted());
+                        const playerIsFactionRival = isFactionRival; // Already calculated above
+                        const shipIsAggressive = enemy.role === AI_ROLE.PIRATE ||
+                            enemy.role === AI_ROLE.ALIEN ||
+                            enemy.role === AI_ROLE.BOUNTY_HUNTER;
+                        isPlayerHostile = playerIsWanted || playerIsFactionRival || shipIsAggressive;
+                    }
+
+                    // Combined hostile check - NOTE: Players are only hostile under specific conditions
+                    const isHostileTarget = isPlayerHostile || isHostileRole || isFactionRival || isPoliceHostile;
 
                     // Only apply decay for non-hostile targets
                     if (!isHostileTarget) {
                         const timeSinceAttack = millis() - attackTimestamp;
-                        const RETALIATION_TIMEOUT_MS = 10000; // 10 seconds before giving up on neutrals
+
+                        // GRUDGE-BASED: Higher grudge = longer retaliation window
+                        // Base: 10 seconds, +3 seconds per grudge level, cap at 25 seconds
+                        const RETALIATION_TIMEOUT_MS = Math.min(10000 + hitCount * 3000, 25000);
+                        const decayStart = RETALIATION_TIMEOUT_MS * 0.5; // Decay starts at 50% of timeout
 
                         if (timeSinceAttack > RETALIATION_TIMEOUT_MS) {
                             // Timeout expired - no retaliation bonus for neutral targets
                             retaliationBonus = 0;
                         } else {
-                            // Decay retaliation bonus over time (full bonus for first 5s, then linear decay)
-                            const decayStart = 5000;
+                            // Decay retaliation bonus over time (full bonus until decayStart, then linear decay)
                             if (timeSinceAttack > decayStart) {
                                 const decayProgress = (timeSinceAttack - decayStart) / (RETALIATION_TIMEOUT_MS - decayStart);
                                 retaliationBonus = TARGET_SCORE_RETALIATION_PIRATE * (1 - decayProgress);

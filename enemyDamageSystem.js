@@ -80,7 +80,18 @@ class EnemyDamageSystem {
                 isFriendlyFire = true;
             }
 
-            if (!isNonCombatObject && !isFriendlyFire) {
+            // SAME-FACTION CHECK: Don't record same-faction ships as attackers
+            // This prevents same-faction grudges (e.g., two Separatists fighting each other)
+            let isSameFaction = false;
+            if (this._getShipFaction && attacker instanceof Enemy) {
+                const myFaction = this._getShipFaction(this);
+                const attackerFaction = this._getShipFaction(attacker);
+                if (myFaction !== 'UNKNOWN' && attackerFaction !== 'UNKNOWN' && myFaction === attackerFaction) {
+                    isSameFaction = true;
+                }
+            }
+
+            if (!isNonCombatObject && !isFriendlyFire && !isSameFaction) {
                 // Initialize attacker history Map if needed: attacker → {timestamp, hitCount}
                 if (!this.attackerHistory) {
                     this.attackerHistory = new Map();

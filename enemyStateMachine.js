@@ -155,19 +155,49 @@ class EnemyStateMachine {
         }
 
         // Tactical decision timer - periodically consider switching tactics
+        // GRUDGE-BASED: Higher grudge = faster decision checks (more restless)
+        const grudgeLevel = this._getGrudgeLevel ? this._getGrudgeLevel(this.target) : 0;
+        const baseTimerMin = Math.max(0.5, 2.0 - grudgeLevel * 0.3); // Faster checks with higher grudge
+        const baseTimerMax = Math.max(1.5, 4.0 - grudgeLevel * 0.5);
+
         if (this._snipingDecisionTimer === null || this._snipingDecisionTimer === undefined) {
-            this._snipingDecisionTimer = random(2.0, 4.0); // Check every 2-4 seconds
+            this._snipingDecisionTimer = random(baseTimerMin, baseTimerMax);
         }
         const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
         this._snipingDecisionTimer = Math.max(0, this._snipingDecisionTimer - deltaSeconds);
 
         if (this._snipingDecisionTimer <= 0) {
-            this._snipingDecisionTimer = random(2.0, 4.0);
+            this._snipingDecisionTimer = random(baseTimerMin, baseTimerMax);
 
-            // Random chance to switch to more aggressive tactics
-            if (random() < SNIPING_TACTIC_CHANGE_CHANCE) {
-                if (random() < SNIPING_REPOSITION_CHANCE) {
-                    // 40% of the time, reposition to a new angle
+            // GRUDGE-BASED AGGRESSION: Higher grudge = more likely to switch to attack
+            // Base chance: SNIPING_TACTIC_CHANGE_CHANCE
+            // At grudge 3+: 40% chance to switch
+            // At grudge 5+: 55% chance to switch
+            let tacticChangeChance = SNIPING_TACTIC_CHANGE_CHANCE;
+            if (grudgeLevel >= 5) {
+                tacticChangeChance = 0.55;
+            } else if (grudgeLevel >= 3) {
+                tacticChangeChance = 0.40;
+            } else if (grudgeLevel >= 2) {
+                tacticChangeChance = 0.30;
+            }
+
+            // GRUDGE-BASED: Higher grudge = prefer attack pass over reposition
+            // Base: 40% reposition, 60% attack pass
+            // At grudge 3+: 25% reposition, 75% attack pass
+            // At grudge 5+: 15% reposition, 85% attack pass
+            let repositionChance = SNIPING_REPOSITION_CHANCE;
+            if (grudgeLevel >= 5) {
+                repositionChance = 0.15;
+            } else if (grudgeLevel >= 3) {
+                repositionChance = 0.25;
+            } else if (grudgeLevel >= 2) {
+                repositionChance = 0.30;
+            }
+
+            if (random() < tacticChangeChance) {
+                if (random() < repositionChance) {
+                    // Reposition to a new angle
                     let stateData = {};
                     let v = p5.Vector.sub(this.pos, this.target.pos);
                     v.rotate(random(-PI / 2, PI / 2)); // Shift angle randomly
@@ -175,7 +205,8 @@ class EnemyStateMachine {
                     stateData.repositionTarget = p5.Vector.add(this.pos, v);
                     this.changeState(AI_STATE.REPOSITIONING, stateData);
                 } else {
-                    // 60% of the time, do an attack pass
+                    // Do an aggressive attack pass
+                    AI_LOG(`${this.shipTypeName} (SNIPING): Grudge ${grudgeLevel} triggers attack pass!`);
                     this.changeState(AI_STATE.ATTACK_PASS);
                 }
             }
@@ -243,18 +274,32 @@ class EnemyStateMachine {
         if (this.passTimer <= 0) {
             // After attack pass completion, make a tactical decision
             if (this.isTargetValid(this.target)) {
-                // 50% chance to reposition, 50% chance to go back to approaching
-                if (random() < 0.5) {
+                // GRUDGE-BASED AGGRESSION: Higher grudge = more attack runs
+                // Base chance for repositioning: 50%
+                // At grudge 3+: 30% chance to reposition (70% attack again)
+                // At grudge 5+: 20% chance to reposition (80% attack again)
+                const grudgeLevel = this._getGrudgeLevel ? this._getGrudgeLevel(this.target) : 0;
+                let repositionChance = 0.5; // Default 50% chance
+
+                if (grudgeLevel >= 5) {
+                    repositionChance = 0.20; // 20% - very aggressive
+                } else if (grudgeLevel >= 3) {
+                    repositionChance = 0.30; // 30% - aggressive
+                } else if (grudgeLevel >= 2) {
+                    repositionChance = 0.40; // 40% - slightly aggressive
+                }
+
+                if (random() < repositionChance) {
                     // Reposition after attack
                     let stateData = {};
                     let v = p5.Vector.sub(this.pos, this.target.pos);
                     v.setMag(this.repositionDistance * 1.5);
                     stateData.repositionTarget = p5.Vector.add(this.pos, v);
-                    AI_LOG(`${this.shipTypeName}: Attack pass complete, repositioning`);
+                    AI_LOG(`${this.shipTypeName}: Attack pass complete, repositioning (grudge: ${grudgeLevel})`);
                     this.changeState(AI_STATE.REPOSITIONING, stateData);
                 } else {
                     // Go directly back to approaching state for another attack run
-                    AI_LOG(`${this.shipTypeName}: Attack pass complete, resuming approach`);
+                    AI_LOG(`${this.shipTypeName}: Attack pass complete, resuming approach (grudge: ${grudgeLevel})`);
                     this.changeState(AI_STATE.APPROACHING);
                 }
             } else {
@@ -628,8 +673,11 @@ class EnemyStateMachine {
 
             case AI_STATE.ATTACK_PASS:
                 // Initialize attack pass with timer
+                // GRUDGE-BASED: Higher grudge = longer attack passes
+                const grudgeLevel = this._getGrudgeLevel ? this._getGrudgeLevel(this.target) : 0;
+                const grudgeMultiplier = 1 + Math.min(grudgeLevel * 0.06, 0.30); // Up to 30% longer at grudge 5+
                 const basePassDuration = this.passDuration;
-                this.passTimer = basePassDuration * random(0.85, 1.25);
+                this.passTimer = basePassDuration * random(0.85, 1.25) * grudgeMultiplier;
                 this.strafeDirection = random([-1, 1]); // -1 for left, 1 for right
 
                 // CALCULATE STRAFE TARGET ONCE - upon entering state
