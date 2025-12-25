@@ -111,9 +111,10 @@ class EnemyDamageSystem {
                 const existingEntry = this.attackerHistory.get(attacker);
 
                 // Update attacker history with hit count for "grudge" system
+                const MAX_GRUDGE_HIT_COUNT = 10; // Cap to prevent unbounded growth
                 if (existingEntry) {
                     // Repeat attacker - increase grudge (hit count), optionally refresh timer
-                    existingEntry.hitCount++;
+                    existingEntry.hitCount = Math.min(existingEntry.hitCount + 1, MAX_GRUDGE_HIT_COUNT);
                     if (!isCurrentTarget) {
                         existingEntry.timestamp = now; // Refresh timer only if not actively fighting
                     }
