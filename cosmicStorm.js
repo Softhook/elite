@@ -19,6 +19,8 @@ class CosmicStorm {
         this.lightningDuration = 0;
         this.lightningBolts = [];
         this.initParticles();
+        this.effectRadius = radius; // Gameplay effects apply at original radius
+        this.visualRadius = radius * 1.43; // Visual extends beyond effect for soft fade warning halo
         this.debug = false;
         this.affectedEntities = new Set();
         this.lastEffectTime = 0;
@@ -166,11 +168,11 @@ class CosmicStorm {
         // Use Canvas 2D API for efficient radial gradient, just like in Nebula
         const ctx = drawingContext;
 
-        // Create a radial gradient
-        const outerRadius = this.radius;
+        // Create a radial gradient - using larger visual radius for soft fade
+        const outerRadius = this.visualRadius;
         const gradient = ctx.createRadialGradient(
             this.pos.x, this.pos.y, 0,           // Inner circle (center point, radius 0)
-            this.pos.x, this.pos.y, outerRadius  // Outer circle
+            this.pos.x, this.pos.y, outerRadius  // Outer circle - visual radius
         );
 
         // Add color stops for smooth gradient
@@ -179,19 +181,20 @@ class CosmicStorm {
         const b = this.color[2];
         const baseAlpha = 100 * this.intensity / 255; // Convert to 0-1 range for RGBA
 
-        // Create smooth gradient that doesn't fully fade out
+        // Create smooth gradient that fades to transparent for natural look
         gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${baseAlpha})`);
-        gradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.85})`);
-        gradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.65})`);
-        gradient.addColorStop(0.85, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.45})`);
-        gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.3})`);
+        gradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.8})`);
+        gradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.55})`);
+        gradient.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.3})`);
+        gradient.addColorStop(0.85, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.12})`);
+        gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
 
         // Apply gradient to context
         ctx.fillStyle = gradient;
 
-        // Draw circle with the gradient
+        // Draw circle with the gradient - using larger visual radius
         ctx.beginPath();
-        ctx.arc(this.pos.x, this.pos.y, this.radius * 1.5, 0, TWO_PI);
+        ctx.arc(this.pos.x, this.pos.y, this.visualRadius * 1.5, 0, TWO_PI);
         ctx.fill();
     }
 
@@ -281,10 +284,10 @@ class CosmicStorm {
     // --- Utility and Effects ---
     isInView(screenBounds) {
         return (
-            this.pos.x + this.radius >= screenBounds.left &&
-            this.pos.x - this.radius <= screenBounds.right &&
-            this.pos.y + this.radius >= screenBounds.top &&
-            this.pos.y - this.radius <= screenBounds.bottom
+            this.pos.x + this.visualRadius >= screenBounds.left &&
+            this.pos.x - this.visualRadius <= screenBounds.right &&
+            this.pos.y + this.visualRadius >= screenBounds.top &&
+            this.pos.y - this.visualRadius <= screenBounds.bottom
         );
     }
 
@@ -292,7 +295,7 @@ class CosmicStorm {
         if (!entity || !entity.pos) return;
         const dist = p5.Vector.dist(entity.pos, this.pos);
         const entityId = entity.id || (entity instanceof Player ? 'player' : Date.now());
-        if (dist > this.radius) {
+        if (dist > this.effectRadius) {
             if (this.affectedEntities.has(entityId)) {
                 this.affectedEntities.delete(entityId);
                 if (this.type === 'electromagnetic') entity.targetingDisruption = 0;
@@ -300,7 +303,7 @@ class CosmicStorm {
             }
             return;
         }
-        const effectStrength = map(dist, 0, this.radius, 1, 0) * this.intensity;
+        const effectStrength = map(dist, 0, this.effectRadius, 1, 0) * this.intensity;
         if (!this.affectedEntities.has(entityId)) {
             this.affectedEntities.add(entityId);
             if (this.debug) console.log(`Entity ${entityId} entered ${this.type} storm`);

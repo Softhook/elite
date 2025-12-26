@@ -2,6 +2,8 @@
 
 ## Bugs and Issues
 
+get rid of the multiship and combat roles
+
 enemy Ship docking distance at stations should be the same as player docking distance. 
 
 Make the war state affect the enemy behavior 

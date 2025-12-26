@@ -15,7 +15,8 @@ class Nebula {
 
         // Effect settings
         this.shieldDisruptionFactor = 1.0; // Complete shield disruption
-        this.effectRadius = radius; // Same as visual radius
+        this.effectRadius = radius; // Gameplay effects apply at original radius
+        this.visualRadius = radius * 1.43; // Visual extends beyond effect for soft fade warning halo
 
         // Add debug properties
         this.debug = false;
@@ -101,11 +102,11 @@ class Nebula {
         const prevOp = ctx.globalCompositeOperation;
         ctx.globalCompositeOperation = 'screen';
 
-        // Create a radial gradient - using original nebula radius
-        const outerRadius = this.radius;
+        // Create a radial gradient - using larger visual radius for soft fade
+        const outerRadius = this.visualRadius;
         const gradient = ctx.createRadialGradient(
             this.pos.x, this.pos.y, 0,           // Inner circle (center point, radius 0)
-            this.pos.x, this.pos.y, outerRadius  // Outer circle (same center, same as nebula radius)
+            this.pos.x, this.pos.y, outerRadius  // Outer circle (same center, visual radius)
         );
 
         // Add color stops for smooth gradient
@@ -113,25 +114,24 @@ class Nebula {
         const g = this.color[1];
         const b = this.color[2];
 
-        // Start with high opacity in center, don't fully fade out at edge
+        // Start with high opacity in center, fade to transparent at edge for natural look
         const baseAlpha = this.opacity / 255; // typically ~0.47
         const a0 = baseAlpha * 0.9;
         const a1 = baseAlpha * 0.75;
-        const a2 = baseAlpha * 0.6;
-        const a3 = baseAlpha * 0.45;
-        const a4 = baseAlpha * 0.35;
-        const a5 = baseAlpha * 0.25;
+        const a2 = baseAlpha * 0.55;
+        const a3 = baseAlpha * 0.35;
+        const a4 = baseAlpha * 0.15;
         gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${a0})`);
         gradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${a1})`);
         gradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${a2})`);
         gradient.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, ${a3})`);
         gradient.addColorStop(0.85, `rgba(${r}, ${g}, ${b}, ${a4})`);
-        gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${a5})`);
+        gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
 
         // Apply gradient to context
         ctx.fillStyle = gradient;
 
-        // Draw circle with the gradient - using the nebula radius
+        // Draw circle with the gradient - using the visual radius for soft edge
         ctx.beginPath();
         ctx.arc(this.pos.x, this.pos.y, outerRadius, 0, TWO_PI);
         ctx.fill();
@@ -192,10 +192,10 @@ class Nebula {
     // Check if nebula is in view (for culling)
     isInView(screenBounds) {
         return (
-            this.pos.x + this.radius >= screenBounds.left &&
-            this.pos.x - this.radius <= screenBounds.right &&
-            this.pos.y + this.radius >= screenBounds.top &&
-            this.pos.y - this.radius <= screenBounds.bottom
+            this.pos.x + this.visualRadius >= screenBounds.left &&
+            this.pos.x - this.visualRadius <= screenBounds.right &&
+            this.pos.y + this.visualRadius >= screenBounds.top &&
+            this.pos.y - this.visualRadius <= screenBounds.bottom
         );
     }
 
