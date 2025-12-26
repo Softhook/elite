@@ -134,34 +134,24 @@ const SHIP_DEFINITIONS = {
             },
             {
                 vertexData: [{ x: -0.1312, y: 0.2187 }, { x: -0.2479, y: 0.1312 }, { x: -0.2479, y: -0.1312 }, { x: -0.1312, y: -0.2187 }, { x: -0.0146, y: -0.1604 }, { x: 0.1312, y: -0.0875 }, { x: 0.2187, y: 0.0000 }, { x: 0.1312, y: 0.0875 }, { x: -0.0146, y: 0.1604 }],
-                fillColor: [80, 140, 220]
+                fillColor: [129, 176, 238]
             },
-            // White police stripe - center
-            {
-                vertexData: [{ x: 0.6000, y: 0.0400 }, { x: -0.5000, y: 0.0400 }, { x: -0.5000, y: -0.0400 }, { x: 0.6000, y: -0.0400 }],
-                fillColor: [255, 255, 255]
-            },
-            // Police pursuit light - port (red)
             {
                 vertexData: [{ x: -0.5500, y: 0.4200 }, { x: -0.6500, y: 0.3800 }, { x: -0.5800, y: 0.3400 }],
                 fillColor: [255, 0, 0]
             },
-            // Police pursuit light - starboard (blue)
             {
                 vertexData: [{ x: -0.5500, y: -0.4200 }, { x: -0.6500, y: -0.3800 }, { x: -0.5800, y: -0.3400 }],
                 fillColor: [0, 100, 255]
             },
-            // Police badge emblem
             {
                 vertexData: [{ x: 0.3500, y: 0.0000 }, { x: 0.2800, y: 0.0600 }, { x: 0.2000, y: 0.0400 }, { x: 0.2000, y: -0.0400 }, { x: 0.2800, y: -0.0600 }],
                 fillColor: [255, 215, 0]
             },
-            // Wing tip - port
             {
                 vertexData: [{ x: -0.7000, y: 0.4600 }, { x: -0.9000, y: 0.3200 }, { x: -0.8500, y: 0.3000 }, { x: -0.6500, y: 0.4300 }],
                 fillColor: [40, 80, 150]
             },
-            // Wing tip - starboard
             {
                 vertexData: [{ x: -0.7000, y: -0.4600 }, { x: -0.9000, y: -0.3200 }, { x: -0.8500, y: -0.3000 }, { x: -0.6500, y: -0.4300 }],
                 fillColor: [40, 80, 150]
