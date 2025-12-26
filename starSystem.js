@@ -5354,6 +5354,14 @@ class StarSystem {
             }
         }
 
+        // Draw enemy targeting lines FIRST (so they appear underneath ships)
+        for (let i = 0; i < enemyCount; i++) {
+            const e = this.enemies[i];
+            if (e.drawTargetingLine && this.isInView(e.pos.x, e.pos.y, e.size * 2, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                e.drawTargetingLine();
+            }
+        }
+
         // Draw only visible enemies
         for (let i = 0; i < enemyCount; i++) {
             const e = this.enemies[i];

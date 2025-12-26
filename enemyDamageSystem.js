@@ -123,10 +123,43 @@ class EnemyDamageSystem {
                     this.attackerHistory.set(attacker, { timestamp: now, hitCount: 1 });
                 }
 
-                // Maintain lastAttacker for backwards compatibility
-                this.lastAttacker = attacker;
-                const entry = this.attackerHistory.get(attacker);
-                this.lastAttackTime = entry ? entry.timestamp : now;
+                // SMART lastAttacker UPDATE: Only switch focus when there's a meaningful reason
+                // This prevents rapid oscillation when multiple enemies are attacking
+                const LAST_ATTACKER_SWITCH_COOLDOWN_MS = 5000; // 5 second cooldown before switching focus
+                const currentAttackerEntry = this.lastAttacker ? this.attackerHistory.get(this.lastAttacker) : null;
+                const newAttackerEntry = this.attackerHistory.get(attacker);
+
+                let shouldSwitchLastAttacker = false;
+
+                if (!this.lastAttacker || !this.isTargetValid(this.lastAttacker)) {
+                    // No current lastAttacker or they're invalid - switch immediately
+                    shouldSwitchLastAttacker = true;
+                } else if (attacker === this.lastAttacker) {
+                    // Same attacker - just refresh timestamp
+                    shouldSwitchLastAttacker = false;
+                    this.lastAttackTime = now;
+                } else {
+                    // Different attacker - only switch if:
+                    // 1. New attacker has HIGHER grudge (more hits = bigger threat), OR
+                    // 2. Current lastAttacker hasn't hit us recently (stale)
+                    const newGrudge = newAttackerEntry?.hitCount || 1;
+                    const currentGrudge = currentAttackerEntry?.hitCount || 0;
+                    const timeSinceLastAttackerHit = currentAttackerEntry ? (now - currentAttackerEntry.timestamp) : Infinity;
+
+                    if (newGrudge > currentGrudge) {
+                        // New threat is more persistent - switch focus
+                        shouldSwitchLastAttacker = true;
+                    } else if (timeSinceLastAttackerHit > LAST_ATTACKER_SWITCH_COOLDOWN_MS) {
+                        // Current lastAttacker is stale - switch to new threat
+                        shouldSwitchLastAttacker = true;
+                    }
+                    // Otherwise keep focus on current lastAttacker
+                }
+
+                if (shouldSwitchLastAttacker) {
+                    this.lastAttacker = attacker;
+                    this.lastAttackTime = now;
+                }
             }
 
             // Debug log for tracking

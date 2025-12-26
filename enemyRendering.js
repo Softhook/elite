@@ -556,10 +556,12 @@ class EnemyRendering {
         }
         // --- End Barrier Effect ---
 
-        // --- Draw Other Effects (Debug Line, Force Wave, Beam, Range) ---
+        // --- Draw Other Effects (Force Wave, Beam, Range) ---
         // These use absolute coordinates or manage their own transformations
+        // NOTE: Targeting line is drawn separately via drawTargetingLine() BEFORE ships
+        // to ensure it appears underneath ships, not on top
 
-        this._drawTargetLockOnEffect();
+        this._handleTargetLockOnSound();
         // DEBUG LINE
         //if (this.target?.pos && this.role !== AI_ROLE.HAULER && (this.currentState === AI_STATE.APPROACHING || this.currentState === AI_STATE.ATTACK_PASS || this.role === AI_ROLE.ALIEN)) { 
         //     push(); let lineCol = this.p5StrokeColor; try { if (lineCol?.setAlpha) { lineCol.setAlpha(100); stroke(lineCol); } else { stroke(255, 0, 0, 100); } } catch(e) { stroke(255, 0, 0, 100); } strokeWeight(1); line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
@@ -660,10 +662,10 @@ class EnemyRendering {
 
     /**
      * @private
-     * Handles drawing the debug target line and playing the lock-on sound effect
-     * when specific conditions are met.
+     * Handles the lock-on sound effect when specific conditions are met.
+     * The targeting LINE is drawn separately via drawTargetingLine().
      */
-    _drawTargetLockOnEffect() {
+    _handleTargetLockOnSound() {
         const conditionsMetForLine = this.isTargetValid(this.target) &&
             this.role !== AI_ROLE.HAULER &&
             (this.currentState === AI_STATE.APPROACHING ||
@@ -671,42 +673,65 @@ class EnemyRendering {
                 this.role === AI_ROLE.ALIEN);
 
         if (conditionsMetForLine) {
+            // --- Sound Logic: Play only when target is Player with global and per-enemy cooldowns ---
+            if (this.target instanceof Player) {
+                const now = Date.now();
+                const GLOBAL_LOCK_SOUND_COOLDOWN_MS = 3000;
+                const PER_ENEMY_LOCK_SOUND_COOLDOWN_MS = 5000;
 
-            // --- Sound Logic: Play only when target is Player and sound hasn't been played for this lock ---
-            if (this.target instanceof Player) { // Check if the current target is the player
-                if (!this.hasPlayedLockOnSound) {
+                if (typeof EnemyRendering._lastLockOnSoundTime !== 'number') {
+                    EnemyRendering._lastLockOnSoundTime = 0;
+                }
+                if (typeof this._lastLockOnSoundTime !== 'number') {
+                    this._lastLockOnSoundTime = 0;
+                }
+
+                const globalCooldownOk = (now - EnemyRendering._lastLockOnSoundTime) >= GLOBAL_LOCK_SOUND_COOLDOWN_MS;
+                const perEnemyCooldownOk = (now - this._lastLockOnSoundTime) >= PER_ENEMY_LOCK_SOUND_COOLDOWN_MS;
+
+                if (!this.hasPlayedLockOnSound && globalCooldownOk && perEnemyCooldownOk) {
                     if (typeof soundManager !== 'undefined' && soundManager.playSound) {
-                        soundManager.playSound('targetlock'); // Ensure 'targetlock' (or 'targetLock') sound is loaded
+                        soundManager.playSound('targetlock');
                     }
-                    this.hasPlayedLockOnSound = true; // Mark sound as played for this player lock-on period
+                    this.hasPlayedLockOnSound = true;
+                    this._lastLockOnSoundTime = now;
+                    EnemyRendering._lastLockOnSoundTime = now;
                 }
             } else {
-                // If target is not the player (or no target), reset the sound flag.
-                // This allows the sound to play again if the player is re-acquired.
                 this.hasPlayedLockOnSound = false;
             }
-
-            // Always draw the line if conditions are met
-            // Avoid mutating shared p5 color instance; use raw RGBA values
-            try {
-                const sc = this.strokeColorValue;
-                push();
-                if (Array.isArray(sc) && sc.length >= 3) {
-                    stroke(sc[0], sc[1], sc[2], 100);
-                } else {
-                    stroke(255, 0, 0, 100);
-                }
-                strokeWeight(1);
-                line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
-                pop();
-            } catch (e) {
-                // Defensive fallback
-                push(); stroke(255, 0, 0, 100); strokeWeight(1);
-                line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
-            }
         } else {
-            // If conditions are NOT met, reset the sound flag so it can play next time
             this.hasPlayedLockOnSound = false;
+        }
+    }
+
+    /**
+     * Draws the targeting line from this enemy to its target.
+     * Called separately from draw() to allow proper layering (lines underneath ships).
+     */
+    drawTargetingLine() {
+        const shouldDrawLine = this.isTargetValid(this.target) &&
+            this.role !== AI_ROLE.HAULER &&
+            (this.currentState === AI_STATE.APPROACHING ||
+                this.currentState === AI_STATE.ATTACK_PASS ||
+                this.role === AI_ROLE.ALIEN);
+
+        if (!shouldDrawLine) return;
+
+        try {
+            const sc = this.strokeColorValue;
+            push();
+            if (Array.isArray(sc) && sc.length >= 3) {
+                stroke(sc[0], sc[1], sc[2], 100);
+            } else {
+                stroke(255, 0, 0, 100);
+            }
+            strokeWeight(1);
+            line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y);
+            pop();
+        } catch (e) {
+            push(); stroke(255, 0, 0, 100); strokeWeight(1);
+            line(this.pos.x, this.pos.y, this.target.pos.x, this.target.pos.y); pop();
         }
     }
 }

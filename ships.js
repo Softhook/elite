@@ -1185,7 +1185,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: [], price: 20000, techLevel: 2,
-        aiRoles: ["COMBAT", "IMPERIAL", "GUARD"]
+        aiRoles: ["COMBAT", "IMPERIAL"]
     },
     "ImperialCourier": {
         name: "Imperial Courier", role: "Light Fighter/Multi", sizeCategory: "Small", size: 32,
@@ -1226,7 +1226,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: [], price: 58000, techLevel: 3,
-        aiRoles: ["COMBAT", "IMPERIAL", "GUARD"]
+        aiRoles: ["COMBAT", "IMPERIAL"]
     },
     "ImperialLancer": {
         name: "Imperial Lancer", role: "Fast Attack Interceptor", sizeCategory: "Small", size: 34,
@@ -1245,7 +1245,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: [], price: 62000, techLevel: 4,
-        aiRoles: ["COMBAT", "IMPERIAL", "GUARD"]
+        aiRoles: ["COMBAT", "IMPERIAL"]
     },
     "ImperialGuardian": {
         name: "Imperial Guardian", role: "System Patrol Cutter", sizeCategory: "Medium", size: 50,
@@ -1415,7 +1415,7 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: [], price: 28000, techLevel: 2,
-        aiRoles: ["COMBAT", "SEPARATIST", "GUARD"]
+        aiRoles: ["COMBAT", "SEPARATIST"]
     },
     "SeparatistLiberator": {
         name: "Separatist Liberator", role: "Assault Fighter", sizeCategory: "Small", size: 36,

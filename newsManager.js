@@ -499,20 +499,20 @@ class NewsManager {
             read: false
         };
 
-        // Binary search for insert position (sorted by priority desc, then timestamp desc)
+        // Binary search for insert position (sorted by timestamp desc - newest first)
+        // Priority is kept for visual styling only (badges, colors), not sort order
         const items = this.newsItems;
         const len = items.length;
         if (len === 0) {
             items.push(newItem);
         } else {
             let low = 0, high = len;
-            const newPri = newItem.priority;
             const newTime = newItem.timestamp;
             while (low < high) {
                 const mid = (low + high) >>> 1;
                 const midItem = items[mid];
-                if (midItem.priority > newPri ||
-                    (midItem.priority === newPri && midItem.timestamp >= newTime)) {
+                // Sort purely by timestamp (newest first)
+                if (midItem.timestamp >= newTime) {
                     low = mid + 1;
                 } else {
                     high = mid;

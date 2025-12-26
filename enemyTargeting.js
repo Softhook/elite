@@ -450,11 +450,17 @@ class EnemyTargeting {
             // Either keeping same target or couldn't switch yet
             return this.target !== null;
         } else {
-            if (this.target instanceof Player) {
-                //console.log(`%c🎯 PLAYER LOST: ${this.shipTypeName} stopped targeting player`, 'color:orange');
+            // No valid target found
+            // IMPORTANT: Don't clear target while cooldown is active to prevent rapid switching exploit
+            // where target becomes null, then new target is acquired as 'initial' (bypassing cooldown)
+            if (this.targetSwitchCooldown <= 0) {
+                if (this.target instanceof Player) {
+                    //console.log(`%c🎯 PLAYER LOST: ${this.shipTypeName} stopped targeting player`, 'color:orange');
+                }
+                this.target = null;
             }
-            this.target = null;
-            return false;
+            // Return whether we still have a valid target
+            return this.target !== null && this.isTargetValid(this.target);
         }
     }
 
