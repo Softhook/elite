@@ -583,6 +583,10 @@ class UIStationMenus {
         const availableShips = typeof SHIP_DEFINITIONS !== 'undefined' ? Object.entries(SHIP_DEFINITIONS).filter(([shipKey, shipData]) => {
             // Never show alien ships
             if (shipData.aiRoles && shipData.aiRoles.includes("ALIEN")) return false;
+            // Never show police, guard, or bounty hunter ships
+            if (shipData.aiRoles && shipData.aiRoles.includes("POLICE")) return false;
+            if (shipData.aiRoles && shipData.aiRoles.includes("GUARD")) return false;
+            if (shipData.aiRoles && shipData.aiRoles.includes("BOUNTY_HUNTER")) return false;
 
             // Faction-specific ship filtering
             // Imperial ships only in Imperial systems
