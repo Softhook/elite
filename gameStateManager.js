@@ -1789,10 +1789,12 @@ class GameStateManager {
      */
     _drawPlanetBufferProgress() {
         try {
+            // Skip during jump/teleport - the white fade overlay covers loading
             if (typeof window === 'undefined' ||
                 !window._planetBufferCreationTotal ||
                 (window._planetBufferCreationCompleted || 0) >= window._planetBufferCreationTotal ||
-                this.currentState === "JUMPING") {
+                this.currentState === "JUMPING" ||
+                this.jumpFadeState !== "NONE") {
                 return;
             }
 
