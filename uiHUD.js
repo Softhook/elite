@@ -1140,10 +1140,8 @@ class UIHUD {
             if (target.repairTarget && !target.repairTarget.destroyed) {
                 const structureType = target.repairTarget.type || 'Structure';
                 const typeName = structureType.charAt(0).toUpperCase() + structureType.slice(1);
-                const distToTarget = target.pos && target.repairTarget.pos
-                    ? dist(target.pos.x, target.pos.y, target.repairTarget.pos.x, target.repairTarget.pos.y)
-                    : Infinity;
-                if (distToTarget < 80) {
+                // Use the AI's _isRepairingTarget flag to stay in sync with actual state
+                if (target._isRepairingTarget) {
                     return `Repairing ${typeName}`;
                 }
                 return `En Route to ${typeName}`;

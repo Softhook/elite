@@ -602,28 +602,25 @@ class EnemyRendering {
         }
 
         // --- Repair Beam Effect (REPAIR role) ---
-        if (this.role === AI_ROLE.REPAIR && this.repairTarget && this.currentState === AI_STATE.IDLE) {
-            const distToTarget = dist(this.pos.x, this.pos.y, this.repairTarget.pos.x, this.repairTarget.pos.y);
+        // Use _isRepairingTarget flag to stay consistent with AI state
+        if (this.role === AI_ROLE.REPAIR && this._isRepairingTarget && this.repairTarget && this.repairTarget.pos) {
+            push();
 
-            if (distToTarget < 80) { // Within repair range
-                push();
+            // Draw pulsing repair beam
+            const pulsePhase = (now * 0.003) % 1;
+            const alpha = 100 + 100 * Math.sin(pulsePhase * TWO_PI);
 
-                // Draw pulsing repair beam
-                const pulsePhase = (now * 0.003) % 1;
-                const alpha = 100 + 100 * Math.sin(pulsePhase * TWO_PI);
+            stroke(100, 255, 200, alpha);
+            strokeWeight(2 + Math.sin(pulsePhase * TWO_PI) * 0.5);
+            line(this.pos.x, this.pos.y, this.repairTarget.pos.x, this.repairTarget.pos.y);
 
-                stroke(100, 255, 200, alpha);
-                strokeWeight(2 + Math.sin(pulsePhase * TWO_PI) * 0.5);
-                line(this.pos.x, this.pos.y, this.repairTarget.pos.x, this.repairTarget.pos.y);
+            // Draw glow at endpoints
+            noStroke();
+            fill(100, 255, 200, alpha * 0.6);
+            ellipse(this.pos.x, this.pos.y, 8, 8);
+            ellipse(this.repairTarget.pos.x, this.repairTarget.pos.y, 12, 12);
 
-                // Draw glow at endpoints
-                noStroke();
-                fill(100, 255, 200, alpha * 0.6);
-                ellipse(this.pos.x, this.pos.y, 8, 8);
-                ellipse(this.repairTarget.pos.x, this.repairTarget.pos.y, 12, 12);
-
-                pop();
-            }
+            pop();
         }
 
         // --- Reconstruction Ring Effect (REPAIR role) ---

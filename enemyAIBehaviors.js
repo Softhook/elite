@@ -2476,7 +2476,7 @@ class EnemyAIBehaviors {
      */
     static get REPAIR_CONFIG() {
         return {
-            REPAIR_RANGE: 80,              // Distance at which repair operations can occur
+            REPAIR_RANGE: 150,             // Distance at which repair operations can occur
             RECONSTRUCTION_RANGE: 100,      // Distance needed to reconstruct space objects
             REPAIR_RATE: 4,                 // Health points restored per second
             RECONSTRUCTION_TIME: 30.0,       // Seconds required to build a new space object
@@ -2524,17 +2524,30 @@ class EnemyAIBehaviors {
             );
 
             const repairRange = EnemyAIBehaviors.REPAIR_CONFIG.REPAIR_RANGE;
+            // Hysteresis: start repairing at repairRange, stop when > repairRange * 1.5
+            const repairExitRange = repairRange * 1.5;
 
-            if (distToTarget < repairRange) {
-                // Within range - perform repairs (frame-rate independent braking)
+            // Simple state tracking with hysteresis
+            const isCurrentlyRepairing = this._isRepairingTarget === true;
+
+            // Enter repair if close enough, OR stay in repair if already repairing and not too far
+            const shouldRepair = (distToTarget <= repairRange) ||
+                (isCurrentlyRepairing && distToTarget <= repairExitRange);
+
+            if (shouldRepair) {
+                // Within range - perform repairs
+                this._isRepairingTarget = true;
                 this.changeState(AI_STATE.IDLE);
                 this.performRepair(system, this.repairTarget);
+
+                // Slow down and stay near target (frame-rate independent braking)
                 const repairTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
-                this.vel.mult(Math.pow(0.9, repairTimeScale));
+                this.vel.mult(Math.pow(0.85, repairTimeScale));
 
                 // Check if current target is fully repaired
                 if (!this.isRepairTargetValid(this.repairTarget)) {
                     // Target fully repaired, find next target
+                    this._isRepairingTarget = false;
                     this.repairTarget = this.selectRepairTarget(this.findAllDamagedSpaceObjects(system));
 
                     if (this.repairTarget) {
@@ -2543,6 +2556,7 @@ class EnemyAIBehaviors {
                 }
             } else {
                 // Move towards damaged object
+                this._isRepairingTarget = false;
                 this.changeState(AI_STATE.PATROLLING);
                 this.performRotationAndThrust(this.repairTarget.pos);
             }
