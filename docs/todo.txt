@@ -1,8 +1,14 @@
 # Elite Game Development TODO
 
-## Bugs and Issues
+
+
+Implement three levels of boosters 
 
 get rid of the multiship and combat roles
+
+
+-----
+
 
 enemy Ship docking distance at stations should be the same as player docking distance. 
 
@@ -28,31 +34,17 @@ organised invasion missions that invovle jump to another system with 10 team mem
 
 Create a new weapon called an EMP mine which basically drops. Energy storms 
 
-intermittent events like plague or famine or war that are creating Changes, which would display on the map 
-
-create faction missions where belonging to a faction gives advantages when killing enemies of another faction and provides faction specific missions. 
-
-Make use of the hidden stations. By creating missions that make use of them and give you access to the hidden station detector 
-
 In a war situation, change the spawn distribution in the different systems.
 
 
 Integrate the nrrative class
-
-- All projectile collisions use simple circle-based detection regardless of ship shape
-Problems:
-Hits register when visually the projectile hasn't touched the ship
-Misses occur when projectiles appear to hit elongated ship parts
-Solution: Implement more precise hitbox system using ship vertex data
 
 police perform scan of any ship within 500 units lookig for illegal goods
 
 
 Spcial events: 
 
-- war seperatist vs alliance battle
-- News famine change the cost of food in connected systems
-- News religious uprising drop cost of luxury goods
+Make the war state a ratchet system. What is the situation in sort of random full war
 - News war prerations cost of weapons goes up
 
 
@@ -62,19 +54,12 @@ weapon range weapon speed
 - alien attack behaviour aim and shoot, asssasin
 - opposturnity, assasin, alien enemy beahviour
 
-- Implement ship upgrades beyond weapons:
-- Shield generators/boosters
 
 ## AI
-
-mining Ai for prospectors look for the nearest asteroid and mine, pick up cargo and bring it back to the station.
-There are many of them in mining systems
 
 A new AI role could be avoiding dangerous places such as nebula that cause damage or mines 
 
 ## Editor
-
-- editor mirror editing mode
 
 ## Graphics and UI Improvements
 - mulitple thurst ports on large ships
@@ -97,6 +82,8 @@ A new AI role could be avoiding dangerous places such as nebula that cause damag
   - Rescue missions
   - Exploration missions - find specific named planet or hidden base ona planet
   - Mining contracts
+  guard contracts
+  bounty contracts
   - Salvage operations
 - Implement mission chains with storylines
 - Implement random events while traveling
@@ -106,9 +93,6 @@ A new AI role could be avoiding dangerous places such as nebula that cause damag
 - Implement alien invasion scenarios
 
 ## Technical Improvements
-
-- Optimize rendering for large numbers of objects
-- Implement spatial partitioning for collision detection
 
 ## Future / Advanced Features
 

@@ -175,10 +175,11 @@ class EnemyUtils {
         this.thrustVector.mult(this.thrustForce * multiplier);
         this.vel.add(this.thrustVector);
 
-        // Visual particles from right side (opposite to movement direction)
+        // Visual particles - match player's kiteLeft pattern exactly
+        // Particles show thrust going RIGHT (opposite of movement)
         const isAlien = typeof AI_ROLE !== 'undefined' && this.role === AI_ROLE.ALIEN;
         if (this.thrustManager && !isAlien) {
-            this.thrustManager.createThrust(this.pos, this.angle + HALF_PI, this.size * 0.7);
+            this.thrustManager.createThrust(this.pos, strafeAngle, this.size * 0.8);
         }
     }
 
@@ -195,10 +196,11 @@ class EnemyUtils {
         this.thrustVector.mult(this.thrustForce * multiplier);
         this.vel.add(this.thrustVector);
 
-        // Visual particles from left side (opposite to movement direction)
+        // Visual particles - match player's kiteRight pattern exactly
+        // Particles show thrust going LEFT (opposite of movement)
         const isAlien = typeof AI_ROLE !== 'undefined' && this.role === AI_ROLE.ALIEN;
         if (this.thrustManager && !isAlien) {
-            this.thrustManager.createThrust(this.pos, this.angle - HALF_PI, this.size * 0.7);
+            this.thrustManager.createThrust(this.pos, strafeAngle, this.size * 0.8);
         }
     }
 
@@ -215,12 +217,31 @@ class EnemyUtils {
         this.thrustVector.mult(this.thrustForce * multiplier);
         this.vel.add(this.thrustVector);
 
-        // Visual particles from front (retro-thrusters)
+        // Visual particles from front (retro-thrusters) - match player's reverseThrust exactly
+        // Must calculate positions at the FRONT of the ship, not just use this.pos
         const isAlien = typeof AI_ROLE !== 'undefined' && this.role === AI_ROLE.ALIEN;
         if (this.thrustManager && !isAlien) {
-            // Create thrust particles from front of ship (angled outward like retro rockets)
-            this.thrustManager.createThrust(this.pos, this.angle - PI * 0.25, this.size * 0.6);
-            this.thrustManager.createThrust(this.pos, this.angle + PI * 0.25, this.size * 0.6);
+            // Use cached temp position to avoid allocations
+            if (!this._tempThrustPos) this._tempThrustPos = createVector(0, 0);
+
+            const piOver4 = PI * 0.25;
+            const offset = this.size * 0.7;        // How far forward from center
+            const offsetSide = this.size * 0.4;    // How far to the side
+            const thrustSize = this.size * 0.7;
+
+            // Left front thruster: positioned at front-left of ship
+            const leftThrusterAngle = this.angle - piOver4;
+            const leftPosX = this.pos.x + cos(this.angle) * offset + cos(this.angle - HALF_PI) * offsetSide;
+            const leftPosY = this.pos.y + sin(this.angle) * offset + sin(this.angle - HALF_PI) * offsetSide;
+            this._tempThrustPos.set(leftPosX, leftPosY);
+            this.thrustManager.createThrust(this._tempThrustPos, leftThrusterAngle, thrustSize);
+
+            // Right front thruster: positioned at front-right of ship
+            const rightThrusterAngle = this.angle + piOver4;
+            const rightPosX = this.pos.x + cos(this.angle) * offset + cos(this.angle + HALF_PI) * offsetSide;
+            const rightPosY = this.pos.y + sin(this.angle) * offset + sin(this.angle + HALF_PI) * offsetSide;
+            this._tempThrustPos.set(rightPosX, rightPosY);
+            this.thrustManager.createThrust(this._tempThrustPos, rightThrusterAngle, thrustSize);
         }
     }
 
