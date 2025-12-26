@@ -16,6 +16,7 @@ class EventManager {
             MINER: [],
             MILITARY: [], // Maps to COMBAT/MILITARY
             BOUNTY_HUNTER: [],
+            GUARD: [],   // Ships specifically designed for guard role
             SEPARATIST: [],
             IMPERIAL: []
         };
@@ -62,6 +63,7 @@ class EventManager {
             if (def.aiRoles.includes("MINER")) this.shipGroups.MINER.push(key);
             if (def.aiRoles.includes("MILITARY") || def.aiRoles.includes("COMBAT")) this.shipGroups.MILITARY.push(key);
             if (def.aiRoles.includes("BOUNTY_HUNTER")) this.shipGroups.BOUNTY_HUNTER.push(key);
+            if (def.aiRoles.includes("GUARD")) this.shipGroups.GUARD.push(key);
             if (def.aiRoles.includes("SEPARATIST")) this.shipGroups.SEPARATIST.push(key);
             if (def.aiRoles.includes("IMPERIAL")) this.shipGroups.IMPERIAL.push(key);
         }
@@ -73,6 +75,7 @@ class EventManager {
         if (this.shipGroups.ALIEN.length === 0) this.shipGroups.ALIEN.push('Thargoid');
         if (this.shipGroups.MILITARY.length === 0) this.shipGroups.MILITARY.push('Viper');
         if (this.shipGroups.BOUNTY_HUNTER.length === 0) this.shipGroups.BOUNTY_HUNTER.push('ViperBH');
+        if (this.shipGroups.GUARD.length === 0) this.shipGroups.GUARD.push('Viper');
         if (this.shipGroups.SEPARATIST.length === 0) this.shipGroups.SEPARATIST.push('Sidewinder');
         if (this.shipGroups.IMPERIAL.length === 0) this.shipGroups.IMPERIAL.push('Viper');
 
@@ -363,8 +366,8 @@ class EventManager {
                     useRankFactorForCount: true,
                     shipSelection: {
                         strategy: 'randomFromList',
-                        shipList: this.shipGroups.MILITARY,
-                        fallbackShip: "Viper"
+                        shipList: this.shipGroups.POLICE,  // Use POLICE ships for POLICE role
+                        fallbackShip: "ViperPol"
                     },
                     aiRole: AI_ROLE.POLICE,
                     spawnRadiusMin: 1700,
@@ -1531,7 +1534,7 @@ class EventManager {
             case AI_ROLE.PIRATE: group = this.shipGroups.PIRATE; break;
             case AI_ROLE.HAULER: group = this.shipGroups.TRADER; break;
             case AI_ROLE.BOUNTY_HUNTER: group = this.shipGroups.BOUNTY_HUNTER; break;
-            case AI_ROLE.GUARD: group = this.shipGroups.MILITARY; break;
+            case AI_ROLE.GUARD: group = this.shipGroups.GUARD; break;  // Use GUARD ships for GUARD role
             case AI_ROLE.COMBAT: group = this.shipGroups.MILITARY; break;
             case AI_ROLE.ALIEN: group = this.shipGroups.ALIEN; break;
             default: group = this.shipGroups.PIRATE;
