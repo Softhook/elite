@@ -489,6 +489,11 @@ class Galaxy {
             this.currentSystemIndex = targetIndex;
             const newSystem = this.getCurrentSystem(); // Use the safer getter
 
+            // Invalidate galaxy map cache to ensure fresh data for new system
+            if (typeof uiManager !== 'undefined' && uiManager.galaxyMap && typeof uiManager.galaxyMap.invalidateCache === 'function') {
+                uiManager.galaxyMap.invalidateCache();
+            }
+
             // Record system visit in player's personal record with economy and security context
             if (player && typeof player.recordSystemVisit === 'function') {
                 player.recordSystemVisit(

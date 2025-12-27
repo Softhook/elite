@@ -51,6 +51,15 @@ class UIGalaxyMap {
     }
 
     /**
+     * Invalidates the market overlay cache to force fresh data on next draw.
+     * Should be called when jumping to a new system.
+     */
+    invalidateCache() {
+        this._marketOverlayCacheIndex = -1;
+        this._marketOverlayDescText = '';
+    }
+
+    /**
      * Draws the Galaxy Map screen.
      * @param {Galaxy} galaxy
      * @param {Player} player
@@ -331,15 +340,22 @@ class UIGalaxyMap {
             this._marketOverlayDescHeight = descHeight;
         }
 
+        // Helper to check if a space object is alive and valid for display
+        const isAlive = (so) => {
+            if (!so || so.destroyed) return false;
+            if (typeof so.health === 'number' && so.health <= 0) return false;
+            return true;
+        };
+
         // Prepare lists: planets (all) and dockable space objects (filtered)
         const planets = system.planets || [];
         let dockableObjects = [];
         if (system.spaceObjects && system.spaceObjects.length) {
             if (typeof DOCKABLE_SPACE_OBJECT_TYPES !== 'undefined') {
-                dockableObjects = system.spaceObjects.filter(so => DOCKABLE_SPACE_OBJECT_TYPES.includes(so.type));
+                dockableObjects = system.spaceObjects.filter(so => isAlive(so) && DOCKABLE_SPACE_OBJECT_TYPES.includes(so.type));
             } else {
                 // Fallback: check for explicit flags on objects
-                dockableObjects = system.spaceObjects.filter(so => so.isDockable || so.canDock || so.isStation);
+                dockableObjects = system.spaceObjects.filter(so => isAlive(so) && (so.isDockable || so.canDock || so.isStation));
             }
         }
 
@@ -441,7 +457,7 @@ class UIGalaxyMap {
         // Also map quantum gates by planet (they're not in dockableObjects)
         if (system.spaceObjects && system.spaceObjects.length) {
             for (let so of system.spaceObjects) {
-                if (so && so.type === 'quantumGate' && !so.destroyed) {
+                if (so && so.type === 'quantumGate' && isAlive(so)) {
                     const pIdx = (typeof so.planetIndex === 'number') ? so.planetIndex : null;
                     if (pIdx !== null) {
                         if (!quantumGatesByPlanet[pIdx]) quantumGatesByPlanet[pIdx] = [];
