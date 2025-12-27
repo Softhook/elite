@@ -131,6 +131,10 @@ function initializeGameObjects() {
     communicationSystem = new CommunicationSystem();
     const newsManager = new NewsManager();
 
+    // Initialize communication system with references
+    communicationSystem.initialize({ uiManager, player });
+    communicationSystem.initializeSpeech(); // Enable speech synthesis
+
     Object.assign(GameGlobals, {
         gameStateManager,
         galaxy,
@@ -1475,9 +1479,15 @@ function resetGame() {
     inventoryScreen = new InventoryScreen();
     saveSelectionScreen = new SaveSelectionScreen();
     eventManager = new EventManager();
+
+    // Clean up old speech before creating new communication system
+    if (communicationSystem && typeof communicationSystem.cleanupSpeech === 'function') {
+        communicationSystem.cleanupSpeech();
+    }
     communicationSystem = new CommunicationSystem();
     stationMusicManager = new StationMusicManager();
     communicationSystem.initialize({ uiManager, player });
+    communicationSystem.initializeSpeech(); // Enable speech synthesis for ship communications
 
     // Reinitialize player ship definition
     if (typeof player.applyShipDefinition === 'function') {

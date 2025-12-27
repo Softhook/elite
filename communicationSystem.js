@@ -10,6 +10,13 @@ class CommunicationSystem {
         this._lastGlobalMessageTime = -Infinity;
         this._playerTitle = "Commander";
 
+        // Speech synthesis properties
+        this._speechQueue = [];           // Queue of messages to speak
+        this._isSpeaking = false;         // Lock to prevent overlapping speech
+        this._voiceByEnemy = new Map();   // Cache voice index per enemy for consistency
+        this._speech = null;              // p5.Speech instance (initialized later)
+        this._speechEnabled = true;       // Master toggle for speech
+
         this._cargoWords = ["cargo", "freight", "payload", "haul", "manifest", "containers", "stock"];
         // Use shared constant from enemyConstants.js for pirate gang names
         this._pirateGroups = (typeof PIRATE_GANG_NAMES !== 'undefined') ? PIRATE_GANG_NAMES : [
@@ -453,6 +460,150 @@ class CommunicationSystem {
         this.player = player;
     }
 
+    /**
+     * Initialize speech synthesis with p5.Speech
+     * Should be called after p5 is ready
+     */
+    initializeSpeech() {
+        // Clean up any existing speech first
+        this.cleanupSpeech();
+
+        if (typeof p5 === 'undefined' || typeof p5.Speech === 'undefined') {
+            console.warn('CommunicationSystem: p5.Speech not available');
+            this._speechEnabled = false;
+            return;
+        }
+
+        try {
+            this._speech = new p5.Speech();
+            this._speech.setVolume(0.45); // Low volume - background context
+            this._speech.interrupt = false; // Queue mode
+
+            // When speech ends, process next in queue
+            this._speech.onEnd = () => {
+                this._isSpeaking = false;
+                this._processQueue();
+            };
+
+            this._speechEnabled = true;
+            console.log('CommunicationSystem: Speech synthesis initialized');
+        } catch (e) {
+            console.warn('CommunicationSystem: Failed to initialize speech', e);
+            this._speechEnabled = false;
+        }
+    }
+
+    /**
+     * Clean up speech synthesis - stop any active speech and clear queue
+     * Should be called before game reset or when cleaning up resources
+     */
+    cleanupSpeech() {
+        // Stop any active speech
+        if (this._speech) {
+            try {
+                this._speech.cancel();
+            } catch (e) {
+                // Ignore errors during cleanup
+            }
+        }
+
+        // Clear the queue
+        this._speechQueue = [];
+        this._isSpeaking = false;
+        this._voiceByEnemy.clear();
+
+        console.log('CommunicationSystem: Speech cleaned up');
+    }
+
+    /**
+     * Queue a message to be spoken with a voice assigned to the enemy
+     * @param {string} message - The message to speak
+     * @param {Object} enemy - The enemy ship sending the message (for voice assignment)
+     */
+    _queueSpeech(message, enemy) {
+        if (!this._speechEnabled || !this._speech || !this._speech.isLoaded) {
+            return;
+        }
+
+        // Strip special characters (alien symbols, etc.) and clean up
+        let cleanMessage = message
+            .replace(/[⟟⟊⟒⋮⊑✦☼⌬𐌰𐌿𐍄∴ʘ͜ʖ∰⟴⟁⋇ᚠᛇᚻᚾᚪᚷᛟᚾᛖᚱᛚᛝ҉☍☌彡彗ζ≀₪ᚺᚨᛚ¤Ѫ≀∿▣▢◬Ϟϟƛ𓆣◯]/g, ''); // Remove alien symbols
+
+        // Skip if message is mostly symbols (alien speech)
+        if (cleanMessage.replace(/[^a-zA-Z]/g, '').length < 5) {
+            return;
+        }
+
+        // Clean up extra whitespace
+        cleanMessage = cleanMessage.replace(/\s+/g, ' ').trim();
+
+        if (!cleanMessage) {
+            return;
+        }
+
+        // Assign a voice index for this enemy (consistent voice per ship)
+        let voiceIndex = 0;
+        if (enemy) {
+            const enemyKey = this._getEnemyKey(enemy);
+            if (enemyKey) {
+                if (!this._voiceByEnemy.has(enemyKey)) {
+                    // Assign a random voice index
+                    const voiceCount = this._speech.voices?.length || 10;
+                    this._voiceByEnemy.set(enemyKey, Math.floor(Math.random() * voiceCount));
+                }
+                voiceIndex = this._voiceByEnemy.get(enemyKey);
+            }
+        } else {
+            // Random voice for non-enemy messages
+            const voiceCount = this._speech.voices?.length || 10;
+            voiceIndex = Math.floor(Math.random() * voiceCount);
+        }
+
+        // Add to queue
+        this._speechQueue.push({
+            message: cleanMessage,
+            voiceIndex: voiceIndex
+        });
+
+        // Start processing if not already speaking
+        this._processQueue();
+    }
+
+    /**
+     * Process the speech queue - speak the next message if not already speaking
+     */
+    _processQueue() {
+        if (this._isSpeaking || this._speechQueue.length === 0) {
+            return;
+        }
+
+        if (!this._speech || !this._speech.isLoaded) {
+            return;
+        }
+
+        const item = this._speechQueue.shift();
+        this._isSpeaking = true;
+
+        // Set voice for this message
+        try {
+            this._speech.setVoice(item.voiceIndex);
+
+            // Vary rate and pitch slightly for more natural variation
+            const rate = 0.9 + Math.random() * 0.3;  // 0.9-1.2
+            const pitch = 0.8 + Math.random() * 0.4; // 0.8-1.2
+            this._speech.setRate(rate);
+            this._speech.setPitch(pitch);
+
+            // Speak the message
+            this._speech.speak(item.message);
+        } catch (e) {
+            console.warn('CommunicationSystem: Speech error', e);
+            this._isSpeaking = false;
+            // Try next in queue
+            setTimeout(() => this._processQueue(), 100);
+        }
+    }
+
     handleStateChange(enemy, oldState, newState) {
         if (!enemy || !this._isPlayerTarget(enemy)) {
             return;
@@ -715,6 +866,10 @@ class CommunicationSystem {
             ? this.uiManager.addCommunicationMessage.bind(this.uiManager)
             : this.uiManager.addMessage.bind(this.uiManager);
         addFn(message, color, duration);
+
+        // Queue speech for this message (after displaying text)
+        this._queueSpeech(message, enemy);
+
         enemyRecord[category] = now;
         this._enemyCooldowns.set(enemyKey, enemyRecord);
         this._lastGlobalMessageTime = now;
