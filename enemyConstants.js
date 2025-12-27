@@ -108,11 +108,19 @@ const FACTION_ENEMY_MAP = {
 };
 
 // Defines which roles are hostile to other roles/factions
+// Note: Actual targeting logic is implemented in evaluateTargetScore() - this map is for reference
+// and used by off-screen targeting optimization
 const ROLE_ENEMY_MAP = {
-    [AI_ROLE.ALIEN]: ['MILITARY'], // Aliens specifically target military first
+    [AI_ROLE.ALIEN]: ['MILITARY'], // Aliens specifically target military first, but hostile to all non-aliens
     [AI_ROLE.PIRATE]: [AI_ROLE.HAULER, AI_ROLE.TRANSPORT], // Pirates prey on commerce
     [AI_ROLE.POLICE]: [AI_ROLE.PIRATE, AI_ROLE.ALIEN], // Police hunt criminals and aliens
-    [AI_ROLE.COMBAT]: [AI_ROLE.PIRATE, AI_ROLE.ALIEN]  // Combat ships hunt threats
+    [AI_ROLE.COMBAT]: [AI_ROLE.PIRATE, AI_ROLE.ALIEN],  // Combat ships hunt threats (+ faction rivalries)
+    [AI_ROLE.BOUNTY_HUNTER]: ['BOUNTY_TARGET'], // Special: targets assigned bountyTarget (player, pirate, combat ship, etc.)
+    [AI_ROLE.GUARD]: ['PRINCIPAL_ATTACKER'], // Special: only retaliates against principal's attacker or self-defense
+    [AI_ROLE.HAULER]: [], // Defensive only - retaliates when attacked
+    [AI_ROLE.TRANSPORT]: [], // Defensive only - retaliates when attacked
+    [AI_ROLE.MINER]: [], // Defensive only - focuses on mining asteroids
+    [AI_ROLE.REPAIR]: [] // Non-combatant - focuses on repair duties
 };
 
 // -------------------------
