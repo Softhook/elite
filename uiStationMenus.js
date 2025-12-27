@@ -588,13 +588,13 @@ class UIStationMenus {
             if (shipData.aiRoles && shipData.aiRoles.includes("GUARD")) return false;
             if (shipData.aiRoles && shipData.aiRoles.includes("BOUNTY_HUNTER")) return false;
 
-            // Faction-specific ship filtering
+            // Faction-specific ship filtering (using faction property)
             // Imperial ships only in Imperial systems
-            if (shipData.aiRoles?.includes("IMPERIAL") && !isImperialSystem) return false;
+            if (shipData.faction === "IMPERIAL" && !isImperialSystem) return false;
             // Separatist ships only in Separatist systems
-            if (shipData.aiRoles?.includes("SEPARATIST") && !isSeparatistSystem) return false;
+            if (shipData.faction === "SEPARATIST" && !isSeparatistSystem) return false;
             // Military ships only in Military systems
-            if (shipData.aiRoles?.includes("MILITARY") && !isMillitarySystem) return false;
+            if (shipData.faction === "MILITARY" && !isMillitarySystem) return false;
 
             // Tech level filtering
             const shipTechLevel = shipData.techLevel || Math.min(5, Math.ceil(shipData.price / 40000));

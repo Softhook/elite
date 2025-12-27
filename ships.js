@@ -37,6 +37,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: [],
         price: 15900,
         aiRoles: ["POLICE"],
+        faction: "POLICE",
         techLevel: 1 // Starter
     },
     "CobraMkPol": {
@@ -73,6 +74,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Food"],
         price: 21600,
         aiRoles: ["POLICE"],
+        faction: "POLICE",
         techLevel: 2 // Utility
     },
     "Viper": {
@@ -118,7 +120,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Computers", "Weapons"],
         price: 24500,
-        aiRoles: ["MILITARY", "COMBAT"],
+        aiRoles: ["COMBAT"],
+        faction: "MILITARY",
         techLevel: 3
     },
     "ViperPol": {
@@ -160,6 +163,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: [],
         price: 25500,
         aiRoles: ["POLICE"],
+        faction: "POLICE",
         techLevel: 3
     },
     "ViperBH": {
@@ -214,6 +218,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Weapons", "Narcotics"],
         price: 26500,
         aiRoles: ["BOUNTY_HUNTER"],
+        faction: "",
         techLevel: 3
     },
     "ViperGuard": {
@@ -263,6 +268,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: [],
         price: 27500,
         aiRoles: ["GUARD"],
+        faction: "",
         techLevel: 3
     },
 
@@ -309,7 +315,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Computers", "Computers", "Computers", "Weapons", "Metals", "Adv Components"],
         price: 59300,
-        aiRoles: ["MILITARY"],
+        aiRoles: ["COMBAT"],
+        faction: "MILITARY",
         techLevel: 4 // Advanced
     },
 
@@ -355,7 +362,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: [],
         price: 69700,
-        aiRoles: ["MILITARY"],
+        aiRoles: ["COMBAT"],
+        faction: "MILITARY",
         techLevel: 4, // Advanced
         canDualEngage: true // Large ships can engage two targets simultaneously
     },
@@ -393,7 +401,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: [],
         price: 10900,
-        aiRoles: ["MILITARY"],
+        aiRoles: ["COMBAT"],
+        faction: "MILITARY",
         techLevel: 1 // Starter
     },
     "WaspAssault": {
@@ -428,7 +437,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Computers"],
         price: 12500,
-        aiRoles: ["MILITARY"],
+        aiRoles: ["COMBAT"],
+        faction: "MILITARY",
         techLevel: 2 // Utility
     },
     "WaspAssaultBH": {
@@ -455,6 +465,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Weapons"],
         price: 13500,
         aiRoles: ["BOUNTY_HUNTER"],
+        faction: "",
         techLevel: 2
     },
     "WaspAssaultGuard": {
@@ -481,6 +492,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: [],
         price: 13500,
         aiRoles: ["GUARD"],
+        faction: "",
         techLevel: 2
     },
     "Bat": {
@@ -515,7 +527,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Computers"],
         price: 12500,
-        aiRoles: ["MILITARY"],
+        aiRoles: ["COMBAT"],
+        faction: "MILITARY",
         techLevel: 2 // Utility
     },
     "BatBH": {
@@ -540,6 +553,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Weapons"],
         price: 13500,
         aiRoles: ["BOUNTY_HUNTER"],
+        faction: "",
         techLevel: 2
     },
     "BatGuard": {
@@ -564,6 +578,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: [],
         price: 13500,
         aiRoles: ["GUARD"],
+        faction: "",
         techLevel: 2
     },
     "HummingBird": {
@@ -598,7 +613,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Computers"],
         price: 17500,
-        aiRoles: ["MILITARY"],
+        aiRoles: ["COMBAT"],
+        faction: "MILITARY",
         techLevel: 2
     },
     "HummingBirdBH": {
@@ -622,6 +638,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Weapons"],
         price: 18500,
         aiRoles: ["BOUNTY_HUNTER"],
+        faction: "",
         techLevel: 2
     },
     "HummingBirdGuard": {
@@ -645,6 +662,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: [],
         price: 18500,
         aiRoles: ["GUARD"],
+        faction: "",
         techLevel: 2
     },
     "GladiusFighter": {
@@ -689,7 +707,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Computers"],
         price: 28400,
-        aiRoles: ["MILITARY"],
+        aiRoles: ["COMBAT"],
+        faction: "MILITARY",
         techLevel: 3
     },
     "GladiusFighterBH": {
@@ -713,6 +732,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Weapons"],
         price: 29400,
         aiRoles: ["BOUNTY_HUNTER"],
+        faction: "",
         techLevel: 3
     },
     "GladiusFighterGuard": {
@@ -736,6 +756,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: [],
         price: 29400,
         aiRoles: ["GUARD"],
+        faction: "",
         techLevel: 3
     },
     "Vulture": {
@@ -775,7 +796,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Computers", "Computers", "Weapons", "Narcotics", "Slaves"],
         price: 31300,
-        aiRoles: ["MILITARY"],
+        aiRoles: ["COMBAT"],
+        faction: "MILITARY",
         techLevel: 3
     },
     "VultureBH": {
@@ -799,6 +821,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Weapons", "Narcotics"],
         price: 32300,
         aiRoles: ["BOUNTY_HUNTER"],
+        faction: "",
         techLevel: 3
     },
     "VultureGuard": {
@@ -821,6 +844,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: [],
         price: 32300,
         aiRoles: ["GUARD"],
+        faction: "",
         techLevel: 3
     },
     "CenturionGunship": {
@@ -876,7 +900,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Weapons", "Metals", "Machinery"],
         price: 55600,
-        aiRoles: ["MILITARY"],
+        aiRoles: ["COMBAT"],
+        faction: "MILITARY",
         techLevel: 3 // Mid-tier
     },
     "HammerheadCorvette": { // NEW - Unique 2
@@ -910,7 +935,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Machinery", "Metals", "Food", "Metals", "Weapons"],
         price: 63700,
-        aiRoles: ["MILITARY"],
+        aiRoles: ["COMBAT"],
+        faction: "MILITARY",
         techLevel: 4 // Advanced
     },
     "FerDeLance": {
@@ -962,7 +988,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Computers", "Computers", "Computers", "Computers", "Luxury Goods", "Weapons", "Narcotics"],
         price: 64200,
-        aiRoles: ["MILITARY"],
+        aiRoles: ["COMBAT"],
+        faction: "MILITARY",
         techLevel: 4 // Advanced
     },
     "FerDeLanceBH": {
@@ -1019,6 +1046,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Weapons", "Narcotics", "Slaves"],
         price: 68200,
         aiRoles: ["BOUNTY_HUNTER"],
+        faction: "",
         techLevel: 4
     },
     "JackalMultirole": { // NEW - Multi-role
@@ -1044,7 +1072,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Machinery", "Metals", "Food"],
         price: 23100,
-        aiRoles: ["COMBAT", "MILITARY"],
+        aiRoles: ["HAULER", "COMBAT"],
+        faction: "MILITARY",
         techLevel: 2 // Utility
     },
     "Anaconda": {
@@ -1094,7 +1123,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Luxury Goods", "Adv Components", "Metals", "Machinery", "Minerals"],
         price: 53800,
-        aiRoles: ["COMBAT", "MILITARY"],
+        aiRoles: ["COMBAT", "HAULER"],
+        faction: "MILITARY",
         techLevel: 3, // Mid-tier
         canDualEngage: true // Large ships can engage two targets simultaneously
     },
@@ -1135,7 +1165,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Weapons", "Adv Components", "Computers"],
         price: 89500,
-        aiRoles: ["MILITARY", "COMBAT"],
+        aiRoles: ["COMBAT"],
+        faction: "MILITARY",
         techLevel: 4,
         canDualEngage: true
     },
@@ -1153,7 +1184,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: [],
         price: 30400,
-        aiRoles: ["MILITARY"],
+        aiRoles: ["COMBAT"],
+        faction: "MILITARY",
         techLevel: 5
     },
 
@@ -1175,7 +1207,8 @@ const SHIP_DEFINITIONS = {
             }
         ],
         typicalCargo: [], price: 20000, techLevel: 2,
-        aiRoles: ["COMBAT", "IMPERIAL"]
+        aiRoles: ["COMBAT"],
+        faction: "IMPERIAL"
     },
     "ImperialCourier": {
         name: "Imperial Courier", role: "Light Fighter/Multi", sizeCategory: "Small", size: 32,
@@ -1195,7 +1228,8 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Luxury Goods", "Medicine"],
         price: 20100,
-        aiRoles: ["IMPERIAL"],
+        aiRoles: ["COMBAT", "HAULER"],
+        faction: "IMPERIAL",
         techLevel: 2 // Utility
     },
     "ImperialEagleMkII": {
@@ -1215,8 +1249,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [160, 80, 200],
             }
         ],
-        typicalCargo: [], price: 58000, techLevel: 3,
-        aiRoles: ["COMBAT", "IMPERIAL"]
+        typicalCargo: [],
+        price: 58000,
+        aiRoles: ["COMBAT"],
+        faction: "IMPERIAL",
+        techLevel: 3
     },
     "ImperialLancer": {
         name: "Imperial Lancer", role: "Fast Attack Interceptor", sizeCategory: "Small", size: 34,
@@ -1234,8 +1271,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [160, 80, 200],
             }
         ],
-        typicalCargo: [], price: 62000, techLevel: 4,
-        aiRoles: ["COMBAT", "IMPERIAL"]
+        typicalCargo: [],
+        price: 62000,
+        techLevel: 4,
+        aiRoles: ["COMBAT"],
+        faction: "IMPERIAL"
     },
     "ImperialGuardian": {
         name: "Imperial Guardian", role: "System Patrol Cutter", sizeCategory: "Medium", size: 50,
@@ -1253,8 +1293,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [160, 80, 200],
             }
         ],
-        typicalCargo: ["Slaves", "Narcotics"], price: 85000, techLevel: 4,
-        aiRoles: ["COMBAT", "IMPERIAL"]
+        typicalCargo: ["Weapons", "Slaves"],
+        price: 85000,
+        aiRoles: ["COMBAT"],
+        faction: "IMPERIAL",
+        techLevel: 4
     },
     "ImperialJusticar": {
         name: "Imperial Justicar", role: "Heavy Gunboat", sizeCategory: "Medium", size: 62,
@@ -1280,8 +1323,10 @@ const SHIP_DEFINITIONS = {
                 fillColor: [160, 80, 200],
             }
         ],
-        typicalCargo: ["Weapons", "Slaves"], price: 125000, techLevel: 4,
-        aiRoles: ["COMBAT", "IMPERIAL"]
+        typicalCargo: ["Weapons", "Slaves"], price: 125000,
+        aiRoles: ["COMBAT"],
+        faction: "IMPERIAL",
+        techLevel: 4
     },
     "ImperialPaladin": {
         name: "Imperial Paladin", role: "Heavy Assault Frigate", sizeCategory: "Large", size: 90,
@@ -1299,8 +1344,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [160, 80, 200],
             }
         ],
-        typicalCargo: ["Weapons", "Luxury Goods"], price: 170000, techLevel: 4,
-        aiRoles: ["COMBAT", "IMPERIAL"],
+        typicalCargo: ["Weapons", "Luxury Goods"],
+        price: 170000,
+        aiRoles: ["COMBAT"],
+        faction: "IMPERIAL",
+        techLevel: 4,
         canDualEngage: true // Large ships can engage two targets simultaneously
     },
     "ImperialEnvoy": {
@@ -1339,8 +1387,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [160, 80, 200],
             }
         ],
-        typicalCargo: ["Adv Components", "Slaves"], price: 145000, techLevel: 5,
-        aiRoles: ["COMBAT", "IMPERIAL"]
+        typicalCargo: ["Adv Components", "Slaves"],
+        price: 145000,
+        aiRoles: ["COMBAT"],
+        faction: "IMPERIAL",
+        techLevel: 5
     },
     "ImperialClipper": {
         name: "Imperial Clipper", role: "Multi-Role/Trader", sizeCategory: "Large", size: 95,
@@ -1364,8 +1415,9 @@ const SHIP_DEFINITIONS = {
         ],
         typicalCargo: ["Luxury Goods", "Medicine", "Textiles", "Textiles", "Textiles"],
         price: 42900,
-        aiRoles: ["IMPERIAL"],
-        techLevel: 4 // Advanced
+        aiRoles: ["HAULER"],
+        faction: "IMPERIAL",
+        techLevel: 4
     },
     "ImperialCutterLite": {
         name: "Imperial Cutter Lite", role: "Fast Armed Trader", sizeCategory: "Large", size: 80,
@@ -1383,8 +1435,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [160, 80, 200],
             }
         ],
-        typicalCargo: ["Luxury Goods", "Adv Components", "Computers"], price: 130000, techLevel: 5,
-        aiRoles: ["COMBAT", "IMPERIAL"]
+        typicalCargo: ["Luxury Goods", "Adv Components", "Computers"],
+        price: 130000,
+        aiRoles: ["COMBAT", "HAULER"],
+        faction: "IMPERIAL",
+        techLevel: 5
     },
 
     // --- SEPARATIST ---
@@ -1404,8 +1459,10 @@ const SHIP_DEFINITIONS = {
                 fillColor: [182, 17, 17],
             }
         ],
-        typicalCargo: [], price: 28000, techLevel: 2,
-        aiRoles: ["COMBAT", "SEPARATIST"]
+        typicalCargo: [], price: 28000,
+        aiRoles: ["COMBAT"],
+        faction: "SEPARATIST",
+        techLevel: 2,
     },
     "SeparatistLiberator": {
         name: "Separatist Liberator", role: "Assault Fighter", sizeCategory: "Small", size: 36,
@@ -1437,15 +1494,18 @@ const SHIP_DEFINITIONS = {
                 fillColor: [180, 60, 60]
             }
         ],
-        typicalCargo: ["Weapons", "Food"], price: 52000, techLevel: 3,
-        aiRoles: ["SEPARATIST"]
+        typicalCargo: ["Weapons", "Food"],
+        price: 52000,
+        aiRoles: ["COMBAT"],
+        faction: "SEPARATIST",
+        techLevel: 3
     },
     "SeparatistShadow": {
         name: "Separatist Shadow", role: "Stealth Infiltrator", sizeCategory: "Small", size: 28,
         baseMaxSpeed: 6.0, baseThrust: 0.11, baseTurnRate: 0.06,
         baseHull: 50, baseShield: 70, shieldRecharge: 1.2, cargoCapacity: 10,
         armament: ["Pulse Laser", "Disruptor"],
-        costCategory: "Medium-High", description: "Painted matte black because Separatist stealth operatives watched too many spy holos. Actually does have basic sensor-dampening tech, but it's temperamental. Fast enough (6.0) to slip past patrols when the stealth works. When it doesn't, that 50 hull won't save you. High risk, high reward, high stupidity.",
+        costCategory: "Medium-High", description: "Painted matte black because Separatist stealth operatives watched too many spy holos. Actually does have basic sensor-dampening tech, but it's temperamental. Fast enough (6.0) to slip past patrols when the stealth works. When it doesn't, that 50 hull won't save you. High risk, high reward.",
         vertexLayers: [
             {
                 vertexData: [{ x: 1.0000, y: 0.0000 }, { x: -0.3000, y: 0.4000 }, { x: -0.8000, y: 0.1000 }, { x: -0.8000, y: -0.1000 }, { x: -0.3000, y: -0.4000 }],
@@ -1456,8 +1516,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [114, 3, 3]
             }
         ],
-        typicalCargo: ["Adv Components", "Computers"], price: 65000, techLevel: 4,
-        aiRoles: ["SEPARATIST"]
+        typicalCargo: ["Adv Components", "Computers"],
+        price: 65000,
+        aiRoles: ["COMBAT"],
+        faction: "SEPARATIST",
+        techLevel: 4
     },
     "SeparatistOutlander": {
         name: "Separatist Outlander", role: "Long-Range Scout/Raider", sizeCategory: "Medium", size: 50,
@@ -1475,8 +1538,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [212, 22, 22],
             }
         ],
-        typicalCargo: ["Computers", "Adv Components", "Food"], price: 70000, techLevel: 4,
-        aiRoles: ["SEPARATIST"]
+        typicalCargo: ["Computers", "Adv Components", "Food"],
+        price: 70000,
+        aiRoles: ["COMBAT", "HAULER"],
+        faction: "SEPARATIST",
+        techLevel: 4,
     },
     "SeparatistDefiant": {
         name: "Separatist Defiant", role: "Gunship", sizeCategory: "Medium", size: 58,
@@ -1502,8 +1568,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [113, 14, 39]
             }
         ],
-        typicalCargo: ["Weapons", "Chemicals"], price: 90000, techLevel: 4,
-        aiRoles: ["SEPARATIST"]
+        typicalCargo: ["Weapons", "Chemicals"],
+        price: 90000,
+        aiRoles: ["COMBAT"],
+        faction: "SEPARATIST",
+        techLevel: 4,
     },
     "SeparatistVanguard": {
         name: "Separatist Vanguard", role: "Heavy Assault Cruiser", sizeCategory: "Large", size: 85,
@@ -1521,8 +1590,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [212, 12, 42]
             }
         ],
-        typicalCargo: ["Weapons", "Machinery"], price: 160000, techLevel: 5,
-        aiRoles: ["COMBAT", "SEPARATIST"]
+        typicalCargo: ["Weapons", "Machinery"],
+        price: 160000,
+        aiRoles: ["COMBAT"],
+        faction: "SEPARATIST",
+        techLevel: 5,
     },
     "SeparatistBulwark": {
         name: "Separatist Bulwark", role: "Mobile Defense Platform", sizeCategory: "Very Large", size: 130,
@@ -1548,8 +1620,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [212, 12, 42]
             }
         ],
-        typicalCargo: ["Metals", "Machinery"], price: 250000, techLevel: 5,
-        aiRoles: ["COMBAT", "SEPARATIST"],
+        typicalCargo: ["Metals", "Machinery"],
+        price: 250000,
+        aiRoles: ["COMBAT"],
+        faction: "SEPARATIST",
+        techLevel: 5,
         canDualEngage: true // Large ships can engage two targets simultaneously
     },
     "SeparatistSupplyRunner": {
@@ -1572,8 +1647,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [133, 0, 57]
             }
         ],
-        typicalCargo: ["Food", "Medicine", "Weapons", "Chemicals"], price: 48000, techLevel: 3,
-        aiRoles: ["HAULER"]
+        typicalCargo: ["Food", "Medicine", "Weapons", "Chemicals"],
+        price: 48000,
+        aiRoles: ["HAULER"],
+        faction: "SEPARATIST",
+        techLevel: 3,
     },
 
     // --- PIRATE ---
@@ -1588,6 +1666,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Food"],
         price: 9800,
         aiRoles: ["PIRATE"],
+        faction: "",
         techLevel: 1 // Starter
     },
     "KraitMKI": {
@@ -1633,6 +1712,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: [],
         price: 14600,
         aiRoles: ["PIRATE"],
+        faction: "",
         techLevel: 2 // Utility
     },
     "KraitMKII": {
@@ -1678,6 +1758,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Food", "Minerals"],
         price: 17200,
         aiRoles: ["PIRATE"],
+        faction: "",
         techLevel: 2 // Utility
     },
     "Geister": {
@@ -1703,6 +1784,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Computers"],
         price: 18400,
         aiRoles: ["PIRATE"],
+        faction: "",
         techLevel: 3 // Mid-tier
     },
     "PirateBrigand": {
@@ -1745,8 +1827,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [0, 0, 0]
             }
         ],
-        typicalCargo: ["Food", "Textiles", "Minerals"], price: 38000, techLevel: 2,
-        aiRoles: ["PIRATE"]
+        typicalCargo: ["Food", "Textiles", "Minerals"],
+        price: 38000,
+        aiRoles: ["PIRATE"],
+        faction: "",
+        techLevel: 2,
     },
     "PirateCutlass": {
         name: "Pirate Cutlass", role: "Fast Attack Fighter", sizeCategory: "Small", size: 32,
@@ -1798,8 +1883,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [255, 255, 255]
             }
         ],
-        typicalCargo: ["Adv Components", "Narcotics"], price: 45000, techLevel: 3,
-        aiRoles: ["PIRATE"]
+        typicalCargo: ["Adv Components", "Narcotics"],
+        price: 45000,
+        aiRoles: ["PIRATE"],
+        faction: "",
+        techLevel: 3,
     },
     "PirateInterceptorMKII": {
         name: "Pirate Interceptor MkII", role: "Heavy Interceptor", sizeCategory: "Medium", size: 42,
@@ -1841,8 +1929,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [0, 0, 0]
             }
         ],
-        typicalCargo: ["Narcotics", "Weapons"], price: 68000, techLevel: 4,
-        aiRoles: ["PIRATE"]
+        typicalCargo: ["Narcotics", "Weapons"],
+        price: 68000,
+        aiRoles: ["PIRATE"],
+        faction: "",
+        techLevel: 4,
     },
     "PirateMarauder": {
         name: "Pirate Marauder", role: "Raider/Boarding Craft", sizeCategory: "Medium", size: 48,
@@ -1902,8 +1993,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [255, 255, 255]
             }
         ],
-        typicalCargo: ["Slaves", "Weapons", "Adv Components"], price: 75000, techLevel: 4,
-        aiRoles: ["PIRATE"]
+        typicalCargo: ["Slaves", "Weapons", "Adv Components"],
+        price: 75000,
+        aiRoles: ["PIRATE"],
+        faction: "",
+        techLevel: 4,
     },
     "PirateReaver": {
         name: "Pirate Reaver", role: "Heavy Pirate Cruiser", sizeCategory: "Large", size: 75,
@@ -1945,8 +2039,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [0, 0, 0]
             }
         ],
-        typicalCargo: ["Narcotics", "Slaves", "Weapons"], price: 140000, techLevel: 5,
-        aiRoles: ["PIRATE"]
+        typicalCargo: ["Narcotics", "Slaves", "Weapons"],
+        price: 140000,
+        aiRoles: ["PIRATE"],
+        faction: "",
+        techLevel: 5,
     },
 
     // --- HARLEQUIN ---
@@ -1990,8 +2087,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [255, 0, 0]
             }
         ],
-        typicalCargo: [], price: 32000, techLevel: 2,
-        aiRoles: ["PIRATE"]
+        typicalCargo: [],
+        price: 32000,
+        aiRoles: ["PIRATE"],
+        faction: "HARLEQUIN",
+        techLevel: 2,
     },
     "HarlequinMotley": {
         name: "Harlequin Motley", role: "Fast Interceptor", sizeCategory: "Small", size: 28,
@@ -2049,8 +2149,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [0, 0, 0]
             }
         ],
-        typicalCargo: ["Narcotics", "Computers"], price: 42000, techLevel: 3,
-        aiRoles: ["PIRATE"]
+        typicalCargo: ["Narcotics", "Computers"],
+        price: 42000,
+        aiRoles: ["PIRATE"],
+        faction: "HARLEQUIN",
+        techLevel: 3,
     },
     "HarlequinColumbine": {
         name: "Harlequin Columbine", role: "Explorer/Scout", sizeCategory: "Small", size: 28,
@@ -2068,8 +2171,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [251, 255, 0]
             }
         ],
-        typicalCargo: ["Luxury Goods", "Computers"], price: 48000, techLevel: 3,
-        aiRoles: ["PIRATE"]
+        typicalCargo: ["Luxury Goods", "Computers"],
+        price: 48000,
+        aiRoles: ["PIRATE"],
+        faction: "HARLEQUIN",
+        techLevel: 3,
     },
     "HarlequinZanni": {
         name: "Harlequin Zanni", role: "Heavy Striker", sizeCategory: "Medium", size: 52,
@@ -2124,8 +2230,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [255, 20, 147]
             }
         ],
-        typicalCargo: ["Weapons", "Slaves", "Luxury Goods"], price: 98000, techLevel: 4,
-        aiRoles: ["PIRATE"]
+        typicalCargo: ["Weapons", "Slaves", "Luxury Goods"],
+        price: 98000,
+        aiRoles: ["PIRATE"],
+        faction: "HARLEQUIN",
+        techLevel: 4,
     },
     "HarlequinScaramouche": {
         name: "Harlequin Scaramouche", role: "Multi-Role Combat", sizeCategory: "Medium", size: 55,
@@ -2171,8 +2280,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [0, 157, 255]
             }
         ],
-        typicalCargo: ["Weapons", "Adv Components"], price: 115000, techLevel: 4,
-        aiRoles: ["PIRATE"]
+        typicalCargo: ["Weapons", "Adv Components"],
+        price: 115000,
+        aiRoles: ["PIRATE"],
+        faction: "HARLEQUIN",
+        techLevel: 4,
     },
     "HarlequinPierrot": {
         name: "Harlequin Pierrot", role: "Multi-Purpose", sizeCategory: "Medium", size: 40,
@@ -2238,8 +2350,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [0, 0, 0]
             }
         ],
-        typicalCargo: ["Luxury Goods", "Narcotics", "Slaves"], price: 55000, techLevel: 3,
-        aiRoles: ["PIRATE"]
+        typicalCargo: ["Luxury Goods", "Narcotics", "Slaves"],
+        price: 55000,
+        aiRoles: ["PIRATE"],
+        faction: "HARLEQUIN",
+        techLevel: 3,
     },
     "HarlequinPulcinella": {
         name: "Harlequin Pulcinella", role: "Support/Logistics", sizeCategory: "Medium", size: 48,
@@ -2273,8 +2388,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [200, 200, 220]
             }
         ],
-        typicalCargo: ["Narcotics", "Luxury Goods", "Slaves", "Textiles"], price: 72000, techLevel: 3,
-        aiRoles: ["PIRATE"]
+        typicalCargo: ["Narcotics", "Luxury Goods", "Slaves", "Textiles"],
+        price: 72000,
+        aiRoles: ["PIRATE"],
+        faction: "HARLEQUIN",
+        techLevel: 3,
     },
     "HarlequinPantaloon": {
         name: "Harlequin Pantaloon", role: "Heavy Freighter", sizeCategory: "Large", size: 70,
@@ -2324,8 +2442,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [212, 255, 0]
             }
         ],
-        typicalCargo: ["Slaves", "Narcotics", "Weapons"], price: 95000, techLevel: 4,
-        aiRoles: ["PIRATE"]
+        typicalCargo: ["Slaves", "Narcotics", "Weapons"],
+        price: 95000,
+        aiRoles: ["PIRATE", "HAULER"],
+        faction: "HARLEQUIN",
+        techLevel: 4,
     },
 
     // --- CIVILIAN - TRADERS & HAULERS ---
@@ -2358,6 +2479,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Food", "Textiles", "Minerals"],
         price: 11000,
         aiRoles: ["HAULER"],
+        faction: "",
         techLevel: 1 // Starter
     },
     "Type6Transporter": {
@@ -2397,6 +2519,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery"],
         price: 20100,
         aiRoles: ["HAULER"],
+        faction: "",
         techLevel: 2 // Utility
     },
     "Keelback": {
@@ -2418,6 +2541,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Minerals", "Metals", "Machinery"],
         price: 20600,
         aiRoles: ["HAULER"],
+        faction: "",
         techLevel: 2 // Utility
     },
     "Type9Heavy": {
@@ -2466,6 +2590,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Food", "Textiles", "Minerals", "Metals", "Machinery", "Chemicals", "Computers"],
         price: 43100,
         aiRoles: ["HAULER"],
+        faction: "",
         techLevel: 3, // Mid-tier
         canDualEngage: true
     },
@@ -2488,6 +2613,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Minerals", "Metals", "Machinery", "Food", "Textiles"],
         price: 34600,
         aiRoles: ["HAULER"],
+        faction: "",
         techLevel: 3 // Mid-tier
     },
     "Python": {
@@ -2509,6 +2635,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Luxury Goods", "Medicine", "Metals", "Chemicals", "Medicine", "Metals", "Chemicals"],
         price: 57300,
         aiRoles: ["HAULER"],
+        faction: "",
         techLevel: 4 // Advanced
     },
     "StarlinerCruiser": {
@@ -2540,6 +2667,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Luxury Goods", "Food", "Medicine", "Food", "Medicine"],
         price: 36000,
         aiRoles: ["HAULER"],
+        faction: "",
         techLevel: 4 // Advanced
     },
     "CobraMkIII": {
@@ -2573,6 +2701,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Food"],
         price: 21600,
         aiRoles: ["HAULER"],
+        faction: "",
         techLevel: 2 // Utility
     },
 
@@ -2596,6 +2725,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Minerals", "Minerals", "Minerals", "Minerals", "Medicine", "Computers"],
         price: 23600,
         aiRoles: ["HAULER"],
+        faction: "",
         techLevel: 2 // Mid-tier
     },
     "DiamondbackExplorer": {
@@ -2640,6 +2770,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Minerals", "Metals", "Adv Components"],
         price: 20800,
         aiRoles: ["HAULER"],
+        faction: "",
         techLevel: 3 // Mid-tier
     },
     "NomadVoyager": {
@@ -2689,6 +2820,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Minerals", "Food", "Medicine"],
         price: 24600,
         aiRoles: ["HAULER"],
+        faction: "",
         techLevel: 4 // Advanced
     },
     "PathfinderSurvey": {
@@ -2710,6 +2842,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Food", "Food", "Minerals", "Minerals", "Metals"],
         price: 10200,
         aiRoles: ["HAULER"],
+        faction: "",
         techLevel: 3 // Mid-tier
     },
     "ProspectorMiner": { // NEW - Miner
@@ -2723,6 +2856,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Minerals", "Metals"],
         price: 8700,
         aiRoles: ["MINER"],
+        faction: "",
         techLevel: 2 // Utility
     },
 
@@ -2790,8 +2924,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [50, 255, 50]
             }
         ],
-        typicalCargo: ["Food", "Textiles"], price: 1800, techLevel: 1,
-        aiRoles: ["TRANSPORT"]
+        typicalCargo: ["Food", "Textiles"],
+        price: 1800,
+        aiRoles: ["TRANSPORT"],
+        faction: "",
+        techLevel: 1,
     },
     "MuleFreighter": { // NEW - Small Transporter
         name: "Mule Freighter", role: "Local Transport", sizeCategory: "Small", size: 25,
@@ -2865,6 +3002,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Food", "Machinery", "Metals"],
         price: 4200,
         aiRoles: ["TRANSPORT"],
+        faction: "",
         techLevel: 1 // Starter
     },
     "ErrandRunner": {
@@ -2930,8 +3068,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [255, 255, 180]
             }
         ],
-        typicalCargo: ["Machinery", "Medicine"], price: 4500, techLevel: 1,
-        aiRoles: ["HAULER"]
+        typicalCargo: ["Machinery", "Medicine"],
+        price: 4500,
+        aiRoles: ["HAULER"],
+        faction: "",
+        techLevel: 1,
     },
     "SystemShuttle": {
         name: "System Shuttle", role: "Medium Transport", sizeCategory: "Small", size: 30,
@@ -3020,8 +3161,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [255, 255, 200]
             }
         ],
-        typicalCargo: ["Minerals", "Food", "Machinery"], price: 12000, techLevel: 2,
-        aiRoles: ["TRANSPORT"]
+        typicalCargo: ["Minerals", "Food", "Machinery"],
+        price: 12000,
+        aiRoles: ["TRANSPORT"],
+        faction: "",
+        techLevel: 2,
     },
     "CargoWagon": {
         name: "Cargo Wagon", role: "Heavy Local Transport", sizeCategory: "Medium", size: 45,
@@ -3124,8 +3268,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [255, 200, 50]
             }
         ],
-        typicalCargo: ["Machinery", "Metals", "Chemicals"], price: 22000, techLevel: 2,
-        aiRoles: ["TRANSPORT"]
+        typicalCargo: ["Machinery", "Metals", "Chemicals"],
+        price: 22000,
+        aiRoles: ["TRANSPORT"],
+        faction: "",
+        techLevel: 2,
     },
 
     // --- SUPPORT & REPAIR ---
@@ -3148,6 +3295,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Metals"],
         price: 38500,
         aiRoles: ["REPAIR"],
+        faction: "",
         techLevel: 3
     },
 
@@ -3163,10 +3311,14 @@ const SHIP_DEFINITIONS = {
         typicalCargo: [],
         price: 999999,
         aiRoles: ["ALIEN"],
+        faction: "ALIEN",
         techLevel: 5 // Cutting-edge
     },
     "TriadProbe": {
-        name: "Triad Probe (Alien)", role: "Alien Scout", sizeCategory: "Tiny", size: 16,
+        name: "Triad Probe (Alien)",
+        role: "Alien Scout",
+        sizeCategory: "Tiny",
+        size: 16,
         baseMaxSpeed: 9.0, baseThrust: 0.25, baseTurnRate: 0.15,
         baseHull: 25, baseShield: 30, shieldRecharge: 1.0, cargoCapacity: 0,
         armament: ["Scatter Beam"],
@@ -3175,7 +3327,11 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [200, 255, 180] },
             { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.2, y: 0.0 }, { x: 0.0, y: -0.3 }, { x: -0.2, y: 0.0 }], fillColor: [255, 255, 100] }
         ],
-        typicalCargo: [], price: 999999, aiRoles: ["ALIEN"]
+        typicalCargo: [],
+        price: 999999,
+        aiRoles: ["ALIEN"],
+        faction: "ALIEN",
+        techLevel: 5 // Cutting-edge
     },
     "TesseractScout": {
         name: "Tesseract Scout (Alien)", role: "Alien Recon", sizeCategory: "Tiny", size: 18,
@@ -3187,7 +3343,11 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 1.0, y: 1.0 }, { x: 1.0, y: -1.0 }, { x: -1.0, y: -1.0 }, { x: -1.0, y: 1.0 }], fillColor: [200, 255, 255] },
             { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.7, y: 0.0 }, { x: 0.0, y: -0.7 }, { x: -0.7, y: 0.0 }], fillColor: [0, 255, 255] }
         ],
-        typicalCargo: [], price: 999999, aiRoles: ["ALIEN"]
+        typicalCargo: [],
+        price: 999999,
+        aiRoles: ["ALIEN"],
+        faction: "ALIEN",
+        techLevel: 5 // Cutting-edge
     },
     "PetalSpinner": {
         name: "Petal Spinner (Alien)", role: "Alien Fighter", sizeCategory: "Small", size: 26,
@@ -3199,7 +3359,11 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [255, 180, 255] },
             { vertexData: [{ x: 0.0, y: 0.2 }, { x: 0.1, y: 0.0 }, { x: 0.0, y: -0.2 }, { x: -0.1, y: 0.0 }], fillColor: [255, 100, 255] }
         ],
-        typicalCargo: [], price: 999999, aiRoles: ["ALIEN"]
+        typicalCargo: [],
+        price: 999999,
+        aiRoles: ["ALIEN"],
+        faction: "ALIEN",
+        techLevel: 5 // Cutting-edge
     },
     "SpiralWarden": {
         name: "Spiral Warden (Alien)", role: "Alien Interceptor", sizeCategory: "Small", size: 28,
@@ -3211,7 +3375,9 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.7, y: 0.7 }, { x: 1.0, y: 0.0 }, { x: 0.7, y: -0.7 }, { x: 0.0, y: -1.0 }, { x: -0.7, y: -0.7 }, { x: -1.0, y: 0.0 }, { x: -0.7, y: 0.7 }], fillColor: [180, 255, 220] },
             { vertexData: [{ x: 0.0, y: 0.5 }, { x: 0.35, y: 0.35 }, { x: 0.5, y: 0.0 }, { x: 0.35, y: -0.35 }, { x: 0.0, y: -0.5 }, { x: -0.35, y: -0.35 }, { x: -0.5, y: 0.0 }, { x: -0.35, y: 0.35 }], fillColor: [100, 255, 200] }
         ],
-        typicalCargo: ["Chemicals"], price: 999999, aiRoles: ["ALIEN"]
+        typicalCargo: ["Chemicals"], price: 999999, aiRoles: ["ALIEN"],
+        faction: "ALIEN",
+        techLevel: 5 // Cutting-edge
     },
     "CrescentMarauder": {
         name: "Crescent Marauder (Alien)", role: "Alien Raider", sizeCategory: "Medium", size: 38,
@@ -3223,7 +3389,9 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.8, y: 0.3 }, { x: 1.0, y: 0.0 }, { x: 0.8, y: -0.3 }, { x: 0.0, y: -1.0 }, { x: -0.8, y: -0.3 }, { x: -1.0, y: 0.0 }, { x: -0.8, y: 0.3 }], fillColor: [180, 255, 255] },
             { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.56, y: 0.21 }, { x: 0.7, y: 0.0 }, { x: 0.56, y: -0.21 }, { x: 0.0, y: -0.7 }, { x: -0.56, y: -0.21 }, { x: -0.7, y: 0.0 }, { x: -0.56, y: 0.21 }], fillColor: [0, 255, 255] }
         ],
-        typicalCargo: ["Narcotics", "Chemicals"], price: 999999, aiRoles: ["ALIEN"]
+        typicalCargo: ["Narcotics", "Chemicals"], price: 999999, aiRoles: ["ALIEN"],
+        faction: "ALIEN",
+        techLevel: 5 // Cutting-edge
     },
     "ObeliskSentinel": {
         name: "Obelisk Sentinel (Alien)", role: "Alien Guardian", sizeCategory: "Medium", size: 40,
@@ -3241,7 +3409,9 @@ const SHIP_DEFINITIONS = {
                 fillColor: [0, 255, 120],
             }
         ],
-        typicalCargo: ["Chemicals", "Metals"], price: 999999, aiRoles: ["ALIEN"]
+        typicalCargo: ["Chemicals", "Metals"], price: 999999, aiRoles: ["ALIEN"],
+        faction: "ALIEN",
+        techLevel: 5 // Cutting-edge
     },
     "HexaManta": {
         name: "Hexa-Manta (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 70,
@@ -3254,7 +3424,9 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 0.0, y: 0.7 }, { x: 0.42, y: 0.56 }, { x: 0.7, y: 0.0 }, { x: 0.42, y: -0.56 }, { x: 0.0, y: -0.7 }, { x: -0.42, y: -0.56 }, { x: -0.7, y: 0.0 }, { x: -0.42, y: 0.56 }], fillColor: [255, 100, 255] },
             { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.21, y: 0.21 }, { x: 0.3, y: 0.0 }, { x: 0.21, y: -0.21 }, { x: 0.0, y: -0.3 }, { x: -0.21, y: -0.21 }, { x: -0.3, y: 0.0 }, { x: -0.21, y: 0.21 }], fillColor: [255, 255, 255] }
         ],
-        typicalCargo: ["Metals", "Chemicals"], price: 999999, aiRoles: ["ALIEN"]
+        typicalCargo: ["Metals", "Chemicals"], price: 999999, aiRoles: ["ALIEN"],
+        faction: "ALIEN",
+        techLevel: 5 // Cutting-edge    
     },
     "FractalRay": {
         name: "Fractal Ray (Alien)", role: "Alien Destroyer", sizeCategory: "Large", size: 85,
@@ -3266,7 +3438,9 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [255, 255, 180] },
             { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.2, y: 0.0 }, { x: 0.0, y: -0.3 }, { x: -0.2, y: 0.0 }], fillColor: [255, 255, 100] }
         ],
-        typicalCargo: ["Weapons", "Chemicals"], price: 999999, aiRoles: ["ALIEN"]
+        typicalCargo: ["Weapons", "Chemicals"], price: 999999, aiRoles: ["ALIEN"],
+        faction: "ALIEN",
+        techLevel: 5 // Cutting-edge        
     },
     "ObsidianOrb": {
         name: "Obsidian Orb (Alien)", role: "Alien Tank", sizeCategory: "Large", size: 90,
@@ -3295,7 +3469,9 @@ const SHIP_DEFINITIONS = {
                 ], fillColor: [120, 80, 180]
             }
         ],
-        typicalCargo: ["Metals", "Weapons"], price: 999999, aiRoles: ["ALIEN"]
+        typicalCargo: ["Metals", "Weapons"], price: 999999, aiRoles: ["ALIEN"],
+        faction: "ALIEN",
+        techLevel: 5 // Cutting-edge    
     },
     "BioFrigate": {
         name: "Bio-Frigate (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 90,
@@ -3316,6 +3492,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Metals", "Chemicals", "Adv Components"],
         price: 999999,
         aiRoles: ["ALIEN"],
+        faction: "ALIEN",
         techLevel: 5 // Alien
     },
     "Thargoid": {
@@ -3328,6 +3505,7 @@ const SHIP_DEFINITIONS = {
         typicalCargo: ["Chemicals", "Weapons", "Narcotics"],
         price: 999999,
         aiRoles: ["ALIEN"],
+        faction: "ALIEN",
         techLevel: 5 // Alien
     },
     "LotusCarrier": {
@@ -3342,7 +3520,11 @@ const SHIP_DEFINITIONS = {
             { vertexData: [{ x: 0.0, y: 0.3 }, { x: 0.21, y: 0.21 }, { x: 0.3, y: 0.0 }, { x: 0.21, y: -0.21 }, { x: 0.0, y: -0.3 }, { x: -0.21, y: -0.21 }, { x: -0.3, y: 0.0 }, { x: -0.21, y: 0.21 }], fillColor: [255, 255, 255] }
         ],
         fillColor: [255, 200, 255],
-        typicalCargo: ["Luxury Goods", "Chemicals", "Metals"], price: 999999, aiRoles: ["ALIEN"]
+        typicalCargo: ["Luxury Goods", "Chemicals", "Metals"],
+        price: 999999,
+        aiRoles: ["ALIEN"],
+        faction: "ALIEN",
+        techLevel: 5 // Alien
     }
 };
 

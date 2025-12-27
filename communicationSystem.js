@@ -872,27 +872,23 @@ class CommunicationSystem {
     }
 
     _getShipFaction(ship) {
-        // Determine ship faction based on ship type definition
-        if (!ship || !ship.shipTypeName) {
+        // Determine ship faction - prefer runtime faction, then ship definition faction
+        if (!ship) {
             return 'MILITARY'; // Default
         }
 
-        // Check if SHIP_DEFINITIONS is available
-        if (typeof SHIP_DEFINITIONS === 'undefined') {
-            return 'MILITARY';
+        // Check runtime faction property first (set in Enemy constructor)
+        // Note: Empty string "" is valid (neutral/civilian ships)
+        if (ship.faction !== undefined && ship.faction !== null) {
+            return ship.faction;
         }
 
-        const shipDef = SHIP_DEFINITIONS[ship.shipTypeName];
-        if (!shipDef || !shipDef.aiRoles) {
-            return 'MILITARY';
-        }
-
-        if (shipDef.aiRoles.includes('IMPERIAL')) {
-            return 'IMPERIAL';
-        } else if (shipDef.aiRoles.includes('SEPARATIST')) {
-            return 'SEPARATIST';
-        } else if (shipDef.aiRoles.includes('MILITARY')) {
-            return 'MILITARY';
+        // Check ship definition faction property
+        if (ship.shipTypeName && typeof SHIP_DEFINITIONS !== 'undefined') {
+            const shipDef = SHIP_DEFINITIONS[ship.shipTypeName];
+            if (shipDef && shipDef.faction !== undefined && shipDef.faction !== null) {
+                return shipDef.faction;
+            }
         }
 
         return 'MILITARY'; // Default

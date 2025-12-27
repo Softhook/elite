@@ -359,29 +359,27 @@ class EnemyUtils {
     /**
      * Helper to determine ship faction from ship definition or player faction property
      * @param {Object} ship - The ship to check (enemy or player)
-     * @returns {string} - Faction identifier: 'IMPERIAL', 'SEPARATIST', 'MILITARY', 'UNKNOWN'
+     * @returns {string} - Faction identifier: 'IMPERIAL', 'SEPARATIST', 'MILITARY', '' (neutral), or 'UNKNOWN'
      */
     _getShipFaction(ship) {
         if (!ship) return 'UNKNOWN';
 
-        // [FIX] Check runtime faction property first (set in Enemy constructor)
-        // This ensures Police/Pirates are correctly identified even if the ship hull defaults to UNKNOWN
-        if (ship.faction) {
+        // Check runtime faction property first (set in Enemy constructor)
+        // Note: Empty string "" is valid (neutral/civilian ships)
+        if (ship.faction !== undefined && ship.faction !== null) {
             return ship.faction;
         }
 
         // Check if this is a player with a faction
-        if (ship.playerFaction) {
+        if (ship.playerFaction !== undefined && ship.playerFaction !== null) {
             return ship.playerFaction;
         }
 
-        // Check ship definition for faction in aiRoles
+        // Check ship definition for faction property
         if (ship.shipTypeName && typeof SHIP_DEFINITIONS !== 'undefined') {
             const shipDef = SHIP_DEFINITIONS[ship.shipTypeName];
-            if (shipDef && shipDef.aiRoles) {
-                if (shipDef.aiRoles.includes('IMPERIAL')) return 'IMPERIAL';
-                if (shipDef.aiRoles.includes('SEPARATIST')) return 'SEPARATIST';
-                if (shipDef.aiRoles.includes('MILITARY')) return 'MILITARY';
+            if (shipDef && shipDef.faction !== undefined && shipDef.faction !== null) {
+                return shipDef.faction;
             }
         }
 

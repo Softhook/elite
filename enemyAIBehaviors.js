@@ -1139,6 +1139,24 @@ class EnemyAIBehaviors {
                         this.inCombat = false;
                         this.haulerCombatTimer = undefined;
                         HAULER_LOG(`[LEAVING] ${this.role} ${this.shipTypeName} reached jump zone (dE=${dE.toFixed(1)}). Initiating jump fade.`);
+
+                        // Notify guards that their principal is leaving - they should leave too
+                        const sys = this.getSystem() || this.currentSystem;
+                        if (sys && sys.enemies) {
+                            for (let i = 0; i < sys.enemies.length; i++) {
+                                const guard = sys.enemies[i];
+                                if (guard && guard.principal === this && guard.role === AI_ROLE.GUARD && !guard.destroyed) {
+                                    // Guard's principal is leaving - tell guard to initiate jump fade too
+                                    HAULER_LOG(`${guard.shipTypeName} (Guard) leaving with principal ${this.shipTypeName}`);
+                                    if (typeof guard.initiateJumpFade === 'function') {
+                                        guard.initiateJumpFade(0.35, 1.2);
+                                    } else {
+                                        guard.destroyed = true; // Fallback
+                                    }
+                                }
+                            }
+                        }
+
                         // Use centralized helper so all ships use the same visual fade behavior
                         this.initiateJumpFade(0.35, 1.2);
                         HAULER_LOG(`${this.role} ${this.shipTypeName} left the system (fade)`);
@@ -1801,29 +1819,18 @@ class EnemyAIBehaviors {
         }
 
         // Combat ships don't trade - just patrol and fight
-        // Determine ship faction based on ship type
-        const shipDef = SHIP_DEFINITIONS[this.shipTypeName];
-        let faction = 'MILITARY'; // Default
-
-        if (shipDef && shipDef.aiRoles) {
-            if (shipDef.aiRoles.includes('IMPERIAL')) {
-                faction = 'IMPERIAL';
-            } else if (shipDef.aiRoles.includes('SEPARATIST')) {
-                faction = 'SEPARATIST';
-            } else if (shipDef.aiRoles.includes('MILITARY')) {
-                faction = 'MILITARY';
-            }
-        }
+        // Use the faction property set in constructor (no need to look up ship definition each frame)
+        const faction = this.faction || 'MILITARY';
 
         // Update targeting with faction-specific priorities
         let targetExists = this.updateTargeting(system);
 
         // Apply faction-specific AI bonuses when engaging
         if (targetExists && this.target) {
-            const targetDef = this.target.shipTypeName ? SHIP_DEFINITIONS[this.target.shipTypeName] : null;
+            // For Player targets, use playerFaction; for enemies, use faction property
             const targetFaction = (this.target instanceof Player)
                 ? (this.target.playerFaction || 'UNKNOWN')
-                : (this._getShipFaction ? this._getShipFaction(this.target) : 'UNKNOWN');
+                : (this.target.faction || 'UNKNOWN');
 
             // Military ships get bonus against aliens
             if (faction === 'MILITARY' && this.target.role === AI_ROLE.ALIEN) {

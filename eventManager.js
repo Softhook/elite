@@ -56,16 +56,19 @@ class EventManager {
         for (const [key, def] of Object.entries(SHIP_DEFINITIONS)) {
             if (!def.aiRoles) continue;
 
+            // Role-based grouping (from aiRoles)
             if (def.aiRoles.includes("POLICE")) this.shipGroups.POLICE.push(key);
             if (def.aiRoles.includes("PIRATE")) this.shipGroups.PIRATE.push(key);
             if (def.aiRoles.includes("HAULER") || def.aiRoles.includes("TRANSPORT") || def.aiRoles.includes("TRADER")) this.shipGroups.TRADER.push(key);
             if (def.aiRoles.includes("ALIEN")) this.shipGroups.ALIEN.push(key);
             if (def.aiRoles.includes("MINER")) this.shipGroups.MINER.push(key);
-            if (def.aiRoles.includes("MILITARY") || def.aiRoles.includes("COMBAT")) this.shipGroups.MILITARY.push(key);
+            if (def.aiRoles.includes("COMBAT")) this.shipGroups.MILITARY.push(key);
             if (def.aiRoles.includes("BOUNTY_HUNTER")) this.shipGroups.BOUNTY_HUNTER.push(key);
             if (def.aiRoles.includes("GUARD")) this.shipGroups.GUARD.push(key);
-            if (def.aiRoles.includes("SEPARATIST")) this.shipGroups.SEPARATIST.push(key);
-            if (def.aiRoles.includes("IMPERIAL")) this.shipGroups.IMPERIAL.push(key);
+
+            // Faction-based grouping (from faction property)
+            if (def.faction === "SEPARATIST") this.shipGroups.SEPARATIST.push(key);
+            if (def.faction === "IMPERIAL") this.shipGroups.IMPERIAL.push(key);
         }
 
         // Fallbacks to ensure lists aren't empty

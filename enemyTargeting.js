@@ -390,7 +390,8 @@ class EnemyTargeting {
                 if (this._getShipFaction) {
                     const myFaction = this._getShipFaction(this);
                     const theirFaction = this._getShipFaction(otherEnemy);
-                    if (myFaction === theirFaction && myFaction !== 'UNKNOWN') {
+                    // Empty string means "no faction" - treat like UNKNOWN
+                    if (myFaction && theirFaction && myFaction === theirFaction && myFaction !== 'UNKNOWN') {
                         continue; // Don't even evaluate allies
                     }
                 }
@@ -671,8 +672,9 @@ class EnemyTargeting {
                     ? (target.playerFaction || 'UNKNOWN')
                     : enemy._getShipFaction(target);
 
-                // Only apply faction logic if both have known factions (not UNKNOWN)
-                if (myFaction !== 'UNKNOWN' && targetFaction !== 'UNKNOWN' && myFaction === targetFaction) {
+                // Only apply faction logic if both have known factions (not UNKNOWN or empty string)
+                // Empty string means "no faction" and should not trigger same-faction penalties
+                if (myFaction && myFaction !== 'UNKNOWN' && targetFaction && targetFaction !== 'UNKNOWN' && myFaction === targetFaction) {
                     // Same faction - apply large penalty to discourage targeting
                     // But still allow retaliation if they attacked us first
                     if (!isAttacker) {
@@ -753,11 +755,12 @@ class EnemyTargeting {
 
                 case AI_ROLE.COMBAT:
                     // Combat ships prioritize based on faction
-                    const myFaction = enemy._getShipFaction ? enemy._getShipFaction(enemy) : 'UNKNOWN';
-                    // For Player targets, use their faction directly (or 'UNKNOWN' if null)
+                    // Use the faction property set in constructor (no redundant lookups)
+                    const myFaction = enemy.faction || 'MILITARY';
+                    // For Player targets, use their faction directly; for enemies, use faction property
                     const targetFaction = (target instanceof Player)
                         ? (target.playerFaction || 'UNKNOWN')
-                        : (enemy._getShipFaction ? enemy._getShipFaction(target) : 'UNKNOWN');
+                        : (target.faction || 'UNKNOWN');
 
                     // Military ships prioritize aliens with significant bonus
                     if (myFaction === 'MILITARY' && target.role === AI_ROLE.ALIEN) {
@@ -836,7 +839,8 @@ class EnemyTargeting {
                         // Also ensure ally is actually an Enemy instance
                         if ((ally instanceof Enemy) && ally.target === target && ally.role) {
                             const allyFaction = enemy._getShipFaction(ally);
-                            if (allyFaction === myFaction && myFaction !== 'UNKNOWN') {
+                            // Empty string means "no faction" - treat like UNKNOWN
+                            if (allyFaction && myFaction && allyFaction === myFaction && myFaction !== 'UNKNOWN') {
                                 alliesTargetingSame++;
                             }
                         }

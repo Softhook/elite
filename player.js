@@ -3482,15 +3482,12 @@ class Player {
         for (const [shipName, shipDef] of Object.entries(SHIP_DEFINITIONS)) {
             let isFactionShip = false;
 
-            if (factionName === 'MILITARY') {
-                // Military ships are identified by having "MILITARY" in their aiRoles
-                isFactionShip = shipDef.aiRoles && Array.isArray(shipDef.aiRoles) && shipDef.aiRoles.includes('MILITARY');
-            } else if (factionName === 'POLICE') {
-                // Police ships are identified by having "POLICE" in their aiRoles
+            if (factionName === 'POLICE') {
+                // Police ships are identified by having "POLICE" in their aiRoles (role-based)
                 isFactionShip = shipDef.aiRoles && Array.isArray(shipDef.aiRoles) && shipDef.aiRoles.includes('POLICE');
             } else {
-                // Imperial and Separatist ships are identified by name prefix
-                isFactionShip = shipName.toUpperCase().startsWith(factionName.toUpperCase());
+                // Military, Imperial, Separatist ships are identified by faction property
+                isFactionShip = shipDef.faction === factionName;
             }
 
             if (!isFactionShip) {

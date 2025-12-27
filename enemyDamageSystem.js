@@ -86,7 +86,8 @@ class EnemyDamageSystem {
             if (this._getShipFaction && attacker instanceof Enemy) {
                 const myFaction = this._getShipFaction(this);
                 const attackerFaction = this._getShipFaction(attacker);
-                if (myFaction !== 'UNKNOWN' && attackerFaction !== 'UNKNOWN' && myFaction === attackerFaction) {
+                // Empty string means "no faction" - treat like UNKNOWN
+                if (myFaction && myFaction !== 'UNKNOWN' && attackerFaction && attackerFaction !== 'UNKNOWN' && myFaction === attackerFaction) {
                     isSameFaction = true;
                 }
             }

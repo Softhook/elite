@@ -103,8 +103,8 @@ class UIFactionRecruitment {
         let lowestPrice = Infinity;
 
         for (const [shipName, shipDef] of Object.entries(SHIP_DEFINITIONS)) {
-            const isFactionShip = shipDef.aiRoles &&
-                shipDef.aiRoles.includes(factionKey);
+            // Use faction property to identify faction ships
+            const isFactionShip = shipDef.faction === factionKey;
 
             if (!isFactionShip) continue;
 
