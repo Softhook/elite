@@ -96,11 +96,15 @@ class EnemyStateMachine {
 
     /**
      * Helper to determine default state when losing target
-     * Guards return to GUARDING, Police to PATROLLING, others to IDLE
+     * Guards return to GUARDING, Police to PATROLLING, Bounty Hunters leave after contract, others to IDLE
      * @return {number} AI_STATE constant for default state
      * @private
      */
     _getDefaultStateForRole() {
+        // Bounty hunters leave after completing their contract
+        if (this.role === AI_ROLE.BOUNTY_HUNTER && this.hasCompletedContract) {
+            return AI_STATE.LEAVING_SYSTEM;
+        }
         if (this.role === AI_ROLE.GUARD && this.principal && this.isTargetValid(this.principal)) {
             return AI_STATE.GUARDING;
         } else if (this.role === AI_ROLE.POLICE) {

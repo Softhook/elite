@@ -93,6 +93,7 @@ const TARGET_SCORE_COMBAT_LOW_PRIORITY = 0;     // Other ships (generic)
 
 // Faction-based targeting modifier
 const TARGET_SCORE_SAME_FACTION_PENALTY = 200;  // Large penalty for targeting same faction (prevents friendly fire)
+const TARGET_SCORE_BOUNTY_CONTRACT = 1000;      // Score for bounty hunter's assigned target
 
 // -------------------------
 // --- Faction and Role Hostility Maps ---

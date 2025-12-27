@@ -865,6 +865,7 @@ class EnemyAIBehaviors {
             this.currentState !== AI_STATE.ATTACK_PASS &&
             this.currentState !== AI_STATE.REPOSITIONING &&
             this.currentState !== AI_STATE.SNIPING && // Don't interrupt sniping
+            this.currentState !== AI_STATE.LEAVING_SYSTEM && // Don't interrupt leaving (e.g., bounty hunters with completed contracts)
             (!this.attackCooldown || this.attackCooldown <= 0)) {
 
             const attackerDistance = this.distanceTo(this.lastAttacker);

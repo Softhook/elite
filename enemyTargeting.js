@@ -290,16 +290,50 @@ class EnemyTargeting {
             }
         }
 
-        // --- BOUNTY HUNTER: Always target player ---
+        // --- BOUNTY HUNTER: Target assigned bountyTarget, or fall back to player ---
         if (this.role === AI_ROLE.BOUNTY_HUNTER) {
-            const playerRef = system.player || this.target; // Ensure we have a reference to player
+            // If contract is already completed, head to jump zone
+            if (this.hasCompletedContract) {
+                this.target = null;
+                if (this.currentState !== AI_STATE.LEAVING_SYSTEM) {
+                    // setLeavingSystemTarget internally calls changeState
+                    this.setLeavingSystemTarget(system);
+                }
+                return false;
+            }
+
+            // Check if assigned bounty target is still valid
+            if (this.bountyTarget) {
+                if (this.isTargetValid(this.bountyTarget)) {
+                    if (this.target !== this.bountyTarget) {
+                        this.target = this.bountyTarget;
+                    }
+                    return true;
+                } else {
+                    // Target destroyed - contract complete, time to leave
+                    this.hasCompletedContract = true;
+                    this.bountyTarget = null;
+                    this.target = null;
+                    // setLeavingSystemTarget internally calls changeState
+                    if (system) {
+                        this.setLeavingSystemTarget(system);
+                    } else {
+                        this.changeState(AI_STATE.LEAVING_SYSTEM);
+                    }
+                    AI_LOG(`${this.shipTypeName} (Bounty Hunter): Contract complete, leaving system.`);
+                    return false;
+                }
+            }
+
+            // No assigned target - fall back to player (backward compatibility)
+            const playerRef = system.player || this.target;
             if (playerRef instanceof Player && this.isTargetValid(playerRef)) {
                 if (this.target !== playerRef) {
                     this.target = playerRef;
                 }
-                return true; // Player is the target
+                return true;
             } else {
-                this.target = null; // Player is not valid (e.g., destroyed, not in system)
+                this.target = null;
                 return false;
             }
         }
@@ -541,13 +575,18 @@ class EnemyTargeting {
             }
             // --- END GUARD ---
 
-            // --- BOUNTY HUNTER: Only cares about the player ---
+            // --- BOUNTY HUNTER: Target assigned bountyTarget or default to player ---
             if (enemy.role === AI_ROLE.BOUNTY_HUNTER) {
-                if (target instanceof Player) {
-                    return 1000; // Very high score for the player
-                } else {
-                    return TARGET_SCORE_INVALID; // Ignore all other targets
+                // Assigned bounty target gets highest priority
+                if (enemy.bountyTarget && target === enemy.bountyTarget) {
+                    return TARGET_SCORE_BOUNTY_CONTRACT; // 1000
                 }
+                // No assigned target - fall back to player (backward compatibility)
+                if (!enemy.bountyTarget && target instanceof Player) {
+                    return TARGET_SCORE_BOUNTY_CONTRACT;
+                }
+                // Ignore everything else
+                return TARGET_SCORE_INVALID;
             }
             // --- END BOUNTY HUNTER ---
 

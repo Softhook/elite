@@ -203,7 +203,56 @@ class EventManager {
                     spawnRadiusMin: 1700,
                     spawnRadiusMax: 2300,
                     spawnAngleSpreadFactor: 0.15,
-                    positionRandomnessFactor: 200
+                    positionRandomnessFactor: 200,
+                    additionalEnemySetup: (enemy, player, system) => {
+                        // Collect potential bounty targets with weights
+                        const potentialTargets = [];
+
+                        // 1. Check for assassination mission targets (highest priority)
+                        if (player.activeMission &&
+                            player.activeMission.type === MISSION_TYPE?.ASSASSINATION &&
+                            player.activeMission._targetEnemyRef &&
+                            !player.activeMission._targetEnemyRef.destroyed) {
+                            potentialTargets.push({
+                                target: player.activeMission._targetEnemyRef,
+                                weight: 3
+                            });
+                        }
+
+                        // 2. Add pirates in system (medium priority)
+                        if (system && system.enemies) {
+                            for (const e of system.enemies) {
+                                if (e && e.role === AI_ROLE.PIRATE && !e.destroyed && e !== enemy) {
+                                    potentialTargets.push({ target: e, weight: 2 });
+                                }
+                            }
+                        }
+
+                        // 3. Player is always a potential target (lowest priority)
+                        potentialTargets.push({ target: player, weight: 1 });
+
+                        // Weighted random selection
+                        const totalWeight = potentialTargets.reduce((sum, t) => sum + t.weight, 0);
+                        let roll = random() * totalWeight;
+                        let selectedTarget = player; // Default fallback
+
+                        for (const t of potentialTargets) {
+                            roll -= t.weight;
+                            if (roll <= 0) {
+                                selectedTarget = t.target;
+                                break;
+                            }
+                        }
+
+                        enemy.bountyTarget = selectedTarget;
+                        enemy.currentState = AI_STATE.APPROACHING;
+
+                        // Log the target assignment
+                        const targetName = selectedTarget instanceof Player
+                            ? 'Player'
+                            : (selectedTarget.displayName || selectedTarget.shipTypeName || 'Unknown');
+                        console.log(`Bounty Hunter ${enemy.shipTypeName} assigned target: ${targetName}`);
+                    }
                 }
             },
             {
@@ -1081,20 +1130,35 @@ class EventManager {
                 const anchorVec = this.starSystem.jumpZoneCenter || this.player.pos;
                 const baseRadius = (this.starSystem.jumpZoneRadius || 600) + random(300, 700);
 
-                // Spawn bounty hunters that hunt pirates, not the player
+                // Collect available pirates to assign as targets
+                const availablePirates = (this.starSystem.enemies || []).filter(
+                    e => e && e.role === AI_ROLE.PIRATE && !e.destroyed
+                );
+                let pirateIndex = 0;
+
+                // Spawn bounty hunters that hunt pirates
                 for (let i = 0; i < spawnCount; i++) {
                     const angle = random(TWO_PI);
                     const dist = baseRadius + random(-200, 200);
                     const sx = anchorVec.x + cos(angle) * dist;
                     const sy = anchorVec.y + sin(angle) * dist;
                     this._spawnAdHocEnemy(sx, sy, AI_ROLE.BOUNTY_HUNTER, (enemy) => {
-                        enemy.currentState = AI_STATE.PATROLLING;
-                        // Bounty hunters will find and target pirates via their normal AI
+                        // Assign a pirate target if available, otherwise null (will fall back to player)
+                        if (availablePirates.length > 0) {
+                            // Distribute bounty hunters across available pirates
+                            enemy.bountyTarget = availablePirates[pirateIndex % availablePirates.length];
+                            pirateIndex++;
+                        }
+                        // Note: if no pirates, bountyTarget stays null and bounty hunter targets player
+                        enemy.currentState = AI_STATE.APPROACHING;
                     });
                 }
 
                 const systemLabel = this.starSystem?.name || 'Local sector';
-                this._notifyEvent(`${systemLabel}: Bounty payouts raised — ${spawnCount} hunter ships hunting pirates`, 'red');
+                const targetInfo = availablePirates.length > 0
+                    ? `hunting ${availablePirates.length} pirates`
+                    : 'seeking targets';
+                this._notifyEvent(`${systemLabel}: Bounty payouts raised — ${spawnCount} hunter ships ${targetInfo}`, 'red');
                 this._addPersistentEvent('BOUNTY_INCREASE', 'NOTICE: High Bounty Payouts Active', 'red', this._extendDurationMs(180000));
                 break;
             }

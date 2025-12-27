@@ -121,6 +121,9 @@ class Enemy {
                 this.angleTolerance = shipDef.angleTolerance || (10 * PI / 180); // Standard tolerance
                 this.drag = shipDef.drag || 0.99; // Slightly less drag
                 this.target = playerRef;
+                // Bounty hunter contract properties
+                this.bountyTarget = null;           // Assigned target (player, enemy, or assassination target)
+                this.hasCompletedContract = false;  // Set true when bountyTarget is destroyed
                 break;
             case AI_ROLE.GUARD:
                 this.strokeColorValue = shipDef.strokeColorValue || [150, 150, 220]; // Light purple/blue
@@ -663,7 +666,12 @@ class Enemy {
                         this.updateCombatAI(system);
                         break;
                     case AI_ROLE.BOUNTY_HUNTER:
-                        this.updateCombatAI(system); // Bounty Hunters use combat AI
+                        // Bounty hunters use hauler AI when leaving system after contract completion
+                        if (this.currentState === AI_STATE.LEAVING_SYSTEM) {
+                            this.updateHaulerAI(system);
+                        } else {
+                            this.updateCombatAI(system);
+                        }
                         break;
                     default:
                         // Default behavior for unknown roles (frame-rate independent)
