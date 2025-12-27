@@ -779,11 +779,31 @@ class CommunicationSystem {
         const item = this._speechQueue.shift();
         this._isSpeaking = true;
 
+        // Play radio static at start of transmission
+        if (typeof soundManager !== 'undefined' && soundManager.playSound) {
+            soundManager.playSound('radioStaticStart');
+        }
+
         // Set voice and profile for this message
         try {
             this._speech.setVoice(item.voiceIndex);
             this._speech.setRate(item.rate);
             this._speech.setPitch(item.pitch);
+
+            // Store reference to play end static when speech completes
+            const originalOnEnd = this._speech.onEnd;
+            const self = this;
+            this._speech.onEnd = function () {
+                // Play radio static at end of transmission
+                if (typeof soundManager !== 'undefined' && soundManager.playSound) {
+                    soundManager.playSound('radioStaticEnd');
+                }
+
+                self._isSpeaking = false;
+                // Restore and call original onEnd handler
+                self._speech.onEnd = originalOnEnd;
+                self._processQueue();
+            };
 
             // Speak the message
             this._speech.speak(item.message);
