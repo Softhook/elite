@@ -476,7 +476,7 @@ class CommunicationSystem {
 
         try {
             this._speech = new p5.Speech();
-            this._speech.setVolume(0.45); // Low volume - background context
+            this._speech.setVolume(0.45); // Background context volume
             this._speech.interrupt = false; // Queue mode
 
             // When speech ends, process next in queue
@@ -485,8 +485,39 @@ class CommunicationSystem {
                 this._processQueue();
             };
 
-            this._speechEnabled = true;
-            console.log('CommunicationSystem: Speech synthesis initialized');
+            // Voices load asynchronously - use onLoad to confirm ready
+            this._speech.onLoad = () => {
+                this._speechEnabled = true;
+                console.log('CommunicationSystem: Speech voices loaded via onLoad callback');
+            };
+
+            // CRITICAL FIX: onvoiceschanged only fires ONCE per window lifetime.
+            // If this is a second p5.Speech instance (after game reset), voices
+            // are already available but onLoad will never be called.
+            // Check if voices are already available and manually initialize.
+            const existingVoices = window.speechSynthesis?.getVoices();
+            if (existingVoices && existingVoices.length > 0) {
+                // Voices already loaded from previous session
+                this._speech.voices = existingVoices;
+                this._speech.isLoaded = 1;
+                this._speechEnabled = true;
+
+                // ALSO bind utterance callbacks that p5.speech normally sets in onvoiceschanged
+                // Without this, onEnd never fires and queue gets stuck
+                const speech = this._speech;
+                speech.utterance.onend = (e) => {
+                    if (speech.onEnd) speech.onEnd(e);
+                };
+                speech.utterance.onstart = (e) => {
+                    if (speech.onStart) speech.onStart(e);
+                };
+
+                console.log('CommunicationSystem: Speech voices already available (reused from previous session)');
+            } else {
+                // First load - wait for onLoad callback
+                this._speechEnabled = true;
+                console.log('CommunicationSystem: Speech synthesis initialized (waiting for voices)');
+            }
         } catch (e) {
             console.warn('CommunicationSystem: Failed to initialize speech', e);
             this._speechEnabled = false;
@@ -498,19 +529,25 @@ class CommunicationSystem {
      * Should be called before game reset or when cleaning up resources
      */
     cleanupSpeech() {
-        // Stop any active speech
+        // Stop any active speech and null the reference
         if (this._speech) {
             try {
                 this._speech.cancel();
             } catch (e) {
                 // Ignore errors during cleanup
             }
+            this._speech = null;
         }
 
-        // Clear the queue
+        // Clear the queue and state
         this._speechQueue = [];
         this._isSpeaking = false;
-        this._voiceByEnemy.clear();
+        this._speechEnabled = false;
+
+        // Clear voice cache if it exists
+        if (this._voiceByEnemy) {
+            this._voiceByEnemy.clear();
+        }
 
         console.log('CommunicationSystem: Speech cleaned up');
     }
@@ -525,17 +562,13 @@ class CommunicationSystem {
             return;
         }
 
-        // Strip special characters (alien symbols, etc.) and clean up
-        let cleanMessage = message
-            .replace(/[⟟⟊⟒⋮⊑✦☼⌬𐌰𐌿𐍄∴ʘ͜ʖ∰⟴⟁⋇ᚠᛇᚻᚾᚪᚷᛟᚾᛖᚱᛚᛝ҉☍☌彡彗ζ≀₪ᚺᚨᛚ¤Ѫ≀∿▣▢◬Ϟϟƛ𓆣◯]/g, ''); // Remove alien symbols
+        // Clean up extra whitespace but keep all characters (including alien symbols)
+        // The speech synthesizer will attempt to speak them or skip unpronounceables
+        let cleanMessage = message.replace(/\s+/g, ' ').trim();
 
-        // Skip if message is mostly symbols (alien speech)
-        if (cleanMessage.replace(/[^a-zA-Z]/g, '').length < 5) {
-            return;
-        }
-
-        // Clean up extra whitespace
-        cleanMessage = cleanMessage.replace(/\s+/g, ' ').trim();
+        // Remove pilot/ship name prefix (e.g., "Viper:" or "Patrol P-42:" at the start)
+        // This strips everything before the first colon if it looks like a name prefix
+        cleanMessage = cleanMessage.replace(/^[^:]{1,40}:\s*/, '');
 
         if (!cleanMessage) {
             return;
