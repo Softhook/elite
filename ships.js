@@ -1368,8 +1368,11 @@ const SHIP_DEFINITIONS = {
                 fillColor: [160, 80, 200],
             }
         ],
-        typicalCargo: ["Luxury Goods"], price: 105000, techLevel: 4,
-        aiRoles: ["IMPERIAL"]
+        typicalCargo: ["Luxury Goods"],
+        price: 105000,
+        aiRoles: ["HAULER"],
+        faction: "IMPERIAL",
+        techLevel: 4
     },
     "ImperialSentinel": {
         name: "Imperial Sentinel", role: "Border Patrol Corvette", sizeCategory: "Large", size: 78,

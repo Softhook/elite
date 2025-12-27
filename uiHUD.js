@@ -762,6 +762,7 @@ class UIHUD {
 
         const shipName = this._getTargetShipName(target);
         const roleLabel = this._formatRoleLabel(target.role);
+        const factionLabel = this._formatFactionLabel(target.faction);
         const wantedLabel = (typeof target.isWanted === 'boolean') ? (target.isWanted ? 'Wanted' : null) : null;
 
         // Check if this target is a mission target
@@ -794,7 +795,16 @@ class UIHUD {
 
         const infoLines = [];
         if (hasShipIdentity) {
-            infoLines.push(`${shipName}${roleLabel ? ` (${roleLabel})` : ''}`);
+            // Build a combined role/faction identifier
+            let identifier = '';
+            if (roleLabel && factionLabel) {
+                identifier = ` (${roleLabel} / ${factionLabel})`;
+            } else if (roleLabel) {
+                identifier = ` (${roleLabel})`;
+            } else if (factionLabel) {
+                identifier = ` (${factionLabel})`;
+            }
+            infoLines.push(`${shipName}${identifier}`);
         }
         // Add mission target indicator prominently
         if (isMissionTarget) {
@@ -1069,6 +1079,12 @@ class UIHUD {
         if (!role) return '';
         if (role === AI_ROLE?.BOUNTY_HUNTER) return 'Bounty Hunter';
         if (typeof role === 'string') return role.replace(/_/g, ' ');
+        return '';
+    }
+
+    _formatFactionLabel(faction) {
+        if (!faction || faction === '' || faction === 'UNKNOWN') return '';
+        if (typeof faction === 'string') return faction.replace(/_/g, ' ');
         return '';
     }
 

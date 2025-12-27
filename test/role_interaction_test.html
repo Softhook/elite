@@ -267,7 +267,7 @@
                 this.playerFaction = null;
                 this.cargo = [];
             }
-            getCargoAmount() { return this.cargo.length; }
+            getCargoAmount() { return this.cargo.reduce((sum, item) => sum + (item?.quantity ?? 0), 0); }
         }
 
         function createMockPlayer(options = {}) {
@@ -343,7 +343,7 @@
             const playerVariants = [
                 { label: 'Player (Clean)', config: { isWanted: false } },
                 { label: 'Player (Wanted)', config: { isWanted: true } },
-                { label: 'Player (Cargo)', config: { isWanted: false, cargo: [{ name: 'Gold', qty: 20 }] } }
+                { label: 'Player (Cargo)', config: { isWanted: false, cargo: [{ name: 'Gold', quantity: 20 }] } }
             ];
 
             // Create mock system - ALL enemies at same position (0,0) to eliminate distance penalties
