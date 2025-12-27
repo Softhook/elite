@@ -218,30 +218,37 @@ const PIRATE_GANG_NAMES = [
 // --- NPC Name Generation ---
 // -------------------------
 
-// Single source of truth for human NPC first names
-const NPC_FIRST_NAMES = [
-    'Alex', 'Blake', 'Casey', 'Dana', 'Ellis', 'Finley', 'Gray', 'Harper',
-    'Jordan', 'Kelly', 'Lane', 'Morgan', 'Nova', 'Parker', 'Quinn', 'River',
-    'Sage', 'Taylor', 'Val', 'Zephyr', 'Aria', 'Cade', 'Echo', 'Frost',
-    'Kai', 'Luna', 'Orion', 'Phoenix', 'Raven', 'Storm', 'Ash', 'Blaze',
-    'Ahmed', 'Amina', 'Carlos', 'Elena', 'Fatima', 'Gustavo', 'Hana', 'Ibrahim',
-    'Javier', 'Katarina', 'Luis', 'Maria', 'Nadia', 'Omar', 'Priya', 'Rafael',
-    'Sofia', 'Tariq', 'Ursula', 'Viktor', 'Wafa', 'Xavier', 'Yasmin', 'Zara',
-    'Bjorn', 'Clara', 'Diego', 'Eva', 'Felix', 'Gabriela', 'Hans', 'Isabella',
-    'Johan', 'Kira', 'Lars', 'Maya', 'Christian', 'Nils', 'Olivia', 'Pedro', 'Quincy',
-    'Rosa', 'Sven', 'Tina', 'Ulf', 'Vera', 'Wolfgang', 'Xena', 'Yuri',
-    'Zoe', 'Akira', 'Bao', 'Chun', 'Dmitri', 'Emiko', 'Fahad', 'Gina',
-    'Hiroshi', 'Ines', 'Jiro', 'Kamal', 'Ling', 'Mateo', 'Nina', 'Oscar',
-    'Pavel', 'Qamar', 'Rina', 'Santiago', 'Tao', 'Uma', 'Vladimir', 'Wei',
-    'Xin', 'Yuki', 'Zheng', 'Anika', 'Poppy', 'Bruno', 'Carmen', 'Dario', 'Elsa',
-    'Fabio', 'Greta', 'Hugo', 'Ivy', 'Jasmine', 'Klaus', 'Lila', 'Miguel',
-    'Nora', 'Otto', 'Paola', 'Ruben', 'Sara', 'Sebastian', 'Theo', 'Ulla', 'Victor',
-    'Wanda', 'Ximena', 'Yara', 'Ziggy', 'Amir', 'Bianca', 'Cesar', 'Diana',
-    'Eduardo', 'Fiona', 'Giuseppe', 'Helena', 'Ivan', 'Julia', 'Kofi', 'Lena',
-    'Marco', 'Oleg', 'Paula', 'Quentin', 'Rita', 'Sergio', 'Talia',
-    'Ulrich', 'Vanessa', 'Walter', 'Xia', 'Yosef', 'Marcus', 'Ingrid', 'Rashid',
-    'Astrid', 'Chen', 'Aleksei', 'Jorge', 'Nikolai', 'Dante', 'Mei'
+// Gender-specific first name pools for voice selection
+const NPC_FIRST_NAMES_MALE = [
+    'Alex', 'Blake', 'Casey', 'Ellis', 'Gray', 'Jordan', 'Parker', 'Quinn',
+    'River', 'Cade', 'Kai', 'Orion', 'Phoenix', 'Ash', 'Blaze',
+    'Ahmed', 'Carlos', 'Gustavo', 'Ibrahim', 'Javier', 'Luis', 'Omar', 'Rafael',
+    'Tariq', 'Viktor', 'Xavier', 'Bjorn', 'Diego', 'Felix', 'Hans',
+    'Johan', 'Lars', 'Christian', 'Nils', 'Pedro', 'Quincy', 'Sven', 'Ulf',
+    'Wolfgang', 'Yuri', 'Akira', 'Bao', 'Dmitri', 'Fahad', 'Hiroshi', 'Jiro',
+    'Kamal', 'Mateo', 'Oscar', 'Pavel', 'Santiago', 'Tao', 'Vladimir', 'Wei',
+    'Xin', 'Zheng', 'Bruno', 'Dario', 'Fabio', 'Hugo', 'Klaus', 'Miguel',
+    'Otto', 'Ruben', 'Sebastian', 'Theo', 'Victor', 'Amir', 'Cesar',
+    'Eduardo', 'Giuseppe', 'Ivan', 'Kofi', 'Marco', 'Oleg', 'Quentin', 'Sergio',
+    'Ulrich', 'Walter', 'Yosef', 'Marcus', 'Rashid', 'Chen', 'Aleksei', 'Jorge',
+    'Nikolai', 'Dante'
 ];
+
+const NPC_FIRST_NAMES_FEMALE = [
+    'Dana', 'Finley', 'Harper', 'Kelly', 'Lane', 'Morgan', 'Nova', 'Sage',
+    'Taylor', 'Val', 'Aria', 'Echo', 'Luna', 'Raven', 'Storm', 'Frost',
+    'Amina', 'Elena', 'Fatima', 'Hana', 'Katarina', 'Maria', 'Nadia', 'Priya',
+    'Sofia', 'Ursula', 'Wafa', 'Yasmin', 'Zara', 'Clara', 'Eva', 'Gabriela',
+    'Isabella', 'Kira', 'Maya', 'Olivia', 'Rosa', 'Tina', 'Vera', 'Xena',
+    'Zoe', 'Chun', 'Emiko', 'Gina', 'Ines', 'Ling', 'Nina', 'Qamar', 'Rina',
+    'Uma', 'Yuki', 'Anika', 'Poppy', 'Carmen', 'Elsa', 'Greta', 'Ivy',
+    'Jasmine', 'Lila', 'Nora', 'Paola', 'Sara', 'Ulla', 'Wanda', 'Ximena',
+    'Yara', 'Bianca', 'Diana', 'Fiona', 'Helena', 'Julia', 'Lena', 'Paula',
+    'Rita', 'Talia', 'Vanessa', 'Xia', 'Ingrid', 'Astrid', 'Mei', 'Zephyr'
+];
+
+// Combined list for backwards compatibility
+const NPC_FIRST_NAMES = [...NPC_FIRST_NAMES_MALE, ...NPC_FIRST_NAMES_FEMALE];
 
 // Single source of truth for human NPC last names
 const NPC_LAST_NAMES = [
@@ -287,14 +294,24 @@ function getRandomNamePart(list) {
 }
 
 /**
+ * Generate a random human NPC name with gender information
+ * @returns {{ name: string, gender: 'male'|'female' }} Object with name and gender
+ */
+function generateGenderedNPCName() {
+    const gender = Math.random() < 0.5 ? 'male' : 'female';
+    const firstNames = gender === 'male' ? NPC_FIRST_NAMES_MALE : NPC_FIRST_NAMES_FEMALE;
+    const first = getRandomNamePart(firstNames);
+    const last = getRandomNamePart(NPC_LAST_NAMES);
+    const name = (first && last) ? `${first} ${last}` : (first || last || '');
+    return { name, gender };
+}
+
+/**
  * Generate a random human NPC name (first + last)
  * @returns {string} Full name like "Elena Volkov"
  */
 function generateNPCName() {
-    const first = getRandomNamePart(NPC_FIRST_NAMES);
-    const last = getRandomNamePart(NPC_LAST_NAMES);
-    if (!first && !last) { return ''; }
-    return last ? `${first} ${last}` : first;
+    return generateGenderedNPCName().name;
 }
 
 /**

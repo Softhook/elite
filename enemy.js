@@ -11,6 +11,13 @@ function generateHumanEnemyName() {
     return (typeof generateNPCName === 'function') ? generateNPCName() : '';
 }
 
+// Generate name with gender info for voice selection
+function generateGenderedHumanEnemyName() {
+    return (typeof generateGenderedNPCName === 'function')
+        ? generateGenderedNPCName()
+        : { name: '', gender: 'male' };
+}
+
 class Enemy {
     // ---------------------------------
     // --- Constructor & Initialization
@@ -62,7 +69,16 @@ class Enemy {
         // --- Assign CORRECT Properties ---
         this.shipTypeName = actualShipTypeName; // Store the ACTUAL KEY used to find the definition
         this.role = role;
-        this.displayName = (this.role === AI_ROLE.ALIEN) ? null : generateHumanEnemyName();
+
+        // Generate name with gender for voice selection
+        if (this.role === AI_ROLE.ALIEN) {
+            this.displayName = null;
+            this.gender = null; // Aliens don't have human gender
+        } else {
+            const nameData = generateGenderedHumanEnemyName();
+            this.displayName = nameData.name;
+            this.gender = nameData.gender; // 'male' or 'female'
+        }
 
         // Assign faction - prefer explicit shipDef.faction, then infer from role
         this.faction = null;
@@ -768,6 +784,7 @@ class Enemy {
             angle: this.angle,
             currentState: this.currentState,
             shipDisplayName: this.displayName,
+            gender: this.gender, // For voice selection
             cargoHold: Array.isArray(this.cargoHold) ? this.cargoHold.map(c => (typeof c.toJSON === 'function' ? c.toJSON() : c)) : [],
             weapons: Array.isArray(this.weapons) ? this.weapons.map(w => (w && w.name) ? w.name : w) : [],
             strokeColorValue: this.strokeColorValue,
@@ -805,6 +822,7 @@ class Enemy {
             // ID and identity
             enemy.id = data.id || (Date.now() + '_' + Math.floor(Math.random() * 1000));
             enemy.displayName = data.shipDisplayName || enemy.displayName;
+            enemy.gender = data.gender || enemy.gender; // Restore gender for voice selection
             enemy.faction = data.faction || enemy.faction;
             enemy.isWanted = !!data.isWanted;
 

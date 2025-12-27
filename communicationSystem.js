@@ -13,9 +13,68 @@ class CommunicationSystem {
         // Speech synthesis properties
         this._speechQueue = [];           // Queue of messages to speak
         this._isSpeaking = false;         // Lock to prevent overlapping speech
-        this._voiceByEnemy = new Map();   // Cache voice index per enemy for consistency
+        this._voiceByEnemy = new Map();   // Cache voice profile per enemy for consistency
         this._speech = null;              // p5.Speech instance (initialized later)
         this._speechEnabled = true;       // Master toggle for speech
+
+        // Role-based voice profiles: pitch and rate ranges for different AI roles
+        // Pitch: 0.01-2.0, Rate: 0.1-2.0 (browser limits)
+        this._roleVoiceProfiles = {
+            // Pirates: rougher, gruffer voices
+            'Pirate': {
+                male: { pitchMin: 0.6, pitchMax: 0.85, rateMin: 1.0, rateMax: 1.15 },
+                female: { pitchMin: 0.85, pitchMax: 1.05, rateMin: 1.0, rateMax: 1.15 }
+            },
+            // Police: authoritative, clear
+            'Police': {
+                male: { pitchMin: 0.85, pitchMax: 1.0, rateMin: 0.9, rateMax: 1.0 },
+                female: { pitchMin: 1.0, pitchMax: 1.2, rateMin: 0.9, rateMax: 1.0 }
+            },
+            // Imperial: deep, commanding, measured
+            'IMPERIAL': {
+                male: { pitchMin: 0.55, pitchMax: 0.75, rateMin: 0.8, rateMax: 0.95 },
+                female: { pitchMin: 0.85, pitchMax: 1.0, rateMin: 0.8, rateMax: 0.95 }
+            },
+            // Separatist: passionate, faster
+            'SEPARATIST': {
+                male: { pitchMin: 0.9, pitchMax: 1.1, rateMin: 1.05, rateMax: 1.2 },
+                female: { pitchMin: 1.05, pitchMax: 1.25, rateMin: 1.05, rateMax: 1.2 }
+            },
+            // Military: professional, calm
+            'MILITARY': {
+                male: { pitchMin: 0.8, pitchMax: 0.95, rateMin: 0.9, rateMax: 1.0 },
+                female: { pitchMin: 1.0, pitchMax: 1.15, rateMin: 0.9, rateMax: 1.0 }
+            },
+            // Combat (generic): slightly aggressive
+            'Combat': {
+                male: { pitchMin: 0.75, pitchMax: 0.95, rateMin: 0.95, rateMax: 1.1 },
+                female: { pitchMin: 0.95, pitchMax: 1.15, rateMin: 0.95, rateMax: 1.1 }
+            },
+            // Guard: protective, firm
+            'Guard': {
+                male: { pitchMin: 0.8, pitchMax: 0.95, rateMin: 0.9, rateMax: 1.0 },
+                female: { pitchMin: 1.0, pitchMax: 1.15, rateMin: 0.9, rateMax: 1.0 }
+            },
+            // Hauler/Transport: casual, varied
+            'Hauler': {
+                male: { pitchMin: 0.9, pitchMax: 1.1, rateMin: 0.9, rateMax: 1.1 },
+                female: { pitchMin: 1.0, pitchMax: 1.2, rateMin: 0.9, rateMax: 1.1 }
+            },
+            'Transport': {
+                male: { pitchMin: 0.9, pitchMax: 1.1, rateMin: 0.9, rateMax: 1.1 },
+                female: { pitchMin: 1.0, pitchMax: 1.2, rateMin: 0.9, rateMax: 1.1 }
+            },
+            // Alien: very strange, extreme pitch modulation
+            'Alien': {
+                male: { pitchMin: 0.3, pitchMax: 2.0, rateMin: 0.5, rateMax: 1.8 },
+                female: { pitchMin: 0.3, pitchMax: 2.0, rateMin: 0.5, rateMax: 1.8 }
+            },
+            // Default fallback
+            'default': {
+                male: { pitchMin: 0.85, pitchMax: 1.05, rateMin: 0.9, rateMax: 1.1 },
+                female: { pitchMin: 1.0, pitchMax: 1.2, rateMin: 0.9, rateMax: 1.1 }
+            }
+        };
 
         this._cargoWords = ["cargo", "freight", "payload", "haul", "manifest", "containers", "stock"];
         // Use shared constant from enemyConstants.js for pirate gang names
@@ -553,7 +612,80 @@ class CommunicationSystem {
     }
 
     /**
+     * Get the voice profile key for an enemy based on role and faction
+     * @param {Object} enemy - The enemy to get profile for
+     * @returns {string} Profile key (role or faction name)
+     */
+    _getVoiceProfileKey(enemy) {
+        if (!enemy) return 'default';
+
+        // For Combat role, use faction-specific profile if available
+        if (enemy.role === 'Combat' && enemy.faction) {
+            if (this._roleVoiceProfiles[enemy.faction]) {
+                return enemy.faction;
+            }
+        }
+
+        // Use role-based profile
+        if (enemy.role && this._roleVoiceProfiles[enemy.role]) {
+            return enemy.role;
+        }
+
+        return 'default';
+    }
+
+    /**
+     * Find a suitable English voice matching the desired gender
+     * @param {string} gender - 'male' or 'female'
+     * @returns {number} Voice index to use
+     */
+    _selectVoiceForGender(gender) {
+        if (!this._speech || !this._speech.voices || this._speech.voices.length === 0) {
+            return 0;
+        }
+
+        const voices = this._speech.voices;
+
+        // Filter for English voices first
+        const englishVoices = voices.filter(v =>
+            v.lang && (v.lang.startsWith('en-') || v.lang === 'en')
+        );
+
+        const voicesToSearch = englishVoices.length > 0 ? englishVoices : voices;
+
+        // Try to find voices matching gender by name heuristics
+        // Common patterns: names ending in 'a' tend female, or containing gender keywords
+        const genderMatched = voicesToSearch.filter(v => {
+            const name = v.name.toLowerCase();
+            if (gender === 'female') {
+                return name.includes('female') || name.includes('woman') ||
+                    name.includes('samantha') || name.includes('victoria') ||
+                    name.includes('karen') || name.includes('moira') ||
+                    name.includes('kate') || name.includes('fiona') ||
+                    name.includes('allison') || name.includes('susan') ||
+                    name.includes('zira') || name.includes('hazel') ||
+                    name.includes('serena') || name.includes('ellen');
+            } else {
+                return name.includes('male') || name.includes('man') ||
+                    name.includes('daniel') || name.includes('james') ||
+                    name.includes('alex') || name.includes('david') ||
+                    name.includes('tom') || name.includes('oliver') ||
+                    name.includes('george') || name.includes('aaron') ||
+                    name.includes('fred') || name.includes('ralph');
+            }
+        });
+
+        // Pick from gender-matched voices if available, otherwise any English voice
+        const candidates = genderMatched.length > 0 ? genderMatched : voicesToSearch;
+        const selectedVoice = candidates[Math.floor(Math.random() * candidates.length)];
+
+        // Return the index in the original voices array
+        return voices.indexOf(selectedVoice);
+    }
+
+    /**
      * Queue a message to be spoken with a voice assigned to the enemy
+     * Uses role-based voice profiles and gender-aware voice selection
      * @param {string} message - The message to speak
      * @param {Object} enemy - The enemy ship sending the message (for voice assignment)
      */
@@ -574,28 +706,58 @@ class CommunicationSystem {
             return;
         }
 
-        // Assign a voice index for this enemy (consistent voice per ship)
-        let voiceIndex = 0;
+        // Get or create voice profile for this enemy
+        let voiceProfile = null;
         if (enemy) {
             const enemyKey = this._getEnemyKey(enemy);
             if (enemyKey) {
                 if (!this._voiceByEnemy.has(enemyKey)) {
-                    // Assign a random voice index
-                    const voiceCount = this._speech.voices?.length || 10;
-                    this._voiceByEnemy.set(enemyKey, Math.floor(Math.random() * voiceCount));
+                    // Determine profile based on role/faction
+                    const profileKey = this._getVoiceProfileKey(enemy);
+                    const profile = this._roleVoiceProfiles[profileKey] || this._roleVoiceProfiles['default'];
+
+                    // Get gender-specific settings
+                    const gender = enemy.gender || 'male';
+                    const genderProfile = profile[gender] || profile['male'];
+
+                    // Select a voice matching the gender
+                    const voiceIndex = this._selectVoiceForGender(gender);
+
+                    // Generate fixed pitch/rate within profile range for this enemy
+                    const pitch = genderProfile.pitchMin + Math.random() * (genderProfile.pitchMax - genderProfile.pitchMin);
+                    const rate = genderProfile.rateMin + Math.random() * (genderProfile.rateMax - genderProfile.rateMin);
+
+                    // Cache the complete voice profile for this enemy
+                    this._voiceByEnemy.set(enemyKey, {
+                        voiceIndex,
+                        pitch,
+                        rate,
+                        role: enemy.role,
+                        gender
+                    });
                 }
-                voiceIndex = this._voiceByEnemy.get(enemyKey);
+                voiceProfile = this._voiceByEnemy.get(enemyKey);
             }
-        } else {
-            // Random voice for non-enemy messages
-            const voiceCount = this._speech.voices?.length || 10;
-            voiceIndex = Math.floor(Math.random() * voiceCount);
         }
 
-        // Add to queue
+        // Fallback for non-enemy messages
+        if (!voiceProfile) {
+            const voiceCount = this._speech.voices?.length || 10;
+            voiceProfile = {
+                voiceIndex: Math.floor(Math.random() * voiceCount),
+                pitch: 0.9 + Math.random() * 0.2,
+                rate: 0.9 + Math.random() * 0.2,
+                role: null,
+                gender: 'male'
+            };
+        }
+
+        // Add to queue with full voice profile
         this._speechQueue.push({
             message: cleanMessage,
-            voiceIndex: voiceIndex
+            voiceIndex: voiceProfile.voiceIndex,
+            pitch: voiceProfile.pitch,
+            rate: voiceProfile.rate
         });
 
         // Start processing if not already speaking
@@ -617,15 +779,11 @@ class CommunicationSystem {
         const item = this._speechQueue.shift();
         this._isSpeaking = true;
 
-        // Set voice for this message
+        // Set voice and profile for this message
         try {
             this._speech.setVoice(item.voiceIndex);
-
-            // Vary rate and pitch slightly for more natural variation
-            const rate = 0.9 + Math.random() * 0.3;  // 0.9-1.2
-            const pitch = 0.8 + Math.random() * 0.4; // 0.8-1.2
-            this._speech.setRate(rate);
-            this._speech.setPitch(pitch);
+            this._speech.setRate(item.rate);
+            this._speech.setPitch(item.pitch);
 
             // Speak the message
             this._speech.speak(item.message);
