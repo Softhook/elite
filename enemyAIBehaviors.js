@@ -859,13 +859,14 @@ class EnemyAIBehaviors {
         const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
 
         // Check for attackers FIRST
+        // Check for attackers FIRST - allow retaliation even when LEAVING_SYSTEM
+        // (Haulers should defend themselves regardless of current activity)
         if (this.lastAttacker && this.isTargetValid(this.lastAttacker) &&
             this.currentState !== AI_STATE.FLEEING && // Don't interrupt fleeing
             this.currentState !== AI_STATE.APPROACHING && // Don't interrupt combat
             this.currentState !== AI_STATE.ATTACK_PASS &&
             this.currentState !== AI_STATE.REPOSITIONING &&
             this.currentState !== AI_STATE.SNIPING && // Don't interrupt sniping
-            this.currentState !== AI_STATE.LEAVING_SYSTEM && // Don't interrupt leaving (e.g., bounty hunters with completed contracts)
             (!this.attackCooldown || this.attackCooldown <= 0)) {
 
             const attackerDistance = this.distanceTo(this.lastAttacker);
