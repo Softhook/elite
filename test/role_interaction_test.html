@@ -341,14 +341,8 @@
             // Basic validity
             if (!source.isTargetValid || !source.isTargetValid(target)) return -Infinity;
 
-            // Start with the actual score (which will be -Infinity for non-interesting)
-            const actualScore = source.evaluateTargetScore(target, system);
-
-            // If it's a valid positive score, return it
-            if (actualScore > -Infinity) return actualScore;
-
-            // For -Infinity results, calculate what the score WOULD be to show penalties
-            // This is a simplified calculation focusing on key interactions
+            // Always calculate simplified rawScore for matrix display
+            // (avoids distance penalties from real evaluateTargetScore)
             let rawScore = 0;
             const isPlayer = target instanceof Player;
 
@@ -362,7 +356,13 @@
                     if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
                         rawScore = TARGET_SCORE_PIRATE_PREY_HAULER; // 40
                     } else if (isPlayer) {
-                        rawScore = 60; // Base interest
+                        // Base interest in player
+                        rawScore = TARGET_SCORE_PIRATE_CARGO_BASE; // 30
+                        // Add cargo bonus if player has cargo
+                        const cargo = target.getCargoAmount ? target.getCargoAmount() : 0;
+                        if (cargo > 0) {
+                            rawScore += cargo * TARGET_SCORE_PIRATE_CARGO_MULT; // +1.5 per unit
+                        }
                     }
                     break;
 
@@ -373,15 +373,17 @@
                     break;
 
                 case AI_ROLE.COMBAT:
-                    // Check faction rivalries
+                    // Check faction rivalries - Combat ships only target specific enemies
                     if ((srcFaction === 'IMPERIAL' && tgtFaction === 'SEPARATIST') ||
                         (srcFaction === 'SEPARATIST' && tgtFaction === 'IMPERIAL')) {
-                        rawScore = TARGET_SCORE_COMBAT_RIVALRY_BONUS; // 500
+                        rawScore = TARGET_SCORE_COMBAT_RIVALRY_BONUS; // 500 - faction rivalry
                     } else if (srcFaction === 'MILITARY' && target.role === AI_ROLE.ALIEN) {
-                        rawScore = TARGET_SCORE_COMBAT_VS_ALIEN_BONUS; // 500
+                        rawScore = TARGET_SCORE_COMBAT_VS_ALIEN_BONUS; // 500 - military vs aliens
                     } else if (target.role === AI_ROLE.PIRATE || target.role === AI_ROLE.ALIEN) {
-                        rawScore = TARGET_SCORE_COMBAT_STANDARD_ENGAGE; // 100
+                        rawScore = TARGET_SCORE_COMBAT_STANDARD_ENGAGE; // 100 - standard threats
                     }
+                    // NOTE: Combat ships do NOT proactively target neutral players
+                    // They only engage players of rival factions or if attacked first
                     break;
 
                 case AI_ROLE.ALIEN:
@@ -405,15 +407,16 @@
                     break;
             }
 
-            // Apply same-faction penalty if applicable
-            if (srcFaction && srcFaction !== 'UNKNOWN' && srcFaction !== '' &&
+            // Apply same-faction penalty only if there's base interest to penalize
+            // No base interest (rawScore == 0) means the ship ignores this target entirely
+            if (rawScore > 0 && srcFaction && srcFaction !== 'UNKNOWN' && srcFaction !== '' &&
                 tgtFaction && tgtFaction !== 'UNKNOWN' && tgtFaction !== '' &&
                 srcFaction === tgtFaction) {
                 rawScore -= TARGET_SCORE_SAME_FACTION_PENALTY; // -200
             }
 
-            // If still 0 and no interest, return -Infinity 
-            if (rawScore === 0) return -Infinity;
+            // If no interest (0 or less with no reason), return -Infinity 
+            if (rawScore <= 0 && rawScore > -200) return -Infinity;
 
             return rawScore;
         }
@@ -441,7 +444,11 @@
             const playerVariants = [
                 { label: 'Player (Clean)', config: { isWanted: false } },
                 { label: 'Player (Wanted)', config: { isWanted: true } },
-                { label: 'Player (Cargo)', config: { isWanted: false, cargo: [{ name: 'Gold', quantity: 20 }] } }
+                { label: 'Player (Cargo)', config: { isWanted: false, cargo: [{ name: 'Gold', quantity: 20 }] } },
+                { label: 'Player (MILITARY)', config: { isWanted: false, faction: 'MILITARY' } },
+                { label: 'Player (IMPERIAL)', config: { isWanted: false, faction: 'IMPERIAL' } },
+                { label: 'Player (SEPARATIST)', config: { isWanted: false, faction: 'SEPARATIST' } },
+                { label: 'Player (POLICE)', config: { isWanted: false, faction: 'POLICE' } }
             ];
 
             // Create mock system - ALL enemies at same position (0,0) to eliminate distance penalties
@@ -469,7 +476,7 @@
                 const srcCombo = combinations[i];
                 const srcEnemy = enemies[i];
 
-                html += `<tr><td class="row-header">${getRoleLabel(srcCombo.role, srcCombo.faction)}</td>`;
+                html += `<tr><th class="row-header">${getRoleLabel(srcCombo.role, srcCombo.faction)}</th>`;
 
                 // Score against each enemy target (use raw scores to show penalties)
                 for (let j = 0; j < combinations.length; j++) {
@@ -490,13 +497,14 @@
                     }
                 }
 
-                // Score against player variants (use actual evaluateTargetScore for accuracy)
+                // Score against player variants (use getRawTargetScore to show faction penalties)
                 for (const pv of playerVariants) {
                     const mockPlayer = createMockPlayer(pv.config);
                     system.player = mockPlayer;
                     let score;
                     try {
-                        score = srcEnemy.evaluateTargetScore(mockPlayer, system);
+                        // Use getRawTargetScore to show actual penalty values
+                        score = getRawTargetScore(srcEnemy, mockPlayer, system);
                     } catch (e) {
                         score = null;
                     }
