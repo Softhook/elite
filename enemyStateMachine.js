@@ -8,6 +8,57 @@
  */
 class EnemyStateMachine {
     /**
+     * Gets delta time in seconds, safely handling undefined/invalid deltaTime
+     * @return {number} Delta time in seconds
+     * @private
+     */
+    _getDeltaSeconds() {
+        return (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
+    }
+
+    /**
+     * Gets grudge-adjusted reposition chance (lower = more aggressive)
+     * @param {Object} target - The target to check grudge against
+     * @param {boolean} isAttackPass - If true, use ATTACK_PASS values (slightly higher chances)
+     * @return {number} Probability (0-1) of choosing to reposition vs attack
+     * @private
+     */
+    _getGrudgeBasedRepositionChance(target, isAttackPass = false) {
+        const grudgeLevel = this._getGrudgeLevel ? this._getGrudgeLevel(target) : 0;
+
+        if (isAttackPass) {
+            // ATTACK_PASS uses slightly higher reposition chances
+            if (grudgeLevel >= GRUDGE_LEVEL_5) return ATTACK_PASS_REPOSITION_AT_GRUDGE_5;
+            if (grudgeLevel >= GRUDGE_LEVEL_4) return ATTACK_PASS_REPOSITION_AT_GRUDGE_4;
+            if (grudgeLevel >= GRUDGE_LEVEL_3) return ATTACK_PASS_REPOSITION_AT_GRUDGE_3;
+            if (grudgeLevel >= GRUDGE_LEVEL_2) return ATTACK_PASS_REPOSITION_AT_GRUDGE_2;
+            return ATTACK_PASS_REPOSITION_AT_NO_GRUDGE;
+        } else {
+            // SNIPING uses lower reposition chances (more aggressive)
+            if (grudgeLevel >= GRUDGE_LEVEL_5) return SNIPING_REPOSITION_AT_GRUDGE_5;
+            if (grudgeLevel >= GRUDGE_LEVEL_4) return SNIPING_REPOSITION_AT_GRUDGE_4;
+            if (grudgeLevel >= GRUDGE_LEVEL_3) return SNIPING_REPOSITION_AT_GRUDGE_3;
+            if (grudgeLevel >= GRUDGE_LEVEL_2) return SNIPING_REPOSITION_AT_GRUDGE_2;
+            return SNIPING_REPOSITION_CHANCE;
+        }
+    }
+
+    /**
+     * Gets grudge-adjusted tactic change chance (higher = more restless)
+     * @param {Object} target - The target to check grudge against
+     * @return {number} Probability (0-1) of changing tactics
+     * @private
+     */
+    _getGrudgeBasedTacticChance(target) {
+        const grudgeLevel = this._getGrudgeLevel ? this._getGrudgeLevel(target) : 0;
+        if (grudgeLevel >= GRUDGE_LEVEL_5) return TACTIC_CHANGE_AT_GRUDGE_5;
+        if (grudgeLevel >= GRUDGE_LEVEL_4) return TACTIC_CHANGE_AT_GRUDGE_4;
+        if (grudgeLevel >= GRUDGE_LEVEL_3) return TACTIC_CHANGE_AT_GRUDGE_3;
+        if (grudgeLevel >= GRUDGE_LEVEL_2) return TACTIC_CHANGE_AT_GRUDGE_2;
+        return SNIPING_TACTIC_CHANGE_CHANCE;
+    }
+
+    /**
      * Updates combat state based on current AI state
      * Routes to appropriate state handler method
      * @param {boolean} targetExists - Whether a valid target exists
@@ -33,7 +84,7 @@ class EnemyStateMachine {
             case AI_STATE.FLEEING:
                 this._updateState_FLEEING(targetExists, distanceToTarget);
                 break;
-            case AI_STATE.SNIPING: // <<< NEW CASE
+            case AI_STATE.SNIPING:
                 this._updateState_SNIPING(targetExists, distanceToTarget);
                 break;
             case AI_STATE.GUARDING:
@@ -161,43 +212,19 @@ class EnemyStateMachine {
         // Tactical decision timer - periodically consider switching tactics
         // GRUDGE-BASED: Higher grudge = faster decision checks (more restless)
         const grudgeLevel = this._getGrudgeLevel ? this._getGrudgeLevel(this.target) : 0;
-        const baseTimerMin = Math.max(0.5, 2.0 - grudgeLevel * 0.3); // Faster checks with higher grudge
-        const baseTimerMax = Math.max(1.5, 4.0 - grudgeLevel * 0.5);
+        const baseTimerMin = Math.max(0.5, GRUDGE_DECISION_TIMER_MIN_BASE - grudgeLevel * GRUDGE_TIMER_MIN_REDUCTION_PER_LEVEL);
+        const baseTimerMax = Math.max(1.5, GRUDGE_DECISION_TIMER_MAX_BASE - grudgeLevel * GRUDGE_TIMER_MAX_REDUCTION_PER_LEVEL);
 
         if (this._snipingDecisionTimer === null || this._snipingDecisionTimer === undefined) {
             this._snipingDecisionTimer = random(baseTimerMin, baseTimerMax);
         }
-        const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
-        this._snipingDecisionTimer = Math.max(0, this._snipingDecisionTimer - deltaSeconds);
+        this._snipingDecisionTimer = Math.max(0, this._snipingDecisionTimer - this._getDeltaSeconds());
 
         if (this._snipingDecisionTimer <= 0) {
             this._snipingDecisionTimer = random(baseTimerMin, baseTimerMax);
 
-            // GRUDGE-BASED AGGRESSION: Higher grudge = more likely to switch to attack
-            // Base chance: SNIPING_TACTIC_CHANGE_CHANCE
-            // At grudge 3+: 40% chance to switch
-            // At grudge 5+: 55% chance to switch
-            let tacticChangeChance = SNIPING_TACTIC_CHANGE_CHANCE;
-            if (grudgeLevel >= 5) {
-                tacticChangeChance = 0.55;
-            } else if (grudgeLevel >= 3) {
-                tacticChangeChance = 0.40;
-            } else if (grudgeLevel >= 2) {
-                tacticChangeChance = 0.30;
-            }
-
-            // GRUDGE-BASED: Higher grudge = prefer attack pass over reposition
-            // Base: 40% reposition, 60% attack pass
-            // At grudge 3+: 25% reposition, 75% attack pass
-            // At grudge 5+: 15% reposition, 85% attack pass
-            let repositionChance = SNIPING_REPOSITION_CHANCE;
-            if (grudgeLevel >= 5) {
-                repositionChance = 0.15;
-            } else if (grudgeLevel >= 3) {
-                repositionChance = 0.25;
-            } else if (grudgeLevel >= 2) {
-                repositionChance = 0.30;
-            }
+            const tacticChangeChance = this._getGrudgeBasedTacticChance(this.target);
+            const repositionChance = this._getGrudgeBasedRepositionChance(this.target);
 
             if (random() < tacticChangeChance) {
                 if (random() < repositionChance) {
@@ -250,7 +277,7 @@ class EnemyStateMachine {
         // Tactical decision: Snipe (stationary turret) or Attack Pass (dynamic movement)
         // Choose sniping if we have suitable weapons and a random tactical choice
         const shouldSnipe = this.hasGoodSnipingWeapon() &&
-            random() < 0.6; // 60% chance to choose sniping over attack pass
+            random() < SNIPE_VS_ATTACK_CHANCE;
 
         if (distanceToTarget < this.engageDistance) {
             if (shouldSnipe) {
@@ -273,25 +300,12 @@ class EnemyStateMachine {
             this.changeState(this._getDefaultStateForRole());
             return;
         }
-        const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
-        this.passTimer = Math.max(0, this.passTimer - deltaSeconds);
+        this.passTimer = Math.max(0, this.passTimer - this._getDeltaSeconds());
         if (this.passTimer <= 0) {
             // After attack pass completion, make a tactical decision
             if (this.isTargetValid(this.target)) {
-                // GRUDGE-BASED AGGRESSION: Higher grudge = more attack runs
-                // Base chance for repositioning: 50%
-                // At grudge 3+: 30% chance to reposition (70% attack again)
-                // At grudge 5+: 20% chance to reposition (80% attack again)
+                const repositionChance = this._getGrudgeBasedRepositionChance(this.target, true);
                 const grudgeLevel = this._getGrudgeLevel ? this._getGrudgeLevel(this.target) : 0;
-                let repositionChance = 0.5; // Default 50% chance
-
-                if (grudgeLevel >= 5) {
-                    repositionChance = 0.20; // 20% - very aggressive
-                } else if (grudgeLevel >= 3) {
-                    repositionChance = 0.30; // 30% - aggressive
-                } else if (grudgeLevel >= 2) {
-                    repositionChance = 0.40; // 40% - slightly aggressive
-                }
 
                 if (random() < repositionChance) {
                     // Reposition after attack
@@ -331,10 +345,10 @@ class EnemyStateMachine {
             : Infinity;
 
         // Reached repositioning point - choose next tactic
-        if (distToRepo < 50 || distanceToTarget > this.repositionDistance * 0.9) {
+        if (distToRepo < REPOSITION_DISTANCE_THRESHOLD || distanceToTarget > this.repositionDistance * 0.9) {
             // Tactical choice: snipe or approach for another pass
             const shouldSnipe = this.hasGoodSnipingWeapon() &&
-                random() < 0.5; // 50% chance after repositioning
+                random() < REPOSITION_SNIPE_CHANCE;
 
             if (shouldSnipe) {
                 this.changeState(AI_STATE.SNIPING);
@@ -414,8 +428,7 @@ class EnemyStateMachine {
 
         // Maintain guard reaction cooldown so we don't spam engagements
         if (this.guardReactionTime > 0) {
-            const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
-            this.guardReactionTime = Math.max(0, this.guardReactionTime - deltaSeconds);
+            this.guardReactionTime = Math.max(0, this.guardReactionTime - this._getDeltaSeconds());
         }
 
         const guardDistance = (principal.size || 10) * 3;
@@ -533,8 +546,6 @@ class EnemyStateMachine {
             return;
         }
 
-        const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
-
         // 3) Movement: thrust away from attacker (target guaranteed valid here)
         //    Compute escape point
         this.tempVector
@@ -553,7 +564,7 @@ class EnemyStateMachine {
 
         //    Occasional random jiggle (~0.5 second interval)
         if (!this._fleeJiggleTimer) this._fleeJiggleTimer = 0;
-        this._fleeJiggleTimer += deltaSeconds;
+        this._fleeJiggleTimer += this._getDeltaSeconds();
         if (this._fleeJiggleTimer >= 0.5) {
             this._fleeJiggleTimer = 0;
             this.tempVector.set(random(-1, 1), random(-1, 1)).normalize().mult(0.3);
@@ -578,22 +589,34 @@ class EnemyStateMachine {
 
     /**
      * Determines appropriate state to return to after fleeing
+     * Builds on _getDefaultStateForRole with additional handling for haulers/transports
+     * and ensures we never return to a combat state after fleeing
      * @return {number} AI_STATE constant for post-flee state
      * @private
      */
     _determinePostFleeState() {
-        let state = AI_STATE.IDLE;
+        let state;
+
+        // Determine base state based on role
         if (this.role === AI_ROLE.GUARD && this.principal && this.isTargetValid(this.principal)) {
             state = AI_STATE.GUARDING;
         } else if (this.role === AI_ROLE.POLICE) {
             state = AI_STATE.PATROLLING;
         } else if (this.role === AI_ROLE.HAULER) {
+            // Haulers return to previous state or default to PATROLLING
             state = this.previousHaulerState || AI_STATE.PATROLLING;
         } else if (this.role === AI_ROLE.TRANSPORT) {
+            // Transports return to previous state or default to TRANSPORTING
             state = this.previousTransportState || AI_STATE.TRANSPORTING;
+        } else if (this.role === AI_ROLE.BOUNTY_HUNTER && this.hasCompletedContract) {
+            state = AI_STATE.LEAVING_SYSTEM;
+        } else {
+            state = AI_STATE.IDLE;
         }
-        // never return into a combat state
-        if ([AI_STATE.APPROACHING, AI_STATE.ATTACK_PASS, AI_STATE.REPOSITIONING, AI_STATE.SNIPING].includes(state)) {
+
+        // Safety check: never return into a combat state after fleeing
+        const combatStates = [AI_STATE.APPROACHING, AI_STATE.ATTACK_PASS, AI_STATE.REPOSITIONING, AI_STATE.SNIPING];
+        if (combatStates.includes(state)) {
             if (this.role === AI_ROLE.POLICE || this.role === AI_ROLE.HAULER) {
                 state = AI_STATE.PATROLLING;
             } else if (this.role === AI_ROLE.TRANSPORT) {
@@ -679,7 +702,7 @@ class EnemyStateMachine {
                 // Initialize attack pass with timer
                 // GRUDGE-BASED: Higher grudge = longer attack passes
                 const grudgeLevel = this._getGrudgeLevel ? this._getGrudgeLevel(this.target) : 0;
-                const grudgeMultiplier = 1 + Math.min(grudgeLevel * 0.06, 0.30); // Up to 30% longer at grudge 5+
+                const grudgeMultiplier = 1 + Math.min(grudgeLevel * GRUDGE_PASS_DURATION_MULT_PER_LEVEL, GRUDGE_PASS_DURATION_MULT_CAP);
                 const basePassDuration = this.passDuration;
                 this.passTimer = basePassDuration * random(0.85, 1.25) * grudgeMultiplier;
                 this.strafeDirection = random([-1, 1]); // -1 for left, 1 for right
@@ -705,7 +728,7 @@ class EnemyStateMachine {
             case AI_STATE.SNIPING:
                 this.vel.mult(0.5); // Slow down upon entering stationary turret mode
                 this.shieldPlusHullAtStateEntry = this.shield + this.hull; // Store health for damage checking
-                this._snipingDecisionTimer = random(2.0, 4.0); // Initialize tactical decision timer
+                this._snipingDecisionTimer = random(GRUDGE_DECISION_TIMER_MIN_BASE, GRUDGE_DECISION_TIMER_MAX_BASE);
                 break;
 
             case AI_STATE.NEAR_STATION:

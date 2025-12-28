@@ -514,7 +514,9 @@ class EnemyAIBehaviors {
             }
 
             // Simplified movement & firing (keeps battle loop active)
-            if (this.target && this.target.pos) {
+            // [FIX] Use isTargetValid() instead of just checking pos existence
+            // A destroyed target may still have a pos for several frames
+            if (this.target && this.isTargetValid(this.target)) {
                 // Determine rough distance/angle (renamed to avoid shadowing global dist())
                 const distToTarget = this.distanceTo(this.target);
 
@@ -573,6 +575,19 @@ class EnemyAIBehaviors {
             } else {
                 // If no target off-screen, clear firing persistence
                 this._persistedFiring = null;
+
+                // [FIX] Bounty hunters: immediately handle contract completion when target destroyed
+                // Don't wait for the next scan frame - check and transition now
+                if (this.role === AI_ROLE.BOUNTY_HUNTER && this.bountyTarget && !this.isTargetValid(this.bountyTarget)) {
+                    this.hasCompletedContract = true;
+                    this.bountyTarget = null;
+                    this.target = null;
+                    this.attackPassTargetPos = null;
+                    this.repositionTarget = null;
+                    // Always use setLeavingSystemTarget to ensure patrolTargetPos is set
+                    // It handles null/missing system gracefully with fallback edge target
+                    this.setLeavingSystemTarget(system);
+                }
             }
             return; // EXIT EARLY - Skip complex state machine, cover, and predictive aiming
         }

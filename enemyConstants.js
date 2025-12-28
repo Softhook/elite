@@ -182,9 +182,77 @@ const GUARD_PRINCIPAL_ATTACK_WINDOW_MS = 5000; // React to attacks on principal 
 const GUARD_ENGAGEMENT_LOCK_DURATION = 3.0;    // Lock engagement with target for 3 seconds
 const GUARD_REACTION_COOLDOWN = 5.0;           // Cooldown between guard reactions
 
+// -------------------------
+// --- Tactical Decision Constants ---
+// -------------------------
+
+const SNIPE_VS_ATTACK_CHANCE = 0.6;            // 60% chance to choose sniping over attack pass when approaching
+const REPOSITION_SNIPE_CHANCE = 0.5;           // 50% chance to snipe after repositioning
+const REPOSITION_DISTANCE_THRESHOLD = 50;     // Distance threshold for reaching reposition target
+
+// -------------------------
+// --- Grudge Behavior Thresholds ---
+// -------------------------
+
+// Grudge level thresholds for behavior changes (hitCount from attackerHistory)
+// Ships accumulate grudge when hit repeatedly by the same attacker (max 10)
+const GRUDGE_LEVEL_2 = 2;   // Minor grudge - slight behavior change
+const GRUDGE_LEVEL_3 = 3;   // Moderate grudge
+const GRUDGE_LEVEL_4 = 4;   // Significant grudge
+const GRUDGE_LEVEL_5 = 5;   // Maximum grudge effect (values above 5 don't increase aggression further)
+
+// Grudge-based reposition chances for SNIPING
+// Lower chance = more aggressive (fewer repositions, more attack runs)
+const SNIPING_REPOSITION_AT_GRUDGE_5 = 0.15;   // Very aggressive - 15% reposition
+const SNIPING_REPOSITION_AT_GRUDGE_4 = 0.20;   // 20% reposition
+const SNIPING_REPOSITION_AT_GRUDGE_3 = 0.25;   // 25% reposition  
+const SNIPING_REPOSITION_AT_GRUDGE_2 = 0.30;   // Slightly aggressive - 30% reposition
+// Default (no grudge): uses SNIPING_REPOSITION_CHANCE = 0.4
+
+// Grudge-based reposition chances for ATTACK_PASS (slightly higher than SNIPING)
+const ATTACK_PASS_REPOSITION_AT_GRUDGE_5 = 0.20;   // Very aggressive
+const ATTACK_PASS_REPOSITION_AT_GRUDGE_4 = 0.25;   // 25% reposition
+const ATTACK_PASS_REPOSITION_AT_GRUDGE_3 = 0.30;   // 30% reposition
+const ATTACK_PASS_REPOSITION_AT_GRUDGE_2 = 0.40;   // Slightly aggressive
+const ATTACK_PASS_REPOSITION_AT_NO_GRUDGE = 0.5;   // Default 50%
+
+// Grudge-based tactic change chances (higher = more restless, switches tactics more)
+const TACTIC_CHANGE_AT_GRUDGE_5 = 0.55;   // Very restless - 55% switch
+const TACTIC_CHANGE_AT_GRUDGE_4 = 0.45;   // 45% switch
+const TACTIC_CHANGE_AT_GRUDGE_3 = 0.40;   // 40% switch
+const TACTIC_CHANGE_AT_GRUDGE_2 = 0.30;   // Slightly restless - 30% switch
+// Default (no grudge): uses SNIPING_TACTIC_CHANGE_CHANCE = 0.15
+
+// Grudge-based decision timer modifiers (faster checks = more restless)
+const GRUDGE_DECISION_TIMER_MIN_BASE = 2.0;
+const GRUDGE_DECISION_TIMER_MAX_BASE = 4.0;
+const GRUDGE_TIMER_MIN_REDUCTION_PER_LEVEL = 0.3;   // Min timer: 2.0 - grudge * 0.3
+const GRUDGE_TIMER_MAX_REDUCTION_PER_LEVEL = 0.5;   // Max timer: 4.0 - grudge * 0.5
+
+// Grudge-based attack pass duration multiplier (higher grudge = longer attacks)
+const GRUDGE_PASS_DURATION_MULT_PER_LEVEL = 0.06;
+const GRUDGE_PASS_DURATION_MULT_CAP = 0.30;  // Max 30% longer at high grudge
+
 // Debug flags/helpers moved to debug.js (loaded early).
 // If needed, you can still check or toggle via the global Debug API:
 //   Debug.get(), Debug.set({ DEBUG_AI: true }), Debug.enable('DEBUG_TARGETING')
+
+// -------------------------
+// --- Damage System Constants ---
+// -------------------------
+
+const GRUDGE_MEMORY_MS = 30000;             // How long attackers are remembered (30 seconds)
+const MAX_GRUDGE_HIT_COUNT = 10;            // Cap on hit count to prevent unbounded grudge
+const LAST_ATTACKER_SWITCH_COOLDOWN_MS = 5000; // Cooldown before switching lastAttacker focus
+
+const DAMAGE_CARGO_DROP_HULL_THRESHOLD = 0.5; // Hull % threshold for random cargo jettison
+const DAMAGE_CARGO_DROP_CHANCE = 0.05;        // 5% chance to drop cargo when hit below threshold
+
+// Faction bounty amounts
+const BOUNTY_POLICE_ALIEN_PIRATE = 1000;      // Police bounty for killing aliens/pirates
+const BOUNTY_FACTION_RIVALRY = 2000;          // Separatist vs Imperial bounty
+const BOUNTY_MILITARY_ALIEN = 4000;           // Military bounty for killing aliens
+const BOUNTY_MILITARY_PIRATE = 1000;          // Military bounty for killing pirates
 
 // -------------------------
 // --- Combat Role Bonuses ---

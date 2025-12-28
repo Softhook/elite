@@ -293,7 +293,9 @@ class EnemyTargeting {
         // --- BOUNTY HUNTER: Target assigned bountyTarget, or fall back to player ---
         if (this.role === AI_ROLE.BOUNTY_HUNTER) {
             // If contract is already completed, head to jump zone
-            if (this.hasCompletedContract) {
+            // If contract is already completed, head to jump zone
+            // [FIX] Allow self-defense: Only force leaving if NOT currently in combat
+            if (this.hasCompletedContract && !this.inCombat) {
                 this.target = null;
                 if (this.currentState !== AI_STATE.LEAVING_SYSTEM) {
                     // setLeavingSystemTarget internally calls changeState

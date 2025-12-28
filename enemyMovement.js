@@ -241,6 +241,11 @@ class EnemyMovement {
                 desiredMovementTargetPos = this.patrolTargetPos;
                 break;
 
+            case AI_STATE.LEAVING_SYSTEM:
+                // Use patrolTargetPos which is set to jump zone by setLeavingSystemTarget()
+                desiredMovementTargetPos = this.patrolTargetPos;
+                break;
+
             case AI_STATE.SNIPING:
                 // Turret mode with subtle forward drift toward target (no standoff maintenance)
                 if (this.isTargetValid(this.target)) {

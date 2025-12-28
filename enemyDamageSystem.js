@@ -43,183 +43,200 @@ class EnemyDamageSystem {
      * @param {number} amount - Damage amount for logging purposes
      */
     _handleAttackerReference(attacker, amount, system = null) {
-        if (attacker) {
-            if (typeof communicationSystem !== 'undefined' && communicationSystem) {
-                let playerSource = null;
-                if (typeof Player !== 'undefined' && attacker instanceof Player) {
-                    playerSource = attacker;
-                } else if (attacker?.owner && typeof Player !== 'undefined' && attacker.owner instanceof Player) {
-                    playerSource = attacker.owner;
-                } else if (attacker?.source && typeof Player !== 'undefined' && attacker.source instanceof Player) {
-                    playerSource = attacker.source;
-                }
-                if (playerSource) {
-                    communicationSystem.handlePlayerDamageReaction(this, playerSource, amount);
-                }
-            }
-            // Record attacker, but skip non-combat objects like asteroids and cargo
-            // (collisions with these shouldn't trigger combat behavior)
-            const isNonCombatObject = attacker?.constructor?.name === 'Asteroid' ||
-                attacker?.constructor?.name === 'Cargo';
+        if (!attacker) return;
 
-            // FRIENDLY FIRE PREVENTION: Don't record friendly fire as lastAttacker
-            // Guards should not retaliate against their principal or fellow guards
-            let isFriendlyFire = false;
-            if (this.role === AI_ROLE.GUARD && this.principal) {
-                // Guard hit by their own principal
-                if (attacker === this.principal) {
-                    isFriendlyFire = true;
-                }
-                // Guard hit by a fellow guard protecting the same principal
-                if (attacker?.role === AI_ROLE.GUARD && attacker.principal === this.principal) {
-                    isFriendlyFire = true;
-                }
-            }
-            // Principal (any role) hit by their own guard
-            if (attacker?.role === AI_ROLE.GUARD && attacker.principal === this) {
-                isFriendlyFire = true;
-            }
+        // Skip everything for non-combat objects like asteroids and cargo
+        const isNonCombatObject = attacker?.constructor?.name === 'Asteroid' ||
+            attacker?.constructor?.name === 'Cargo';
+        if (isNonCombatObject) return;
 
-            // SAME-FACTION CHECK: Don't record same-faction ships as attackers
-            // This prevents same-faction grudges (e.g., two Separatists fighting each other)
-            let isSameFaction = false;
-            if (this._getShipFaction && attacker instanceof Enemy) {
-                const myFaction = this._getShipFaction(this);
-                const attackerFaction = this._getShipFaction(attacker);
-                // Empty string means "no faction" - treat like UNKNOWN
-                if (myFaction && myFaction !== 'UNKNOWN' && attackerFaction && attackerFaction !== 'UNKNOWN' && myFaction === attackerFaction) {
-                    isSameFaction = true;
-                }
+        // Trigger communication reaction for player attacks
+        this._triggerPlayerDamageReaction(attacker, amount);
+
+        // Skip recording for friendly fire and same-faction
+        if (this._shouldIgnoreAttacker(attacker)) return;
+
+        // Track attacker in grudge system
+        const now = millis();
+        this._updateAttackerHistory(attacker, now);
+
+        // Smart lastAttacker update to prevent oscillation
+        this._updateLastAttacker(attacker, now);
+
+        // Debug log for tracking
+        DAMAGE_LOG(`🔫 ${this.shipTypeName} (${this.role}, ${AI_STATE_NAME[this.currentState]}) HIT by ${attacker.constructor.name} for ${amount.toFixed(1)} dmg`);
+
+        // Handle targeting update and combat reactions
+        this._handleTargetingAfterHit(attacker, system);
+    }
+
+    /**
+     * Triggers communication system reaction when player deals damage.
+     * @param {Object} attacker
+     * @param {number} amount
+     */
+    _triggerPlayerDamageReaction(attacker, amount) {
+        if (typeof communicationSystem === 'undefined' || !communicationSystem) return;
+
+        let playerSource = null;
+        if (typeof Player !== 'undefined' && attacker instanceof Player) {
+            playerSource = attacker;
+        } else if (attacker?.owner && typeof Player !== 'undefined' && attacker.owner instanceof Player) {
+            playerSource = attacker.owner;
+        } else if (attacker?.source && typeof Player !== 'undefined' && attacker.source instanceof Player) {
+            playerSource = attacker.source;
+        }
+        if (playerSource) {
+            communicationSystem.handlePlayerDamageReaction(this, playerSource, amount);
+        }
+    }
+
+    /**
+     * Determines if an attacker should be ignored for grudge/targeting purposes.
+     * Note: Non-combat objects (asteroids, cargo) are handled earlier in _handleAttackerReference.
+     * @param {Object} attacker
+     * @returns {boolean} True if attacker should be ignored
+     */
+    _shouldIgnoreAttacker(attacker) {
+        // Friendly fire prevention for guards
+        if (this.role === AI_ROLE.GUARD && this.principal) {
+            if (attacker === this.principal) return true;
+            if (attacker?.role === AI_ROLE.GUARD && attacker.principal === this.principal) return true;
+        }
+        if (attacker?.role === AI_ROLE.GUARD && attacker.principal === this) return true;
+
+        // Same-faction check
+        if (typeof this._getShipFaction === 'function' && typeof Enemy !== 'undefined' && attacker instanceof Enemy) {
+            const myFaction = this._getShipFaction(this);
+            const attackerFaction = this._getShipFaction(attacker);
+            if (myFaction && myFaction !== 'UNKNOWN' && attackerFaction && attackerFaction !== 'UNKNOWN' && myFaction === attackerFaction) {
+                return true;
             }
+        }
 
-            if (!isNonCombatObject && !isFriendlyFire && !isSameFaction) {
-                // Initialize attacker history Map if needed: attacker → {timestamp, hitCount}
-                if (!this.attackerHistory) {
-                    this.attackerHistory = new Map();
-                }
+        return false;
+    }
 
-                // Clean up old entries (> 30 seconds) to prevent memory growth
-                const now = millis();
-                const GRUDGE_MEMORY_MS = 30000; // 30 second memory
-                for (const [oldAttacker, data] of this.attackerHistory) {
-                    if (now - data.timestamp > GRUDGE_MEMORY_MS) {
-                        this.attackerHistory.delete(oldAttacker);
+    /**
+     * Updates attacker history for the grudge system.
+     * @param {Object} attacker
+     * @param {number} now - Current timestamp
+     */
+    _updateAttackerHistory(attacker, now) {
+        if (!this.attackerHistory) {
+            this.attackerHistory = new Map();
+        }
+
+        // Clean up old entries and destroyed attackers to prevent memory growth
+        for (const [oldAttacker, data] of this.attackerHistory) {
+            if (now - data.timestamp > GRUDGE_MEMORY_MS || oldAttacker.destroyed) {
+                this.attackerHistory.delete(oldAttacker);
+            }
+        }
+
+        const isCurrentTarget = this.target === attacker;
+        const existingEntry = this.attackerHistory.get(attacker);
+
+        if (existingEntry) {
+            existingEntry.hitCount = Math.min(existingEntry.hitCount + 1, MAX_GRUDGE_HIT_COUNT);
+            if (!isCurrentTarget) {
+                existingEntry.timestamp = now;
+            }
+        } else {
+            this.attackerHistory.set(attacker, { timestamp: now, hitCount: 1 });
+        }
+    }
+
+    /**
+     * Smart lastAttacker update to prevent rapid oscillation between threats.
+     * @param {Object} attacker
+     * @param {number} now - Current timestamp
+     */
+    _updateLastAttacker(attacker, now) {
+        const currentAttackerEntry = this.lastAttacker ? this.attackerHistory.get(this.lastAttacker) : null;
+        const newAttackerEntry = this.attackerHistory.get(attacker);
+
+        let shouldSwitch = false;
+
+        if (!this.lastAttacker || !this.isTargetValid(this.lastAttacker)) {
+            shouldSwitch = true;
+        } else if (attacker === this.lastAttacker) {
+            this.lastAttackTime = now;
+            return;
+        } else {
+            const newGrudge = newAttackerEntry?.hitCount || 1;
+            const currentGrudge = currentAttackerEntry?.hitCount || 0;
+            const timeSinceLastHit = currentAttackerEntry ? (now - currentAttackerEntry.timestamp) : Infinity;
+
+            if (newGrudge > currentGrudge || timeSinceLastHit > LAST_ATTACKER_SWITCH_COOLDOWN_MS) {
+                shouldSwitch = true;
+            }
+        }
+
+        if (shouldSwitch) {
+            this.lastAttacker = attacker;
+            this.lastAttackTime = now;
+        }
+    }
+
+    /**
+     * Handles targeting update and combat state transitions after being hit.
+     * @param {Object} attacker
+     * @param {Object} system - Optional system reference
+     */
+    _handleTargetingAfterHit(attacker, system) {
+        // Don't retarget if in SNIPING state (target lock)
+        if (this.currentState === AI_STATE.SNIPING) {
+            TARGETING_LOGF(() => {
+                const nameOf = (e) => e ? (e.shipTypeName || e.constructor?.name || 'Unknown') : 'none';
+                const attackerName = attacker ? (attacker.shipTypeName || attacker.constructor?.name || 'Unknown') : 'Unknown';
+                let distToAttacker = null;
+                try {
+                    if (this.pos && attacker?.pos) {
+                        distToAttacker = dist(this.pos.x, this.pos.y, attacker.pos.x, attacker.pos.y);
                     }
-                }
+                } catch (e) { /* p5 dist might be unavailable briefly; ignore */ }
+                return `   → SNIPING: ${this.shipTypeName} [${AI_STATE_NAME[this.currentState]}, ${this.role}] holding lock on ${nameOf(this.target)}; ignoring attacker ${attackerName}` +
+                    (typeof distToAttacker === 'number' ? ` @${distToAttacker.toFixed(0)}u` : '');
+            });
+            return;
+        }
 
-                // Check if this is someone we're already fighting (to avoid resetting timer during combat)
-                const isCurrentTarget = this.target === attacker;
-                const existingEntry = this.attackerHistory.get(attacker);
+        // Always update targeting for any attacker
+        const resolvedSystem = system || this.getSystem();
+        if (resolvedSystem) {
+            // Special debug for player attacks
+            if (typeof Player !== 'undefined' && attacker instanceof Player) {
+                DAMAGE_LOG(`🎯 PLAYER ATTACK: Force targeting update for ${this.shipTypeName}`);
+            }
 
-                // Update attacker history with hit count for "grudge" system
-                const MAX_GRUDGE_HIT_COUNT = 10; // Cap to prevent unbounded growth
-                if (existingEntry) {
-                    // Repeat attacker - increase grudge (hit count), optionally refresh timer
-                    existingEntry.hitCount = Math.min(existingEntry.hitCount + 1, MAX_GRUDGE_HIT_COUNT);
-                    if (!isCurrentTarget) {
-                        existingEntry.timestamp = now; // Refresh timer only if not actively fighting
+            // Update targeting immediately for all attackers
+            const prevTarget = this.target;
+            const targetResult = this.updateTargeting(resolvedSystem);
+            const newTarget = this.target;
+            const changed = prevTarget !== newTarget;
+            TARGETING_LOGF(() => {
+                const nameOf = (e) => e ? (e.shipTypeName || e.constructor?.name || 'Unknown') : 'null';
+                const attackerName = attacker ? (attacker.shipTypeName || attacker.constructor?.name || 'Unknown') : 'Unknown';
+                let distToAttacker = null;
+                try {
+                    if (this.pos && attacker?.pos) {
+                        distToAttacker = dist(this.pos.x, this.pos.y, attacker.pos.x, attacker.pos.y);
                     }
-                } else {
-                    // New attacker
-                    this.attackerHistory.set(attacker, { timestamp: now, hitCount: 1 });
-                }
+                } catch (e) { /* ignore */ }
+                const validNow = this.isTargetValid?.(newTarget);
+                return `   → Targeting: ${this.shipTypeName} [${AI_STATE_NAME[this.currentState]}, ${this.role}] ${changed ? 'switched' : 'kept'} target: ${nameOf(prevTarget)} -> ${nameOf(newTarget)} (valid=${validNow ? 'yes' : 'no'}, result=${!!targetResult}) after hit by ${attackerName}` +
+                    (typeof distToAttacker === 'number' ? ` @${distToAttacker.toFixed(0)}u` : '');
+            });
 
-                // SMART lastAttacker UPDATE: Only switch focus when there's a meaningful reason
-                // This prevents rapid oscillation when multiple enemies are attacking
-                const LAST_ATTACKER_SWITCH_COOLDOWN_MS = 5000; // 5 second cooldown before switching focus
-                const currentAttackerEntry = this.lastAttacker ? this.attackerHistory.get(this.lastAttacker) : null;
-                const newAttackerEntry = this.attackerHistory.get(attacker);
-
-                let shouldSwitchLastAttacker = false;
-
-                if (!this.lastAttacker || !this.isTargetValid(this.lastAttacker)) {
-                    // No current lastAttacker or they're invalid - switch immediately
-                    shouldSwitchLastAttacker = true;
-                } else if (attacker === this.lastAttacker) {
-                    // Same attacker - just refresh timestamp
-                    shouldSwitchLastAttacker = false;
-                    this.lastAttackTime = now;
-                } else {
-                    // Different attacker - only switch if:
-                    // 1. New attacker has HIGHER grudge (more hits = bigger threat), OR
-                    // 2. Current lastAttacker hasn't hit us recently (stale)
-                    const newGrudge = newAttackerEntry?.hitCount || 1;
-                    const currentGrudge = currentAttackerEntry?.hitCount || 0;
-                    const timeSinceLastAttackerHit = currentAttackerEntry ? (now - currentAttackerEntry.timestamp) : Infinity;
-
-                    if (newGrudge > currentGrudge) {
-                        // New threat is more persistent - switch focus
-                        shouldSwitchLastAttacker = true;
-                    } else if (timeSinceLastAttackerHit > LAST_ATTACKER_SWITCH_COOLDOWN_MS) {
-                        // Current lastAttacker is stale - switch to new threat
-                        shouldSwitchLastAttacker = true;
-                    }
-                    // Otherwise keep focus on current lastAttacker
-                }
-
-                if (shouldSwitchLastAttacker) {
-                    this.lastAttacker = attacker;
-                    this.lastAttackTime = now;
-                }
+            // Immediate combat reaction for aggressive roles when idle
+            const aggressiveRole = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.BOUNTY_HUNTER);
+            const passiveState = (this.currentState === AI_STATE.IDLE || this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.NEAR_STATION || this.currentState === AI_STATE.COLLECTING_CARGO);
+            if (aggressiveRole && passiveState && this.isTargetValid(this.target) && this.isArmed()) {
+                this.changeState(AI_STATE.APPROACHING);
             }
-
-            // Debug log for tracking
-            DAMAGE_LOG(`🔫 ${this.shipTypeName} (${this.role}, ${AI_STATE_NAME[this.currentState]}) HIT by ${attacker.constructor.name} for ${amount.toFixed(1)} dmg`);
-
-            // Don't retarget if in SNIPING state (target lock)
-            if (this.currentState === AI_STATE.SNIPING) {
-                TARGETING_LOGF(() => {
-                    const nameOf = (e) => e ? (e.shipTypeName || e.constructor?.name || 'Unknown') : 'none';
-                    const attackerName = attacker ? (attacker.shipTypeName || attacker.constructor?.name || 'Unknown') : 'Unknown';
-                    let distToAttacker = null;
-                    try {
-                        if (this.pos && attacker?.pos) {
-                            distToAttacker = dist(this.pos.x, this.pos.y, attacker.pos.x, attacker.pos.y);
-                        }
-                    } catch (e) { /* p5 dist might be unavailable briefly; ignore */ }
-                    return `   → SNIPING: ${this.shipTypeName} [${AI_STATE_NAME[this.currentState]}, ${this.role}] holding lock on ${nameOf(this.target)}; ignoring attacker ${attackerName}` +
-                        (typeof distToAttacker === 'number' ? ` @${distToAttacker.toFixed(0)}u` : '');
-                });
-                return;
-            }
-
-            // Always update targeting for any attacker
-            const resolvedSystem = system || this.getSystem();
-            if (resolvedSystem) {
-                // Special debug for player attacks
-                if (attacker instanceof Player) {
-                    DAMAGE_LOG(`🎯 PLAYER ATTACK: Force targeting update for ${this.shipTypeName}`);
-                }
-
-                // Update targeting immediately for all attackers
-                const prevTarget = this.target;
-                const targetResult = this.updateTargeting(resolvedSystem);
-                const newTarget = this.target;
-                const changed = prevTarget !== newTarget;
-                TARGETING_LOGF(() => {
-                    const nameOf = (e) => e ? (e.shipTypeName || e.constructor?.name || 'Unknown') : 'null';
-                    const attackerName = attacker ? (attacker.shipTypeName || attacker.constructor?.name || 'Unknown') : 'Unknown';
-                    let distToAttacker = null;
-                    try {
-                        if (this.pos && attacker?.pos) {
-                            distToAttacker = dist(this.pos.x, this.pos.y, attacker.pos.x, attacker.pos.y);
-                        }
-                    } catch (e) { /* ignore */ }
-                    const validNow = this.isTargetValid?.(newTarget);
-                    return `   → Targeting: ${this.shipTypeName} [${AI_STATE_NAME[this.currentState]}, ${this.role}] ${changed ? 'switched' : 'kept'} target: ${nameOf(prevTarget)} -> ${nameOf(newTarget)} (valid=${validNow ? 'yes' : 'no'}, result=${!!targetResult}) after hit by ${attackerName}` +
-                        (typeof distToAttacker === 'number' ? ` @${distToAttacker.toFixed(0)}u` : '');
-                });
-
-                // Immediate combat reaction for aggressive roles when idle
-                // Do not override if fleeing or sniping (already engaged)
-                const aggressiveRole = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.BOUNTY_HUNTER);
-                const passiveState = (this.currentState === AI_STATE.IDLE || this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.NEAR_STATION || this.currentState === AI_STATE.COLLECTING_CARGO);
-                if (aggressiveRole && passiveState && this.isTargetValid(this.target) && this.isArmed() && this.currentState !== AI_STATE.FLEEING && this.currentState !== AI_STATE.SNIPING) {
-                    this.changeState(AI_STATE.APPROACHING);
-                }
-            } else {
-                if (DEBUG_DAMAGE || DEBUG_TARGETING) console.warn(`⚠️ NO SYSTEM available for ${this.shipTypeName} targeting update!`);
-            }
+        } else {
+            if (DEBUG_DAMAGE || DEBUG_TARGETING) console.warn(`⚠️ NO SYSTEM available for ${this.shipTypeName} targeting update!`);
         }
     }
 
@@ -243,13 +260,16 @@ class EnemyDamageSystem {
         // Skip shield check entirely if shields are disabled
         if (this.shield > 0 && !this.shieldsDisabled) {
             shieldHit = true;
-            this.shieldHitTime = millis();
-            this.lastShieldHitTime = millis();
+            const now = millis();
+            this.shieldHitTime = now;
+            this.lastShieldHitTime = now;
 
             if (amount <= this.shield) {
                 // Shield absorbs all damage
                 this.shield -= amount;
                 damageDealt = amount;
+                // Reset shield-down flag while shields are still up
+                this._shieldWasZero = false;
             } else {
                 // Shield is depleted, remaining damage goes to hull
                 damageDealt = this.shield; // Damage absorbed by shield
@@ -301,7 +321,7 @@ class EnemyDamageSystem {
         const system = this.getSystem();
         if (system) {
             // Create explosion effect
-            this.currentSystem.addExplosion(
+            system.addExplosion(
                 this.pos.x,
                 this.pos.y,
                 this.size,
@@ -329,12 +349,9 @@ class EnemyDamageSystem {
      * @param {StarSystem} system
      */
     _handlePlayerKillConsequences(attacker, system) {
-
-
         AI_LOG(`BEFORE: Player kills = ${system.player.kills}`);
         system.player.addKill(this);
         AI_LOG(`AFTER: Player kills = ${system.player.kills}, Rating: ${system.player.getEliteRating()}`);
-
 
         // Update mission progress using helper to reduce code duplication
         if (attacker.activeMission) {
@@ -432,7 +449,6 @@ class EnemyDamageSystem {
             }
 
             if (system.setPlayerWanted) {
-
                 // If player is police, revoke status first
                 if (attacker === system.player && system.player.isPolice) {
                     system.player.removePoliceStatus();
@@ -441,7 +457,9 @@ class EnemyDamageSystem {
                 const wantedLevel = (this.role === AI_ROLE.POLICE) ? 3 : 1;
                 system.setPlayerWanted(true, wantedLevel);
                 AI_LOG(`Player marked as WANTED (Level ${wantedLevel}) for destroying ${this.shipTypeName}`);
-                uiManager.addMessage(`WANTED: For destroying ${this.role} ship!`, '#ff0000');
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage(`WANTED: For destroying ${this.role} ship!`, '#ff0000');
+                }
             } else {
                 // Fallback if setPlayerWanted doesn't exist
                 attacker.isWanted = true;
@@ -460,30 +478,30 @@ class EnemyDamageSystem {
         let bountyAmount = 0;
         let bountyMessage = null;
 
-        // Police bounties - 1,000 credits for killing aliens or pirates
+        // Police bounties for killing aliens or pirates
         if (attacker.isPolice && (this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.PIRATE)) {
-            bountyAmount = 1000;
-            bountyMessage = "Police bounty: 1,000 cr";
+            bountyAmount = BOUNTY_POLICE_ALIEN_PIRATE;
+            bountyMessage = `Police bounty: ${BOUNTY_POLICE_ALIEN_PIRATE.toLocaleString()} cr`;
         }
-        // Separatist bounties - 2,000 credits for killing Imperial ships
-        else if (attacker.playerFaction === 'SEPARATIST' && this._isImperialShip()) {
-            bountyAmount = 2000;
-            bountyMessage = "Separatist bounty: 2,000 cr";
+        // Separatist bounties for killing Imperial ships
+        else if (attacker.playerFaction === 'SEPARATIST' && this._isShipOfFaction('IMPERIAL')) {
+            bountyAmount = BOUNTY_FACTION_RIVALRY;
+            bountyMessage = `Separatist bounty: ${BOUNTY_FACTION_RIVALRY.toLocaleString()} cr`;
         }
-        // Imperial bounties - 2,000 credits for killing Separatist ships
-        else if (attacker.playerFaction === 'IMPERIAL' && this._isSeparatistShip()) {
-            bountyAmount = 2000;
-            bountyMessage = "Imperial bounty: 2,000 cr";
+        // Imperial bounties for killing Separatist ships
+        else if (attacker.playerFaction === 'IMPERIAL' && this._isShipOfFaction('SEPARATIST')) {
+            bountyAmount = BOUNTY_FACTION_RIVALRY;
+            bountyMessage = `Imperial bounty: ${BOUNTY_FACTION_RIVALRY.toLocaleString()} cr`;
         }
-        // Military bounties - 4,000 credits for killing Alien ships
+        // Military bounties for killing Alien ships
         else if (attacker.playerFaction === 'MILITARY' && this.role === AI_ROLE.ALIEN) {
-            bountyAmount = 4000;
-            bountyMessage = "Military bounty: 4,000 cr";
+            bountyAmount = BOUNTY_MILITARY_ALIEN;
+            bountyMessage = `Military bounty: ${BOUNTY_MILITARY_ALIEN.toLocaleString()} cr`;
         }
-        // Military bounties - 1,000 credits for killing pirates
+        // Military bounties for killing pirates
         else if (attacker.playerFaction === 'MILITARY' && this.role === AI_ROLE.PIRATE) {
-            bountyAmount = 1000;
-            bountyMessage = "Military bounty: 1,000 cr";
+            bountyAmount = BOUNTY_MILITARY_PIRATE;
+            bountyMessage = `Military bounty: ${BOUNTY_MILITARY_PIRATE.toLocaleString()} cr`;
         }
 
         // Award the bounty
@@ -497,17 +515,29 @@ class EnemyDamageSystem {
     }
 
     /**
+     * Helper: Checks if this enemy belongs to a specific faction
+     * @param {string} factionName - Faction to check ('IMPERIAL', 'SEPARATIST', etc.)
+     * @returns {boolean}
+     */
+    _isShipOfFaction(factionName) {
+        // Check faction property first (set in Enemy constructor)
+        if (this.faction === factionName) return true;
+
+        // Fallback: Check ship type arrays for backwards compatibility
+        const factionShipsMap = {
+            'IMPERIAL': typeof IMPERIAL_SHIPS !== 'undefined' ? IMPERIAL_SHIPS : [],
+            'SEPARATIST': typeof SEPARATIST_SHIPS !== 'undefined' ? SEPARATIST_SHIPS : []
+        };
+        const factionShips = factionShipsMap[factionName];
+        return Array.isArray(factionShips) && factionShips.includes(this.shipTypeName);
+    }
+
+    /**
      * Helper: Checks if this enemy is an Imperial ship
      * @returns {boolean}
      */
     _isImperialShip() {
-        // Check faction property first (set in Enemy constructor)
-        if (this.faction === 'IMPERIAL') return true;
-
-        // Fallback: Check if this ship type is in the IMPERIAL_SHIPS array
-        return typeof IMPERIAL_SHIPS !== 'undefined' &&
-            Array.isArray(IMPERIAL_SHIPS) &&
-            IMPERIAL_SHIPS.includes(this.shipTypeName);
+        return this._isShipOfFaction('IMPERIAL');
     }
 
     /**
@@ -515,13 +545,7 @@ class EnemyDamageSystem {
      * @returns {boolean}
      */
     _isSeparatistShip() {
-        // Check faction property first (set in Enemy constructor)
-        if (this.faction === 'SEPARATIST') return true;
-
-        // Fallback: Check if this ship type is in the SEPARATIST_SHIPS array
-        return typeof SEPARATIST_SHIPS !== 'undefined' &&
-            Array.isArray(SEPARATIST_SHIPS) &&
-            SEPARATIST_SHIPS.includes(this.shipTypeName);
+        return this._isShipOfFaction('SEPARATIST');
     }
 
     /**
@@ -529,7 +553,7 @@ class EnemyDamageSystem {
      */
     _checkRandomCargoDrop() {
         // Random cargo drop chance when hit but not destroyed
-        if (this.hull < this.maxHull * 0.5 && Math.random() < 0.05) {
+        if (this.hull < this.maxHull * DAMAGE_CARGO_DROP_HULL_THRESHOLD && Math.random() < DAMAGE_CARGO_DROP_CHANCE) {
             this.jettisonCargo();
         }
     }
