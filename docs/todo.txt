@@ -1,11 +1,7 @@
 # Elite Game Development TODO
 
-
-
 Implement three levels of boosters 
-
-get rid of the multiship and combat roles
-
+the siderwinder has the bsic state
 
 -----
 
