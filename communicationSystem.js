@@ -2524,10 +2524,14 @@ class CommunicationSystem {
     }
 
     _cleanupEnemy(enemy) {
-        // Remove cooldown entry for destroyed enemy to prevent memory leak
+        // Remove cooldown and voice profile entries for destroyed enemy to prevent memory leak
         const enemyKey = this._getEnemyKey(enemy);
         if (enemyKey) {
             this._enemyCooldowns.delete(enemyKey);
+            // Also clean up cached voice profile
+            if (this._voiceByEnemy) {
+                this._voiceByEnemy.delete(enemyKey);
+            }
         }
     }
 
