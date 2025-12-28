@@ -880,12 +880,12 @@ class CommunicationSystem {
                 "{enemyName}: Revolution! {separatistSlogan}!"
             ],
             separatistRetort: [
-                "{enemyName}: Republic won't yield!",
+                "{enemyName}: Republic won't die!",
                 "{enemyName}: Can't stop us! {separatistSlogan}!",
                 "{enemyName}: Every hit strengthens us!",
                 "{enemyName}: Endured worse, Imperial!",
-                "{enemyName}: For freedom! Won't fall!",
-                "{enemyName}: People with us. You alone!",
+                "{enemyName}: For freedom!",
+                "{enemyName}: The People are with us!",
                 "{enemyName}: Empire's best? Pathetic.",
                 "{enemyName}: Survived bombardments. This?",
                 "{enemyName}: Strike us, thousand rise!",
@@ -990,7 +990,7 @@ class CommunicationSystem {
                 "{enemyName}: Let's fight, {playerTitle}.",
                 "{enemyName}: Hostile presence. Engaging.",
                 "{enemyName}: Time for combat.",
-                "{enemyName}: Weapons hot. You're done.",
+                "{enemyName}: Weapons hot.",
                 "{enemyName}: Target in range. Fire.",
                 "{enemyName}: Combat ship. Combat time.",
                 "{enemyName}: Let's see your skills."

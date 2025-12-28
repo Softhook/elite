@@ -98,6 +98,10 @@ class EnemyUtils {
         if (target && target.isCloaked) {
             return false;
         }
+        // Player is not a valid target while dying (prevents flickering target displays)
+        if (target && target.isDying) {
+            return false;
+        }
         return target && target.pos &&
             ((target.hull !== undefined && target.hull > 0) || target.hull === undefined) &&
             (target.destroyed === undefined || !target.destroyed);
