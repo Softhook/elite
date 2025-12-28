@@ -1908,6 +1908,14 @@ class Player {
             this._shieldWasZero = true;
         }
 
+        // Enemy gloating when player is critically low on health
+        if (this.maxHull > 0 && attacker && typeof communicationSystem !== 'undefined') {
+            const healthPercent = (this.hull / this.maxHull) * 100;
+            if (healthPercent <= 15) {
+                communicationSystem.handlePlayerDying(attacker, healthPercent);
+            }
+        }
+
         // Check for destruction
         if (this.hull <= 0) {
             this.hull = 0;
