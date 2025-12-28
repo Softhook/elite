@@ -67,6 +67,11 @@ class CommunicationSystem {
                 male: { pitchMin: 0.9, pitchMax: 1.1, rateMin: 0.9, rateMax: 1.1 },
                 female: { pitchMin: 1.0, pitchMax: 1.2, rateMin: 0.9, rateMax: 1.1 }
             },
+            // Repair: calm, patient, slightly exasperated
+            'Repair': {
+                male: { pitchMin: 0.9, pitchMax: 1.05, rateMin: 0.85, rateMax: 1.0 },
+                female: { pitchMin: 1.0, pitchMax: 1.15, rateMin: 0.85, rateMax: 1.0 }
+            },
             // Alien: very strange, extreme pitch modulation
             'Alien': {
                 male: { pitchMin: 0.3, pitchMax: 2.0, rateMin: 0.5, rateMax: 1.8 },
@@ -1474,6 +1479,81 @@ class CommunicationSystem {
                 "{enemyName}: {guardPrincipal} appreciates this.",
                 "{enemyName}: Hostile eliminated.",
                 "{enemyName}: That's my job."
+            ],
+            // Repair ships - wanting to be left alone
+            repairPleas: [
+                "{enemyName}: We're repair crew! Back off!",
+                "{enemyName}: Non-combatant here! Cease fire!",
+                "{enemyName}: Just doing maintenance! Leave us alone!",
+                "{enemyName}: Repair tender! No weapons here!",
+                "{enemyName}: We fix things, not fight them!",
+                "{enemyName}: Service vessel! Stand down!",
+                "{enemyName}: Field repairs only! Not a threat!",
+                "{enemyName}: Maintenance crew! We're unarmed!",
+                "{enemyName}: Emergency repairs in progress! Go away!",
+                "{enemyName}: Hull patches don't stop lasers! Please!",
+                "{enemyName}: We're support, not combat!",
+                "{enemyName}: Repair drone carrier! No hostiles!",
+                "{enemyName}: Just welding hulls here! Back off!",
+                "{enemyName}: Station maintenance! Let us work!",
+                "{enemyName}: Work order in progress! Leave!",
+                "{enemyName}: Service contract active! Disengage!",
+                "{enemyName}: We keep ships flying! Don't shoot!",
+                "{enemyName}: Repair bay open! Not hostile!",
+                "{enemyName}: Technical crew! Cease fire!",
+                "{enemyName}: Field mechanic here! Stand down!",
+                "{enemyName}: Patching hulls, not fighting!",
+                "{enemyName}: Repair tender on duty! Back away!",
+                "{enemyName}: We're the cleanup crew! Not targets!",
+                "{enemyName}: Station sent us! We're authorized!",
+                "{enemyName}: Support vessel! Leave us be!",
+                "{enemyName}: Maintenance contract! Disengage!",
+                "{enemyName}: We're here to help! Stop shooting!",
+                "{enemyName}: Repair schedule tight! Don't delay us!",
+                "{enemyName}: Service crew! We're neutral!",
+                "{enemyName}: Field repairs! Not your enemy!",
+                "{enemyName}: Hull integrity low enough! Please stop!",
+                "{enemyName}: Repair drones active! Not weapons!",
+                "{enemyName}: Maintenance vessel! Just leave!",
+                "{enemyName}: We fix combat damage! Don't add to it!",
+                "{enemyName}: Tender crew! We're non-combat!",
+                "{enemyName}: Service bay active! Go find someone else!",
+                "{enemyName}: Unarmed repair ship! Back off!",
+                "{enemyName}: Just a support vessel! Please!",
+                "{enemyName}: Fixing the station! Let us work!",
+                "{enemyName}: Engineering crew! Cease fire!",
+                "{enemyName}: We're not worth the ammo!",
+                "{enemyName}: Repair manifest active! Leave!",
+                "{enemyName}: Technical support only! Stand down!",
+                "{enemyName}: Hull patchers, not fighters!",
+                "{enemyName}: Service tender on contract! Go away!"
+            ],
+            repairDeath: [
+                "{enemyName}: Hull— patches— failing—",
+                "{enemyName}: Repair— bay— breached—",
+                "{enemyName}: Service— crew— down—",
+                "{enemyName}: Just— maintenance—",
+                "{enemyName}: Work— order— incomplete—",
+                "{enemyName}: Tender— lost—",
+                "{enemyName}: We— weren't— armed—",
+                "{enemyName}: Why— target— support—",
+                "{enemyName}: Repair— drones— offline—",
+                "{enemyName}: Station— we're down—",
+                "{enemyName}: Service— terminated—",
+                "{enemyName}: Maintenance— failed—",
+                "{enemyName}: Hull— integrity— gone—",
+                "{enemyName}: Crew— evacuating—",
+                "{enemyName}: Repair— contract— void—",
+                "{enemyName}: Engineering— critical—",
+                "{enemyName}: Support— vessel— lost—",
+                "{enemyName}: Just— wanted— to help—",
+                "{enemyName}: Tender— crew— sorry—",
+                "{enemyName}: Service— bay— destroyed—",
+                "{enemyName}: We— weren't— combat—",
+                "{enemyName}: Repair— systems— failing—",
+                "{enemyName}: Maintenance— over—",
+                "{enemyName}: What a— waste—",
+                "{enemyName}: Just— a tender—"
             ]
         };
     }
@@ -1992,6 +2072,15 @@ class CommunicationSystem {
             });
             return;
         }
+        if (enemy.role === AI_ROLE.REPAIR) {
+            this._maybeSend(enemy, "repair_plea", this.templates.repairPleas, {
+                chance: 0.9,
+                cooldown: 18000,
+                color: [180, 220, 140],
+                tokens: { damageAmount: Math.round(damage) }
+            });
+            return;
+        }
         if (enemy.role === AI_ROLE.POLICE) {
             this._maybeSend(enemy, "police_warning", this.templates.policeWarnings, {
                 chance: 0.95,
@@ -2064,6 +2153,7 @@ class CommunicationSystem {
             case AI_ROLE.TRANSPORT: templateList = this.templates.transporterDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.TRANSPORT : [255, 150, 80]; break;
             case AI_ROLE.ALIEN: templateList = this.templates.alienDeath; color = [180, 100, 255]; break;
             case AI_ROLE.GUARD: templateList = this.templates.guardDeath; color = [200, 160, 255]; break;
+            case AI_ROLE.REPAIR: templateList = this.templates.repairDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.REPAIR : [180, 220, 140]; break;
             case AI_ROLE.COMBAT:
                 // Determine faction for combat ships
                 const faction = this._getShipFaction(enemy);
