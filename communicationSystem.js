@@ -635,7 +635,8 @@ class CommunicationSystem {
     }
 
     /**
-     * Find a suitable English voice matching the desired gender
+     * Find a suitable non-English voice matching the desired gender
+     * Non-English voices give a more alien/futuristic sci-fi feel
      * @param {string} gender - 'male' or 'female'
      * @returns {number} Voice index to use
      */
@@ -646,36 +647,39 @@ class CommunicationSystem {
 
         const voices = this._speech.voices;
 
-        // Filter for English voices first
-        const englishVoices = voices.filter(v =>
-            v.lang && (v.lang.startsWith('en-') || v.lang === 'en')
+        // Filter for NON-English voices for sci-fi intercom feel
+        const nonEnglishVoices = voices.filter(v =>
+            v.lang && !v.lang.startsWith('en-') && v.lang !== 'en'
         );
 
-        const voicesToSearch = englishVoices.length > 0 ? englishVoices : voices;
+        // Prefer non-English, fallback to all voices if none available
+        const voicesToSearch = nonEnglishVoices.length > 0 ? nonEnglishVoices : voices;
 
         // Try to find voices matching gender by name heuristics
-        // Common patterns: names ending in 'a' tend female, or containing gender keywords
+        // International female name patterns
         const genderMatched = voicesToSearch.filter(v => {
             const name = v.name.toLowerCase();
             if (gender === 'female') {
+                // Female name patterns across languages
                 return name.includes('female') || name.includes('woman') ||
-                    name.includes('samantha') || name.includes('victoria') ||
-                    name.includes('karen') || name.includes('moira') ||
-                    name.includes('kate') || name.includes('fiona') ||
-                    name.includes('allison') || name.includes('susan') ||
-                    name.includes('zira') || name.includes('hazel') ||
-                    name.includes('serena') || name.includes('ellen');
+                    name.includes('anna') || name.includes('maria') ||
+                    name.includes('elena') || name.includes('yuki') ||
+                    name.includes('mei') || name.includes('sara') ||
+                    name.includes('lucia') || name.includes('amélie') ||
+                    name.includes('ingrid') || name.includes('karin') ||
+                    name.includes('paulina') || name.includes('yelena');
             } else {
+                // Male name patterns across languages
                 return name.includes('male') || name.includes('man') ||
-                    name.includes('daniel') || name.includes('james') ||
-                    name.includes('alex') || name.includes('david') ||
-                    name.includes('tom') || name.includes('oliver') ||
-                    name.includes('george') || name.includes('aaron') ||
-                    name.includes('fred') || name.includes('ralph');
+                    name.includes('yuri') || name.includes('ivan') ||
+                    name.includes('hans') || name.includes('jorge') ||
+                    name.includes('thomas') || name.includes('diego') ||
+                    name.includes('luca') || name.includes('henrik') ||
+                    name.includes('carlos') || name.includes('nicolas');
             }
         });
 
-        // Pick from gender-matched voices if available, otherwise any English voice
+        // Pick from gender-matched voices if available, otherwise any non-English voice
         const candidates = genderMatched.length > 0 ? genderMatched : voicesToSearch;
         const selectedVoice = candidates[Math.floor(Math.random() * candidates.length)];
 
