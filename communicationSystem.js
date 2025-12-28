@@ -17,6 +17,9 @@ class CommunicationSystem {
         this._speech = null;              // p5.Speech instance (initialized later)
         this._speechEnabled = true;       // Master toggle for speech
 
+        // Cached voice pools by language/region (built when voices load)
+        this._voicePools = null;          // { us: [], uk: [], ru: [], nonEnglish: [], all: [] }
+
         // Role-based voice profiles: pitch and rate ranges for different AI roles
         // Pitch: 0.01-2.0, Rate: 0.1-2.0 (browser limits)
         this._roleVoiceProfiles = {
@@ -136,73 +139,87 @@ class CommunicationSystem {
 
         this.templates = {
             pirateEngage: [
-                "{enemyName}: Wrong vector, {playerTitle}. Kill thrust and {pirateDemand} before we vent your {playerShip}.",
-                "{enemyName}: {pirateGroup} patrol claims {systemName}. Tribute now or you leave in pieces.",
-                "Channel open. {enemyName} here. We like your {cargoWord}. Hand it over and maybe you limp away.",
-                "{enemyName}: That {playerShip} looks heavy. Flip the bays and give us the payload.",
-                "Broadcast from {enemyShip}: You're trespassing. Jettison the goods or we core your reactor.",
-                "{enemyName}: Cargo transfer. Now. Stall again and we start taking parts off your hull.",
-                "This is {pirateGroup} lead. Congratulations, {playerTitle}, you're today's donation. {pirateDemand}.",
-                "Heads up, {playerTitle}. We just tagged your transponder. Pay the toll or pay in blood.",
-                "Still flying? Cute. Last chance: cut engines, dump cargo, live to regret it.",
-                "{enemyName}: We have overdrafts to cover. Don't make us use the big guns.",
-                "Eyes front. That ping was a missile lock. Cooperate and it becomes a warning shot.",
-                "Message from {enemyShip}: You're about to have a very short commute unless we see cargo in five seconds.",
-                "Broadcast // {pirateGroup}: You're on the wrong side of the frontier, {playerTitle}. Tribute or trouble.",
-                "Hey {playerTitle}, your insurance paid up? Prove it by surviving the next minute.",
-                "{enemyName}: We smell profit. Jettison everything labeled fragile and we might stay friendly.",
-                "We already sold your {playerShip} for scrap. Make it easy: {pirateDemand}.",
-                "{enemyName}: Relax, this is just business. The kind where you drop cargo and live.",
-                "Incoming demand. Move the goods or move to the afterlife.",
-                "You hearing that tone? That's your shield grid failing. Dump the {cargoWord} while it still matters.",
-                "This is {pirateGroup} enforcement. We flag, you pay. Step one: eject your hold.",
-                "{enemyName}: Copy your heat signature. That's one juicy freighter. Put it in neutral and start offloading.",
-                "Broadcast intercept: {pirateGroup} needs new parts. Your {playerShip} will do nicely unless we see cargo streaming out now.",
-                "{enemyName}: {pirateInsult}, you thought you could sneak through {systemName}? Bad call.",
-                "{enemyName}: Look at that, a {pirateInsult} hiding behind fancy paint. Hand over the goods.",
-                "{enemyName}: Throttle to idle and pop the hatches—tribute time.",
-                "{enemyName}: Beacon’s live on you. Make this painless: {pirateDemand}.",
-                "{enemyName}: {playerTitle}, your route goes through us now. Pay up.",
-                "{enemyName}: Two options: cargo or caskets. Don’t make us pick.",
-                "{enemyName}: We do collections for the {pirateGroup}. Consider this a friendly visit.",
-                "{enemyName}: Nice heat signature. Must be a full hold. Empty it.",
-                "{enemyName}: Drift and de-spin. We’re latching to your bays in ten.",
-                "{enemyName}: Your {playerShip} is a donation bin today. Start donating.",
-                "{enemyName}: We’ll take the fragile stuff first. Toss it gently.",
-                "{enemyName}: Spool down. Toss manifests. Then toss the crates.",
-                "{enemyName}: See those dots? That’s us. See this dot? That’s you.",
-                "{enemyName}: We’ve got collectors on payroll. Don’t waste their time.",
-                "{enemyName}: We run tolls on {systemName}. Yours is overdue.",
-                "{enemyName}: Toss the {cargoWord} and you keep your wings attached.",
-                "{enemyName}: This is the easy conversation. The hard one involves shrapnel.",
-                "{enemyName}: We’ve got time, ammo, and a quota. Make it easy.",
-                "{enemyName}: We’ll be gentle if your cargo is. Start venting.",
-                "{enemyName}: Don’t make us open you like a tin—{pirateDemand}.",
-                "{enemyName}: Your transponder just pinged a payday. Comply.",
-                "{enemyName}: Last offer: pay the toll or pay the undertow.",
-                "{enemyName}: We’re bored and broke. You can fix both.",
-                "{enemyName}: If you loved that paint job, keep it safe and pay up.",
-                "{enemyName}: We don’t want trouble. We want your {cargoWord}."
+                "{enemyName}: Kill thrust. {pirateDemand}.",
+                "{enemyName}: {pirateGroup} runs {systemName}. Pay up.",
+                "{enemyName}: Nice {cargoWord}. Hand it over.",
+                "{enemyName}: Heavy load. Open the bays.",
+                "{enemyName}: Jettison or die. Simple.",
+                "{enemyName}: Cargo. Now. Don't stall.",
+                "{enemyName}: {pirateGroup} toll. {pirateDemand}.",
+                "{enemyName}: Tagged you. Pay or bleed.",
+                "{enemyName}: Engines off. Cargo out.",
+                "{enemyName}: We got bills. You got cargo.",
+                "{enemyName}: Missile lock. Cooperate.",
+                "{enemyName}: Five seconds. Dump everything.",
+                "{enemyName}: Wrong sector, {playerTitle}. Tribute.",
+                "{enemyName}: Insurance up? Prove it.",
+                "{enemyName}: Fragile stuff first. Toss it.",
+                "{enemyName}: Already sold your {playerShip}. {pirateDemand}.",
+                "{enemyName}: Just business. Drop cargo, live.",
+                "{enemyName}: Goods or grave. Pick one.",
+                "{enemyName}: Shields failing. Dump the {cargoWord}.",
+                "{enemyName}: {pirateGroup} enforcement. {pirateDemand}.",
+                "{enemyName}: Juicy heat sig. Start offloading.",
+                "{enemyName}: {pirateInsult}. Bad call flying here.",
+                "{enemyName}: Fancy paint, full hold. Empty it.",
+                "{enemyName}: Hatches open. Tribute time.",
+                "{enemyName}: Beacon live. {pirateDemand}.",
+                "{enemyName}: Your route goes through us. Pay.",
+                "{enemyName}: Cargo or caskets. Choose.",
+                "{enemyName}: {pirateGroup} collections. Friendly visit.",
+                "{enemyName}: Full hold. Empty it. Now.",
+                "{enemyName}: Latching in ten. Don't move.",
+                "{enemyName}: Donation time, {playerTitle}.",
+                "{enemyName}: Fragile first. Toss gently.",
+                "{enemyName}: Manifests out. Crates next.",
+                "{enemyName}: Those dots? Us. This dot? You.",
+                "{enemyName}: Collectors waiting. Don't waste time.",
+                "{enemyName}: {systemName} toll overdue. Pay.",
+                "{enemyName}: {cargoWord} out, wings stay on.",
+                "{enemyName}: Easy talk or shrapnel. Pick.",
+                "{enemyName}: Time, ammo, quota. Make it easy.",
+                "{enemyName}: Gentle with cargo. Start venting.",
+                "{enemyName}: Don't make us crack you open.",
+                "{enemyName}: Transponder says payday. Comply.",
+                "{enemyName}: Last offer. Toll or undertow.",
+                "{enemyName}: Bored and broke. Fix both.",
+                "{enemyName}: Love that paint? Pay up.",
+                "{enemyName}: No trouble. Just your {cargoWord}.",
+                "{enemyName}: {pirateGroup} wants a cut. Now.",
+                "{enemyName}: Haul looks good. Share it.",
+                "{enemyName}: Credits or combat. Your call.",
+                "{enemyName}: Slow down. Open up. Live.",
+                "{enemyName}: We see cargo. We want cargo.",
+                "{enemyName}: Wrong place, wrong time, {pirateInsult}.",
+                "{enemyName}: Full bays? Not for long.",
+                "{enemyName}: Tribute or target. Decide fast.",
+                "{enemyName}: {pirateGroup} tax. Everyone pays."
             ],
             pirateRetort: [
-                "{enemyName}: Bold move, {playerTitle}. Let's see how long that bravado lasts.",
-                "Ouch. You'll pay triple for that scorch mark.",
-                "{enemyName}: Cute. You get one free punch. After that we stop playing.",
-                "Guess we're doing this the hard way. Brace yourself.",
-                "You shoot first, we keep the wreckage. Fair trade.",
-                "{enemyName}: Cannons warming. Say goodbye to that {playerShip}.",
-                "That sting woke us up. We hope you brought friends.",
-                "Alright, {playerTitle}. Opening with live ammo now.",
-                "{enemyName}: You just made the bounty list. Enjoy the notoriety while you can.",
-                "{enemyName}: That the best you’ve got? We brought more.",
-                "Shields spiked—now we’re interested.",
-                "{enemyName}: You nicked the paint. Now we nick your hull.",
-                "Shouldn’t have done that. Signing your obituary now.",
-                "{enemyName}: Oh good, a workout.",
-                "Spicy. Let’s turn up the heat.",
-                "{enemyName}: We were being polite. Past tense.",
-                "Alright, hero—let’s see if you can tank this.",
-                "{enemyName}: We’ll add that to the invoice."
+                "{enemyName}: Bold. Let's see how long.",
+                "{enemyName}: Ouch. Triple for that.",
+                "{enemyName}: One free hit. No more.",
+                "{enemyName}: Hard way it is.",
+                "{enemyName}: You shoot, we keep wreckage.",
+                "{enemyName}: Cannons hot. Bye, {playerShip}.",
+                "{enemyName}: Woke us up. Got friends?",
+                "{enemyName}: Live ammo now, {playerTitle}.",
+                "{enemyName}: Bounty list. Welcome.",
+                "{enemyName}: That all? We brought more.",
+                "{enemyName}: Shields spiked. Interested now.",
+                "{enemyName}: Nicked paint. Now your hull.",
+                "{enemyName}: Obituary's getting signed.",
+                "{enemyName}: Oh good. Workout.",
+                "{enemyName}: Spicy. Heating up.",
+                "{enemyName}: Were polite. Past tense.",
+                "{enemyName}: Tank this, hero.",
+                "{enemyName}: Added to invoice.",
+                "{enemyName}: Big mistake, {pirateInsult}.",
+                "{enemyName}: You'll regret that.",
+                "{enemyName}: Weapons hot. Your funeral.",
+                "{enemyName}: Cute. Won't save you.",
+                "{enemyName}: Now you die tired.",
+                "{enemyName}: Wrong target, friend."
             ],
             alienEngage: [
                 "⟟⟊⟒⋮⟟ ⊑⟟⟊⟟⟒ ✦ ☼", "⌬𐌰𐌿𐍄 ∴ ʘ͜ʖʘ", "∰⟴⟴⟁⟁⟁ ∰⟴⟴⟁⟁⟁", "⋇⋇⋇ ᚠᛇᚻ ᚾᚪᚾ", "◬⟁◬⟁◬",
@@ -223,69 +240,112 @@ class CommunicationSystem {
                 "{enemyName}: Power—critical—", "{enemyName}: Couldn’t—hold—", "{enemyName}: Hull breach—", "Patrol {policeWing}: Unit offline—"
             ],
             haulerDeath: [
-                "{enemyName}: I—can’t—", "{enemyName}: Tell {haulerDestination}… sorry—", "{enemyName}: cargo—everywhere—",
-                "{enemyName}: seals—blown—", "{enemyName}: ugh—", "Freighter {enemyShip}: Losing integrity— goodbye—"
+                "{enemyName}: I—can't—", "{enemyName}: Tell {haulerDestination}… sorry—", "{enemyName}: cargo—everywhere—",
+                "{enemyName}: seals—blown—", "{enemyName}: ugh—", "Freighter {enemyShip}: Losing integrity— goodbye—",
+                "{enemyName}: hull—breach—", "{enemyName}: systems—gone—", "{enemyName}: not—like—this—"
+            ],
+            transporterDeath: [
+                "{enemyName}: —static—", "{enemyName}: we're hit—", "{enemyName}: passengers—oh no—",
+                "{enemyName}: cabin—breach—", "{enemyName}: ugh—", "Shuttle {enemyShip}: mayday—",
+                "{enemyName}: losing— pressure—", "{enemyName}: tell— the station—"
             ],
             alienDeath: [
                 "⟟⟊⟒⟒— — —", "҉҉҉ …", "彗… 彗…", "∿∿∿", "◯◯…", "₪₪—", "ᛝᛝᛝ …", "⟁⟁⟁ …", "⌬⌬⌬ —", "◬◬◬ …"
             ],
             haulerPleas: [
-                "{enemyName}: Whoa! I'm a civilian hauler out of {haulerDestination}. Back off!",
-                "Hauler {enemyShip}: I'm carrying {haulerCargo} for disaster relief. Go pick on pirates!",
-                "{enemyName}: Easy! That shot almost punctured my tanks. Leave me alone, I'm just {haulerJob}!",
-                "Freight ID {enemyShip}: I don't carry weapons. Let me go and nobody files paperwork.",
-                "{enemyName}: Are you kidding me? I'm on a contract to {haulerDestination}. Stop shooting!",
-                "{enemyName}: This run barely pays fuel. Take what's in the crate if you must, just stop firing!",
-                "Listen, {playerTitle}. You punch another hole in this hull and we both decompress.",
-                "{enemyName}: Okay, okay! {haulerExcuse}. Let me jump out and it's yours.",
-                "Cargo pilot here. I'll broadcast my manifest if you cease fire!",
-                "{enemyName}: I'm not your enemy. There's a pirate wing two sectors over—go bother them.",
-                "Transport {enemyShip}: That was a warning ping? Felt real. Disengage, please!",
-                "{enemyName}: Medical supplies on board. You want a plague on your hands?",
-                "Freighter {enemyShip}: I'm chartered to {haulerDestination}. Hitting me is paperwork you do not want.",
-                "{enemyName}: Come on! We're just {haulerJob}. Let us finish the run."
+                "{enemyName}: I'm a freighter! Back off!",
+                "{enemyName}: Civilian hauler here. Cease fire!",
+                "{enemyName}: {haulerCargo} on board. Don't shoot!",
+                "{enemyName}: Contract to {haulerDestination}. Let me pass!",
+                "Freighter {enemyShip}: We're unarmed! Stop!",
+                "{enemyName}: Just {haulerJob}. Leave us alone!",
+                "{enemyName}: Hit us again and we decompress!",
+                "{enemyName}: {haulerExcuse}. Just go!",
+                "{enemyName}: Medical cargo! Think about it!",
+                "{enemyName}: Not your enemy. Pirates are out there!",
+                "{enemyName}: This run barely pays fuel. Let me go!",
+                "{enemyName}: Charter law protects us. Back off!",
+                "{enemyName}: No weapons here. Find real targets!",
+                "{enemyName}: Shoot us and someone starves!",
+                "{enemyName}: We've got families waiting!",
+                "{enemyName}: Take the cargo, spare the ship!"
+            ],
+            transporterPleas: [
+                "{enemyName}: Shuttle service! No hostiles here!",
+                "{enemyName}: Passengers aboard! Hold fire!",
+                "{enemyName}: Local ferry! We're civilians!",
+                "Shuttle {enemyShip}: Just station runs. Back off!",
+                "{enemyName}: Commuters on board! Stop shooting!",
+                "{enemyName}: We're a taxi, not a target!",
+                "{enemyName}: Short hop to dock. Let us pass!",
+                "{enemyName}: Crew transfer in progress. Disengage!",
+                "{enemyName}: No cargo worth taking here!",
+                "{enemyName}: Fifty souls aboard. Think about it!",
+                "{enemyName}: Station contract—we're protected!",
+                "{enemyName}: Just moving workers. Calm down!",
+                "{enemyName}: Shuttle service—we don't fight!",
+                "{enemyName}: People on board. Not freight!",
+                "{enemyName}: Short range only. No threat!",
+                "{enemyName}: We're not armed. Just passengers!"
             ],
             policeWarnings: [
-                "Patrol {policeWing}: Cease fire! You are engaging law enforcement.",
-                "Patrol {policeWing}: {playerTitle}, stand down immediately or we will return fire.",
-                "System Control {systemName}: You are attacking a deputy vessel. Power down now!",
-                "Patrol {policeWing}: Another hit and we authorize lethal force. Last warning.",
-                "Security {policeWing}: Weapon strike logged. Disengage or expect arrest on docking.",
-                "Law enforcement broadcast: Drop your weapons and prepare for inspection.",
-                "Patrol {policeWing}: That shot was recorded. Follow-up aggression will be met with missiles.",
-                "Orbital Control {systemName}: Stand down, {playerTitle}. You violate security statute {policeCharge}.",
-                "Patrol {policeWing}: You just crossed the line. Break off or we'll disable you.",
-                "Enforcer {policeWing}: Final warning. Power down weapons and submit to scan."
+                "{enemyName}: Cease fire! Law enforcement!",
+                "{enemyName}: Stand down, {playerTitle}!",
+                "{enemyName}: Attacking police? Bad idea.",
+                "{enemyName}: Last warning. Lethal force next.",
+                "{enemyName}: Strike logged. Arrest pending.",
+                "{enemyName}: Drop weapons. Now.",
+                "{enemyName}: Shot recorded. Missiles next.",
+                "{enemyName}: Violation {policeCharge}. Stand down.",
+                "{enemyName}: Cross us again, we disable you.",
+                "{enemyName}: Power down. Submit to scan.",
+                "{enemyName}: This is law enforcement! Back off!",
+                "{enemyName}: You're firing on police!",
+                "{enemyName}: Aggression noted. Warranted.",
+                "{enemyName}: Don't test us, {playerTitle}.",
+                "{enemyName}: Authority of {systemName}. Cease!",
+                "{enemyName}: Weapons down or we open up.",
+                "{enemyName}: Final warning. Comply.",
+                "{enemyName}: You're making a big mistake."
             ],
             guardEngage: [
                 "{enemyName}: Stay away from {guardPrincipal}!",
-                "{enemyName}: You're threatening {guardPrincipal}. Back off now!",
-                "Guard {enemyShip}: Protective detail engaged. You're too close to {guardPrincipal}.",
-                "{enemyName}: I'm paid to keep {guardPrincipal} safe. You're a threat.",
-                "Escort {enemyShip}: You just painted a target on {guardPrincipal}. Big mistake.",
-                "{enemyName}: Security protocol active. Disengage from {guardPrincipal} immediately.",
-                "{enemyName}: This is your only warning. Move away from {guardPrincipal}.",
-                "Bodyguard {enemyShip}: My job is simple: keep {guardPrincipal} alive. You're making that complicated.",
-                "{enemyName}: Touch {guardPrincipal} and you'll answer to me.",
-                "{enemyName}: Protective zone breach detected. Stand down or be eliminated.",
-                "Guard unit {enemyShip}: {guardPrincipal} is under my protection. You're not getting close.",
-                "{enemyName}: You don't want this fight, {playerTitle}. Leave {guardPrincipal} alone.",
-                "{enemyName}: I've got one job: protect {guardPrincipal}. Don't make me do it the hard way.",
-                "Escort leader: Hostile intent detected toward {guardPrincipal}. Engaging.",
-                "{enemyName}: You picked the wrong convoy to mess with.",
-                "{enemyName}: Security detail here. {guardPrincipal} stays safe, you don't."
+                "{enemyName}: Threatening {guardPrincipal}. Back off!",
+                "{enemyName}: Too close. Engaging.",
+                "{enemyName}: Paid to protect. You're a threat.",
+                "{enemyName}: Painted {guardPrincipal}. Mistake.",
+                "{enemyName}: Security active. Disengage.",
+                "{enemyName}: Only warning. Move away.",
+                "{enemyName}: One job. Protect. Don't interfere.",
+                "{enemyName}: Touch {guardPrincipal}, answer to me.",
+                "{enemyName}: Zone breach. Stand down.",
+                "{enemyName}: {guardPrincipal} protected. Stay back.",
+                "{enemyName}: Don't want this fight, {playerTitle}.",
+                "{enemyName}: Hard way or easy way. Choose.",
+                "{enemyName}: Hostile intent. Engaging.",
+                "{enemyName}: Wrong convoy to mess with.",
+                "{enemyName}: {guardPrincipal} safe. You won't be.",
+                "{enemyName}: Escort duty. You're the threat.",
+                "{enemyName}: Back off. Final warning.",
+                "{enemyName}: Protecting {guardPrincipal}. Don't test me.",
+                "{enemyName}: Security escort. Weapons hot."
             ],
             guardRetort: [
-                "{enemyName}: You just signed your death warrant!",
-                "{enemyName}: That was a mistake. I don't go down easy.",
-                "Guard {enemyShip}: You think that hurt? I'm just getting started.",
-                "{enemyName}: Nice shot. Now let me return the favor.",
-                "{enemyName}: You're going to regret that.",
-                "Bodyguard {enemyShip}: Is that all you've got?",
-                "{enemyName}: I've taken worse hits from asteroids.",
-                "{enemyName}: You'll pay for that. {guardPrincipal} doesn't forgive threats.",
-                "{enemyName}: Wrong move. I'm trained for this.",
-                "Escort {enemyShip}: Armor holding. Can you say the same?"
+                "{enemyName}: Death warrant signed.",
+                "{enemyName}: Mistake. I don't go easy.",
+                "{enemyName}: That hurt? Just started.",
+                "{enemyName}: Nice shot. My turn.",
+                "{enemyName}: You'll regret that.",
+                "{enemyName}: That all you got?",
+                "{enemyName}: Worse from asteroids.",
+                "{enemyName}: {guardPrincipal} won't forgive.",
+                "{enemyName}: Wrong move. I'm trained.",
+                "{enemyName}: Armor holding. Yours?",
+                "{enemyName}: Hit back harder.",
+                "{enemyName}: Good shot. Last one.",
+                "{enemyName}: Now I'm angry.",
+                "{enemyName}: Paid for this. Worth it.",
+                "{enemyName}: Keep shooting. See what happens."
             ],
             guardDeath: [
                 "{enemyName}: {guardPrincipal}… get clear…",
@@ -298,210 +358,276 @@ class CommunicationSystem {
                 "{enemyName}: {guardPrincipal}… forgive me…"
             ],
             militaryEngage: [
-                "{enemyName} ({militaryUnit}): Hostile contact. Weapons hot.",
-                "Military vessel {enemyShip}: Target acquired. Engaging by authority of Naval Command.",
-                "{enemyName}: {militaryUnit} reporting hostile in {systemName}. Neutralizing threat.",
-                "Command, this is {militaryUnit}. Engaging enemy combatant.",
-                "{enemyName}: Military protocol engaged. You are designated hostile.",
-                "{enemyName}: This sector is under military protection. Stand down or be destroyed.",
-                "Defense grid active. {militaryUnit} moving to intercept.",
-                "{enemyName}: You've entered a restricted zone. Prepare to be boarded or destroyed.",
-                "{enemyName} ({militaryUnit}): Threat assessment complete. Engaging.",
-                "Military broadcast: Unauthorized vessel, you will comply or be eliminated.",
-                "{enemyName}: Fleet orders are clear: neutralize all threats in {systemName}.",
-                "{militaryUnit} leader: Target locked. Commencing attack run.",
-                "{enemyName}: This is military space. You don't belong here.",
-                "{enemyName}: Rules of engagement satisfied. Opening fire.",
-                "Tactical {enemyShip}: Hostile vessel identified. Weapons free."
+                "{enemyName}: Hostile contact. Weapons hot.",
+                "{enemyName}: Target acquired. Engaging.",
+                "{enemyName}: {militaryUnit} hostile. Neutralizing.",
+                "{enemyName}: {militaryUnit} engaging combatant.",
+                "{enemyName}: Designated hostile. Firing.",
+                "{enemyName}: Military sector. Stand down.",
+                "{enemyName}: Defense grid active. Intercepting.",
+                "{enemyName}: Restricted zone. Leave or die.",
+                "{enemyName}: Threat assessed. Engaging.",
+                "{enemyName}: Comply or be eliminated.",
+                "{enemyName}: Fleet orders. Neutralize threats.",
+                "{enemyName}: Target locked. Attack run.",
+                "{enemyName}: Military space. You don't belong.",
+                "{enemyName}: ROE satisfied. Firing.",
+                "{enemyName}: Hostile identified. Weapons free.",
+                "{enemyName}: {militaryUnit} on intercept.",
+                "{enemyName}: Naval authority. Comply.",
+                "{enemyName}: You picked a fight with the fleet.",
+                "{enemyName}: Tango spotted. Engaging.",
+                "{enemyName}: Military response. Incoming."
             ],
             militaryRetort: [
-                "{enemyName}: Shields up. Returning fire!",
-                "{militaryUnit}: Taking damage. Requesting backup.",
-                "{enemyName}: You just attacked a military vessel. That's a death sentence.",
-                "{enemyName}: Hit confirmed. Counter-attack authorized.",
-                "Military vessel {enemyShip}: Armor compromised. Escalating response.",
-                "{enemyName}: You're outgunned and you don't even know it.",
-                "{enemyName} ({militaryUnit}): That's an act of war. Prepare for retaliation.",
-                "{enemyName}: All units, we are taking fire. Engage at will!",
-                "{enemyName}: Command, we have a hostile. Permission to use lethal force?",
-                "{enemyName}: That scorch mark will be the last thing you see."
+                "{enemyName}: Shields up. Returning fire.",
+                "{enemyName}: Taking damage. Backup requested.",
+                "{enemyName}: Attack on military. Death sentence.",
+                "{enemyName}: Hit confirmed. Counter-attack.",
+                "{enemyName}: Armor hit. Escalating.",
+                "{enemyName}: Outgunned. You don't know it.",
+                "{enemyName}: Act of war. Retaliation.",
+                "{enemyName}: All units engage!",
+                "{enemyName}: Lethal force authorized.",
+                "{enemyName}: That scorch? Your last.",
+                "{enemyName}: Fleet doesn't forget.",
+                "{enemyName}: Big mistake, hostile.",
+                "{enemyName}: Hull hit. Now you pay.",
+                "{enemyName}: Weapons hot. Your funeral.",
+                "{enemyName}: Bad move. Very bad."
             ],
             militaryDeath: [
-                "{enemyName}: {militaryUnit} down… Mayday…",
-                "{militaryUnit} leader: We're hit… systems critical…",
-                "{enemyName}: Command… we're not going to make it…",
-                "Military vessel {enemyShip}: Hull failing… tell command…",
-                "{enemyName}: Ejecting… shields gone…",
-                "{enemyName}: {militaryUnit}… reporting… casualty…",
-                "{enemyName}: Ship lost… crew… evacuating…",
-                "{enemyName}: This is {militaryUnit}… going dark…"
+                "{enemyName}: {militaryUnit} down—",
+                "{enemyName}: We're hit— critical—",
+                "{enemyName}: Command— not making it—",
+                "{enemyName}: Hull failing—",
+                "{enemyName}: Ejecting—",
+                "{enemyName}: Casualty—",
+                "{enemyName}: Ship lost—",
+                "{enemyName}: Going dark—",
+                "{enemyName}: Tell fleet—",
+                "{enemyName}: Mayday— mayday—"
             ],
             imperialEngage: [
-                "{enemyName}: In the name of {imperialRank}, you will stand down!",
-                "Imperial vessel {enemyShip}: You face the might of the Empire. Surrender now.",
-                "{enemyName}: Glory to the Crown! Target identified, engaging.",
-                "{enemyName}: {imperialRank} does not tolerate defiance. Prepare to be destroyed.",
-                "For the Empire! {enemyName} engaging hostile contact.",
-                "{enemyName}: You dare challenge Imperial authority in {systemName}?",
-                "Imperial Command: Hostile vessel detected. Eliminating in the Emperor's name.",
-                "{enemyName}: The Empire's justice is swift. Your time has come.",
-                "{enemyName}: Long live the Empire! All guns, fire at will!",
-                "Crown fleet {enemyShip}: You will bow before Imperial power or burn.",
-                "{enemyName}: Traitors and rebels will be crushed. Engaging.",
-                "{enemyName}: {imperialRank} protects this sector. You are not welcome.",
-                "Imperial Squadron: Target acquired. For the glory of the Crown!",
-                "{enemyName}: You oppose the Empire? Foolish. Weapons hot.",
-                "{enemyName}: The Emperor's word is law. You violate it at your peril."
+                "{enemyName}: In the Emperor's name! Stand down!",
+                "{enemyName}: Face the Empire. Surrender.",
+                "{enemyName}: Glory to the Crown! Engaging.",
+                "{enemyName}: {imperialRank} tolerates no defiance.",
+                "{enemyName}: For the Empire! Weapons hot.",
+                "{enemyName}: Challenge Imperial authority? Foolish.",
+                "{enemyName}: Emperor's justice. Swift.",
+                "{enemyName}: Long live the Empire! Fire!",
+                "{enemyName}: Bow or burn. Your choice.",
+                "{enemyName}: Traitors will be crushed.",
+                "{enemyName}: {imperialRank} protects this sector.",
+                "{enemyName}: For the Crown! Engaging.",
+                "{enemyName}: Oppose us? Fatal mistake.",
+                "{enemyName}: Imperial law is absolute.",
+                "{enemyName}: The Crown commands. You die.",
+                "{enemyName}: Empire's will. Your end.",
+                "{enemyName}: No mercy for rebels.",
+                "{enemyName}: Imperial wrath incoming.",
+                "{enemyName}: You face {imperialRank}. Kneel.",
+                "{enemyName}: Crown fleet. Weapons free."
             ],
             imperialRetort: [
-                "{enemyName}: You dare strike an Imperial vessel?!",
-                "{enemyName}: That was treason. The Empire will remember this!",
-                "Imperial {enemyShip}: Shields holding. The Crown does not fall so easily.",
-                "{enemyName}: Your rebellion ends here!",
-                "{enemyName}: For every Imperial you harm, ten more will hunt you down!",
-                "{enemyName}: The Empire's wrath is upon you now!",
-                "{enemyName}: You've made a powerful enemy today, rebel scum!",
-                "{enemyName}: Imperial armor is superior. You'll see.",
-                "{enemyName}: That shot seals your fate. The Emperor demands justice!",
-                "{enemyName}: Attack the Empire and face annihilation!"
+                "{enemyName}: Strike an Imperial?!",
+                "{enemyName}: Treason! Empire remembers!",
+                "{enemyName}: Crown doesn't fall easy.",
+                "{enemyName}: Rebellion ends here!",
+                "{enemyName}: Ten more for every one!",
+                "{enemyName}: Empire's wrath upon you!",
+                "{enemyName}: Powerful enemy made, rebel!",
+                "{enemyName}: Imperial armor superior.",
+                "{enemyName}: Emperor demands justice!",
+                "{enemyName}: Attack Empire? Annihilation.",
+                "{enemyName}: You'll regret that.",
+                "{enemyName}: Crown retaliates.",
+                "{enemyName}: Bad choice, rebel.",
+                "{enemyName}: Imperial response incoming.",
+                "{enemyName}: Now you face the fleet."
             ],
             imperialDeath: [
-                "{enemyName}: Long… live… the Emperor…",
-                "Imperial {enemyShip}: For… the Crown… ugh…",
-                "{enemyName}: The Empire… will avenge… me…",
-                "{enemyName}: The Emperor protects…",
-                "{enemyName}: Glory to… {imperialRank}… fading…",
-                "{enemyName}: I die… for the Empire…",
-                "Crown vessel {enemyShip}: Systems… failing… Emperor…",
-                "{enemyName}: Tell the Emperor… we fought… bravely…",
-                "{enemyName}: The Empire… endures… even… as I fall…"
+                "{enemyName}: Long live— Emperor—",
+                "{enemyName}: For— Crown—",
+                "{enemyName}: Empire— avenge me—",
+                "{enemyName}: Emperor— protects—",
+                "{enemyName}: Glory— fading—",
+                "{enemyName}: Die for— Empire—",
+                "{enemyName}: Fought— bravely—",
+                "{enemyName}: Empire— endures—",
+                "{enemyName}: For the— Crown—",
+                "{enemyName}: Emperor— witness—"
             ],
             separatistEngage: [
-                "{enemyName}: {separatistSlogan}! Engaging Imperial oppressor!",
-                "Separatist fighter {enemyShip}: You're with the Empire? Then you're the enemy!",
-                "{enemyName}: For freedom! We'll never bow to tyrants!",
-                "{enemyName}: The Republic rises! Death to Imperial dogs!",
-                "Freedom fighter {enemyName}: You support the Crown? Then you fall with it!",
-                "{enemyName}: We fight for the people! Engaging enemy of the Republic!",
-                "{enemyName}: {separatistSlogan}! Target locked.",
-                "Rebel {enemyShip}: Imperial scum detected in {systemName}. Attacking!",
-                "{enemyName}: The chains are broken! We are free, and we fight!",
-                "{enemyName}: For every world they've crushed, we strike back! Engaging!",
-                "{enemyName}: The Separatist cause is just. You picked the wrong side!",
-                "Freedom squadron: Imperial contact. All units, weapons free!",
-                "{enemyName}: We remember the oppression. Now we deliver justice!",
-                "{enemyName}: The Republic will not be silenced! Fire!",
-                "{enemyName}: Crown loyalists die today. For the Republic!"
+                "{enemyName}: {separatistSlogan}! Engaging!",
+                "{enemyName}: With Empire? You're enemy!",
+                "{enemyName}: For freedom! Never bow!",
+                "{enemyName}: Republic rises! Fire!",
+                "{enemyName}: Crown falls today!",
+                "{enemyName}: Fight for the people!",
+                "{enemyName}: {separatistSlogan}! Locked on.",
+                "{enemyName}: Imperial detected. Attacking!",
+                "{enemyName}: Chains broken! We fight!",
+                "{enemyName}: Strike back! Engaging!",
+                "{enemyName}: Just cause. Wrong side.",
+                "{enemyName}: Freedom squadron! Weapons free!",
+                "{enemyName}: Remember oppression. Deliver justice!",
+                "{enemyName}: Republic not silenced!",
+                "{enemyName}: Loyalists die today!",
+                "{enemyName}: Liberty or death!",
+                "{enemyName}: Down with tyrants!",
+                "{enemyName}: People's will! Fire!",
+                "{enemyName}: No more crowns!",
+                "{enemyName}: Free systems unite!"
             ],
             separatistRetort: [
-                "{enemyName}: The Republic does not yield!",
-                "{enemyName}: You can't stop us! {separatistSlogan}!",
-                "Separatist {enemyShip}: Every hit makes our cause stronger!",
-                "{enemyName}: We've endured worse than you, Imperial!",
-                "{enemyName}: For freedom! We will not fall!",
-                "{enemyName}: The people stand with us. You fight alone!",
-                "{enemyName}: That the best the Empire can do?",
-                "{enemyName}: We've survived Imperial bombardments. This is nothing!",
-                "{enemyName}: Strike us down and a thousand more will rise!",
-                "{enemyName}: You can't kill an idea, oppressor!"
+                "{enemyName}: Republic won't yield!",
+                "{enemyName}: Can't stop us! {separatistSlogan}!",
+                "{enemyName}: Every hit strengthens us!",
+                "{enemyName}: Endured worse, Imperial!",
+                "{enemyName}: For freedom! Won't fall!",
+                "{enemyName}: People with us. You alone!",
+                "{enemyName}: Empire's best? Pathetic.",
+                "{enemyName}: Survived bombardments. This?",
+                "{enemyName}: Strike us, thousand rise!",
+                "{enemyName}: Can't kill an idea!",
+                "{enemyName}: Freedom burns bright!",
+                "{enemyName}: Tyrant's shot? Weak.",
+                "{enemyName}: Republic endures!",
+                "{enemyName}: Not afraid to die free!",
+                "{enemyName}: Your empire crumbles!"
             ],
             separatistDeath: [
-                "{enemyName}: The Republic… will live on…",
-                "{enemyName}: Freedom!…",
-                "Separatist {enemyShip}: Tell them… we fought… for freedom…",
-                "{enemyName}: {separatistSlogan}… always…",
-                "{enemyName}: I die… free…",
-                "{enemyName}: The cause… endures…",
-                "Freedom fighter: Others… will finish… what we started…",
-                "{enemyName}: For… the Republic… ugh…",
-                "{enemyName}: We… are… not defeated… only… fallen…"
+                "{enemyName}: Republic— lives on—",
+                "{enemyName}: Freedom!—",
+                "{enemyName}: Fought for— freedom—",
+                "{enemyName}: {separatistSlogan}— always—",
+                "{enemyName}: Die— free—",
+                "{enemyName}: Cause— endures—",
+                "{enemyName}: Others— finish—",
+                "{enemyName}: For Republic—",
+                "{enemyName}: Not defeated— fallen—",
+                "{enemyName}: Remember— us—"
             ],
             combatEngage: [
-                "{enemyName}: Combat protocols engaged. Weapons hot.",
-                "Warship {enemyShip}: Target designated hostile. Commencing attack.",
-                "{enemyName}: You're in my sights. This won't take long.",
-                "{enemyName}: Combat vessel ready. Let's see what you've got.",
-                "Battle cruiser {enemyShip}: Hostile contact confirmed. Engaging.",
-                "{enemyName}: Time to earn my pay. Target acquired.",
-                "{enemyName}: This sector belongs to those who can hold it. Prove yourself.",
-                "{enemyName}: I'm built for war. You're just target practice.",
-                "Combat ship {enemyName}: Threat detected. Eliminating.",
-                "{enemyName}: My weapons are primed. Your shields won't last.",
-                "{enemyName}: You want a fight? You've got one.",
-                "{enemyName}: Combat systems online. Engaging enemy.",
-                "Tactical vessel {enemyShip}: Target lock achieved. Opening fire.",
-                "{enemyName}: Let's dance, {playerTitle}. Hope you brought armor.",
-                "{enemyName}: Another day, another hostile. Weapons free."
+                "{enemyName}: Combat protocols. Weapons hot.",
+                "{enemyName}: Target hostile. Engaging.",
+                "{enemyName}: In my sights. Won't take long.",
+                "{enemyName}: Let's see what you've got.",
+                "{enemyName}: Hostile confirmed. Engaging.",
+                "{enemyName}: Earning my pay. Target locked.",
+                "{enemyName}: Hold it or lose it. Prove yourself.",
+                "{enemyName}: Built for war. You're practice.",
+                "{enemyName}: Threat detected. Eliminating.",
+                "{enemyName}: Weapons primed. Shields won't last.",
+                "{enemyName}: You want a fight? Got one.",
+                "{enemyName}: Combat systems online.",
+                "{enemyName}: Target lock. Opening fire.",
+                "{enemyName}: Let's dance, {playerTitle}.",
+                "{enemyName}: Another hostile. Weapons free.",
+                "{enemyName}: Contact. Engaging.",
+                "{enemyName}: Time to work.",
+                "{enemyName}: Hostile in range. Firing.",
+                "{enemyName}: Combat ship active.",
+                "{enemyName}: Here for a fight. Found one."
             ],
             combatRetort: [
                 "{enemyName}: That tickled. My turn.",
-                "{enemyName}: You're going to regret that shot.",
-                "Combat vessel {enemyShip}: Damage minimal. Returning fire.",
-                "{enemyName}: Nice try. I've got better armor than that.",
-                "{enemyName}: You hit like a freighter. Let me show you real firepower.",
-                "{enemyName}: Shields holding. Can you say the same?",
-                "{enemyName}: That's it? I expected more from you.",
-                "{enemyName}: You just upgraded this from a warning to a kill.",
-                "Warship {enemyShip}: Taking fire. Retaliating with full force.",
-                "{enemyName}: Bad move. Combat ships don't go down easy."
+                "{enemyName}: Regret incoming.",
+                "{enemyName}: Damage minimal. Returning fire.",
+                "{enemyName}: Better armor than that.",
+                "{enemyName}: Hit like a freighter. Watch this.",
+                "{enemyName}: Shields holding. Yours?",
+                "{enemyName}: That's it? Expected more.",
+                "{enemyName}: Warning to kill. Upgraded.",
+                "{enemyName}: Retaliating full force.",
+                "{enemyName}: Combat ships don't go easy.",
+                "{enemyName}: Nice try. My turn.",
+                "{enemyName}: Felt that. You'll feel this.",
+                "{enemyName}: Now you made me angry.",
+                "{enemyName}: Good hit. Last one.",
+                "{enemyName}: Armor took it. Returning fire."
             ],
             combatDeath: [
-                "{enemyName}: Systems… failing… well fought…",
-                "Combat vessel {enemyShip}: Hull breach… I'm done…",
-                "{enemyName}: You… earned this… one…",
-                "{enemyName}: Ship… critical… ejecting…",
-                "{enemyName}: Damn… didn't… see that coming…",
-                "Warship {enemyShip}: Reactor… overload… goodbye…",
-                "{enemyName}: Not bad… for a… {playerShip}…",
-                "{enemyName}: This… isn't… over…"
+                "{enemyName}: Systems— failing— well fought—",
+                "{enemyName}: Hull breach— done—",
+                "{enemyName}: Earned— this one—",
+                "{enemyName}: Critical— ejecting—",
+                "{enemyName}: Didn't— see that—",
+                "{enemyName}: Reactor— overload—",
+                "{enemyName}: Not bad— for a {playerShip}—",
+                "{enemyName}: Isn't— over—",
+                "{enemyName}: Good— fight—",
+                "{enemyName}: Better— than expected—"
             ],
             imperialMotivation: [
-                "Imperial Command: {playerTitle}, your service to the Crown is exemplary. Continue the fight!",
-                "Crown Fleet: Glory to the Empire! Your victories strengthen our cause.",
-                "Imperial Dispatch: {playerTitle}, the Emperor watches your deeds with pride.",
-                "{imperialRank}: Your loyalty to the Crown is unwavering. Press on!",
-                "Imperial High Command: {playerTitle}, you embody the spirit of the Empire.",
-                "Crown Intelligence: Your actions serve the greater good of Imperial unity.",
-                "Imperial Fleet: {playerTitle}, your ship flies true under the Imperial banner.",
-                "{imperialRank}: The Empire grows stronger with commanders like you.",
-                "Imperial Command: {playerTitle}, your dedication to the Crown inspires us all.",
-                "Crown Fleet: For the Emperor! Your service honors the Imperial legacy."
+                "Imperial Command: {playerTitle}, exemplary service!",
+                "Crown Fleet: Glory to Empire! Strong work.",
+                "Imperial Dispatch: Emperor watches with pride.",
+                "{imperialRank}: Unwavering loyalty. Press on!",
+                "Imperial HQ: You embody Imperial spirit.",
+                "Crown Intel: Serving Imperial unity well.",
+                "Imperial Fleet: Flying true, {playerTitle}.",
+                "{imperialRank}: Empire grows stronger.",
+                "Imperial Command: Crown inspired by you.",
+                "Crown Fleet: For the Emperor!",
+                "Imperial Dispatch: Crown salutes you.",
+                "{imperialRank}: Imperial excellence shown.",
+                "Imperial HQ: Proud of your victories.",
+                "Crown Fleet: Long may you serve!",
+                "{imperialRank}: The Emperor approves."
             ],
             militaryMotivation: [
-                "Naval Command: {playerTitle}, your tactical prowess serves the fleet well.",
-                "{militaryUnit}: Outstanding performance in the field. Keep it up!",
-                "Military High Command: {playerTitle}, your service strengthens our defenses.",
-                "Fleet Operations: Your combat record is exemplary. Continue the mission.",
-                "{militaryUnit}: {playerTitle}, you represent the best of military discipline.",
-                "Naval Intelligence: Your strategic decisions protect our borders.",
-                "Military Command: {playerTitle}, your ship is a beacon of military might.",
-                "{militaryUnit}: Your dedication to duty is commendable. Press on!",
-                "Fleet Command: {playerTitle}, your victories bolster our security.",
-                "Military Operations: {playerTitle}, you embody the spirit of the fleet."
+                "Naval Command: Tactical prowess, {playerTitle}!",
+                "{militaryUnit}: Outstanding performance!",
+                "Military HQ: Defenses strengthened.",
+                "Fleet Ops: Exemplary record. Continue.",
+                "{militaryUnit}: Best of military discipline.",
+                "Naval Intel: Borders secured.",
+                "Military Command: Beacon of might.",
+                "{militaryUnit}: Commendable duty. Press on!",
+                "Fleet Command: Victories bolster security.",
+                "Military Ops: Spirit of the fleet.",
+                "Naval Command: Fleet proud of you.",
+                "{militaryUnit}: Excellent work out there.",
+                "Fleet Ops: Mission accomplished, {playerTitle}.",
+                "Military HQ: Strong performance noted.",
+                "{militaryUnit}: Keep up the good fight."
             ],
             separatistMotivation: [
-                "Republic Council: {playerTitle}, your fight for freedom inspires the people!",
-                "Freedom Forces: {playerTitle}, your actions bring us closer to liberty.",
-                "{separatistSlogan}! Your courage strengthens our cause.",
-                "Separatist Command: {playerTitle}, you are a true champion of the Republic.",
-                "Freedom Fleet: Your victories against tyranny will be remembered.",
-                "Republic Intelligence: {playerTitle}, your dedication to the people is unwavering.",
-                "{separatistSlogan}! {playerTitle}, you fight with the heart of a true rebel.",
-                "Separatist High Command: Your ship flies proudly for freedom.",
-                "Republic Forces: {playerTitle}, your service to the cause is legendary.",
-                "Freedom Command: {playerTitle}, together we will overthrow the oppressors!"
+                "Republic Council: Fight inspires the people!",
+                "Freedom Forces: Closer to liberty!",
+                "{separatistSlogan}! Courage strengthens us.",
+                "Separatist Command: True champion, {playerTitle}!",
+                "Freedom Fleet: Tyranny remembers defeat.",
+                "Republic Intel: Dedication unwavering.",
+                "{separatistSlogan}! Heart of a true rebel.",
+                "Separatist HQ: Flying proudly for freedom.",
+                "Republic Forces: Service is legendary.",
+                "Freedom Command: Oppressors will fall!",
+                "{separatistSlogan}! Victory is near.",
+                "Republic Council: People stand with you.",
+                "Freedom Fleet: Hope burns bright.",
+                "Separatist Command: Keep fighting!",
+                "{separatistSlogan}! Liberty endures."
             ],
             policeMotivation: [
-                "Police Headquarters: {playerTitle}, your enforcement actions maintain order.",
-                "Law Enforcement: {playerTitle}, your dedication to justice is exemplary.",
-                "Police Command: Your patrols keep the sectors safe. Well done!",
-                "Justice Division: {playerTitle}, your service upholds the rule of law.",
-                "Police Fleet: {playerTitle}, you are a guardian of peace and order.",
-                "Law Enforcement HQ: Your arrest record strengthens our authority.",
-                "Police Operations: {playerTitle}, your vigilance protects innocent lives.",
-                "Justice Command: {playerTitle}, you embody the principles of law enforcement.",
-                "Police High Command: Your service to justice is commendable.",
-                "Law Division: {playerTitle}, continue enforcing peace across the stars."
+                "Police HQ: Order maintained, {playerTitle}.",
+                "Law Enforcement: Justice exemplified.",
+                "Police Command: Sectors kept safe.",
+                "Justice Division: Law upheld.",
+                "Police Fleet: Guardian of peace.",
+                "Law Enforcement HQ: Authority strengthened.",
+                "Police Ops: Vigilance protects lives.",
+                "Justice Command: Principles embodied.",
+                "Police HQ: Service commendable.",
+                "Law Division: Peace enforced.",
+                "Police Command: Well done, {playerTitle}.",
+                "Justice Division: Order preserved.",
+                "Law Enforcement: Excellent patrol work.",
+                "Police Fleet: Criminals beware.",
+                "Police Ops: Keeping the peace."
             ]
         };
     }
@@ -547,6 +673,7 @@ class CommunicationSystem {
             // Voices load asynchronously - use onLoad to confirm ready
             this._speech.onLoad = () => {
                 this._speechEnabled = true;
+                this._buildVoicePools();
                 console.log('CommunicationSystem: Speech voices loaded via onLoad callback');
             };
 
@@ -572,6 +699,7 @@ class CommunicationSystem {
                 };
 
                 console.log('CommunicationSystem: Speech voices already available (reused from previous session)');
+                this._buildVoicePools();
             } else {
                 // First load - wait for onLoad callback
                 this._speechEnabled = true;
@@ -608,7 +736,42 @@ class CommunicationSystem {
             this._voiceByEnemy.clear();
         }
 
+        // Clear cached voice pools
+        this._voicePools = null;
+
         console.log('CommunicationSystem: Speech cleaned up');
+    }
+
+    /**
+     * Build cached voice pools by language/region
+     * Called once when voices are loaded to avoid re-filtering on every voice selection
+     */
+    _buildVoicePools() {
+        if (!this._speech || !this._speech.voices || this._speech.voices.length === 0) {
+            this._voicePools = null;
+            return;
+        }
+
+        const voices = this._speech.voices;
+
+        // Build voice pools by language
+        const usVoices = voices.filter(v => v.lang && v.lang.startsWith('en-US'));
+        const ukVoices = voices.filter(v => v.lang && v.lang.startsWith('en-GB'));
+        const ruVoices = voices.filter(v => v.lang && v.lang.startsWith('ru'));
+        const anyEnglishVoices = voices.filter(v => v.lang && v.lang.startsWith('en'));
+        const nonEnglishVoices = voices.filter(v =>
+            v.lang && !v.lang.startsWith('en-') && v.lang !== 'en'
+        );
+
+        this._voicePools = {
+            us: usVoices.length > 0 ? usVoices : anyEnglishVoices,
+            uk: ukVoices.length > 0 ? ukVoices : anyEnglishVoices,
+            ru: ruVoices.length > 0 ? ruVoices : voices,
+            nonEnglish: nonEnglishVoices.length > 0 ? nonEnglishVoices : voices,
+            all: voices
+        };
+
+        console.log(`CommunicationSystem: Voice pools built - US:${this._voicePools.us.length}, UK:${this._voicePools.uk.length}, RU:${this._voicePools.ru.length}, NonEng:${this._voicePools.nonEnglish.length}`);
     }
 
     /**
@@ -635,51 +798,81 @@ class CommunicationSystem {
     }
 
     /**
-     * Find a suitable non-English voice matching the desired gender
-     * Non-English voices give a more alien/futuristic sci-fi feel
+     * Find a suitable voice matching the desired gender and role
+     * Uses role-specific language preferences:
+     * - Military: American English (en-US)
+     * - Police: British English (en-GB)
+     * - Others: Non-English voices for sci-fi intercom feel
      * @param {string} gender - 'male' or 'female'
+     * @param {string} role - The AI role (e.g., 'Police', 'Combat' with MILITARY faction)
+     * @param {string} faction - The faction if applicable
      * @returns {number} Voice index to use
      */
-    _selectVoiceForGender(gender) {
+    _selectVoiceForGender(gender, role, faction) {
         if (!this._speech || !this._speech.voices || this._speech.voices.length === 0) {
             return 0;
         }
 
         const voices = this._speech.voices;
+        let voicesToSearch;
 
-        // Filter for NON-English voices for sci-fi intercom feel
-        const nonEnglishVoices = voices.filter(v =>
-            v.lang && !v.lang.startsWith('en-') && v.lang !== 'en'
-        );
+        // Use cached voice pools if available, otherwise fall back to all voices
+        if (this._voicePools) {
+            // Determine language preference based on role/faction
+            const isMilitary = role === 'Combat' && faction === 'MILITARY';
+            const isImperial = faction === 'IMPERIAL';
+            const isSeparatist = faction === 'SEPARATIST';
+            const isPolice = role === 'Police';
 
-        // Prefer non-English, fallback to all voices if none available
-        const voicesToSearch = nonEnglishVoices.length > 0 ? nonEnglishVoices : voices;
+            if (isMilitary) {
+                voicesToSearch = this._voicePools.us;
+            } else if (isImperial || isPolice) {
+                voicesToSearch = this._voicePools.uk;
+            } else if (isSeparatist) {
+                voicesToSearch = this._voicePools.ru;
+            } else {
+                voicesToSearch = this._voicePools.nonEnglish;
+            }
+        } else {
+            // Fallback if pools not built yet
+            voicesToSearch = voices;
+        }
+
+        // Fallback to all voices if pool is empty
+        if (!voicesToSearch || voicesToSearch.length === 0) {
+            voicesToSearch = this._voicePools?.all || voices;
+        }
 
         // Try to find voices matching gender by name heuristics
-        // International female name patterns
         const genderMatched = voicesToSearch.filter(v => {
             const name = v.name.toLowerCase();
             if (gender === 'female') {
-                // Female name patterns across languages
+                // Female name patterns
                 return name.includes('female') || name.includes('woman') ||
                     name.includes('anna') || name.includes('maria') ||
                     name.includes('elena') || name.includes('yuki') ||
                     name.includes('mei') || name.includes('sara') ||
                     name.includes('lucia') || name.includes('amélie') ||
                     name.includes('ingrid') || name.includes('karin') ||
-                    name.includes('paulina') || name.includes('yelena');
+                    name.includes('paulina') || name.includes('yelena') ||
+                    name.includes('samantha') || name.includes('kate') ||
+                    name.includes('victoria') || name.includes('emily') ||
+                    name.includes('allison') || name.includes('susan');
             } else {
-                // Male name patterns across languages
+                // Male name patterns
                 return name.includes('male') || name.includes('man') ||
                     name.includes('yuri') || name.includes('ivan') ||
                     name.includes('hans') || name.includes('jorge') ||
                     name.includes('thomas') || name.includes('diego') ||
                     name.includes('luca') || name.includes('henrik') ||
-                    name.includes('carlos') || name.includes('nicolas');
+                    name.includes('carlos') || name.includes('nicolas') ||
+                    name.includes('alex') || name.includes('daniel') ||
+                    name.includes('david') || name.includes('james') ||
+                    name.includes('tom') || name.includes('aaron');
             }
         });
 
-        // Pick from gender-matched voices if available, otherwise any non-English voice
+        // Pick from gender-matched voices if available, otherwise any from language pool
         const candidates = genderMatched.length > 0 ? genderMatched : voicesToSearch;
         const selectedVoice = candidates[Math.floor(Math.random() * candidates.length)];
 
@@ -724,8 +917,8 @@ class CommunicationSystem {
                     const gender = enemy.gender || 'male';
                     const genderProfile = profile[gender] || profile['male'];
 
-                    // Select a voice matching the gender
-                    const voiceIndex = this._selectVoiceForGender(gender);
+                    // Select a voice matching the gender and role
+                    const voiceIndex = this._selectVoiceForGender(gender, enemy.role, enemy.faction);
 
                     // Generate fixed pitch/rate within profile range for this enemy
                     const pitch = genderProfile.pitchMin + Math.random() * (genderProfile.pitchMax - genderProfile.pitchMin);
@@ -935,11 +1128,20 @@ class CommunicationSystem {
         if (typeof AI_ROLE === "undefined") {
             return;
         }
-        if (enemy.role === AI_ROLE.HAULER || enemy.role === AI_ROLE.TRANSPORT) {
+        if (enemy.role === AI_ROLE.HAULER) {
             this._maybeSend(enemy, "hauler_plea", this.templates.haulerPleas, {
                 chance: 0.85,
                 cooldown: 22000,
                 color: [255, 220, 140],
+                tokens: { damageAmount: Math.round(damage) }
+            });
+            return;
+        }
+        if (enemy.role === AI_ROLE.TRANSPORT) {
+            this._maybeSend(enemy, "transporter_plea", this.templates.transporterPleas, {
+                chance: 0.85,
+                cooldown: 22000,
+                color: [255, 180, 120],
                 tokens: { damageAmount: Math.round(damage) }
             });
             return;
@@ -1012,8 +1214,8 @@ class CommunicationSystem {
         switch (enemy.role) {
             case AI_ROLE.PIRATE: templateList = this.templates.pirateDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.PIRATE : [220, 20, 20]; break;
             case AI_ROLE.POLICE: templateList = this.templates.policeDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.POLICE : [30, 144, 255]; break;
-            case AI_ROLE.HAULER:
-            case AI_ROLE.TRANSPORT: templateList = this.templates.haulerDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.TRANSPORT : [204, 119, 34]; break;
+            case AI_ROLE.HAULER: templateList = this.templates.haulerDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.HAULER : [204, 119, 34]; break;
+            case AI_ROLE.TRANSPORT: templateList = this.templates.transporterDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.TRANSPORT : [255, 150, 80]; break;
             case AI_ROLE.ALIEN: templateList = this.templates.alienDeath; color = [180, 100, 255]; break;
             case AI_ROLE.GUARD: templateList = this.templates.guardDeath; color = [200, 160, 255]; break;
             case AI_ROLE.COMBAT:
