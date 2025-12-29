@@ -406,6 +406,9 @@ function showCriticalError(msg) {
  * Main keyboard input handler
  */
 function keyPressed() {
+    // Handle surface mode keys first when in surface mode
+    if (handleSurfaceModeKeys()) return false;
+
     if (handleGameOverInput()) return false;
     if (handleInstructionsInput()) return false;
     if (handleSaveSelectionInput()) return false;
@@ -415,6 +418,17 @@ function keyPressed() {
     if (handleMissionNavigation()) return false;
     if (handleDetailScreenNavigation()) return false;
     if (handleEscapeKey()) return false;
+}
+
+/**
+ * Handle surface mode control keys
+ * @returns {boolean} True if handled
+ */
+function handleSurfaceModeKeys() {
+    if (!gameStateManager || gameStateManager.currentState !== "SURFACE_MODE") return false;
+    if (typeof surfaceMode === 'undefined' || !surfaceMode) return false;
+
+    return surfaceMode.handleKeyDown(keyCode, key);
 }
 
 /**
@@ -476,7 +490,8 @@ function handleSaveSelectionInput() {
  */
 function handleSpacebarFiring() {
     if ((key === ' ' || keyCode === 32) &&
-        gameStateManager.currentState === "IN_FLIGHT" && player) {
+        (gameStateManager.currentState === "IN_FLIGHT" ||
+            gameStateManager.currentState === "SURFACE_MODE") && player) {
         player.handleFireInput();
         return true;
     }
@@ -527,6 +542,8 @@ function handleSingleKeyActions() {
             return handleMinimapZoomOut();
         case 'c':
             return handleCloakActivation();
+        case 'f':
+            return handleSurfaceDescent();
     }
     return false;
 }
@@ -825,6 +842,32 @@ function handleCloakActivation() {
 }
 
 /**
+ * Handle surface descent ('F' key) - enter planetary surface mode
+ * @returns {boolean} True if handled
+ */
+function handleSurfaceDescent() {
+    if (gameStateManager.currentState !== "IN_FLIGHT" || !player) return false;
+    if (typeof surfaceMode === 'undefined' || !surfaceMode) return false;
+
+    const currentSystem = galaxy?.getCurrentSystem();
+    if (!currentSystem?.planets) return false;
+
+    // Check for planet proximity and trigger descent
+    for (const planet of currentSystem.planets) {
+        if (surfaceMode.canEnter(player, planet)) {
+            if (surfaceMode.enter(player, planet, currentSystem)) {
+                uiManager?.addMessage(`Descending to ${planet.name} surface...`, [100, 200, 255]);
+                return true;
+            }
+        }
+    }
+
+    // Not near any planet
+    uiManager?.addMessage("No planet in range for surface descent", [255, 150, 100]);
+    return false;
+}
+
+/**
  * Handle ESC key to exit map/docked state
  */
 function handleEscapeKey() {
@@ -838,6 +881,11 @@ function handleEscapeKey() {
 }
 
 function keyReleased() {
+    // Handle surface mode key releases
+    if (gameStateManager?.currentState === "SURFACE_MODE" &&
+        typeof surfaceMode !== 'undefined' && surfaceMode) {
+        surfaceMode.handleKeyUp(keyCode, key);
+    }
     return true;
 }
 

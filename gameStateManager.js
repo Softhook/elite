@@ -719,6 +719,13 @@ class GameStateManager {
                 if (saveSelectionScreen) saveSelectionScreen.update(deltaTime);
                 break;
 
+            case "SURFACE_MODE":
+                // Update surface mode (terrain, player physics, projectiles)
+                if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+                    surfaceMode.update(deltaTime);
+                }
+                break;
+
             case "DOCKED":
             case "DOCKED_SPACE_OBJECT":
             case "VIEWING_SPACE_OBJECT_MARKET":
@@ -1240,6 +1247,13 @@ class GameStateManager {
 
             case "SAVE_SELECTION":
                 if (saveSelectionScreen) saveSelectionScreen.draw();
+                break;
+
+            case "SURFACE_MODE":
+                // Draw surface mode (terrain, player ship, HUD)
+                if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+                    surfaceMode.draw();
+                }
                 break;
 
             default:
