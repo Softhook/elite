@@ -101,7 +101,7 @@
 
         <div class="control-group">
             <label>Mesh Resolution: <span id="resValue" class="value">24</span></label>
-            <input type="range" id="resSlider" min="12" max="40" value="24">
+            <input type="range" id="resSlider" min="12" max="200" value="24">
         </div>
 
         <button id="newPlanet">New Planet</button>
@@ -114,6 +114,9 @@
     <script src="../draw3d.js"></script>
     <script src="../planet.js"></script>
     <script src="../ships.js"></script>
+    <script src="../weapons.js"></script>
+    <script src="../enemyConstants.js"></script>
+    <script src="../projectile.js"></script>
 
     <script>
         // ==============================================
@@ -137,6 +140,12 @@
         let altitude = 100;
         let surfaceX = 0;         // Position on surface
         let surfaceY = 0;
+
+        // Projectile system
+        let projectiles = [];
+        let fireInput = false;
+        let fireCooldown = 0;
+        const FIRE_RATE = 8;  // Shots per second
 
         // Control state
         let turnInput = 0;        // Q/E
@@ -184,6 +193,9 @@
                 document.getElementById('resValue').textContent = meshResolution;
                 generateTerrainMesh();
             });
+
+            // Set a static target objective
+            window.targetPos = { x: 300, y: -600 };
         }
 
         function generateTestPlanet() {
@@ -255,8 +267,8 @@
 
                     const noiseVal = noise(nx, ny, nz);
 
-                    // Height from noise - deeper valleys, higher peaks
-                    const height = (noiseVal - 0.5) * 300;
+                    // Height from noise - very deep valleys, high peaks
+                    const height = (noiseVal - 0.5) * 500;
 
                     // Color from palette
                     const paletteIdx = Math.floor(noiseVal * (palette.length - 1));
@@ -295,6 +307,9 @@
             if (key === 'r' || key === 'R') altitudeInput = 1;
             if (key === 'f' || key === 'F') altitudeInput = -1;
 
+            // Fire control (Spacebar)
+            if (key === ' ') fireInput = true;
+
             // Cycle biome
             if (key === 'b' || key === 'B') {
                 currentBiomeIndex = (currentBiomeIndex + 1) % biomeTypes.length;
@@ -314,6 +329,7 @@
             if (key === 'w' || key === 'W' || key === 's' || key === 'S') thrustInput = 0;
             if (key === 'a' || key === 'A' || key === 'd' || key === 'D') strafeInput = 0;
             if (key === 'r' || key === 'R' || key === 'f' || key === 'F') altitudeInput = 0;
+            if (key === ' ') fireInput = false;
         }
 
         function updatePhysics(dt) {
@@ -325,10 +341,9 @@
             playerSpeed *= 0.95; // Friction
             playerSpeed = constrain(playerSpeed, -MAX_SPEED * 0.5, MAX_SPEED);
 
-            // Movement direction: offset by -PI/2 to compensate for view rotation
-            // The view is rotated by -playerAngle, so we need to move in the direction
-            // that APPEARS correct on screen (player always faces up)
-            const moveAngle = playerAngle - Math.PI / 2;
+            // Movement direction: DIRECTLY based on playerAngle (Map View)
+            // If Ship points East (0), we move East.
+            const moveAngle = playerAngle;
 
             // Move in facing direction (forward/backward with W/S)
             surfaceX += Math.cos(moveAngle) * playerSpeed * dt;
@@ -365,7 +380,8 @@
             translate(width / 2, height / 2);
 
             // Rotate entire view based on player angle
-            rotate(-playerAngle);
+            // Fixed World View - No world rotation
+            // rotate(-playerAngle); // REMOVED
 
             // Apply perspective scaling based on altitude
             const perspectiveScale = map(altitude, MIN_ALTITUDE, MAX_ALTITUDE, 1.2, 0.6);
@@ -376,8 +392,44 @@
 
             pop();
 
+            // Handle firing projectiles
+            fireCooldown -= dt;
+            if (fireInput && fireCooldown <= 0) {
+                fireCooldown = 1 / FIRE_RATE;
+                // Create projectile at player position, moving up the screen
+                // Use screen center as spawn point
+                const proj = new Projectile(
+                    width / 2,
+                    height / 2 - 25,  // Slightly ahead of ship
+                    -Math.PI / 2,     // Fire upward on screen
+                    null,             // Owner (null for now)
+                    12,               // Speed
+                    10,               // Damage
+                    color(255, 200, 50), // Yellow projectile
+                    'projectile',
+                    null,             // No target
+                    60                // Lifespan frames
+                );
+                projectiles.push(proj);
+            }
+
+            // Update and draw projectiles
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const proj = projectiles[i];
+                proj.update();
+                proj.draw();
+
+                // Remove dead projectiles
+                if (proj.lifespan <= 0 || proj.destroyed) {
+                    projectiles.splice(i, 1);
+                }
+            }
+
             // Draw player ship (always facing up at center)
             drawPlayerShip();
+
+            // Draw Target Objective (if visible)
+            drawTargetObject();
 
             // Draw HUD
             drawHUD();
@@ -388,91 +440,134 @@
             }
         }
 
+        function drawTargetObject() {
+            if (!window.targetPos) return;
+
+            const cx = width / 2;
+            const cy = height / 2;
+
+            // Relative position
+            const dx = targetPos.x - surfaceX;
+            const dy = targetPos.y - surfaceY;
+
+            // Check if roughly on screen (simple bounds check)
+            if (Math.abs(dx) > width && Math.abs(dy) > height) return;
+
+            // Height of base (Floating or 0)
+            const baseZ = 50;
+            const size = 60;
+            const heightZ = 150;
+
+            // Projection (Fixed World)
+            // Top Vertex
+            const px = cx + dx;
+            const py = cy + dy - (baseZ + heightZ);
+
+            // Base Vertices
+            const b1x = cx + (dx - size); const b1y = cy + (dy - size) - baseZ;
+            const b2x = cx + (dx + size); const b2y = cy + (dy - size) - baseZ;
+            const b3x = cx + (dx + size); const b3y = cy + (dy + size) - baseZ;
+            const b4x = cx + (dx - size); const b4y = cy + (dy + size) - baseZ;
+
+            // Draw Pyramid
+            stroke(255, 100, 50);
+            strokeWeight(2);
+            fill(255, 50, 50, 200);
+
+            beginShape(TRIANGLES);
+            // Face 1
+            vertex(px, py); vertex(b1x, b1y); vertex(b2x, b2y);
+            // Face 2
+            vertex(px, py); vertex(b2x, b2y); vertex(b3x, b3y);
+            // Face 3
+            vertex(px, py); vertex(b3x, b3y); vertex(b4x, b4y);
+            // Face 4
+            vertex(px, py); vertex(b4x, b4y); vertex(b1x, b1y);
+            endShape();
+
+            // Pulsing highlight
+            noStroke();
+            fill(255, 200, 0, 100 + Math.sin(frameCount * 0.1) * 100);
+            ellipse(px, py - 20, 20, 20);
+        }
+
         function drawTerrainMesh() {
             const cellSize = meshSize / meshResolution;
 
-            // Draw cells from back to front for proper depth
-            for (let gy = 0; gy < meshResolution; gy++) {
-                for (let gx = 0; gx < meshResolution; gx++) {
-                    const cell = terrainMesh[gy][gx];
-                    if (!cell) continue;
+            // Fixed World View (Map View)
+            // North is ALWAYS Screen Up (-Y).
+            // No World Rotation.
+            // Center of screen
+            const cx = width / 2;
+            const cy = height / 2;
 
-                    // Screen position: world position minus player position
-                    const screenX = cell.worldX - surfaceX;
-                    const screenY = cell.worldY - surfaceY;
+            if (showWireframe) {
+                stroke(0, 0, 0, 40);
+                strokeWeight(0.5);
+            } else {
+                noStroke();
+            }
 
-                    // Faux 3D: offset based on height (isometric-style)
-                    const heightOffset = cell.height * 0.5;
-                    const drawX = screenX;
-                    const drawY = screenY - heightOffset;
+            // Fixed Draw Order: Top-to-Bottom (North-to-South)
+            // Since the world is fixed, Y=0 (North) is always at the top of the screen (Far)
+            // and Y=Max (South) is always at the bottom (Near).
+            // So we always draw 0 -> Max.
+            const resMinus1 = meshResolution - 1;
 
-                    // Get corner heights for proper 3D quad
-                    const h00 = cell.height;
-                    const h10 = (gx < meshResolution - 1) ? terrainMesh[gy][gx + 1].height : h00;
-                    const h01 = (gy < meshResolution - 1) ? terrainMesh[gy + 1][gx].height : h00;
-                    const h11 = (gx < meshResolution - 1 && gy < meshResolution - 1)
-                        ? terrainMesh[gy + 1][gx + 1].height : h00;
+            for (let gy = 0; gy < resMinus1; gy++) {
+                const row0 = terrainMesh[gy];
+                const row1 = terrainMesh[gy + 1];
+                if (!row0 || !row1) continue;
 
-                    // Shading based on height gradient (simulates lighting)
-                    const shade = map(cell.height, -60, 60, 0.5, 1.2);
-                    const shadedColor = color(
-                        red(cell.color) * shade,
-                        green(cell.color) * shade,
-                        blue(cell.color) * shade
+                for (let gx = 0; gx < resMinus1; gx++) {
+                    const c00 = row0[gx];
+                    const c10 = row0[gx + 1];
+                    const c01 = row1[gx];
+                    const c11 = row1[gx + 1];
+
+                    if (!c00 || !c10 || !c01 || !c11) continue;
+
+                    // --- Lighting (Screen Space = World Space) ---
+                    // Since World is Fixed, World Slope = Screen Slope.
+                    const slopeX = ((c10.height - c00.height) + (c11.height - c01.height)) * 0.5;
+                    const slopeY = ((c01.height - c00.height) + (c11.height - c10.height)) * 0.5;
+
+                    // Light from Top-Left (-1, -1)
+                    // SlopeX > 0 (Uphill Right) -> Face Left (Lit).
+                    // SlopeY > 0 (Uphill Down) -> Face Up (Lit).
+                    // Coefficients match the "Top-Left" Light.
+                    const sunIntensity = slopeX * 0.004 + slopeY * 0.005;
+                    const avgHeight = (c00.height + c10.height + c01.height + c11.height) * 0.25;
+                    const heightLight = avgHeight * 0.0005;
+
+                    let shade = 0.65 + sunIntensity + heightLight;
+                    if (shade < 0.25) shade = 0.25;
+                    if (shade > 1.4) shade = 1.4;
+
+                    // Set Color
+                    const baseCol = c00.color;
+                    fill(
+                        baseCol.levels[0] * shade,
+                        baseCol.levels[1] * shade,
+                        baseCol.levels[2] * shade
                     );
 
-                    // Draw the cell as a 3D quad
-                    const halfCell = cellSize / 2;
+                    // --- PROJECTION ---
+                    // Fixed Perspective (No Rotation)
+                    // dx = worldX - mapCenter.
+                    // dy = worldY - mapCenter.
+                    // Height is simply subtracted from Screen Y (-z -> Up).
+                    const dx00 = c00.worldX - surfaceX; const dy00 = c00.worldY - surfaceY;
+                    const dx10 = c10.worldX - surfaceX; const dy10 = c10.worldY - surfaceY;
+                    const dx11 = c11.worldX - surfaceX; const dy11 = c11.worldY - surfaceY;
+                    const dx01 = c01.worldX - surfaceX; const dy01 = c01.worldY - surfaceY;
 
-                    if (showWireframe) {
-                        stroke(0, 0, 0, 100);
-                        strokeWeight(1);
-                    } else {
-                        noStroke();
-                    }
-                    fill(shadedColor);
-
-                    // Draw as quad with height offsets at corners
                     beginShape();
-                    vertex(screenX - halfCell, screenY - halfCell - h00 * 0.5);
-                    vertex(screenX + halfCell, screenY - halfCell - h10 * 0.5);
-                    vertex(screenX + halfCell, screenY + halfCell - h11 * 0.5);
-                    vertex(screenX - halfCell, screenY + halfCell - h01 * 0.5);
+                    vertex(cx + dx00, cy + dy00 - c00.height);
+                    vertex(cx + dx10, cy + dy10 - c10.height);
+                    vertex(cx + dx11, cy + dy11 - c11.height);
+                    vertex(cx + dx01, cy + dy01 - c01.height);
                     endShape(CLOSE);
-
-                    // Draw side faces for elevated terrain (gives 3D block appearance)
-                    if (cell.height > 10) {
-                        const sideShade = 0.6;
-                        const sideColor = color(
-                            red(cell.color) * sideShade,
-                            green(cell.color) * sideShade,
-                            blue(cell.color) * sideShade
-                        );
-                        fill(sideColor);
-
-                        // Front face (bottom edge)
-                        beginShape();
-                        vertex(screenX - halfCell, screenY + halfCell - h01 * 0.5);
-                        vertex(screenX + halfCell, screenY + halfCell - h11 * 0.5);
-                        vertex(screenX + halfCell, screenY + halfCell);
-                        vertex(screenX - halfCell, screenY + halfCell);
-                        endShape(CLOSE);
-
-                        // Right face
-                        const rightShade = 0.7;
-                        const rightColor = color(
-                            red(cell.color) * rightShade,
-                            green(cell.color) * rightShade,
-                            blue(cell.color) * rightShade
-                        );
-                        fill(rightColor);
-                        beginShape();
-                        vertex(screenX + halfCell, screenY - halfCell - h10 * 0.5);
-                        vertex(screenX + halfCell, screenY + halfCell - h11 * 0.5);
-                        vertex(screenX + halfCell, screenY + halfCell);
-                        vertex(screenX + halfCell, screenY - halfCell);
-                        endShape(CLOSE);
-                    }
                 }
             }
         }
@@ -481,26 +576,29 @@
             push();
             translate(width / 2, height / 2);
 
-            // Draw shadow first
-            const shadowOffset = altitude * 0.3;
+            // Shadow fixed to screen (Top-Left light -> Bottom-Right shadow)
+            const shadowDist = altitude * 0.4;
+            const shadowOffset = shadowDist * 0.707;
             const shadowScale = 1.0 - (altitude / MAX_ALTITUDE) * 0.4;
+
             push();
-            translate(shadowOffset * 0.3, shadowOffset * 0.5);
+            translate(shadowOffset, shadowOffset);
             scale(shadowScale);
             noStroke();
-            fill(0, 0, 0, 60);
+            fill(0, 0, 0, 50);
             ellipse(0, 0, 50, 25);
             pop();
 
-            // Get Sidewinder ship definition
+            // Draw Ship Rotating
             const shipDef = typeof SHIP_DEFINITIONS !== 'undefined' ? SHIP_DEFINITIONS['Sidewinder'] : null;
-            const shipScale = 25; // Scale factor for display
+            const shipScale = 25;
 
-            // Rotate ship to face up (-90 degrees, since vertex data has ship pointing right)
-            rotate(-Math.PI / 2);
+            // Rotate ship to face travel direction
+            // playerAngle 0 = East (+X).
+            // Sidewinder vertex model likely points +X.
+            rotate(playerAngle);
 
             if (shipDef && shipDef.vertexData) {
-                // Draw ship using vertex data from SHIP_DEFINITIONS
                 const vertices = shipDef.vertexData;
                 const fillCol = shipDef.fillColor || [180, 100, 20];
 
@@ -514,10 +612,10 @@
                 }
                 endShape(CLOSE);
 
-                // Cockpit highlight
+                // Cockpit highlight (assume small offset for cockpit)
                 fill(255, 255, 255, 100);
                 noStroke();
-                ellipse(shipScale * 0.3, 0, 8, 6);
+                ellipse(5, 0, 10, 20); // Rough cockpit guess
             } else {
                 // Fallback if SHIP_DEFINITIONS not loaded
                 stroke(100, 200, 255);
@@ -593,30 +691,65 @@
             push();
             translate(width / 2, height - 50);
 
-            // Compass ring
+            // Compass ring background
+            fill(0, 0, 0, 100);
+            ellipse(0, 0, 70, 70);
+
+            // Compass ring stroke
             noFill();
             stroke(100, 100, 100, 150);
             strokeWeight(2);
             ellipse(0, 0, 60, 60);
 
-            // Cardinal directions (rotate with player)
+            // Cardinal directions (Fixed North-Up for Map View)
             fill(200);
             textSize(12);
             textAlign(CENTER, CENTER);
             const compassRadius = 35;
 
-            push();
-            rotate(-playerAngle);
+            // Fixed Cardinal Points
             text('N', 0, -compassRadius);
             text('S', 0, compassRadius);
             text('E', compassRadius, 0);
             text('W', -compassRadius, 0);
+
+            // Player Heading Indicator (Rotates with Ship)
+            push();
+            rotate(playerAngle);
+            stroke(255, 50, 50); // Red Needle
+            strokeWeight(3);
+            line(0, 0, 0, -25);
             pop();
 
-            // Heading indicator (always points up)
-            stroke(255, 100, 100);
-            strokeWeight(2);
-            line(0, -20, 0, -8);
+            // Target Direction Indicator
+            if (window.targetPos) { // Ensure target exists
+                const dx = targetPos.x - surfaceX;
+                const dy = targetPos.y - surfaceY;
+                const angleToTarget = Math.atan2(dy, dx) + Math.PI / 2; // Offset PI/2 because 0 is East, but compass 0 is North(Up)? 
+                // atan2(y,x) -> 0 is +X (East).
+                // Compass Up is -Y (North).
+                // If target is East (dx>0, dy=0), Angle 0. Indicator should point Right (PI/2).
+                // Wait. Canvas 0 angle is +X. Compass text 'E' is at +X.
+                // So atan2 0 means Right. That matches 'E'.
+                // So raw atan2 is compatible with default canvas rotation? 
+                // Yes. 0 = Right. +PI/2 = Down. 
+                // But Compass "Up" is -PI/2.
+                // Let's stick to Canvas Coordinates.
+
+                push();
+                rotate(Math.atan2(dy, dx)); // Rotate to point towards target
+                translate(25, 0); // Move to edge of ring
+                noStroke();
+                fill(255, 200, 0); // Yellow Target Pointer
+                triangle(0, 0, -8, -4, -8, 4);
+                pop();
+
+                // Distance Text
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                fill(255, 200, 0);
+                textSize(10);
+                text(`TGT: ${Math.floor(dist)}`, 0, 45);
+            }
 
             pop();
 
