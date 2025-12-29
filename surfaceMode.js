@@ -140,11 +140,18 @@ class SurfaceMode {
         this.transitionStartTime = millis();
         this.transitionProgress = 0;
 
+        // Mute space ambient sounds
+        if (typeof ambientSoundManager !== 'undefined') {
+            ambientSoundManager.stopAll();
+        }
+
         // Clear terrain
         this.terrainMesh = [];
         this.lastGridX = null;
         this.lastGridY = null;
+        this.lastGridY = null;
         this.projectiles = [];
+        this.surfaceObjects = [];
 
         // Create terrain buffer
         this._createTerrainBuffer();
@@ -207,6 +214,11 @@ class SurfaceMode {
         // Restore game state
         if (typeof gameStateManager !== 'undefined') {
             gameStateManager.setState("IN_FLIGHT");
+        }
+
+        // Restart space ambient sounds
+        if (this.starSystem && typeof this.starSystem.initAmbientSounds === 'function') {
+            this.starSystem.initAmbientSounds();
         }
 
         console.log("Surface mode cleanup complete");
@@ -336,6 +348,13 @@ class SurfaceMode {
             this._fireProjectile();
         }
 
+        // Update surface objects (turrets, etc.)
+        if (this.surfaceObjects) {
+            for (let obj of this.surfaceObjects) {
+                if (obj.update) obj.update(dt, this.player);
+            }
+        }
+
         // Update existing projectiles
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const proj = this.projectiles[i];
@@ -430,6 +449,8 @@ class SurfaceMode {
                 };
             }
         }
+
+        this._spawnObjects(currentGridX, currentGridY);
 
         this._updateTerrainBuffer();
     }
@@ -582,6 +603,96 @@ class SurfaceMode {
         const by = -this.terrainBuffer.height / 2 + offsetY;
 
         image(this.terrainBuffer, bx, by);
+
+        // Draw objects on top of terrain buffer
+        this._drawSurfaceObjects(offsetX, offsetY);
+    }
+
+    /**
+     * Spawn objects for the current grid
+     */
+    /**
+     * Spawn objects for the current grid
+     * Uses coordinate-based hashing to ensure persistence
+     */
+    _spawnObjects(gridX, gridY) {
+        if (!this.planet) return;
+
+        this.surfaceObjects = [];
+        const resolution = SURFACE_CONFIG.MESH_RESOLUTION;
+        const cellSize = SURFACE_CONFIG.MESH_SIZE / resolution;
+
+        // Iterate over the entire active grid area
+        for (let gy = 0; gy < resolution; gy++) {
+            for (let gx = 0; gx < resolution; gx++) {
+                // Calculate absolute grid coordinates for this cell
+                const activeGridX = gridX + (gx - Math.floor(resolution / 2));
+                const activeGridY = gridY + (gy - Math.floor(resolution / 2));
+
+                // Create a clear, deterministic seed from coordinates
+                // Shift bits to avoid symmetries
+                const h1 = (activeGridX * 15485863) & 0xffffffff;
+                const h2 = (activeGridY * 20380733) & 0xffffffff;
+                const cellHash = Math.abs((h1 ^ h2) / 2147483647);
+
+                // Determine if object exists here based on density threshold
+                // Adjust threshold for scarcity (e.g. 1% chance per cell)
+                if (cellHash < 0.02) { // 2% chance
+
+                    const wx = activeGridX * cellSize;
+                    const wy = activeGridY * cellSize;
+                    const h = this._getTerrainHeightAt(wx, wy);
+
+                    // Use a secondary hash for type determination
+                    const typeHash = (cellHash * 100) % 1;
+
+                    let obj;
+                    if (typeHash < 0.3) {
+                        obj = new Turret(wx, wy, 40);
+                    } else if (typeHash < 0.35) {
+                        obj = new SurfaceStation(wx, wy);
+                    } else {
+                        const bTypes = ['skyscraper', 'factory', 'silo'];
+                        const bIdx = floor(typeHash * 100) % bTypes.length;
+
+                        // Deterministic size within 30-80 range
+                        // Use decimals of typeHash
+                        const sizeVal = (typeHash * 123.45) % 1;
+                        const size = 30 + sizeVal * 50;
+
+                        obj = new Building(wx, wy, size, bTypes[bIdx], cellHash * 10000);
+                    }
+
+                    obj.yOffset = h;
+                    this.surfaceObjects.push(obj);
+                }
+            }
+        }
+    }
+
+    /**
+     * Draw surface objects
+     */
+    _drawSurfaceObjects() {
+        if (!this.surfaceObjects) return;
+
+        // Render directly to the main canvas context (which has already been scaled/translated in draw())
+        // Coordinates are relative to the player (center screen is 0,0 after translate(width/2, height/2))
+
+        for (let obj of this.surfaceObjects) {
+            // Calculate screen position relative to surface camera
+            // obj.pos is world coordinates
+            // surfaceX/surfaceY is camera world coordinates
+
+            const sx = obj.pos.x - this.surfaceX;
+            const sy = (obj.pos.y - this.surfaceY) - obj.yOffset;
+
+            // Draw directly to global context
+            if (obj.draw) {
+                // Pass sun angle for shading
+                obj.draw(sx, sy, SURFACE_CONFIG.SUN_ANGLE);
+            }
+        }
     }
 
     /**
@@ -598,10 +709,14 @@ class SurfaceMode {
         push();
         translate(offsetX, offsetY);
 
-        // Draw all projectiles in star system
+        // Draw all projectiles in star system, but only if close to player
         for (const proj of this.starSystem.projectiles) {
             if (proj && !proj.destroyed) {
-                proj.draw();
+                // Filter out distant space projectiles
+                const distSq = p5.Vector.sub(proj.pos, this.player.pos).magSq();
+                if (distSq < 3000 * 3000) { // Only draw within 3000 units
+                    proj.draw();
+                }
             }
         }
 
@@ -846,6 +961,7 @@ class SurfaceMode {
         return false;
     }
 }
+
 
 // Global surface mode instance
 let surfaceMode = null;

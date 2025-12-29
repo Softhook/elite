@@ -1,0 +1,245 @@
+class SurfaceObject {
+    constructor(x, y, size) {
+        this.pos = createVector(x, y);
+        this.size = size || 50;
+        this.health = 100;
+        this.destroyed = false;
+        this.color = color(150, 150, 150);
+        this.yOffset = 0;
+    }
+
+    update(dt, player) {
+    }
+
+    // Draw using Draw3D primitives
+    // x, y: Screen coordinates
+    // sunAngle: Lighting angle
+    draw(x, y, sunAngle) {
+        // Base implementation
+    }
+
+    checkCollision(projectile) {
+        return false;
+    }
+
+    takeDamage(amount) {
+        this.health -= amount;
+        if (this.health <= 0) {
+            this.destroyed = true;
+            this.onDestroy();
+        }
+    }
+
+    onDestroy() {
+    }
+}
+
+class Building extends SurfaceObject {
+    constructor(x, y, size, type, seed = 0) {
+        super(x, y, size);
+        this.type = type || 'skyscraper';
+        this.seed = seed;
+
+        this.color = this._getTypeColor();
+        this.height = this._getTypeHeight();
+    }
+
+    _getTypeColor() {
+        const r = (Math.sin(this.seed) * 0.5 + 0.5) * 50;
+        const g = (Math.cos(this.seed * 0.7) * 0.5 + 0.5) * 50;
+
+        switch (this.type) {
+            case 'skyscraper': return color(60 + r, 70 + g, 90 + r);
+            case 'factory': return color(80 + r, 70 + g, 60 + r);
+            case 'silo': return color(180 + r, 180 + g, 190 + r);
+            default: return color(100, 100, 100);
+        }
+    }
+
+    _getTypeHeight() {
+        switch (this.type) {
+            case 'skyscraper': return this.size * 4;
+            case 'factory': return this.size * 1.5;
+            case 'silo': return this.size * 2.5;
+            default: return this.size;
+        }
+    }
+
+    draw(x, y, sunAngle = -Math.PI / 4) {
+        // Extrude from Roof (Front) to Base (Back)
+        // Vector points DOWN (positive Y)
+        // Angle 0 = (0, 1) in Draw3D logic
+        // Use slight angle to show sides
+        const extrusionAngle = 0.1;
+
+        // Calculate Roof position (Front face)
+        // Base is at (x, y)
+        // BackFace = FrontFace + Vector
+        // Base = Roof + Vector
+        // Roof = Base - Vector
+
+        const dvX = this.height * Math.sin(extrusionAngle);
+        const dvY = this.height * Math.cos(extrusionAngle);
+
+        const rx = x - dvX;
+        const ry = y - dvY;
+
+        switch (this.type) {
+            case 'silo':
+                Draw3D.drawCylinder(rx, ry, this.size / 2, this.height, 12, this.color, extrusionAngle, sunAngle);
+                break;
+            case 'factory':
+                Draw3D.drawBox3D(rx, ry, this.size, this.size, this.height, this.color, extrusionAngle, sunAngle);
+                break;
+            case 'skyscraper':
+            default:
+                Draw3D.drawBox3D(rx, ry, this.size, this.size, this.height, this.color, extrusionAngle, sunAngle);
+                break;
+        }
+    }
+}
+
+class Turret extends SurfaceObject {
+    constructor(x, y, size) {
+        super(x, y, size || 40);
+        this.range = 1000;
+        this.color = color(120, 120, 120);
+        this.angle = 0;
+        this.cooldown = 0;
+    }
+
+    update(dt, player) {
+        if (!player) return;
+        const d = dist(this.pos.x, this.pos.y, player.pos.x, player.pos.y);
+        if (d < this.range) {
+            this.angle = atan2(player.pos.y - this.pos.y, player.pos.x - this.pos.x);
+        }
+    }
+
+    draw(x, y, sunAngle = -Math.PI / 4) {
+        const sz = this.size;
+        const extrusionAngle = 0.1;
+
+        const baseH = sz * 0.2;
+        const headH = sz * 0.6;
+
+        // --- BASE ---
+        // Calculate Base Roof Pos
+        const baseDvX = baseH * Math.sin(extrusionAngle);
+        const baseDvY = baseH * Math.cos(extrusionAngle);
+        const baseRx = x - baseDvX;
+        const baseRy = y - baseDvY;
+
+        Draw3D.drawCylinder(baseRx, baseRy, sz / 2, baseH, 12, color(60), extrusionAngle, sunAngle);
+
+        // --- HEAD ---
+        // Head sits on Base Roof
+        // Head Base = Base Roof = (baseRx, baseRy)
+        // Head Roof = Head Base - Head Vector
+        const headDvX = headH * Math.sin(extrusionAngle);
+        const headDvY = headH * Math.cos(extrusionAngle);
+
+        // We need to pass EXTUDED SHAPE vertices for the "Front" (Roof) face.
+        // But drawExtrudedShape takes vertices of the Front face.
+        // So we calculate corners relative to (0,0) then translate to Head Roof position.
+
+        const headW = sz * 0.8;
+        const headL = sz * 0.8;
+        const hw = headW / 2;
+        const hl = headL / 2;
+
+        // Local corners (centered)
+        const local = [
+            { x: -hw, y: -hl },
+            { x: hw, y: -hl },
+            { x: hw, y: hl },
+            { x: -hw, y: hl }
+        ];
+
+        const c = Math.cos(this.angle);
+        const s = Math.sin(this.angle);
+
+        // Head Base Pos = (baseRx, baseRy)
+        // Head Roof Pos = (baseRx - headDvX, baseRy - headDvY)
+        const headRx = baseRx - headDvX;
+        const headRy = baseRy - headDvY;
+
+        const corners = [];
+        for (let p of local) {
+            const rx = (p.x * c - p.y * s) + headRx;
+            const ry = (p.x * s + p.y * c) + headRy;
+            corners.push({ x: rx, y: ry });
+        }
+
+        Draw3D.drawExtrudedShape(corners, headH, this.color, extrusionAngle, sunAngle);
+
+        // Barrel
+        const barrelLen = sz * 0.8;
+        const barrelW = sz * 0.15;
+        // Project barrel from front of head
+        const bx = headRx + (hw + barrelLen / 2) * c;
+        const by = headRy + (hw + barrelLen / 2) * s;
+        // Its actually a box/cylinder rotated
+
+        // Ideally we'd draw barrels too but simple shape is fine for now
+    }
+}
+
+class SurfaceStation extends SurfaceObject {
+    constructor(x, y) {
+        super(x, y, 200);
+        this.health = 5000;
+        this.color = color(80, 80, 90);
+    }
+
+    draw(x, y, sunAngle = -Math.PI / 4) {
+        const extrusionAngle = 0.1;
+
+        // --- Main Platform ---
+        const platH = 20;
+        const platDvX = platH * Math.sin(extrusionAngle);
+        const platDvY = platH * Math.cos(extrusionAngle);
+        const platRx = x - platDvX;
+        const platRy = y - platDvY;
+
+        Draw3D.drawCylinder(platRx, platRy, 100, platH, 16, this.color, extrusionAngle, sunAngle);
+
+        // --- Control Tower ---
+        const towerH = 120;
+        const towerX = platRx - 30; // On platform roof
+        const towerY = platRy - 20;
+
+        const towerDvX = towerH * Math.sin(extrusionAngle);
+        const towerDvY = towerH * Math.cos(extrusionAngle);
+        const towerRx = towerX - towerDvX;
+        const towerRy = towerY - towerDvY;
+
+        Draw3D.drawBox3D(towerRx, towerRy, 40, 40, towerH, color(100, 100, 120), extrusionAngle, sunAngle);
+
+        // --- Dome ---
+        // Sits on tower roof
+        // Dome "Base" = Tower Roof = (towerRx, towerRy)
+        // But drawDome takes Center Position.
+        // For Dome, extrudes from Base to Tip? Or Tip to Base?
+        // drawDome implementation:
+        // "Draw base/rim circle at specified position (top of dome, no offset)"
+        // "Height offset: starts at 0 (rim) and increases toward tip"
+        // Tip = Rim + dv * depthDir.
+        // So (x,y) is RIM.
+        // We want RIM to be on Tower Roof.
+
+        Draw3D.drawDome(towerRx, towerRy, 30, 8, color(200, 220, 255), extrusionAngle, sunAngle);
+
+        // --- Pads --
+        // On Ground? Or Platform? Let's put on Ground for visual footprint extend
+        const padH = 10;
+        const padDvX = padH * Math.sin(extrusionAngle);
+        const padDvY = padH * Math.cos(extrusionAngle);
+        const padRy = y - padDvY;
+        const padRxLeft = (x - 80) - padDvX;
+        const padRxRight = (x + 80) - padDvX;
+
+        Draw3D.drawCylinder(padRxLeft, padRy, 30, padH, 12, color(60), extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(padRxRight, padRy, 30, padH, 12, color(60), extrusionAngle, sunAngle);
+    }
+}

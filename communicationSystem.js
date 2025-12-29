@@ -2246,6 +2246,12 @@ class CommunicationSystem {
     }
 
     _maybeSend(enemy, category, templates, options = {}) {
+        // Suppress communications while on planet surface
+        if (typeof gameStateManager !== 'undefined' &&
+            gameStateManager.currentState === 'SURFACE_MODE') {
+            return false;
+        }
+
         if (!this.uiManager || !Array.isArray(templates) || templates.length === 0) {
             return false;
         }

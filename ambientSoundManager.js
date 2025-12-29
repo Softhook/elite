@@ -418,6 +418,13 @@ class AmbientSoundManager {
     }
 
     /**
+     * Stop all currently playing ambient sounds
+     */
+    stopAll() {
+        this.cleanup();
+    }
+
+    /**
      * Clean up all ambient sounds
      */
     cleanup() {
