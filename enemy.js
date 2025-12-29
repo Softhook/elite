@@ -477,8 +477,8 @@ class Enemy {
         // Regenerate shields
         const timeSinceShieldHit = currentTime - this.lastShieldHitTime;
         if (this.shield < this.maxShield && !this.destroyed && !this.shieldsDisabled && timeSinceShieldHit > this.shieldRechargeDelay) {
-            const timeScale = deltaTime ? (deltaTime / 16.67) : 1;
-            const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * 0.016;
+            const timeScale = deltaTime ? (deltaTime / FRAME_TIME_BASELINE_MS) : 1;
+            const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * DEFAULT_DELTA_SECONDS;
             const prevShield = this.shield;
             const newShield = Math.min(this.maxShield, prevShield + rechargeAmount);
             if (prevShield === 0 && newShield > 0 && this._shieldWasZero) {
@@ -691,7 +691,7 @@ class Enemy {
                         break;
                     default:
                         // Default behavior for unknown roles (frame-rate independent)
-                        const defaultTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                        const defaultTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
                         this.vel.mult(Math.pow(this.drag * 0.95, defaultTimeScale));
                         break;
                 }
@@ -789,7 +789,12 @@ class Enemy {
             weapons: Array.isArray(this.weapons) ? this.weapons.map(w => (w && w.name) ? w.name : w) : [],
             strokeColorValue: this.strokeColorValue,
             baseColorValue: this.baseColorValue,
-            isWanted: !!this.isWanted
+            isWanted: !!this.isWanted,
+            isAssassinationTarget: !!this.isAssassinationTarget,
+            isAssassinationGuard: !!this.isAssassinationGuard,
+            isMissionSpecific: !!this.isMissionSpecific,
+            isEventEntity: !!this.isEventEntity,
+            bountyTargetId: (this.bountyTarget && this.bountyTarget.id) ? this.bountyTarget.id : null
             , principalId: (this.principal && this.principal.id) ? this.principal.id : null
         };
     }
@@ -816,6 +821,12 @@ class Enemy {
             if (data.maxShield !== undefined) enemy.maxShield = data.maxShield;
             if (data.angle !== undefined) enemy.angle = data.angle;
 
+            // Safety check: skip enemies with no hull (they were destroyed and shouldn't be restored)
+            if (enemy.hull <= 0) {
+                console.warn(`Enemy.fromJSON: Skipping destroyed enemy with hull=${enemy.hull}: ${data.shipTypeName}`);
+                return null;
+            }
+
             // Velocity
             if (data.vel && enemy.vel) { enemy.vel.x = data.vel.x || 0; enemy.vel.y = data.vel.y || 0; }
 
@@ -825,6 +836,13 @@ class Enemy {
             enemy.gender = data.gender || enemy.gender; // Restore gender for voice selection
             enemy.faction = data.faction || enemy.faction;
             enemy.isWanted = !!data.isWanted;
+            enemy.isAssassinationTarget = !!data.isAssassinationTarget;
+            enemy.isAssassinationGuard = !!data.isAssassinationGuard;
+            enemy.isMissionSpecific = !!data.isMissionSpecific;
+            enemy.isEventEntity = !!data.isEventEntity;
+
+            // Store target IDs for relinking phase
+            enemy._bountyTargetId = data.bountyTargetId || null;
 
             // Colors
             if (Array.isArray(data.baseColorValue)) enemy.baseColorValue = data.baseColorValue;

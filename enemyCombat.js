@@ -530,7 +530,7 @@ class EnemyCombat {
 
         // Update secondary fire cooldown (decrement each frame)
         if (this._secondaryFireCooldown > 0) {
-            const dtSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0.016;
+            const dtSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : DEFAULT_DELTA_SECONDS;
             this._secondaryFireCooldown = Math.max(0, this._secondaryFireCooldown - dtSeconds);
         }
     }

@@ -1101,4 +1101,33 @@ class NewsManager {
             this.generateBackgroundNews();
         }
     }
+    // -------------------------------------------------------------------------
+    // PERSISTENCE
+    // -------------------------------------------------------------------------
+
+    toJSON() {
+        return {
+            newsItems: this.newsItems,
+            recentNewsHashes: Array.from(this.recentNewsHashes),
+            lastGalaxyNewsTime: this.lastGalaxyNewsTime,
+            lastCombatReportTime: this.lastCombatReportTime,
+            lastHeroReportTime: this.lastHeroReportTime
+        };
+    }
+
+    fromJSON(data) {
+        if (!data) return;
+
+        if (Array.isArray(data.newsItems)) {
+            this.newsItems = data.newsItems;
+        }
+
+        if (Array.isArray(data.recentNewsHashes)) {
+            this.recentNewsHashes = new Set(data.recentNewsHashes);
+        }
+
+        if (typeof data.lastGalaxyNewsTime === 'number') this.lastGalaxyNewsTime = data.lastGalaxyNewsTime;
+        if (typeof data.lastCombatReportTime === 'number') this.lastCombatReportTime = data.lastCombatReportTime;
+        if (typeof data.lastHeroReportTime === 'number') this.lastHeroReportTime = data.lastHeroReportTime;
+    }
 }

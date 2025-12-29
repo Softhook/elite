@@ -13,7 +13,7 @@ class EnemyStateMachine {
      * @private
      */
     _getDeltaSeconds() {
-        return (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0;
+        return (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : DEFAULT_DELTA_SECONDS;
     }
 
     /**
@@ -504,7 +504,7 @@ class EnemyStateMachine {
             this.performRotationAndThrust(this._guardFormationTarget);
         } else {
             // Frame-rate independent velocity matching
-            const guardTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+            const guardTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
             if (principal.vel) {
                 this.tempVector.set(principal.vel.x - this.vel.x, principal.vel.y - this.vel.y);
                 const velDiffMagSq = this.tempVector.magSq();
@@ -761,7 +761,7 @@ class EnemyStateMachine {
                             const d = dist(this.pos.x, this.pos.y, sys.jumpZoneCenter.x, sys.jumpZoneCenter.y);
                             if (d < 150) {
                                 if (typeof this.initiateJumpFade === 'function') {
-                                    this.initiateJumpFade(0.35, 1.2);
+                                    this.initiateJumpFade(JUMP_FADE_OUT_DURATION, JUMP_FADE_IN_DURATION);
                                 }
                             }
                         }

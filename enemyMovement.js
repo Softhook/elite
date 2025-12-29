@@ -105,7 +105,7 @@ class EnemyMovement {
                         this._sniperReactionDelay = 0; // Reaction delay before executing new direction
                     }
 
-                    const strafeTimeScale = (typeof deltaTime === 'number') ? deltaTime / 1000 : 0.016;
+                    const strafeTimeScale = (typeof deltaTime === 'number') ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS;
                     this._sniperStrafeTimer -= strafeTimeScale;
 
                     // Count down reaction delay if set
@@ -163,13 +163,13 @@ class EnemyMovement {
                     }
 
                     // Apply braking - lighter when actively maneuvering so strafe is visible
-                    const snipeTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                    const snipeTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
                     const brakeFactor = isActivelyManeuvering ? 0.96 : SNIPING_BRAKE_FACTOR;
                     this.vel.mult(Math.pow(constrain(brakeFactor, 0.6, 0.99), snipeTimeScale));
                     canThrust = false; // Strafe/reverse already handled above
                 } else {
                     // No valid target - just brake
-                    const snipeTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                    const snipeTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
                     this.vel.mult(Math.pow(constrain(SNIPING_BRAKE_FACTOR, 0.6, 0.99), snipeTimeScale));
                     canThrust = false;
                 }
@@ -298,7 +298,7 @@ class EnemyMovement {
         if (this.destroyed) return;
 
         // Calculate timeScale once for all physics operations
-        const physicsTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+        const physicsTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
 
         // --- TANGLE WEAPON EFFECT ---
         if (this.dragMultiplier > 1.0 && this.dragEffectTimer > 0) {
@@ -356,7 +356,7 @@ class EnemyMovement {
 
         // Update position only if velocity is valid (frame-rate independent)
         if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) {
-            const timeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+            const timeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
             this.pos.add(p5.Vector.mult(this.vel, timeScale));
         } else {
             console.warn(`Invalid velocity detected for ${this.shipTypeName}, resetting`);

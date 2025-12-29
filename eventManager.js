@@ -1512,6 +1512,7 @@ class EventManager {
             );
 
             newEnemy.currentSystem = this.starSystem;
+            newEnemy.isEventEntity = true; // Mark as event entity for persistence
             if (typeof newEnemy.calculateRadianProperties === 'function') newEnemy.calculateRadianProperties();
             if (typeof newEnemy.initializeColors === 'function') newEnemy.initializeColors();
 
@@ -1836,6 +1837,7 @@ class EventManager {
         if (!shipType) return null;
         const enemy = new Enemy(x, y, this.player, shipType, role);
         enemy.currentSystem = this.starSystem;
+        enemy.isEventEntity = true; // Mark as event entity for persistence
         if (typeof enemy.calculateRadianProperties === 'function') enemy.calculateRadianProperties();
         if (typeof enemy.initializeColors === 'function') enemy.initializeColors();
         if (typeof setupFn === 'function') setupFn(enemy);
@@ -1988,5 +1990,30 @@ class EventManager {
         if (station?.name) return station.name;
         if (this.starSystem?.name) return `${this.starSystem.name} sector`;
         return 'local grid';
+    }
+
+    // -------------------------------------------------------------------------
+    // PERSISTENCE
+    // -------------------------------------------------------------------------
+
+    toJSON() {
+        return {
+            activeWarState: this.activeWarState,
+            activeCrisisState: this.activeCrisisState,
+            // activeEvents (like meteor warnings) are generally transient and don't need saving
+            // unless we want to persist specific timers. For simplicity, we skip transient events.
+        };
+    }
+
+    fromJSON(data) {
+        if (!data) return;
+
+        if (data.activeWarState) {
+            this.activeWarState = data.activeWarState;
+        }
+
+        if (data.activeCrisisState) {
+            this.activeCrisisState = data.activeCrisisState;
+        }
     }
 }

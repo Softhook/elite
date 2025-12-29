@@ -79,7 +79,7 @@ class EnemyTargeting {
             }
 
             // Accumulate time
-            const dt = (typeof deltaTime === 'number') ? deltaTime / 1000 : 0.016;
+            const dt = (typeof deltaTime === 'number') ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS;
             this.offScreenTargetTimer += dt;
 
             const isScanFrame = this.offScreenTargetTimer >= scanIntervalSeconds;

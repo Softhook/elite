@@ -1092,9 +1092,12 @@ function __buildSaveData() {
         playerData,
         galaxyData: galaxy.getSaveData(),
         currentSystemIndex: galaxy.currentSystemIndex,
+        globalSessionSeed: typeof globalSessionSeed !== 'undefined' ? globalSessionSeed : null,
         savedAt: Date.now(),
         version: 2,
-        dockingState
+        dockingState,
+        newsManager: GameGlobals.newsManager ? GameGlobals.newsManager.toJSON() : null,
+        eventManager: GameGlobals.eventManager ? GameGlobals.eventManager.toJSON() : null
     };
 }
 
@@ -1240,9 +1243,19 @@ function loadGame(slotIndex) {
                     ambientSoundManager.cleanup();
                 }
 
-                // 1. Load Galaxy Data First
+                // 1. Restore Global Seed (Critical for correct procedural generation)
+                if (savedData.globalSessionSeed !== undefined && savedData.globalSessionSeed !== null) {
+                    globalSessionSeed = savedData.globalSessionSeed;
+                } else {
+                    // Fallback to avoid complete breakage, though positions will likely shift
+                    if (typeof globalSessionSeed === 'undefined' || globalSessionSeed === null) {
+                        globalSessionSeed = Math.floor(Math.random() * 999999);
+                    }
+                }
+
+                // 2. Load Galaxy Data First
                 if (savedData.galaxyData) {
-                    galaxy.loadSaveData(savedData.galaxyData); // This populates galaxy.systems
+                    galaxy.loadSaveData(savedData.galaxyData, globalSessionSeed); // This populates galaxy.systems
                 } else {
                     console.error(`No galaxyData found in save file for slot ${slotIndex} (Key: ${loadKey})`);
                     showCriticalError("Corrupt save: Missing galaxy data.");
@@ -1276,7 +1289,7 @@ function loadGame(slotIndex) {
                     return false;
                 }
 
-                // 4. Restore Player Data
+                // 5. Restore Player Data
                 if (savedData.playerData) {
                     player.loadSaveData(savedData.playerData);
                 } else {
@@ -1388,7 +1401,16 @@ function loadGame(slotIndex) {
                     gameStateManager.setState("IN_FLIGHT");
                 }
 
-                // 7. Ensure economy types are synchronized after loading
+                // 8. Restore News and Event Persistence
+                if (savedData.newsManager && GameGlobals.newsManager) {
+                    GameGlobals.newsManager.fromJSON(savedData.newsManager);
+                }
+
+                if (savedData.eventManager && GameGlobals.eventManager) {
+                    GameGlobals.eventManager.fromJSON(savedData.eventManager);
+                }
+
+                // 9. Ensure economy types are synchronized after loading
                 if (galaxy.systems) {
                     galaxy.systems.forEach(system => {
                         if (system && system.economyType) {

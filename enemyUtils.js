@@ -12,7 +12,9 @@
  * @returns {number} Delta time in seconds (defaults to ~60fps if unavailable)
  */
 function getDeltaSeconds() {
-    return (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0.016;
+    return (typeof deltaTime === 'number' && isFinite(deltaTime))
+        ? (deltaTime / 1000)
+        : DEFAULT_DELTA_SECONDS;
 }
 
 /**
@@ -21,7 +23,9 @@ function getDeltaSeconds() {
  * @returns {number} Time scale multiplier
  */
 function getTimeScale() {
-    return (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 16.67) : 1;
+    return (typeof deltaTime === 'number' && isFinite(deltaTime))
+        ? (deltaTime / FRAME_TIME_BASELINE_MS)
+        : 1;
 }
 
 /**
@@ -29,6 +33,32 @@ function getTimeScale() {
  * These methods can be added to the Enemy prototype
  */
 class EnemyUtils {
+    // -------------------------
+    // --- Helper Methods ---
+    // -------------------------
+
+    /**
+     * Checks if this ship is an Alien role (uses different propulsion visuals)
+     * @return {boolean} Whether this ship is an Alien
+     */
+    _isAlienShip() {
+        return typeof AI_ROLE !== 'undefined' && this.role === AI_ROLE.ALIEN;
+    }
+
+    /**
+     * Ensures thrustVector exists for thrust calculations
+     * Call at the start of thrust methods to avoid repeated fallback checks
+     */
+    _ensureThrustVector() {
+        if (!this.thrustVector) {
+            this.thrustVector = createVector(0, 0);
+        }
+    }
+
+    // -------------------------
+    // --- Position & Angle Utilities ---
+    // -------------------------
+
     /**
      * Predicts future position of current target based on velocity
      * @return {p5.Vector|null} Predicted position or null if no valid target
@@ -39,7 +69,8 @@ class EnemyUtils {
         // Reuse the temp vector for calculation, but return a copy
         // to prevent corruption if caller stores the result
         this.tempVector.set(this.target.vel.x, this.target.vel.y);
-        let pf = this.predictionTime * (deltaTime ? (60 / (1000 / deltaTime)) : 60);
+        // Use getTimeScale for frame-rate independent prediction
+        const pf = this.predictionTime * getTimeScale() * PREDICTION_FPS_BASELINE;
         this.tempVector.mult(pf);
         this.tempVector.add(this.target.pos);
         return this.tempVector.copy();
@@ -123,13 +154,12 @@ class EnemyUtils {
     rotateTowards(targetAngleRadians) {
         if (isNaN(targetAngleRadians)) return 0;
 
-        let diff = this.getAngleDifference(targetAngleRadians);
+        const diff = this.getAngleDifference(targetAngleRadians);
 
-        const rotationThreshold = 0.02;
-        if (abs(diff) > rotationThreshold) {
+        if (abs(diff) > ROTATION_THRESHOLD_RAD) {
             // Use Math.sign for browser compatibility 
             const rotationAmount = Math.sign(diff) *
-                Math.min(Math.abs(diff), this.rotationSpeed * (deltaTime / 16.67));
+                Math.min(Math.abs(diff), this.rotationSpeed * getTimeScale());
             this.angle += rotationAmount;
         }
         return diff;
@@ -145,35 +175,28 @@ class EnemyUtils {
         this._persistedThrust = multiplier;
 
         // Skip negligible thrust and particle work
-        if (!(multiplier > 0.01)) { return; }
+        if (!(multiplier > MIN_THRUST_THRESHOLD)) { return; }
 
         // Apply thrust in the direction we're facing
-        if (!this.thrustVector) {
-            // Fallback if constructor didn't create it for some reason
-            this.thrustVector = createVector(0, 0);
-        }
+        this._ensureThrustVector();
         this.thrustVector.set(cos(this.angle), sin(this.angle));
         this.thrustVector.mult(this.thrustForce * multiplier);
         this.vel.add(this.thrustVector);
 
         this.isThrusting = true;
 
-        // Create visual thrust particles (using the pool via thrustManager)
-        // Skip for alien ships - they use different propulsion
-        const isAlien = typeof AI_ROLE !== 'undefined' && this.role === AI_ROLE.ALIEN;
-        if (createParticles && this.thrustManager && !isAlien) {
+        // Create visual thrust particles (skip for alien ships - different propulsion)
+        if (createParticles && this.thrustManager && !this._isAlienShip()) {
             this.thrustManager.createThrust(this.pos, this.angle, this.size);
         }
     }
 
     /**
      * Applies left strafe thrust (perpendicular to facing direction)
-     * @param {number} [multiplier=0.6] - Thrust multiplier (strafe is weaker than forward)
+     * @param {number} [multiplier=STRAFE_THRUST_MULTIPLIER] - Thrust multiplier (strafe is weaker than forward)
      */
-    thrustLeft(multiplier = 0.6) {
-        if (!this.thrustVector) {
-            this.thrustVector = createVector(0, 0);
-        }
+    thrustLeft(multiplier = STRAFE_THRUST_MULTIPLIER) {
+        this._ensureThrustVector();
         const strafeAngle = this.angle - HALF_PI; // 90 degrees left
         this.thrustVector.set(cos(strafeAngle), sin(strafeAngle));
         this.thrustVector.mult(this.thrustForce * multiplier);
@@ -181,20 +204,17 @@ class EnemyUtils {
 
         // Visual particles - match player's kiteLeft pattern exactly
         // Particles show thrust going RIGHT (opposite of movement)
-        const isAlien = typeof AI_ROLE !== 'undefined' && this.role === AI_ROLE.ALIEN;
-        if (this.thrustManager && !isAlien) {
-            this.thrustManager.createThrust(this.pos, strafeAngle, this.size * 0.8);
+        if (this.thrustManager && !this._isAlienShip()) {
+            this.thrustManager.createThrust(this.pos, strafeAngle, this.size * STRAFE_PARTICLE_SIZE_MULT);
         }
     }
 
     /**
      * Applies right strafe thrust (perpendicular to facing direction)
-     * @param {number} [multiplier=0.6] - Thrust multiplier (strafe is weaker than forward)
+     * @param {number} [multiplier=STRAFE_THRUST_MULTIPLIER] - Thrust multiplier (strafe is weaker than forward)
      */
-    thrustRight(multiplier = 0.6) {
-        if (!this.thrustVector) {
-            this.thrustVector = createVector(0, 0);
-        }
+    thrustRight(multiplier = STRAFE_THRUST_MULTIPLIER) {
+        this._ensureThrustVector();
         const strafeAngle = this.angle + HALF_PI; // 90 degrees right
         this.thrustVector.set(cos(strafeAngle), sin(strafeAngle));
         this.thrustVector.mult(this.thrustForce * multiplier);
@@ -202,20 +222,17 @@ class EnemyUtils {
 
         // Visual particles - match player's kiteRight pattern exactly
         // Particles show thrust going LEFT (opposite of movement)
-        const isAlien = typeof AI_ROLE !== 'undefined' && this.role === AI_ROLE.ALIEN;
-        if (this.thrustManager && !isAlien) {
-            this.thrustManager.createThrust(this.pos, strafeAngle, this.size * 0.8);
+        if (this.thrustManager && !this._isAlienShip()) {
+            this.thrustManager.createThrust(this.pos, strafeAngle, this.size * STRAFE_PARTICLE_SIZE_MULT);
         }
     }
 
     /**
      * Applies reverse thrust (backward movement while maintaining facing)
-     * @param {number} [multiplier=0.5] - Thrust multiplier (reverse is weaker than forward)
+     * @param {number} [multiplier=REVERSE_THRUST_MULTIPLIER] - Thrust multiplier (reverse is weaker than forward)
      */
-    thrustReverse(multiplier = 0.5) {
-        if (!this.thrustVector) {
-            this.thrustVector = createVector(0, 0);
-        }
+    thrustReverse(multiplier = REVERSE_THRUST_MULTIPLIER) {
+        this._ensureThrustVector();
         const reverseAngle = this.angle + PI; // 180 degrees (backward)
         this.thrustVector.set(cos(reverseAngle), sin(reverseAngle));
         this.thrustVector.mult(this.thrustForce * multiplier);
@@ -224,13 +241,12 @@ class EnemyUtils {
         // Visual particles from front (retro-thrusters)
         // createThrust places particles BEHIND the given angle direction
         // So passing backward-facing angles (angle + PI ± offset) places particles at FRONT of ship
-        const isAlien = typeof AI_ROLE !== 'undefined' && this.role === AI_ROLE.ALIEN;
-        if (this.thrustManager && !isAlien) {
-            const piOver4 = PI * 0.25;
+        if (this.thrustManager && !this._isAlienShip()) {
+            const retroAngleOffset = PI * RETRO_THRUST_ANGLE_OFFSET;
             // Left front thruster: backward-left angle makes particles appear at front-left
-            this.thrustManager.createThrust(this.pos, this.angle + PI - piOver4, this.size * 0.7);
+            this.thrustManager.createThrust(this.pos, this.angle + PI - retroAngleOffset, this.size * REVERSE_PARTICLE_SIZE_MULT);
             // Right front thruster: backward-right angle makes particles appear at front-right
-            this.thrustManager.createThrust(this.pos, this.angle + PI + piOver4, this.size * 0.7);
+            this.thrustManager.createThrust(this.pos, this.angle + PI + retroAngleOffset, this.size * REVERSE_PARTICLE_SIZE_MULT);
         }
     }
 
@@ -247,9 +263,9 @@ class EnemyUtils {
         } else {
             // --- Fallback: Target random point at edge ---
             console.warn(`Hauler ${this.shipTypeName}: Jump Zone not found in system ${system?.name}. Using fallback edge target.`);
-            let angle = random(TWO_PI);
+            const angle = random(TWO_PI);
             // Use a large distance, slightly beyond despawn radius
-            let dist = (system?.despawnRadius ?? 3000) * 1.5;
+            const dist = (system?.despawnRadius ?? 3000) * DESPAWN_DISTANCE_MULTIPLIER;
             this.patrolTargetPos = createVector(cos(angle) * dist, sin(angle) * dist);
         }
 
@@ -264,10 +280,10 @@ class EnemyUtils {
      * Initiate a jump fade effect (fade out -> mark destroyed -> fade in).
      * This centralizes the visual jump/despawn behavior so all ship roles
      * can use the same smooth effect instead of instant destruction.
-     * @param {number} [outDuration=0.35] - Fade-to-white duration (seconds)
-     * @param {number} [inDuration=1.2] - Fade-back duration (seconds)
+     * @param {number} [outDuration=JUMP_FADE_OUT_DURATION] - Fade-to-white duration (seconds)
+     * @param {number} [inDuration=JUMP_FADE_IN_DURATION] - Fade-back duration (seconds)
      */
-    initiateJumpFade(outDuration = 0.35, inDuration = 1.2) {
+    initiateJumpFade(outDuration = JUMP_FADE_OUT_DURATION, inDuration = JUMP_FADE_IN_DURATION) {
         try {
             this._isJumpFading = true;
             this._jumpFadeOutDuration = outDuration;
@@ -290,13 +306,13 @@ class EnemyUtils {
      * @param {number} duration - How long drag lasts in seconds
      * @param {number} multiplier - How much drag is increased
      */
-    applyDragEffect(duration = 5.0, multiplier = 10.0) {
+    applyDragEffect(duration = DRAG_EFFECT_DEFAULT_DURATION, multiplier = DRAG_EFFECT_DEFAULT_MULTIPLIER) {
         // Use higher value if already affected
         this.dragMultiplier = Math.max(this.dragMultiplier || 1.0, multiplier);
 
         // ENHANCED: Extend duration for consecutive hits
         this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, duration) +
-            (this.dragEffectTimer > 0 ? duration * 0.5 : 0);
+            (this.dragEffectTimer > 0 ? duration * DRAG_CONSECUTIVE_HIT_MULT : 0);
 
         // Visual effect timestamp
         this.tangleEffectTime = millis();

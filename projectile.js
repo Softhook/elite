@@ -11,7 +11,7 @@
 class Projectile {
     constructor(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null,
         type = "projectile", target = null, lifespan = 90, turnRate = 0,
-        missileSpeed = 0, tangleDuration = 5.0, dragMultiplier = 10.0,
+        missileSpeed = 0, tangleDuration = DRAG_EFFECT_DEFAULT_DURATION, dragMultiplier = DRAG_EFFECT_DEFAULT_MULTIPLIER,
         rotationBlockMultiplier = 0.1) {
         // Create vectors just once at construction time (reused for entire lifecycle)
         this.pos = createVector(0, 0);
@@ -58,7 +58,7 @@ class Projectile {
     // Reset method for object pooling
     reset(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null,
         type = "projectile", target = null, lifespan = 90, turnRate = 0,
-        missileSpeed = 0, tangleDuration = 5.0, dragMultiplier = 10.0,
+        missileSpeed = 0, tangleDuration = DRAG_EFFECT_DEFAULT_DURATION, dragMultiplier = DRAG_EFFECT_DEFAULT_MULTIPLIER,
         rotationBlockMultiplier = 0.1, system = null) {
         // Validate position inputs (early return on invalid)
         if (isNaN(x) || isNaN(y)) {
@@ -168,7 +168,7 @@ class Projectile {
 
     update() {
         // Frame-rate independent time scaling
-        const timeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+        const timeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
 
         // Homing missile logic (using cached type check)
         if (this._isMissile && this.target && this.target.pos && !this.target.destroyed && (this.target.hull === undefined || this.target.hull > 0)) {

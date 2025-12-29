@@ -692,7 +692,7 @@ class Galaxy {
     }
 
     /** Loads saved data into systems and sets current index. Regenerates connections. */
-    loadSaveData(data) {
+    loadSaveData(data, sessionSeed) {
         console.log("Galaxy.loadSaveData called with data:", data);
 
         if (!data || !Array.isArray(data.systems)) {
@@ -714,13 +714,14 @@ class Galaxy {
             return sys;
         }).filter(Boolean);
 
-        // When loading a saved game, we do NOT want to use a new globalSessionSeed.
-        // The original seed (this.systemIndex) is sufficient to reconstruct the saved state.
+        // When loading, we MUST use the same seed that was used to generate planets/stations initially.
+        // Otherwise, station positions will shift, and docked players/enemies near stations will be
+        // displaced relative to each other, causing immediate despawn of enemies.
         this.systems.forEach((sys, idx) => {
             if (sys && typeof sys.initStaticElements === 'function') {
                 const wasInitialized = !!sys.staticElementsInitialized;
                 try {
-                    sys.initStaticElements(); // No globalSessionSeed here for loading
+                    sys.initStaticElements(sessionSeed);
                 } catch (e) {
                     console.error(`Error during initStaticElements for loaded system ${idx} (${sys?.name || 'N/A'}):`, e);
                 }

@@ -3991,8 +3991,8 @@ class StarSystem {
                     // Apply Tangle effect if it's a tangle projectile
                     if (proj._isTangle && typeof this.player.applyDragEffect === 'function') {
                         this.player.applyDragEffect(
-                            proj.tangleDuration || 5.0,
-                            proj.dragMultiplier || 10.0,
+                            proj.tangleDuration || DRAG_EFFECT_DEFAULT_DURATION,
+                            proj.dragMultiplier || DRAG_EFFECT_DEFAULT_MULTIPLIER,
                             proj.rotationBlockMultiplier || 0.1
                         );
 
@@ -4091,8 +4091,8 @@ class StarSystem {
                         // Apply Tangle effect if it's a tangle projectile
                         if (proj._isTangle && typeof enemy.applyDragEffect === 'function') {
                             enemy.applyDragEffect(
-                                proj.tangleDuration || 5.0,
-                                proj.dragMultiplier || 10.0,
+                                proj.tangleDuration || DRAG_EFFECT_DEFAULT_DURATION,
+                                proj.dragMultiplier || DRAG_EFFECT_DEFAULT_MULTIPLIER,
                                 proj.rotationBlockMultiplier || 0.1
                             );
 
@@ -4175,8 +4175,8 @@ class StarSystem {
                         // Apply Tangle effect if it's a tangle projectile
                         if (proj._isTangle && typeof enemy.applyDragEffect === 'function') {
                             enemy.applyDragEffect(
-                                (proj.tangleDuration || 5.0),
-                                (proj.dragMultiplier || 10.0),
+                                (proj.tangleDuration || DRAG_EFFECT_DEFAULT_DURATION),
+                                (proj.dragMultiplier || DRAG_EFFECT_DEFAULT_MULTIPLIER),
                                 (proj.rotationBlockMultiplier || 0.1)
                             );
                         }
@@ -5647,9 +5647,9 @@ class StarSystem {
             cachedDescription: this.cachedDescription ?? null,
 
             // Dynamic entities
-            // Filter out player bodyguards - they're saved with player.activeBodyguards instead
+            // Filter out player bodyguards (saved with player.activeBodyguards) and destroyed enemies
             enemies: this._serializeEntityArray(
-                this.enemies.filter(e => !e?.isPlayerBodyguard),
+                this.enemies.filter(e => e && !e.isPlayerBodyguard && !e.destroyed && e.hull > 0),
                 (e) => ({
                     shipType: e.shipTypeName || e.shipType || null,
                     role: e.role || null,
@@ -5742,6 +5742,10 @@ class StarSystem {
 
         // Initialize spawn timer (critical for saved games)
         sys._spawnTimer = SPAWN_CONFIG.SPAWN_INTERVAL_MS || 5000;
+
+        // CRITICAL: Restore the large despawn radius used during initial generation (10000)
+        // Since initStaticElements is skipped on load, this would otherwise default to ~3500, causing massive culling.
+        sys.despawnRadius = 10000;
 
         sys.visited = data.visited;
         sys.economyType = data.economyType;
@@ -5905,6 +5909,19 @@ class StarSystem {
                 if ((rid === 'player' || rid === 'me') && this.player) return this.player;
                 return null;
             };
+
+            // Restore persistent bounty targets for Event Hunters
+            if (Array.isArray(this.enemies)) {
+                for (const e of this.enemies) {
+                    if (e && e._bountyTargetId) {
+                        const target = resolveOwnerRef(e._bountyTargetId);
+                        if (target) {
+                            e.bountyTarget = target;
+                        }
+                        delete e._bountyTargetId; // Cleanup temporary ID
+                    }
+                }
+            }
 
             // Projectiles: restore vectors and owner references
             if (Array.isArray(this.projectiles)) {
@@ -6133,7 +6150,8 @@ class StarSystem {
 
         // Protect mission-critical entities from being despawned.
         // Assassination targets/guards are explicitly flagged when spawned.
-        if (entity.isAssassinationTarget || entity.isAssassinationGuard || entity.isMissionSpecific) return false;
+        // Event entities (Raids, Swarms) are also protected.
+        if (entity.isAssassinationTarget || entity.isAssassinationGuard || entity.isMissionSpecific || entity.isEventEntity) return false;
 
         // Also protect any entity referenced by the player's active mission (if present)
         try {

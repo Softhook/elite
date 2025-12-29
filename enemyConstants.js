@@ -3,6 +3,57 @@
 // Extracted from enemy.js for better organization
 
 // -------------------------
+// --- Time & Frame Constants ---
+// -------------------------
+
+const DEFAULT_DELTA_SECONDS = 0.016;       // ~60fps fallback (1000ms / 60frames)
+const FRAME_TIME_BASELINE_MS = 16.67;      // 60fps frame time baseline for time scaling
+
+// -------------------------
+// --- Rotation Constants ---
+// -------------------------
+
+const ROTATION_THRESHOLD_RAD = 0.02;       // Angle threshold below which rotation is skipped
+
+// -------------------------
+// --- Thrust Multipliers ---
+// -------------------------
+
+const STRAFE_THRUST_MULTIPLIER = 0.6;      // Default strafe thrust (weaker than forward)
+const REVERSE_THRUST_MULTIPLIER = 0.6;     // Default reverse thrust (weaker than forward) - matches player
+const STRAFE_PARTICLE_SIZE_MULT = 0.8;     // Particle size multiplier for strafe
+const REVERSE_PARTICLE_SIZE_MULT = 0.7;    // Particle size multiplier for reverse
+const RETRO_THRUST_ANGLE_OFFSET = 0.25;    // PI * 0.25 for front thruster spread
+
+// -------------------------
+// --- System Navigation Constants ---
+// -------------------------
+
+const DESPAWN_DISTANCE_MULTIPLIER = 1.5;   // Multiplier of despawnRadius for fallback leaving target
+
+// -------------------------
+// --- Prediction & Thrust Constants ---
+// -------------------------
+
+const PREDICTION_FPS_BASELINE = 60;        // FPS baseline for prediction calculations
+const MIN_THRUST_THRESHOLD = 0.01;         // Skip negligible thrust below this multiplier
+
+// -------------------------
+// --- Jump Fade Effect Constants ---
+// -------------------------
+
+const JUMP_FADE_OUT_DURATION = 0.35;       // Fade-to-white duration in seconds
+const JUMP_FADE_IN_DURATION = 1.2;         // Fade-back duration in seconds
+
+// -------------------------
+// --- Drag/Tangle Effect Constants ---
+// -------------------------
+
+const DRAG_EFFECT_DEFAULT_DURATION = 5.0;  // Default tangle/drag duration in seconds
+const DRAG_EFFECT_DEFAULT_MULTIPLIER = 10.0; // Default drag multiplier
+const DRAG_CONSECUTIVE_HIT_MULT = 0.5;     // Duration extension for consecutive hits
+
+// -------------------------
 // --- AI Roles ---
 // -------------------------
 

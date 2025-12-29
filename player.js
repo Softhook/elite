@@ -905,13 +905,13 @@ class Player {
      * @param {number} duration - How long drag lasts in seconds
      * @param {number} multiplier - How much drag is increased
      */
-    applyDragEffect(duration = 5.0, multiplier = 10.0) {
+    applyDragEffect(duration = DRAG_EFFECT_DEFAULT_DURATION, multiplier = DRAG_EFFECT_DEFAULT_MULTIPLIER) {
         // Use higher value if already affected
         this.dragMultiplier = Math.max(this.dragMultiplier || 1.0, multiplier);
 
         // ENHANCED: Extend duration for consecutive hits
         this.dragEffectTimer = Math.max(this.dragEffectTimer || 0, duration) +
-            (this.dragEffectTimer > 0 ? duration * 0.5 : 0);
+            (this.dragEffectTimer > 0 ? duration * DRAG_CONSECUTIVE_HIT_MULT : 0);
 
         // Visual effect timestamp
         this.tangleEffectTime = millis();
@@ -1089,7 +1089,7 @@ class Player {
         }
 
         // 1) Rotation (frame-rate independent)
-        const rotTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+        const rotTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
         if (keyIsDown(LEFT_ARROW) || keyIsDown(81)) {      // Q 
             this.angle -= this.rotationSpeed * rotTimeScale;
         }
@@ -1180,7 +1180,7 @@ class Player {
 
         // Calculate force in opposite direction (angle + PI) - optimized without vector allocation
         const reverseAngle = this.angle + (this._PI || PI);
-        const reducedForce = this.thrustForce * 0.6;
+        const reducedForce = this.thrustForce * PLAYER_CONFIG.REVERSE_THRUST_MULTIPLIER;
         this.vel.add(cos(reverseAngle) * reducedForce, sin(reverseAngle) * reducedForce);
 
         // Create thrust particles at ship's front sides for reverse thrusters
@@ -1464,7 +1464,7 @@ class Player {
         if (isNaN(this.vel.x) || isNaN(this.vel.y)) {
             this.vel.set(0, 0); // Safety net for NaN velocity
         }
-        const moveTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+        const moveTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
         this.pos.add(p5.Vector.mult(this.vel, moveTimeScale));
 
         // Update cooldown timer using cached deltaSeconds
@@ -3073,7 +3073,7 @@ class Player {
 
         // Rotate towards target - Using FIXED values independent of player's rotation speed
         const AUTOPILOT_ROTATION_RATE = 0.03; // Fixed rotation speed for autopilot (per frame at 60fps)
-        const autopilotTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+        const autopilotTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
         if (abs(angleDiff) > 0.05) {
             if (angleDiff > 0) {
                 this.angle += AUTOPILOT_ROTATION_RATE * autopilotTimeScale;

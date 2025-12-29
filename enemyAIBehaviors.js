@@ -392,7 +392,7 @@ class EnemyAIBehaviors {
     }
 
     _updateCoverBehavior(system, targetExists, distanceToTarget) {
-        const dtSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0.016;
+        const dtSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : DEFAULT_DELTA_SECONDS;
         if (this.coverEvalTimer > 0 && dtSeconds > 0) {
             this.coverEvalTimer = Math.max(0, this.coverEvalTimer - dtSeconds);
         }
@@ -796,7 +796,7 @@ class EnemyAIBehaviors {
                 dist(this.pos.x, this.pos.y, system.station.pos.x, system.station.pos.y) < this.stationProximityThreshold;
 
             // Time delta for repairs
-            const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : 0.016);
+            const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
             const isOffScreenFar = !this._isOnScreen && (!system?.player || this.distanceTo(system.player) >= 1500);
             const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
 
@@ -820,7 +820,7 @@ class EnemyAIBehaviors {
                     }
 
                     // Brake while repairing
-                    const brakeTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                    const brakeTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
                     this.vel.mult(Math.pow(0.8, brakeTimeScale));
 
                     this._policeRepairTimer -= timerDelta;
@@ -868,7 +868,7 @@ class EnemyAIBehaviors {
     /** Hauler AI Logic - Moves between station and system edge. */
     updateHaulerAI(system) {
         // Base delta time (1x speed)
-        const dtSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0.016;
+        const dtSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : DEFAULT_DELTA_SECONDS;
         // Timer delta compensates for off-screen frame skipping (3x to run at real-time)
         const isOffScreenFar = !this._isOnScreen && (!system?.player || this.distanceTo(system.player) >= 1500);
         const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
@@ -1051,7 +1051,7 @@ class EnemyAIBehaviors {
             case AI_STATE.NEAR_STATION:
                 this.target = null; // Ensure target is null when near station
                 {
-                    const nearStationTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                    const nearStationTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
                     this.vel.mult(Math.pow(0.8, nearStationTimeScale)); // Apply braking continuously (frame-rate independent)
                 }
                 shouldMove = false; // Don't actively thrust, just brake and wait
@@ -1166,7 +1166,7 @@ class EnemyAIBehaviors {
                                     // Guard's principal is leaving - tell guard to initiate jump fade too
                                     HAULER_LOG(`${guard.shipTypeName} (Guard) leaving with principal ${this.shipTypeName}`);
                                     if (typeof guard.initiateJumpFade === 'function') {
-                                        guard.initiateJumpFade(0.35, 1.2);
+                                        guard.initiateJumpFade(JUMP_FADE_OUT_DURATION, JUMP_FADE_IN_DURATION);
                                     } else {
                                         guard.destroyed = true; // Fallback
                                     }
@@ -1175,7 +1175,7 @@ class EnemyAIBehaviors {
                         }
 
                         // Use centralized helper so all ships use the same visual fade behavior
-                        this.initiateJumpFade(0.35, 1.2);
+                        this.initiateJumpFade(JUMP_FADE_OUT_DURATION, JUMP_FADE_IN_DURATION);
                         HAULER_LOG(`${this.role} ${this.shipTypeName} left the system (fade)`);
                     }
                     shouldMove = false;
@@ -1206,7 +1206,7 @@ class EnemyAIBehaviors {
         if (!system) return;
 
         // Base delta time (1x speed)
-        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : 0.016);
+        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
         // Timer delta compensates for off-screen frame skipping (3x to run at real-time)
         const isOffScreenFar = !this._isOnScreen && (!system.player || this.distanceTo(system.player) >= 1500);
         const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
@@ -1555,7 +1555,7 @@ class EnemyAIBehaviors {
     /** Handles cargo collection AI */
     updateCargoCollectionAI(system) {
         // Base delta time (1x speed)
-        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : 0.016);
+        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
         // Timer delta compensates for off-screen frame skipping (3x to run at real-time)
         const isOffScreenFar = !this._isOnScreen && (!system?.player || this.distanceTo(system.player) >= 1500);
         const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
@@ -1751,7 +1751,7 @@ class EnemyAIBehaviors {
      */
     updateCombatRoleAI(system) {
         // Base delta time (1x speed)
-        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : 0.016);
+        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
         // Timer delta compensates for off-screen frame skipping (3x to run at real-time)
         const isOffScreenFar = !this._isOnScreen && (!system?.player || this.distanceTo(system.player) >= 1500);
         const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
@@ -1936,7 +1936,7 @@ class EnemyAIBehaviors {
      */
     updateMinerAI(system) {
         // Base delta time (1x speed)
-        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : 0.016);
+        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
         // Timer delta compensates for off-screen frame skipping (3x to run at real-time)
         const isOffScreenFar = !this._isOnScreen && (!system?.player || this.distanceTo(system.player) >= 1500);
         const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
@@ -1946,7 +1946,7 @@ class EnemyAIBehaviors {
             this._minerElapsedTime += timerDelta;
             if (this._minerElapsedTime < this._minerInitOffset) {
                 // Still in initialization delay - idle with gentle drift (frame-rate independent)
-                const initTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                const initTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
                 this.vel.mult(Math.pow(0.95, initTimeScale));
                 this.updatePhysics();
                 return;
@@ -1978,7 +1978,7 @@ class EnemyAIBehaviors {
             if (!system?.station?.pos) {
                 // No station in system, just idle (frame-rate independent braking)
                 this.changeState(AI_STATE.IDLE);
-                const idleTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                const idleTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
                 this.vel.mult(Math.pow(0.95, idleTimeScale));
                 this.updatePhysics();
                 return;
@@ -1989,7 +1989,7 @@ class EnemyAIBehaviors {
             if (distToStation < this.stationProximityThreshold) {
                 // At station - idle and wait (frame-rate independent braking)
                 this.changeState(AI_STATE.NEAR_STATION);
-                const stationTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                const stationTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
                 this.vel.mult(Math.pow(0.9, stationTimeScale));
 
                 // Count down wait timer using corrected delta
@@ -2148,12 +2148,12 @@ class EnemyAIBehaviors {
             while (angleDiff < -PI) angleDiff += TWO_PI;
 
             if (Math.abs(angleDiff) > 0.05) {
-                const minerRotTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                const minerRotTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
                 this.angle += angleDiff * 0.1 * minerRotTimeScale; // Smooth rotation (frame-rate independent)
             }
 
             // Apply strong damping when close - reduces jitter (frame-rate independent)
-            const closeTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+            const closeTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
             this.vel.mult(Math.pow(0.92, closeTimeScale));
         }
 
@@ -2256,7 +2256,7 @@ class EnemyAIBehaviors {
      */
     _updateCombatPatrolBehavior(system) {
         // Base delta time (1x speed)
-        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : 0.016);
+        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
         // Timer delta compensates for off-screen frame skipping (3x to run at real-time)
         const isOffScreenFar = !this._isOnScreen && (!system?.player || this.distanceTo(system.player) >= 1500);
         const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
@@ -2295,7 +2295,7 @@ class EnemyAIBehaviors {
         if (distToPatrolTarget < 50) {
             // Pause to "scan" occasionally
             if (random() < 0.2) {
-                const scanTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                const scanTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
                 this.vel.mult(Math.pow(0.5, scanTimeScale)); // Slow down (frame-rate independent)
 
                 // Gradual repair while pausing (combat ships can repair during scan pauses)
@@ -2483,9 +2483,9 @@ class EnemyAIBehaviors {
         // If an avoidance timer is set, gently reduce velocity to avoid collisions
         if (this._asteroidAvoidTimer === undefined) this._asteroidAvoidTimer = 0;
         if (this._asteroidAvoidTimer > 0) {
-            this._asteroidAvoidTimer = Math.max(0, this._asteroidAvoidTimer - ((typeof deltaTime === 'number') ? (deltaTime / 1000) : 0.016));
+            this._asteroidAvoidTimer = Math.max(0, this._asteroidAvoidTimer - ((typeof deltaTime === 'number') ? (deltaTime / 1000) : DEFAULT_DELTA_SECONDS));
             // Gentle damping (frame-rate independent)
-            const avoidTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+            const avoidTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
             this.vel.mult(Math.pow(0.92, avoidTimeScale));
         }
     }
@@ -2565,7 +2565,7 @@ class EnemyAIBehaviors {
                 this.performRepair(system, this.repairTarget);
 
                 // Slow down and stay near target (frame-rate independent braking)
-                const repairTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+                const repairTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
                 this.vel.mult(Math.pow(0.85, repairTimeScale));
 
                 // Check if current target is fully repaired
@@ -2592,7 +2592,7 @@ class EnemyAIBehaviors {
         // Priority 4: Return to station when no work found
         if (!system?.station?.pos) {
             this.changeState(AI_STATE.IDLE);
-            const noStationTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+            const noStationTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
             this.vel.mult(Math.pow(0.95, noStationTimeScale));
             this.updatePhysics();
             return;
@@ -2604,14 +2604,14 @@ class EnemyAIBehaviors {
         );
 
         // Base delta time for timers
-        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : 0.016);
+        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
         const isOffScreenFar = !this._isOnScreen && (!system?.player || this.distanceTo(system.player) >= 1500);
         const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
 
         if (distToStation < this.stationProximityThreshold) {
             // At station - idle and wait (frame-rate independent)
             this.changeState(AI_STATE.NEAR_STATION);
-            const stationTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+            const stationTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
             this.vel.mult(Math.pow(0.8, stationTimeScale));
 
             // Gradual self-repair while at station
@@ -2710,13 +2710,13 @@ class EnemyAIBehaviors {
             // Count down reconstruction timer
             const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime))
                 ? (deltaTime / 1000)
-                : 0.016;
+                : DEFAULT_DELTA_SECONDS;
 
             this._reconstructionTimer -= deltaSeconds;
 
             // Stop moving during reconstruction (frame-rate independent)
             this.changeState(AI_STATE.IDLE);
-            const reconstructTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+            const reconstructTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
             this.vel.mult(Math.pow(0.85, reconstructTimeScale));
 
             // Spawn construction particles
@@ -2853,7 +2853,7 @@ class EnemyAIBehaviors {
         const repairRate = EnemyAIBehaviors.REPAIR_CONFIG.REPAIR_RATE;
         const deltaSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime))
             ? (deltaTime / 1000)
-            : 0.016;
+            : DEFAULT_DELTA_SECONDS;
 
         // Correct for off-screen throttling
         // Standard delta time - no multiplier needed since off-screen frame skipping already handles throttling
