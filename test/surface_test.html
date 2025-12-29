@@ -131,8 +131,8 @@
 
         // Terrain mesh data
         let terrainMesh = [];
-        let meshResolution = 24;  // Grid resolution (higher = more detail)
-        let meshSize = 2400;      // Total mesh size - must be large enough to cover view at max altitude
+        let meshResolution = 80;  // Grid resolution (higher = more detail)
+        let meshSize = 4000;      // Large enough to cover screen buffer (Scale 0.6 -> Need ~1.7x screen size. Using 4000 for safety)
 
         // Player state
         let playerAngle = -Math.PI / 2; // Start facing UP (negative Y) - use Math.PI not p5's PI
@@ -163,9 +163,22 @@
         const MAX_ALTITUDE = 500;
         const SUN_ANGLE = -Math.PI / 4;
 
+        // Cached Terrain Buffer
+        let terrainBuffer;
+
         function setup() {
-            createCanvas(1200, 800);
+            createCanvas(windowWidth, windowHeight);
             angleMode(RADIANS);
+
+            // Create offscreen buffer for terrain
+            // Size needs to be large enough to cover screen + scroll buffer
+            // At Max Altitude, Scale is 0.6.
+            // So ImageSize * 0.6 must cover Screen.
+            // ImageSize > Screen / 0.6 = Screen * 1.66
+            // We use 2.5x max dimension to be very safe
+            const bufSize = Math.max(width, height) * 2.5;
+            terrainBuffer = createGraphics(bufSize, bufSize);
+            terrainBuffer.noStroke();
 
             // Generate initial planet
             generateTestPlanet();
@@ -176,11 +189,12 @@
             // UI handlers
             document.getElementById('newPlanet').addEventListener('click', () => {
                 generateTestPlanet();
-                generateTerrainMesh();
+                generateTerrainMesh(true);
             });
 
             document.getElementById('toggleWireframe').addEventListener('click', () => {
                 showWireframe = !showWireframe;
+                updateTerrainBuffer(); // Re-render if wireframe toggled
             });
 
             document.getElementById('altSlider').addEventListener('input', (e) => {
@@ -191,7 +205,7 @@
             document.getElementById('resSlider').addEventListener('input', (e) => {
                 meshResolution = parseInt(e.target.value);
                 document.getElementById('resValue').textContent = meshResolution;
-                generateTerrainMesh();
+                generateTerrainMesh(true);
             });
 
             // Set a static target objective
@@ -278,14 +292,86 @@
                     const cellColor = lerpColor(col1, col2, paletteT);
 
                     terrainMesh[gy][gx] = {
-                        worldX: worldX,  // Fixed world position
+                        worldX: worldX,
                         worldY: worldY,
-                        baseX: localX,   // Local position for rendering
-                        baseY: localY,
                         height: height,
-                        color: cellColor,
-                        noiseVal: noiseVal
+                        color: cellColor
                     };
+                }
+            }
+
+            // After data generation -> Render to Buffer
+            updateTerrainBuffer();
+        }
+
+        function updateTerrainBuffer() {
+            if (!terrainBuffer || terrainMesh.length === 0) return;
+
+            terrainBuffer.background(10, 15, 25); // Clear with sky color
+            terrainBuffer.clear(); // Transparent clear
+
+            const cx = terrainBuffer.width / 2;
+            const cy = terrainBuffer.height / 2;
+
+            // Iterate over mesh and draw to buffer
+            const resMinus1 = meshResolution - 1;
+
+            if (showWireframe) {
+                terrainBuffer.stroke(0, 0, 0, 40);
+                terrainBuffer.strokeWeight(0.5);
+            } else {
+                terrainBuffer.noStroke();
+            }
+
+            const cellSize = meshSize / meshResolution;
+            const meshCenterWX = lastGridX * cellSize;
+            const meshCenterWY = lastGridY * cellSize;
+
+            for (let gy = 0; gy < resMinus1; gy++) {
+                const row0 = terrainMesh[gy];
+                const row1 = terrainMesh[gy + 1];
+                if (!row0 || !row1) continue;
+
+                for (let gx = 0; gx < resMinus1; gx++) {
+                    const c00 = row0[gx];
+                    const c10 = row0[gx + 1];
+                    const c01 = row1[gx];
+                    const c11 = row1[gx + 1];
+
+                    if (!c00 || !c10 || !c01 || !c11) continue;
+
+                    // Lighting (Static Top-Left)
+                    const slopeX = ((c10.height - c00.height) + (c11.height - c01.height)) * 0.5;
+                    const slopeY = ((c01.height - c00.height) + (c11.height - c10.height)) * 0.5;
+                    const sunIntensity = slopeX * 0.004 + slopeY * 0.005;
+
+                    const avgHeight = (c00.height + c10.height + c01.height + c11.height) * 0.25;
+                    const heightLight = avgHeight * 0.0005;
+
+                    let shade = 0.65 + sunIntensity + heightLight;
+                    if (shade < 0.25) shade = 0.25;
+                    if (shade > 1.4) shade = 1.4;
+
+                    const baseCol = c00.color;
+                    terrainBuffer.fill(
+                        baseCol.levels[0] * shade,
+                        baseCol.levels[1] * shade,
+                        baseCol.levels[2] * shade
+                    );
+
+                    // Projection to Buffer Coordinates
+                    // Relative to Mesh Center
+                    const dx00 = c00.worldX - meshCenterWX; const dy00 = c00.worldY - meshCenterWY;
+                    const dx10 = c10.worldX - meshCenterWX; const dy10 = c10.worldY - meshCenterWY;
+                    const dx11 = c11.worldX - meshCenterWX; const dy11 = c11.worldY - meshCenterWY;
+                    const dx01 = c01.worldX - meshCenterWX; const dy01 = c01.worldY - meshCenterWY;
+
+                    terrainBuffer.beginShape();
+                    terrainBuffer.vertex(cx + dx00, cy + dy00 - c00.height);
+                    terrainBuffer.vertex(cx + dx10, cy + dy10 - c10.height);
+                    terrainBuffer.vertex(cx + dx11, cy + dy11 - c11.height);
+                    terrainBuffer.vertex(cx + dx01, cy + dy01 - c01.height);
+                    terrainBuffer.endShape(CLOSE);
                 }
             }
         }
@@ -440,6 +526,18 @@
             }
         }
 
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+
+            // Re-create buffer with new size
+            const bufSize = Math.max(width, height) * 2.5;
+            terrainBuffer = createGraphics(bufSize, bufSize);
+            terrainBuffer.noStroke();
+
+            // Regenerate terrain image
+            generateTerrainMesh(true);
+        }
+
         function drawTargetObject() {
             if (!window.targetPos) return;
 
@@ -492,6 +590,32 @@
         }
 
         function drawTerrainMesh() {
+            if (!terrainBuffer) return;
+
+            const cellSize = meshSize / meshResolution;
+
+            // Calculate offset based on how far player has moved from the grid center
+            // Mesh is centered on (lastGridX, lastGridY)
+            const meshCenterWX = lastGridX * cellSize;
+            const meshCenterWY = lastGridY * cellSize;
+
+            // Player position relative to mesh center
+            const offsetX = meshCenterWX - surfaceX;
+            const offsetY = meshCenterWY - surfaceY;
+
+            // Draw buffer centered on screen + offset
+            // We are already translated to Center (width/2, height/2) in draw()
+            // So (0,0) is the center.
+            // We want the Buffer's Center to align with (0,0) + offset.
+            // Top-Left of buffer should be at: -BufferHalfWidth + Offset
+
+            const bx = -terrainBuffer.width / 2 + offsetX;
+            const by = -terrainBuffer.height / 2 + offsetY;
+
+            image(terrainBuffer, bx, by);
+        }
+
+        function drawTerrainMesh_OLD() {
             const cellSize = meshSize / meshResolution;
 
             // Fixed World View (Map View)
@@ -685,7 +809,9 @@
             textAlign(LEFT, TOP);
             fill(200);
             text(`Speed: ${Math.floor(playerSpeed)}`, width - 120, 20);
-            text(`Heading: ${Math.floor(degrees(playerAngle) % 360)}°`, width - 120, 35);
+            // Convert Math Angle (0=East) to Compass Angle (0=North, 90=East)
+            let compassHeading = (degrees(playerAngle) + 90 + 360) % 360;
+            text(`Heading: ${Math.floor(compassHeading)}°`, width - 120, 35);
 
             // Compass rose at bottom
             push();
@@ -718,7 +844,7 @@
             rotate(playerAngle);
             stroke(255, 50, 50); // Red Needle
             strokeWeight(3);
-            line(0, 0, 0, -25);
+            line(0, 0, 25, 0);   // Points East (0 degrees)
             pop();
 
             // Target Direction Indicator
