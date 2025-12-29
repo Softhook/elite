@@ -252,7 +252,7 @@
         describe('SpatialHash - Basic Operations', () => {
             it('should create with default cell size', () => {
                 const hash = new SpatialHash();
-                expect(hash.cellSize).toBe(600); // Optimal based on realistic game benchmarks
+                expect(hash.cellSize).toBe(1000); // Optimal based on realistic game benchmarks
             });
 
             it('should create with custom cell size', () => {

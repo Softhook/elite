@@ -685,11 +685,28 @@ class Mission {
         }
     }
 
-    /** Marks the mission as failed. */
     fail() {
         MISSION_LOG(`Mission Failed: ${this.title}`);
         this.status = 'Failed';
         this._cleanupAssassinationRuntime(null);
+    }
+
+    /**
+     * Abandons the mission.
+     * @param {Player} playerRef - Reference to the player object.
+     */
+    abandon(playerRef) {
+        MISSION_LOG(`Mission Abandoned: ${this.title}`);
+        this.status = 'Abandoned';
+        this._cleanupAssassinationRuntime(null);
+
+        if (typeof playerRef !== 'undefined' && playerRef?.activeMission === this) {
+            playerRef.activeMission = null;
+        }
+
+        if (typeof uiManager !== 'undefined') {
+            uiManager.addMessage(`Mission Abandoned: ${this.title}`, [200, 200, 200]);
+        }
     }
 
     /** Cleanup runtime references for assassination mission */

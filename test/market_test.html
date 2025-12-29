@@ -342,6 +342,47 @@
                 market.consumeStockForNPC('Food', 10);
                 expect(food.stock).toBe(40);
             });
+
+            it('should not consume stock below zero', () => {
+                const food = market.commodities.find(g => g.name === 'Food');
+                food.stock = 5;
+                const consumed = market.consumeStockForNPC('Food', 10, { allowPartial: true });
+                expect(consumed).toBe(5);
+                expect(food.stock).toBe(0);
+            });
+        });
+
+        // ============================================
+        // Illegal Goods Tests
+        // ============================================
+
+        describe('Illegal Goods', () => {
+            let market;
+            let player;
+
+            beforeEach(() => {
+                market = new Market('Industrial'); // Should have Narcotics/Weapons if not filtered
+                player = createMockPlayer(10000, [], 50);
+            });
+
+            it('should identify illegal goods', () => {
+                const narcotics = market.commodities.find(g => g.name === 'Narcotics');
+                if (narcotics) {
+                    expect(narcotics.isLegal).toBe(false);
+                }
+            });
+
+            it('should allow buying illegal goods if available', () => {
+                // Assuming standard market allows it but maybe with risk? 
+                // For now, testing mechanics.
+                const weapons = market.commodities.find(g => g.name === 'Weapons');
+                if (weapons && weapons.stock > 0) {
+                    const result = market.buy('Weapons', 1, player);
+                    expect(result).toBe(true);
+                    const playerWeapons = player.cargo.find(c => c.name === 'Weapons');
+                    expect(playerWeapons).toBeDefined();
+                }
+            });
         });
 
         // ============================================

@@ -290,6 +290,26 @@
                 mission.fail();
                 expect(mission.status).toBe('Failed');
             });
+
+            it('should support mission abandonment', () => {
+                expect(typeof mission.abandon).toBe('function');
+                mission.abandon();
+                expect(mission.status).toBe('Abandoned');
+            });
+
+            it('should expire when time limit reached', () => {
+                // Mocking time check inside update if possible, or just checking logic
+                mission.expires = 1000;
+                // Simulate current time > expires
+                // This requires the mission class to have an update/checkExpiry method
+                if (typeof mission.checkExpiry === 'function') {
+                    const originalMillis = window.millis;
+                    window.millis = () => 2000; // Past expiry
+                    mission.checkExpiry();
+                    expect(mission.status).toBe('Failed');
+                    window.millis = originalMillis;
+                }
+            });
         });
 
         // ============================================

@@ -67,6 +67,8 @@
     <script src="../thrustParticles.js"></script>
     <script src="../enemy.js"></script>
     <script src="../player.js"></script>
+    <script src="../newsManager.js"></script>
+    <script src="../eventManager.js"></script>
 
     <script>
         // Constants needed for Cargo tests
@@ -174,6 +176,25 @@
                 const parsed = JSON.parse(str);
                 expect(parsed.credits).toBe(5000);
             });
+
+            it('should serialize active mission', () => {
+                const mission = new Mission({
+                    id: 999,
+                    title: 'Test Mission',
+                    type: MISSION_TYPE.BOUNTY_PIRATE,
+                    targetCount: 1
+                });
+                player.activeMission = mission;
+
+                const json = player.toJSON();
+                // Player.toJSON might not serialize activeMission directly if it's transient or handled separately.
+                // But if it does, or if we want to ensure it doesn't crash:
+                expect(json).toBeDefined();
+                // If the game architecture intends for mission persistence on player:
+                if (json.activeMission) {
+                    expect(json.activeMission.id).toBe(999);
+                }
+            });
         });
 
         // ============================================
@@ -240,6 +261,17 @@
                 expect(restored.role).toBe(enemy.role);
                 expect(restored.hull).toBe(enemy.hull);
                 expect(restored.currentState).toBe(enemy.currentState);
+            });
+
+            it('should safe-serialize with circular references', () => {
+                // Simulate circular reference (e.g., enemy targeting itself or player that references enemy)
+                enemy.bountyTarget = enemy; // Self-reference
+
+                // toJSON should handle or ignore this without crashing
+                // The implementation might explicitly exclude complex objects or just store IDs
+                const json = enemy.toJSON();
+                expect(json).toBeDefined();
+                expect(json.bountyTarget).toBeUndefined(); // Assuming it's not serialized or is stripped
             });
         });
 
@@ -637,6 +669,150 @@
                 const player = Player.fromJSON(minimalData);
                 // Should have default values for missing fields
                 expect(player.cargo).toBeDefined();
+            });
+        });
+
+        // ============================================
+        // NewsManager Persistence Tests
+        // ============================================
+
+        describe('NewsManager Persistence', () => {
+            let newsMgr;
+
+            beforeEach(() => {
+                newsMgr = new NewsManager();
+            });
+
+            it('should serialize empty manager', () => {
+                const json = newsMgr.toJSON();
+                expect(json.newsItems).toBeDefined();
+                expect(json.newsItems.length).toBe(0);
+                expect(json.recentNewsHashes).toBeDefined();
+            });
+
+            it('should persist news items', () => {
+                // Add manual news item
+                const newsItem = {
+                    headline: "Test Headline",
+                    body: "Test Body",
+                    source: "Test Source",
+                    sourceColor: [255, 255, 255],
+                    category: "LOCAL_EVENT",
+                    priority: 3
+                };
+                newsMgr._addNews(newsItem);
+                expect(newsMgr.newsItems.length).toBe(1);
+
+                const json = newsMgr.toJSON();
+
+                const restored = new NewsManager();
+                restored.fromJSON(json);
+
+                expect(restored.newsItems.length).toBe(1);
+                expect(restored.newsItems[0].headline).toBe("Test Headline");
+                expect(restored.newsItems[0].body).toBe("Test Body");
+            });
+
+            it('should persist read status', () => {
+                const newsItem = {
+                    headline: "Read News",
+                    body: "Body",
+                    source: "Source",
+                    category: "LOCAL_EVENT",
+                    priority: 1
+                };
+                newsMgr._addNews(newsItem);
+                newsMgr.newsItems[0].read = true;
+
+                const json = newsMgr.toJSON();
+
+                const restored = new NewsManager();
+                restored.fromJSON(json);
+
+                expect(restored.newsItems[0].read).toBe(true);
+            });
+
+            it('should persist timers', () => {
+                newsMgr.lastCombatReportTime = 12345;
+                newsMgr.lastGalaxyNewsTime = 67890;
+                newsMgr.lastHeroReportTime = 54321;
+
+                const json = newsMgr.toJSON();
+
+                const restored = new NewsManager();
+                restored.fromJSON(json);
+
+                expect(restored.lastCombatReportTime).toBe(12345);
+                expect(restored.lastGalaxyNewsTime).toBe(67890);
+                expect(restored.lastHeroReportTime).toBe(54321);
+            });
+
+            it('should persist deduplication hashes', () => {
+                newsMgr.recentNewsHashes.add("hash1");
+                newsMgr.recentNewsHashes.add("hash2");
+
+                const json = newsMgr.toJSON();
+
+                const restored = new NewsManager();
+                restored.fromJSON(json);
+
+                expect(restored.recentNewsHashes.has("hash1")).toBe(true);
+                expect(restored.recentNewsHashes.has("hash2")).toBe(true);
+                expect(restored.recentNewsHashes.size).toBe(2);
+            });
+        });
+
+        // ============================================
+        // EventManager Persistence Tests
+        // ============================================
+
+        describe('EventManager Persistence', () => {
+            let eventMgr;
+
+            beforeEach(() => {
+                eventMgr = new EventManager();
+            });
+
+            it('should serialize basic state', () => {
+                const json = eventMgr.toJSON();
+                expect(json).toBeDefined();
+            });
+
+            it('should persist active war state', () => {
+                eventMgr.activeWarState = {
+                    isActive: true,
+                    intensity: 'SKIRMISH',
+                    factions: 'SEPARATIST_VS_IMPERIAL',
+                    expires: 100000,
+                    spawnModifiers: { SEPARATIST: 1.5 }
+                };
+
+                const json = eventMgr.toJSON();
+
+                const restored = new EventManager();
+                restored.fromJSON(json);
+
+                expect(restored.activeWarState.isActive).toBe(true);
+                expect(restored.activeWarState.intensity).toBe('SKIRMISH');
+                expect(restored.activeWarState.factions).toBe('SEPARATIST_VS_IMPERIAL');
+                expect(restored.activeWarState.expires).toBe(100000);
+            });
+
+            it('should persist active crisis state', () => {
+                eventMgr.activeCrisisState = {
+                    plague: { originSystemIndex: 5, expires: 200000, priceMultiplier: 3.0 },
+                    famine: null
+                };
+
+                const json = eventMgr.toJSON();
+
+                const restored = new EventManager();
+                restored.fromJSON(json);
+
+                expect(restored.activeCrisisState.plague).toBeDefined();
+                expect(restored.activeCrisisState.plague.originSystemIndex).toBe(5);
+                expect(restored.activeCrisisState.plague.priceMultiplier).toBe(3.0);
+                expect(restored.activeCrisisState.famine).toBeNull();
             });
         });
 

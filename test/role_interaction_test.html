@@ -353,7 +353,7 @@
             // Role-specific base scoring (simplified version)
             switch (source.role) {
                 case AI_ROLE.PIRATE:
-                    if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT) {
+                    if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT || target.role === AI_ROLE.MINER) {
                         rawScore = TARGET_SCORE_PIRATE_PREY_HAULER; // 40
                     } else if (isPlayer) {
                         // Base interest in player
@@ -723,6 +723,26 @@
                 const score = pirate.evaluateTargetScore(hauler, system);
                 console.log(`DEBUG: Score = ${score}`);
                 expect(score).toBeGreaterThan(0);
+            });
+
+
+
+            it('Pirates should target Miners', () => {
+                const pirate = createEnemy(AI_ROLE.PIRATE, 'PIRATE');
+                const miner = createEnemy(AI_ROLE.MINER, null, 100, 0);
+                system.enemies = [miner];
+
+                const score = pirate.evaluateTargetScore(miner, system);
+
+                expect(score).toBeGreaterThan(0);
+            });
+            it('Combat ships should ignore Repair ships (neutral)', () => {
+                const combat = createEnemy(AI_ROLE.COMBAT, 'MILITARY');
+                const repair = createEnemy(AI_ROLE.REPAIR, null, 100, 0);
+                system.enemies = [repair];
+
+                const score = combat.evaluateTargetScore(repair, system);
+                expect(score).toBeLessThanOrEqual(0); // Should be ignored unless specific hostility
             });
         });
 

@@ -144,15 +144,20 @@
         }
 
         // Mock Objects
+        class MockPlayer {
+            constructor() {
+                this.pos = createVector(0, 0);
+                this.maxShield = 100;
+                this.shield = 100;
+                this.lastShieldHitTime = 0;
+                this.shieldHitTime = 0;
+            }
+            getEliteRating() { return 'Harmless'; }
+        }
+        window.Player = MockPlayer;
+
         function createMockPlayer() {
-            return {
-                pos: createVector(0, 0),
-                getEliteRating: () => 'Harmless',
-                maxShield: 100,
-                shield: 100,
-                lastShieldHitTime: 0,
-                shieldHitTime: 0
-            };
+            return new MockPlayer();
         }
 
         function createMockMarket() {
@@ -530,6 +535,14 @@
             it('should execute REPUTATION_SCANDAL', () => {
                 em.executeConfiguredEvent('REPUTATION_SCANDAL');
                 expect(ui.persistentMessages.find(m => m.id.startsWith('SCANDAL_'))).toBeDefined();
+            });
+
+            it('should execute WAR_SEPARATIST_IMPERIAL', () => {
+                em.executeConfiguredEvent('WAR_SEPARATIST_IMPERIAL');
+                // War zone typically sets activeWarState
+                expect(em.activeWarState).toBeDefined();
+                expect(em.activeWarState.isActive).toBe(true);
+                expect(ui.messages[0].msg).toContain('WAR');
             });
         });
 
