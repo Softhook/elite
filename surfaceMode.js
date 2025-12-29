@@ -191,9 +191,8 @@ class SurfaceMode {
 
         // Restore player position near planet
         if (this.player && this.savedPlayerPos && this.planet) {
-            // Position player just outside planet approach zone
-            const dir = p5.Vector.sub(this.savedPlayerPos, this.planet.pos).normalize();
-            this.player.pos = p5.Vector.add(this.planet.pos, dir.mult(this.planet.radius * 2));
+            // Position player exactly where they entered
+            this.player.pos = this.savedPlayerPos.copy();
             this.player.angle = this.playerAngle;
 
             // Clear invulnerability - player is now back in space
