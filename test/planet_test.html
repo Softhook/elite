@@ -70,6 +70,7 @@
         <button id="newPlanet">New Planet</button>
         <button id="toggleRotation">Toggle Rotation</button>
         <button id="toggleAtmosphere">Toggle Atmosphere</button>
+        <button id="toggleHabitation">Toggle Habitation</button>
 
         <div class="control-group">
             <label>Atmosphere Alpha: <span id="alphaValue" class="alpha-value">37</span></label>
@@ -91,6 +92,7 @@
         // Copy the Planet class from planet.js here
         // For now, we'll load it via script tag
     </script>
+    <script src="../uiComponents.js"></script>
     <script src="../planet.js"></script>
     <script>
         let testPlanet;
@@ -112,6 +114,30 @@
             document.getElementById('toggleAtmosphere').addEventListener('click', () => {
                 if (testPlanet) {
                     testPlanet.hasAtmosphere = !testPlanet.hasAtmosphere;
+                    // If turning on, ensure color exists
+                    if (testPlanet.hasAtmosphere && !testPlanet.atmosphereColor) {
+                        testPlanet.atmosphereColor = color(random(150, 220), random(150, 220), random(200, 255), atmosphereAlpha);
+                    }
+                    // Regenerate buffers to reflect change
+                    testPlanet.disposeBuffers();
+                    testPlanet.createBuffers();
+                    updateStats();
+                }
+            });
+
+            document.getElementById('toggleHabitation').addEventListener('click', () => {
+                if (testPlanet) {
+                    testPlanet.isInhabited = !testPlanet.isInhabited;
+
+                    // If turning on habitation, ensure properties are set
+                    if (testPlanet.isInhabited) {
+                        if (!testPlanet.cityLightsColor) testPlanet.cityLightsColor = color(255, 240, 180, 200);
+                        if (!testPlanet.cityLightsDensity) testPlanet.cityLightsDensity = random(0.3, 0.8);
+                    }
+
+                    // Regenerate buffers (city lights are part of buffers)
+                    testPlanet.disposeBuffers();
+                    testPlanet.createBuffers();
                     updateStats();
                 }
             });
@@ -138,9 +164,40 @@
             // Size slider
             const sizeSlider = document.getElementById('sizeSlider');
             sizeSlider.addEventListener('input', (e) => {
-                planetSize = parseInt(e.target.value);
-                document.getElementById('sizeValue').textContent = planetSize;
-                regeneratePlanetWithCurrentSettings();
+                const newSize = parseInt(e.target.value);
+                const oldSize = testPlanet.size;
+
+                // Update text display
+                document.getElementById('sizeValue').textContent = newSize;
+
+                if (testPlanet) {
+                    // Adjust noiseScale to preserve feature size relative to planet
+                    // noiseScale = k / radius, so newNoiseScale = oldNoiseScale * (oldRadius / newRadius)
+                    // simplified: newNoiseScale = oldNoiseScale * (oldSize / newSize)
+                    testPlanet.noiseScale = testPlanet.noiseScale * (oldSize / newSize);
+
+                    // Update size and derived properties
+                    testPlanet.size = newSize;
+                    testPlanet.radius = newSize * 0.5;
+                    testPlanet.radiusSq = testPlanet.radius * testPlanet.radius;
+
+                    // Update ring dimensions proportionally
+                    if (testPlanet.hasRings) {
+                        const ratio = newSize / oldSize;
+                        testPlanet.ringInnerRad *= ratio;
+                        testPlanet.ringOuterRad *= ratio;
+                    }
+
+                    // Regenerate buffers
+                    testPlanet.disposeBuffers(); // Clear old buffers
+                    testPlanet.createBuffers();  // Create new ones at new size
+
+                    // Update shadow
+                    const sunPos = createVector(width / 2 - 500, height / 2 - 300);
+                    testPlanet.computeShadowOffset(sunPos);
+
+                    updateStats();
+                }
             });
         }
 
@@ -238,6 +295,7 @@
                 <p>Seed: ${Math.floor(currentPlanetSeed)}</p>
                 <p>Size: ${Math.floor(testPlanet.size)}</p>
                 <p>Atmosphere: ${testPlanet.hasAtmosphere ? 'ON' : 'OFF'}</p>
+                <p>Inhabited: ${testPlanet.isInhabited ? 'YES' : 'NO'}</p>
                 <p>Name: ${testPlanet.name}</p>
             `;
         }
