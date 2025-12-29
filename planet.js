@@ -156,6 +156,10 @@ class Planet {
 
         // Flag to track buffer creation status
         this.buffersCreated = false;
+
+        // Surface mission flag - set by mission system when surface strike mission is active
+        // For testing: always true to allow surface descent on any planet
+        this.hasSurfaceMission = true; // TODO: Set to false in production, enable via mission
     }
 
     /**
@@ -683,7 +687,7 @@ class Planet {
         // Atmosphere extends from planet edge outward (reduced halo size)
         const innerR = this.radius * 0.92;  // Start slightly inside planet surface for blending
         const outerR = this.radius * 1.15;  // Reduced from 1.25 to make halo smaller
-        
+
         // Ensure gradient extends to buffer edge to prevent hard cutoff
         const bufferMaxR = Math.min(pg.width, pg.height) * 0.5;
 
@@ -696,7 +700,7 @@ class Planet {
         // Create smooth radial gradient from planet surface outward to buffer edge
         const grad = ctx.createRadialGradient(cx, cy, innerR, cx, cy, bufferMaxR);
         grad.addColorStop(0, `rgba(${atmR},${atmG},${atmB},${Math.min(1, baseAlpha * 0.8)})`);
-        
+
         // Calculate stop positions relative to visible vs buffer size
         const visibleRatio = outerR / bufferMaxR;
         grad.addColorStop(visibleRatio * 0.3, `rgba(${atmR},${atmG},${atmB},${Math.max(0, baseAlpha * 0.5)})`);
@@ -706,7 +710,7 @@ class Planet {
 
         // Enable smoothing for better gradient quality
         ctx.imageSmoothingEnabled = true;
-        
+
         // Draw gradient circle filling entire buffer to prevent edge artifacts
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, pg.width, pg.height);

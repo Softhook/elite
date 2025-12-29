@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surface Mode Test - 3D Mesh Terrain</title>
+    <script src="../libraries/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #111;
+            color: #fff;
+            font-family: monospace;
+        }
+
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 1px solid #444;
+            max-width: 320px;
+            z-index: 100;
+        }
+
+        button {
+            margin: 5px 5px 5px 0;
+            padding: 8px 12px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #666;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #555;
+        }
+
+        .control-group {
+            margin: 10px 0;
+            padding: 8px;
+            background: rgba(50, 50, 80, 0.5);
+            border-radius: 4px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #aaf;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .value {
+            color: #ff0;
+            font-weight: bold;
+        }
+
+        h3 {
+            color: #8af;
+            margin-top: 0;
+        }
+
+        .key-hint {
+            background: #444;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="info">
+        <h3>Surface Mode - 3D Mesh</h3>
+
+        <div class="control-group">
+            <label>Flight Controls:</label>
+            <div><span class="key-hint">Q / E</span> Turn Left / Right</div>
+            <div><span class="key-hint">W / S</span> Thrust / Reverse</div>
+            <div><span class="key-hint">A / D</span> Strafe Left / Right</div>
+            <div><span class="key-hint">R / F</span> Climb / Descend</div>
+        </div>
+
+        <div class="control-group">
+            <label>Other Controls:</label>
+            <div><span class="key-hint">B</span> Cycle biome</div>
+            <div><span class="key-hint">N</span> New planet</div>
+        </div>
+
+        <div class="control-group">
+            <label>Altitude: <span id="altValue" class="value">100</span></label>
+            <input type="range" id="altSlider" min="10" max="500" value="100">
+        </div>
+
+        <div class="control-group">
+            <label>Mesh Resolution: <span id="resValue" class="value">24</span></label>
+            <input type="range" id="resSlider" min="12" max="40" value="24">
+        </div>
+
+        <button id="newPlanet">New Planet</button>
+        <button id="toggleWireframe">Toggle Wireframe</button>
+
+        <div id="stats" style="margin-top: 10px;"></div>
+    </div>
+
+    <!-- Dependencies -->
+    <script src="../draw3d.js"></script>
+    <script src="../planet.js"></script>
+    <script src="../ships.js"></script>
+
+    <script>
+        // ==============================================
+        // FAUX 3D MESH TERRAIN WITH ROTATION CONTROLS
+        // ==============================================
+
+        // Test state
+        let testPlanet = null;
+        let showWireframe = true;
+        let currentBiomeIndex = 0;
+        const biomeTypes = ['DEFAULT', 'DESERT', 'ICE', 'VOLCANIC', 'INHABITED'];
+
+        // Terrain mesh data
+        let terrainMesh = [];
+        let meshResolution = 24;  // Grid resolution (higher = more detail)
+        let meshSize = 2400;      // Total mesh size - must be large enough to cover view at max altitude
+
+        // Player state
+        let playerAngle = -Math.PI / 2; // Start facing UP (negative Y) - use Math.PI not p5's PI
+        let playerSpeed = 0;      // Current forward speed
+        let altitude = 100;
+        let surfaceX = 0;         // Position on surface
+        let surfaceY = 0;
+
+        // Control state
+        let turnInput = 0;        // Q/E
+        let thrustInput = 0;      // W/S
+        let strafeInput = 0;      // A/D
+        let altitudeInput = 0;    // R/F
+
+        // Constants
+        const TURN_SPEED = 2.5;   // Radians per second
+        const THRUST_ACCEL = 400; // Units per second squared
+        const MAX_SPEED = 300;
+        const STRAFE_SPEED = 200;
+        const CLIMB_SPEED = 150;
+        const MIN_ALTITUDE = 10;
+        const MAX_ALTITUDE = 500;
+        const SUN_ANGLE = -Math.PI / 4;
+
+        function setup() {
+            createCanvas(1200, 800);
+            angleMode(RADIANS);
+
+            // Generate initial planet
+            generateTestPlanet();
+
+            // Generate initial terrain mesh
+            generateTerrainMesh();
+
+            // UI handlers
+            document.getElementById('newPlanet').addEventListener('click', () => {
+                generateTestPlanet();
+                generateTerrainMesh();
+            });
+
+            document.getElementById('toggleWireframe').addEventListener('click', () => {
+                showWireframe = !showWireframe;
+            });
+
+            document.getElementById('altSlider').addEventListener('input', (e) => {
+                altitude = parseInt(e.target.value);
+                document.getElementById('altValue').textContent = altitude;
+            });
+
+            document.getElementById('resSlider').addEventListener('input', (e) => {
+                meshResolution = parseInt(e.target.value);
+                document.getElementById('resValue').textContent = meshResolution;
+                generateTerrainMesh();
+            });
+        }
+
+        function generateTestPlanet() {
+            const seed = Math.random() * 10000;
+            randomSeed(seed);
+            noiseSeed(seed);
+
+            const color1 = color(random(80, 180), random(80, 180), random(80, 180));
+            const color2 = color(random(80, 180), random(80, 180), random(80, 180));
+
+            testPlanet = new Planet(0, 0, 300, color1, color2, "Test System", 1);
+
+            // Set biome properties
+            const biome = biomeTypes[currentBiomeIndex];
+            testPlanet.isInhabited = (biome === 'INHABITED');
+            testPlanet.hasSurfaceMission = true;
+
+            updateStats();
+        }
+
+        // Track last grid position to only regenerate when needed
+        let lastGridX = null;
+        let lastGridY = null;
+
+        function generateTerrainMesh(forceRegenerate = false) {
+            if (!testPlanet) return;
+
+            const cellSize = meshSize / meshResolution;
+
+            // Calculate current grid position (which grid cell the player is in)
+            const currentGridX = Math.floor(surfaceX / cellSize);
+            const currentGridY = Math.floor(surfaceY / cellSize);
+
+            // Only regenerate if we've moved to a new grid cell or forced
+            if (!forceRegenerate && lastGridX === currentGridX && lastGridY === currentGridY && terrainMesh.length > 0) {
+                return; // No need to regenerate
+            }
+
+            lastGridX = currentGridX;
+            lastGridY = currentGridY;
+
+            terrainMesh = [];
+
+            // Sample planet noise to create height map
+            const featureRand = testPlanet.featureRand || 0;
+            const palette = testPlanet.palette || [color(128, 128, 128)];
+
+            for (let gy = 0; gy < meshResolution; gy++) {
+                terrainMesh[gy] = [];
+                for (let gx = 0; gx < meshResolution; gx++) {
+                    // World grid position (snapped to grid cells)
+                    // This ensures heights stay stable as player moves within a cell
+                    const gridX = currentGridX + (gx - Math.floor(meshResolution / 2));
+                    const gridY = currentGridY + (gy - Math.floor(meshResolution / 2));
+
+                    // World position at grid cell center
+                    const worldX = gridX * cellSize;
+                    const worldY = gridY * cellSize;
+
+                    // Local position for rendering (relative to player)
+                    const localX = worldX - surfaceX;
+                    const localY = worldY - surfaceY;
+
+                    // Sample noise at fixed grid world position (prevents swimming)
+                    const sampleMultiplier = 0.003;
+                    const nx = worldX * sampleMultiplier + featureRand * 0.001;
+                    const ny = worldY * sampleMultiplier + featureRand * 0.002;
+                    const nz = featureRand * 0.6;
+
+                    const noiseVal = noise(nx, ny, nz);
+
+                    // Height from noise - deeper valleys, higher peaks
+                    const height = (noiseVal - 0.5) * 300;
+
+                    // Color from palette
+                    const paletteIdx = Math.floor(noiseVal * (palette.length - 1));
+                    const paletteT = (noiseVal * (palette.length - 1)) - paletteIdx;
+                    const col1 = palette[paletteIdx];
+                    const col2 = palette[Math.min(paletteIdx + 1, palette.length - 1)];
+                    const cellColor = lerpColor(col1, col2, paletteT);
+
+                    terrainMesh[gy][gx] = {
+                        worldX: worldX,  // Fixed world position
+                        worldY: worldY,
+                        baseX: localX,   // Local position for rendering
+                        baseY: localY,
+                        height: height,
+                        color: cellColor,
+                        noiseVal: noiseVal
+                    };
+                }
+            }
+        }
+
+        function keyPressed() {
+            // Turn controls (Q/E)
+            if (key === 'q' || key === 'Q') turnInput = -1;
+            if (key === 'e' || key === 'E') turnInput = 1;
+
+            // Thrust controls (W/S)
+            if (key === 'w' || key === 'W') thrustInput = 1;
+            if (key === 's' || key === 'S') thrustInput = -1;
+
+            // Strafe controls (A/D)
+            if (key === 'a' || key === 'A') strafeInput = -1;
+            if (key === 'd' || key === 'D') strafeInput = 1;
+
+            // Altitude controls (R/F)
+            if (key === 'r' || key === 'R') altitudeInput = 1;
+            if (key === 'f' || key === 'F') altitudeInput = -1;
+
+            // Cycle biome
+            if (key === 'b' || key === 'B') {
+                currentBiomeIndex = (currentBiomeIndex + 1) % biomeTypes.length;
+                generateTestPlanet();
+                generateTerrainMesh();
+            }
+
+            // New planet
+            if (key === 'n' || key === 'N') {
+                generateTestPlanet();
+                generateTerrainMesh();
+            }
+        }
+
+        function keyReleased() {
+            if (key === 'q' || key === 'Q' || key === 'e' || key === 'E') turnInput = 0;
+            if (key === 'w' || key === 'W' || key === 's' || key === 'S') thrustInput = 0;
+            if (key === 'a' || key === 'A' || key === 'd' || key === 'D') strafeInput = 0;
+            if (key === 'r' || key === 'R' || key === 'f' || key === 'F') altitudeInput = 0;
+        }
+
+        function updatePhysics(dt) {
+            // Update rotation (Q/E turns the view)
+            playerAngle += turnInput * TURN_SPEED * dt;
+
+            // Update speed from thrust
+            playerSpeed += thrustInput * THRUST_ACCEL * dt;
+            playerSpeed *= 0.95; // Friction
+            playerSpeed = constrain(playerSpeed, -MAX_SPEED * 0.5, MAX_SPEED);
+
+            // Movement direction: offset by -PI/2 to compensate for view rotation
+            // The view is rotated by -playerAngle, so we need to move in the direction
+            // that APPEARS correct on screen (player always faces up)
+            const moveAngle = playerAngle - Math.PI / 2;
+
+            // Move in facing direction (forward/backward with W/S)
+            surfaceX += Math.cos(moveAngle) * playerSpeed * dt;
+            surfaceY += Math.sin(moveAngle) * playerSpeed * dt;
+
+            // Strafe (perpendicular to facing, left/right with A/D)
+            const strafeAngle = moveAngle + Math.PI / 2;
+            surfaceX += Math.cos(strafeAngle) * strafeInput * STRAFE_SPEED * dt;
+            surfaceY += Math.sin(strafeAngle) * strafeInput * STRAFE_SPEED * dt;
+
+            // Altitude
+            altitude += altitudeInput * CLIMB_SPEED * dt;
+            altitude = constrain(altitude, MIN_ALTITUDE, MAX_ALTITUDE);
+
+            // Update slider
+            document.getElementById('altSlider').value = altitude;
+            document.getElementById('altValue').textContent = Math.floor(altitude);
+        }
+
+        function draw() {
+            // Dark gradient sky
+            background(10, 15, 25);
+
+            if (!testPlanet) return;
+
+            const dt = deltaTime / 1000;
+            updatePhysics(dt);
+
+            // Regenerate terrain based on player position for infinite terrain
+            generateTerrainMesh();
+
+            // Draw terrain mesh with rotation
+            push();
+            translate(width / 2, height / 2);
+
+            // Rotate entire view based on player angle
+            rotate(-playerAngle);
+
+            // Apply perspective scaling based on altitude
+            const perspectiveScale = map(altitude, MIN_ALTITUDE, MAX_ALTITUDE, 1.2, 0.6);
+            scale(perspectiveScale);
+
+            // Draw the 3D mesh terrain
+            drawTerrainMesh();
+
+            pop();
+
+            // Draw player ship (always facing up at center)
+            drawPlayerShip();
+
+            // Draw HUD
+            drawHUD();
+
+            // Update stats
+            if (frameCount % 10 === 0) {
+                updateStats();
+            }
+        }
+
+        function drawTerrainMesh() {
+            const cellSize = meshSize / meshResolution;
+
+            // Draw cells from back to front for proper depth
+            for (let gy = 0; gy < meshResolution; gy++) {
+                for (let gx = 0; gx < meshResolution; gx++) {
+                    const cell = terrainMesh[gy][gx];
+                    if (!cell) continue;
+
+                    // Screen position: world position minus player position
+                    const screenX = cell.worldX - surfaceX;
+                    const screenY = cell.worldY - surfaceY;
+
+                    // Faux 3D: offset based on height (isometric-style)
+                    const heightOffset = cell.height * 0.5;
+                    const drawX = screenX;
+                    const drawY = screenY - heightOffset;
+
+                    // Get corner heights for proper 3D quad
+                    const h00 = cell.height;
+                    const h10 = (gx < meshResolution - 1) ? terrainMesh[gy][gx + 1].height : h00;
+                    const h01 = (gy < meshResolution - 1) ? terrainMesh[gy + 1][gx].height : h00;
+                    const h11 = (gx < meshResolution - 1 && gy < meshResolution - 1)
+                        ? terrainMesh[gy + 1][gx + 1].height : h00;
+
+                    // Shading based on height gradient (simulates lighting)
+                    const shade = map(cell.height, -60, 60, 0.5, 1.2);
+                    const shadedColor = color(
+                        red(cell.color) * shade,
+                        green(cell.color) * shade,
+                        blue(cell.color) * shade
+                    );
+
+                    // Draw the cell as a 3D quad
+                    const halfCell = cellSize / 2;
+
+                    if (showWireframe) {
+                        stroke(0, 0, 0, 100);
+                        strokeWeight(1);
+                    } else {
+                        noStroke();
+                    }
+                    fill(shadedColor);
+
+                    // Draw as quad with height offsets at corners
+                    beginShape();
+                    vertex(screenX - halfCell, screenY - halfCell - h00 * 0.5);
+                    vertex(screenX + halfCell, screenY - halfCell - h10 * 0.5);
+                    vertex(screenX + halfCell, screenY + halfCell - h11 * 0.5);
+                    vertex(screenX - halfCell, screenY + halfCell - h01 * 0.5);
+                    endShape(CLOSE);
+
+                    // Draw side faces for elevated terrain (gives 3D block appearance)
+                    if (cell.height > 10) {
+                        const sideShade = 0.6;
+                        const sideColor = color(
+                            red(cell.color) * sideShade,
+                            green(cell.color) * sideShade,
+                            blue(cell.color) * sideShade
+                        );
+                        fill(sideColor);
+
+                        // Front face (bottom edge)
+                        beginShape();
+                        vertex(screenX - halfCell, screenY + halfCell - h01 * 0.5);
+                        vertex(screenX + halfCell, screenY + halfCell - h11 * 0.5);
+                        vertex(screenX + halfCell, screenY + halfCell);
+                        vertex(screenX - halfCell, screenY + halfCell);
+                        endShape(CLOSE);
+
+                        // Right face
+                        const rightShade = 0.7;
+                        const rightColor = color(
+                            red(cell.color) * rightShade,
+                            green(cell.color) * rightShade,
+                            blue(cell.color) * rightShade
+                        );
+                        fill(rightColor);
+                        beginShape();
+                        vertex(screenX + halfCell, screenY - halfCell - h10 * 0.5);
+                        vertex(screenX + halfCell, screenY + halfCell - h11 * 0.5);
+                        vertex(screenX + halfCell, screenY + halfCell);
+                        vertex(screenX + halfCell, screenY - halfCell);
+                        endShape(CLOSE);
+                    }
+                }
+            }
+        }
+
+        function drawPlayerShip() {
+            push();
+            translate(width / 2, height / 2);
+
+            // Draw shadow first
+            const shadowOffset = altitude * 0.3;
+            const shadowScale = 1.0 - (altitude / MAX_ALTITUDE) * 0.4;
+            push();
+            translate(shadowOffset * 0.3, shadowOffset * 0.5);
+            scale(shadowScale);
+            noStroke();
+            fill(0, 0, 0, 60);
+            ellipse(0, 0, 50, 25);
+            pop();
+
+            // Get Sidewinder ship definition
+            const shipDef = typeof SHIP_DEFINITIONS !== 'undefined' ? SHIP_DEFINITIONS['Sidewinder'] : null;
+            const shipScale = 25; // Scale factor for display
+
+            // Rotate ship to face up (-90 degrees, since vertex data has ship pointing right)
+            rotate(-Math.PI / 2);
+
+            if (shipDef && shipDef.vertexData) {
+                // Draw ship using vertex data from SHIP_DEFINITIONS
+                const vertices = shipDef.vertexData;
+                const fillCol = shipDef.fillColor || [180, 100, 20];
+
+                stroke(0);
+                strokeWeight(1.5);
+                fill(fillCol[0], fillCol[1], fillCol[2]);
+
+                beginShape();
+                for (const v of vertices) {
+                    vertex(v.x * shipScale, v.y * shipScale);
+                }
+                endShape(CLOSE);
+
+                // Cockpit highlight
+                fill(255, 255, 255, 100);
+                noStroke();
+                ellipse(shipScale * 0.3, 0, 8, 6);
+            } else {
+                // Fallback if SHIP_DEFINITIONS not loaded
+                stroke(100, 200, 255);
+                strokeWeight(2);
+                fill(180, 100, 20, 220);
+
+                beginShape();
+                vertex(22, 0);
+                vertex(-18, 20);
+                vertex(-22, 0);
+                vertex(-18, -20);
+                endShape(CLOSE);
+            }
+
+            // Reset rotation for thrust effect
+            rotate(Math.PI / 2);
+
+            // Thrust glow if moving
+            if (Math.abs(playerSpeed) > 10) {
+                fill(255, 150, 50, 150);
+                noStroke();
+                ellipse(-8, 22, 6, 10 + Math.abs(playerSpeed) * 0.05);
+                ellipse(8, 22, 6, 10 + Math.abs(playerSpeed) * 0.05);
+            }
+
+            pop();
+        }
+
+        function drawHUD() {
+            push();
+
+            // Altitude bar on right
+            const barX = width - 50;
+            const barY = height / 2 - 100;
+            const barHeight = 200;
+            const barWidth = 25;
+
+            fill(0, 0, 0, 180);
+            stroke(80, 80, 80);
+            strokeWeight(1);
+            rect(barX, barY, barWidth, barHeight, 3);
+
+            const altPercent = altitude / MAX_ALTITUDE;
+            const fillHeight = barHeight * altPercent;
+
+            noStroke();
+            for (let i = 0; i < fillHeight; i += 2) {
+                const t = i / barHeight;
+                fill(lerpColor(color(50, 150, 200), color(100, 220, 255), t));
+                rect(barX + 2, barY + barHeight - i - 2, barWidth - 4, 2);
+            }
+
+            // Min altitude marker
+            stroke(255, 100, 100);
+            strokeWeight(2);
+            const minY = barY + barHeight - (barHeight * MIN_ALTITUDE / MAX_ALTITUDE);
+            line(barX - 5, minY, barX + barWidth + 5, minY);
+
+            noStroke();
+            fill(255);
+            textSize(11);
+            textAlign(CENTER, TOP);
+            text('ALT', barX + barWidth / 2, barY - 18);
+            text(Math.floor(altitude), barX + barWidth / 2, barY + barHeight + 5);
+
+            // Speed indicator
+            textAlign(LEFT, TOP);
+            fill(200);
+            text(`Speed: ${Math.floor(playerSpeed)}`, width - 120, 20);
+            text(`Heading: ${Math.floor(degrees(playerAngle) % 360)}°`, width - 120, 35);
+
+            // Compass rose at bottom
+            push();
+            translate(width / 2, height - 50);
+
+            // Compass ring
+            noFill();
+            stroke(100, 100, 100, 150);
+            strokeWeight(2);
+            ellipse(0, 0, 60, 60);
+
+            // Cardinal directions (rotate with player)
+            fill(200);
+            textSize(12);
+            textAlign(CENTER, CENTER);
+            const compassRadius = 35;
+
+            push();
+            rotate(-playerAngle);
+            text('N', 0, -compassRadius);
+            text('S', 0, compassRadius);
+            text('E', compassRadius, 0);
+            text('W', -compassRadius, 0);
+            pop();
+
+            // Heading indicator (always points up)
+            stroke(255, 100, 100);
+            strokeWeight(2);
+            line(0, -20, 0, -8);
+
+            pop();
+
+            pop();
+        }
+
+        function updateStats() {
+            const stats = document.getElementById('stats');
+            const biome = biomeTypes[currentBiomeIndex];
+            stats.innerHTML = `
+                <div>Planet: ${testPlanet ? testPlanet.name : 'None'}</div>
+                <div>Biome: ${biome}</div>
+                <div>Position: (${Math.floor(surfaceX)}, ${Math.floor(surfaceY)})</div>
+                <div>FPS: ${Math.floor(frameRate())}</div>
+            `;
+        }
+    </script>
+</body>
+
+</html>
