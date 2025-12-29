@@ -33,6 +33,7 @@ const SPAWN_CONFIG = {
     MAX_ENEMIES_WAR: 30,           // During full war
     MAX_ASTEROIDS: 45,
     DEFAULT_DESPAWN_RADIUS: 5000,
+    FIXED_LARGE_DESPAWN_RADIUS: 10000, // Used during generation and save/load to prevent entity culling
     SPAWN_DISTANCE_MIN: 800,
     SPAWN_DISTANCE_MAX: 2000,
     // NPC Spawn specifics
@@ -679,11 +680,11 @@ class StarSystem {
 
         // --- Set a fixed large Despawn Radius ---
         try {
-            this.despawnRadius = 10000; // Set a fixed large radius
+            this.despawnRadius = SPAWN_CONFIG.FIXED_LARGE_DESPAWN_RADIUS;
             console.log(`         Despawn Radius set to fixed value: ${this.despawnRadius}`); // Add log
         } catch (e) {
             console.error("         Error setting fixed despawnRadius:", e);
-            this.despawnRadius = 10000; // Use fixed fallback
+            this.despawnRadius = SPAWN_CONFIG.FIXED_LARGE_DESPAWN_RADIUS; // Use fixed fallback
         }
 
         // Note: Stars are now generated procedurally in drawBackground() - no need to pre-generate them
@@ -5649,7 +5650,7 @@ class StarSystem {
             // Dynamic entities
             // Filter out player bodyguards (saved with player.activeBodyguards) and destroyed enemies
             enemies: this._serializeEntityArray(
-                this.enemies.filter(e => e && !e.isPlayerBodyguard && !e.destroyed && e.hull > 0),
+                this.enemies.filter(e => e && !e?.isPlayerBodyguard && !e?.destroyed && e?.hull > 0),
                 (e) => ({
                     shipType: e.shipTypeName || e.shipType || null,
                     role: e.role || null,
@@ -5743,9 +5744,9 @@ class StarSystem {
         // Initialize spawn timer (critical for saved games)
         sys._spawnTimer = SPAWN_CONFIG.SPAWN_INTERVAL_MS || 5000;
 
-        // CRITICAL: Restore the large despawn radius used during initial generation (10000)
+        // CRITICAL: Restore the large despawn radius used during initial generation
         // Since initStaticElements is skipped on load, this would otherwise default to ~3500, causing massive culling.
-        sys.despawnRadius = 10000;
+        sys.despawnRadius = SPAWN_CONFIG.FIXED_LARGE_DESPAWN_RADIUS;
 
         sys.visited = data.visited;
         sys.economyType = data.economyType;

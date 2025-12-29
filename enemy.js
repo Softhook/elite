@@ -477,8 +477,8 @@ class Enemy {
         // Regenerate shields
         const timeSinceShieldHit = currentTime - this.lastShieldHitTime;
         if (this.shield < this.maxShield && !this.destroyed && !this.shieldsDisabled && timeSinceShieldHit > this.shieldRechargeDelay) {
-            const timeScale = deltaTime ? (deltaTime / FRAME_TIME_BASELINE_MS) : 1;
-            const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * timeScale * DEFAULT_DELTA_SECONDS;
+            // Use deltaSeconds for frame-rate independent recharge (shieldRechargeRate is per-second)
+            const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * deltaSeconds;
             const prevShield = this.shield;
             const newShield = Math.min(this.maxShield, prevShield + rechargeAmount);
             if (prevShield === 0 && newShield > 0 && this._shieldWasZero) {

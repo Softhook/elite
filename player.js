@@ -1479,8 +1479,8 @@ class Player {
 
         // Regenerate shields only after recharge delay has passed (and not disabled by Ion nebula)
         if (this.shield < this.maxShield && !this.shieldsDisabled && (currentTime - this.lastShieldHitTime) > this.shieldRechargeDelay) {
-            // Pre-calculate recharge amount (scale by deltaTime for consistent rate)
-            const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * (deltaTime * 0.00096); // 0.016 / 16.67
+            // Use deltaSeconds for frame-rate independent recharge (shieldRechargeRate is per-second)
+            const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * deltaSeconds;
             const prevShield = this.shield;
             const newShield = Math.min(this.maxShield, prevShield + rechargeAmount);
             // Play shield-up cue when recovering from 0
