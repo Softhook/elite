@@ -964,12 +964,6 @@ class SurfaceMode {
         text('ALT', barX + barWidth / 2, barY - 18);
         text(Math.floor(this.altitude), barX + barWidth / 2, barY + barHeight + 5);
 
-        // Exit hint
-        textAlign(CENTER, TOP);
-        fill(150);
-        textSize(10);
-        text("Press R to climb and exit", width / 2, 10);
-
         // Compass
         push();
         translate(width / 2, height - 50);
