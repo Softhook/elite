@@ -95,8 +95,10 @@ class Building extends SurfaceObject {
             const try_ = ry - (tierH * Math.cos(extrusionAngle));
             Draw3D.drawBox3D(trx, try_, this.size * 0.6, this.size * 0.6, tierH, lerpColor(this.color, color(255), 0.1), extrusionAngle, sunAngle);
 
-            // Antennas on top tier
+            // Antennas on top tier (start from tier roof)
             const antH = 30;
+            const arx = trx - (tierH * Math.sin(extrusionAngle));
+            const ary = try_ - (tierH * Math.cos(extrusionAngle));
             Draw3D.drawCylinder(arx, ary, 2, antH, 6, color(200), extrusionAngle, sunAngle);
         }
 
@@ -137,11 +139,20 @@ class Turret extends SurfaceObject {
         if (!player) return;
         this.cooldown -= dt;
 
-        // World distance check (including altitude)
+        // Height-based detection: turret can only track player if player is ABOVE turret
+        // Turret ground height is yOffset, player flight height is altitude
+        const turretHeight = this.yOffset || 0;
+        const playerHeight = player.altitude || 0;
+
+        // Player must be higher than turret to be detected
+        if (playerHeight <= turretHeight) {
+            // Player is below or at turret level - can't see them
+            return;
+        }
+
+        // World distance check (2D only - X/Y plane)
         const dx = player.pos.x - this.pos.x;
         const dy = player.pos.y - this.pos.y;
-        // In our 2D projection, the 'up' direction is effectively screen-Y
-        // But for gameplay distance, altitude is the Z.
         const d = Math.sqrt(dx * dx + dy * dy);
 
         if (d < this.range) {
@@ -157,8 +168,8 @@ class Turret extends SurfaceObject {
             while (this.angle < -PI) this.angle += TWO_PI;
             while (this.angle > PI) this.angle -= TWO_PI;
 
-            // Fire if ready AND player is not too high
-            if (this.cooldown <= 0 && starSystem && (player.altitude < 400)) {
+            // Fire if ready
+            if (this.cooldown <= 0 && starSystem) {
                 this.fire(starSystem, player);
                 this.cooldown = 2.0;
             }
@@ -383,5 +394,85 @@ class SurfaceStation extends SurfaceObject {
         const bdx = boxH * Math.sin(extrusionAngle);
         const bdy = boxH * Math.cos(extrusionAngle);
         Draw3D.drawBox3D(bx - bdx, by - bdy, 20, 20, boxH, color(40), extrusionAngle, sunAngle);
+    }
+}
+
+/**
+ * Shield Generator - Main mission target
+ * The red dot on radar, destroying this is the objective
+ */
+class ShieldGenerator extends SurfaceObject {
+    constructor(x, y) {
+        super(x, y, 60);
+        this.health = 500;
+        this.maxHealth = 500;
+        this.lastHitTime = 0;
+        this.isTarget = true; // Marks this as the mission objective
+        this.pulsePhase = 0;
+    }
+
+    update(dt, player, starSystem) {
+        if (this.destroyed) return;
+        this.pulsePhase += dt * 3; // Pulsing animation
+    }
+
+    takeDamage(amount) {
+        this.health -= amount;
+        this.lastHitTime = millis();
+        console.log(`Shield Generator took ${amount} damage, health: ${this.health}/${this.maxHealth}`);
+        if (this.health <= 0) {
+            this.destroyed = true;
+            this.onDestroy();
+        }
+    }
+
+    onDestroy() {
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.starSystem) {
+            const visualY = this.pos.y - (this.yOffset || 0);
+            // Big explosion for the generator
+            surfaceMode.starSystem.addExplosion(this.pos.x, visualY, this.size * 3, [100, 200, 255], true);
+            surfaceMode.starSystem.addExplosion(this.pos.x, visualY, this.size * 2, [255, 255, 255], true);
+        }
+    }
+
+    draw(x, y, sunAngle = -Math.PI / 4) {
+        const sz = this.size;
+        const extrusionAngle = 0.5;
+
+        // Damage flash
+        let flashColor = null;
+        if (this.lastHitTime && millis() - this.lastHitTime < 150) {
+            flashColor = color(255, 255, 255);
+        }
+
+        // Health-based color tint
+        const healthRatio = this.health / this.maxHealth;
+        const baseColor = lerpColor(color(255, 50, 50), color(80, 100, 120), healthRatio);
+
+        // Base platform
+        const baseH = sz * 0.3;
+        const baseDv = baseH * Math.cos(extrusionAngle);
+        Draw3D.drawCylinder(x, y - baseDv, sz * 0.8, baseH, 8, flashColor || color(60, 70, 80), extrusionAngle, sunAngle);
+
+        // Central pillar
+        const pillarH = sz * 0.6;
+        const pillarDv = pillarH * Math.cos(extrusionAngle);
+        Draw3D.drawCylinder(x, y - baseDv - pillarDv, sz * 0.25, pillarH, 6, flashColor || color(40, 50, 60), extrusionAngle, sunAngle);
+
+        // Energy dome (pulsing)
+        const domeY = y - baseDv - pillarDv;
+        const pulseScale = 1 + Math.sin(this.pulsePhase) * 0.1;
+        const domeColor = flashColor || lerpColor(color(50, 150, 255, 180), color(100, 200, 255, 220), (Math.sin(this.pulsePhase) + 1) / 2);
+        Draw3D.drawDome(x, domeY, sz * 0.4 * pulseScale, 8, domeColor, extrusionAngle, sunAngle);
+
+        // Energy ring around base
+        const ringPulse = (Math.sin(this.pulsePhase * 2) + 1) / 2;
+        const ringSize = sz * 0.9 + ringPulse * 10;
+        push();
+        noFill();
+        stroke(50, 150, 255, 100 + ringPulse * 50);
+        strokeWeight(2);
+        ellipse(x, y, ringSize, ringSize * 0.4);
+        pop();
     }
 }

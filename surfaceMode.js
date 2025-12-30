@@ -55,7 +55,7 @@ class SurfaceMode {
         this.surfaceY = 0;
         this.altitude = SURFACE_CONFIG.DEFAULT_ALTITUDE;
         this.objectCache = new Map(); // Cache for persistent objects
-        this.debugMode = true; // Set to true to spawn only one turret for testing
+        this.debugMode = false; // Set to true to spawn only one turret for testing
 
         // Player physics
         this.playerAngle = -Math.PI / 2; // Start facing UP
@@ -737,20 +737,38 @@ class SurfaceMode {
                         const objSeed = cellHash * 100000;
 
                         let obj;
-                        if (subHash < 0.25) {
+
+                        // Check terrain height - turrets go on high points (h > 100)
+                        const isHighTerrain = h > 100;
+
+                        if (subHash < 0.05) {
+                            // Shield Generator - rare, main target, on lower terrain for accessibility
+                            if (h < 50 && typeof ShieldGenerator !== 'undefined') {
+                                obj = new ShieldGenerator(wx, wy);
+                            } else {
+                                // Fall back to building
+                                obj = new Building(wx, wy, 40, 'silo', objSeed);
+                            }
+                        } else if (subHash < 0.25 && isHighTerrain) {
+                            // Turrets ONLY on high terrain points
                             obj = new Turret(wx, wy);
                         } else if (subHash < 0.3) {
                             obj = new SurfaceStation(wx, wy);
-                        } else {
+                        } else if (subHash < 0.35) { // Drastically reduced building chance (was 1.0)
                             const bTypes = ['skyscraper', 'factory', 'silo'];
                             const bIdx = Math.floor(subHash * 13) % bTypes.length;
                             const size = 30 + (subHash * 50);
                             obj = new Building(wx, wy, size, bTypes[bIdx], objSeed);
                         }
 
-                        obj.yOffset = h;
-                        this.surfaceObjects.push(obj);
-                        this.objectCache.set(cellKey, obj);
+                        // If no object created, skip adding to list
+                        if (obj) {
+                            obj.yOffset = h;
+                            this.surfaceObjects.push(obj);
+                            this.objectCache.set(cellKey, obj);
+                        } else {
+                            this.objectCache.set(cellKey, null);
+                        }
                     } else {
                         // Mark cell as empty in cache
                         this.objectCache.set(cellKey, null);
@@ -941,8 +959,12 @@ class SurfaceMode {
         strokeWeight(1);
         rect(barX, barY, barWidth, barHeight, 3);
 
-        const altPercent = this.altitude / SURFACE_CONFIG.MAX_ALTITUDE;
-        const fillHeight = barHeight * altPercent;
+        // Relative Altitude (Radar Altitude)
+        const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
+        const radarAlt = Math.max(0, this.altitude - groundH);
+
+        const altPercent = radarAlt / 500; // Scale relative altitude (0-500m)
+        const fillHeight = Math.min(barHeight, barHeight * altPercent);
 
         noStroke();
         for (let i = 0; i < fillHeight; i += 2) {
@@ -951,7 +973,7 @@ class SurfaceMode {
             rect(barX + 2, barY + barHeight - i - 2, barWidth - 4, 2);
         }
 
-        // Min altitude marker
+        // Min altitude marker (safe floor)
         stroke(255, 100, 100);
         strokeWeight(2);
         const minY = barY + barHeight - (barHeight * SURFACE_CONFIG.MIN_ALTITUDE / SURFACE_CONFIG.MAX_ALTITUDE);
@@ -961,8 +983,8 @@ class SurfaceMode {
         fill(255);
         textSize(11);
         textAlign(CENTER, TOP);
-        text('ALT', barX + barWidth / 2, barY - 18);
-        text(Math.floor(this.altitude), barX + barWidth / 2, barY + barHeight + 5);
+        text('R-ALT', barX + barWidth / 2, barY - 18);
+        text(Math.floor(radarAlt), barX + barWidth / 2, barY + barHeight + 5);
 
         // Compass
         push();
@@ -998,6 +1020,13 @@ class SurfaceMode {
         for (const obj of this.surfaceObjects) {
             if (obj.destroyed) continue;
 
+            // Only show relevant tactical targets
+            // Check for ShieldGenerator class name since we might not have imported the class in this scope
+            const isShieldGen = (obj.constructor && obj.constructor.name === 'ShieldGenerator') || obj.isTarget;
+            const isTurret = (obj.constructor && obj.constructor.name === 'Turret');
+
+            if (!isShieldGen && !isTurret) continue;
+
             const dx = obj.pos.x - this.player.pos.x;
             const dy = obj.pos.y - this.player.pos.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
@@ -1005,18 +1034,23 @@ class SurfaceMode {
             // Calculate angle on compass
             const angle = Math.atan2(dy, dx);
             // Map distance to compass radius (30 pixels)
-            // Use 2000 as max tracking distance for better resolution at close range
-            const markerDist = map(dist, 0, 2000, 0, 30, true);
+            // Use 3000 as max tracking distance 
+            const markerDist = map(dist, 0, 3000, 0, 30, true);
 
             push();
             rotate(angle);
             noStroke();
-            if (obj instanceof Turret) {
-                fill(255, 50, 50); // Red for turrets
-            } else {
-                fill(255, 255, 255, 150); // White for buildings
+
+            if (isShieldGen) {
+                // Main Target (Shield Generator) - Red, larger, pulsing
+                const pulse = (Math.sin(millis() * 0.01) + 1) * 0.5;
+                fill(255, 0, 0, 200 + pulse * 55);
+                ellipse(markerDist, 0, 6 + pulse * 2, 6 + pulse * 2);
+            } else if (isTurret) {
+                // Turrets - Orange, smaller
+                fill(255, 150, 0, 200);
+                ellipse(markerDist, 0, 4, 4);
             }
-            ellipse(markerDist, 0, 4, 4);
             pop();
         }
 
