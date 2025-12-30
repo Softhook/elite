@@ -369,7 +369,6 @@ class SurfaceMode {
      */
     _checkSurfaceCollisions() {
         if (!this.starSystem || !this.starSystem.projectiles) return;
-        if (!this.surfaceObjects || this.surfaceObjects.length === 0) return;
 
         // Check each projectile in the world
         for (let proj of this.starSystem.projectiles) {
@@ -378,35 +377,65 @@ class SurfaceMode {
 
             const projPos = proj.pos;
 
+            // Check Terrain Collision (Ground)
+            const terrainH = this._getTerrainHeightAt(projPos.x, projPos.y);
+            const projAlt = proj.altitude || 0;
+
+            // If projectile is lower than terrain (with small buffer)
+            if (projAlt <= terrainH + 2) {
+                // Hit the ground!
+                // EXPLOSION FIX: Terrain is drawn flat, so explosion must be drawn flat (altitude 0 offset)
+                // Otherwise it floats in the air above the flat map image
+                this._createSurfaceExplosion(projPos.x, projPos.y, 0, 8, [255, 100, 50]);
+
+                // Crater/Ground hit sound
+                if (typeof soundManager !== 'undefined' && this.player) {
+                    soundManager.playWorldSound('explosion', projPos.x, projPos.y, this.player.pos);
+                }
+
+                proj.destroyed = true;
+                continue;
+            }
+
             // Player's projectiles hitting surface objects
-            if (proj.owner === this.player) {
+            if (this.surfaceObjects && this.surfaceObjects.length > 0 && proj.owner === this.player) {
                 for (let obj of this.surfaceObjects) {
                     if (obj.destroyed) continue;
 
-                    // Simple 2D distance collision check
-                    const dx = projPos.x - obj.pos.x;
-                    const dy = projPos.y - obj.pos.y;
-                    const distSq = dx * dx + dy * dy;
+                    // COLLISION FIX: Use Line Segment distance to account for 3D extrusion
+                    // Visual Base: obj.pos
+                    // Visual Top: obj.pos offset by height * extrusionAngle
 
-                    // Collision radius based on object size (generous hitbox)
-                    const hitRadius = obj.size * 1.5;
-                    const hitRadiusSq = hitRadius * hitRadius;
+                    const extrusionAngle = 0.5; // Must match Draw3D
+                    const objH = 150; // Assume standard hit height if not defined
+                    const tipX = obj.pos.x - (objH * Math.sin(extrusionAngle));
+                    const tipY = obj.pos.y - (objH * Math.cos(extrusionAngle));
 
-                    if (distSq < hitRadiusSq) {
-                        console.log(`HIT on surface object [${obj.id || obj.type}]! Damage: ${proj.damage || 10}`);
-                        obj.takeDamage(proj.damage || 10);
-                        proj.destroyed = true;
+                    // Distance from Point (Projectile) to Line Segment (Base -> Tip)
+                    const distToAxis = this._distToSegment(projPos, obj.pos, { x: tipX, y: tipY });
 
-                        // Impact effect - mark as surface explosion
-                        if (this.starSystem.addExplosion) {
-                            this.starSystem.addExplosion(projPos.x, projPos.y, 8, [255, 150, 50], true);
+                    // Generous radius for hitting the tower
+                    const hitRadius = Math.max(obj.size || 20, 20);
+
+                    if (distToAxis < hitRadius) {
+                        // Vertical Check range matches object
+                        const objBase = obj.yOffset || 0;
+                        const objTop = objBase + 400;
+
+                        if (projAlt >= objBase && projAlt <= objTop) {
+                            console.log(`HIT on surface object [${obj.id || obj.type}]!`);
+                            obj.takeDamage(proj.damage || 10);
+                            proj.destroyed = true;
+
+                            // Explosion visually offset to match impact altitude on the tower
+                            this._createSurfaceExplosion(projPos.x, projPos.y, projAlt, 10, [255, 150, 50]);
+
+                            // Play hit sound
+                            if (typeof soundManager !== 'undefined' && this.player) {
+                                soundManager.playWorldSound('hit', projPos.x, projPos.y, this.player.pos);
+                            }
+                            break;
                         }
-
-                        // Play hit sound (within player distance so it won't be muted)
-                        if (typeof soundManager !== 'undefined' && this.player) {
-                            soundManager.playWorldSound('hit', projPos.x, projPos.y, this.player.pos);
-                        }
-                        break;
                     }
                 }
             }
@@ -426,16 +455,36 @@ class SurfaceMode {
             const hitRadiusSq = this.player.size * this.player.size;
 
             if (distSq < hitRadiusSq) {
-                console.log(`Player hit by surface projectile! Damage: ${proj.damage || 5}`);
-                this.player.takeDamage(proj.damage || 5);
-                proj.destroyed = true;
+                // Check vertical height difference
+                // Player height is this.player.altitude
+                // Projectile height is proj.altitude
+                const altDiff = Math.abs((proj.altitude || 0) - this.player.altitude);
 
-                if (this.starSystem.addExplosion) {
-                    this.starSystem.addExplosion(proj.pos.x, proj.pos.y, 5, [255, 100, 50], true);
+                if (altDiff < 50) { // Vertical hit tolerance
+                    console.log(`Player hit by surface projectile!`);
+                    this.player.takeDamage(proj.damage || 5);
+                    this._createSurfaceExplosion(proj.pos.x, proj.pos.y, proj.altitude, 15, [255, 50, 50]);
+                    proj.destroyed = true;
                 }
             }
         }
     }
+
+    /**
+     * Create explosion with visual offset for altitude
+     */
+    _createSurfaceExplosion(x, y, altitude, size, color) {
+        if (!this.starSystem || !this.starSystem.addExplosion) return;
+
+        // Calculate visual offset based on altitude
+        // Matches the extrusion logic in Draw3D and SurfaceObjects
+        const extrusionAngle = 0.5; // Must match surfaceObjects.js
+        const visualX = x - (altitude * Math.sin(extrusionAngle));
+        const visualY = y - (altitude * Math.cos(extrusionAngle));
+
+        this.starSystem.addExplosion(visualX, visualY, size, color, true);
+    }
+
 
     /**
      * Generate terrain mesh
@@ -728,7 +777,7 @@ class SurfaceMode {
                 const densityNoise = noise(activeGridX * 0.05 + 1000, activeGridY * 0.05 + 2000);
 
                 if (densityNoise > 0.6) {
-                    if (cellHash < 0.15) {
+                    if (cellHash < 0.25) { // Increased object density (was 0.15)
                         const wx = activeGridX * cellSize;
                         const wy = activeGridY * cellSize;
                         const h = this._getTerrainHeightAt(wx, wy);
@@ -741,20 +790,22 @@ class SurfaceMode {
                         // Check terrain height - turrets go on high points (h > 100)
                         const isHighTerrain = h > 100;
 
-                        if (subHash < 0.05) {
-                            // Shield Generator - rare, main target, on lower terrain for accessibility
-                            if (h < 50 && typeof ShieldGenerator !== 'undefined') {
-                                obj = new ShieldGenerator(wx, wy);
-                            } else {
-                                // Fall back to building
-                                obj = new Building(wx, wy, 40, 'silo', objSeed);
+                        // Shield Generator Logic:
+                        // Spawn EXACTLY ONE per planet near the landing site
+                        // e.g. at grid (2, 2) relative to origin derived from seed
+                        // Force spawn at grid coordinates (2, 2) relative to spawn
+                        if (activeGridX === 2 && activeGridY === 2 && typeof ShieldGenerator !== 'undefined') {
+                            obj = new ShieldGenerator(wx, wy);
+                        } else if (isHighTerrain) {
+                            // Turrets on high ground - HIGH density
+                            // 50% chance for turret if on high ground
+                            if (subHash < 0.5) {
+                                obj = new Turret(wx, wy);
                             }
-                        } else if (subHash < 0.25 && isHighTerrain) {
-                            // Turrets ONLY on high terrain points
-                            obj = new Turret(wx, wy);
-                        } else if (subHash < 0.3) {
+                            // Else leave empty (peaks shouldn't have cities)
+                        } else if (subHash < 0.1) {
                             obj = new SurfaceStation(wx, wy);
-                        } else if (subHash < 0.35) { // Drastically reduced building chance (was 1.0)
+                        } else if (subHash < 0.15) { // Rare buildings
                             const bTypes = ['skyscraper', 'factory', 'silo'];
                             const bIdx = Math.floor(subHash * 13) % bTypes.length;
                             const size = 30 + (subHash * 50);
@@ -1084,6 +1135,19 @@ class SurfaceMode {
 
         // Let other keys pass through to normal game handling
         return false;
+    }
+
+    /**
+     * Helper: Distance from point P to line segment AB
+     */
+    _distToSegment(p, a, b) {
+        const l2 = (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y);
+        if (l2 === 0) return Math.sqrt((p.x - a.x) * (p.x - a.x) + (p.y - a.y) * (p.y - a.y));
+        let t = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l2;
+        t = Math.max(0, Math.min(1, t));
+        const px = a.x + t * (b.x - a.x);
+        const py = a.y + t * (b.y - a.y); // Projection point on segment
+        return Math.sqrt((p.x - px) * (p.x - px) + (p.y - py) * (p.y - py));
     }
 
     /**
