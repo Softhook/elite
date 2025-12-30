@@ -503,11 +503,7 @@ class WeaponSystem {
         }
 
         // Apply altitude for surface mode
-        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
-            proj.altitude = (owner.altitude || 0) + (owner.yOffset || 0);
-            proj.ownerType = (owner.shipDef) ? 'ship' : 'turret';
-            proj.isSurface = true;
-        }
+        this._applySurfaceProperties(proj, owner);
 
         // Play weapon-specific sound using playWorldSound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
@@ -566,6 +562,9 @@ class WeaponSystem {
             system.projectiles.push(proj);
         }
 
+        // Apply surface mode properties
+        this._applySurfaceProperties(proj, owner);
+
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
             // Consider adding a specific 'missileLaunch' sound
             soundManager.playWorldSound('missileLaunch', spawnX, spawnY, player.pos);
@@ -593,6 +592,20 @@ class WeaponSystem {
         for (let i = 0; i < count; i++) {
             const projectileAngle = angle - halfSpread + i * step;
             this.fireProjectile(owner, system, projectileAngle);
+        }
+    }
+
+    /**
+     * Apply surface mode properties to a projectile if applicable
+     * @param {Projectile} proj - The projectile to update
+     * @param {Object} owner - The entity firing the weapon
+     * @private
+     */
+    static _applySurfaceProperties(proj, owner) {
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+            proj.altitude = (owner.altitude || 0) + (owner.yOffset || 0);
+            proj.ownerType = (owner.shipDef) ? 'ship' : 'turret';
+            proj.isSurface = true;
         }
     }
 
@@ -645,6 +658,10 @@ class WeaponSystem {
                 );
                 proj.system = system;
             }
+
+            // Apply surface mode properties
+            this._applySurfaceProperties(proj, owner);
+
             system.addProjectile(proj);
         }
 

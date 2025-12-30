@@ -145,51 +145,99 @@ class Turret extends SurfaceObject {
         const playerHeight = player.altitude || 0;
 
         // Player must be higher than turret to be detected
-        if (playerHeight <= turretHeight) {
-            // Player is below or at turret level - can't see them
+        // (relax this slightly for gameplay - if they are close, they should see them)
+        if (playerHeight <= turretHeight - 50) { // Allow being slightly below
+            // Player is safely below detection
             return;
         }
 
-        // World distance check (2D only - X/Y plane)
-        const dx = player.pos.x - this.pos.x;
-        const dy = player.pos.y - this.pos.y;
+        // --- COORDINATE FIX ---
+        // We must calculate angles based on VISUAL positions as they appear on screen.
+        // Surface mode uses an "extruded 2D" projection.
+        // X_visual = X_world - Height * sin(extrusion)
+        // Y_visual = (Y_world - TerrainZ) - Height * cos(extrusion)
+
+        const extrusionAngle = 0.5; // Must match Draw3D usage in draw()
+        const sz = this.size;
+        const totalHeadHeight = (sz * 0.2) + (sz * 0.6); // Base + Head Height
+
+        // 1. Calculate Turret VISUAL Position (Muzzle/Head level)
+        const extX = totalHeadHeight * Math.sin(extrusionAngle);
+        const extY = totalHeadHeight * Math.cos(extrusionAngle);
+
+        // Terrain acts as a Z-offset on Y axis in drawing logic
+        const terrainOffset = this.yOffset || 0;
+
+        const turretVisualX = this.pos.x - extX;
+        const turretVisualY = (this.pos.y - terrainOffset) - extY;
+
+        // 2. Calculate Player VISUAL Position
+        // The player is drawn at their map position (pos.x, pos.y) without terrain offset
+        // (Shadow handles terrain indication, ship stays at "Space/Map" level)
+        const playerVisualX = player.pos.x;
+        const playerVisualY = player.pos.y;
+
+        // 3. Aiming Logic in Visual Space
+        const dx = playerVisualX - turretVisualX;
+        const dy = playerVisualY - turretVisualY;
         const d = Math.sqrt(dx * dx + dy * dy);
 
         if (d < this.range) {
-            // Aiming angle (ground plane) - Shortest path interpolation
-            const targetAngle = atan2(dy, dx);
+            // Aim towards player's visual position
+            const targetAngle = Math.atan2(dy, dx);
             let diff = targetAngle - this.angle;
-            while (diff < -PI) diff += TWO_PI;
-            while (diff > PI) diff -= TWO_PI;
+
+            // Normalize
+            const TWO_PI = Math.PI * 2;
+            while (diff < -Math.PI) diff += TWO_PI;
+            while (diff > Math.PI) diff -= TWO_PI;
 
             // Smoother, frame-rate independent rotation
             this.angle += diff * 5 * dt;
-            // Normalize angle to keep it within [-PI, PI] range
-            while (this.angle < -PI) this.angle += TWO_PI;
-            while (this.angle > PI) this.angle -= TWO_PI;
+
+            // Normalize angle
+            while (this.angle < -Math.PI) this.angle += TWO_PI;
+            while (this.angle > Math.PI) this.angle -= TWO_PI;
 
             // Fire if ready
             if (this.cooldown <= 0 && starSystem) {
-                this.fire(starSystem, player);
+                // Pass the calculated visual muzzle position
+                this.fire(starSystem, player, turretVisualX, turretVisualY);
                 this.cooldown = 2.0;
             }
         }
     }
 
-    fire(starSystem, player) {
+    fire(starSystem, player, visualX, visualY) {
         if (typeof Projectile === 'undefined') return;
 
-        // Muzzle position in world coords
-        // The turret is visually drawn at (pos.x, pos.y - yOffset).
-        // So muzzle position must also subtract yOffset to match the visual.
-        const baseY = this.pos.y - (this.yOffset || 0); // Visual Y position
+        // Muzzle position in world coords (Visual)
+        // If not passed (called from elsewhere?), recalculate
+        let muzzleX, muzzleY;
+
+        if (visualX === undefined || visualY === undefined) {
+            const extrusionAngle = 0.5;
+            const sz = this.size;
+            const totalH = (sz * 0.8);
+            const extX = totalH * Math.sin(extrusionAngle);
+            const extY = totalH * Math.cos(extrusionAngle);
+            const terrainOffset = this.yOffset || 0;
+
+            muzzleX = (this.pos.x - extX);
+            muzzleY = ((this.pos.y - terrainOffset) - extY);
+        } else {
+            muzzleX = visualX;
+            muzzleY = visualY;
+        }
+
+        // Apply rotation to extend from center of head to barrel tip
         const muzzleOffset = 40;
-        const muzzleX = this.pos.x + muzzleOffset * Math.cos(this.angle);
-        const muzzleY = baseY + muzzleOffset * Math.sin(this.angle);
+        const px = muzzleX + muzzleOffset * Math.cos(this.angle);
+        const py = muzzleY + muzzleOffset * Math.sin(this.angle);
 
         const proj = new Projectile(
-            muzzleX,
-            muzzleY,
+            px,
+            py,
             this.angle,
             this,
             15,               // Speed
@@ -205,15 +253,17 @@ class Turret extends SurfaceObject {
             // Use ownerType and isSurface to help filtering
             proj.ownerType = 'turret';
             proj.isSurface = true;
+
             // Projectile altitude for collision purposes
-            proj.altitude = (this.yOffset || 0) + 20;
+            // This is the logical altitude, which is Turret Base Z + Turret Height
+            proj.altitude = (this.yOffset || 0) + (this.size * 0.8);
 
             if (typeof soundManager !== 'undefined') {
                 soundManager.playSound('laser');
             }
             // Visual muzzle flash - tag as isSurface
             if (starSystem.addExplosion) {
-                starSystem.addExplosion(muzzleX, muzzleY, 5, [255, 100, 50], true);
+                starSystem.addExplosion(px, py, 5, [255, 100, 50], true);
             }
         }
     }

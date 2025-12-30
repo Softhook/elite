@@ -2237,14 +2237,19 @@ class StarSystem {
             const projSize = proj.size || 3;
             let hit = false;
 
-            // Check asteroids
-            if (this._checkProjectileAsteroidCollision(proj, i, distCheckVector, asteroidCount)) continue;
+            // In Surface Mode, surface projectiles should NOT hit space entities
+            const isSurfaceProj = proj.isSurface || (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive() && proj.owner === this.player);
 
-            // Check space objects
-            if (this._checkProjectileSpaceObjectCollision(proj, i, distCheckVector)) continue;
+            if (!isSurfaceProj) {
+                // Check asteroids
+                if (this._checkProjectileAsteroidCollision(proj, i, distCheckVector, asteroidCount)) continue;
 
-            // Check mines
-            if (this._checkProjectileMineCollision(proj, i, distCheckVector)) continue;
+                // Check space objects
+                if (this._checkProjectileSpaceObjectCollision(proj, i, distCheckVector)) continue;
+
+                // Check mines
+                if (this._checkProjectileMineCollision(proj, i, distCheckVector)) continue;
+            }
 
             // Check player collision (normally skipped while docked, but enabled for surface mode)
             if (typeof surfaceMode !== 'undefined' && surfaceMode.isActive() && !this.player.destroyed && proj.owner !== this.player) {
@@ -2297,6 +2302,11 @@ class StarSystem {
                     const combinedRadius = enemy.size + projSize;
                     const combinedRadiusSq = combinedRadius * combinedRadius;
                     distCheckVector.set(enemy.pos.x - projPos.x, enemy.pos.y - projPos.y);
+
+                    // FIX: Prevent surface player projectiles from hitting space enemies
+                    if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+                        continue;
+                    }
 
                     if (distCheckVector.magSq() <= combinedRadiusSq && proj.checkCollision(enemy)) {
                         WeaponSystem.handleHitEffects(enemy, projPos, proj.damage, proj.owner, this, proj.color);

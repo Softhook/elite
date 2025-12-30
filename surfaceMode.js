@@ -364,6 +364,31 @@ class SurfaceMode {
     }
 
     /**
+     * Calculate visual bounds for collision and rendering
+     * Returns the visual base and tip segment for the extruded object
+     * @private
+     */
+    _getVisualBounds(obj) {
+        const extrusionAngle = 0.5; // Must match Draw3D
+        // Visual Base Position (accounting for terrain yOffset)
+        const visualBaseY = obj.pos.y - (obj.yOffset || 0);
+
+        // Use approximate height from size if height property missing
+        const objH = (obj.height) ? obj.height : (obj.size * 2);
+
+        // Calculate tip position (extruded top)
+        const tipX = obj.pos.x - (objH * Math.sin(extrusionAngle));
+        const tipY = visualBaseY - (objH * Math.cos(extrusionAngle));
+
+        return {
+            base: { x: obj.pos.x, y: visualBaseY },
+            tip: { x: tipX, y: tipY },
+            height: objH,
+            radius: Math.max((obj.size || 40) / 2, 10) // Radius matches visual Cylinder (size/2)
+        };
+    }
+
+    /**
      * Check collisions between projectiles and surface objects
      * Uses simple 2D distance check since all objects are on the same plane visually
      */
@@ -401,41 +426,38 @@ class SurfaceMode {
             if (this.surfaceObjects && this.surfaceObjects.length > 0 && proj.owner === this.player) {
                 for (let obj of this.surfaceObjects) {
                     if (obj.destroyed) continue;
+                    // DEBUG: Match visual filter - only collide with Turrets
+                    if (obj.constructor.name !== 'Turret') continue;
 
-                    // COLLISION FIX: Use Line Segment distance to account for 3D extrusion
-                    // Visual Base: obj.pos
-                    // Visual Top: obj.pos offset by height * extrusionAngle
-
-                    const extrusionAngle = 0.5; // Must match Draw3D
-                    const objH = 150; // Assume standard hit height if not defined
-                    const tipX = obj.pos.x - (objH * Math.sin(extrusionAngle));
-                    const tipY = obj.pos.y - (objH * Math.cos(extrusionAngle));
+                    const bounds = this._getVisualBounds(obj);
 
                     // Distance from Point (Projectile) to Line Segment (Base -> Tip)
-                    const distToAxis = this._distToSegment(projPos, obj.pos, { x: tipX, y: tipY });
+                    const distToAxis = this._distToSegment(projPos, bounds.base, bounds.tip);
 
-                    // Generous radius for hitting the tower
-                    const hitRadius = Math.max(obj.size || 20, 20);
+                    // Generous radius for hitting the tower - allow striking the "width" of the object
+                    const hitRadius = bounds.radius;
 
                     if (distToAxis < hitRadius) {
-                        // Vertical Check range matches object
-                        const objBase = obj.yOffset || 0;
-                        const objTop = objBase + 400;
+                        // VISUAL 2D HIT:
+                        // Since we are fixing the "2D aspect", if it visually overlaps the extruded shape, it hits.
+                        // We removed the vertical altitude check (projAlt) because projectiles travel flatly in this mode.
+                        // If it looks like a hit, it is a hit.
 
-                        if (projAlt >= objBase && projAlt <= objTop) {
-                            console.log(`HIT on surface object [${obj.id || obj.type}]!`);
-                            obj.takeDamage(proj.damage || 10);
-                            proj.destroyed = true;
+                        const objName = obj.type || obj.id || obj.constructor.name;
+                        console.log(`HIT on surface object [${objName}]!`);
+                        obj.takeDamage(proj.damage || 10);
+                        proj.destroyed = true;
 
-                            // Explosion visually offset to match impact altitude on the tower
-                            this._createSurfaceExplosion(projPos.x, projPos.y, projAlt, 10, [255, 150, 50]);
+                        // Explosion visually happens at impact point (which is screen coords)
+                        // Pass 0 for altitude so _createSurfaceExplosion doesn't double-shift it.
+                        // (projPos is already at visual screen coordinates)
+                        this._createSurfaceExplosion(projPos.x, projPos.y, 0, 10, [255, 150, 50]);
 
-                            // Play hit sound
-                            if (typeof soundManager !== 'undefined' && this.player) {
-                                soundManager.playWorldSound('hit', projPos.x, projPos.y, this.player.pos);
-                            }
-                            break;
+                        // Play hit sound
+                        if (typeof soundManager !== 'undefined' && this.player) {
+                            soundManager.playWorldSound('hit', projPos.x, projPos.y, this.player.pos);
                         }
+                        break;
                     }
                 }
             }
@@ -456,16 +478,27 @@ class SurfaceMode {
 
             if (distSq < hitRadiusSq) {
                 // Check vertical height difference
-                // Player height is this.player.altitude
-                // Projectile height is proj.altitude
-                const altDiff = Math.abs((proj.altitude || 0) - this.player.altitude);
+                // SIMPLIFICATION: User requested focusing on 2D aspect.
+                // Since aiming is now visual (screen-space), if it hits in 2D, it counts.
+                // We ignore altitude difference for collision to match the "extruded 2D" visual style.
 
-                if (altDiff < 50) { // Vertical hit tolerance
-                    console.log(`Player hit by surface projectile!`);
-                    this.player.takeDamage(proj.damage || 5);
-                    this._createSurfaceExplosion(proj.pos.x, proj.pos.y, proj.altitude, 15, [255, 50, 50]);
-                    proj.destroyed = true;
-                }
+                console.log(`Player hit by surface projectile!`);
+                this.player.takeDamage(proj.damage || 5);
+
+                // Explosion at projectile's "visual" altitude (which is effectively just its POS in this mode)
+                // But we pass proj.altitude just in case the explosion wants to interact with logic.
+                // However, visually proj.pos IS the screen point.
+                // _createSurfaceExplosion applies altitude shift.
+                // If proj.pos is ALREADY shifted (visual), we should pass 0 altitude to _createSurfaceExplosion
+                // to avoid double shifting?
+
+                // Turret fired at VISUAL coords. So proj.pos is VISUAL.
+                // _createSurfaceExplosion takes World coords and Altitude and shifts them.
+                // To get explosion at proj.pos, we must reverse the shift or pass 0.
+                // It is safest to pass 0 altitude since proj.pos is already the "screen point".
+
+                this._createSurfaceExplosion(proj.pos.x, proj.pos.y, 0, 15, [255, 50, 50]);
+                proj.destroyed = true;
             }
         }
     }
@@ -852,12 +885,25 @@ class SurfaceMode {
         const sunAngle = this._getSunAngle();
 
         for (let obj of this.surfaceObjects) {
+            // DEBUG: Only draw Turrets as requested
+            if (obj.constructor.name !== 'Turret') continue;
+
             // Drawn directly at world position. Transformation is handled by the camera in draw()
             if (obj.draw) {
                 // Pass world coordinates. Turret.draw translates to these.
                 // Camera will subtract player.pos automatically.
                 obj.draw(obj.pos.x, obj.pos.y - (obj.yOffset || 0), sunAngle);
             }
+
+            // VISUALIZE COLLISION BOUNDARY
+            // Semi-transparent red capsule shape
+            push();
+            const bounds = this._getVisualBounds(obj);
+            stroke(255, 0, 0, 80); // Semi-transparent red (approx 0.3 alpha)
+            strokeWeight(bounds.radius * 2); // Diameter matches size
+            strokeCap(ROUND);
+            line(bounds.base.x, bounds.base.y, bounds.tip.x, bounds.tip.y);
+            pop();
         }
     }
 
@@ -869,6 +915,13 @@ class SurfaceMode {
         if (!this.starSystem || !this.starSystem.projectiles) return;
         if (!this.player) return;
 
+        push(); // Ensure state isolation for projectiles
+        // FIX: Clear shadow settings to prevent "black bullet" artifacts
+        if (typeof drawingContext !== 'undefined') {
+            drawingContext.shadowBlur = 0;
+            drawingContext.shadowColor = 'transparent';
+        }
+
         for (const proj of this.starSystem.projectiles) {
             if (proj && !proj.destroyed && proj.isSurface) {
                 const distSq = p5.Vector.sub(proj.pos, this.player.pos).magSq();
@@ -879,6 +932,7 @@ class SurfaceMode {
                 }
             }
         }
+        pop();
     }
 
     _drawExplosions() {
