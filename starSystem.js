@@ -5336,10 +5336,29 @@ class StarSystem {
         // This avoids 60+ Math.atan2 calls per frame in SpaceObjectRenderers
         this._cachedSunPos = sunPos;
 
-        // Draw only visible planets
+        // Draw only visible planets with dynamic buffer management
+        // OPTIMIZATION: Dispose buffers for planets that are very far away to save memory
+        const farCullingDistance = Math.max(width, height) * 3; // 3x viewport size
         for (let i = 0; i < planetCount; i++) {
             const p = this.planets[i];
+            const dx = p.pos.x - this.player.pos.x;
+            const dy = p.pos.y - this.player.pos.y;
+            const distSq = dx * dx + dy * dy;
+            
+            // Dispose buffers if planet is very far away
+            if (distSq > farCullingDistance * farCullingDistance) {
+                if (p.buffersCreated) {
+                    p.disposeBuffers();
+                }
+                continue; // Skip drawing if too far
+            }
+            
+            // Check if planet is in view
             if (this.isInView(p.pos.x, p.pos.y, p.size * 1.5, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                // Ensure buffers are created before drawing
+                if (!p.buffersCreated) {
+                    p.createBuffers();
+                }
                 p.draw(sunPos);
             }
         }

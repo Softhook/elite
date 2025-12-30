@@ -466,6 +466,7 @@ class Planet {
 
     /**
      * Renders the planet texture to the buffer
+     * Optimized version with improved performance
      */
     renderPlanetTexture() {
         const pg = this.planetBuffer;
@@ -505,18 +506,29 @@ class Planet {
         // Increase octaves/persistence for richer, more dramatic detail
         pg.noiseDetail(6, this.noisePersistence);
 
-        // Skip drawing the solid base circle; the textured bands will fill the planet
-
-        // Set resolution based on planet size
-        const bandHeight = Math.max(2, Math.ceil(400 / this.size));
+        // OPTIMIZATION: Adaptive band height based on planet size for better performance
+        // Larger planets use bigger bands to reduce iteration count
+        const bandHeight = Math.max(3, Math.ceil(600 / this.size));
 
         // Cache constants for inner loop
         const noiseScale = this.noiseScale;
         const featureRand = this.featureRand;
-        // Larger Z offset to separate octave layers and avoid overly smooth noise
         const noiseZ = featureRand * 0.6;
         const paletteLen = this.palette.length;
         const paletteMaxIdx = paletteLen - 1;
+        
+        // Pre-calculate inverse radius for normalization (avoid repeated division)
+        const invR = 1.0 / r;
+        const sampleMultiplier = Math.max(0.0005, (r * noiseScale) * 0.8);
+        const featureOffsetX = featureRand * 0.001;
+        const featureOffsetY = featureRand * 0.002;
+        
+        // Cache palette colors as raw RGB for faster access
+        const paletteRGB = this.palette.map(c => ({
+            r: red(c),
+            g: green(c),
+            b: blue(c)
+        }));
 
         // Loop through vertical bands (full planet)
         for (let y = -r; y < r; y += bandHeight) {
@@ -524,32 +536,23 @@ class Planet {
             const bandRSq = rSq - ySq;
             if (bandRSq <= 0) continue;
             const bandR = Math.sqrt(bandRSq);
+            
+            // Pre-calculate ny for this row
+            const ny = y * invR;
+            const nySq = ny * ny;
 
             for (let x = -bandR; x < bandR; x += bandHeight) {
-                // Optimized distance and angle calculation
-                const distSq = x * x + ySq;
-                const distFromCenter = Math.sqrt(distSq);
-                const angle = Math.atan2(y, x);
-                const cosA = Math.cos(angle);
-                const sinA = Math.sin(angle);
-
                 // Spherical mapping: convert local x,y to normalized sphere coordinates
-                const nx = x / r; // -1..1 across the planet surface
-                const ny = y / r;
-                const inside = nx * nx + ny * ny;
-                if (inside > 1) continue; // safety, skip pixels outside the disc
+                const nx = x * invR;
+                const inside = nx * nx + nySq;
+                if (inside > 1) continue; // skip pixels outside the disc
 
                 // z component of the unit sphere (0 at limb, 1 at center)
-                const nzUnit = Math.sqrt(Math.max(0, 1 - inside));
+                const nzUnit = Math.sqrt(1 - inside); // Already checked inside <= 1
 
-                // Use the unit sphere coordinates as 3D inputs to the noise function so
-                // patterns wrap naturally around the globe and naturally compress at the limb.
-                // The existing `noiseScale` was tuned earlier; invert it into a sample multiplier
-                // so larger planets still get reasonable detail. We keep a small featureRand offset
-                // to avoid visible seam artifacts.
-                const sampleMultiplier = Math.max(0.0005, (this.radius * noiseScale) * 0.8);
-                const baseNX = nx * sampleMultiplier + featureRand * 0.001;
-                const baseNY = ny * sampleMultiplier + featureRand * 0.002;
+                // Calculate noise coordinates
+                const baseNX = nx * sampleMultiplier + featureOffsetX;
+                const baseNY = ny * sampleMultiplier + featureOffsetY;
                 const baseNZ = nzUnit * sampleMultiplier + noiseZ;
 
                 // Combine several noise octaves (FBM) sampled on the sphere
@@ -557,33 +560,43 @@ class Planet {
                 const n2 = pg.noise(baseNX * 2.0, baseNY * 2.0, baseNZ * 1.7);
                 const n3 = pg.noise(baseNX * 4.0, baseNY * 4.0, baseNZ * 3.5);
                 let n = n1 * 0.55 + n2 * 0.30 + n3 * 0.15;
-                n = Math.min(1, Math.max(0, Math.pow(n, 1.3)));
+                n = Math.pow(Math.min(1, Math.max(0, n)), 1.3);
+                
+                // Color interpolation from palette
                 const nScaled = n * paletteMaxIdx;
                 const paletteIndex = Math.floor(nScaled);
                 const lerpFactor = nScaled - paletteIndex;
-                const col1 = this.palette[paletteIndex];
-                const col2 = this.palette[Math.min(paletteIndex + 1, paletteMaxIdx)];
-                // Increase color contrast by biasing interpolation away from midtones
-                const contrastBias = 2.6; // higher bias pushes values toward palette endpoints
+                
+                const col1RGB = paletteRGB[paletteIndex];
+                const col2RGB = paletteRGB[Math.min(paletteIndex + 1, paletteMaxIdx)];
+                
+                // Contrast bias interpolation
+                const contrastBias = 2.6;
                 let cf = ((lerpFactor - 0.5) * contrastBias) + 0.5;
                 cf = Math.min(1, Math.max(0, cf));
-                let bandColor = lerpColor(col1, col2, cf);
+                
+                // Manual color lerp (faster than p5's lerpColor)
+                let r = col1RGB.r + (col2RGB.r - col1RGB.r) * cf;
+                let g = col1RGB.g + (col2RGB.g - col1RGB.g) * cf;
+                let b = col1RGB.b + (col2RGB.b - col1RGB.b) * cf;
 
-                // Apply subtle limb-based distortion/attenuation so features feel wrapped
-                // around a sphere: at the limb (nzUnit -> 0) we slightly desaturate/darken
-                // and compress contrast to simulate foreshortening.
-                const limbFactor = Math.pow(nzUnit, 0.9); // 1 at center, 0 at edge
+                // Apply limb darkening
+                const limbFactor = Math.pow(nzUnit, 0.9);
                 const limbDarken = 0.35 * (1 - limbFactor);
-                bandColor = lerpColor(bandColor, color(0, 0, 0), limbDarken);
+                r *= (1 - limbDarken);
+                g *= (1 - limbDarken);
+                b *= (1 - limbDarken);
 
-                // Antialiasing at the planet edge for smooth transition to background
-                const edgeWidth = 5; // pixels over which to fade alpha
-                if (distFromCenter > r - edgeWidth) {
-                    const alphaFactor = Math.max(0, (r - distFromCenter) / edgeWidth);
-                    bandColor = color(red(bandColor), green(bandColor), blue(bandColor), alpha(bandColor) * alphaFactor);
+                // Antialiasing at the planet edge
+                const distFromCenterSq = x * x + ySq;
+                const edgeDistSq = (r - 5) * (r - 5); // 5px edge width
+                let alpha = 255;
+                if (distFromCenterSq > edgeDistSq) {
+                    const distFromCenter = Math.sqrt(distFromCenterSq);
+                    alpha = Math.max(0, (r - distFromCenter) * 51); // 255/5 = 51
                 }
 
-                pg.fill(bandColor);
+                pg.fill(r, g, b, alpha);
                 pg.rect(bufferCenter + x, bufferCenter + y, bandHeight, bandHeight);
             }
         }

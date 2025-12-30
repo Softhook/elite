@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planet Rendering Performance Benchmark</title>
+    <script src="../libraries/p5.min.js"></script>
+    <script src="../libraries/p5.sound.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #0a0f28;
+            color: #fff;
+            font-family: monospace;
+        }
+        #results {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 2px solid #4a90ff;
+            max-width: 400px;
+            border-radius: 5px;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 2px solid #4a90ff;
+            max-width: 300px;
+            border-radius: 5px;
+        }
+        button {
+            margin: 5px;
+            padding: 8px 15px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #666;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        button:hover {
+            background: #555;
+        }
+        button:active {
+            background: #222;
+        }
+        .metric {
+            margin: 8px 0;
+            padding: 5px;
+            background: rgba(40, 40, 60, 0.5);
+            border-left: 3px solid #4a90ff;
+        }
+        .metric-label {
+            color: #88ccff;
+            font-weight: bold;
+        }
+        .metric-value {
+            color: #ffff88;
+            float: right;
+        }
+        h3 {
+            color: #88ccff;
+            margin-top: 0;
+        }
+        .test-status {
+            color: #88ff88;
+            font-weight: bold;
+        }
+        .test-running {
+            color: #ffaa00;
+        }
+        .test-error {
+            color: #ff4444;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <h3>Planet Rendering Benchmark</h3>
+        <button id="runSmall">Test Small Planets (50-150px)</button>
+        <button id="runMedium">Test Medium Planets (150-400px)</button>
+        <button id="runLarge">Test Large Planets (400-800px)</button>
+        <button id="runAll">Run All Tests</button>
+        <button id="clearCanvas">Clear Canvas</button>
+        <div id="status" class="test-status">Ready</div>
+    </div>
+
+    <div id="results">
+        <h3>Performance Metrics</h3>
+        <div id="metrics"></div>
+    </div>
+
+    <script src="../uiComponents.js"></script>
+    <script src="../planet.js"></script>
+    <script>
+        let benchmarkResults = [];
+        let testPlanets = [];
+        let currentTest = null;
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            angleMode(RADIANS);
+            
+            // Setup button handlers
+            document.getElementById('runSmall').onclick = () => runBenchmark('small', 50, 150, 10);
+            document.getElementById('runMedium').onclick = () => runBenchmark('medium', 150, 400, 8);
+            document.getElementById('runLarge').onclick = () => runBenchmark('large', 400, 800, 5);
+            document.getElementById('runAll').onclick = runAllBenchmarks;
+            document.getElementById('clearCanvas').onclick = clearTestCanvas;
+        }
+
+        function draw() {
+            background(10, 15, 40);
+            
+            // Draw test planets if any
+            for (let p of testPlanets) {
+                push();
+                translate(p.pos.x, p.pos.y);
+                if (p.buffersCreated) {
+                    p.draw(createVector(0, 0));
+                }
+                pop();
+            }
+        }
+
+        async function runBenchmark(testName, minSize, maxSize, count) {
+            setStatus(`Running ${testName} planet test...`, 'test-running');
+            clearTestCanvas();
+            
+            const results = {
+                testName: testName,
+                planetCount: count,
+                minSize: minSize,
+                maxSize: maxSize,
+                createTime: 0,
+                renderTime: 0,
+                totalTime: 0,
+                avgTimePerPlanet: 0,
+                memoryUsed: 0
+            };
+
+            // Measure buffer creation time
+            const createStart = performance.now();
+            
+            for (let i = 0; i < count; i++) {
+                const size = random(minSize, maxSize);
+                const x = random(200, width - 200);
+                const y = random(200, height - 200);
+                const c1 = color(random(80, 180), random(80, 180), random(80, 180));
+                const c2 = color(random(80, 180), random(80, 180), random(80, 180));
+                
+                // Create planet with random seed
+                randomSeed(i * 12345);
+                const planet = new Planet(x, y, size, c1, c2, `Test-${i}`, i + 1);
+                
+                // Compute shadow (required before createBuffers)
+                planet.computeShadowOffset(createVector(0, 0));
+                
+                // Create buffers (this is the expensive operation)
+                planet.createBuffers();
+                
+                testPlanets.push(planet);
+            }
+            
+            const createEnd = performance.now();
+            results.createTime = createEnd - createStart;
+
+            // Measure render time (one full frame)
+            const renderStart = performance.now();
+            redraw(); // Force one draw cycle
+            const renderEnd = performance.now();
+            results.renderTime = renderEnd - renderStart;
+
+            results.totalTime = results.createTime + results.renderTime;
+            results.avgTimePerPlanet = results.createTime / count;
+
+            // Estimate memory usage (rough calculation based on buffer sizes)
+            let totalMemory = 0;
+            for (let p of testPlanets) {
+                if (p.planetBuffer) totalMemory += p.planetBuffer.width * p.planetBuffer.height * 4;
+                if (p.atmosphereBuffer) totalMemory += p.atmosphereBuffer.width * p.atmosphereBuffer.height * 4;
+                if (p.ringsBuffer) totalMemory += p.ringsBuffer.width * p.ringsBuffer.height * 4;
+                if (p.cityLightsBuffer) totalMemory += p.cityLightsBuffer.width * p.cityLightsBuffer.height * 4;
+            }
+            results.memoryUsed = totalMemory;
+
+            benchmarkResults.push(results);
+            displayResults();
+            setStatus(`${testName} test complete!`, 'test-status');
+        }
+
+        async function runAllBenchmarks() {
+            benchmarkResults = [];
+            await runBenchmark('small', 50, 150, 10);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await runBenchmark('medium', 150, 400, 8);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await runBenchmark('large', 400, 800, 5);
+            setStatus('All tests complete!', 'test-status');
+        }
+
+        function clearTestCanvas() {
+            // Dispose all planet buffers to free memory
+            for (let p of testPlanets) {
+                if (p.disposeBuffers) {
+                    p.disposeBuffers();
+                }
+            }
+            testPlanets = [];
+            redraw();
+        }
+
+        function setStatus(message, className) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = className;
+        }
+
+        function displayResults() {
+            const metricsDiv = document.getElementById('metrics');
+            let html = '';
+
+            for (let r of benchmarkResults) {
+                html += `<div style="margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;">`;
+                html += `<h4 style="color: #88ccff; margin: 5px 0;">${r.testName.toUpperCase()} (${r.minSize}-${r.maxSize}px)</h4>`;
+                html += `<div class="metric"><span class="metric-label">Planet Count:</span><span class="metric-value">${r.planetCount}</span></div>`;
+                html += `<div class="metric"><span class="metric-label">Buffer Creation:</span><span class="metric-value">${r.createTime.toFixed(2)}ms</span></div>`;
+                html += `<div class="metric"><span class="metric-label">Render Time:</span><span class="metric-value">${r.renderTime.toFixed(2)}ms</span></div>`;
+                html += `<div class="metric"><span class="metric-label">Total Time:</span><span class="metric-value">${r.totalTime.toFixed(2)}ms</span></div>`;
+                html += `<div class="metric"><span class="metric-label">Avg Per Planet:</span><span class="metric-value">${r.avgTimePerPlanet.toFixed(2)}ms</span></div>`;
+                html += `<div class="metric"><span class="metric-label">Memory Used:</span><span class="metric-value">${(r.memoryUsed / 1024 / 1024).toFixed(2)}MB</span></div>`;
+                html += `</div>`;
+            }
+
+            metricsDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
