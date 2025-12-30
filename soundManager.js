@@ -1593,6 +1593,23 @@ class SoundManager {
      * @param {p5.Vector} listenerPos - The world position of the listener (player).
      */
     playWorldSound(name, sourceX, sourceY, listenerPos) {
+        // In surface mode, only allow player-originated sounds (weapons fired by player)
+        // Block space battle sounds from enemies/NPCs that are still updating in background
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+            // Allow surface weapon sounds - check if sound is near player position
+            if (listenerPos) {
+                const dx = sourceX - listenerPos.x;
+                const dy = sourceY - listenerPos.y;
+                const distSq = dx * dx + dy * dy;
+                // Only allow sounds within 200 units of player (their own weapons)
+                if (distSq > 200 * 200) {
+                    return; // Block distant space sounds
+                }
+            } else {
+                return; // No listener position, block sound
+            }
+        }
+
         const soundEntry = this.sounds[name];
         if (!soundEntry) {
             console.warn(`playWorldSound: Sound entry '${name}' not found (likely failed generation).`);

@@ -1657,8 +1657,16 @@ class GameStateManager {
      * @private
      */
     _drawGalaxyMapView(player, currentSystem) {
-        // Draw regular game view behind the map
-        if (currentSystem && player) {
+        // Draw background based on where player came from
+        if (this._previousState === "SURFACE_MODE" && typeof surfaceMode !== 'undefined' && surfaceMode) {
+            // Draw surface mode view as background when opened from surface
+            try {
+                surfaceMode.draw();
+            } catch (e) {
+                console.error("Error drawing surface mode behind galaxy map:", e);
+            }
+        } else if (currentSystem && player) {
+            // Draw regular space view behind the map
             try {
                 currentSystem.draw(player);
             } catch (e) {
@@ -1767,7 +1775,8 @@ class GameStateManager {
      * @private
      */
     _drawInventoryOverlay(player) {
-        if (this.currentState === "IN_FLIGHT" && this.showingInventory) {
+        const state = this.currentState;
+        if ((state === "IN_FLIGHT" || state === "SURFACE_MODE") && this.showingInventory) {
             inventoryScreen.draw(player);
         }
     }

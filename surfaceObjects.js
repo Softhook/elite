@@ -125,11 +125,15 @@ class Turret extends SurfaceObject {
         this.color = color(120, 120, 120);
         this.angle = 0;
         this.cooldown = 0;
-        this.range = 1000;
         this.id = Math.floor(Math.random() * 10000);
+        this.health = 100; // Explicitly set health
+        this.maxHealth = 100;
+        this.lastHitTime = 0; // For damage flash effect
     }
 
     update(dt, player, starSystem) {
+        // Stop all activity if destroyed
+        if (this.destroyed) return;
         if (!player) return;
         this.cooldown -= dt;
 
@@ -158,13 +162,6 @@ class Turret extends SurfaceObject {
                 this.fire(starSystem, player);
                 this.cooldown = 2.0;
             }
-
-            // [DEBUG] Log aiming info throttled to once per second
-            if (this._lastLogTime === undefined) this._lastLogTime = 0;
-            if (millis() - this._lastLogTime > 1000) {
-                console.log(`Turret [${this.id}] targeting player: targetAngle=${targetAngle.toFixed(2)}, currentAngle=${this.angle.toFixed(2)}, diff=${diff.toFixed(2)}`);
-                this._lastLogTime = millis();
-            }
         }
     }
 
@@ -172,8 +169,12 @@ class Turret extends SurfaceObject {
         if (typeof Projectile === 'undefined') return;
 
         // Muzzle position in world coords
-        const muzzleX = this.pos.x + 40 * Math.cos(this.angle);
-        const muzzleY = this.pos.y + 40 * Math.sin(this.angle);
+        // The turret is visually drawn at (pos.x, pos.y - yOffset).
+        // So muzzle position must also subtract yOffset to match the visual.
+        const baseY = this.pos.y - (this.yOffset || 0); // Visual Y position
+        const muzzleOffset = 40;
+        const muzzleX = this.pos.x + muzzleOffset * Math.cos(this.angle);
+        const muzzleY = baseY + muzzleOffset * Math.sin(this.angle);
 
         const proj = new Projectile(
             muzzleX,
@@ -193,8 +194,7 @@ class Turret extends SurfaceObject {
             // Use ownerType and isSurface to help filtering
             proj.ownerType = 'turret';
             proj.isSurface = true;
-            // CRITICAL: Set projectile altitude to muzzle height relative to planet
-            // This ensures it's visible in 3D and hits correct collision zones
+            // Projectile altitude for collision purposes
             proj.altitude = (this.yOffset || 0) + 20;
 
             if (typeof soundManager !== 'undefined') {
@@ -208,18 +208,41 @@ class Turret extends SurfaceObject {
     }
 
     onDestroy() {
-        // Create large surface explosion
+        // Create large surface explosion at visual position (pos.y - yOffset matches draw position)
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.starSystem) {
-            surfaceMode.starSystem.addExplosion(this.pos.x, this.pos.y, this.size * 2, [255, 100, 50], true);
+            const visualY = this.pos.y - (this.yOffset || 0);
+            surfaceMode.starSystem.addExplosion(this.pos.x, visualY, this.size * 2, [255, 100, 50], true);
+        }
+    }
+
+    takeDamage(amount) {
+        this.health -= amount;
+        this.lastHitTime = millis(); // Flash effect trigger
+        console.log(`Turret [${this.id}] took ${amount} damage, health now: ${this.health}/${this.maxHealth}`);
+        if (this.health <= 0) {
+            this.destroyed = true;
+            this.onDestroy();
         }
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
         const sz = this.size;
-        const extrusionAngle = 0.1;
+        // Use larger extrusion angle for more solid 3D appearance
+        const extrusionAngle = 0.5;
 
         const baseH = sz * 0.2;
         const headH = sz * 0.6;
+
+        // Damage flash effect - flash white when recently hit
+        let damageFlash = false;
+        if (this.lastHitTime && millis() - this.lastHitTime < 150) {
+            damageFlash = true;
+        }
+
+        // Health-based color tinting (damaged turrets look redder)
+        const healthRatio = this.health / this.maxHealth;
+        const damageColor = damageFlash ? color(255, 255, 255) :
+            lerpColor(color(255, 50, 50), color(60), healthRatio);
 
         // --- BASE ---
         // Calculate Base Roof Pos
@@ -228,7 +251,7 @@ class Turret extends SurfaceObject {
         const baseRx = x - baseDvX;
         const baseRy = y - baseDvY;
 
-        Draw3D.drawCylinder(baseRx, baseRy, sz / 2, baseH, 12, color(60), extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(baseRx, baseRy, sz / 2, baseH, 12, damageFlash ? color(255) : color(60), extrusionAngle, sunAngle);
 
         // --- HEAD ---
         // Head sits on Base Roof
@@ -269,7 +292,7 @@ class Turret extends SurfaceObject {
             corners.push({ x: rx, y: ry });
         }
 
-        Draw3D.drawExtrudedShape(corners, headH, this.color, extrusionAngle, sunAngle);
+        Draw3D.drawExtrudedShape(corners, headH, damageFlash ? color(255) : damageColor, extrusionAngle, sunAngle);
 
         // -- DUAL BARRELS --
         const barrelLen = sz * 0.8;

@@ -930,6 +930,34 @@ class WeaponSystem {
 
         // Find nearest enemy if player is firing
         if (owner instanceof Player) {
+            // In surface mode, target surface objects instead of space enemies
+            if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+                const surfaceObjects = surfaceMode.surfaceObjects;
+                if (!surfaceObjects || surfaceObjects.length === 0) return null;
+
+                let nearestTarget = null;
+                let closestDistSq = Infinity;
+                const ownerX = owner.pos.x;
+                const ownerY = owner.pos.y;
+
+                for (let i = 0, len = surfaceObjects.length; i < len; i++) {
+                    const obj = surfaceObjects[i];
+                    if (!obj?.pos || obj.destroyed) continue;
+
+                    const dx = obj.pos.x - ownerX;
+                    const dy = obj.pos.y - ownerY;
+                    const distSq = dx * dx + dy * dy;
+
+                    if (distSq < closestDistSq) {
+                        nearestTarget = obj;
+                        closestDistSq = distSq;
+                    }
+                }
+
+                return nearestTarget;
+            }
+
+            // Normal space mode: target enemies
             const enemies = system.enemies;
             if (!enemies || enemies.length === 0) return null;
 

@@ -503,7 +503,8 @@ function handleSpacebarFiring() {
  * @returns {boolean} True if handled
  */
 function handleWeaponSwitching() {
-    if (gameStateManager.currentState !== "IN_FLIGHT" || !player) return false;
+    const state = gameStateManager.currentState;
+    if ((state !== "IN_FLIGHT" && state !== "SURFACE_MODE") || !player) return false;
 
     const numKey = parseInt(key);
     if (isNaN(numKey) || numKey < 1 || numKey > 9) return false;
@@ -639,7 +640,8 @@ function handleDetailScreenNavigation() {
  * Toggle inventory screen
  */
 function handleInventoryToggle() {
-    if (gameStateManager.currentState === "IN_FLIGHT") {
+    const state = gameStateManager.currentState;
+    if (state === "IN_FLIGHT" || state === "SURFACE_MODE") {
         const opening = !gameStateManager.showingInventory;
         gameStateManager.showingInventory = opening;
         soundManager?.playSound(opening ? 'mapOpen' : 'mapClose');
@@ -652,10 +654,16 @@ function handleInventoryToggle() {
  * Toggle galaxy map
  */
 function handleMapToggle() {
-    if (gameStateManager.currentState === "IN_FLIGHT") {
+    const state = gameStateManager.currentState;
+    if (state === "IN_FLIGHT" || state === "SURFACE_MODE") {
+        // Store the previous state so we can return to it
+        gameStateManager._previousState = state;
         gameStateManager.setState("GALAXY_MAP");
-    } else if (gameStateManager.currentState === "GALAXY_MAP") {
-        gameStateManager.setState("IN_FLIGHT");
+    } else if (state === "GALAXY_MAP") {
+        // Return to the previous state (surface mode or in-flight)
+        const returnState = gameStateManager._previousState || "IN_FLIGHT";
+        gameStateManager.setState(returnState);
+        gameStateManager._previousState = null;
     }
     return true;
 }
@@ -803,7 +811,8 @@ function handleAutopilot(autopilotKey) {
  * Handle minimap zoom out (',' key)
  */
 function handleMinimapZoomOut() {
-    if (gameStateManager.currentState === "IN_FLIGHT" && uiManager) {
+    const state = gameStateManager.currentState;
+    if ((state === "IN_FLIGHT" || state === "SURFACE_MODE") && uiManager) {
         uiManager.cycleOutMinimapZoom();
         return true;
     }
@@ -814,7 +823,8 @@ function handleMinimapZoomOut() {
  * Handle minimap zoom in ('.' key)
  */
 function handleMinimapZoomIn() {
-    if (gameStateManager.currentState === "IN_FLIGHT" && uiManager) {
+    const state = gameStateManager.currentState;
+    if ((state === "IN_FLIGHT" || state === "SURFACE_MODE") && uiManager) {
         uiManager.cycleInMinimapZoom();
         return true;
     }
@@ -967,7 +977,8 @@ function handleMarketButtonPress() {
  * @returns {boolean} True if handled
  */
 function handleInventoryClick() {
-    if (!gameStateManager.showingInventory || gameStateManager.currentState !== "IN_FLIGHT") {
+    const state = gameStateManager.currentState;
+    if (!gameStateManager.showingInventory || (state !== "IN_FLIGHT" && state !== "SURFACE_MODE")) {
         return false;
     }
 
@@ -1006,7 +1017,8 @@ function handleGeneralUIClick() {
  * @returns {boolean} True if handled
  */
 function handleInFlightTargeting() {
-    if (gameStateManager.currentState === "IN_FLIGHT") {
+    const state = gameStateManager.currentState;
+    if (state === "IN_FLIGHT" || state === "SURFACE_MODE") {
         player?.handleMousePressedForTargeting();
         return true;
     }

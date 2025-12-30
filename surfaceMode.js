@@ -195,12 +195,10 @@ class SurfaceMode {
     _completeExit() {
         this.state = SURFACE_STATE.INACTIVE;
 
-        // Restore player position near planet
-        // Restore player position near planet if they moved far or if we want exact return
-        if (this.player && this.planet) {
-            // Keep surface position but apply to world coordinates relative to planet
-            // This allows persistent movement across the planet surface
-            this.player.angle = this.player.angle;
+        // Restore player position near planet where they entered
+        if (this.player && this.planet && this.savedPlayerPos) {
+            // Return player to their saved position near the planet
+            this.player.pos.set(this.savedPlayerPos.x, this.savedPlayerPos.y);
             this.player.altitude = 0;
 
             // Clear invulnerability - player is now back in space
@@ -216,6 +214,7 @@ class SurfaceMode {
         // Clear data
         this.terrainMesh = [];
         this.projectiles = [];
+        this.savedPlayerPos = null;
         this.planet = null;
 
         // Restore game state
@@ -366,41 +365,35 @@ class SurfaceMode {
 
     /**
      * Check collisions between projectiles and surface objects
+     * Uses simple 2D distance check since all objects are on the same plane visually
      */
     _checkSurfaceCollisions() {
         if (!this.starSystem || !this.starSystem.projectiles) return;
+        if (!this.surfaceObjects || this.surfaceObjects.length === 0) return;
 
         // Check each projectile in the world
         for (let proj of this.starSystem.projectiles) {
             if (proj.destroyed) continue;
+            if (!proj.isSurface) continue; // Only check surface projectiles
 
             const projPos = proj.pos;
 
-            // Only care about player's projectiles hitting surface objects
+            // Player's projectiles hitting surface objects
             if (proj.owner === this.player) {
                 for (let obj of this.surfaceObjects) {
                     if (obj.destroyed) continue;
 
-                    // Building collision check
+                    // Simple 2D distance collision check
                     const dx = projPos.x - obj.pos.x;
                     const dy = projPos.y - obj.pos.y;
-                    const dSq = dx * dx + dy * dy;
+                    const distSq = dx * dx + dy * dy;
 
-                    const rangeSq = obj.size * obj.size * 2; // Slightly more generous hitbox for buildings
-                    const pAlt = proj.altitude || 0;
-                    const verticalDiff = Math.abs(pAlt - obj.yOffset);
+                    // Collision radius based on object size (generous hitbox)
+                    const hitRadius = obj.size * 1.5;
+                    const hitRadiusSq = hitRadius * hitRadius;
 
-                    // [DEBUG] Log near-misses or hits
-                    if (dSq < rangeSq * 4 && verticalDiff < 200) {
-                        if (millis() - (this._lastCollLog || 0) > 500) {
-                            console.log(`Collision check [${obj.id}]: dist=${Math.sqrt(dSq).toFixed(1)}, vDiff=${verticalDiff.toFixed(1)}, pAlt=${pAlt.toFixed(1)}, objH=${obj.yOffset.toFixed(1)}`);
-                            this._lastCollLog = millis();
-                        }
-                    }
-
-                    // Turrets/buildings are usually 40-100 units high
-                    if (dSq < rangeSq && verticalDiff < 120) {
-                        console.log(`HIT REGISTERED on [${obj.id}]!`);
+                    if (distSq < hitRadiusSq) {
+                        console.log(`HIT on surface object [${obj.id || obj.type}]! Damage: ${proj.damage || 10}`);
                         obj.takeDamage(proj.damage || 10);
                         proj.destroyed = true;
 
@@ -408,11 +401,39 @@ class SurfaceMode {
                         if (this.starSystem.addExplosion) {
                             this.starSystem.addExplosion(projPos.x, projPos.y, 8, [255, 150, 50], true);
                         }
+
+                        // Play hit sound (within player distance so it won't be muted)
+                        if (typeof soundManager !== 'undefined' && this.player) {
+                            soundManager.playWorldSound('hit', projPos.x, projPos.y, this.player.pos);
+                        }
                         break;
                     }
                 }
             }
-            // Note: NPC projectiles hitting the player are now handled by starSystem._checkNPCProjectileCollisions()
+        }
+
+        // Also check turret projectiles hitting the player
+        for (let proj of this.starSystem.projectiles) {
+            if (proj.destroyed) continue;
+            if (!proj.isSurface) continue;
+            if (proj.owner === this.player) continue; // Skip player's own projectiles
+            if (!this.player || this.player.destroyed) continue;
+
+            // Check if turret projectile hits player
+            const dx = proj.pos.x - this.player.pos.x;
+            const dy = proj.pos.y - this.player.pos.y;
+            const distSq = dx * dx + dy * dy;
+            const hitRadiusSq = this.player.size * this.player.size;
+
+            if (distSq < hitRadiusSq) {
+                console.log(`Player hit by surface projectile! Damage: ${proj.damage || 5}`);
+                this.player.takeDamage(proj.damage || 5);
+                proj.destroyed = true;
+
+                if (this.starSystem.addExplosion) {
+                    this.starSystem.addExplosion(proj.pos.x, proj.pos.y, 5, [255, 100, 50], true);
+                }
+            }
         }
     }
 
@@ -436,6 +457,7 @@ class SurfaceMode {
 
         this.lastGridX = currentGridX;
         this.lastGridY = currentGridY;
+
 
         this.terrainMesh = [];
 
@@ -605,6 +627,19 @@ class SurfaceMode {
     }
 
     /**
+     * Get sun angle relative to planet surface
+     * Uses planet position relative to origin (where sun is) to calculate light direction
+     */
+    _getSunAngle() {
+        if (!this.planet || !this.planet.pos) {
+            return -Math.PI / 4; // Default fallback
+        }
+        // Sun is at origin (0,0), planet orbits around it
+        // Sun direction from planet surface = angle from planet to origin
+        return Math.atan2(-this.planet.pos.y, -this.planet.pos.x);
+    }
+
+    /**
      * Get terrain height at a specific world position
      * Uses same noise sampling as terrain generation
      */
@@ -744,18 +779,22 @@ class SurfaceMode {
     _drawSurfaceObjects() {
         if (!this.surfaceObjects) return;
 
+        // Use dynamic sun angle from planet position
+        const sunAngle = this._getSunAngle();
+
         for (let obj of this.surfaceObjects) {
             // Drawn directly at world position. Transformation is handled by the camera in draw()
             if (obj.draw) {
                 // Pass world coordinates. Turret.draw translates to these.
                 // Camera will subtract player.pos automatically.
-                obj.draw(obj.pos.x, obj.pos.y - (obj.yOffset || 0), SURFACE_CONFIG.SUN_ANGLE);
+                obj.draw(obj.pos.x, obj.pos.y - (obj.yOffset || 0), sunAngle);
             }
         }
     }
 
     /**
-     * Draw projectiles from starSystem with screen-space transformation
+     * Draw projectiles from starSystem - at world position, no altitude offset
+     * The camera transform already handles centering, so projectiles appear near ship
      */
     _drawProjectiles() {
         if (!this.starSystem || !this.starSystem.projectiles) return;
@@ -765,14 +804,9 @@ class SurfaceMode {
             if (proj && !proj.destroyed && proj.isSurface) {
                 const distSq = p5.Vector.sub(proj.pos, this.player.pos).magSq();
                 if (distSq < 3000 * 3000) {
-                    // Use the stored projectile altitude
-                    const vOffset = -(proj.altitude || 0);
-
-                    push();
-                    // Apply vertical offset in world space-screen-Y
-                    translate(0, vOffset);
+                    // Draw at world position - no altitude offset needed
+                    // The camera transform handles centering everything
                     proj.draw();
-                    pop();
                 }
             }
         }
@@ -788,20 +822,9 @@ class SurfaceMode {
         for (let i = 0; i < explosions.length; i++) {
             const exp = explosions[i];
             if (exp && !exp.destroyed && exp.isSurface) {
-                // Determine vertical offset based on source
-                let vOffset = 0;
-                if (this.player && this.player.destroyed && p5.Vector.dist(exp.pos, this.player.pos) < 50) {
-                    // Explosion at ship altitude
-                    vOffset = -(this.player.yOffset + this.altitude);
-                } else {
-                    // Ground explosion at terrain height
-                    vOffset = -(this._getTerrainHeightAt(exp.pos.x, exp.pos.y) + 20);
-                }
-
-                push();
-                translate(0, vOffset);
+                // Draw at world position - no altitude offset needed
+                // The camera transform handles centering everything
                 exp.draw();
-                pop();
             }
         }
     }
@@ -813,50 +836,80 @@ class SurfaceMode {
     _drawPlayerShip() {
         if (!this.player) return;
 
-        // 1. Draw shadow on terrain
-        const shadowDist = this.altitude * 0.4;
-        const shadowOffset = shadowDist * 0.707;
-        const shadowScale = (1.0 - (this.altitude / SURFACE_CONFIG.MAX_ALTITUDE) * 0.4) * 0.8;
+        // Calculate the inverse of perspective scale to keep ship at constant size
+        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
+        const counterScale = 1 / perspectiveScale;
 
-        // The ship is drawn relative to its world pos. 
-        // For the shadow, we want to stay flat on the terrain.
+        // Get sun direction from planet position (sun at origin)
+        const sunAngle = this._getSunAngle();
+
+        // 1. Draw shadow on terrain - offset based on sun direction and altitude
+        // Sun rays are nearly parallel at this distance, so offset is minimal and consistent
+        const baseOffset = 40; // Stronger fixed offset for visible displacement
+        const altitudeOffset = this.altitude * 0.08; // Moderate altitude influence
+        const totalOffset = baseOffset + altitudeOffset;
+
+        const shadowOffsetX = Math.cos(sunAngle + Math.PI) * totalOffset;
+        const shadowOffsetY = Math.sin(sunAngle + Math.PI) * totalOffset;
+
+        // Shadow shrinks slightly with altitude (further away = smaller shadow)
+        const shadowScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 0.9, 0.6);
+
         push();
-        translate(this.player.pos.x + shadowOffset, this.player.pos.y + shadowOffset);
+        // Position shadow relative to ship position, offset by sun direction
+        const shadowX = this.player.pos.x + shadowOffsetX;
+        const shadowY = this.player.pos.y + shadowOffsetY;
+        translate(shadowX, shadowY);
 
-        // Elevation shift for shadow: just the terrain height
-        const terrainH = this._getTerrainHeightAt(this.player.pos.x + shadowOffset, this.player.pos.y + shadowOffset);
+        // Apply terrain height at shadow position so it follows the ground
+        const terrainH = this._getTerrainHeightAt(shadowX, shadowY);
         translate(0, -terrainH);
 
         rotate(this.player.angle);
-        scale(shadowScale);
+        scale(shadowScale);  // DO NOT apply counterScale - shadow stays ground-sized
 
-        const shadowAlpha = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 80, 20);
+        // Lighter shadow - distant sun means softer shadows
+        const shadowAlpha = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 60, 20);
         fill(0, 0, 0, shadowAlpha);
         noStroke();
 
-        // Draw shadow (same as ship model hull)
+        // Draw shadow using first vertex layer of ship definition
+        // Try to get ship def from player's cache first, then fall back to SHIP_DEFINITIONS lookup
         const shipTypeName = this.player.shipTypeName || 'Sidewinder';
-        const shipDef = typeof SHIP_DEFINITIONS !== 'undefined' ? SHIP_DEFINITIONS[shipTypeName] : null;
+        let shipDef = this.player._cachedShipDef ||
+            (typeof SHIP_DEFINITIONS !== 'undefined' ? SHIP_DEFINITIONS[shipTypeName] : null);
         const shipScale = this.player.size / 25;
 
-        if (shipDef && shipDef.vertexLayers && shipDef.vertexLayers.length > 0) {
+        // Get vertex data - handle both new vertexLayers format and legacy vertexData format
+        let vertices = null;
+        if (shipDef) {
+            if (shipDef.vertexLayers && shipDef.vertexLayers.length > 0 && shipDef.vertexLayers[0].vertexData) {
+                // New format: vertexLayers[0].vertexData
+                vertices = shipDef.vertexLayers[0].vertexData;
+            } else if (shipDef.vertexData && shipDef.vertexData.length > 0) {
+                // Legacy format: direct vertexData array (e.g., Sidewinder)
+                vertices = shipDef.vertexData;
+            }
+        }
+
+        if (vertices && vertices.length > 0) {
             beginShape();
-            for (const v of shipDef.vertexLayers[0].vertexData) {
+            for (const v of vertices) {
                 vertex(v.x * shipScale * 25, v.y * shipScale * 25);
             }
             endShape(CLOSE);
         } else {
+            // Fallback to ellipse if no vertex data available
             ellipse(0, 0, this.player.size, this.player.size * 0.8);
         }
         pop();
 
-        // 2. Draw actual ship model
+        // 2. Draw actual ship model at its world position with counter-scale
+        // This keeps the ship at constant screen size regardless of altitude
         push();
-        // Shift up by (terrainHeight + altitude)
-        const verticalShift = -(this.player.yOffset + this.altitude);
-        translate(0, verticalShift);
-
-        // Player.draw() already handles translate(this.pos.x, this.pos.y)
+        translate(this.player.pos.x, this.player.pos.y);
+        scale(counterScale);
+        translate(-this.player.pos.x, -this.player.pos.y);
         this.player.draw();
         pop();
     }
@@ -910,13 +963,6 @@ class SurfaceMode {
         textAlign(CENTER, TOP);
         text('ALT', barX + barWidth / 2, barY - 18);
         text(Math.floor(this.altitude), barX + barWidth / 2, barY + barHeight + 5);
-
-        // Speed and heading
-        textAlign(LEFT, TOP);
-        fill(200);
-        text(`Speed: ${Math.floor(this.playerSpeed)}`, width - 120, 20);
-        let compassHeading = (degrees(this.playerAngle) + 90 + 360) % 360;
-        text(`Heading: ${Math.floor(compassHeading)}°`, width - 120, 35);
 
         // Exit hint
         textAlign(CENTER, TOP);
