@@ -1329,14 +1329,24 @@ class Planet {
     _renderCitySprawl(pg, r, bufferCenter, noiseScale, featureRand, primR, primG, primB) {
         const faintBandHeight = Math.max(2, Math.ceil(3 * random(10)));
         const faintDotSize = faintBandHeight * 0.5;
+        
+        // OPTIMIZATION: Pre-calculate inverse radius
+        const invR = 1.0 / r;
+        const rSq = r * r;
+        
         for (let y = -r; y < r; y += faintBandHeight) {
             const ySq = y * y;
-            const bandRSq = r * r - ySq;
+            const bandRSq = rSq - ySq;
             if (bandRSq <= 0) continue;
             const bandR = Math.sqrt(bandRSq);
+            
+            // Pre-calculate ny for this row
+            const ny = y * invR;
+            const nySq = ny * ny;
+            
             for (let x = -bandR; x < bandR; x += faintBandHeight) {
-                const nx = x / r, ny = y / r;
-                const inside = nx * nx + ny * ny;
+                const nx = x * invR;
+                const inside = nx * nx + nySq;
                 if (inside > 1) continue;
                 const nzUnit = Math.sqrt(Math.max(0, 1 - inside));
                 const sampleMultiplier = Math.max(0.0005, (r * noiseScale) * 0.8);
@@ -1378,14 +1388,23 @@ class Planet {
 
     _renderCityHubs(pg, r, bufferCenter, cityHubs, bandHeight, noiseScale, featureRand, primR, primG, primB, secR, secG, secB, accR, accG, accB, densityBase) {
         const rSq = r * r;
+        
+        // OPTIMIZATION: Pre-calculate inverse radius
+        const invR = 1.0 / r;
+        
         for (let y = -r; y < r; y += bandHeight) {
             const ySq = y * y;
             const bandRSq = rSq - ySq;
             if (bandRSq <= 0) continue;
             const bandR = Math.sqrt(bandRSq);
+            
+            // Pre-calculate ny for this row
+            const ny = y * invR;
+            const nySq = ny * ny;
+            
             for (let x = -bandR; x < bandR; x += bandHeight) {
-                const nx = x / r, ny = y / r;
-                const inside = nx * nx + ny * ny;
+                const nx = x * invR;
+                const inside = nx * nx + nySq;
                 if (inside > 1) continue;
                 const nzUnit = Math.sqrt(Math.max(0, 1 - inside));
                 const sampleMultiplier = Math.max(0.0005, (r * noiseScale) * 0.8);
