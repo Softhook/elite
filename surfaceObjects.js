@@ -139,17 +139,13 @@ class Turret extends SurfaceObject {
         if (!player) return;
         this.cooldown -= dt;
 
-        // Height-based detection: turret can only track player if player is ABOVE turret
-        // Turret ground height is yOffset, player flight height is altitude
+        // Height-based detection: turret can track player at any altitude
+        // The absolute altitude check is against the turret's base position on terrain
         const turretHeight = this.yOffset || 0;
         const playerHeight = player.altitude || 0;
-
-        // Player must be higher than turret to be detected
-        // (relax this slightly for gameplay - if they are close, they should see them)
-        if (playerHeight <= turretHeight - 50) { // Allow being slightly below
-            // Player is safely below detection
-            return;
-        }
+        
+        // Always detect player regardless of relative height - turrets have full range sensors
+        // The previous check prevented detection at low altitudes which was too restrictive
 
         // Calculate turret aiming based on visual positions
         // Surface mode uses an isometric projection with extrusion angle

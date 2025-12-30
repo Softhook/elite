@@ -17,7 +17,7 @@ const SURFACE_CONFIG = {
     CLIMB_SPEED: 150,
 
     // Terrain mesh
-    MESH_RESOLUTION: 80,       // Grid resolution
+    MESH_RESOLUTION: 160,      // Grid resolution (doubled for finer detail)
     MESH_SIZE: 4000,           // World units covered
 
     // Transition
@@ -380,7 +380,7 @@ class SurfaceMode {
 
     /**
      * Calculate visual bounds for collision and rendering
-     * Returns the visual base and tip segment for the extruded object
+     * Hit detection uses only the base plate on the ground surface
      * @private
      */
     _getVisualBounds(obj) {
@@ -388,18 +388,12 @@ class SurfaceMode {
         // Visual Base Position (accounting for terrain yOffset)
         const visualBaseY = obj.pos.y - (obj.yOffset || 0);
 
-        // Use approximate height from size if height property missing
-        const objH = (obj.height) ? obj.height : (obj.size * 2);
-
-        // Calculate tip position (extruded top)
-        const tipX = obj.pos.x - (objH * Math.sin(extrusionAngle));
-        const tipY = visualBaseY - (objH * Math.cos(extrusionAngle));
-
+        // For hit detection, we only care about the base plate on the ground
+        // Use the object's footprint size for collision radius
         return {
             base: { x: obj.pos.x, y: visualBaseY },
-            tip: { x: tipX, y: tipY },
-            height: objH,
-            radius: Math.max((obj.size || 40) / 2, 10) // Radius matches visual Cylinder (size/2)
+            // Hit detection radius should match the base footprint only
+            radius: Math.max((obj.size || 40) / 2, 10)
         };
     }
 
@@ -442,14 +436,14 @@ class SurfaceMode {
 
                     const bounds = this._getVisualBounds(obj);
 
-                    // Distance from Point (Projectile) to Line Segment (Base -> Tip)
-                    const distToAxis = this._distToSegment(projPos, bounds.base, bounds.tip);
+                    // Check distance from projectile to object's base position (ground footprint only)
+                    const dx = projPos.x - bounds.base.x;
+                    const dy = projPos.y - bounds.base.y;
+                    const distSq = dx * dx + dy * dy;
+                    const hitRadiusSq = bounds.radius * bounds.radius;
 
-                    // Generous radius for hitting the tower - allow striking the "width" of the object
-                    const hitRadius = bounds.radius;
-
-                    if (distToAxis < hitRadius) {
-                        // Projectile hit the object
+                    if (distSq < hitRadiusSq) {
+                        // Projectile hit the object's base
                         const objName = obj.type || obj.id || obj.constructor.name;
                         console.log(`Hit on surface object [${objName}]!`);
                         obj.takeDamage(proj.damage || 10);
@@ -758,7 +752,8 @@ class SurfaceMode {
     _getTerrainHeightAt(worldX, worldY) {
         if (!this.planet) return 0;
 
-        const featureRand = this.planet.nameHash || 12345;
+        // Use featureRand consistently with terrain generation
+        const featureRand = this.planet.featureRand || 0;
         const sampleMultiplier = 0.003;
 
         const nx = worldX * sampleMultiplier + featureRand * 0.001;
@@ -957,10 +952,10 @@ class SurfaceMode {
             if (this.debugMode) {
                 push();
                 const bounds = this._getVisualBounds(obj);
-                stroke(255, 0, 0, 80);
-                strokeWeight(bounds.radius * 2);
-                strokeCap(ROUND);
-                line(bounds.base.x, bounds.base.y, bounds.tip.x, bounds.tip.y);
+                stroke(255, 0, 0, 100);
+                strokeWeight(2);
+                noFill();
+                ellipse(bounds.base.x, bounds.base.y, bounds.radius * 2, bounds.radius * 2);
                 pop();
             }
         }
@@ -1058,32 +1053,36 @@ class SurfaceMode {
         const sunAngle = this._getSunAngle();
 
         // 1. Draw shadow on terrain - offset based on sun direction and altitude
-        // Sun rays are nearly parallel at this distance, so offset is minimal and consistent
-        const baseOffset = 40; // Stronger fixed offset for visible displacement
-        const altitudeOffset = this.altitude * 0.08; // Moderate altitude influence
-        const totalOffset = baseOffset + altitudeOffset;
-
-        const shadowOffsetX = Math.cos(sunAngle + Math.PI) * totalOffset;
-        const shadowOffsetY = Math.sin(sunAngle + Math.PI) * totalOffset;
-
-        // Shadow shrinks slightly with altitude (further away = smaller shadow)
-        const shadowScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 0.9, 0.6);
-
+        // Shadow should be smaller than ship and realistic to altitude
+        // At low altitude, shadow is close and similar size; at high altitude, shadow is far and much smaller
+        const altitudeRatio = (this.altitude - SURFACE_CONFIG.MIN_ALTITUDE) / 
+                             (SURFACE_CONFIG.MAX_ALTITUDE - SURFACE_CONFIG.MIN_ALTITUDE);
+        
+        // Shadow offset increases with altitude (higher = shadow further from ship position)
+        const shadowOffset = 20 + (this.altitude * 0.15); // More realistic scaling
+        const shadowOffsetX = Math.cos(sunAngle + Math.PI) * shadowOffset;
+        const shadowOffsetY = Math.sin(sunAngle + Math.PI) * shadowOffset;
+        
+        // Shadow size should be smaller than ship, and shrink more dramatically with altitude
+        // At minimum altitude: shadow is ~0.7x ship size
+        // At maximum altitude: shadow is ~0.3x ship size
+        const shadowScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 0.7, 0.3);
+        
         push();
         // Position shadow relative to ship position, offset by sun direction
         const shadowX = this.player.pos.x + shadowOffsetX;
         const shadowY = this.player.pos.y + shadowOffsetY;
         translate(shadowX, shadowY);
-
+        
         // Apply terrain height at shadow position so it follows the ground
         const terrainH = this._getTerrainHeightAt(shadowX, shadowY);
         translate(0, -terrainH);
-
+        
         rotate(this.player.angle);
-        scale(shadowScale);  // DO NOT apply counterScale - shadow stays ground-sized
-
-        // Lighter shadow - distant sun means softer shadows
-        const shadowAlpha = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 60, 20);
+        scale(shadowScale);  // Shadow is smaller than ship
+        
+        // Shadow alpha: softer at higher altitudes
+        const shadowAlpha = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 80, 15);
         fill(0, 0, 0, shadowAlpha);
         noStroke();
 
@@ -1318,19 +1317,6 @@ class SurfaceMode {
 
         // Let other keys pass through to normal game handling
         return false;
-    }
-
-    /**
-     * Helper: Distance from point P to line segment AB
-     */
-    _distToSegment(p, a, b) {
-        const l2 = (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y);
-        if (l2 === 0) return Math.sqrt((p.x - a.x) * (p.x - a.x) + (p.y - a.y) * (p.y - a.y));
-        let t = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l2;
-        t = Math.max(0, Math.min(1, t));
-        const px = a.x + t * (b.x - a.x);
-        const py = a.y + t * (b.y - a.y); // Projection point on segment
-        return Math.sqrt((p.x - px) * (p.x - px) + (p.y - py) * (p.y - py));
     }
 
     /**
