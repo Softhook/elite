@@ -586,7 +586,7 @@ class SurfaceMode {
     }
 
     /**
-     * Update terrain buffer
+     * Update terrain buffer with viewport culling optimization
      */
     _updateTerrainBuffer() {
         if (!this.terrainBuffer || this.terrainMesh.length === 0) return;
@@ -602,8 +602,18 @@ class SurfaceMode {
         const meshCenterWX = this.lastGridX * cellSize;
         const meshCenterWY = this.lastGridY * cellSize;
 
+        // Calculate viewport bounds in buffer space for culling
+        // Buffer is centered at (cx, cy) with the mesh center at world (meshCenterWX, meshCenterWY)
+        const bufferLeft = -cx;
+        const bufferRight = cx;
+        const bufferTop = -cy;
+        const bufferBottom = cy;
+
         this.terrainBuffer.stroke(0, 0, 0, 40);
         this.terrainBuffer.strokeWeight(0.5);
+
+        let cellsDrawn = 0;
+        let cellsCulled = 0;
 
         for (let gy = 0; gy < resMinus1; gy++) {
             const row0 = this.terrainMesh[gy];
@@ -617,6 +627,36 @@ class SurfaceMode {
                 const c11 = row1[gx + 1];
 
                 if (!c00 || !c10 || !c01 || !c11) continue;
+
+                // Projection to buffer coordinates (calculate once for culling)
+                // Projection to buffer coordinates (calculate once for culling)
+                const dx00 = c00.worldX - meshCenterWX;
+                const dy00 = c00.worldY - meshCenterWY;
+                const dx10 = c10.worldX - meshCenterWX;
+                const dy10 = c10.worldY - meshCenterWY;
+                const dx11 = c11.worldX - meshCenterWX;
+                const dy11 = c11.worldY - meshCenterWY;
+                const dx01 = c01.worldX - meshCenterWX;
+                const dy01 = c01.worldY - meshCenterWY;
+
+                // Viewport culling optimization: skip if quad is completely outside buffer bounds
+                // Calculate screen-space bounds of this quad (including height offset)
+                const minHeight = Math.min(c00.height, c10.height, c01.height, c11.height);
+                const maxHeight = Math.max(c00.height, c10.height, c01.height, c11.height);
+                
+                const quadLeft = Math.min(dx00, dx10, dx01, dx11);
+                const quadRight = Math.max(dx00, dx10, dx01, dx11);
+                const quadTop = Math.min(dy00, dy10, dy01, dy11) - maxHeight;
+                const quadBottom = Math.max(dy00, dy10, dy01, dy11) - minHeight;
+
+                // Early rejection for off-screen quads
+                if (quadRight < bufferLeft || quadLeft > bufferRight ||
+                    quadBottom < bufferTop || quadTop > bufferBottom) {
+                    cellsCulled++;
+                    continue;
+                }
+
+                cellsDrawn++;
 
                 // Lighting
                 const slopeX = ((c10.height - c00.height) + (c11.height - c01.height)) * 0.5;
@@ -636,16 +676,6 @@ class SurfaceMode {
                     baseCol.levels[2] * shade
                 );
 
-                // Projection to buffer coordinates
-                const dx00 = c00.worldX - meshCenterWX;
-                const dy00 = c00.worldY - meshCenterWY;
-                const dx10 = c10.worldX - meshCenterWX;
-                const dy10 = c10.worldY - meshCenterWY;
-                const dx11 = c11.worldX - meshCenterWX;
-                const dy11 = c11.worldY - meshCenterWY;
-                const dx01 = c01.worldX - meshCenterWX;
-                const dy01 = c01.worldY - meshCenterWY;
-
                 this.terrainBuffer.beginShape();
                 this.terrainBuffer.vertex(cx + dx00, cy + dy00 - c00.height);
                 this.terrainBuffer.vertex(cx + dx10, cy + dy10 - c10.height);
@@ -654,6 +684,9 @@ class SurfaceMode {
                 this.terrainBuffer.endShape(CLOSE);
             }
         }
+
+        // Store culling stats for debug overlay
+        this._lastCullStats = { drawn: cellsDrawn, culled: cellsCulled };
     }
 
     /**
@@ -873,7 +906,7 @@ class SurfaceMode {
     }
 
     /**
-     * Draw surface objects
+     * Draw surface objects with viewport culling
      */
     _drawSurfaceObjects() {
         if (!this.surfaceObjects) return;
@@ -881,8 +914,37 @@ class SurfaceMode {
         // Use dynamic sun angle from planet position
         const sunAngle = this._getSunAngle();
 
+        // Calculate viewport bounds in world space for culling
+        // Account for perspective scale and camera transform
+        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
+        const viewportPadding = 200; // Extra padding to avoid pop-in at edges
+        const viewportWidth = (width / perspectiveScale) + viewportPadding * 2;
+        const viewportHeight = (height / perspectiveScale) + viewportPadding * 2;
+
+        const viewLeft = this.player.pos.x - viewportWidth / 2;
+        const viewRight = this.player.pos.x + viewportWidth / 2;
+        const viewTop = this.player.pos.y - viewportHeight / 2;
+        const viewBottom = this.player.pos.y + viewportHeight / 2;
+
+        let objectsDrawn = 0;
+        let objectsCulled = 0;
+
         for (let obj of this.surfaceObjects) {
             if (obj.destroyed) continue;
+
+            // Viewport culling: check if object is within visible bounds
+            // Use object size to create a bounding box
+            const objSize = obj.size || 50;
+            const objHeight = obj.height || (objSize * 2);
+            
+            // Check horizontal and vertical bounds
+            if (obj.pos.x + objSize < viewLeft || obj.pos.x - objSize > viewRight ||
+                obj.pos.y + objSize < viewTop || obj.pos.y - objHeight > viewBottom) {
+                objectsCulled++;
+                continue;
+            }
+
+            objectsDrawn++;
 
             // Drawn directly at world position. Transformation is handled by the camera in draw()
             if (obj.draw) {
@@ -902,15 +964,29 @@ class SurfaceMode {
                 pop();
             }
         }
+
+        // Store culling stats for debug overlay
+        this._lastObjectCullStats = { drawn: objectsDrawn, culled: objectsCulled };
     }
 
     /**
-     * Draw projectiles from starSystem at their world positions
+     * Draw projectiles from starSystem at their world positions with viewport culling
      * Camera transform handles centering relative to player
      */
     _drawProjectiles() {
         if (!this.starSystem || !this.starSystem.projectiles) return;
         if (!this.player) return;
+
+        // Calculate viewport bounds for culling
+        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
+        const viewportPadding = 100;
+        const viewportWidth = (width / perspectiveScale) + viewportPadding * 2;
+        const viewportHeight = (height / perspectiveScale) + viewportPadding * 2;
+
+        const viewLeft = this.player.pos.x - viewportWidth / 2;
+        const viewRight = this.player.pos.x + viewportWidth / 2;
+        const viewTop = this.player.pos.y - viewportHeight / 2;
+        const viewBottom = this.player.pos.y + viewportHeight / 2;
 
         push();
         // Clear shadow settings to prevent visual artifacts
@@ -921,10 +997,13 @@ class SurfaceMode {
 
         for (const proj of this.starSystem.projectiles) {
             if (proj && !proj.destroyed && proj.isSurface) {
-                const distSq = p5.Vector.sub(proj.pos, this.player.pos).magSq();
-                if (distSq < 3000 * 3000) {
-                    proj.draw();
+                // Viewport culling for projectiles
+                if (proj.pos.x < viewLeft || proj.pos.x > viewRight ||
+                    proj.pos.y < viewTop || proj.pos.y > viewBottom) {
+                    continue;
                 }
+
+                proj.draw();
             }
         }
         pop();
@@ -937,9 +1016,26 @@ class SurfaceMode {
         const explosions = this.starSystem.explosions;
         if (!explosions) return;
 
+        // Calculate viewport bounds for culling
+        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
+        const viewportPadding = 100;
+        const viewportWidth = (width / perspectiveScale) + viewportPadding * 2;
+        const viewportHeight = (height / perspectiveScale) + viewportPadding * 2;
+
+        const viewLeft = this.player.pos.x - viewportWidth / 2;
+        const viewRight = this.player.pos.x + viewportWidth / 2;
+        const viewTop = this.player.pos.y - viewportHeight / 2;
+        const viewBottom = this.player.pos.y + viewportHeight / 2;
+
         for (let i = 0; i < explosions.length; i++) {
             const exp = explosions[i];
             if (exp && !exp.destroyed && exp.isSurface) {
+                // Viewport culling for explosions
+                if (exp.pos.x < viewLeft || exp.pos.x > viewRight ||
+                    exp.pos.y < viewTop || exp.pos.y > viewBottom) {
+                    continue;
+                }
+
                 // Draw at world position - no altitude offset needed
                 // The camera transform handles centering everything
                 exp.draw();
@@ -1047,6 +1143,37 @@ class SurfaceMode {
      */
     _drawHUD() {
         push();
+
+        // Performance stats (top left, only if debugMode is active or stats are available)
+        if (this.debugMode || this._lastCullStats || this._lastObjectCullStats) {
+            push();
+            fill(0, 0, 0, 180);
+            stroke(80, 80, 80);
+            strokeWeight(1);
+            rect(10, 10, 200, 80, 3);
+
+            fill(100, 255, 100);
+            noStroke();
+            textSize(10);
+            textAlign(LEFT, TOP);
+            text('Surface Render Stats:', 15, 15);
+
+            fill(200);
+            if (this._lastCullStats) {
+                const total = this._lastCullStats.drawn + this._lastCullStats.culled;
+                const cullPercent = total > 0 ? ((this._lastCullStats.culled / total) * 100).toFixed(1) : 0;
+                text(`Terrain: ${this._lastCullStats.drawn}/${total} (${cullPercent}% culled)`, 15, 30);
+            }
+            if (this._lastObjectCullStats) {
+                const total = this._lastObjectCullStats.drawn + this._lastObjectCullStats.culled;
+                const cullPercent = total > 0 ? ((this._lastObjectCullStats.culled / total) * 100).toFixed(1) : 0;
+                text(`Objects: ${this._lastObjectCullStats.drawn}/${total} (${cullPercent}% culled)`, 15, 45);
+            }
+
+            text(`FPS: ${Math.round(frameRate())}`, 15, 60);
+            text(`Altitude: ${Math.round(this.altitude)}`, 15, 75);
+            pop();
+        }
 
         // Altitude bar
         const barX = width - 50;
@@ -1181,6 +1308,13 @@ class SurfaceMode {
         // Altitude controls (T/G)
         if (key === 't' || key === 'T') { this.altitudeInput = 1; return true; }
         if (key === 'g' || key === 'G') { this.altitudeInput = -1; return true; }
+
+        // Toggle debug mode (shows culling stats) - 'P' for performance
+        if (key === 'p' || key === 'P') {
+            this.debugMode = !this.debugMode;
+            console.log(`Surface mode debug: ${this.debugMode ? 'ON' : 'OFF'}`);
+            return true;
+        }
 
         // Let other keys pass through to normal game handling
         return false;

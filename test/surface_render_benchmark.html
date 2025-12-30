@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surface Rendering Benchmark</title>
+    <script src="../libraries/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            background: #0a0f28;
+            color: #0f0;
+        }
+
+        #controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 1px solid #0f0;
+            border-radius: 5px;
+            max-width: 300px;
+        }
+
+        button {
+            background: #000;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 8px 15px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+
+        button:hover {
+            background: #0f0;
+            color: #000;
+        }
+
+        button.active {
+            background: #0f0;
+            color: #000;
+        }
+
+        #results {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 1px solid #0f0;
+            border-radius: 5px;
+            min-width: 300px;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+
+        .good {
+            color: #0f0;
+        }
+
+        .ok {
+            color: #ff0;
+        }
+
+        .bad {
+            color: #f00;
+        }
+
+        .section-label {
+            font-size: 12px;
+            color: #888;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="controls">
+        <h3>Surface Render Benchmark</h3>
+        <div class="section-label">Culling Mode:</div>
+        <div>
+            <button id="btn-optimized" class="active" onclick="setCullingMode(true)">Optimized (Culling ON)</button>
+            <button id="btn-baseline" onclick="setCullingMode(false)">Baseline (Culling OFF)</button>
+        </div>
+        <div style="margin-top: 10px;">
+            <button onclick="runBenchmark()">Run Benchmark</button>
+            <button onclick="resetBenchmark()">Reset</button>
+        </div>
+        <div id="cull-status" style="margin-top: 10px; font-size: 12px;">
+            Status: <span id="status-indicator">Ready</span>
+        </div>
+    </div>
+
+    <div id="results">
+        <h3>Performance Metrics</h3>
+        <div class="result-row">
+            <span>Mode:</span>
+            <span id="current-mode">optimized</span>
+        </div>
+        <div class="result-row">
+            <span>FPS:</span>
+            <span id="fps">-</span>
+        </div>
+        <div class="result-row">
+            <span>Avg Frame Time:</span>
+            <span id="frame-time">-</span>
+        </div>
+        <div class="result-row">
+            <span>Min FPS:</span>
+            <span id="min-fps">-</span>
+        </div>
+        <div class="result-row">
+            <span>Terrain Culled:</span>
+            <span id="terrain-culled">-</span>
+        </div>
+        <div class="result-row">
+            <span>Objects Culled:</span>
+            <span id="objects-culled">-</span>
+        </div>
+        <hr style="border-color: #0f0;">
+        <div id="benchmark-results"></div>
+    </div>
+
+    <!-- Dependencies -->
+    <script src="../draw3d.js"></script>
+    <script src="../planet.js"></script>
+    <script src="../ships.js"></script>
+    <script src="../weapons.js"></script>
+    <script src="../enemyConstants.js"></script>
+    <script src="../projectile.js"></script>
+    <script src="../surfaceObjects.js"></script>
+
+    <script>
+        // Benchmark Configuration
+        const BENCHMARK_CONFIG = {
+            OBJECT_COUNT: 50,           // Number of surface objects to spawn for testing
+            MESH_RESOLUTION: 80,        // Terrain grid resolution
+            MESH_SIZE: 4000,           // World units covered by mesh
+            TEST_DURATION_MS: 5000,    // Duration of each benchmark test
+            AUTO_DRIVE_SPEED: 25       // Speed during automated testing
+        };
+
+        let cullingEnabled = true;
+        let terrainMesh = [];
+        let surfaceObjects = [];
+        let meshResolution = BENCHMARK_CONFIG.MESH_RESOLUTION;
+        let meshSize = BENCHMARK_CONFIG.MESH_SIZE;
+        let terrainBuffer = null;
+        let lastGridX = 0;
+        let lastGridY = 0;
+
+        // Player state
+        let playerX = 0;
+        let playerY = 0;
+        let altitude = 100;
+        let testPlanet = null;
+
+        // Performance tracking
+        let frameTimes = [];
+        let maxFrameTimes = 120;
+        let cullStats = { terrain: { drawn: 0, culled: 0 }, objects: { drawn: 0, culled: 0 } };
+
+        // Auto-drive for benchmark
+        let isAutoDriving = false;
+        let autoDriveStartTime = 0;
+        let autoDriveDuration = 0;
+        let onAutoDriveComplete = null;
+
+        function setup() {
+            createCanvas(windowWidth - 40, windowHeight - 40);
+            angleMode(RADIANS);
+
+            // Create terrain buffer
+            const bufSize = Math.max(width, height) * 2.5;
+            terrainBuffer = createGraphics(bufSize, bufSize);
+            terrainBuffer.noStroke();
+
+            // Generate test planet
+            generateTestPlanet();
+            generateTerrainMesh(true);
+            spawnTestObjects();
+        }
+
+        function generateTestPlanet() {
+            const seed = 12345; // Fixed seed for consistency
+            randomSeed(seed);
+            noiseSeed(seed);
+
+            const color1 = color(120, 140, 100);
+            const color2 = color(80, 100, 70);
+            testPlanet = new Planet(0, 0, 300, color1, color2, "Benchmark Planet", 1);
+        }
+
+        function generateTerrainMesh(forceRegenerate = false) {
+            if (!testPlanet) return;
+
+            const cellSize = meshSize / meshResolution;
+            const currentGridX = Math.floor(playerX / cellSize);
+            const currentGridY = Math.floor(playerY / cellSize);
+
+            if (!forceRegenerate && lastGridX === currentGridX && lastGridY === currentGridY && terrainMesh.length > 0) {
+                return;
+            }
+
+            lastGridX = currentGridX;
+            lastGridY = currentGridY;
+            terrainMesh = [];
+
+            const featureRand = testPlanet.featureRand || 0;
+            const palette = testPlanet.palette || [color(128, 128, 128)];
+
+            for (let gy = 0; gy < meshResolution; gy++) {
+                terrainMesh[gy] = [];
+                for (let gx = 0; gx < meshResolution; gx++) {
+                    const gridX = currentGridX + (gx - Math.floor(meshResolution / 2));
+                    const gridY = currentGridY + (gy - Math.floor(meshResolution / 2));
+                    const worldX = gridX * cellSize;
+                    const worldY = gridY * cellSize;
+
+                    const sampleMultiplier = 0.003;
+                    const nx = worldX * sampleMultiplier + featureRand * 0.001;
+                    const ny = worldY * sampleMultiplier + featureRand * 0.002;
+                    const nz = featureRand * 0.6;
+                    const noiseVal = noise(nx, ny, nz);
+                    const height = (noiseVal - 0.5) * 500;
+
+                    const paletteIdx = Math.floor(noiseVal * (palette.length - 1));
+                    const paletteT = (noiseVal * (palette.length - 1)) - paletteIdx;
+                    const col1 = palette[paletteIdx];
+                    const col2 = palette[Math.min(paletteIdx + 1, palette.length - 1)];
+                    const cellColor = lerpColor(col1, col2, paletteT);
+
+                    terrainMesh[gy][gx] = {
+                        worldX: worldX,
+                        worldY: worldY,
+                        height: height,
+                        color: cellColor
+                    };
+                }
+            }
+
+            updateTerrainBuffer();
+        }
+
+        function updateTerrainBuffer() {
+            if (!terrainBuffer || terrainMesh.length === 0) return;
+
+            terrainBuffer.background(10, 15, 25);
+            terrainBuffer.clear();
+
+            const cx = terrainBuffer.width / 2;
+            const cy = terrainBuffer.height / 2;
+            const resMinus1 = meshResolution - 1;
+            const cellSize = meshSize / meshResolution;
+            const meshCenterWX = lastGridX * cellSize;
+            const meshCenterWY = lastGridY * cellSize;
+
+            // Culling bounds (only if culling enabled)
+            const bufferLeft = cullingEnabled ? -cx : -Infinity;
+            const bufferRight = cullingEnabled ? cx : Infinity;
+            const bufferTop = cullingEnabled ? -cy : Infinity;
+            const bufferBottom = cullingEnabled ? cy : Infinity;
+
+            terrainBuffer.stroke(0, 0, 0, 40);
+            terrainBuffer.strokeWeight(0.5);
+
+            let cellsDrawn = 0;
+            let cellsCulled = 0;
+
+            for (let gy = 0; gy < resMinus1; gy++) {
+                const row0 = terrainMesh[gy];
+                const row1 = terrainMesh[gy + 1];
+                if (!row0 || !row1) continue;
+
+                for (let gx = 0; gx < resMinus1; gx++) {
+                    const c00 = row0[gx];
+                    const c10 = row0[gx + 1];
+                    const c01 = row1[gx];
+                    const c11 = row1[gx + 1];
+
+                    if (!c00 || !c10 || !c01 || !c11) continue;
+
+                    const dx00 = c00.worldX - meshCenterWX;
+                    const dy00 = c00.worldY - meshCenterWY;
+                    const dx10 = c10.worldX - meshCenterWX;
+                    const dy10 = c10.worldY - meshCenterWY;
+                    const dx11 = c11.worldX - meshCenterWX;
+                    const dy11 = c11.worldY - meshCenterWY;
+                    const dx01 = c01.worldX - meshCenterWX;
+                    const dy01 = c01.worldY - meshCenterWY;
+
+                    if (cullingEnabled) {
+                        // Culling check
+                        const minHeight = Math.min(c00.height, c10.height, c01.height, c11.height);
+                        const maxHeight = Math.max(c00.height, c10.height, c01.height, c11.height);
+                        const quadLeft = Math.min(dx00, dx10, dx01, dx11);
+                        const quadRight = Math.max(dx00, dx10, dx01, dx11);
+                        const quadTop = Math.min(dy00, dy10, dy01, dy11) - maxHeight;
+                        const quadBottom = Math.max(dy00, dy10, dy01, dy11) - minHeight;
+
+                        if (quadRight < bufferLeft || quadLeft > bufferRight ||
+                            quadBottom < bufferTop || quadTop > bufferBottom) {
+                            cellsCulled++;
+                            continue;
+                        }
+                    }
+
+                    cellsDrawn++;
+
+                    // Lighting
+                    const slopeX = ((c10.height - c00.height) + (c11.height - c01.height)) * 0.5;
+                    const slopeY = ((c01.height - c00.height) + (c11.height - c10.height)) * 0.5;
+                    const sunIntensity = slopeX * 0.004 + slopeY * 0.005;
+                    const avgHeight = (c00.height + c10.height + c01.height + c11.height) * 0.25;
+                    const heightLight = avgHeight * 0.0005;
+                    let shade = 0.65 + sunIntensity + heightLight;
+                    shade = constrain(shade, 0.25, 1.4);
+
+                    const baseCol = c00.color;
+                    terrainBuffer.fill(
+                        baseCol.levels[0] * shade,
+                        baseCol.levels[1] * shade,
+                        baseCol.levels[2] * shade
+                    );
+
+                    terrainBuffer.beginShape();
+                    terrainBuffer.vertex(cx + dx00, cy + dy00 - c00.height);
+                    terrainBuffer.vertex(cx + dx10, cy + dy10 - c10.height);
+                    terrainBuffer.vertex(cx + dx11, cy + dy11 - c11.height);
+                    terrainBuffer.vertex(cx + dx01, cy + dy01 - c01.height);
+                    terrainBuffer.endShape(CLOSE);
+                }
+            }
+
+            cullStats.terrain = { drawn: cellsDrawn, culled: cellsCulled };
+        }
+
+        function spawnTestObjects() {
+            surfaceObjects = [];
+            const objectCount = BENCHMARK_CONFIG.OBJECT_COUNT;
+
+            for (let i = 0; i < objectCount; i++) {
+                const angle = (i / objectCount) * Math.PI * 2;
+                const dist = 500 + Math.random() * 1500;
+                const x = Math.cos(angle) * dist;
+                const y = Math.sin(angle) * dist;
+
+                if (typeof Building !== 'undefined') {
+                    const size = 30 + Math.random() * 40;
+                    const types = ['skyscraper', 'factory', 'silo'];
+                    const type = types[Math.floor(Math.random() * types.length)];
+                    const obj = new Building(x, y, size, type, Math.random() * 10000);
+                    obj.yOffset = 0;
+                    surfaceObjects.push(obj);
+                }
+            }
+        }
+
+        function drawSurfaceObjects() {
+            if (!surfaceObjects) return;
+
+            const sunAngle = -Math.PI / 4;
+            const perspectiveScale = map(altitude, 10, 500, 1.2, 0.6);
+            const viewportPadding = 200;
+            const viewportWidth = cullingEnabled ? (width / perspectiveScale) + viewportPadding * 2 : Infinity;
+            const viewportHeight = cullingEnabled ? (height / perspectiveScale) + viewportPadding * 2 : Infinity;
+
+            const viewLeft = cullingEnabled ? playerX - viewportWidth / 2 : -Infinity;
+            const viewRight = cullingEnabled ? playerX + viewportWidth / 2 : Infinity;
+            const viewTop = cullingEnabled ? playerY - viewportHeight / 2 : -Infinity;
+            const viewBottom = cullingEnabled ? playerY + viewportHeight / 2 : Infinity;
+
+            let objectsDrawn = 0;
+            let objectsCulled = 0;
+
+            for (let obj of surfaceObjects) {
+                if (obj.destroyed) continue;
+
+                if (cullingEnabled) {
+                    const objSize = obj.size || 50;
+                    const objHeight = obj.height || (objSize * 2);
+
+                    if (obj.pos.x + objSize < viewLeft || obj.pos.x - objSize > viewRight ||
+                        obj.pos.y + objSize < viewTop || obj.pos.y - objHeight > viewBottom) {
+                        objectsCulled++;
+                        continue;
+                    }
+                }
+
+                objectsDrawn++;
+
+                if (obj.draw) {
+                    obj.draw(obj.pos.x, obj.pos.y - (obj.yOffset || 0), sunAngle);
+                }
+            }
+
+            cullStats.objects = { drawn: objectsDrawn, culled: objectsCulled };
+        }
+
+        function draw() {
+            // Update player movement
+            updatePlayer();
+
+            const frameStart = performance.now();
+
+            background(10, 15, 25);
+
+            push();
+            translate(width / 2, height / 2);
+
+            const perspectiveScale = map(altitude, 10, 500, 1.2, 0.6);
+            scale(perspectiveScale);
+            translate(-playerX, -playerY);
+
+            // Draw terrain
+            drawTerrain();
+
+            // Draw surface objects
+            drawSurfaceObjects();
+
+            // Draw player indicator
+            fill(0, 255, 0);
+            ellipse(playerX, playerY, 10, 10);
+
+            pop();
+
+            // Track frame time
+            const frameEnd = performance.now();
+            const frameTime = frameEnd - frameStart;
+            frameTimes.push(frameTime);
+            if (frameTimes.length > maxFrameTimes) {
+                frameTimes.shift();
+            }
+
+            // Update UI
+            updateUI();
+        }
+
+        function drawTerrain() {
+            if (!terrainBuffer) return;
+
+            const cellSize = meshSize / meshResolution;
+            const meshCenterWX = lastGridX * cellSize;
+            const meshCenterWY = lastGridY * cellSize;
+
+            const bx = meshCenterWX - terrainBuffer.width / 2;
+            const by = meshCenterWY - terrainBuffer.height / 2;
+
+            image(terrainBuffer, bx, by);
+        }
+
+        function updatePlayer() {
+            if (isAutoDriving) {
+                const elapsed = millis() - autoDriveStartTime;
+                const progress = elapsed / 2000;
+                const speed = 25;
+                playerX += Math.cos(progress) * speed;
+                playerY += Math.sin(progress) * speed;
+
+                if (elapsed >= autoDriveDuration) {
+                    isAutoDriving = false;
+                    if (onAutoDriveComplete) onAutoDriveComplete();
+                }
+                return;
+            }
+
+            const speed = keyIsDown(SHIFT) ? 25 : 8;
+            if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) playerX -= speed;
+            if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) playerX += speed;
+            if (keyIsDown(UP_ARROW) || keyIsDown(87)) playerY -= speed;
+            if (keyIsDown(DOWN_ARROW) || keyIsDown(83)) playerY += speed;
+        }
+
+        function updateUI() {
+            document.getElementById('current-mode').textContent = cullingEnabled ? 'optimized' : 'baseline';
+
+            if (frameTimes.length > 0) {
+                const avgFrameTime = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+                const maxFrameTime = Math.max(...frameTimes);
+                const fps = 1000 / avgFrameTime;
+                const minFps = 1000 / maxFrameTime;
+
+                document.getElementById('fps').textContent = fps.toFixed(1);
+                document.getElementById('fps').className = fps >= 55 ? 'good' : (fps >= 30 ? 'ok' : 'bad');
+
+                document.getElementById('frame-time').textContent = avgFrameTime.toFixed(2) + ' ms';
+                document.getElementById('frame-time').className = avgFrameTime <= 16 ? 'good' : (avgFrameTime <= 33 ? 'ok' : 'bad');
+
+                document.getElementById('min-fps').textContent = minFps.toFixed(1);
+                document.getElementById('min-fps').className = minFps >= 30 ? 'good' : (minFps >= 15 ? 'ok' : 'bad');
+            }
+
+            if (cullStats.terrain) {
+                const total = cullStats.terrain.drawn + cullStats.terrain.culled;
+                const percent = total > 0 ? ((cullStats.terrain.culled / total) * 100).toFixed(1) : 0;
+                document.getElementById('terrain-culled').textContent = `${cullStats.terrain.culled}/${total} (${percent}%)`;
+            }
+
+            if (cullStats.objects) {
+                const total = cullStats.objects.drawn + cullStats.objects.culled;
+                const percent = total > 0 ? ((cullStats.objects.culled / total) * 100).toFixed(1) : 0;
+                document.getElementById('objects-culled').textContent = `${cullStats.objects.drawn}/${total} (${percent}% culled)`;
+            }
+        }
+
+        function setCullingMode(enabled) {
+            cullingEnabled = enabled;
+            frameTimes = [];
+
+            document.querySelectorAll('#controls button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(enabled ? 'btn-optimized' : 'btn-baseline').classList.add('active');
+
+            // Regenerate terrain buffer
+            updateTerrainBuffer();
+
+            document.getElementById('status-indicator').textContent = enabled ? 'Culling Enabled' : 'Culling Disabled';
+        }
+
+        function resetBenchmark() {
+            document.getElementById('benchmark-results').innerHTML = '';
+            playerX = 0;
+            playerY = 0;
+            frameTimes = [];
+        }
+
+        async function runBenchmark() {
+            const resultsDiv = document.getElementById('benchmark-results');
+            resultsDiv.innerHTML = '<div style="color:#fc0">Running benchmark... Do not touch controls.</div>';
+
+            const modes = [
+                { name: "Baseline (No Culling)", enabled: false },
+                { name: "Optimized (With Culling)", enabled: true }
+            ];
+
+            const results = [];
+
+            for (const mode of modes) {
+                setCullingMode(mode.enabled);
+                resultsDiv.innerHTML += `<div>Testing: ${mode.name}...</div>`;
+
+                // Reset position
+                playerX = 0;
+                playerY = 0;
+                frameTimes = [];
+
+                // Run test
+                await new Promise(resolve => {
+                    isAutoDriving = true;
+                    autoDriveStartTime = millis();
+                    autoDriveDuration = 5000; // 5 seconds
+                    onAutoDriveComplete = resolve;
+                });
+
+                // Collect metrics
+                const avgFrameTime = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+                const fps = 1000 / avgFrameTime;
+                const minFps = 1000 / Math.max(...frameTimes);
+                const terrainCullPercent = cullStats.terrain.culled / (cullStats.terrain.drawn + cullStats.terrain.culled) * 100;
+                const objectCullPercent = cullStats.objects.culled / (cullStats.objects.drawn + cullStats.objects.culled) * 100;
+
+                results.push({
+                    name: mode.name,
+                    fps: fps.toFixed(1),
+                    minFps: minFps.toFixed(1),
+                    terrainCulled: terrainCullPercent.toFixed(1),
+                    objectCulled: objectCullPercent.toFixed(1)
+                });
+            }
+
+            // Display results
+            let html = '<h4>Benchmark Results</h4>';
+            html += '<table style="width:100%; border-collapse:collapse;">';
+            html += '<tr style="border-bottom:1px solid #0f0"><th style="text-align:left;padding:5px">Mode</th><th>FPS</th><th>Min FPS</th><th>Terrain Culled</th><th>Objects Culled</th></tr>';
+
+            for (const r of results) {
+                const fpsClass = parseFloat(r.fps) >= 55 ? 'good' : (parseFloat(r.fps) >= 30 ? 'ok' : 'bad');
+                html += `<tr style="border-bottom:1px solid #333">
+                    <td style="padding:5px">${r.name}</td>
+                    <td class="${fpsClass}">${r.fps}</td>
+                    <td>${r.minFps}</td>
+                    <td>${r.terrainCulled}%</td>
+                    <td>${r.objectCulled}%</td>
+                </tr>`;
+            }
+            html += '</table>';
+
+            // Calculate improvement
+            if (results.length === 2) {
+                const baselineFps = parseFloat(results[0].fps);
+                const optimizedFps = parseFloat(results[1].fps);
+                const improvement = ((optimizedFps - baselineFps) / baselineFps * 100).toFixed(1);
+                html += `<p style="margin-top:10px;color:#fc0;">Performance Improvement: <span class="good">${improvement}%</span></p>`;
+            }
+
+            resultsDiv.innerHTML = html;
+
+            // Return to optimized mode
+            setCullingMode(true);
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth - 40, windowHeight - 40);
+
+            const bufSize = Math.max(width, height) * 2.5;
+            terrainBuffer = createGraphics(bufSize, bufSize);
+            terrainBuffer.noStroke();
+
+            generateTerrainMesh(true);
+        }
+    </script>
+</body>
+
+</html>
