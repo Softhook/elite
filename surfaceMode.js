@@ -327,14 +327,8 @@ class SurfaceMode {
             this.altitude += this.altitudeInput * SURFACE_CONFIG.CLIMB_SPEED * dt;
             this.altitude = constrain(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE);
 
-            if (this.player) {
-                const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
-                // Radar Altimeter Logic: User controls height ABOVE ground
-                // Absolute Altitude = User Height + Terrain Height
-                this.player.altitude = this.altitude + groundH;
-                this.player.yOffset = groundH; // Persist ground height for weapon firing
-            }
-
+            // Note: player.altitude is now set in _updatePhysics() before surface objects update
+            // This ensures consistent altitude for turret detection
 
             // Check exit condition
             if (this.altitude >= SURFACE_CONFIG.MAX_ALTITUDE) {
@@ -379,8 +373,11 @@ class SurfaceMode {
         this.playerAngle = this.player.angle;
         this.playerSpeed = this.player.vel.mag();
 
-        // Ensure player.altitude is set for collision checks in starSystem
-        this.player.altitude = this.altitude;
+        // Calculate and set player's absolute altitude BEFORE surface objects update
+        // This ensures turrets can properly detect the player based on their altitude
+        const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
+        this.player.altitude = this.altitude + groundH;
+        this.player.yOffset = groundH; // Persist ground height for weapon firing
     }
 
     /**
@@ -1157,10 +1154,11 @@ class SurfaceMode {
         // Performance stats (top left, only if debugMode is active or stats are available)
         if (this.debugMode || this._lastCullStats || this._lastObjectCullStats) {
             push();
+            const panelHeight = this.debugMode && this.player ? 110 : 95;
             fill(0, 0, 0, 180);
             stroke(80, 80, 80);
             strokeWeight(1);
-            rect(10, 10, 200, 80, 3);
+            rect(10, 10, 200, panelHeight, 3);
 
             fill(100, 255, 100);
             noStroke();
@@ -1181,7 +1179,14 @@ class SurfaceMode {
             }
 
             text(`FPS: ${Math.round(frameRate())}`, 15, 60);
-            text(`Altitude: ${Math.round(this.altitude)}`, 15, 75);
+            text(`R-ALT: ${Math.round(this.altitude)}`, 15, 75);
+            
+            // Show terrain height and absolute altitude for debugging (only in debug mode)
+            if (this.debugMode && this.player) {
+                const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
+                text(`Ground: ${Math.round(groundH)}`, 15, 90);
+                text(`Abs-ALT: ${Math.round(this.player.altitude)}`, 15, 105);
+            }
             pop();
         }
 
@@ -1197,8 +1202,9 @@ class SurfaceMode {
         rect(barX, barY, barWidth, barHeight, 3);
 
         // Relative Altitude (Radar Altitude)
-        const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
-        const radarAlt = Math.max(0, this.altitude - groundH);
+        // this.altitude is the radar altitude (height above ground) controlled by the player
+        // Display it directly, no need to subtract groundH
+        const radarAlt = Math.max(0, this.altitude);
 
         const altPercent = radarAlt / 500; // Scale relative altitude (0-500m)
         const fillHeight = Math.min(barHeight, barHeight * altPercent);
