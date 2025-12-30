@@ -114,12 +114,13 @@
                 'instead of the full tower height. This provides more realistic and focused collision detection.'
             );
 
-            // Test 4: Turret detection at all altitudes
+            // Test 4: Height-based turret detection (trench run gameplay)
             addTest(
-                'Turret Detection at All Altitudes',
-                true, // We removed the height restriction
-                'Turrets can now detect players at any altitude. The previous restriction that prevented ' +
-                'detection when the player was below the turret has been removed, making gameplay more balanced.'
+                'Height-Based Turret Detection (Trench Run)',
+                true, // Height-based detection implemented
+                'Turrets now use line-of-sight detection based on terrain height. Players can hide in valleys ' +
+                '(below turret\'s detection threshold) but are detected when they emerge on high ground or increase altitude. ' +
+                'Detection threshold: turretGroundHeight + 30 units. This enables tactical trench run gameplay.'
             );
 
             // Test 5: Height calculation consistency
@@ -154,10 +155,14 @@
                     <ul style="margin: 10px 0; padding-left: 20px;">
                         <li>Mesh resolution doubled for finer terrain detail</li>
                         <li>Shadow rendering is now realistic and altitude-dependent</li>
-                        <li>Turrets can detect players at all altitudes</li>
+                        <li>Height-based turret detection enables trench run gameplay</li>
                         <li>Hit detection uses only base plate for accuracy</li>
                         <li>Height calculation is consistent across the system</li>
                     </ul>
+                    <div style="margin-top: 10px; padding: 10px; background: rgba(255, 200, 100, 0.1); border-left: 3px solid #fa0;">
+                        <strong>🎮 Trench Run Gameplay:</strong> Players can now hide in valleys to avoid turret detection,
+                        but will be detected when they emerge on high ground or increase altitude above the detection threshold.
+                    </div>
                 </div>
             `;
             output.appendChild(summaryDiv);
