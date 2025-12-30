@@ -516,6 +516,14 @@ class SurfaceMode {
 
 
     /**
+     * Get terrain feature random seed with fallback
+     * @private
+     */
+    _getFeatureRand() {
+        return this.planet?.featureRand ?? SURFACE_CONFIG.DEFAULT_FEATURE_SEED;
+    }
+
+    /**
      * Generate terrain mesh
      */
     _generateTerrainMesh(forceRegenerate = false) {
@@ -539,10 +547,7 @@ class SurfaceMode {
 
         this.terrainMesh = [];
 
-        // Use featureRand consistently - fallback to a fixed seed if undefined
-        // This ensures deterministic terrain generation even without a planet
-        const featureRand = this.planet.featureRand !== undefined ? 
-            this.planet.featureRand : SURFACE_CONFIG.DEFAULT_FEATURE_SEED;
+        const featureRand = this._getFeatureRand();
         const palette = this.planet.palette || [color(128, 128, 128)];
         const resolution = SURFACE_CONFIG.MESH_RESOLUTION;
 
@@ -760,10 +765,7 @@ class SurfaceMode {
     _getTerrainHeightAt(worldX, worldY) {
         if (!this.planet) return 0;
 
-        // Use featureRand consistently with terrain generation
-        // Fallback to a fixed seed if undefined for deterministic terrain
-        const featureRand = this.planet.featureRand !== undefined ? 
-            this.planet.featureRand : SURFACE_CONFIG.DEFAULT_FEATURE_SEED;
+        const featureRand = this._getFeatureRand();
         const sampleMultiplier = 0.003;
 
         const nx = worldX * sampleMultiplier + featureRand * 0.001;
@@ -1065,8 +1067,6 @@ class SurfaceMode {
         // 1. Draw shadow on terrain - offset based on sun direction and altitude
         // Shadow should be smaller than ship and realistic to altitude
         // At low altitude, shadow is close and similar size; at high altitude, shadow is far and much smaller
-        const altitudeRatio = (this.altitude - SURFACE_CONFIG.MIN_ALTITUDE) / 
-                             (SURFACE_CONFIG.MAX_ALTITUDE - SURFACE_CONFIG.MIN_ALTITUDE);
         
         // Shadow offset increases with altitude (higher = shadow further from ship position)
         const shadowOffset = SURFACE_CONFIG.SHADOW_BASE_OFFSET + 
