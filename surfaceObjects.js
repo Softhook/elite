@@ -141,19 +141,25 @@ class Turret extends SurfaceObject {
         this.cooldown -= dt;
 
         // Height-based detection for trench run gameplay:
-        // - Players can hide in valleys (below turret's line of sight)
+        // - Players can hide in valleys (below turret's line of sight) when hugging terrain
         // - Players are detected when they emerge on high ground or increase altitude
+        // - Players flying high (radar alt > 50) are detected even in valleys
         
         const turretGroundHeight = this.yOffset || 0; // Terrain height at turret position
         const playerAbsoluteAltitude = player.altitude || 0; // Player's absolute altitude (includes terrain)
         
-        // Detection threshold: turret detects player if they're above turret's horizon
-        // This allows valley hiding but detection on hills/high altitude
-        const detectionThreshold = turretGroundHeight + this.detectionHeightThreshold;
+        // Detection threshold: turret's horizon line based on its ground height
+        const turretHorizon = turretGroundHeight + this.detectionHeightThreshold;
         
-        if (playerAbsoluteAltitude < detectionThreshold) {
-            // Player is hiding below the turret's line of sight (in valleys or low altitude)
-            return;
+        // Check if player is below turret's horizon
+        if (playerAbsoluteAltitude < turretHorizon) {
+            // Check if player has high radar altitude (flying high even in valley)
+            const playerRadarAlt = typeof surfaceMode !== 'undefined' && surfaceMode ? surfaceMode.altitude : 100;
+            if (playerRadarAlt <= 50) {
+                // Player is hugging terrain (low radar alt) and below horizon - hidden
+                return;
+            }
+            // Player is flying high (radar alt > 50), even if in a valley - continue to detection
         }
 
         // Calculate turret aiming based on visual positions

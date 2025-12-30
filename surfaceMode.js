@@ -306,6 +306,10 @@ class SurfaceMode {
                 this.player.isDockedAndInvulnerable = true;
             }
 
+            // Altitude control - BEFORE physics update so player.altitude uses current value
+            this.altitude += this.altitudeInput * SURFACE_CONFIG.CLIMB_SPEED * dt;
+            this.altitude = constrain(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE);
+
             this._updatePhysics(dt);
             this._generateTerrainMesh();
 
@@ -323,12 +327,8 @@ class SurfaceMode {
                 this.starSystem.updateWhileDocked();
             }
 
-            // Altitude control  
-            this.altitude += this.altitudeInput * SURFACE_CONFIG.CLIMB_SPEED * dt;
-            this.altitude = constrain(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE);
-
-            // Note: player.altitude is now set in _updatePhysics() before surface objects update
-            // This ensures consistent altitude for turret detection
+            // Note: altitude control happens BEFORE _updatePhysics() so player.altitude
+            // is calculated with current radar altitude, ensuring turrets see accurate data
 
             // Check exit condition
             if (this.altitude >= SURFACE_CONFIG.MAX_ALTITUDE) {
