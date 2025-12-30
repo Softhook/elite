@@ -124,6 +124,7 @@ class Turret extends SurfaceObject {
     constructor(x, y, size) {
         super(x, y, size || 40);
         this.range = 1000;
+        this.detectionHeightThreshold = 30; // Height above turret's ground level for detection
         this.color = color(120, 120, 120);
         this.angle = 0;
         this.cooldown = 0;
@@ -139,13 +140,21 @@ class Turret extends SurfaceObject {
         if (!player) return;
         this.cooldown -= dt;
 
-        // Height-based detection: turret can track player at any altitude
-        // The absolute altitude check is against the turret's base position on terrain
-        const turretHeight = this.yOffset || 0;
-        const playerHeight = player.altitude || 0;
+        // Height-based detection for trench run gameplay:
+        // - Players can hide in valleys (below turret's line of sight)
+        // - Players are detected when they emerge on high ground or increase altitude
         
-        // Always detect player regardless of relative height - turrets have full range sensors
-        // The previous check prevented detection at low altitudes which was too restrictive
+        const turretGroundHeight = this.yOffset || 0; // Terrain height at turret position
+        const playerAbsoluteAltitude = player.altitude || 0; // Player's absolute altitude (includes terrain)
+        
+        // Detection threshold: turret detects player if they're above turret's horizon
+        // This allows valley hiding but detection on hills/high altitude
+        const detectionThreshold = turretGroundHeight + this.detectionHeightThreshold;
+        
+        if (playerAbsoluteAltitude < detectionThreshold) {
+            // Player is hiding below the turret's line of sight (in valleys or low altitude)
+            return;
+        }
 
         // Calculate turret aiming based on visual positions
         // Surface mode uses an isometric projection with extrusion angle
