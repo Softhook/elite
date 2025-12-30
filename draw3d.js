@@ -398,7 +398,7 @@ const Draw3D = {
 
             const dx = v2.x - v1.x;
             const dy = v2.y - v1.y;
-            const faceAngle = Math.atan2(dx, -dy);
+            const faceAngle = Math.atan2(-dx, dy);
 
             const nx = Math.cos(faceAngle);
             const ny = Math.sin(faceAngle);
@@ -1227,7 +1227,7 @@ function drawExtrudedPolyOptimized(r, layerCache, depth, angle, localSunAngle, l
                 const fy2 = edge.v2.y * layerR;
 
                 // Use pre-computed faceAngle if available, else compute
-                const faceAngle = edge.faceAngle !== undefined ? edge.faceAngle : Math.atan2(edge.dx, -edge.dy);
+                const faceAngle = edge.faceAngle !== undefined ? edge.faceAngle : Math.atan2(-edge.dx, edge.dy);
                 const b = getShading(faceAngle - localSunAngle);
 
                 fill(fillRGB.r * b, fillRGB.g * b, fillRGB.b * b);
@@ -1292,7 +1292,7 @@ function drawExtrudedPolySymmetric(r, layerCache, depth, angle, localSunAngle, l
                 const fx2 = edge.v2.x * layerR;
                 const fy2 = edge.v2.y * layerR;
 
-                const faceAngle = edge.faceAngle !== undefined ? edge.faceAngle : Math.atan2(edge.dx, -edge.dy);
+                const faceAngle = edge.faceAngle !== undefined ? edge.faceAngle : Math.atan2(-edge.dx, edge.dy);
                 const b = getShading(faceAngle - localSunAngle);
 
                 fill(fillRGB.r * b, fillRGB.g * b, fillRGB.b * b);

@@ -382,7 +382,7 @@ class SurfaceMode {
             const projAlt = proj.altitude || 0;
 
             // If projectile is lower than terrain (with small buffer)
-            if (projAlt <= terrainH + 2) {
+            if (projAlt <= terrainH + 2 && proj.owner !== this.player) {
                 // Hit the ground!
                 // EXPLOSION FIX: Terrain is drawn flat, so explosion must be drawn flat (altitude 0 offset)
                 // Otherwise it floats in the air above the flat map image

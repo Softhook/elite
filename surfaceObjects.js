@@ -311,17 +311,32 @@ class Turret extends SurfaceObject {
         const barrelGap = sz * 0.2;
 
         const drawBarrel = (offset) => {
-            const bx = headRx + (hw + barrelLen / 2) * c + (offset * -s);
-            const by = headRy + (hw + barrelLen / 2) * s + (offset * c);
+            push();
+            translate(headRx, headRy);
+            rotate(this.angle);
 
-            // Barrels extrude along the same depth vector
-            const bdvX = 10 * Math.sin(extrusionAngle);
-            const bdvY = 10 * Math.cos(extrusionAngle);
-            const brx = bx - bdvX;
-            const bry = by - bdvY;
+            const compAngle = extrusionAngle - this.angle;
+
+            // Barrels sit relative to the rotated head
+            // Local X (Forward) = hw + barrelLen/2
+            // Local Y (Side) = offset
+            const lx = hw + barrelLen / 2;
+            const ly = offset;
+
+            // Compensate for extrusion shift relative to head center? 
+            // In original code: brx = bx - bdvX. 
+            // Local DV = 10 * sin(compAngle).
+            // We apply offset to Local Pos. 
+
+            const ldvX = 10 * Math.sin(compAngle);
+            const ldvY = 10 * Math.cos(compAngle);
+
+            const lrx = lx - ldvX;
+            const lry = ly - ldvY;
 
             const barrelCol = color(40);
-            Draw3D.drawBox3D(brx, bry, barrelLen, barrelW, 10, barrelCol, extrusionAngle, sunAngle, this.angle);
+            Draw3D.drawBox3D(lrx, lry, barrelLen, barrelW, 10, barrelCol, compAngle, sunAngle);
+            pop();
         };
 
         drawBarrel(barrelGap);
