@@ -1154,7 +1154,9 @@ class SurfaceMode {
         // Performance stats (top left, only if debugMode is active or stats are available)
         if (this.debugMode || this._lastCullStats || this._lastObjectCullStats) {
             push();
-            const panelHeight = this.debugMode && this.player ? 110 : 95;
+            const DEBUG_PANEL_HEIGHT_BASIC = 95;
+            const DEBUG_PANEL_HEIGHT_EXTENDED = 110;
+            const panelHeight = this.debugMode && this.player ? DEBUG_PANEL_HEIGHT_EXTENDED : DEBUG_PANEL_HEIGHT_BASIC;
             fill(0, 0, 0, 180);
             stroke(80, 80, 80);
             strokeWeight(1);
