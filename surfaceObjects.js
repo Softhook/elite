@@ -242,7 +242,7 @@ class Turret extends SurfaceObject {
             this,
             15,               // Speed
             5,                // Damage
-            color(255, 50, 50),
+            [255, 50, 50],    // Color (Red) - Array for consistency
             'enemy_projectile',
             null,
             120               // Lifespan

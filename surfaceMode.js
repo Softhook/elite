@@ -311,7 +311,9 @@ class SurfaceMode {
 
             if (this.player) {
                 const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
-                this.player.altitude = this.altitude;
+                // Radar Altimeter Logic: User controls height ABOVE ground
+                // Absolute Altitude = User Height + Terrain Height
+                this.player.altitude = this.altitude + groundH;
                 this.player.yOffset = groundH; // Persist ground height for weapon firing
             }
 
