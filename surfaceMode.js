@@ -19,6 +19,7 @@ const SURFACE_CONFIG = {
     // Terrain mesh
     MESH_RESOLUTION: 160,      // Grid resolution (doubled for finer detail)
     MESH_SIZE: 4000,           // World units covered
+    DEFAULT_FEATURE_SEED: 12345, // Fallback seed for terrain generation
 
     // Transition
     TRANSITION_DURATION: 2000, // ms for enter/exit transitions
@@ -26,7 +27,11 @@ const SURFACE_CONFIG = {
 
     // Visual
     SUN_ANGLE: -Math.PI / 4,
-    FIRE_RATE: 8               // Shots per second
+    FIRE_RATE: 8,              // Shots per second
+    
+    // Shadow rendering
+    SHADOW_BASE_OFFSET: 20,    // Base shadow offset distance
+    SHADOW_ALTITUDE_SCALE: 0.15 // Shadow offset multiplier per altitude unit
 };
 
 /**
@@ -536,7 +541,8 @@ class SurfaceMode {
 
         // Use featureRand consistently - fallback to a fixed seed if undefined
         // This ensures deterministic terrain generation even without a planet
-        const featureRand = this.planet.featureRand !== undefined ? this.planet.featureRand : 12345;
+        const featureRand = this.planet.featureRand !== undefined ? 
+            this.planet.featureRand : SURFACE_CONFIG.DEFAULT_FEATURE_SEED;
         const palette = this.planet.palette || [color(128, 128, 128)];
         const resolution = SURFACE_CONFIG.MESH_RESOLUTION;
 
@@ -756,7 +762,8 @@ class SurfaceMode {
 
         // Use featureRand consistently with terrain generation
         // Fallback to a fixed seed if undefined for deterministic terrain
-        const featureRand = this.planet.featureRand !== undefined ? this.planet.featureRand : 12345;
+        const featureRand = this.planet.featureRand !== undefined ? 
+            this.planet.featureRand : SURFACE_CONFIG.DEFAULT_FEATURE_SEED;
         const sampleMultiplier = 0.003;
 
         const nx = worldX * sampleMultiplier + featureRand * 0.001;
@@ -1062,7 +1069,8 @@ class SurfaceMode {
                              (SURFACE_CONFIG.MAX_ALTITUDE - SURFACE_CONFIG.MIN_ALTITUDE);
         
         // Shadow offset increases with altitude (higher = shadow further from ship position)
-        const shadowOffset = 20 + (this.altitude * 0.15); // More realistic scaling
+        const shadowOffset = SURFACE_CONFIG.SHADOW_BASE_OFFSET + 
+                            (this.altitude * SURFACE_CONFIG.SHADOW_ALTITUDE_SCALE);
         const shadowOffsetX = Math.cos(sunAngle + Math.PI) * shadowOffset;
         const shadowOffsetY = Math.sin(sunAngle + Math.PI) * shadowOffset;
         
