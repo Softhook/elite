@@ -428,8 +428,6 @@ class SurfaceMode {
             if (this.surfaceObjects && this.surfaceObjects.length > 0 && proj.owner === this.player) {
                 for (let obj of this.surfaceObjects) {
                     if (obj.destroyed) continue;
-                    // DEBUG: Match visual filter - only collide with Turrets
-                    if (obj.constructor.name !== 'Turret') continue;
 
                     const bounds = this._getVisualBounds(obj);
 
@@ -887,25 +885,25 @@ class SurfaceMode {
         const sunAngle = this._getSunAngle();
 
         for (let obj of this.surfaceObjects) {
-            // DEBUG: Only draw Turrets as requested
-            if (obj.constructor.name !== 'Turret') continue;
+            if (obj.destroyed) continue;
 
             // Drawn directly at world position. Transformation is handled by the camera in draw()
             if (obj.draw) {
-                // Pass world coordinates. Turret.draw translates to these.
+                // Pass world coordinates. Object.draw translates to these.
                 // Camera will subtract player.pos automatically.
                 obj.draw(obj.pos.x, obj.pos.y - (obj.yOffset || 0), sunAngle);
             }
 
-            // VISUALIZE COLLISION BOUNDARY
-            // Semi-transparent red capsule shape
-            push();
-            const bounds = this._getVisualBounds(obj);
-            stroke(255, 0, 0, 80); // Semi-transparent red (approx 0.3 alpha)
-            strokeWeight(bounds.radius * 2); // Diameter matches size
-            strokeCap(ROUND);
-            line(bounds.base.x, bounds.base.y, bounds.tip.x, bounds.tip.y);
-            pop();
+            // Debug visualization (only if debugMode is enabled)
+            if (this.debugMode) {
+                push();
+                const bounds = this._getVisualBounds(obj);
+                stroke(255, 0, 0, 80);
+                strokeWeight(bounds.radius * 2);
+                strokeCap(ROUND);
+                line(bounds.base.x, bounds.base.y, bounds.tip.x, bounds.tip.y);
+                pop();
+            }
         }
     }
 
