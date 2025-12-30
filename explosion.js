@@ -3,7 +3,7 @@
  * The animation has multiple phases - initial flash, debris ejection, and fading smoke.
  */
 class Explosion {
-    constructor(x, y, size, baseColor = [255, 160, 30]) {
+    constructor(x, y, size, baseColor = [255, 160, 30], isSurface = false) {
         // Create position vector just once (reused by reset)
         this.pos = createVector(0, 0);
 
@@ -16,10 +16,11 @@ class Explosion {
         this.baseColor = [255, 160, 30];
         this.duration = 60;
         this.currentFrame = 0;
+        this.isSurface = isSurface;
 
         // Call reset if parameters provided
         if (x !== undefined) {
-            this.reset(x, y, size, baseColor);
+            this.reset(x, y, size, baseColor, isSurface);
         }
     }
 
@@ -29,8 +30,9 @@ class Explosion {
      * @param {number} y - Y position of explosion
      * @param {number} size - Size of explosion
      * @param {Array} baseColor - Base color of explosion
+     * @param {boolean} isSurface - Whether this is a surface mode explosion
      */
-    reset(x, y, size, baseColor = [255, 160, 30]) {
+    reset(x, y, size, baseColor = [255, 160, 30], isSurface = false) {
         // Update position vector
         this.pos.set(x, y);
 
@@ -39,6 +41,7 @@ class Explosion {
         this.baseColor = baseColor;
         this.duration = 60; // Frames until complete
         this.currentFrame = 0;
+        this.isSurface = isSurface;
 
         // Clear arrays for reuse
         this.particles.length = 0;

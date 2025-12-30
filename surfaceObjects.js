@@ -57,44 +57,63 @@ class Building extends SurfaceObject {
     }
 
     _getTypeHeight() {
+        // Deterministic height based on seed
+        const heightVar = (Math.sin(this.seed * 1.321) * 0.5 + 0.5);
         switch (this.type) {
-            case 'skyscraper': return this.size * 4;
-            case 'factory': return this.size * 1.5;
-            case 'silo': return this.size * 2.5;
+            case 'skyscraper': return this.size * (3 + heightVar * 4);
+            case 'factory': return this.size * (1.2 + heightVar * 0.8);
+            case 'silo': return this.size * (2 + heightVar * 1);
             default: return this.size;
         }
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        // Extrude from Roof (Front) to Base (Back)
-        // Vector points DOWN (positive Y)
-        // Angle 0 = (0, 1) in Draw3D logic
-        // Use slight angle to show sides
         const extrusionAngle = 0.1;
-
-        // Calculate Roof position (Front face)
-        // Base is at (x, y)
-        // BackFace = FrontFace + Vector
-        // Base = Roof + Vector
-        // Roof = Base - Vector
-
         const dvX = this.height * Math.sin(extrusionAngle);
         const dvY = this.height * Math.cos(extrusionAngle);
-
         const rx = x - dvX;
         const ry = y - dvY;
 
-        switch (this.type) {
-            case 'silo':
-                Draw3D.drawCylinder(rx, ry, this.size / 2, this.height, 12, this.color, extrusionAngle, sunAngle);
-                break;
-            case 'factory':
-                Draw3D.drawBox3D(rx, ry, this.size, this.size, this.height, this.color, extrusionAngle, sunAngle);
-                break;
-            case 'skyscraper':
-            default:
-                Draw3D.drawBox3D(rx, ry, this.size, this.size, this.height, this.color, extrusionAngle, sunAngle);
-                break;
+        // Base Structure
+        Draw3D.drawBox3D(rx, ry, this.size, this.size, this.height, this.color, extrusionAngle, sunAngle);
+
+        // Neon Details (Windows/Pipes)
+        if (this.type === 'skyscraper') {
+            const neonColor = color(0, 200, 255, 150);
+            for (let i = 0.2; i < 0.9; i += 0.2) {
+                const wh = this.height * i;
+                const wrx = x - (wh * Math.sin(extrusionAngle));
+                const wry = y - (wh * Math.cos(extrusionAngle));
+                Draw3D.drawBox3D(wrx, wry, this.size * 1.05, this.size * 0.1, 5, neonColor, extrusionAngle, sunAngle);
+            }
+        }
+
+        // Tiered levels for non-silos
+        if (this.type === 'skyscraper' || this.type === 'factory') {
+            const tierH = this.height * 0.4;
+            const trx = rx - (tierH * Math.sin(extrusionAngle));
+            const try_ = ry - (tierH * Math.cos(extrusionAngle));
+            Draw3D.drawBox3D(trx, try_, this.size * 0.6, this.size * 0.6, tierH, lerpColor(this.color, color(255), 0.1), extrusionAngle, sunAngle);
+
+            // Antennas on top tier
+            const antH = 30;
+            Draw3D.drawCylinder(arx, ary, 2, antH, 6, color(200), extrusionAngle, sunAngle);
+        }
+
+        if (this.type === 'silo') {
+            Draw3D.drawCylinder(rx, ry, this.size / 2, this.height, 12, this.color, extrusionAngle, sunAngle);
+            // Red warning light
+            const lightH = 10;
+            const lrx = rx - (lightH * Math.sin(extrusionAngle));
+            const lry = ry - (lightH * Math.cos(extrusionAngle));
+            Draw3D.drawDome(lrx, lry, 10, 4, color(255, 0, 0), extrusionAngle, sunAngle);
+        }
+    }
+
+    onDestroy() {
+        // Create large surface explosion
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.starSystem) {
+            surfaceMode.starSystem.addExplosion(this.pos.x, this.pos.y, this.size * 1.5, [255, 150, 50], true);
         }
     }
 }
@@ -106,13 +125,92 @@ class Turret extends SurfaceObject {
         this.color = color(120, 120, 120);
         this.angle = 0;
         this.cooldown = 0;
+        this.range = 1000;
+        this.id = Math.floor(Math.random() * 10000);
     }
 
-    update(dt, player) {
+    update(dt, player, starSystem) {
         if (!player) return;
-        const d = dist(this.pos.x, this.pos.y, player.pos.x, player.pos.y);
+        this.cooldown -= dt;
+
+        // World distance check (including altitude)
+        const dx = player.pos.x - this.pos.x;
+        const dy = player.pos.y - this.pos.y;
+        // In our 2D projection, the 'up' direction is effectively screen-Y
+        // But for gameplay distance, altitude is the Z.
+        const d = Math.sqrt(dx * dx + dy * dy);
+
         if (d < this.range) {
-            this.angle = atan2(player.pos.y - this.pos.y, player.pos.x - this.pos.x);
+            // Aiming angle (ground plane) - Shortest path interpolation
+            const targetAngle = atan2(dy, dx);
+            let diff = targetAngle - this.angle;
+            while (diff < -PI) diff += TWO_PI;
+            while (diff > PI) diff -= TWO_PI;
+
+            // Smoother, frame-rate independent rotation
+            this.angle += diff * 5 * dt;
+            // Normalize angle to keep it within [-PI, PI] range
+            while (this.angle < -PI) this.angle += TWO_PI;
+            while (this.angle > PI) this.angle -= TWO_PI;
+
+            // Fire if ready AND player is not too high
+            if (this.cooldown <= 0 && starSystem && (player.altitude < 400)) {
+                this.fire(starSystem, player);
+                this.cooldown = 2.0;
+            }
+
+            // [DEBUG] Log aiming info throttled to once per second
+            if (this._lastLogTime === undefined) this._lastLogTime = 0;
+            if (millis() - this._lastLogTime > 1000) {
+                console.log(`Turret [${this.id}] targeting player: targetAngle=${targetAngle.toFixed(2)}, currentAngle=${this.angle.toFixed(2)}, diff=${diff.toFixed(2)}`);
+                this._lastLogTime = millis();
+            }
+        }
+    }
+
+    fire(starSystem, player) {
+        if (typeof Projectile === 'undefined') return;
+
+        // Muzzle position in world coords
+        const muzzleX = this.pos.x + 40 * Math.cos(this.angle);
+        const muzzleY = this.pos.y + 40 * Math.sin(this.angle);
+
+        const proj = new Projectile(
+            muzzleX,
+            muzzleY,
+            this.angle,
+            this,
+            15,               // Speed
+            5,                // Damage
+            color(255, 50, 50),
+            'enemy_projectile',
+            null,
+            120               // Lifespan
+        );
+
+        if (starSystem.projectiles) {
+            starSystem.projectiles.push(proj);
+            // Use ownerType and isSurface to help filtering
+            proj.ownerType = 'turret';
+            proj.isSurface = true;
+            // CRITICAL: Set projectile altitude to muzzle height relative to planet
+            // This ensures it's visible in 3D and hits correct collision zones
+            proj.altitude = (this.yOffset || 0) + 20;
+
+            if (typeof soundManager !== 'undefined') {
+                soundManager.playSound('laser');
+            }
+            // Visual muzzle flash - tag as isSurface
+            if (starSystem.addExplosion) {
+                starSystem.addExplosion(muzzleX, muzzleY, 5, [255, 100, 50], true);
+            }
+        }
+    }
+
+    onDestroy() {
+        // Create large surface explosion
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.starSystem) {
+            surfaceMode.starSystem.addExplosion(this.pos.x, this.pos.y, this.size * 2, [255, 100, 50], true);
         }
     }
 
@@ -173,15 +271,27 @@ class Turret extends SurfaceObject {
 
         Draw3D.drawExtrudedShape(corners, headH, this.color, extrusionAngle, sunAngle);
 
-        // Barrel
+        // -- DUAL BARRELS --
         const barrelLen = sz * 0.8;
         const barrelW = sz * 0.15;
-        // Project barrel from front of head
-        const bx = headRx + (hw + barrelLen / 2) * c;
-        const by = headRy + (hw + barrelLen / 2) * s;
-        // Its actually a box/cylinder rotated
+        const barrelGap = sz * 0.2;
 
-        // Ideally we'd draw barrels too but simple shape is fine for now
+        const drawBarrel = (offset) => {
+            const bx = headRx + (hw + barrelLen / 2) * c + (offset * -s);
+            const by = headRy + (hw + barrelLen / 2) * s + (offset * c);
+
+            // Barrels extrude along the same depth vector
+            const bdvX = 10 * Math.sin(extrusionAngle);
+            const bdvY = 10 * Math.cos(extrusionAngle);
+            const brx = bx - bdvX;
+            const bry = by - bdvY;
+
+            const barrelCol = color(40);
+            Draw3D.drawBox3D(brx, bry, barrelLen, barrelW, 10, barrelCol, extrusionAngle, sunAngle, this.angle);
+        };
+
+        drawBarrel(barrelGap);
+        drawBarrel(-barrelGap);
     }
 }
 
@@ -241,5 +351,14 @@ class SurfaceStation extends SurfaceObject {
 
         Draw3D.drawCylinder(padRxLeft, padRy, 30, padH, 12, color(60), extrusionAngle, sunAngle);
         Draw3D.drawCylinder(padRxRight, padRy, 30, padH, 12, color(60), extrusionAngle, sunAngle);
+
+        // --- Details ---
+        // Add some "boxes" on the platform
+        const boxH = 15;
+        const bx = platRx + 40;
+        const by = platRy + 10;
+        const bdx = boxH * Math.sin(extrusionAngle);
+        const bdy = boxH * Math.cos(extrusionAngle);
+        Draw3D.drawBox3D(bx - bdx, by - bdy, 20, 20, boxH, color(40), extrusionAngle, sunAngle);
     }
 }

@@ -358,7 +358,7 @@ function performPeriodicTasks() {
  * Handle continuous firing when space is held
  */
 function handleContinuousFiring() {
-    if (gameStateManager.currentState === "IN_FLIGHT" &&
+    if ((gameStateManager.currentState === "IN_FLIGHT" || gameStateManager.currentState === "SURFACE_MODE") &&
         !player.destroyed &&
         keyIsDown(32)) {
         player.handleFireInput();
@@ -542,7 +542,7 @@ function handleSingleKeyActions() {
             return handleMinimapZoomOut();
         case 'c':
             return handleCloakActivation();
-        case 'f':
+        case 'g':
             return handleSurfaceDescent();
     }
     return false;
@@ -1559,6 +1559,10 @@ function resetGame() {
     communicationSystem.initialize({ uiManager, player });
     communicationSystem.initializeSpeech(); // Enable speech synthesis for ship communications
 
+    // Re-initialize surface mode for fresh state
+    if (typeof initSurfaceMode === 'function') {
+        initSurfaceMode();
+    }
     // Reinitialize player ship definition
     if (typeof player.applyShipDefinition === 'function') {
         player.applyShipDefinition(player.shipTypeName);

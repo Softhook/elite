@@ -2246,6 +2246,12 @@ class CommunicationSystem {
     }
 
     _maybeSend(enemy, category, templates, options = {}) {
+        // Suppress space chatter while on planet surface
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.state === SURFACE_STATE.ACTIVE) {
+            return; // Contextual chatter from space ships is suppressed
+        }
+
+        if (!enemy || !this.player || !this.uiManager) return;
         // Suppress communications while on planet surface
         if (typeof gameStateManager !== 'undefined' &&
             gameStateManager.currentState === 'SURFACE_MODE') {

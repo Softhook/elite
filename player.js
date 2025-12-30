@@ -109,6 +109,8 @@ class Player {
         this.vel = createVector(0, 0);
         this.angle = 0; // Current facing angle (RADIANS, 0 = right)
         this.drag = PLAYER_CONFIG.DEFAULT_DRAG;
+        this.altitude = 0; // Surface mode altitude
+
 
         // Cached math constants for performance
         this._TWO_PI = TWO_PI;

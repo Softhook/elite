@@ -2246,7 +2246,22 @@ class StarSystem {
             // Check mines
             if (this._checkProjectileMineCollision(proj, i, distCheckVector)) continue;
 
-            // SKIP player collision check entirely - player is docked and invulnerable
+            // Check player collision (normally skipped while docked, but enabled for surface mode)
+            if (typeof surfaceMode !== 'undefined' && surfaceMode.isActive() && !this.player.destroyed && proj.owner !== this.player) {
+                const combinedRadius = this.player.size + projSize;
+                distCheckVector.set(this.player.pos.x - projPos.x, this.player.pos.y - projPos.y);
+
+                // Only register hit if distance check passes AND altitude is low enough
+                // Ground turrets are ~20-40 units high, so if player is > 100 units high, shots pass under
+                const hitAltitude = (this.player.altitude || 0) < 100;
+
+                if (hitAltitude && distCheckVector.magSq() <= combinedRadius * combinedRadius && proj.checkCollision(this.player)) {
+                    WeaponSystem.handleHitEffects(this.player, projPos, proj.damage, proj.owner, this, proj.color);
+                    this.removeProjectile(i);
+                    continue;
+                }
+            }
+
 
             // Enemy-fired projectiles can hit OTHER enemies (friendly fire / combat)
             if (proj.owner instanceof Enemy) {
@@ -3230,10 +3245,10 @@ class StarSystem {
     }
 
     /** Adds an explosion to the system's list. */
-    addExplosion(x, y, size, color) {
+    addExplosion(x, y, size, color, isSurface = false) {
         // Use object pooling if WeaponSystem is available
         if (typeof WeaponSystem !== 'undefined' && typeof WeaponSystem.getPooledObject === 'function') {
-            const explosion = WeaponSystem.getPooledObject('explosion', x, y, size, color);
+            const explosion = WeaponSystem.getPooledObject('explosion', x, y, size, color, isSurface);
 
             if (explosion) {
                 this.explosions.push(explosion);
@@ -3247,7 +3262,7 @@ class StarSystem {
         // Fall back to direct instantiation if pooling is unavailable or failed
         if (STAR_SYSTEM_DEBUG) console.log(`Creating new explosion directly at (${x.toFixed(1)},${y.toFixed(1)})`);
         try {
-            const explosion = new Explosion(x, y, size, color);
+            const explosion = new Explosion(x, y, size, color, isSurface);
             this.explosions.push(explosion);
             if (STAR_SYSTEM_DEBUG) console.log(`Successfully added direct explosion, total explosions: ${this.explosions.length}`);
         } catch (error) {

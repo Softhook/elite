@@ -45,6 +45,10 @@ class Projectile {
         this._isMissile = false;
         this._isTangle = false;
         this._isHarpoon = false;
+        this.destroyed = false;
+        this.altitude = 0; // Altitude for surface mode
+        this.isSurface = false; // Whether this is a surface mode projectile
+        this.ownerType = 'ship'; // 'ship' or 'turret'
         this._timeCorrection = 1.0;
 
         // Call reset if parameters provided
@@ -81,6 +85,7 @@ class Projectile {
         this.tangleDuration = tangleDuration;
         this.dragMultiplier = dragMultiplier;
         this.rotationBlockMultiplier = rotationBlockMultiplier;
+        this.altitude = 0;
         this._isPlayer = !!owner && (
             (typeof Player !== 'undefined' && owner instanceof Player) ||
             (typeof player !== 'undefined' && owner === player) ||

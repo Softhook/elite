@@ -502,6 +502,13 @@ class WeaponSystem {
             system.projectiles.push(proj);
         }
 
+        // Apply altitude for surface mode
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+            proj.altitude = (owner.altitude || 0) + (owner.yOffset || 0);
+            proj.ownerType = (owner.shipDef) ? 'ship' : 'turret';
+            proj.isSurface = true;
+        }
+
         // Play weapon-specific sound using playWorldSound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
             let soundName = 'laser';

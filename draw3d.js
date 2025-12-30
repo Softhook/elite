@@ -159,8 +159,17 @@ const Draw3D = {
 
     /**
      * Draw an extruded regular prism (polygon with depth)
+     * @param {number} x - Center X
+     * @param {number} y - Center Y
+     * @param {number} r - Radius
+     * @param {number} sides - Number of sides
+     * @param {number} depth - Extrusion depth
+     * @param {color} col - Base color
+     * @param {number} angle - Extrusion angle (radians)
+     * @param {number} sunAngle - Sun angle (radians)
+     * @param {number} [shapeRotation=0] - Rotation of the shape around its center
      */
-    drawPrism: function (x, y, r, sides, depth, col, angle, sunAngle) {
+    drawPrism: function (x, y, r, sides, depth, col, angle, sunAngle, shapeRotation = 0) {
         // If deferred rendering is active, queue this call
         if (_renderQueue !== null) {
             const primitiveDepth = calculatePrimitiveDepth(x, y, depth, angle);
@@ -183,24 +192,28 @@ const Draw3D = {
         stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
         beginShape();
         for (let i = 0; i < sides; i++) {
-            vertex(x + trig.cos[i] * r + dv.x, y + trig.sin[i] * r + dv.y);
+            const ang = i * angleStep - Math.PI / 2 + shapeRotation;
+            vertex(x + Math.cos(ang) * r + dv.x, y + Math.sin(ang) * r + dv.y);
         }
         endShape(CLOSE);
 
         // Draw sides with backface culling
         for (let i = 0; i < sides; i++) {
             const next = (i + 1) % sides;
-            const faceAngle = (i + 0.5) * angleStep - Math.PI / 2;
+            const faceAngle = (i + 0.5) * angleStep - Math.PI / 2 + shapeRotation;
 
             const nx = Math.cos(faceAngle);
             const ny = Math.sin(faceAngle);
             const dot = nx * dv.x + ny * dv.y;
 
             if (dot > 0.001) {
-                const vx = x + trig.cos[i] * r;
-                const vy = y + trig.sin[i] * r;
-                const nvx = x + trig.cos[next] * r;
-                const nvy = y + trig.sin[next] * r;
+                const ang1 = i * angleStep - Math.PI / 2 + shapeRotation;
+                const ang2 = next * angleStep - Math.PI / 2 + shapeRotation;
+
+                const vx = x + Math.cos(ang1) * r;
+                const vy = y + Math.sin(ang1) * r;
+                const nvx = x + Math.cos(ang2) * r;
+                const nvy = y + Math.sin(ang2) * r;
 
                 const b = getShading(faceAngle - sunAngle);
 
@@ -221,7 +234,8 @@ const Draw3D = {
         stroke(cc.r * 0.8, cc.g * 0.8, cc.b * 0.8, cc.a);
         beginShape();
         for (let i = 0; i < sides; i++) {
-            vertex(x + trig.cos[i] * r, y + trig.sin[i] * r);
+            const ang = i * angleStep - Math.PI / 2 + shapeRotation;
+            vertex(x + Math.cos(ang) * r, y + Math.sin(ang) * r);
         }
         endShape(CLOSE);
     },
@@ -291,8 +305,17 @@ const Draw3D = {
 
     /**
      * Draw a 3D extruded box
+     * @param {number} x - Center X
+     * @param {number} y - Center Y
+     * @param {number} w - Width
+     * @param {number} h - Height
+     * @param {number} depth - Extrusion depth
+     * @param {color} col - Base color
+     * @param {number} angle - Extrusion angle (radians)
+     * @param {number} sunAngle - Sun angle (radians)
+     * @param {number} [shapeRotation=0] - Rotation of the box around its center
      */
-    drawBox3D: function (x, y, w, h, depth, col, angle, sunAngle) {
+    drawBox3D: function (x, y, w, h, depth, col, angle, sunAngle, shapeRotation = 0) {
         // If deferred rendering is active, queue this call instead of executing
         if (_renderQueue !== null) {
             const primitiveDepth = calculatePrimitiveDepth(x, y, depth, angle);
@@ -305,47 +328,60 @@ const Draw3D = {
 
         const dv = this.getDepthVector(depth, angle);
         const cc = getColorComponents(col);
+
+        // Sides with backface culling
         const hw = w / 2;
         const hh = h / 2;
 
-        // Pre-computed face angles and normals for box
-        const faceAngles = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
+        // Corner coordinates relative to center, rotated
+        const corners = [
+            { x: -hw, y: -hh },
+            { x: hw, y: -hh },
+            { x: hw, y: hh },
+            { x: -hw, y: hh }
+        ];
 
-        strokeWeight(1);
+        const rotatedCorners = corners.map(c => {
+            const cosR = Math.cos(shapeRotation);
+            const sinR = Math.sin(shapeRotation);
+            return {
+                x: x + c.x * cosR - c.y * sinR,
+                y: y + c.x * sinR + c.y * cosR
+            };
+        });
 
         // Bottom Cap
         fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
         stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
         beginShape();
-        vertex(x - hw + dv.x, y - hh + dv.y);
-        vertex(x + hw + dv.x, y - hh + dv.y);
-        vertex(x + hw + dv.x, y + hh + dv.y);
-        vertex(x - hw + dv.x, y + hh + dv.y);
+        for (let c of rotatedCorners) vertex(c.x + dv.x, c.y + dv.y);
         endShape(CLOSE);
 
-        // Sides with backface culling
+        // Sides
         for (let i = 0; i < 4; i++) {
-            const nx = Math.cos(faceAngles[i]);
-            const ny = Math.sin(faceAngles[i]);
+            const next = (i + 1) % 4;
+            const c1 = rotatedCorners[i];
+            const c2 = rotatedCorners[next];
+
+            // Calculate face normal angle
+            const dx = c2.x - c1.x;
+            const dy = c2.y - c1.y;
+            const faceAngle = Math.atan2(dx, -dy); // Normal is perpendicular to edge
+
+            const nx = Math.cos(faceAngle);
+            const ny = Math.sin(faceAngle);
             const dot = nx * dv.x + ny * dv.y;
 
             if (dot > 0.001) {
-                const b = getShading(faceAngles[i] - sunAngle);
-
+                const b = getShading(faceAngle - sunAngle);
                 fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
                 stroke(cc.r * b * 0.8, cc.g * b * 0.8, cc.b * b * 0.8, cc.a);
 
                 beginShape();
-                let x1, y1, x2, y2;
-                if (i === 0) { x1 = x - hw; y1 = y - hh; x2 = x + hw; y2 = y - hh; }
-                else if (i === 1) { x1 = x + hw; y1 = y - hh; x2 = x + hw; y2 = y + hh; }
-                else if (i === 2) { x1 = x + hw; y1 = y + hh; x2 = x - hw; y2 = y + hh; }
-                else { x1 = x - hw; y1 = y + hh; x2 = x - hw; y2 = y - hh; }
-
-                vertex(x1 + dv.x, y1 + dv.y);
-                vertex(x2 + dv.x, y2 + dv.y);
-                vertex(x2, y2);
-                vertex(x1, y1);
+                vertex(c1.x + dv.x, c1.y + dv.y);
+                vertex(c2.x + dv.x, c2.y + dv.y);
+                vertex(c2.x, c2.y);
+                vertex(c1.x, c1.y);
                 endShape(CLOSE);
             }
         }
@@ -353,8 +389,9 @@ const Draw3D = {
         // Top
         fill(col);
         stroke(cc.r * 0.8, cc.g * 0.8, cc.b * 0.8, cc.a);
-        rectMode(CENTER);
-        rect(x, y, w, h);
+        beginShape();
+        for (let c of rotatedCorners) vertex(c.x, c.y);
+        endShape(CLOSE);
     },
 
     /**
