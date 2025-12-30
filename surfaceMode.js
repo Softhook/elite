@@ -534,7 +534,9 @@ class SurfaceMode {
 
         this.terrainMesh = [];
 
-        const featureRand = this.planet.featureRand || 0;
+        // Use featureRand consistently - fallback to a fixed seed if undefined
+        // This ensures deterministic terrain generation even without a planet
+        const featureRand = this.planet.featureRand !== undefined ? this.planet.featureRand : 12345;
         const palette = this.planet.palette || [color(128, 128, 128)];
         const resolution = SURFACE_CONFIG.MESH_RESOLUTION;
 
@@ -753,7 +755,8 @@ class SurfaceMode {
         if (!this.planet) return 0;
 
         // Use featureRand consistently with terrain generation
-        const featureRand = this.planet.featureRand || 0;
+        // Fallback to a fixed seed if undefined for deterministic terrain
+        const featureRand = this.planet.featureRand !== undefined ? this.planet.featureRand : 12345;
         const sampleMultiplier = 0.003;
 
         const nx = worldX * sampleMultiplier + featureRand * 0.001;
