@@ -5340,8 +5340,9 @@ class StarSystem {
         // OPTIMIZATION: Dispose buffers for planets that are very far away to save memory.
         // Buffers are automatically recreated when planets come back into view range.
         // This reduces memory footprint for large systems without impacting visual quality.
-        // Far culling distance: 3x viewport size (prevents disposing nearby off-screen planets)
-        const farCullingDistance = Math.max(width, height) * 3; // 3x viewport size
+        // Far culling distance: configurable multiplier of viewport size
+        const FAR_CULLING_MULTIPLIER = 3; // Viewport size multiplier for far culling
+        const farCullingDistance = Math.max(width, height) * FAR_CULLING_MULTIPLIER;
         for (let i = 0; i < planetCount; i++) {
             const p = this.planets[i];
             const dx = p.pos.x - this.player.pos.x;

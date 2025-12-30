@@ -1,6 +1,19 @@
 // ****** planet.js ******
 // --- Optimized Textured Planet with Buffer-based Rendering ---
 
+// Performance tuning constants for planet surface rendering
+const PLANET_RENDERING_CONFIG = {
+    // Adaptive band height divisor - controls iteration count vs quality tradeoff
+    // Higher values = larger bands = fewer iterations = faster rendering
+    ADAPTIVE_BAND_DIVISOR: 600,
+    
+    // Edge antialiasing width in pixels
+    EDGE_ANTIALIASING_WIDTH: 5,
+    
+    // Pre-calculated constant for edge alpha: 255 / EDGE_ANTIALIASING_WIDTH
+    EDGE_ALPHA_MULTIPLIER: 51  // 255 / 5 = 51
+};
+
 class Planet {
     /**
      * Creates a Planet instance with detailed visuals and rings.
@@ -518,7 +531,7 @@ class Planet {
 
         // OPTIMIZATION: Adaptive band height based on planet size for better performance
         // Larger planets use bigger bands to reduce iteration count
-        const bandHeight = Math.max(3, Math.ceil(600 / this.size));
+        const bandHeight = Math.max(3, Math.ceil(PLANET_RENDERING_CONFIG.ADAPTIVE_BAND_DIVISOR / this.size));
 
         // Cache constants for inner loop
         const noiseScale = this.noiseScale;
@@ -599,11 +612,12 @@ class Planet {
 
                 // Antialiasing at the planet edge
                 const distFromCenterSq = x * x + ySq;
-                const edgeDistSq = (r - 5) * (r - 5); // 5px edge width
+                const edgeDistSq = (r - PLANET_RENDERING_CONFIG.EDGE_ANTIALIASING_WIDTH) * 
+                                  (r - PLANET_RENDERING_CONFIG.EDGE_ANTIALIASING_WIDTH);
                 let alpha = 255;
                 if (distFromCenterSq > edgeDistSq) {
                     const distFromCenter = Math.sqrt(distFromCenterSq);
-                    alpha = Math.max(0, (r - distFromCenter) * 51); // 255/5 = 51
+                    alpha = Math.max(0, (r - distFromCenter) * PLANET_RENDERING_CONFIG.EDGE_ALPHA_MULTIPLIER);
                 }
 
                 pg.fill(r, g, b, alpha);

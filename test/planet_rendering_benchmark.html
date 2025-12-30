@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Planet Rendering Performance Benchmark</title>
     <script src="../libraries/p5.min.js"></script>
-    <script src="../libraries/p5.sound.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -158,10 +157,11 @@
                 randomSeed(i * 12345);
                 const planet = new Planet(x, y, size, c1, c2, `Test-${i}`, i + 1);
                 
-                // Compute shadow (required before createBuffers)
+                // Compute shadow offset (required before createBuffers because city lights 
+                // rendering needs shadow position to determine day/night lighting)
                 planet.computeShadowOffset(createVector(0, 0));
                 
-                // Create buffers (this is the expensive operation)
+                // Create buffers (this is the expensive operation we're benchmarking)
                 planet.createBuffers();
                 
                 testPlanets.push(planet);
