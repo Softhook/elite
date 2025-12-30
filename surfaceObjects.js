@@ -151,33 +151,25 @@ class Turret extends SurfaceObject {
             return;
         }
 
-        // --- COORDINATE FIX ---
-        // We must calculate angles based on VISUAL positions as they appear on screen.
-        // Surface mode uses an "extruded 2D" projection.
-        // X_visual = X_world - Height * sin(extrusion)
-        // Y_visual = (Y_world - TerrainZ) - Height * cos(extrusion)
-
+        // Calculate turret aiming based on visual positions
+        // Surface mode uses an isometric projection with extrusion angle
         const extrusionAngle = 0.5; // Must match Draw3D usage in draw()
         const sz = this.size;
         const totalHeadHeight = (sz * 0.2) + (sz * 0.6); // Base + Head Height
 
-        // 1. Calculate Turret VISUAL Position (Muzzle/Head level)
+        // Calculate turret visual position (at muzzle/head level)
         const extX = totalHeadHeight * Math.sin(extrusionAngle);
         const extY = totalHeadHeight * Math.cos(extrusionAngle);
-
-        // Terrain acts as a Z-offset on Y axis in drawing logic
         const terrainOffset = this.yOffset || 0;
 
         const turretVisualX = this.pos.x - extX;
         const turretVisualY = (this.pos.y - terrainOffset) - extY;
 
-        // 2. Calculate Player VISUAL Position
-        // The player is drawn at their map position (pos.x, pos.y) without terrain offset
-        // (Shadow handles terrain indication, ship stays at "Space/Map" level)
+        // Player position (drawn at map position without terrain offset)
         const playerVisualX = player.pos.x;
         const playerVisualY = player.pos.y;
 
-        // 3. Aiming Logic in Visual Space
+        // Calculate aiming angle in visual space
         const dx = playerVisualX - turretVisualX;
         const dy = playerVisualY - turretVisualY;
         const d = Math.sqrt(dx * dx + dy * dy);

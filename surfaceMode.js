@@ -31,16 +31,29 @@ const SURFACE_CONFIG = {
 
 /**
  * Surface flight mode state
+ * Controls transitions between space flight and planetary surface exploration
  */
 const SURFACE_STATE = {
-    INACTIVE: 'inactive',
-    ENTERING: 'entering',
-    ACTIVE: 'active',
-    EXITING: 'exiting'
+    INACTIVE: 'inactive',     // Not in surface mode
+    ENTERING: 'entering',     // Transitioning from space to surface
+    ACTIVE: 'active',         // Actively flying on planet surface
+    EXITING: 'exiting'        // Returning to space
 };
 
 /**
  * SurfaceMode class - manages planetary surface flight with 3D mesh terrain
+ * 
+ * COORDINATE SYSTEM:
+ * - World Coordinates: Actual position of objects in the game world (this.surfaceX, this.surfaceY)
+ * - Screen Coordinates: Position after camera translation (centered on player)
+ * - Visual Coordinates: Screen position adjusted for 3D extrusion effect (altitude offset)
+ * 
+ * The camera system:
+ * 1. Translates to screen center (width/2, height/2)
+ * 2. Applies perspective scaling based on altitude
+ * 3. Translates by -player.pos to center camera on player
+ * 
+ * Objects are drawn at their world positions; the camera transform handles centering.
  */
 class SurfaceMode {
     constructor() {
@@ -404,15 +417,13 @@ class SurfaceMode {
 
             const projPos = proj.pos;
 
-            // Check Terrain Collision (Ground)
+            // Check terrain collision (ground hit)
             const terrainH = this._getTerrainHeightAt(projPos.x, projPos.y);
             const projAlt = proj.altitude || 0;
 
-            // If projectile is lower than terrain (with small buffer)
+            // If projectile hits the ground
             if (projAlt <= terrainH + 2 && proj.owner !== this.player) {
-                // Hit the ground!
-                // EXPLOSION FIX: Terrain is drawn flat, so explosion must be drawn flat (altitude 0 offset)
-                // Otherwise it floats in the air above the flat map image
+                // Create ground impact explosion
                 this._createSurfaceExplosion(projPos.x, projPos.y, 0, 8, [255, 100, 50]);
 
                 // Crater/Ground hit sound
@@ -438,19 +449,13 @@ class SurfaceMode {
                     const hitRadius = bounds.radius;
 
                     if (distToAxis < hitRadius) {
-                        // VISUAL 2D HIT:
-                        // Since we are fixing the "2D aspect", if it visually overlaps the extruded shape, it hits.
-                        // We removed the vertical altitude check (projAlt) because projectiles travel flatly in this mode.
-                        // If it looks like a hit, it is a hit.
-
+                        // Projectile hit the object
                         const objName = obj.type || obj.id || obj.constructor.name;
-                        console.log(`HIT on surface object [${objName}]!`);
+                        console.log(`Hit on surface object [${objName}]!`);
                         obj.takeDamage(proj.damage || 10);
                         proj.destroyed = true;
 
-                        // Explosion visually happens at impact point (which is screen coords)
-                        // Pass 0 for altitude so _createSurfaceExplosion doesn't double-shift it.
-                        // (projPos is already at visual screen coordinates)
+                        // Create explosion at impact point
                         this._createSurfaceExplosion(projPos.x, projPos.y, 0, 10, [255, 150, 50]);
 
                         // Play hit sound
@@ -477,26 +482,10 @@ class SurfaceMode {
             const hitRadiusSq = this.player.size * this.player.size;
 
             if (distSq < hitRadiusSq) {
-                // Check vertical height difference
-                // SIMPLIFICATION: User requested focusing on 2D aspect.
-                // Since aiming is now visual (screen-space), if it hits in 2D, it counts.
-                // We ignore altitude difference for collision to match the "extruded 2D" visual style.
-
                 console.log(`Player hit by surface projectile!`);
                 this.player.takeDamage(proj.damage || 5);
 
-                // Explosion at projectile's "visual" altitude (which is effectively just its POS in this mode)
-                // But we pass proj.altitude just in case the explosion wants to interact with logic.
-                // However, visually proj.pos IS the screen point.
-                // _createSurfaceExplosion applies altitude shift.
-                // If proj.pos is ALREADY shifted (visual), we should pass 0 altitude to _createSurfaceExplosion
-                // to avoid double shifting?
-
-                // Turret fired at VISUAL coords. So proj.pos is VISUAL.
-                // _createSurfaceExplosion takes World coords and Altitude and shifts them.
-                // To get explosion at proj.pos, we must reverse the shift or pass 0.
-                // It is safest to pass 0 altitude since proj.pos is already the "screen point".
-
+                // Create explosion at hit point
                 this._createSurfaceExplosion(proj.pos.x, proj.pos.y, 0, 15, [255, 50, 50]);
                 proj.destroyed = true;
             }
@@ -504,13 +493,21 @@ class SurfaceMode {
     }
 
     /**
-     * Create explosion with visual offset for altitude
+     * Create explosion with appropriate positioning for surface mode
+     * 
+     * @param {number} x - World X coordinate  
+     * @param {number} y - World Y coordinate
+     * @param {number} altitude - Altitude above terrain (0 for ground-level explosions)
+     * @param {number} size - Explosion size
+     * @param {Array} color - RGB color array
+     * 
+     * NOTE: The extrusion angle creates a pseudo-3D effect. For most explosions at ground
+     * level (projectile hits), pass altitude=0 since projectile positions are already visual.
      */
     _createSurfaceExplosion(x, y, altitude, size, color) {
         if (!this.starSystem || !this.starSystem.addExplosion) return;
 
-        // Calculate visual offset based on altitude
-        // Matches the extrusion logic in Draw3D and SurfaceObjects
+        // Calculate visual offset based on altitude (matches Draw3D extrusion)
         const extrusionAngle = 0.5; // Must match surfaceObjects.js
         const visualX = x - (altitude * Math.sin(extrusionAngle));
         const visualY = y - (altitude * Math.cos(extrusionAngle));
@@ -908,15 +905,15 @@ class SurfaceMode {
     }
 
     /**
-     * Draw projectiles from starSystem - at world position, no altitude offset
-     * The camera transform already handles centering, so projectiles appear near ship
+     * Draw projectiles from starSystem at their world positions
+     * Camera transform handles centering relative to player
      */
     _drawProjectiles() {
         if (!this.starSystem || !this.starSystem.projectiles) return;
         if (!this.player) return;
 
-        push(); // Ensure state isolation for projectiles
-        // FIX: Clear shadow settings to prevent "black bullet" artifacts
+        push();
+        // Clear shadow settings to prevent visual artifacts
         if (typeof drawingContext !== 'undefined') {
             drawingContext.shadowBlur = 0;
             drawingContext.shadowColor = 'transparent';
@@ -926,8 +923,6 @@ class SurfaceMode {
             if (proj && !proj.destroyed && proj.isSurface) {
                 const distSq = p5.Vector.sub(proj.pos, this.player.pos).magSq();
                 if (distSq < 3000 * 3000) {
-                    // Draw at world position - no altitude offset needed
-                    // The camera transform handles centering everything
                     proj.draw();
                 }
             }
