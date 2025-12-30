@@ -629,6 +629,7 @@ class SurfaceMode {
                 if (!c00 || !c10 || !c01 || !c11) continue;
 
                 // Projection to buffer coordinates (calculate once for culling)
+                // Projection to buffer coordinates (calculate once for culling)
                 const dx00 = c00.worldX - meshCenterWX;
                 const dy00 = c00.worldY - meshCenterWY;
                 const dx10 = c10.worldX - meshCenterWX;
@@ -638,6 +639,7 @@ class SurfaceMode {
                 const dx01 = c01.worldX - meshCenterWX;
                 const dy01 = c01.worldY - meshCenterWY;
 
+                // Viewport culling optimization: skip if quad is completely outside buffer bounds
                 // Calculate screen-space bounds of this quad (including height offset)
                 const minHeight = Math.min(c00.height, c10.height, c01.height, c11.height);
                 const maxHeight = Math.max(c00.height, c10.height, c01.height, c11.height);
@@ -647,7 +649,7 @@ class SurfaceMode {
                 const quadTop = Math.min(dy00, dy10, dy01, dy11) - maxHeight;
                 const quadBottom = Math.max(dy00, dy10, dy01, dy11) - minHeight;
 
-                // Viewport culling: skip if quad is completely outside buffer bounds
+                // Early rejection for off-screen quads
                 if (quadRight < bufferLeft || quadLeft > bufferRight ||
                     quadBottom < bufferTop || quadTop > bufferBottom) {
                     cellsCulled++;
@@ -683,7 +685,7 @@ class SurfaceMode {
             }
         }
 
-        // Store culling stats for debugging (can be removed in production)
+        // Store culling stats for debug overlay
         this._lastCullStats = { drawn: cellsDrawn, culled: cellsCulled };
     }
 
@@ -963,7 +965,7 @@ class SurfaceMode {
             }
         }
 
-        // Store culling stats for debugging (can be removed in production)
+        // Store culling stats for debug overlay
         this._lastObjectCullStats = { drawn: objectsDrawn, culled: objectsCulled };
     }
 

@@ -148,11 +148,19 @@
 
     <script>
         // Benchmark Configuration
+        const BENCHMARK_CONFIG = {
+            OBJECT_COUNT: 50,           // Number of surface objects to spawn for testing
+            MESH_RESOLUTION: 80,        // Terrain grid resolution
+            MESH_SIZE: 4000,           // World units covered by mesh
+            TEST_DURATION_MS: 5000,    // Duration of each benchmark test
+            AUTO_DRIVE_SPEED: 25       // Speed during automated testing
+        };
+
         let cullingEnabled = true;
         let terrainMesh = [];
         let surfaceObjects = [];
-        let meshResolution = 80;
-        let meshSize = 4000;
+        let meshResolution = BENCHMARK_CONFIG.MESH_RESOLUTION;
+        let meshSize = BENCHMARK_CONFIG.MESH_SIZE;
         let terrainBuffer = null;
         let lastGridX = 0;
         let lastGridY = 0;
@@ -345,7 +353,7 @@
 
         function spawnTestObjects() {
             surfaceObjects = [];
-            const objectCount = 50; // Spawn many objects to test culling
+            const objectCount = BENCHMARK_CONFIG.OBJECT_COUNT;
 
             for (let i = 0; i < objectCount; i++) {
                 const angle = (i / objectCount) * Math.PI * 2;
