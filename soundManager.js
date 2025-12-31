@@ -1598,10 +1598,8 @@ class SoundManager {
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
             // If sourceEntity is provided, check if it's a surface entity
             if (sourceEntity) {
-                // Allow sounds from surface objects (turrets, buildings, etc)
-                const isSurfaceEntity = sourceEntity.isSurface === true || 
-                                       sourceEntity.constructor?.name === 'Turret' ||
-                                       sourceEntity.constructor?.name === 'SurfaceStation';
+                // Check for explicit isSurface flag (standardized approach)
+                const isSurfaceEntity = sourceEntity.isSurface === true;
                 
                 // Allow sounds from player (who is currently on surface)
                 const isPlayer = sourceEntity === (typeof player !== 'undefined' ? player : null);

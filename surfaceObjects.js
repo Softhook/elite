@@ -132,6 +132,7 @@ class Turret extends SurfaceObject {
         this.health = 100; // Explicitly set health
         this.maxHealth = 100;
         this.lastHitTime = 0; // For damage flash effect
+        this.isSurface = true; // Mark as surface entity for sound filtering
     }
 
     update(dt, player, starSystem) {
@@ -682,14 +683,19 @@ class SurfacePirate extends SurfaceObject {
         
         starSystem.projectiles.push(proj);
         
-        // Mark as surface projectile
-        proj.isSurface = true;
-        proj.ownerType = 'pirate';
-        proj.altitude = this.altitude || 0;
+        // Mark as surface projectile - use weaponSystem's standard method
+        if (typeof WeaponSystem !== 'undefined' && WeaponSystem._applySurfaceProperties) {
+            WeaponSystem._applySurfaceProperties(proj, this);
+        } else {
+            // Fallback if weaponSystem not available
+            proj.isSurface = true;
+            proj.ownerType = 'pirate';
+            proj.altitude = this.altitude || 0;
+        }
         
-        // Play laser sound
-        if (typeof soundManager !== 'undefined') {
-            soundManager.playSound('laser');
+        // Play laser sound with proper world positioning
+        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
+            soundManager.playWorldSound('laser', px, py, player.pos, this);
         }
     }
     
