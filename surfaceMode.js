@@ -430,7 +430,7 @@ class SurfaceMode {
 
                 // Crater/Ground hit sound
                 if (typeof soundManager !== 'undefined' && this.player) {
-                    soundManager.playWorldSound('explosion', projPos.x, projPos.y, this.player.pos);
+                    soundManager.playWorldSound('explosion', projPos.x, projPos.y, this.player.pos, proj);
                 }
 
                 proj.destroyed = true;
@@ -460,9 +460,9 @@ class SurfaceMode {
                         // Create explosion at impact point
                         this._createSurfaceExplosion(projPos.x, projPos.y, 0, 10, [255, 150, 50]);
 
-                        // Play hit sound
+                        // Play hit sound with surface entity marker
                         if (typeof soundManager !== 'undefined' && this.player) {
-                            soundManager.playWorldSound('hit', projPos.x, projPos.y, this.player.pos);
+                            soundManager.playWorldSound('hit', projPos.x, projPos.y, this.player.pos, obj);
                         }
                         break;
                     }
@@ -729,6 +729,10 @@ class SurfaceMode {
         this._drawSurfaceObjects();
         this._drawExplosions();
         this._drawProjectiles();
+
+        // Draw beam and force wave effects (no projectile, direct rendering)
+        this._drawBeams();
+        this._drawForceWaves();
 
         // Draw player ship
         this._drawPlayerShip();
@@ -1056,6 +1060,86 @@ class SurfaceMode {
     }
 
     /**
+     * Draw beam weapon effects (laser lines) at world positions
+     * Beams are stored on the player's lastBeam property, not as projectiles
+     * @private
+     */
+    _drawBeams() {
+        if (!this.player || !this.player.lastBeam) return;
+
+        const beam = this.player.lastBeam;
+        const now = millis();
+
+        // Only draw if beam was recently fired (within 150ms)
+        if (now - beam.time >= 150) return;
+
+        push();
+        // Clear shadow settings to prevent visual artifacts
+        if (typeof drawingContext !== 'undefined') {
+            drawingContext.shadowBlur = 0;
+            drawingContext.shadowColor = 'transparent';
+        }
+
+        // Draw main beam line
+        stroke(beam.color);
+        strokeWeight(3);
+        line(beam.start.x, beam.start.y, beam.end.x, beam.end.y);
+
+        // Draw glow effect
+        stroke(beam.color[0], beam.color[1], beam.color[2], 100);
+        strokeWeight(6);
+        line(beam.start.x, beam.start.y, beam.end.x, beam.end.y);
+
+        pop();
+    }
+
+    /**
+     * Draw force wave effects (expanding rings) at world positions
+     * Force waves are stored in starSystem.forceWaves
+     * @private
+     */
+    _drawForceWaves() {
+        if (!this.starSystem || !this.starSystem.forceWaves) return;
+        if (this.starSystem.forceWaves.length === 0) return;
+
+        push();
+        // Clear shadow settings to prevent visual artifacts
+        if (typeof drawingContext !== 'undefined') {
+            drawingContext.shadowBlur = 0;
+            drawingContext.shadowColor = 'transparent';
+        }
+
+        for (const wave of this.starSystem.forceWaves) {
+            // Fade out as the wave expands
+            const alpha = map(wave.radius, 0, wave.maxRadius, 220, 0);
+
+            // Draw outer ring
+            noFill();
+            strokeWeight(6);
+            stroke(wave.color[0], wave.color[1], wave.color[2], alpha);
+            circle(wave.pos.x, wave.pos.y, wave.radius * 2);
+
+            // Draw secondary ring
+            strokeWeight(3);
+            stroke(255, 255, 255, alpha * 0.7);
+            circle(wave.pos.x, wave.pos.y, wave.radius * 1.9);
+
+            // Draw inner glow
+            strokeWeight(10);
+            stroke(wave.color[0], wave.color[1], wave.color[2], alpha * 0.5);
+            circle(wave.pos.x, wave.pos.y, wave.radius * 1.7);
+
+            // Draw center pulse
+            const pulseSize = (millis() - wave.startTime) % 300 / 300 * 50;
+            fill(wave.color[0], wave.color[1], wave.color[2], alpha);
+            noStroke();
+            circle(wave.pos.x, wave.pos.y, pulseSize);
+        }
+
+        pop();
+    }
+
+    /**
      * Draw asteroids (if we want them on surface)
      * @private
      */
@@ -1211,33 +1295,52 @@ class SurfaceMode {
         strokeWeight(1);
         rect(barX, barY, barWidth, barHeight, 3);
 
-        // Relative Altitude (Radar Altitude)
-        // this.altitude is the radar altitude (height above ground) controlled by the player
-        // Display it directly, no need to subtract groundH
-        const radarAlt = Math.max(0, this.altitude);
+        // Absolute Altitude (height above sea level / datum)
+        const absAlt = Math.max(0, this.player?.altitude || 0);
+        const maxDisplayAlt = 500; // Scale for display (0-500m range)
 
-        const altPercent = radarAlt / 500; // Scale relative altitude (0-500m)
-        const fillHeight = Math.min(barHeight, barHeight * altPercent);
+        // Turret detection zone (red transparent bar)
+        // Calculate detection threshold based on nearby turrets
+        let maxTurretHorizon = 0;
+        let turretCount = 0;
 
-        noStroke();
-        for (let i = 0; i < fillHeight; i += 2) {
-            const t = i / barHeight;
-            fill(lerpColor(color(50, 150, 200), color(100, 220, 255), t));
-            rect(barX + 2, barY + barHeight - i - 2, barWidth - 4, 2);
+        if (this.surfaceObjects && this.surfaceObjects.length > 0) {
+            for (const obj of this.surfaceObjects) {
+                if (obj && obj.detectionHeightThreshold !== undefined && !obj.destroyed) {
+                    const turretHorizon = (obj.yOffset || 0) + (obj.detectionHeightThreshold || 30);
+                    maxTurretHorizon = Math.max(maxTurretHorizon, turretHorizon);
+                    turretCount++;
+                }
+            }
         }
 
-        // Min altitude marker (safe floor)
-        stroke(255, 100, 100);
-        strokeWeight(2);
-        const minY = barY + barHeight - (barHeight * SURFACE_CONFIG.MIN_ALTITUDE / SURFACE_CONFIG.MAX_ALTITUDE);
-        line(barX - 5, minY, barX + barWidth + 5, minY);
+        // Draw red transparent bar for detection zone (where turrets CAN detect)
+        if (turretCount > 0) {
+            // Detection threshold - turrets can detect ABOVE this line
+            const detectionThreshold = Math.min(maxTurretHorizon, maxDisplayAlt);
+            const thresholdY = barY + barHeight - (barHeight * detectionThreshold / maxDisplayAlt);
+
+            // Red zone extends from threshold UP to top of bar (detection danger zone)
+            const zoneHeight = thresholdY - barY;
+
+            // Semi-transparent red zone from threshold to top
+            fill(255, 80, 80, 80);
+            noStroke();
+            rect(barX + 2, barY + 2, barWidth - 4, zoneHeight);
+        }
+
+        // Player altitude indicator (red line)
+        const playerAltY = barY + barHeight - (barHeight * Math.min(absAlt, maxDisplayAlt) / maxDisplayAlt);
+        stroke(255, 50, 50);
+        strokeWeight(3);
+        line(barX - 5, playerAltY, barX + barWidth + 5, playerAltY);
 
         noStroke();
         fill(255);
         textSize(11);
         textAlign(CENTER, TOP);
-        text('R-ALT', barX + barWidth / 2, barY - 18);
-        text(Math.floor(radarAlt), barX + barWidth / 2, barY + barHeight + 5);
+        text('ALT', barX + barWidth / 2, barY - 18);
+        text(Math.floor(absAlt), barX + barWidth / 2, barY + barHeight + 5);
 
         // Compass
         push();

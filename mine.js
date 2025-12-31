@@ -93,7 +93,7 @@ class Mine {
 
         // Play explosion sound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-            soundManager.playWorldSound('explosion', this.pos.x, this.pos.y, player.pos);
+            soundManager.playWorldSound('explosion', this.pos.x, this.pos.y, player.pos, this);
         }
 
         // Damage entities in blast radius

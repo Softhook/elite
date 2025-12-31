@@ -1722,8 +1722,9 @@ class Player {
             pop();
         }
 
-        // Draw force wave effect
-        if (this.lastForceWave && millis() - this.lastForceWave.time < 300) {
+        // Draw force wave effect (skip in surface mode - handled by surfaceMode._drawForceWaves)
+        const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
+        if (!inSurfaceMode && this.lastForceWave && millis() - this.lastForceWave.time < 300) {
             const timeSinceForce = millis() - this.lastForceWave.time;
             const alpha = map(timeSinceForce, 0, 300, 200, 0);
 
@@ -1747,8 +1748,8 @@ class Player {
             // ...existing beam drawing code...
         }
 
-        // Draw beam if recently fired
-        if (this.lastBeam && millis() - this.lastBeam.time < 150) {
+        // Draw beam if recently fired (skip in surface mode - handled by surfaceMode._drawBeams)
+        if (!inSurfaceMode && this.lastBeam && millis() - this.lastBeam.time < 150) {
             push();
             stroke(this.lastBeam.color);
             strokeWeight(3);

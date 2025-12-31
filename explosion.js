@@ -54,7 +54,7 @@ class Explosion {
         // Play sound via the manager, passing position and listener
         // Ensure 'player' global object is accessible
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-            soundManager.playExplosion(this.size, this.pos.x, this.pos.y, player.pos);
+            soundManager.playExplosion(this.size, this.pos.x, this.pos.y, player.pos, this);
         }
     }
 

@@ -300,6 +300,15 @@ class WeaponSystem {
         if (owner === system.player) {
             // Player attacking enemies - use concat to avoid spread operator overhead
             entitiesToProcess = system.enemies.concat(system.asteroids);
+
+            // In surface mode, also target surface objects (turrets, buildings, etc.)
+            if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+                const surfaceObjects = surfaceMode.surfaceObjects;
+                if (surfaceObjects && surfaceObjects.length) {
+                    entitiesToProcess = entitiesToProcess.concat(surfaceObjects);
+                }
+            }
+
             WEAPON_LOG(`Found ${entitiesToProcess.length} potential targets for force wave`);
         } else if (system.player) {
             // Enemy attacking player
@@ -909,6 +918,20 @@ class WeaponSystem {
             }
         }
 
+        // Allow beams to hit surface objects when in surface mode (turrets, buildings, etc.)
+        if (isPlayer && typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+            const surfaceObjects = surfaceMode.surfaceObjects;
+            if (surfaceObjects && surfaceObjects.length) {
+                for (let i = 0, len = surfaceObjects.length; i < len; i++) {
+                    const obj = surfaceObjects[i];
+                    if (!obj || !obj.pos || obj.destroyed) continue;
+                    // Use object's size for collision radius
+                    const radius = obj.size ? obj.size * 0.5 : 20;
+                    evaluateTarget(obj, radius);
+                }
+            }
+        }
+
         if (isEnemy) {
             if (system?.player && !system.player.isDockedAndInvulnerable) {
                 const playerRadius = system.player.size ? system.player.size * 0.5 : 0;
@@ -1055,10 +1078,10 @@ class WeaponSystem {
 
         // Make projectile bigger
         proj.size = weapon.projectileSize || 7;
-        
+
         // Apply surface mode properties if in surface mode
         this._applySurfaceProperties(proj, owner);
-        
+
         if (system && typeof system.addProjectile === 'function') {
             system.addProjectile(proj);
         } else if (system && Array.isArray(system.projectiles)) {
@@ -1097,10 +1120,10 @@ class WeaponSystem {
             proj.system = system;
         }
         proj.size = weapon.projectileSize || 6;
-        
+
         // Apply surface mode properties if in surface mode
         this._applySurfaceProperties(proj, owner);
-        
+
         if (system && typeof system.addProjectile === 'function') {
             system.addProjectile(proj);
         } else if (system && Array.isArray(system.projectiles)) {
@@ -1262,7 +1285,7 @@ class WeaponSystem {
                 const last = target._lastShieldHitSoundTime || 0;
                 if (now - last > 150) { // throttle to avoid spam on beams/rapid fire
                     if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player?.pos) {
-                        soundManager.playWorldSound('hit', hitPoint.x, hitPoint.y, player.pos);
+                        soundManager.playWorldSound('hit', hitPoint.x, hitPoint.y, player.pos, target);
                     }
                     target._lastShieldHitSoundTime = now;
                 }
@@ -1287,7 +1310,9 @@ class WeaponSystem {
                         [255, 0, 0];
             }
 
-            system.addExplosion(hitPoint.x, hitPoint.y, hitSize, hitColor);
+            // Pass isSurface flag so explosions render in surface mode
+            const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
+            system.addExplosion(hitPoint.x, hitPoint.y, hitSize, hitColor, inSurfaceMode);
         }
     }
 

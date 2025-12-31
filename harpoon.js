@@ -40,9 +40,9 @@ function Harpoon(owner, target, system, opts) {
     }
 }
 
-Harpoon.prototype.update = function(dtMs) {
+Harpoon.prototype.update = function (dtMs) {
     if (this.broken) return;
-    const dt = (typeof dtMs === 'number') ? dtMs / 1000 : (deltaTime ? deltaTime / 1000 : 1/60);
+    const dt = (typeof dtMs === 'number') ? dtMs / 1000 : (deltaTime ? deltaTime / 1000 : 1 / 60);
     // age/lifetime removed: harpoon persists until broken by tension or explicitly
 
     // Verlet-like integration for middle segments using numeric coords
@@ -81,11 +81,11 @@ Harpoon.prototype.update = function(dtMs) {
     // Constraint relaxation
     // Dynamically reduce iterations for low-velocity situations to save CPU
     let iterations = 4;
-    const ownerVelMag = this.owner && this.owner.vel ? Math.sqrt((this.owner.vel.x||0)*(this.owner.vel.x||0) + (this.owner.vel.y||0)*(this.owner.vel.y||0)) : 0;
-    const targetVelMag = this.target && this.target.vel ? Math.sqrt((this.target.vel.x||0)*(this.target.vel.x||0) + (this.target.vel.y||0)*(this.target.vel.y||0)) : 0;
+    const ownerVelMag = this.owner && this.owner.vel ? Math.sqrt((this.owner.vel.x || 0) * (this.owner.vel.x || 0) + (this.owner.vel.y || 0) * (this.owner.vel.y || 0)) : 0;
+    const targetVelMag = this.target && this.target.vel ? Math.sqrt((this.target.vel.x || 0) * (this.target.vel.x || 0) + (this.target.vel.y || 0) * (this.target.vel.y || 0)) : 0;
     const motion = (ownerVelMag + targetVelMag) * dt;
     if (motion < 1.0) iterations = 2;
-    
+
     // Quick early-out for when anchors and segments are essentially static to avoid costlier physics
     let maxSegVel = 0;
     for (let i = 1; i < cnt - 1; i++) {
@@ -99,49 +99,49 @@ Harpoon.prototype.update = function(dtMs) {
         // still compute tension and anchor pull but skip constraint relaxation work
         // tension evaluation falls through below
     } else {
-    for (let iter = 0; iter < iterations; iter++) {
-        for (let i = 0; i < cnt - 1; i++) {
-            const a = segs[i];
-            const b = segs[i+1];
-            let dx = b.x - a.x;
-            let dy = b.y - a.y;
-            let d = Math.sqrt(dx*dx + dy*dy) || 0.0001;
-            const diff = (d - this.restLength) / d;
+        for (let iter = 0; iter < iterations; iter++) {
+            for (let i = 0; i < cnt - 1; i++) {
+                const a = segs[i];
+                const b = segs[i + 1];
+                let dx = b.x - a.x;
+                let dy = b.y - a.y;
+                let d = Math.sqrt(dx * dx + dy * dy) || 0.0001;
+                const diff = (d - this.restLength) / d;
 
-            // anchors have invMass = 0
-            const invA = (i === 0) ? 0 : 1;
-            const invB = (i+1 === cnt-1) ? 0 : 1;
-            const sum = invA + invB;
-            if (sum === 0) continue;
-            const adjustA = (invA / sum) * this.stiffness;
-            const adjustB = (invB / sum) * this.stiffness;
+                // anchors have invMass = 0
+                const invA = (i === 0) ? 0 : 1;
+                const invB = (i + 1 === cnt - 1) ? 0 : 1;
+                const sum = invA + invB;
+                if (sum === 0) continue;
+                const adjustA = (invA / sum) * this.stiffness;
+                const adjustB = (invB / sum) * this.stiffness;
 
-            a.x += dx * diff * adjustA;
-            a.y += dy * diff * adjustA;
-            b.x -= dx * diff * adjustB;
-            b.y -= dy * diff * adjustB;
-        }
+                a.x += dx * diff * adjustA;
+                a.y += dy * diff * adjustA;
+                b.x -= dx * diff * adjustB;
+                b.y -= dy * diff * adjustB;
+            }
 
-        // re-anchor
-        if (this.owner && this.owner.pos) {
-            segs[0].x = this.owner.pos.x;
-            segs[0].y = this.owner.pos.y;
+            // re-anchor
+            if (this.owner && this.owner.pos) {
+                segs[0].x = this.owner.pos.x;
+                segs[0].y = this.owner.pos.y;
+            }
+            if (this.target && this.target.pos) {
+                segs[cnt - 1].x = this.target.pos.x;
+                segs[cnt - 1].y = this.target.pos.y;
+            }
         }
-        if (this.target && this.target.pos) {
-            segs[cnt-1].x = this.target.pos.x;
-            segs[cnt-1].y = this.target.pos.y;
-        }
-    }
     }
 
     // tension check - approximate by longest segment stretch
     let maxStretch = 0;
     for (let i = 0; i < cnt - 1; i++) {
         const a = segs[i];
-        const b = segs[i+1];
+        const b = segs[i + 1];
         const dx = b.x - a.x;
         const dy = b.y - a.y;
-        const d = Math.sqrt(dx*dx + dy*dy);
+        const d = Math.sqrt(dx * dx + dy * dy);
         maxStretch = Math.max(maxStretch, d - this.restLength);
     }
 
@@ -158,7 +158,7 @@ Harpoon.prototype.update = function(dtMs) {
     if (this.owner && this.target && this.owner.pos && this.target.pos) {
         const dx = this.target.pos.x - this.owner.pos.x;
         const dy = this.target.pos.y - this.owner.pos.y;
-        const dist = Math.sqrt(dx*dx + dy*dy) || 0.0001;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 0.0001;
         const restTotal = this.restTotal;
         const stretch = dist - restTotal;
         if (stretch > 0.5) {
@@ -166,7 +166,7 @@ Harpoon.prototype.update = function(dtMs) {
             const ny = dy / dist;
             // gentler pull: reduce scalar and limit dt scaling to avoid huge impulses on slow frames
             const basePull = Math.min(stretch * 0.12, 100); // reduced from 0.6/400 to 0.12/100
-            const dtScale = Math.min(dt / (1/60), 2); // cap dt scaling
+            const dtScale = Math.min(dt / (1 / 60), 2); // cap dt scaling
             const impulse = basePull * dtScale;
             const maxImpulsePerAxis = 50;
             // apply to velocities if available, but clamp so it's not a sudden huge jump
@@ -197,7 +197,7 @@ Harpoon.prototype.update = function(dtMs) {
     }
 };
 
-Harpoon.prototype.draw = function() {
+Harpoon.prototype.draw = function () {
     if (this.broken) return;
     stroke(180, 220, 255);
     strokeWeight(2);
@@ -229,7 +229,7 @@ Harpoon.prototype.draw = function() {
     endShape();
 };
 
-Harpoon.prototype.break = function() {
+Harpoon.prototype.break = function () {
     if (this.broken) return;
     this.broken = true;
     // Decrement active harpoon counters on anchors (defensive)
@@ -242,21 +242,21 @@ Harpoon.prototype.break = function() {
     // small visual marker
     if (this.system && typeof this.system.addExplosion === 'function') {
         const p = this.segments[this.midIndex];
-        this.system.addExplosion(p.x, p.y, 8, [200,220,255]);
+        this.system.addExplosion(p.x, p.y, 8, [200, 220, 255]);
     }
     if (typeof soundManager !== 'undefined' && this.owner && this.owner.pos && typeof soundManager.playWorldSound === 'function') {
         try {
             // Prefer system player listener if available, fall back to owner position
             const listener = (this.system && this.system.player && this.system.player.pos) ? this.system.player.pos : (typeof player !== 'undefined' && player?.pos ? player.pos : null);
-            soundManager.playWorldSound('harpoonBreak', this.owner.pos.x, this.owner.pos.y, listener);
-        } catch(_) {}
+            soundManager.playWorldSound('harpoonBreak', this.owner.pos.x, this.owner.pos.y, listener, this.owner);
+        } catch (_) { }
     }
 };
 
 /**
  * Helper to indicate whether the harpoon should be removed from the system
  */
-Harpoon.prototype.isDone = function() {
+Harpoon.prototype.isDone = function () {
     return !!this.broken;
 };
 
@@ -264,7 +264,7 @@ Harpoon.prototype.isDone = function() {
 if (typeof window !== 'undefined') window.Harpoon = Harpoon;
 
 // Serialization helpers for Harpoon
-Harpoon.prototype.toJSON = function() {
+Harpoon.prototype.toJSON = function () {
     return {
         segmentCount: this.segmentCount,
         restLength: this.restLength,
@@ -280,11 +280,11 @@ Harpoon.prototype.toJSON = function() {
     };
 };
 
-Harpoon.fromJSON = function(data) {
+Harpoon.fromJSON = function (data) {
     if (!data) return null;
     // Create a minimal harpoon with null anchors; linking to real ships should occur after system is restored
-    const dummyOwner = { pos: createVector(0,0) };
-    const dummyTarget = { pos: createVector(0,0) };
+    const dummyOwner = { pos: createVector(0, 0) };
+    const dummyTarget = { pos: createVector(0, 0) };
     const opts = { segmentCount: data.segmentCount || 8, restLength: data.restLength || data.restTotal || 10, stiffness: data.stiffness || 1.0, breakTension: data.breakTension || 800, damping: data.damping || 0.995 };
     const h = new Harpoon(dummyOwner, dummyTarget, null, opts);
     h.segmentCount = data.segmentCount || h.segmentCount;

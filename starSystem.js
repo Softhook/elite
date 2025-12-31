@@ -3878,7 +3878,7 @@ class StarSystem {
                     cargoItem.attachedBy = 'harpoon';
                     if (cargoItem.vel) { cargoItem.vel.x = 0; cargoItem.vel.y = 0; }
                     this.addExplosion(proj.pos.x, proj.pos.y, 4, [180, 220, 255]);
-                    try { if (typeof soundManager !== 'undefined' && soundManager.playWorldSound) soundManager.playWorldSound('harpoonFire', proj.pos.x, proj.pos.y, this.player.pos); } catch (_) { }
+                    try { if (typeof soundManager !== 'undefined' && soundManager.playWorldSound) soundManager.playWorldSound('harpoonFire', proj.pos.x, proj.pos.y, this.player.pos, proj.owner); } catch (_) { }
                 } catch (e) { console.error('Error attaching cargo to harpoon:', e); }
                 this.removeProjectile(i);
                 return true;
@@ -5401,12 +5401,12 @@ class StarSystem {
         const inSurfaceMode = (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive());
         for (let i = 0; i < projCount; i++) {
             const proj = this.projectiles[i];
-            
+
             // Skip space projectiles when in surface mode
             if (inSurfaceMode && !proj.isSurface) {
                 continue;
             }
-            
+
             if (this.isInView(proj.pos.x, proj.pos.y, proj.size * 3, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                 proj.draw();
             }
@@ -6572,7 +6572,7 @@ class StarSystem {
                     // 1 second cooldown to avoid spam during multi-spawns
                     if (!this._lastAlienSpawnSoundTime || (now - this._lastAlienSpawnSoundTime) > 1000) {
                         if (enemy.pos && this.player && this.player.pos && typeof soundManager.playWorldSound === 'function') {
-                            soundManager.playWorldSound('thargoid', enemy.pos.x, enemy.pos.y, this.player.pos);
+                            soundManager.playWorldSound('thargoid', enemy.pos.x, enemy.pos.y, this.player.pos, enemy);
                         } else if (typeof soundManager.playSound === 'function') {
                             soundManager.playSound('thargoid');
                         }

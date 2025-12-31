@@ -1600,29 +1600,18 @@ class SoundManager {
             if (sourceEntity) {
                 // Check for explicit isSurface flag (standardized approach)
                 const isSurfaceEntity = sourceEntity.isSurface === true;
-                
+
                 // Allow sounds from player (who is currently on surface)
                 const isPlayer = sourceEntity === (typeof player !== 'undefined' ? player : null);
-                
+
                 // Block sounds from space enemies/ships
                 if (!isSurfaceEntity && !isPlayer) {
                     return; // Block space entity sounds
                 }
             } else {
-                // No source entity provided - check distance as fallback
-                // This handles projectiles and other effects
-                if (listenerPos) {
-                    const dx = sourceX - listenerPos.x;
-                    const dy = sourceY - listenerPos.y;
-                    const distSq = dx * dx + dy * dy;
-                    // Only allow sounds within reasonable range (nearby surface activity)
-                    // Increased from 200 to 1500 to allow hearing surface turrets firing
-                    if (distSq > 1500 * 1500) {
-                        return; // Block distant sounds
-                    }
-                } else {
-                    return; // No listener position, block sound
-                }
+                // No source entity provided - block by default in surface mode
+                // Space combat projectiles/explosions shouldn't be heard on surface
+                return;
             }
         }
 
@@ -1912,14 +1901,14 @@ class SoundManager {
      * @param {number} sourceY - World Y coordinate of the explosion.
      * @param {p5.Vector} listenerPos - The world position of the listener (player).
      */
-    playExplosion(size = 30, sourceX, sourceY, listenerPos) {
+    playExplosion(size = 30, sourceX, sourceY, listenerPos, sourceEntity = null) {
         if (!listenerPos) {
             console.warn("SoundManager.playExplosion: listenerPos is required.");
             return;
         }
         // Simple size check for sound selection
         const soundName = size > 60 ? 'explosionLarge' : 'explosionSmall';
-        this.playWorldSound(soundName, sourceX, sourceY, listenerPos);
+        this.playWorldSound(soundName, sourceX, sourceY, listenerPos, sourceEntity);
     }
 
     /**
