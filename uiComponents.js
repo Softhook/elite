@@ -804,7 +804,7 @@ class UIComponents {
         const effectiveWidth = panelRightEdge - panelLeftEdge;
 
         // CHECK IF IT IS A SHIP UPGRADE (Armor, Engine, Cargo, Hardpoints)
-        if (['armor', 'engine', 'cargo', 'hardpoints', 'shield', 'cloak'].includes(type) && typeof Draw3D !== 'undefined' && typeof Draw3D.drawUpgradeModel === 'function') {
+        if (['armor', 'engine', 'cargo', 'hardpoints', 'shield', 'cloak', 'booster'].includes(type) && typeof Draw3D !== 'undefined' && typeof Draw3D.drawUpgradeModel === 'function') {
             const rotationAngle = 0; // Static valid as requested
             Draw3D.drawUpgradeModel(type, weaponDef.level || 1, 0, 0, size * 0.08, rotationAngle);
 

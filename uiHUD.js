@@ -660,57 +660,114 @@ class UIHUD {
             text('Secret Base', width / 2, secretBaseY + 10);
         }
 
-        // Cloak status indicator (when cloak is installed)
-        if (player.installedUpgrades?.cloak > 0) {
-            const cloakBarWidth = 120;
-            const cloakBarHeight = 16;
-            const cloakBarX = 10;
-            const cloakBarY = weaponBarY + weaponBarH + 8;
+        // Cloak and Booster status indicators on RIGHT side of weapon bar
+        // Position from right edge, before mission display if present
+        let rightBarX = width - 10; // Start from right edge
+        const abilityBarWidth = 90;
+        const abilityBarHeight = weaponBarH - 6;
+        const abilityBarY = weaponBarY + 3;
+        const abilitySpacing = 5;
 
-            // Calculate Y offset if autopilot or secret base is shown
-            let yOffset = 0;
-            if (player.autopilotEnabled) yOffset += 25;
-            if (player.showSecretBaseNavigation) yOffset += 25;
-            const adjustedY = cloakBarY + yOffset;
+        // Reserve space for mission display if active
+        if (player.activeMission?.title) {
+            const missionText = `Mission: ${player.activeMission.title}`;
+            const missionPadding = 10;
+            const missionTextW = textWidth(missionText);
+            const missionBoxW = missionTextW + missionPadding * 2;
+            rightBarX = width - missionBoxW - 20; // Position before mission box
+        }
+
+        // Booster status indicator (when booster is installed) - rightmost
+        if (player.installedUpgrades?.booster > 0) {
+            rightBarX -= abilityBarWidth;
+            const boostBarX = rightBarX;
 
             // Background
             fill(20, 40, 60, 180);
             noStroke();
-            rect(cloakBarX, adjustedY, cloakBarWidth, cloakBarHeight, 3);
+            rect(boostBarX, abilityBarY, abilityBarWidth, abilityBarHeight, 5);
+
+            if (player.isSpeedBursting) {
+                // Active boost - show remaining time with orange/yellow bar
+                const remainingPct = player.boostDurationTimer / player.boostMaxDuration;
+                fill(255, 180, 50, 200);
+                rect(boostBarX, abilityBarY, abilityBarWidth * remainingPct, abilityBarHeight, 5);
+
+                // Pulsing effect
+                const pulse = sin(millis() * 0.03) * 30;
+                fill(255, 200 + pulse, 100 + pulse, 230);
+                textAlign(LEFT, CENTER);
+                textSize(STATION_TEXT_SIZE.HELPER + 1);
+                text(`BOOST ${player.boostDurationTimer.toFixed(1)}s`, boostBarX + 5, abilityBarY + abilityBarHeight / 2);
+            } else if (player.boostCooldownTimer > 0) {
+                // Cooldown - show recharge progress
+                const rechargePct = 1 - (player.boostCooldownTimer / player.boostMaxCooldown);
+                fill(60, 80, 100, 150);
+                rect(boostBarX, abilityBarY, abilityBarWidth, abilityBarHeight, 5);
+                fill(140, 100, 40, 200);
+                rect(boostBarX, abilityBarY, abilityBarWidth * rechargePct, abilityBarHeight, 5);
+
+                fill(180, 160, 140);
+                textAlign(LEFT, CENTER);
+                textSize(STATION_TEXT_SIZE.HELPER + 1);
+                text(`BOOST ${Math.ceil(player.boostCooldownTimer)}s`, boostBarX + 5, abilityBarY + abilityBarHeight / 2);
+            } else {
+                // Ready
+                fill(120, 100, 40, 200);
+                rect(boostBarX, abilityBarY, abilityBarWidth, abilityBarHeight, 5);
+
+                fill(255, 220, 100);
+                textAlign(LEFT, CENTER);
+                textSize(STATION_TEXT_SIZE.HELPER + 1);
+                text("BOOST [R]", boostBarX + 5, abilityBarY + abilityBarHeight / 2);
+            }
+
+            rightBarX -= abilitySpacing;
+        }
+
+        // Cloak status indicator (when cloak is installed) - left of booster
+        if (player.installedUpgrades?.cloak > 0) {
+            rightBarX -= abilityBarWidth;
+            const cloakBarX = rightBarX;
+
+            // Background
+            fill(20, 40, 60, 180);
+            noStroke();
+            rect(cloakBarX, abilityBarY, abilityBarWidth, abilityBarHeight, 5);
 
             if (player.isCloaked) {
                 // Active cloak - show remaining time with cyan bar
                 const remainingPct = player.cloakDurationTimer / player.cloakMaxDuration;
                 fill(50, 180, 220, 200);
-                rect(cloakBarX, adjustedY, cloakBarWidth * remainingPct, cloakBarHeight, 3);
+                rect(cloakBarX, abilityBarY, abilityBarWidth * remainingPct, abilityBarHeight, 5);
 
                 // Flickering effect
                 const flicker = sin(millis() * 0.02) * 30;
                 fill(100 + flicker, 220 + flicker, 255, 220);
                 textAlign(LEFT, CENTER);
-                textSize(STATION_TEXT_SIZE.HELPER + 2);
-                text(`CLOAKED ${player.cloakDurationTimer.toFixed(1)}s`, cloakBarX + 5, adjustedY + cloakBarHeight / 2);
+                textSize(STATION_TEXT_SIZE.HELPER + 1);
+                text(`CLOAK ${player.cloakDurationTimer.toFixed(1)}s`, cloakBarX + 5, abilityBarY + abilityBarHeight / 2);
             } else if (player.cloakCooldownTimer > 0) {
                 // Cooldown - show recharge progress
                 const rechargePct = 1 - (player.cloakCooldownTimer / player.cloakMaxCooldown);
                 fill(60, 80, 100, 150);
-                rect(cloakBarX, adjustedY, cloakBarWidth, cloakBarHeight, 3);
+                rect(cloakBarX, abilityBarY, abilityBarWidth, abilityBarHeight, 5);
                 fill(40, 100, 140, 200);
-                rect(cloakBarX, adjustedY, cloakBarWidth * rechargePct, cloakBarHeight, 3);
+                rect(cloakBarX, abilityBarY, abilityBarWidth * rechargePct, abilityBarHeight, 5);
 
                 fill(150, 180, 200);
                 textAlign(LEFT, CENTER);
-                textSize(STATION_TEXT_SIZE.HELPER + 2);
-                text(`CLOAK ${Math.ceil(player.cloakCooldownTimer)}s`, cloakBarX + 5, adjustedY + cloakBarHeight / 2);
+                textSize(STATION_TEXT_SIZE.HELPER + 1);
+                text(`CLOAK ${Math.ceil(player.cloakCooldownTimer)}s`, cloakBarX + 5, abilityBarY + abilityBarHeight / 2);
             } else {
                 // Ready
                 fill(40, 120, 80, 200);
-                rect(cloakBarX, adjustedY, cloakBarWidth, cloakBarHeight, 3);
+                rect(cloakBarX, abilityBarY, abilityBarWidth, abilityBarHeight, 5);
 
                 fill(100, 255, 150);
                 textAlign(LEFT, CENTER);
-                textSize(STATION_TEXT_SIZE.HELPER + 2);
-                text("CLOAK [C]", cloakBarX + 5, adjustedY + cloakBarHeight / 2);
+                textSize(STATION_TEXT_SIZE.HELPER + 1);
+                text("CLOAK [C]", cloakBarX + 5, abilityBarY + abilityBarHeight / 2);
             }
         }
 

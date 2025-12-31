@@ -174,5 +174,40 @@ const SHIP_UPGRADES = [
         cloakDuration: 25,     // seconds
         cloakCooldown: 25,     // seconds
         desc: "Military-grade phase shift technology. Complete invisibility with extended duration and rapid recharge."
+    },
+
+    // -----------------------------
+    // Booster Upgrades (Speed Burst)
+    // -----------------------------
+    {
+        type: "booster",
+        level: 1,
+        name: "Pulse Drive Igniter",
+        price: 4000,
+        boostMultiplier: 2.0,      // 2x speed
+        boostDuration: 1.0,        // 1 second
+        boostCooldown: 10.0,       // 10 second cooldown
+        desc: "Basic afterburner system. Provides short speed bursts with standard recharge."
+    },
+    {
+        type: "booster",
+        level: 2,
+        name: "Turbocharged Injector",
+        price: 12000,
+        boostMultiplier: 2.5,      // 2.5x speed
+        boostDuration: 1.5,        // 1.5 seconds
+        boostCooldown: 8.0,        // 8 second cooldown
+        desc: "Enhanced afterburner with improved thrust output and faster recharge cycle."
+    },
+    {
+        type: "booster",
+        level: 3,
+        name: "Nova Drive System",
+        price: 30000,
+        boostMultiplier: 3.0,      // 3x speed
+        boostDuration: 2.0,        // 2 seconds
+        boostCooldown: 6.0,        // 6 second cooldown
+        desc: "Military-grade boost system. Maximum thrust with rapid recharge."
     }
 ];
+

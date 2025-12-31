@@ -98,7 +98,7 @@ class Player {
         this.shipDefinition = shipDef;
 
         // Initialize installed upgrades tracking (all start at level 0)
-        this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0 };
+        this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0, booster: 0 };
         this._applyDefaultUpgrades(shipDef);
 
         return shipDef;
@@ -155,13 +155,17 @@ class Player {
         this.isReverseThrusting = false;
         this.isStrafing = false;
 
-        // Speed burst system
-        this.speedBurstCooldown = PLAYER_CONFIG.SPEED_BURST_COOLDOWN;
-        this.lastBurstTime = -Infinity;
-        this.speedBurstMultiplier = PLAYER_CONFIG.SPEED_BURST_MULTIPLIER;
+        // Speed burst system (now upgrade-based)
         this.isSpeedBursting = false;
         this.speedBurstEnd = 0;
         this.isCoastingFromBurst = false;
+
+        // Booster upgrade properties (set by recalculateStats)
+        this.boostMaxDuration = 0;
+        this.boostMaxCooldown = 0;
+        this.boostMultiplier = 0;
+        this.boostDurationTimer = 0;
+        this.boostCooldownTimer = 0;
 
         // Thrust particles
         this.thrustManager = new ThrustManager();
@@ -740,7 +744,7 @@ class Player {
         this.loadWeaponsFromShipDefinition(shipTypeName);
 
         // Recalculate any derived properties
-        this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0 }; // Reset upgrades on ship change
+        this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0, booster: 0 }; // Reset upgrades on ship change
         this._applyDefaultUpgrades(def); // Apply default upgrades from definition
         this.recalculateStats(); // Apply bonuses from default upgrades
         this.hull = this.maxHull; // Full hull for new ship
@@ -755,7 +759,7 @@ class Player {
      * @param {number} level - 1, 2, 3
      */
     applyUpgrade(type, level) {
-        if (!this.installedUpgrades) this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0 };
+        if (!this.installedUpgrades) this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0, booster: 0 };
 
         const oldMaxHull = this.maxHull;
         const oldMaxShield = this.maxShield;
@@ -878,6 +882,20 @@ class Player {
         } else {
             this.cloakMaxDuration = 0;
             this.cloakMaxCooldown = 0;
+        }
+
+        // 7. Booster
+        if (this.installedUpgrades.booster > 0) {
+            const upg = SHIP_UPGRADES.find(u => u.type === 'booster' && u.level === this.installedUpgrades.booster);
+            if (upg) {
+                this.boostMultiplier = upg.boostMultiplier;
+                this.boostMaxDuration = upg.boostDuration;
+                this.boostMaxCooldown = upg.boostCooldown;
+            }
+        } else {
+            this.boostMultiplier = 0;
+            this.boostMaxDuration = 0;
+            this.boostMaxCooldown = 0;
         }
     }
 
@@ -1164,21 +1182,38 @@ class Player {
         this.angle = ((this.angle % twoPi) + twoPi) % twoPi;
     }
 
-    /** Attempt a one-off forward speed burst if off cooldown */
+    /** Attempt a one-off forward speed burst if booster installed and off cooldown */
     trySpeedBurst() {
-        const now = millis();
-        if (now - this.lastBurstTime > this.speedBurstCooldown && !this.isSpeedBursting) {
-            this.isSpeedBursting = true;
-            this.isCoastingFromBurst = false; // Reset coasting flag when a new burst starts
-            this.speedBurstEnd = now + 1000;  // 1000ms burst window
-            this.lastBurstTime = now;
-
-            // Immediately set velocity to max forward speed
-            const maxBurstSpeed = this.baseMaxSpeed * this.speedBurstMultiplier;
-            this.vel.set(cos(this.angle) * maxBurstSpeed, sin(this.angle) * maxBurstSpeed);
-
-            uiManager?.addMessage("Speed Burst!", 'lightblue');
+        // Check if booster is installed (silently fail - HUD shows status)
+        if (!this.installedUpgrades?.booster || this.boostMaxDuration <= 0) {
+            return false;
         }
+
+        // Check if already boosting (silently fail)
+        if (this.isSpeedBursting) {
+            return false;
+        }
+
+        // Check cooldown (silently fail - HUD shows recharge progress)
+        if (this.boostCooldownTimer > 0) {
+            return false;
+        }
+
+        // Activate boost
+        this.isSpeedBursting = true;
+        this.isCoastingFromBurst = false;
+        this.boostDurationTimer = this.boostMaxDuration;
+        this.speedBurstEnd = millis() + (this.boostMaxDuration * 1000);
+
+        // Immediately set velocity to max forward speed
+        const maxBurstSpeed = this.baseMaxSpeed * this.boostMultiplier;
+        this.vel.set(cos(this.angle) * maxBurstSpeed, sin(this.angle) * maxBurstSpeed);
+
+        if (typeof soundManager !== 'undefined') {
+            soundManager.playSound('boost');
+        }
+
+        return true;
     }
 
     /** Apply a left‐strafe (kite) thrust */
@@ -1414,14 +1449,29 @@ class Player {
         // ---- End new section ----
 
 
+        // Update booster cooldown timer
+        if (this.boostCooldownTimer > 0) {
+            this.boostCooldownTimer -= deltaSeconds;
+            if (this.boostCooldownTimer < 0) {
+                this.boostCooldownTimer = 0;
+            }
+        }
+
         // --- Speed Burst Thrust & State Management ---
         if (this.isSpeedBursting) {
-            if (currentTime < this.speedBurstEnd) {
+            // Update boost duration timer
+            this.boostDurationTimer -= deltaSeconds;
+
+            if (currentTime < this.speedBurstEnd && this.boostDurationTimer > 0) {
                 // Actively bursting: sustain with normal thrust application
                 this.thrust();
             } else {
                 // Burst thrust duration has ended
                 this.isSpeedBursting = false;
+                this.boostDurationTimer = 0;
+                // Start cooldown
+                this.boostCooldownTimer = this.boostMaxCooldown;
+
                 // Only start coasting if velocity is still significantly above normal max speed.
                 if (this.vel.magSq() > sq(this.baseMaxSpeed * 1.01)) { // Check if speed is > 101% of baseMaxSpeed
                     this.isCoastingFromBurst = true;
@@ -2429,7 +2479,7 @@ class Player {
 
         return {
             shipTypeName: this.shipTypeName,
-            installedUpgrades: this.installedUpgrades || { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0 }, // Save upgrades
+            installedUpgrades: this.installedUpgrades || { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0, booster: 0 }, // Save upgrades
             pos: { x: this.pos.x, y: this.pos.y }, vel: { x: this.vel.x, y: this.vel.y }, angle: normalizedAngle,
             hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(cleanedCargo)),
             isWanted: this.isWanted,
@@ -2498,9 +2548,11 @@ class Player {
         let typeToLoad = data.shipTypeName || "Sidewinder";
         this.applyShipDefinition(typeToLoad);
 
-        // RESTORE UPGRADES
+        // RESTORE UPGRADES - merge with defaults to handle new upgrade types from old saves
         if (data.installedUpgrades) {
-            this.installedUpgrades = { ...data.installedUpgrades };
+            // Keep current defaults (which include all upgrade types like booster)
+            // then overlay saved values on top
+            this.installedUpgrades = { ...this.installedUpgrades, ...data.installedUpgrades };
             // Recalculate stats immediately to apply bonuses (hull, slots, etc.)
             this.recalculateStats();
         }

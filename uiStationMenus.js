@@ -771,7 +771,7 @@ class UIStationMenus {
             let upg = allItems[i];
             let y = startY + (i - firstRow) * rowH;
 
-            const isShipUpgrade = ['armor', 'engine', 'cargo', 'hardpoints', 'shield', 'cloak'].includes(upg.type);
+            const isShipUpgrade = ['armor', 'engine', 'cargo', 'hardpoints', 'shield', 'cloak', 'booster'].includes(upg.type);
 
             // Check formatted affordability (and specific upgrade constraints if needed)
             let canAfford = player.credits >= upg.price;
@@ -2174,7 +2174,7 @@ class UIStationMenus {
         const type = weaponDef.type;
 
         // Check for Ship Upgrade types first
-        if (['armor', 'engine', 'cargo', 'hardpoints', 'shield', 'cloak'].includes(type) || weaponDef.hullBonus || weaponDef.speedMultiplier) {
+        if (['armor', 'engine', 'cargo', 'hardpoints', 'shield', 'cloak', 'booster'].includes(type) || weaponDef.hullBonus || weaponDef.speedMultiplier) {
 
             // Armor
             if (weaponDef.hullBonus) {
@@ -2219,6 +2219,20 @@ class UIStationMenus {
             }
             if (weaponDef.cloakCooldown) {
                 text(`Cooldown: ${weaponDef.cloakCooldown}s`, specX, y);
+                y += lineH;
+            }
+
+            // Booster
+            if (weaponDef.boostMultiplier) {
+                text(`Boost Multiplier: ${weaponDef.boostMultiplier}x`, specX, y);
+                y += lineH;
+            }
+            if (weaponDef.boostDuration) {
+                text(`Boost Duration: ${weaponDef.boostDuration}s`, specX, y);
+                y += lineH;
+            }
+            if (weaponDef.boostCooldown) {
+                text(`Boost Cooldown: ${weaponDef.boostCooldown}s`, specX, y);
                 y += lineH;
             }
 
@@ -2539,7 +2553,7 @@ class UIStationMenus {
 
         const weaponData = this.selectedWeaponForDetail;
         const def = weaponData.weaponDef;
-        const isShipUpgrade = ['armor', 'engine', 'cargo', 'hardpoints', 'shield', 'cloak'].includes(def.type);
+        const isShipUpgrade = ['armor', 'engine', 'cargo', 'hardpoints', 'shield', 'cloak', 'booster'].includes(def.type);
 
         if (this.weaponDetailButtons) {
             // Back

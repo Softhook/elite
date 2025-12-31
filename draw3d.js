@@ -1488,6 +1488,53 @@ Draw3D.drawUpgradeModel = function (type, level, x, y, size, angle) {
             ellipse(px, py, 4, 4);
         }
 
+    } else if (type === 'booster') {
+        // BOOSTER: Afterburner system with flame effects
+        const bodyCol = color(80, 90, 110);
+        const flameCol = level === 3 ? color(255, 150, 50) :
+            level === 2 ? color(255, 200, 100) :
+                color(200, 180, 150);
+
+        // Main thruster body (horizontal cylinder-like)
+        this.drawBox3D(x, y, size * 1.2, size * 0.5, size * 0.6, bodyCol, angle, sunAngle);
+
+        // Intake vents based on level
+        const ventCount = level;
+        for (let i = 0; i < ventCount; i++) {
+            const yOff = (i - (ventCount - 1) / 2) * size * 0.25;
+            this.drawBox3D(x - size * 0.4, y + yOff, size * 0.3, size * 0.12, size * 0.2, color(50, 60, 70), angle, sunAngle);
+        }
+
+        // Exhaust nozzle
+        this.drawCone(x + size * 0.5, y, size * 0.35, size * 0.5, 8, color(60, 70, 80), angle + Math.PI, sunAngle);
+
+        // Animated flame effect
+        noStroke();
+        const flameLength = size * (0.4 + level * 0.2);
+        const flicker = Math.sin(time * 15) * 0.3 + 0.7;
+
+        // Outer flame glow
+        fill(red(flameCol), green(flameCol), blue(flameCol), 80 * flicker);
+        ellipse(x + size * 0.7 + flameLength * 0.3, y, flameLength * 1.2, size * 0.6);
+
+        // Core flame
+        fill(red(flameCol), green(flameCol), blue(flameCol), 180 * flicker);
+        ellipse(x + size * 0.6 + flameLength * 0.2, y, flameLength * 0.7, size * 0.35);
+
+        // Hot center
+        fill(255, 255, 200, 200 * flicker);
+        ellipse(x + size * 0.5, y, size * 0.3, size * 0.2);
+
+        // Speed lines for effect
+        stroke(red(flameCol), green(flameCol), blue(flameCol), 100);
+        strokeWeight(1);
+        for (let i = 0; i < level + 1; i++) {
+            const lineY = y + (i - level / 2) * size * 0.2;
+            const lineStart = x + size * 0.8;
+            const lineEnd = lineStart + flameLength * (0.5 + Math.sin(time * 10 + i) * 0.2);
+            line(lineStart, lineY, lineEnd, lineY);
+        }
+
     } else {
         // Fallback generic box
         this.drawBox3D(x, y, size, size, size, color(100), angle, sunAngle);
