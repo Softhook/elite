@@ -1928,12 +1928,16 @@ class Player {
 
             // Create player explosion (larger, more dramatic)
             if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
+                // Check if we're in surface mode for proper explosion rendering
+                const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
+
                 // Main large explosion
                 this.currentSystem.addExplosion(
                     this.pos.x,
                     this.pos.y,
                     this.size * 3, // Larger explosion
-                    [100, 150, 255] // Blueish-white core
+                    [100, 150, 255], // Blueish-white core
+                    inSurfaceMode // Mark as surface explosion if in surface mode
                 );
 
                 // Create cascading secondary explosions
@@ -1950,7 +1954,8 @@ class Player {
                                     random(100, 200), // Random blue tint
                                     random(150, 255),
                                     random(200, 255)
-                                ]
+                                ],
+                                inSurfaceMode // Mark as surface explosion if in surface mode
                             );
                         }
                     }, i * 120); // Staggered timing for cascade effect (total duration ~1.4 seconds)
