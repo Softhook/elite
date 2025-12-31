@@ -5397,8 +5397,16 @@ class StarSystem {
         }
 
         // Draw only visible projectiles
+        // In surface mode, only draw surface projectiles
+        const inSurfaceMode = (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive());
         for (let i = 0; i < projCount; i++) {
             const proj = this.projectiles[i];
+            
+            // Skip space projectiles when in surface mode
+            if (inSurfaceMode && !proj.isSurface) {
+                continue;
+            }
+            
             if (this.isInView(proj.pos.x, proj.pos.y, proj.size * 3, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
                 proj.draw();
             }

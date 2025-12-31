@@ -544,3 +544,220 @@ class ShieldGenerator extends SurfaceObject {
         pop();
     }
 }
+
+/**
+ * Surface Pirate Ship - Flying hostile ship on planet surface
+ * Patrols the surface and attacks the player
+ */
+class SurfacePirate extends SurfaceObject {
+    constructor(x, y) {
+        super(x, y, 35);
+        this.health = 150;
+        this.maxHealth = 150;
+        this.lastHitTime = 0;
+        this.isSurface = true; // Mark as surface entity for sound filtering
+        
+        // Movement
+        this.angle = Math.random() * Math.PI * 2;
+        this.speed = 0;
+        this.maxSpeed = 150;
+        this.acceleration = 200;
+        this.turnRate = 2.5;
+        
+        // Combat
+        this.range = 800;
+        this.cooldown = 0;
+        this.fireRate = 1.5; // seconds between shots
+        
+        // AI state
+        this.patrolTarget = createVector(x + Math.random() * 1000 - 500, y + Math.random() * 1000 - 500);
+        this.chasePlayer = false;
+        
+        // Visual
+        this.color = color(180, 50, 50); // Pirate red
+    }
+    
+    update(dt, player, starSystem) {
+        if (this.destroyed) return;
+        if (!player) return;
+        
+        this.cooldown -= dt;
+        
+        // Check if player is in range
+        const dx = player.pos.x - this.pos.x;
+        const dy = player.pos.y - this.pos.y;
+        const distSq = dx * dx + dy * dy;
+        const dist = Math.sqrt(distSq);
+        
+        if (dist < this.range) {
+            this.chasePlayer = true;
+            
+            // Aim at player
+            const targetAngle = Math.atan2(dy, dx);
+            let angleDiff = targetAngle - this.angle;
+            
+            // Normalize angle difference
+            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            
+            // Turn towards player
+            const turnSpeed = this.turnRate * dt;
+            if (Math.abs(angleDiff) < turnSpeed) {
+                this.angle = targetAngle;
+            } else {
+                this.angle += Math.sign(angleDiff) * turnSpeed;
+            }
+            
+            // Accelerate towards player
+            this.speed = Math.min(this.maxSpeed, this.speed + this.acceleration * dt);
+            
+            // Fire at player if ready and close enough
+            if (this.cooldown <= 0 && dist < 600) {
+                this.fire(starSystem, player);
+                this.cooldown = this.fireRate;
+            }
+        } else {
+            this.chasePlayer = false;
+            
+            // Patrol behavior - move to patrol target
+            const pdx = this.patrolTarget.x - this.pos.x;
+            const pdy = this.patrolTarget.y - this.pos.y;
+            const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
+            
+            if (pdist < 50) {
+                // Reached patrol point, pick new one
+                this.patrolTarget.set(
+                    this.pos.x + Math.random() * 2000 - 1000,
+                    this.pos.y + Math.random() * 2000 - 1000
+                );
+            } else {
+                // Move towards patrol target
+                const targetAngle = Math.atan2(pdy, pdx);
+                let angleDiff = targetAngle - this.angle;
+                
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                
+                const turnSpeed = this.turnRate * 0.5 * dt;
+                if (Math.abs(angleDiff) < turnSpeed) {
+                    this.angle = targetAngle;
+                } else {
+                    this.angle += Math.sign(angleDiff) * turnSpeed;
+                }
+                
+                // Slower speed during patrol
+                this.speed = Math.min(this.maxSpeed * 0.5, this.speed + this.acceleration * 0.5 * dt);
+            }
+        }
+        
+        // Apply movement
+        this.pos.x += Math.cos(this.angle) * this.speed * dt;
+        this.pos.y += Math.sin(this.angle) * this.speed * dt;
+        
+        // Apply drag
+        this.speed *= Math.pow(0.95, dt * 60);
+    }
+    
+    fire(starSystem, player) {
+        if (typeof Projectile === 'undefined') return;
+        if (!starSystem || !starSystem.projectiles) return;
+        
+        // Muzzle offset
+        const muzzleOffset = 30;
+        const px = this.pos.x + Math.cos(this.angle) * muzzleOffset;
+        const py = this.pos.y + Math.sin(this.angle) * muzzleOffset;
+        
+        const proj = new Projectile(
+            px,
+            py,
+            this.angle,
+            this,
+            12,               // Speed
+            8,                // Damage
+            [255, 100, 50],   // Color (Orange)
+            'enemy_projectile',
+            null,
+            120               // Lifespan
+        );
+        
+        starSystem.projectiles.push(proj);
+        
+        // Mark as surface projectile
+        proj.isSurface = true;
+        proj.ownerType = 'pirate';
+        proj.altitude = this.altitude || 0;
+        
+        // Play laser sound
+        if (typeof soundManager !== 'undefined') {
+            soundManager.playSound('laser');
+        }
+    }
+    
+    takeDamage(amount) {
+        this.health -= amount;
+        this.lastHitTime = millis();
+        console.log(`Surface Pirate took ${amount} damage, health: ${this.health}/${this.maxHealth}`);
+        if (this.health <= 0) {
+            this.destroyed = true;
+            this.onDestroy();
+        }
+    }
+    
+    onDestroy() {
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.starSystem) {
+            const visualY = this.pos.y - (this.yOffset || 0);
+            surfaceMode.starSystem.addExplosion(this.pos.x, visualY, this.size * 2, [255, 150, 50], true);
+        }
+    }
+    
+    draw(x, y, sunAngle = -Math.PI / 4) {
+        const extrusionAngle = 0.5;
+        
+        // Damage flash
+        let flashColor = null;
+        if (this.lastHitTime && millis() - this.lastHitTime < 150) {
+            flashColor = color(255, 255, 255);
+        }
+        
+        // Health-based color
+        const healthRatio = this.health / this.maxHealth;
+        const shipColor = flashColor || lerpColor(color(255, 50, 50), this.color, healthRatio);
+        
+        // Simple ship body
+        const sz = this.size;
+        const bodyH = sz * 0.4;
+        
+        push();
+        translate(x, y);
+        rotate(this.angle);
+        
+        // Main body
+        const bodyverts = [
+            { x: -sz * 0.3, y: -sz * 0.2 },
+            { x: sz * 0.5, y: 0 },
+            { x: -sz * 0.3, y: sz * 0.2 }
+        ];
+        
+        // Apply extrusion
+        const compAngle = extrusionAngle - this.angle;
+        const dvX = bodyH * Math.sin(compAngle);
+        const dvY = bodyH * Math.cos(compAngle);
+        
+        const extrudedVerts = bodyverts.map(v => ({
+            x: v.x - dvX,
+            y: v.y - dvY
+        }));
+        
+        Draw3D.drawExtrudedShape(extrudedVerts, bodyH, shipColor, compAngle, sunAngle);
+        
+        // Engine glow (if moving)
+        if (this.speed > 10) {
+            const glowAlpha = map(this.speed, 0, this.maxSpeed, 50, 200);
+            fill(255, 150, 0, glowAlpha);
+            noStroke();
+            ellipse(-sz * 0.3, 0, sz * 0.2, sz * 0.15);
+        }
+        
+        pop();
+    }
+}

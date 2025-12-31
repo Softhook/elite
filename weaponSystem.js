@@ -340,7 +340,7 @@ class WeaponSystem {
 
         // Play force blast sound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
-            soundManager.playWorldSound('force', ownerX, ownerY, player.pos);
+            soundManager.playWorldSound('force', ownerX, ownerY, player.pos, owner);
         }
     }
 
@@ -514,7 +514,7 @@ class WeaponSystem {
             } else if (wType === WEAPON_TYPE.PROJECTILE || wType === WEAPON_TYPE.SPREAD || wType === WEAPON_TYPE.STRAIGHT) {
                 soundName = 'laser';
             }
-            soundManager.playWorldSound(soundName, spawnX, spawnY, player.pos);
+            soundManager.playWorldSound(soundName, spawnX, spawnY, player.pos, owner);
         }
     }
 
@@ -567,7 +567,7 @@ class WeaponSystem {
 
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
             // Consider adding a specific 'missileLaunch' sound
-            soundManager.playWorldSound('missileLaunch', spawnX, spawnY, player.pos);
+            soundManager.playWorldSound('missileLaunch', spawnX, spawnY, player.pos, owner);
         }
     }
 
@@ -667,7 +667,7 @@ class WeaponSystem {
 
         // Play sound once for all projectiles
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
-            soundManager.playWorldSound('laser', baseX, baseY, player.pos);
+            soundManager.playWorldSound('laser', baseX, baseY, player.pos, owner);
         }
     }
 
@@ -748,7 +748,7 @@ class WeaponSystem {
 
         // Play sound using playWorldSound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
-            soundManager.playWorldSound('beam', spawnPos.x, spawnPos.y, player.pos);
+            soundManager.playWorldSound('beam', spawnPos.x, spawnPos.y, player.pos, owner);
         }
 
         if (weapon?.type === WEAPON_TYPE.BEAM) {
@@ -1055,6 +1055,10 @@ class WeaponSystem {
 
         // Make projectile bigger
         proj.size = weapon.projectileSize || 7;
+        
+        // Apply surface mode properties if in surface mode
+        this._applySurfaceProperties(proj, owner);
+        
         if (system && typeof system.addProjectile === 'function') {
             system.addProjectile(proj);
         } else if (system && Array.isArray(system.projectiles)) {
@@ -1063,7 +1067,7 @@ class WeaponSystem {
 
         // Play tangle sound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
-            soundManager.playWorldSound('tangleCast', spawnX, spawnY, player.pos);
+            soundManager.playWorldSound('tangleCast', spawnX, spawnY, player.pos, owner);
         }
     }
 
@@ -1093,6 +1097,10 @@ class WeaponSystem {
             proj.system = system;
         }
         proj.size = weapon.projectileSize || 6;
+        
+        // Apply surface mode properties if in surface mode
+        this._applySurfaceProperties(proj, owner);
+        
         if (system && typeof system.addProjectile === 'function') {
             system.addProjectile(proj);
         } else if (system && Array.isArray(system.projectiles)) {
@@ -1110,7 +1118,7 @@ class WeaponSystem {
         }
 
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
-            try { soundManager.playWorldSound('harpoonFire', spawnX, spawnY, player.pos); } catch (_) { }
+            try { soundManager.playWorldSound('harpoonFire', spawnX, spawnY, player.pos, owner); } catch (_) { }
         }
     }
 
@@ -1176,7 +1184,7 @@ class WeaponSystem {
 
         // Play mine drop sound
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
-            soundManager.playWorldSound('mineDrop', ownerX, ownerY, player.pos);
+            soundManager.playWorldSound('mineDrop', ownerX, ownerY, player.pos, owner);
         }
     }
 
