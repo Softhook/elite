@@ -221,6 +221,12 @@ class SurfaceMode {
 
             // Clear invulnerability - player is now back in space
             this.player.isDockedAndInvulnerable = false;
+
+            // Clear surface mode combat references to prevent guard confusion
+            // Guards check principal.lastAttacker - if this references a surface entity
+            // (turret/pirate), they might try to engage it inappropriately
+            this.player.lastAttacker = null;
+            this.player.lastAttackTime = 0;
         }
 
         // Cleanup terrain buffer
