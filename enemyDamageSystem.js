@@ -280,7 +280,7 @@ class EnemyDamageSystem {
                 try {
                     if (!this._shieldWasZero) {
                         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player?.pos) {
-                            soundManager.playWorldSound('shieldDown', this.pos.x, this.pos.y, player.pos);
+                            soundManager.playWorldSound('shieldDown', this.pos.x, this.pos.y, player.pos, this);
                         }
                     }
                     this._shieldWasZero = true;

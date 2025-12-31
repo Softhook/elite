@@ -17,7 +17,7 @@ const SURFACE_CONFIG = {
     CLIMB_SPEED: 150,
 
     // Terrain mesh
-    MESH_RESOLUTION: 160,      // Grid resolution (doubled for finer detail)
+    MESH_RESOLUTION: 100,      // Grid resolution
     MESH_SIZE: 4000,           // World units covered
     DEFAULT_FEATURE_SEED: 12345, // Fallback seed for terrain generation
 
@@ -28,7 +28,7 @@ const SURFACE_CONFIG = {
     // Visual
     SUN_ANGLE: -Math.PI / 4,
     FIRE_RATE: 8,              // Shots per second
-    
+
     // Shadow rendering
     SHADOW_BASE_OFFSET: 20,    // Base shadow offset distance
     SHADOW_ALTITUDE_SCALE: 0.15 // Shadow offset multiplier per altitude unit
@@ -647,7 +647,7 @@ class SurfaceMode {
                 // Calculate screen-space bounds of this quad (including height offset)
                 const minHeight = Math.min(c00.height, c10.height, c01.height, c11.height);
                 const maxHeight = Math.max(c00.height, c10.height, c01.height, c11.height);
-                
+
                 const quadLeft = Math.min(dx00, dx10, dx01, dx11);
                 const quadRight = Math.max(dx00, dx10, dx01, dx11);
                 const quadTop = Math.min(dy00, dy10, dy01, dy11) - maxHeight;
@@ -870,7 +870,7 @@ class SurfaceMode {
                                 obj = new Turret(wx, wy);
                             }
                             // Else leave empty (peaks shouldn't have cities)
-                        } else if (subHash < 0.05) { // 5% chance for surface pirates
+                        } else if (subHash < 0.01) { // 5% chance for surface pirates
                             obj = new SurfacePirate(wx, wy);
                         } else if (subHash < 0.1) {
                             obj = new SurfaceStation(wx, wy);
@@ -942,7 +942,7 @@ class SurfaceMode {
             // Use object size to create a bounding box
             const objSize = obj.size || 50;
             const objHeight = obj.height || (objSize * 2);
-            
+
             // Check horizontal and vertical bounds
             if (obj.pos.x + objSize < viewLeft || obj.pos.x - objSize > viewRight ||
                 obj.pos.y + objSize < viewTop || obj.pos.y - objHeight > viewBottom) {
@@ -1066,31 +1066,31 @@ class SurfaceMode {
         // 1. Draw shadow on terrain - offset based on sun direction and altitude
         // Shadow should be smaller than ship and realistic to altitude
         // At low altitude, shadow is close and similar size; at high altitude, shadow is far and much smaller
-        
+
         // Shadow offset increases with altitude (higher = shadow further from ship position)
-        const shadowOffset = SURFACE_CONFIG.SHADOW_BASE_OFFSET + 
-                            (this.altitude * SURFACE_CONFIG.SHADOW_ALTITUDE_SCALE);
+        const shadowOffset = SURFACE_CONFIG.SHADOW_BASE_OFFSET +
+            (this.altitude * SURFACE_CONFIG.SHADOW_ALTITUDE_SCALE);
         const shadowOffsetX = Math.cos(sunAngle + Math.PI) * shadowOffset;
         const shadowOffsetY = Math.sin(sunAngle + Math.PI) * shadowOffset;
-        
+
         // Shadow size should be smaller than ship, and shrink more dramatically with altitude
         // At minimum altitude: shadow is ~0.7x ship size
         // At maximum altitude: shadow is ~0.3x ship size
         const shadowScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 0.7, 0.3);
-        
+
         push();
         // Position shadow relative to ship position, offset by sun direction
         const shadowX = this.player.pos.x + shadowOffsetX;
         const shadowY = this.player.pos.y + shadowOffsetY;
         translate(shadowX, shadowY);
-        
+
         // Apply terrain height at shadow position so it follows the ground
         const terrainH = this._getTerrainHeightAt(shadowX, shadowY);
         translate(0, -terrainH);
-        
+
         rotate(this.player.angle);
         scale(shadowScale);  // Shadow is smaller than ship
-        
+
         // Shadow alpha: softer at higher altitudes
         const shadowAlpha = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 80, 15);
         fill(0, 0, 0, shadowAlpha);
@@ -1184,7 +1184,7 @@ class SurfaceMode {
 
             text(`FPS: ${Math.round(frameRate())}`, 15, 60);
             text(`R-ALT: ${Math.round(this.altitude)}`, 15, 75);
-            
+
             // Show terrain height and absolute altitude for debugging (only in debug mode)
             if (this.debugMode && this.player) {
                 const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);

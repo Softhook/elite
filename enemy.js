@@ -484,7 +484,7 @@ class Enemy {
             if (prevShield === 0 && newShield > 0 && this._shieldWasZero) {
                 // World-positioned cue for enemies
                 if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player?.pos) {
-                    soundManager.playWorldSound('shieldUp', this.pos.x, this.pos.y, player.pos);
+                    soundManager.playWorldSound('shieldUp', this.pos.x, this.pos.y, player.pos, this);
                 }
                 this._shieldWasZero = false;
             }
