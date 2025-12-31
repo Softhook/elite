@@ -10,7 +10,7 @@
 const SHIP_DEFINITIONS = {
     // --- POLICE & SECURITY ---
     "ACAB": {
-        name: "ACAB", role: "Police", sizeCategory: "Small", size: 28,
+        name: "ACAB", role: "Police", upgrades: [], sizeCategory: "Small", size: 28,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236,
         baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 12,
         armament: ["Tangle Projector", "Pulse Laser"],
@@ -41,7 +41,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 1 // Starter
     },
     "CobraMkPol": {
-        name: "Cobra Mk Pol", role: "Police", sizeCategory: "Medium", size: 38,
+        name: "Cobra Mk Pol", role: "Police", upgrades: [], sizeCategory: "Medium", size: 38,
         baseMaxSpeed: 6.0, baseThrust: 0.10, baseTurnRate: 0.06109,
         baseHull: 120, baseShield: 100, shieldRecharge: 1, cargoCapacity: 44,
         armament: ["Twin Pulse", "Tangle Projector"], // Versatile loadout with defense
@@ -78,7 +78,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2 // Utility
     },
     "Viper": {
-        name: "Viper", role: "Fighter", sizeCategory: "Small", size: 35,
+        name: "Viper", role: "Fighter", upgrades: [], sizeCategory: "Small", size: 35,
         baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRate: 0.07854,
         baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 15,
         armament: ["Twin Pulse", "Guardian Missile", "Basic Mine"],
@@ -125,7 +125,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3
     },
     "ViperPol": {
-        name: "Viper Pol", role: "Police Interceptor", sizeCategory: "Small", size: 35,
+        name: "Viper Pol", role: "Police Interceptor", upgrades: [], sizeCategory: "Small", size: 35,
         baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRate: 0.07854,
         baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 15,
         armament: ["Twin Pulse", "Tangle Projector", "Basic Mine"],
@@ -167,7 +167,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3
     },
     "ViperBH": {
-        name: "Viper BH", role: "Bounty Hunter", sizeCategory: "Small", size: 35,
+        name: "Viper BH", role: "Bounty Hunter", upgrades: [], sizeCategory: "Small", size: 35,
         baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRate: 0.07854,
         baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 15,
         armament: ["Twin Pulse", "Guardian Missile", "Harpoon Launcher"],
@@ -222,7 +222,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3
     },
     "ViperGuard": {
-        name: "Viper Guard", role: "Escort Fighter", sizeCategory: "Small", size: 35,
+        name: "Viper Guard", role: "Escort Fighter", upgrades: [], sizeCategory: "Small", size: 35,
         baseMaxSpeed: 7.5, baseThrust: 0.15, baseTurnRate: 0.07854,
         baseHull: 80, baseShield: 120, shieldRecharge: 1.5, cargoCapacity: 15,
         armament: ["Twin Pulse", "Guardian Missile", "Barrier Field"],
@@ -274,7 +274,7 @@ const SHIP_DEFINITIONS = {
 
     // --- FEDERATION MILITARY ---
     "FederalAssaultShip": {
-        name: "Federal Assault Ship", role: "Heavy Fighter", sizeCategory: "Large", size: 70,
+        name: "Federal Assault Ship", role: "Heavy Fighter", upgrades: [], sizeCategory: "Large", size: 70,
         baseMaxSpeed: 5.0, baseThrust: 0.12, baseTurnRate: 0.04363,
         baseHull: 400, baseShield: 300, shieldRecharge: 0.9, cargoCapacity: 30,
         armament: ["Multi-Cannon", "Railgun Turret", "Avenger Missile", "Harpoon Launcher", "Barrier Field", "Heavy Mine"], // Military arsenal
@@ -322,7 +322,7 @@ const SHIP_DEFINITIONS = {
 
     // --- MILITARY (Generic) ---
     "Destroyer": {
-        name: "Destroyer", role: "Military", sizeCategory: "Large", size: 160,
+        name: "Destroyer", role: "Military", upgrades: [], sizeCategory: "Large", size: 160,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.02094,
         baseHull: 800, baseShield: 400, shieldRecharge: 10.0, cargoCapacity: 100,
         armament: ["Disruptor", "Twin Pulse", "Force Blaster", "Avenger Missile", "Harpoon Launcher", "Barrier Field"],
@@ -368,7 +368,7 @@ const SHIP_DEFINITIONS = {
         canDualEngage: true // Large ships can engage two targets simultaneously
     },
     "GnatInterceptor": { // NEW - Light Fighter 1
-        name: "Gnat Interceptor", role: "Light Interceptor", sizeCategory: "Tiny", size: 18,
+        name: "Gnat Interceptor", role: "Light Interceptor", upgrades: [], sizeCategory: "Tiny", size: 18,
         baseMaxSpeed: 9.5, baseThrust: 0.22, baseTurnRate: 0.09963,
         baseHull: 30, baseShield: 30, shieldRecharge: 1.2, cargoCapacity: 4,
         armament: ["Twin Pulse"],
@@ -406,7 +406,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 1 // Starter
     },
     "WaspAssault": {
-        name: "Wasp Assault Craft", role: "Assault Fighter", sizeCategory: "Small", size: 26,
+        name: "Wasp Assault Craft", role: "Assault Fighter", upgrades: [], sizeCategory: "Small", size: 26,
         baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
         baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
         armament: ["Burst Blaster"], // All-out attack fighter
@@ -442,7 +442,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2 // Utility
     },
     "WaspAssaultBH": {
-        name: "Wasp BH", role: "Bounty Hunter", sizeCategory: "Small", size: 26,
+        name: "Wasp BH", role: "Bounty Hunter", upgrades: [], sizeCategory: "Small", size: 26,
         baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
         baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
         armament: ["Burst Blaster", "Harpoon Launcher"],
@@ -469,7 +469,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2
     },
     "WaspAssaultGuard": {
-        name: "Wasp Guard", role: "Escort Fighter", sizeCategory: "Small", size: 26,
+        name: "Wasp Guard", role: "Escort Fighter", upgrades: [], sizeCategory: "Small", size: 26,
         baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
         baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
         armament: ["Burst Blaster", "Barrier Field"],
@@ -496,7 +496,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2
     },
     "Bat": {
-        name: "Bat Assault", role: "Assault Fighter", sizeCategory: "Small", size: 26,
+        name: "Bat Assault", role: "Assault Fighter", upgrades: [], sizeCategory: "Small", size: 26,
         baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
         baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
         armament: ["Burst Blaster"], // All-out attack fighter
@@ -532,7 +532,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2 // Utility
     },
     "BatBH": {
-        name: "Bat BH", role: "Bounty Hunter", sizeCategory: "Small", size: 26,
+        name: "Bat BH", role: "Bounty Hunter", upgrades: [], sizeCategory: "Small", size: 26,
         baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
         baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
         armament: ["Burst Blaster", "Harpoon Launcher"],
@@ -557,7 +557,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2
     },
     "BatGuard": {
-        name: "Bat Guard", role: "Escort Fighter", sizeCategory: "Small", size: 26,
+        name: "Bat Guard", role: "Escort Fighter", upgrades: [], sizeCategory: "Small", size: 26,
         baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
         baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
         armament: ["Burst Blaster", "Barrier Field"],
@@ -582,7 +582,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2
     },
     "HummingBird": {
-        name: "Humming Bird", role: "Assault Fighter", sizeCategory: "Small", size: 26,
+        name: "Humming Bird", role: "Assault Fighter", upgrades: [], sizeCategory: "Small", size: 26,
         baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
         baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
         armament: ["Burst Blaster", "Basic Mine"], // All-out attack fighter
@@ -618,7 +618,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2
     },
     "HummingBirdBH": {
-        name: "Hummingbird BH", role: "Bounty Hunter", sizeCategory: "Small", size: 26,
+        name: "Hummingbird BH", role: "Bounty Hunter", upgrades: [], sizeCategory: "Small", size: 26,
         baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
         baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
         armament: ["Burst Blaster", "Harpoon Launcher"],
@@ -642,7 +642,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2
     },
     "HummingBirdGuard": {
-        name: "Hummingbird Guard", role: "Escort Fighter", sizeCategory: "Small", size: 26,
+        name: "Hummingbird Guard", role: "Escort Fighter", upgrades: [], sizeCategory: "Small", size: 26,
         baseMaxSpeed: 7.0, baseThrust: 0.17, baseTurnRate: 0.09076,
         baseHull: 50, baseShield: 60, shieldRecharge: 1.3, cargoCapacity: 10,
         armament: ["Burst Blaster", "Barrier Field"],
@@ -666,7 +666,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2
     },
     "GladiusFighter": {
-        name: "Gladius Fighter", role: "Medium Fighter", sizeCategory: "Medium", size: 40,
+        name: "Gladius Fighter", role: "Medium Fighter", upgrades: [], sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
         baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 12,
         armament: ["Burst Blaster", "Twin Pulse", "Kalibr Missile"], // Fast attack loadout
@@ -712,7 +712,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3
     },
     "GladiusFighterBH": {
-        name: "Gladius BH", role: "Bounty Hunter", sizeCategory: "Medium", size: 40,
+        name: "Gladius BH", role: "Bounty Hunter", upgrades: [], sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
         baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 12,
         armament: ["Burst Blaster", "Twin Pulse", "Harpoon Launcher"],
@@ -736,7 +736,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3
     },
     "GladiusFighterGuard": {
-        name: "Gladius Guard", role: "Escort Fighter", sizeCategory: "Medium", size: 40,
+        name: "Gladius Guard", role: "Escort Fighter", upgrades: [], sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
         baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 12,
         armament: ["Burst Blaster", "Twin Pulse", "Barrier Field"],
@@ -760,7 +760,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3
     },
     "Vulture": {
-        name: "Vulture", role: "Heavy Fighter", sizeCategory: "Small", size: 38,
+        name: "Vulture", role: "Heavy Fighter", upgrades: [], sizeCategory: "Small", size: 38,
         baseMaxSpeed: 5.5, baseThrust: 0.14, baseTurnRate: 0.09599,
         baseHull: 150, baseShield: 250, shieldRecharge: 1.6, cargoCapacity: 15,
         armament: ["Heavy Cannon", "Burst Blaster", "Loiter Munition", "Basic Mine"], // Aggressive fighter
@@ -801,7 +801,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3
     },
     "VultureBH": {
-        name: "Vulture BH", role: "Bounty Hunter", sizeCategory: "Small", size: 38,
+        name: "Vulture BH", role: "Bounty Hunter", upgrades: [], sizeCategory: "Small", size: 38,
         baseMaxSpeed: 5.5, baseThrust: 0.14, baseTurnRate: 0.09599,
         baseHull: 150, baseShield: 250, shieldRecharge: 1.6, cargoCapacity: 15,
         armament: ["Heavy Cannon", "Burst Blaster", "Harpoon Launcher"],
@@ -825,7 +825,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3
     },
     "VultureGuard": {
-        name: "Vulture Guard", role: "Escort Fighter", sizeCategory: "Small", size: 38,
+        name: "Vulture Guard", role: "Escort Fighter", upgrades: [], sizeCategory: "Small", size: 38,
         baseMaxSpeed: 5.5, baseThrust: 0.14, baseTurnRate: 0.09599,
         baseHull: 150, baseShield: 250, shieldRecharge: 1.6, cargoCapacity: 15,
         armament: ["Heavy Cannon", "Burst Blaster", "Barrier Field"],
@@ -848,7 +848,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3
     },
     "CenturionGunship": {
-        name: "Centurion Gunship", role: "Heavy Fighter", sizeCategory: "Large", size: 72,
+        name: "Centurion Gunship", role: "Heavy Fighter", upgrades: [], sizeCategory: "Large", size: 72,
         baseMaxSpeed: 4.8, baseThrust: 0.13, baseTurnRate: 0.04538,
         baseHull: 320, baseShield: 220, shieldRecharge: 1.0, cargoCapacity: 20,
         armament: ["Quad Pulse", "Beam Laser", "Avenger Missile", "Harpoon Launcher", "Barrier Field", "Heavy Mine"], // Balanced heavy firepower
@@ -905,7 +905,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3 // Mid-tier
     },
     "HammerheadCorvette": { // NEW - Unique 2
-        name: "Hammerhead Corvette", role: "Corvette/Patrol", sizeCategory: "Large", size: 80,
+        name: "Hammerhead Corvette", role: "Corvette/Patrol", upgrades: [], sizeCategory: "Large", size: 80,
         baseMaxSpeed: 4.0, baseThrust: 0.09, baseTurnRate: 0.04014,
         baseHull: 350, baseShield: 280, shieldRecharge: 1.0, cargoCapacity: 60,
         armament: ["Heavy Cannon", "Railgun Turret", "Wide Scatter", "Kalibr Missile", "Harpoon Launcher", "Barrier Field", "Advanced Mine"], // Military loadout
@@ -940,7 +940,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4 // Advanced
     },
     "FerDeLance": {
-        name: "Fer-de-Lance", role: "Heavy Combat", sizeCategory: "Large", size: 65,
+        name: "Fer-de-Lance", role: "Heavy Combat", upgrades: [], sizeCategory: "Large", size: 65,
         baseMaxSpeed: 6.5, baseThrust: 0.11, baseTurnRate: 0.05236,
         baseHull: 180, baseShield: 350, shieldRecharge: 1.8, cargoCapacity: 24,
         armament: ["Sniper Rail", "Force Blaster", "Triple Pulse", "Kalibr Missile", "Harpoon Launcher", "Barrier Field", "Heavy Mine"],
@@ -993,7 +993,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4 // Advanced
     },
     "FerDeLanceBH": {
-        name: "Fer-de-Lance BH", role: "Bounty Hunter", sizeCategory: "Large", size: 65,
+        name: "Fer-de-Lance BH", role: "Bounty Hunter", upgrades: [], sizeCategory: "Large", size: 65,
         baseMaxSpeed: 6.5, baseThrust: 0.11, baseTurnRate: 0.05236,
         baseHull: 180, baseShield: 350, shieldRecharge: 1.8, cargoCapacity: 24,
         armament: ["Sniper Rail", "Force Blaster", "Triple Pulse", "Harpoon Launcher", "Barrier Field"],
@@ -1050,7 +1050,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4
     },
     "JackalMultirole": { // NEW - Multi-role
-        name: "Jackal Multirole", role: "Multi-Role", sizeCategory: "Medium", size: 50,
+        name: "Jackal Multirole", role: "Multi-Role", upgrades: [], sizeCategory: "Medium", size: 50,
         baseMaxSpeed: 5.8, baseThrust: 0.1, baseTurnRate: 0.06283,
         baseHull: 140, baseShield: 160, shieldRecharge: 1.2, cargoCapacity: 60,
         armament: ["Multi-Cannon", "Railgun Turret"], // Versatile
@@ -1077,7 +1077,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2 // Utility
     },
     "Anaconda": {
-        name: "Anaconda", role: "Heavy Combat/Multi", sizeCategory: "Very Large", size: 120,
+        name: "Anaconda", role: "Heavy Combat/Multi", upgrades: [], sizeCategory: "Very Large", size: 120,
         baseMaxSpeed: 3.0, baseThrust: 0.05, baseTurnRate: 0.02094,
         baseHull: 400, baseShield: 350, shieldRecharge: 1, cargoCapacity: 150,
         armament: ["Force Blaster", "Guardian Missile", "Barrier Field", "Advanced Mine"],
@@ -1129,7 +1129,7 @@ const SHIP_DEFINITIONS = {
         canDualEngage: true // Large ships can engage two targets simultaneously
     },
     "VanguardCruiser": {
-        name: "Vanguard Cruiser", role: "Fast Attack Cruiser", sizeCategory: "Large", size: 95,
+        name: "Vanguard Cruiser", role: "Fast Attack Cruiser", upgrades: [], sizeCategory: "Large", size: 95,
         baseMaxSpeed: 6.5, baseThrust: 0.12, baseTurnRate: 0.018,
         baseHull: 380, baseShield: 320, shieldRecharge: 1.3, cargoCapacity: 60,
         armament: ["Sniper Rail", "Railgun Turret", "Force Blaster", "Kalibr Missile", "Harpoon Launcher", "Barrier Field"],
@@ -1171,7 +1171,7 @@ const SHIP_DEFINITIONS = {
         canDualEngage: true
     },
     "ShardInterceptor": {
-        name: "Shard Interceptor", role: "Fighter", sizeCategory: "Small", size: 30,
+        name: "Shard Interceptor", role: "Fighter", upgrades: [], sizeCategory: "Small", size: 30,
         baseMaxSpeed: 8.5, baseThrust: 0.18, baseTurnRate: 0.08727,
         baseHull: 50, baseShield: 100, shieldRecharge: 1.8, cargoCapacity: 4, // Crystalline structure?
         armament: ["Disruptor", "Scatter Beam"], // Alien tech
@@ -1191,7 +1191,7 @@ const SHIP_DEFINITIONS = {
 
     // --- IMPERIAL ---
     "ImperialCharger": {
-        name: "Imperial Charger", role: "Light Skirmisher", sizeCategory: "Tiny", size: 20,
+        name: "Imperial Charger", role: "Light Skirmisher", upgrades: [], sizeCategory: "Tiny", size: 20,
         baseMaxSpeed: 7.5, baseThrust: 0.17, baseTurnRate: 0.085,
         baseHull: 35, baseShield: 45, shieldRecharge: 1.1, cargoCapacity: 4,
         armament: ["Pulse Laser"],
@@ -1211,7 +1211,7 @@ const SHIP_DEFINITIONS = {
         faction: "IMPERIAL"
     },
     "ImperialCourier": {
-        name: "Imperial Courier", role: "Light Fighter/Multi", sizeCategory: "Small", size: 32,
+        name: "Imperial Courier", role: "Light Fighter/Multi", upgrades: [], sizeCategory: "Small", size: 32,
         baseMaxSpeed: 7.8, baseThrust: 0.16, baseTurnRate: 0.07505,
         baseHull: 70, baseShield: 150, shieldRecharge: 1.7, cargoCapacity: 12,
         armament: ["Twin Pulse", "Beam Laser"], // Elegant, refined
@@ -1233,7 +1233,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2 // Utility
     },
     "ImperialEagleMkII": {
-        name: "Imperial Eagle MkII", role: "Superiority Fighter", sizeCategory: "Small", size: 30,
+        name: "Imperial Eagle MkII", role: "Superiority Fighter", upgrades: [], sizeCategory: "Small", size: 30,
         baseMaxSpeed: 7.8, baseThrust: 0.18, baseTurnRate: 0.092,
         baseHull: 60, baseShield: 140, shieldRecharge: 1.7, cargoCapacity: 6,
         armament: ["Twin Pulse", "Beam Laser"],
@@ -1256,7 +1256,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3
     },
     "ImperialLancer": {
-        name: "Imperial Lancer", role: "Fast Attack Interceptor", sizeCategory: "Small", size: 34,
+        name: "Imperial Lancer", role: "Fast Attack Interceptor", upgrades: [], sizeCategory: "Small", size: 34,
         baseMaxSpeed: 8.2, baseThrust: 0.19, baseTurnRate: 0.085,
         baseHull: 70, baseShield: 130, shieldRecharge: 1.6, cargoCapacity: 8,
         armament: ["Twin Pulse", "Sniper Rail"],
@@ -1278,7 +1278,7 @@ const SHIP_DEFINITIONS = {
         faction: "IMPERIAL"
     },
     "ImperialGuardian": {
-        name: "Imperial Guardian", role: "System Patrol Cutter", sizeCategory: "Medium", size: 50,
+        name: "Imperial Guardian", role: "System Patrol Cutter", upgrades: [], sizeCategory: "Medium", size: 50,
         baseMaxSpeed: 5.8, baseThrust: 0.1, baseTurnRate: 0.05,
         baseHull: 160, baseShield: 200, shieldRecharge: 1.5, cargoCapacity: 25,
         armament: ["Beam Laser", "Twin Pulse", "Mini-Turret"],
@@ -1300,7 +1300,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4
     },
     "ImperialJusticar": {
-        name: "Imperial Justicar", role: "Heavy Gunboat", sizeCategory: "Medium", size: 62,
+        name: "Imperial Justicar", role: "Heavy Gunboat", upgrades: [], sizeCategory: "Medium", size: 62,
         baseMaxSpeed: 5.0, baseThrust: 0.11, baseTurnRate: 0.042,
         baseHull: 280, baseShield: 320, shieldRecharge: 1.4, cargoCapacity: 40,
         armament: ["Quad Pulse", "Railgun Turret", "Beam Laser", "Heavy Tangle", "Barrier Field"],
@@ -1329,7 +1329,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4
     },
     "ImperialPaladin": {
-        name: "Imperial Paladin", role: "Heavy Assault Frigate", sizeCategory: "Large", size: 90,
+        name: "Imperial Paladin", role: "Heavy Assault Frigate", upgrades: [], sizeCategory: "Large", size: 90,
         baseMaxSpeed: 4.5, baseThrust: 0.09, baseTurnRate: 0.038,
         baseHull: 350, baseShield: 400, shieldRecharge: 1.7, cargoCapacity: 70,
         armament: ["Heavy Cannon", "Mini-Turret", "Force Blaster", "Heavy Tangle", "Halo"],
@@ -1352,7 +1352,7 @@ const SHIP_DEFINITIONS = {
         canDualEngage: true // Large ships can engage two targets simultaneously
     },
     "ImperialEnvoy": {
-        name: "Imperial Envoy", role: "Diplomatic Transport", sizeCategory: "Large", size: 70,
+        name: "Imperial Envoy", role: "Diplomatic Transport", upgrades: [], sizeCategory: "Large", size: 70,
         baseMaxSpeed: 6.0, baseThrust: 0.08, baseTurnRate: 0.03,
         baseHull: 150, baseShield: 250, shieldRecharge: 1.8, cargoCapacity: 50,
         armament: ["Mini-Turret", "Pulse Laser"],
@@ -1375,7 +1375,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4
     },
     "ImperialSentinel": {
-        name: "Imperial Sentinel", role: "Border Patrol Corvette", sizeCategory: "Large", size: 78,
+        name: "Imperial Sentinel", role: "Border Patrol Corvette", upgrades: [], sizeCategory: "Large", size: 78,
         baseMaxSpeed: 5.2, baseThrust: 0.095, baseTurnRate: 0.04,
         baseHull: 300, baseShield: 350, shieldRecharge: 1.6, cargoCapacity: 60,
         armament: ["Mini-Turret", "Multi-Cannon", "Twin Pulse"],
@@ -1397,7 +1397,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 5
     },
     "ImperialClipper": {
-        name: "Imperial Clipper", role: "Multi-Role/Trader", sizeCategory: "Large", size: 95,
+        name: "Imperial Clipper", role: "Multi-Role/Trader", upgrades: [], sizeCategory: "Large", size: 95,
         baseMaxSpeed: 7.0, baseThrust: 0.10, baseTurnRate: 0.02618,
         baseHull: 180, baseShield: 180, shieldRecharge: 1.4, cargoCapacity: 180,
         armament: ["V Punch", "Mini-Turret", "Beam Laser", "Heavy Tangle"], // Elegant, balanced
@@ -1423,7 +1423,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4
     },
     "ImperialCutterLite": {
-        name: "Imperial Cutter Lite", role: "Fast Armed Trader", sizeCategory: "Large", size: 80,
+        name: "Imperial Cutter Lite", role: "Fast Armed Trader", upgrades: [], sizeCategory: "Large", size: 80,
         baseMaxSpeed: 6.5, baseThrust: 0.09, baseTurnRate: 0.028,
         baseHull: 200, baseShield: 280, shieldRecharge: 1.6, cargoCapacity: 150,
         armament: ["Beam Laser", "Twin Pulse", "Mini-Turret"],
@@ -1447,7 +1447,7 @@ const SHIP_DEFINITIONS = {
 
     // --- SEPARATIST ---
     "SeparatistPartisan": {
-        name: "Separatist Partisan", role: "Light Skirmisher", sizeCategory: "Tiny", size: 20,
+        name: "Separatist Partisan", role: "Light Skirmisher", upgrades: [], sizeCategory: "Tiny", size: 20,
         baseMaxSpeed: 7.5, baseThrust: 0.17, baseTurnRate: 0.085,
         baseHull: 35, baseShield: 45, shieldRecharge: 1.1, cargoCapacity: 4,
         armament: ["Pulse Laser"],
@@ -1468,7 +1468,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2,
     },
     "SeparatistLiberator": {
-        name: "Separatist Liberator", role: "Assault Fighter", sizeCategory: "Small", size: 36,
+        name: "Separatist Liberator", role: "Assault Fighter", upgrades: [], sizeCategory: "Small", size: 36,
         baseMaxSpeed: 6.5, baseThrust: 0.14, baseTurnRate: 0.07,
         baseHull: 90, baseShield: 110, shieldRecharge: 1.2, cargoCapacity: 12,
         armament: ["Multi-Cannon", "Burst Blaster"],
@@ -1504,7 +1504,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3
     },
     "SeparatistShadow": {
-        name: "Separatist Shadow", role: "Stealth Infiltrator", sizeCategory: "Small", size: 28,
+        name: "Separatist Shadow", role: "Stealth Infiltrator", upgrades: [], sizeCategory: "Small", size: 28,
         baseMaxSpeed: 6.0, baseThrust: 0.11, baseTurnRate: 0.06,
         baseHull: 50, baseShield: 70, shieldRecharge: 1.2, cargoCapacity: 10,
         armament: ["Pulse Laser", "Disruptor"],
@@ -1526,7 +1526,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4
     },
     "SeparatistOutlander": {
-        name: "Separatist Outlander", role: "Long-Range Scout/Raider", sizeCategory: "Medium", size: 50,
+        name: "Separatist Outlander", role: "Long-Range Scout/Raider", upgrades: [], sizeCategory: "Medium", size: 50,
         baseMaxSpeed: 5.5, baseThrust: 0.09, baseTurnRate: 0.05,
         baseHull: 120, baseShield: 150, shieldRecharge: 1.3, cargoCapacity: 40, // For supplies or loot
         armament: ["Beam Laser", "Mini-Turret"],
@@ -1548,7 +1548,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4,
     },
     "SeparatistDefiant": {
-        name: "Separatist Defiant", role: "Gunship", sizeCategory: "Medium", size: 58,
+        name: "Separatist Defiant", role: "Gunship", upgrades: [], sizeCategory: "Medium", size: 58,
         baseMaxSpeed: 4.8, baseThrust: 0.1, baseTurnRate: 0.04,
         baseHull: 250, baseShield: 180, shieldRecharge: 0.9, cargoCapacity: 30,
         armament: ["Heavy Cannon", "Railgun Turret", "Twin Pulse", "Guardian Missile"],
@@ -1578,7 +1578,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4,
     },
     "SeparatistVanguard": {
-        name: "Separatist Vanguard", role: "Heavy Assault Cruiser", sizeCategory: "Large", size: 85,
+        name: "Separatist Vanguard", role: "Heavy Assault Cruiser", upgrades: [], sizeCategory: "Large", size: 85,
         baseMaxSpeed: 4.2, baseThrust: 0.08, baseTurnRate: 0.035,
         baseHull: 400, baseShield: 300, shieldRecharge: 1.0, cargoCapacity: 80,
         armament: ["Force Blaster", "Railgun Turret", "Quad Pulse", "Guardian Missile"],
@@ -1600,7 +1600,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 5,
     },
     "SeparatistBulwark": {
-        name: "Separatist Bulwark", role: "Mobile Defense Platform", sizeCategory: "Very Large", size: 130,
+        name: "Separatist Bulwark", role: "Mobile Defense Platform", upgrades: [], sizeCategory: "Very Large", size: 130,
         baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRate: 0.015,
         baseHull: 700, baseShield: 500, shieldRecharge: 0.8, cargoCapacity: 150,
         armament: ["Railgun Turret", "Mini-Turret", "Wide Scatter", "Avenger Missile", "Barrier Field"],
@@ -1631,7 +1631,7 @@ const SHIP_DEFINITIONS = {
         canDualEngage: true // Large ships can engage two targets simultaneously
     },
     "SeparatistSupplyRunner": {
-        name: "Separatist Supply Runner", role: "Armored Transport", sizeCategory: "Medium", size: 52,
+        name: "Separatist Supply Runner", role: "Armored Transport", upgrades: [], sizeCategory: "Medium", size: 52,
         baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRate: 0.035,
         baseHull: 180, baseShield: 120, shieldRecharge: 0.8, cargoCapacity: 100,
         armament: ["Twin Pulse", "Mini-Turret"],
@@ -1659,7 +1659,7 @@ const SHIP_DEFINITIONS = {
 
     // --- PIRATE ---
     "Sidewinder": {
-        name: "Sidewinder", role: "Starter", sizeCategory: "Tiny", size: 20,
+        name: "Sidewinder", role: "Starter", upgrades: ["Faulcon DeLacy Composite"], sizeCategory: "Tiny", size: 20,
         baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.06981,
         baseHull: 50, baseShield: 50, shieldRecharge: 1.0, cargoCapacity: 10,
         armament: ["Pulse Laser"], // Starter weapon
@@ -1673,7 +1673,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 1 // Starter
     },
     "KraitMKI": {
-        name: "Krait MKI", role: "Fighter", sizeCategory: "Small", size: 30,
+        name: "Krait MKI", role: "Fighter", upgrades: [], sizeCategory: "Small", size: 30,
         baseMaxSpeed: 6.2, baseThrust: 0.15, baseTurnRate: 0.06632,
         baseHull: 60, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 15,
         armament: ["Pulse Laser"],
@@ -1719,7 +1719,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2 // Utility
     },
     "KraitMKII": {
-        name: "Krait MKII", role: "Multi-Role/Fighter", sizeCategory: "Medium", size: 60,
+        name: "Krait MKII", role: "Multi-Role/Fighter", upgrades: [], sizeCategory: "Medium", size: 60,
         baseMaxSpeed: 5.2, baseThrust: 0.11, baseTurnRate: 0.04014,
         baseHull: 100, baseShield: 200, shieldRecharge: 1.4, cargoCapacity: 82,
         armament: ["Mini-Turret"], // Combat focused Pirate
@@ -1765,7 +1765,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2 // Utility
     },
     "Geister": {
-        name: "Geister", role: "Medium Fighter", sizeCategory: "Medium", size: 40,
+        name: "Geister", role: "Medium Fighter", upgrades: [], sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 7.0, baseThrust: 0.14, baseTurnRate: 0.06981,
         baseHull: 100, baseShield: 140, shieldRecharge: 1.4, cargoCapacity: 12,
         armament: ["Burst Blaster", "Beam Laser", "Harpoon Launcher"], // Fast attack loadout
@@ -1791,7 +1791,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3 // Mid-tier
     },
     "PirateBrigand": {
-        name: "Pirate Brigand", role: "Fast Cargo Thief", sizeCategory: "Small", size: 30,
+        name: "Pirate Brigand", role: "Fast Cargo Thief", upgrades: [], sizeCategory: "Small", size: 30,
         baseMaxSpeed: 6.8, baseThrust: 0.13, baseTurnRate: 0.065,
         baseHull: 60, baseShield: 70, shieldRecharge: 1.1, cargoCapacity: 30,
         armament: ["Pulse Laser", "Mini-Turret"],
@@ -1837,7 +1837,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2,
     },
     "PirateCutlass": {
-        name: "Pirate Cutlass", role: "Fast Attack Fighter", sizeCategory: "Small", size: 32,
+        name: "Pirate Cutlass", role: "Fast Attack Fighter", upgrades: [], sizeCategory: "Small", size: 32,
         baseMaxSpeed: 7.2, baseThrust: 0.16, baseTurnRate: 0.08,
         baseHull: 70, baseShield: 90, shieldRecharge: 1.3, cargoCapacity: 10,
         armament: ["Multi-Cannon", "Pulse Laser", "Guardian Missile"],
@@ -1893,7 +1893,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3,
     },
     "PirateInterceptorMKII": {
-        name: "Pirate Interceptor MkII", role: "Heavy Interceptor", sizeCategory: "Medium", size: 42,
+        name: "Pirate Interceptor MkII", role: "Heavy Interceptor", upgrades: [], sizeCategory: "Medium", size: 42,
         baseMaxSpeed: 7.0, baseThrust: 0.15, baseTurnRate: 0.075,
         baseHull: 100, baseShield: 150, shieldRecharge: 1.5, cargoCapacity: 15,
         armament: ["Beam Laser", "Multi-Cannon", "Disruptor"],
@@ -1939,7 +1939,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4,
     },
     "PirateMarauder": {
-        name: "Pirate Marauder", role: "Raider/Boarding Craft", sizeCategory: "Medium", size: 48,
+        name: "Pirate Marauder", role: "Raider/Boarding Craft", upgrades: [], sizeCategory: "Medium", size: 48,
         baseMaxSpeed: 5.0, baseThrust: 0.09, baseTurnRate: 0.045,
         baseHull: 150, baseShield: 100, shieldRecharge: 0.8, cargoCapacity: 50,
         armament: ["Heavy Cannon", "Twin Pulse", "Mini-Turret", "Guardian Missile"],
@@ -2003,7 +2003,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4,
     },
     "PirateReaver": {
-        name: "Pirate Reaver", role: "Heavy Pirate Cruiser", sizeCategory: "Large", size: 75,
+        name: "Pirate Reaver", role: "Heavy Pirate Cruiser", upgrades: [], sizeCategory: "Large", size: 75,
         baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRate: 0.03,
         baseHull: 300, baseShield: 200, shieldRecharge: 0.9, cargoCapacity: 100,
         armament: ["Multi-Cannon", "Force Blaster", "Mini-Turret", "Railgun Turret", "Guardian Missile"],
@@ -2051,7 +2051,7 @@ const SHIP_DEFINITIONS = {
 
     // --- HARLEQUIN ---
     "HarlequinJester": {
-        name: "Harlequin Jester", role: "Light Fighter", sizeCategory: "Tiny", size: 22,
+        name: "Harlequin Jester", role: "Light Fighter", upgrades: [], sizeCategory: "Tiny", size: 22,
         baseMaxSpeed: 8.0, baseThrust: 0.18, baseTurnRate: 0.09,
         baseHull: 40, baseShield: 60, shieldRecharge: 1.4, cargoCapacity: 5,
         armament: ["Pulse Laser", "Twin Pulse"],
@@ -2097,7 +2097,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2,
     },
     "HarlequinMotley": {
-        name: "Harlequin Motley", role: "Fast Interceptor", sizeCategory: "Small", size: 28,
+        name: "Harlequin Motley", role: "Fast Interceptor", upgrades: [], sizeCategory: "Small", size: 28,
         baseMaxSpeed: 8.2, baseThrust: 0.19, baseTurnRate: 0.085,
         baseHull: 45, baseShield: 55, shieldRecharge: 1.7, cargoCapacity: 8,
         armament: ["Burst Blaster", "Pulse Laser"],
@@ -2159,7 +2159,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3,
     },
     "HarlequinColumbine": {
-        name: "Harlequin Columbine", role: "Explorer/Scout", sizeCategory: "Small", size: 28,
+        name: "Harlequin Columbine", role: "Explorer/Scout", upgrades: [], sizeCategory: "Small", size: 28,
         baseMaxSpeed: 6.5, baseThrust: 0.12, baseTurnRate: 0.07,
         baseHull: 60, baseShield: 90, shieldRecharge: 1.6, cargoCapacity: 20,
         armament: ["Beam Laser"],
@@ -2181,7 +2181,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3,
     },
     "HarlequinZanni": {
-        name: "Harlequin Zanni", role: "Heavy Striker", sizeCategory: "Medium", size: 52,
+        name: "Harlequin Zanni", role: "Heavy Striker", upgrades: [], sizeCategory: "Medium", size: 52,
         baseMaxSpeed: 5.8, baseThrust: 0.13, baseTurnRate: 0.055,
         baseHull: 180, baseShield: 160, shieldRecharge: 1.1, cargoCapacity: 35,
         armament: ["Heavy Cannon", "Multi-Cannon", "Beam Laser", "Guardian Missile"],
@@ -2240,7 +2240,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4,
     },
     "HarlequinScaramouche": {
-        name: "Harlequin Scaramouche", role: "Multi-Role Combat", sizeCategory: "Medium", size: 55,
+        name: "Harlequin Scaramouche", role: "Multi-Role Combat", upgrades: [], sizeCategory: "Medium", size: 55,
         baseMaxSpeed: 5.5, baseThrust: 0.11, baseTurnRate: 0.055,
         baseHull: 150, baseShield: 180, shieldRecharge: 1.3, cargoCapacity: 40,
         armament: ["Multi-Cannon", "Beam Laser", "Railgun Turret", "Loiter Munition", "Barrier Field"],
@@ -2290,7 +2290,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4,
     },
     "HarlequinPierrot": {
-        name: "Harlequin Pierrot", role: "Multi-Purpose", sizeCategory: "Medium", size: 40,
+        name: "Harlequin Pierrot", role: "Multi-Purpose", upgrades: [], sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.04,
         baseHull: 100, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 80,
         armament: ["Mini-Turret"],
@@ -2360,7 +2360,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3,
     },
     "HarlequinPulcinella": {
-        name: "Harlequin Pulcinella", role: "Support/Logistics", sizeCategory: "Medium", size: 48,
+        name: "Harlequin Pulcinella", role: "Support/Logistics", upgrades: [], sizeCategory: "Medium", size: 48,
         baseMaxSpeed: 4.5, baseThrust: 0.08, baseTurnRate: 0.05,
         baseHull: 140, baseShield: 120, shieldRecharge: 1.0, cargoCapacity: 90,
         armament: ["Mini-Turret", "Twin Pulse"],
@@ -2398,7 +2398,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3,
     },
     "HarlequinPantaloon": {
-        name: "Harlequin Pantaloon", role: "Heavy Freighter", sizeCategory: "Large", size: 70,
+        name: "Harlequin Pantaloon", role: "Heavy Freighter", upgrades: [], sizeCategory: "Large", size: 70,
         baseMaxSpeed: 3.0, baseThrust: 0.05, baseTurnRate: 0.025,
         baseHull: 250, baseShield: 150, shieldRecharge: 0.7, cargoCapacity: 250,
         armament: ["Twin Pulse", "Mini-Turret"],
@@ -2454,7 +2454,7 @@ const SHIP_DEFINITIONS = {
 
     // --- CIVILIAN - TRADERS & HAULERS ---
     "Adder": {
-        name: "Adder", role: "Trader/Explorer", sizeCategory: "Small", size: 28,
+        name: "Adder", role: "Trader/Explorer", upgrades: [], sizeCategory: "Small", size: 28,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.05236,
         baseHull: 60, baseShield: 70, shieldRecharge: 1.0, cargoCapacity: 30,
         armament: ["Pulse Laser"],
@@ -2486,7 +2486,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 1 // Starter
     },
     "Type6Transporter": {
-        name: "Type-6 Transporter", role: "Trader", sizeCategory: "Medium", size: 40,
+        name: "Type-6 Transporter", role: "Trader", upgrades: [], sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 4.2, baseThrust: 0.06, baseTurnRate: 0.03491,
         baseHull: 150, baseShield: 60, shieldRecharge: 0.8, cargoCapacity: 100,
         armament: ["Twin Pulse", "Mini-Turret"], // Basic trader defense
@@ -2526,7 +2526,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2 // Utility
     },
     "Keelback": {
-        name: "Keelback", role: "Combat Trader", sizeCategory: "Medium", size: 42,
+        name: "Keelback", role: "Combat Trader", upgrades: [], sizeCategory: "Medium", size: 42,
         baseMaxSpeed: 4.0, baseThrust: 0.07, baseTurnRate: 0.04363,
         baseHull: 180, baseShield: 90, shieldRecharge: 0.9, cargoCapacity: 50,
         armament: ["Twin Pulse", "Railgun Turret"], // Combat trader
@@ -2548,7 +2548,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2 // Utility
     },
     "Type9Heavy": {
-        name: "Type-9 Heavy", role: "Heavy Trader", sizeCategory: "Very Large", size: 110,
+        name: "Type-9 Heavy", role: "Heavy Trader", upgrades: [], sizeCategory: "Very Large", size: 110,
         baseMaxSpeed: 2.5, baseThrust: 0.04, baseTurnRate: 0.01396,
         baseHull: 550, baseShield: 250, shieldRecharge: 0.6, cargoCapacity: 500,
         armament: ["Mini-Turret", "Force Blaster"], // Defensive cargo hauler
@@ -2598,7 +2598,7 @@ const SHIP_DEFINITIONS = {
         canDualEngage: true
     },
     "MantaHauler": { // NEW - Unique 1
-        name: "Manta Hauler", role: "Wide Cargo Hauler", sizeCategory: "Large", size: 85,
+        name: "Manta Hauler", role: "Wide Cargo Hauler", upgrades: [], sizeCategory: "Large", size: 85,
         baseMaxSpeed: 3.5, baseThrust: 0.06, baseTurnRate: 0.02793,
         baseHull: 250, baseShield: 150, shieldRecharge: 0.7, cargoCapacity: 300,
         armament: ["Mini-Turret", "Force Blaster", "Barrier Field"], // Defensive
@@ -2620,7 +2620,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3 // Mid-tier
     },
     "Python": {
-        name: "Python", role: "Heavy Multi/Trader", sizeCategory: "Large", size: 75,
+        name: "Python", role: "Heavy Multi/Trader", upgrades: [], sizeCategory: "Large", size: 75,
         baseMaxSpeed: 4.5, baseThrust: 0.07, baseTurnRate: 0.03840,
         baseHull: 280, baseShield: 250, shieldRecharge: 0.9, cargoCapacity: 220,
         armament: ["Heavy Cannon", "V Punch", "Mini-Turret", "Kalibr Missile", "Heavy Tangle", "Barrier Field"], // Versatile heavy combat
@@ -2642,7 +2642,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4 // Advanced
     },
     "StarlinerCruiser": {
-        name: "Starliner Cruiser", role: "Passenger Transport", sizeCategory: "Large", size: 105,
+        name: "Starliner Cruiser", role: "Passenger Transport", upgrades: [], sizeCategory: "Large", size: 105,
         baseMaxSpeed: 5.5, baseThrust: 0.07, baseTurnRate: 0.02443,
         baseHull: 200, baseShield: 250, shieldRecharge: 1.1, cargoCapacity: 100, // Less cargo, more cabins assumed
         armament: ["Mini-Turret", "Force Blaster", "Halo"], // Defensive passenger ship
@@ -2674,7 +2674,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4 // Advanced
     },
     "CobraMkIII": {
-        name: "Cobra Mk III", role: "Multi-Role", sizeCategory: "Medium", size: 38,
+        name: "Cobra Mk III", role: "Multi-Role", upgrades: [], sizeCategory: "Medium", size: 38,
         baseMaxSpeed: 6.0, baseThrust: 0.10, baseTurnRate: 0.06109,
         baseHull: 120, baseShield: 100, shieldRecharge: 1, cargoCapacity: 44,
         armament: ["Twin Pulse", "Guardian Missile"], // Versatile loadout
@@ -2710,7 +2710,7 @@ const SHIP_DEFINITIONS = {
 
     // --- CIVILIAN - EXPLORERS ---
     "AspExplorer": {
-        name: "Asp Explorer", role: "Explorer/Multi-Role", sizeCategory: "Medium", size: 55,
+        name: "Asp Explorer", role: "Explorer/Multi-Role", upgrades: [], sizeCategory: "Medium", size: 55,
         baseMaxSpeed: 5.5, baseThrust: 0.09, baseTurnRate: 0.05585,
         baseHull: 150, baseShield: 180, shieldRecharge: 1.3, cargoCapacity: 80,
         armament: ["Beam Laser", "Twin Pulse"],
@@ -2732,7 +2732,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2 // Mid-tier
     },
     "DiamondbackExplorer": {
-        name: "Diamondback Explorer", role: "Explorer/Light Combat", sizeCategory: "Medium", size: 45,
+        name: "Diamondback Explorer", role: "Explorer/Light Combat", upgrades: [], sizeCategory: "Medium", size: 45,
         baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.05236,
         baseHull: 130, baseShield: 100, shieldRecharge: 1.1, cargoCapacity: 40,
         armament: ["Beam Laser", "V Spread"], // Explorer with some punch
@@ -2777,7 +2777,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3 // Mid-tier
     },
     "NomadVoyager": {
-        name: "Nomad Voyager", role: "Deep Space Explorer", sizeCategory: "Medium", size: 58,
+        name: "Nomad Voyager", role: "Deep Space Explorer", upgrades: [], sizeCategory: "Medium", size: 58,
         baseMaxSpeed: 5.2, baseThrust: 0.07, baseTurnRate: 0.05061,
         baseHull: 180, baseShield: 220, shieldRecharge: 1.5, cargoCapacity: 70,
         armament: ["Beam Laser", "Mini-Turret"], // Long range exploration
@@ -2827,7 +2827,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 4 // Advanced
     },
     "PathfinderSurvey": {
-        name: "Pathfinder Survey", role: "Long Range Scanner", sizeCategory: "Medium", size: 62,
+        name: "Pathfinder Survey", role: "Long Range Scanner", upgrades: [], sizeCategory: "Medium", size: 62,
         baseMaxSpeed: 5.0, baseThrust: 0.06, baseTurnRate: 0.04363,
         baseHull: 120, baseShield: 150, shieldRecharge: 1.2, cargoCapacity: 50,
         armament: [],
@@ -2849,7 +2849,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3 // Mid-tier
     },
     "ProspectorMiner": { // NEW - Miner
-        name: "Prospector Miner", role: "Mining Vessel", sizeCategory: "Medium", size: 48,
+        name: "Prospector Miner", role: "Mining Vessel", upgrades: [], sizeCategory: "Medium", size: 48,
         baseMaxSpeed: 2.5, baseThrust: 0.08, baseTurnRate: 0.03840,
         baseHull: 200, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 40, // Includes refinery space
         armament: ["Beam Laser"], // Mining lasers for asteroid destruction
@@ -2865,7 +2865,7 @@ const SHIP_DEFINITIONS = {
 
     // --- TRANSPORTS ---
     "LocalHopper": {
-        name: "Local Hopper", role: "Light Transport", sizeCategory: "Tiny", size: 18,
+        name: "Local Hopper", role: "Light Transport", upgrades: [], sizeCategory: "Tiny", size: 18,
         baseMaxSpeed: 3.5, baseThrust: 0.04, baseTurnRate: 0.05,
         baseHull: 40, baseShield: 0, shieldRecharge: 0.5, cargoCapacity: 15,
         armament: [],
@@ -2934,7 +2934,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 1,
     },
     "MuleFreighter": { // NEW - Small Transporter
-        name: "Mule Freighter", role: "Local Transport", sizeCategory: "Small", size: 25,
+        name: "Mule Freighter", role: "Local Transport", upgrades: [], sizeCategory: "Small", size: 25,
         baseMaxSpeed: 3.8, baseThrust: 0.05, baseTurnRate: 0.04887,
         baseHull: 70, baseShield: 0, shieldRecharge: 0.8, cargoCapacity: 20,
         armament: [],
@@ -3009,7 +3009,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 1 // Starter
     },
     "ErrandRunner": {
-        name: "Errand Runner", role: "Light Transport", sizeCategory: "Small", size: 24,
+        name: "Errand Runner", role: "Light Transport", upgrades: [], sizeCategory: "Small", size: 24,
         baseMaxSpeed: 4.0, baseThrust: 0.05, baseTurnRate: 0.045,
         baseHull: 50, baseShield: 10, shieldRecharge: 0.6, cargoCapacity: 25,
         armament: [],
@@ -3078,7 +3078,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 1,
     },
     "SystemShuttle": {
-        name: "System Shuttle", role: "Medium Transport", sizeCategory: "Small", size: 30,
+        name: "System Shuttle", role: "Medium Transport", upgrades: [], sizeCategory: "Small", size: 30,
         baseMaxSpeed: 3.8, baseThrust: 0.06, baseTurnRate: 0.04,
         baseHull: 80, baseShield: 20, shieldRecharge: 0.7, cargoCapacity: 40,
         armament: [],
@@ -3171,7 +3171,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 2,
     },
     "CargoWagon": {
-        name: "Cargo Wagon", role: "Heavy Local Transport", sizeCategory: "Medium", size: 45,
+        name: "Cargo Wagon", role: "Heavy Local Transport", upgrades: [], sizeCategory: "Medium", size: 45,
         baseMaxSpeed: 3.0, baseThrust: 0.045, baseTurnRate: 0.03,
         baseHull: 120, baseShield: 30, shieldRecharge: 0.5, cargoCapacity: 120,
         armament: [],
@@ -3280,7 +3280,7 @@ const SHIP_DEFINITIONS = {
 
     // --- SUPPORT & REPAIR ---
     "FieldRepairTender": {
-        name: "Field Repair Tender", role: "Support/Repair", sizeCategory: "Medium", size: 90,
+        name: "Field Repair Tender", role: "Support/Repair", upgrades: [], sizeCategory: "Medium", size: 90,
         baseMaxSpeed: 2, baseThrust: 0.04, baseTurnRate: 0.03491,
         baseHull: 420, baseShield: 180, shieldRecharge: 1.2, cargoCapacity: 80,
         armament: ["Barrier Field"],
@@ -3304,7 +3304,7 @@ const SHIP_DEFINITIONS = {
 
     // --- ALIEN ---
     "GeometricDrone": {
-        name: "Geometric Drone (Alien)", role: "Alien Scout?", sizeCategory: "Tiny", size: 15,
+        name: "Geometric Drone (Alien)", role: "Alien Scout?", upgrades: [], sizeCategory: "Tiny", size: 15,
         baseMaxSpeed: 9.0, baseThrust: 0.2, baseTurnRate: 0.13963,
         baseHull: 20, baseShield: 40, shieldRecharge: 1.5, cargoCapacity: 0,
         armament: ["Scatter Beam"], // Alien tech
@@ -3319,7 +3319,7 @@ const SHIP_DEFINITIONS = {
     },
     "TriadProbe": {
         name: "Triad Probe (Alien)",
-        role: "Alien Scout",
+        role: "Alien Scout", upgrades: [],
         sizeCategory: "Tiny",
         size: 16,
         baseMaxSpeed: 9.0, baseThrust: 0.25, baseTurnRate: 0.15,
@@ -3337,7 +3337,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 5 // Cutting-edge
     },
     "TesseractScout": {
-        name: "Tesseract Scout (Alien)", role: "Alien Recon", sizeCategory: "Tiny", size: 18,
+        name: "Tesseract Scout (Alien)", role: "Alien Recon", upgrades: [], sizeCategory: "Tiny", size: 18,
         baseMaxSpeed: 10.0, baseThrust: 0.25, baseTurnRate: 0.15,
         baseHull: 25, baseShield: 30, shieldRecharge: 1.0, cargoCapacity: 0,
         armament: ["Scatter Beam"],
@@ -3353,7 +3353,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 5 // Cutting-edge
     },
     "PetalSpinner": {
-        name: "Petal Spinner (Alien)", role: "Alien Fighter", sizeCategory: "Small", size: 26,
+        name: "Petal Spinner (Alien)", role: "Alien Fighter", upgrades: [], sizeCategory: "Small", size: 26,
         baseMaxSpeed: 8.2, baseThrust: 0.21, baseTurnRate: 0.12,
         baseHull: 55, baseShield: 70, shieldRecharge: 1.5, cargoCapacity: 0,
         armament: ["Scatter Beam"],
@@ -3369,7 +3369,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 5 // Cutting-edge
     },
     "SpiralWarden": {
-        name: "Spiral Warden (Alien)", role: "Alien Interceptor", sizeCategory: "Small", size: 28,
+        name: "Spiral Warden (Alien)", role: "Alien Interceptor", upgrades: [], sizeCategory: "Small", size: 28,
         baseMaxSpeed: 8.0, baseThrust: 0.19, baseTurnRate: 0.11,
         baseHull: 60, baseShield: 90, shieldRecharge: 1.7, cargoCapacity: 0,
         armament: ["Scatter Beam"],
@@ -3383,7 +3383,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 5 // Cutting-edge
     },
     "CrescentMarauder": {
-        name: "Crescent Marauder (Alien)", role: "Alien Raider", sizeCategory: "Medium", size: 38,
+        name: "Crescent Marauder (Alien)", role: "Alien Raider", upgrades: [], sizeCategory: "Medium", size: 38,
         baseMaxSpeed: 7.5, baseThrust: 0.16, baseTurnRate: 0.10,
         baseHull: 100, baseShield: 120, shieldRecharge: 1.8, cargoCapacity: 10,
         armament: ["Disruptor", "Scatter Beam"],
@@ -3397,7 +3397,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 5 // Cutting-edge
     },
     "ObeliskSentinel": {
-        name: "Obelisk Sentinel (Alien)", role: "Alien Guardian", sizeCategory: "Medium", size: 40,
+        name: "Obelisk Sentinel (Alien)", role: "Alien Guardian", upgrades: [], sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 6.2, baseThrust: 0.13, baseTurnRate: 0.075,
         baseHull: 120, baseShield: 180, shieldRecharge: 2.0, cargoCapacity: 0,
         armament: ["Disruptor", "Scatter Beam"],
@@ -3417,7 +3417,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 5 // Cutting-edge
     },
     "HexaManta": {
-        name: "Hexa-Manta (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 70,
+        name: "Hexa-Manta (Alien)", role: "Alien Cruiser", upgrades: [], sizeCategory: "Large", size: 70,
         baseMaxSpeed: 6.0, baseThrust: 0.12, baseTurnRate: 0.07,
         baseHull: 220, baseShield: 320, shieldRecharge: 2.2, cargoCapacity: 30,
         armament: ["Disruptor", "Force Blaster"],
@@ -3432,7 +3432,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 5 // Cutting-edge    
     },
     "FractalRay": {
-        name: "Fractal Ray (Alien)", role: "Alien Destroyer", sizeCategory: "Large", size: 85,
+        name: "Fractal Ray (Alien)", role: "Alien Destroyer", upgrades: [], sizeCategory: "Large", size: 85,
         baseMaxSpeed: 7.0, baseThrust: 0.15, baseTurnRate: 0.09,
         baseHull: 260, baseShield: 350, shieldRecharge: 2.5, cargoCapacity: 40,
         armament: ["Force Blaster", "Disruptor", "Scatter Beam"],
@@ -3446,7 +3446,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 5 // Cutting-edge        
     },
     "ObsidianOrb": {
-        name: "Obsidian Orb (Alien)", role: "Alien Tank", sizeCategory: "Large", size: 90,
+        name: "Obsidian Orb (Alien)", role: "Alien Tank", upgrades: [], sizeCategory: "Large", size: 90,
         baseMaxSpeed: 4.5, baseThrust: 0.09, baseTurnRate: 0.05,
         baseHull: 400, baseShield: 500, shieldRecharge: 3.0, cargoCapacity: 60,
         armament: ["Force Blaster", "Disruptor"],
@@ -3477,7 +3477,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 5 // Cutting-edge    
     },
     "BioFrigate": {
-        name: "Bio-Frigate (Alien)", role: "Alien Cruiser", sizeCategory: "Large", size: 90,
+        name: "Bio-Frigate (Alien)", role: "Alien Cruiser", upgrades: [], sizeCategory: "Large", size: 90,
         baseMaxSpeed: 4.0, baseThrust: 0.1, baseTurnRate: 0.03491,
         baseHull: 500, baseShield: 250, shieldRecharge: 2.5,
         armament: ["Force Blaster", "Disruptor", "Barrier Field"],
@@ -3499,7 +3499,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 5 // Alien
     },
     "Thargoid": {
-        name: "Thargoid Interceptor", role: "Alien Combat", sizeCategory: "Large", size: 60,
+        name: "Thargoid Interceptor", role: "Alien Combat", upgrades: [], sizeCategory: "Large", size: 60,
         baseMaxSpeed: 8.0, baseThrust: 0.20, baseTurnRate: 0.10472,
         baseHull: 200, baseShield: 300, shieldRecharge: 2.0, cargoCapacity: 0,
         armament: ["Force Blaster", "Disruptor", "Scatter Beam"], // Alien arsenal
@@ -3512,7 +3512,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 5 // Alien
     },
     "LotusCarrier": {
-        name: "Lotus Carrier (Alien)", role: "Alien Carrier", sizeCategory: "Very Large", size: 120,
+        name: "Lotus Carrier (Alien)", role: "Alien Carrier", upgrades: [], sizeCategory: "Very Large", size: 120,
         baseMaxSpeed: 3.5, baseThrust: 0.06, baseTurnRate: 0.025,
         baseHull: 800, baseShield: 900, shieldRecharge: 4.0, cargoCapacity: 200,
         armament: ["Force Blaster", "Disruptor", "Scatter Beam", "Halo"],

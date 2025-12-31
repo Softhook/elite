@@ -155,6 +155,34 @@ class Enemy {
         this.p5StrokeColor = null;
         // ---
 
+        // --- Apply Default Ship Upgrades (if any) ---
+        if (shipDef.upgrades && Array.isArray(shipDef.upgrades) && typeof SHIP_UPGRADES !== 'undefined') {
+            shipDef.upgrades.forEach(upgradeName => {
+                const upgDef = SHIP_UPGRADES.find(u => u.name === upgradeName);
+                if (upgDef) {
+                    // Apply based on type
+                    if (upgDef.type === 'armor') {
+                        this.maxHull += (upgDef.hullBonus || 0);
+                        this.hull = this.maxHull; // Heal to full
+                    } else if (upgDef.type === 'engine') {
+                        if (upgDef.speedMultiplier) {
+                            this.baseMaxSpeed *= upgDef.speedMultiplier;
+                            this.maxSpeed = this.baseMaxSpeed;
+                        }
+                        if (upgDef.thrustMultiplier) {
+                            this.baseThrust *= upgDef.thrustMultiplier;
+                            this.thrustForce = this.baseThrust;
+                        }
+                    } else if (upgDef.type === 'shield') {
+                        this.maxShield += (upgDef.shieldBonus || 0);
+                        this.shield = this.maxShield;
+                    }
+                    // Cargo and Hardpoint upgrades might not need explicit handling regarding enemy logic 
+                    // unless they drop cargo or fire extra weapons, which is handled elsewhere.
+                }
+            });
+        }
+
         // --- Targeting & AI ---
         this.target = null; this.currentState = AI_STATE.IDLE; // Default state
         this.repositionTarget = null; this.passTimer = 0; this.nearStationTimer = 0; this.hasPausedNearStation = false; this.hasRepairedAtStation = false; this.patrolTargetPos = null; // Target pos set in first update if needed

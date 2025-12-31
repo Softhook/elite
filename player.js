@@ -71,6 +71,11 @@ class Player {
         this._initAutopilotProperties();
         this._initEffectProperties();
         this._initRecordProperties();
+
+        // Apply stat bonuses from default upgrades and ensure full health
+        this.recalculateStats();
+        this.hull = this.maxHull;
+        this.shield = this.maxShield;
     }
 
     /**
@@ -93,9 +98,28 @@ class Player {
         this.shipDefinition = shipDef;
 
         // Initialize installed upgrades tracking (all start at level 0)
-        this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0 };
+        this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0 };
+        this._applyDefaultUpgrades(shipDef);
 
         return shipDef;
+    }
+
+    /**
+     * Applies default upgrades from ship definition
+     * @param {Object} shipDef 
+     * @private
+     */
+    _applyDefaultUpgrades(shipDef) {
+        if (shipDef && Array.isArray(shipDef.upgrades) && typeof SHIP_UPGRADES !== 'undefined') {
+            shipDef.upgrades.forEach(upgradeName => {
+                const upgDef = SHIP_UPGRADES.find(u => u.name === upgradeName);
+                if (upgDef) {
+                    this.installedUpgrades[upgDef.type] = upgDef.level;
+                    // Note: We don't call recalculateStats here because it might not be ready during constructor,
+                    // but applyShipDefinition calls it explicitly after this.
+                }
+            });
+        }
     }
 
     /**
@@ -717,6 +741,10 @@ class Player {
 
         // Recalculate any derived properties
         this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0 }; // Reset upgrades on ship change
+        this._applyDefaultUpgrades(def); // Apply default upgrades from definition
+        this.recalculateStats(); // Apply bonuses from default upgrades
+        this.hull = this.maxHull; // Full hull for new ship
+        this.shield = this.maxShield; // Full shield for new ship
         this.calculateRadianProperties && this.calculateRadianProperties();
         this.updateShipVisual && this.updateShipVisual();
     }
