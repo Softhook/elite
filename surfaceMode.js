@@ -870,6 +870,8 @@ class SurfaceMode {
                                 obj = new Turret(wx, wy);
                             }
                             // Else leave empty (peaks shouldn't have cities)
+                        } else if (subHash < 0.05) { // 5% chance for surface pirates
+                            obj = new SurfacePirate(wx, wy);
                         } else if (subHash < 0.1) {
                             obj = new SurfaceStation(wx, wy);
                         } else if (subHash < 0.15) { // Rare buildings
