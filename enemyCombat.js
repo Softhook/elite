@@ -413,6 +413,11 @@ class EnemyCombat {
      * @param {number} shootingAngle - Angle to target in radians
      */
     performFiring(system, targetExists, distanceToTarget, shootingAngle) {
+        // Don't fire while cloaked - maintain stealth until decloak
+        if (this.isCloaked) {
+            return; // Suppress firing to preserve cloak
+        }
+
         // Proactively activate barrier if needed regardless of target status
         this.activateBarrierIfNeeded();
         if (!targetExists) return;

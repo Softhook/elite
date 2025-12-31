@@ -224,6 +224,10 @@ class EnemyRendering {
         // fade-back can complete after logical destruction.
         if ((this.destroyed && !this._isJumpFading) || isNaN(this.angle)) return;
 
+        // Cloaked enemies are invisible in the main game view
+        // (They remain visible on minimap, handled separately in StarSystem)
+        if (this.isCloaked) return;
+
 
         // Cache current time (avoid multiple millis() calls per frame)
         const now = millis();

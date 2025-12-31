@@ -1210,7 +1210,7 @@ class Player {
         this.vel.set(cos(this.angle) * maxBurstSpeed, sin(this.angle) * maxBurstSpeed);
 
         if (typeof soundManager !== 'undefined') {
-            soundManager.playSound('boost');
+            // soundManager.playSound('boost'); // TODO: Add boost sound
         }
 
         return true;

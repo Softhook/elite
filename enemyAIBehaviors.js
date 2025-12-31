@@ -629,6 +629,11 @@ class EnemyAIBehaviors {
         // 4b. Cover behavior: pick cover and reposition if needed
         this._updateCoverBehavior(system, targetExists, distanceToTarget);
 
+        // 4c. Strategic ability usage (cloak/booster)
+        if (typeof this.updateCombatAbilities === 'function') {
+            this.updateCombatAbilities(distanceToTarget);
+        }
+
         // 5. If just entered (or still in) FLEEING, perform flee logic and exit
         // ← NO MORE "if (FLEEING) updateFleeingAI" here!
         if (this.currentState === AI_STATE.FLEEING) {

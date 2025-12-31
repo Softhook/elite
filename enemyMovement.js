@@ -343,13 +343,22 @@ class EnemyMovement {
 
         // Limit Max Speed Logic (Soft Cap to allow knockback)
         const currentSpeed = this.vel.mag();
-        if (currentSpeed > this.maxSpeed) {
+
+        // Allow boosted enemies to exceed normal maxSpeed
+        // Only check isSpeedBursting if this enemy has booster capability
+        let currentCap = this.maxSpeed;
+        if (this.boostMaxDuration > 0 && this.isSpeedBursting && this.boostMultiplier > 1) {
+            const baseSpeed = this.baseMaxSpeed || this.maxSpeed || 5;
+            currentCap = baseSpeed * this.boostMultiplier;
+        }
+
+        if (currentSpeed > currentCap) {
             // If exceeding max speed, decay only the excess amount
             // This is more frame-rate independent than multiplying the whole velocity
-            const excess = currentSpeed - this.maxSpeed;
+            const excess = currentSpeed - currentCap;
             const decayedExcess = excess * Math.pow(0.9, physicsTimeScale);
-            this.vel.setMag(this.maxSpeed + decayedExcess);
-        } else {
+            this.vel.setMag(currentCap + decayedExcess);
+        } else if (currentSpeed > this.maxSpeed && !this.isSpeedBursting) {
             // Normal operation - safeguard against thrust accumulation
             this.vel.limit(this.maxSpeed);
         }

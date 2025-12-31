@@ -155,33 +155,8 @@ class Enemy {
         this.p5StrokeColor = null;
         // ---
 
-        // --- Apply Default Ship Upgrades (if any) ---
-        if (shipDef.upgrades && Array.isArray(shipDef.upgrades) && typeof SHIP_UPGRADES !== 'undefined') {
-            shipDef.upgrades.forEach(upgradeName => {
-                const upgDef = SHIP_UPGRADES.find(u => u.name === upgradeName);
-                if (upgDef) {
-                    // Apply based on type
-                    if (upgDef.type === 'armor') {
-                        this.maxHull += (upgDef.hullBonus || 0);
-                        this.hull = this.maxHull; // Heal to full
-                    } else if (upgDef.type === 'engine') {
-                        if (upgDef.speedMultiplier) {
-                            this.baseMaxSpeed *= upgDef.speedMultiplier;
-                            this.maxSpeed = this.baseMaxSpeed;
-                        }
-                        if (upgDef.thrustMultiplier) {
-                            this.baseThrust *= upgDef.thrustMultiplier;
-                            this.thrustForce = this.baseThrust;
-                        }
-                    } else if (upgDef.type === 'shield') {
-                        this.maxShield += (upgDef.shieldBonus || 0);
-                        this.shield = this.maxShield;
-                    }
-                    // Cargo and Hardpoint upgrades might not need explicit handling regarding enemy logic 
-                    // unless they drop cargo or fire extra weapons, which is handled elsewhere.
-                }
-            });
-        }
+        // NOTE: Ship upgrades are applied at the END of the constructor,
+        // after all default property values have been initialized.
 
         // --- Targeting & AI ---
         this.target = null; this.currentState = AI_STATE.IDLE; // Default state
@@ -352,6 +327,23 @@ class Enemy {
         this.barrierColor = [100, 100, 255]; // Default blue
         // ---
 
+        // --- Cloak Properties ---
+        this.isCloaked = false;
+        this.cloakDurationTimer = 0;
+        this.cloakCooldownTimer = 0;
+        this.cloakMaxDuration = 0;
+        this.cloakMaxCooldown = 0;
+        // ---
+
+        // --- Booster Properties ---
+        this.isSpeedBursting = false;
+        this.boostDurationTimer = 0;
+        this.boostCooldownTimer = 0;
+        this.boostMultiplier = 0;
+        this.boostMaxDuration = 0;
+        this.boostMaxCooldown = 0;
+        // ---
+
         // --- Nebula Effect Properties ---
         this.weaponsDisabled = false; // Set by EMP nebula
         this.shieldsDisabled = false; // Set by Ion nebula
@@ -367,6 +359,40 @@ class Enemy {
         // Initialize cargo inventory based on role/ship definition
         if (typeof this.initializeCargoInventory === 'function') {
             this.initializeCargoInventory(shipDef);
+        }
+
+        // --- Apply Default Ship Upgrades (MUST be at end of constructor) ---
+        // This ensures all properties are initialized before upgrades modify them
+        if (shipDef.upgrades && Array.isArray(shipDef.upgrades) && typeof SHIP_UPGRADES !== 'undefined') {
+            shipDef.upgrades.forEach(upgradeName => {
+                const upgDef = SHIP_UPGRADES.find(u => u.name === upgradeName);
+                if (upgDef) {
+                    // Apply based on type
+                    if (upgDef.type === 'armor') {
+                        this.maxHull += (upgDef.hullBonus || 0);
+                        this.hull = this.maxHull; // Heal to full
+                    } else if (upgDef.type === 'engine') {
+                        if (upgDef.speedMultiplier) {
+                            this.baseMaxSpeed *= upgDef.speedMultiplier;
+                            this.maxSpeed = this.baseMaxSpeed;
+                        }
+                        if (upgDef.thrustMultiplier) {
+                            this.baseThrust *= upgDef.thrustMultiplier;
+                            this.thrustForce = this.baseThrust;
+                        }
+                    } else if (upgDef.type === 'shield') {
+                        this.maxShield += (upgDef.shieldBonus || 0);
+                        this.shield = this.maxShield;
+                    } else if (upgDef.type === 'cloak') {
+                        this.cloakMaxDuration = upgDef.cloakDuration;
+                        this.cloakMaxCooldown = upgDef.cloakCooldown;
+                    } else if (upgDef.type === 'booster') {
+                        this.boostMultiplier = upgDef.boostMultiplier;
+                        this.boostMaxDuration = upgDef.boostDuration;
+                        this.boostMaxCooldown = upgDef.boostCooldown;
+                    }
+                }
+            });
         }
     }
 
@@ -530,6 +556,43 @@ class Enemy {
                 this.barrierDamageReduction = 0;
                 this.barrierDurationTimer = 0;
                 if (typeof soundManager !== 'undefined') { soundManager.playSound('barrierDown'); }
+            }
+        }
+
+        // Update cloak timers (only for enemies with cloak capability)
+        if (this.cloakMaxDuration > 0) {
+            if (this.isCloaked) {
+                this.cloakDurationTimer -= deltaSeconds;
+                if (this.cloakDurationTimer <= 0) {
+                    if (typeof this.deactivateCloak === 'function') {
+                        this.deactivateCloak();
+                    } else {
+                        this.isCloaked = false;
+                        this.cloakCooldownTimer = this.cloakMaxCooldown;
+                        this.cloakDurationTimer = 0;
+                    }
+                }
+            }
+            if (this.cloakCooldownTimer > 0) {
+                this.cloakCooldownTimer -= deltaSeconds;
+            }
+        }
+
+        // Update booster timers (only for enemies with booster capability)
+        if (this.boostMaxDuration > 0) {
+            if (this.isSpeedBursting) {
+                this.boostDurationTimer -= deltaSeconds;
+                if (this.boostDurationTimer <= 0) {
+                    if (typeof this.deactivateBoost === 'function') {
+                        this.deactivateBoost();
+                    } else {
+                        this.isSpeedBursting = false;
+                        this.boostCooldownTimer = this.boostMaxCooldown;
+                    }
+                }
+            }
+            if (this.boostCooldownTimer > 0) {
+                this.boostCooldownTimer -= deltaSeconds;
             }
         }
 
@@ -1003,5 +1066,10 @@ if (typeof applyEnemyDamageSystemMethods === 'function') {
 // Apply rendering methods from enemyRendering.js to Enemy prototype
 if (typeof applyEnemyRenderingMethods === 'function') {
     applyEnemyRenderingMethods();
+}
+
+// Apply ability methods from enemyAbilities.js to Enemy prototype
+if (typeof applyEnemyAbilityMethods === 'function') {
+    applyEnemyAbilityMethods();
 }
 

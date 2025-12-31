@@ -312,6 +312,10 @@ class EnemyDamageSystem {
         this.haulerCombatTimer = undefined;
         this.forcedCombatTimer = 0;
 
+        // Clear ability states on death
+        this.isCloaked = false;
+        this.isSpeedBursting = false;
+
         try {
             if (typeof communicationSystem !== 'undefined' && communicationSystem && typeof communicationSystem.handleEnemyDestroyed === 'function') {
                 communicationSystem.handleEnemyDestroyed(this);
