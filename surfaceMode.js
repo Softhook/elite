@@ -423,8 +423,8 @@ class SurfaceMode {
             const terrainH = this._getTerrainHeightAt(projPos.x, projPos.y);
             const projAlt = proj.altitude || 0;
 
-            // If projectile hits the ground
-            if (projAlt <= terrainH + 2 && proj.owner !== this.player) {
+            // If projectile hits the ground (all projectiles, including player's)
+            if (projAlt <= terrainH + 2) {
                 // Create ground impact explosion
                 this._createSurfaceExplosion(projPos.x, projPos.y, 0, 8, [255, 100, 50]);
 
@@ -614,10 +614,18 @@ class SurfaceMode {
 
         // Calculate viewport bounds in buffer space for culling
         // Buffer is centered at (cx, cy) with the mesh center at world (meshCenterWX, meshCenterWY)
-        const bufferLeft = -cx;
-        const bufferRight = cx;
-        const bufferTop = -cy;
-        const bufferBottom = cy;
+        // At high altitude, perspective scale is smaller (0.6x), meaning we see MORE world space
+        // but the buffer size stays constant - so we can cull more aggressively based on what's actually visible
+        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
+        // Visible area = screen size / scale, so higher altitude = smaller visible area in buffer coords
+        // Add generous padding to prevent black edges at screen borders
+        const cullPadding = 300;
+        const visibleHalfWidth = (width / 2) / perspectiveScale + cullPadding;
+        const visibleHalfHeight = (height / 2) / perspectiveScale + cullPadding;
+        const bufferLeft = -visibleHalfWidth;
+        const bufferRight = visibleHalfWidth;
+        const bufferTop = -visibleHalfHeight;
+        const bufferBottom = visibleHalfHeight;
 
         this.terrainBuffer.stroke(0, 0, 0, 40);
         this.terrainBuffer.strokeWeight(0.5);
