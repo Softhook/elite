@@ -337,6 +337,7 @@ class Enemy {
 
         // --- Booster Properties ---
         this.isSpeedBursting = false;
+        this.isCoastingFromBurst = false; // Smooth deceleration after boost ends
         this.boostDurationTimer = 0;
         this.boostCooldownTimer = 0;
         this.boostMultiplier = 0;
@@ -582,12 +583,26 @@ class Enemy {
         if (this.boostMaxDuration > 0) {
             if (this.isSpeedBursting) {
                 this.boostDurationTimer -= deltaSeconds;
-                if (this.boostDurationTimer <= 0) {
+
+                // SUSTAINED THRUST: Like player, sustain boost speed with thrust each frame
+                // This matches player.js line ~1467: "Actively bursting: sustain with normal thrust application"
+                // NOTE: Use 1.0 multiplier like player does, not boostMultiplier (velocity already set high at activation)
+                if (this.boostDurationTimer > 0) {
+                    this.thrustForward(1.0, false); // Normal thrust, no particles during boost
+                } else {
+                    // Boost ended - deactivate
                     if (typeof this.deactivateBoost === 'function') {
                         this.deactivateBoost();
                     } else {
                         this.isSpeedBursting = false;
                         this.boostCooldownTimer = this.boostMaxCooldown;
+                    }
+                    // Start coasting phase like player.js line ~1477
+                    const baseSpeed = this.baseMaxSpeed || this.maxSpeed || 5;
+                    if (this.vel.magSq() > (baseSpeed * 1.01) ** 2) {
+                        this.isCoastingFromBurst = true;
+                    } else {
+                        this.isCoastingFromBurst = false;
                     }
                 }
             }

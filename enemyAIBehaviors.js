@@ -561,8 +561,8 @@ class EnemyAIBehaviors {
                 const angleDiff = this.performSafeRotationAndThrust(system, moveTarget);
 
                 // If aligned enough, thrust! (Manually, since performRotationAndThrust might block it for IDLE)
-                // Only thrust if state dictates motion (not Sniping)
-                if (shouldThrust && Math.abs(angleDiff) < (this.angleTolerance || 0.1) * 2) {
+                // Only thrust if state dictates motion (not Sniping) and not currently boosting
+                if (shouldThrust && !this.isSpeedBursting && Math.abs(angleDiff) < (this.angleTolerance || 0.1) * 2) {
                     this.thrustForward(1.0);
                 }
 

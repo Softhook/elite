@@ -16,6 +16,25 @@ class EnemyMovement {
     performRotationAndThrust(desiredMovementTargetPos) {
         let angleDifference = PI; // Default to max difference
 
+        // BOOST OVERRIDE: When speed bursting, skip normal thrust to let boost work properly.
+        // The boost sets velocity directly and should not be fought by regular thrust.
+        // We still allow rotation so the ship can aim during boost.
+        if (this.isSpeedBursting) {
+            // Only rotate toward target if we have one (for aiming during boost)
+            if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined) {
+                this.tempVector.set(
+                    desiredMovementTargetPos.x - this.pos.x,
+                    desiredMovementTargetPos.y - this.pos.y
+                );
+                if (this.tempVector.magSq() > 0.001) {
+                    let desiredAngle = this.tempVector.heading();
+                    angleDifference = this.rotateTowards(desiredAngle);
+                }
+            }
+            // Skip thrust - boost handles velocity
+            return angleDifference;
+        }
+
         if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined) {
             // Reuse tempVector to avoid allocations
             this.tempVector.set(
@@ -300,56 +319,70 @@ class EnemyMovement {
         // Calculate timeScale once for all physics operations
         const physicsTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
 
-        // --- TANGLE WEAPON EFFECT ---
-        if (this.dragMultiplier > 1.0 && this.dragEffectTimer > 0) {
-            // First apply normal drag (always safe) - frame-rate independent
-            this.vel.mult(Math.pow(this.drag, physicsTimeScale));
+        // DRAG: Skip drag during speed bursting (like player.js line ~1488)
+        // Drag is still applied during coasting phase for smooth deceleration
+        if (!this.isSpeedBursting) {
+            // --- TANGLE WEAPON EFFECT ---
+            if (this.dragMultiplier > 1.0 && this.dragEffectTimer > 0) {
+                // First apply normal drag (always safe) - frame-rate independent
+                this.vel.mult(Math.pow(this.drag, physicsTimeScale));
 
-            // Then apply the tangle effect with safety bounds
-            const safeDragMultiplier = Math.max(this.dragMultiplier, 0.001); // Prevent division by zero
-            const tangledSpeedFactor = Math.min(1 / safeDragMultiplier, 1.0); // Can't increase speed
+                // Then apply the tangle effect with safety bounds
+                const safeDragMultiplier = Math.max(this.dragMultiplier, 0.001); // Prevent division by zero
+                const tangledSpeedFactor = Math.min(1 / safeDragMultiplier, 1.0); // Can't increase speed
 
-            // Apply tangle effect if values are valid - frame-rate independent
-            if (isFinite(tangledSpeedFactor) && tangledSpeedFactor > 0) {
-                this.vel.mult(Math.pow(tangledSpeedFactor, physicsTimeScale));
+                // Apply tangle effect if values are valid - frame-rate independent
+                if (isFinite(tangledSpeedFactor) && tangledSpeedFactor > 0) {
+                    this.vel.mult(Math.pow(tangledSpeedFactor, physicsTimeScale));
 
-                // Add slight directional randomness to simulate being caught in energy net
-                // Timer-based (~80ms interval) for frame rate independence
-                if (!this._tangleJiggleTimer) this._tangleJiggleTimer = 0;
-                this._tangleJiggleTimer += deltaTime / 1000;
-                if (this._tangleJiggleTimer >= 0.08) {
-                    this._tangleJiggleTimer = 0;
-                    this.vel.rotate(random(-0.1, 0.1) * physicsTimeScale);
+                    // Add slight directional randomness to simulate being caught in energy net
+                    // Timer-based (~80ms interval) for frame rate independence
+                    if (!this._tangleJiggleTimer) this._tangleJiggleTimer = 0;
+                    this._tangleJiggleTimer += deltaTime / 1000;
+                    if (this._tangleJiggleTimer >= 0.08) {
+                        this._tangleJiggleTimer = 0;
+                        this.vel.rotate(random(-0.1, 0.1) * physicsTimeScale);
+                    }
+                }
+
+                // Update drag timer
+                this.dragEffectTimer -= deltaTime / 1000;
+                if (this.dragEffectTimer <= 0) {
+                    this.dragMultiplier = 1.0;
+                    this.dragEffectTimer = 0;
                 }
             }
-
-            // Update drag timer
-            this.dragEffectTimer -= deltaTime / 1000;
-            if (this.dragEffectTimer <= 0) {
-                this.dragMultiplier = 1.0;
-                this.dragEffectTimer = 0;
+            // --- STATION PROXIMITY EFFECT ---
+            else if (this.currentState === AI_STATE.NEAR_STATION) {
+                // Station braking - stronger effect than normal drag - frame-rate independent
+                this.vel.mult(Math.pow(this.drag * 0.8, physicsTimeScale));
             }
-        }
-        // --- STATION PROXIMITY EFFECT ---
-        else if (this.currentState === AI_STATE.NEAR_STATION) {
-            // Station braking - stronger effect than normal drag - frame-rate independent
-            this.vel.mult(Math.pow(this.drag * 0.8, physicsTimeScale));
-        }
-        // --- DEFAULT DRAG ---
-        else {
-            // Normal drag - frame-rate independent
-            this.vel.mult(Math.pow(this.drag, physicsTimeScale));
+            // --- DEFAULT DRAG ---
+            else {
+                // Normal drag - frame-rate independent
+                this.vel.mult(Math.pow(this.drag, physicsTimeScale));
+            }
+
+            // End coasting phase when speed has decayed
+            if (this.isCoastingFromBurst) {
+                const baseSpeed = this.baseMaxSpeed || this.maxSpeed || 5;
+                if (this.vel.magSq() < (baseSpeed * 1.01) ** 2) {
+                    this.isCoastingFromBurst = false;
+                }
+            }
         }
 
         // Limit Max Speed Logic (Soft Cap to allow knockback)
         const currentSpeed = this.vel.mag();
 
         // Allow boosted enemies to exceed normal maxSpeed
-        // Only check isSpeedBursting if this enemy has booster capability
+        // Also allow higher speed during coasting phase for smooth deceleration
         let currentCap = this.maxSpeed;
-        if (this.boostMaxDuration > 0 && this.isSpeedBursting && this.boostMultiplier > 1) {
-            const baseSpeed = this.baseMaxSpeed || this.maxSpeed || 5;
-            currentCap = baseSpeed * this.boostMultiplier;
+        if (this.boostMaxDuration > 0 && this.boostMultiplier > 1) {
+            if (this.isSpeedBursting || this.isCoastingFromBurst) {
+                const baseSpeed = this.baseMaxSpeed || this.maxSpeed || 5;
+                currentCap = baseSpeed * this.boostMultiplier;
+            }
         }
 
         if (currentSpeed > currentCap) {
@@ -358,7 +391,7 @@ class EnemyMovement {
             const excess = currentSpeed - currentCap;
             const decayedExcess = excess * Math.pow(0.9, physicsTimeScale);
             this.vel.setMag(currentCap + decayedExcess);
-        } else if (currentSpeed > this.maxSpeed && !this.isSpeedBursting) {
+        } else if (currentSpeed > this.maxSpeed && !this.isSpeedBursting && !this.isCoastingFromBurst) {
             // Normal operation - safeguard against thrust accumulation
             this.vel.limit(this.maxSpeed);
         }

@@ -51,12 +51,8 @@ class EnemyAbilities {
     shouldCloakForSurpriseAttack(distanceToTarget) {
         if (!this.hasCloakReady()) return false;
 
-        // Throttle: only evaluate cloak decision once per second
+        // NOTE: Throttling is now done in updateCombatAbilities() at entry point
         const now = typeof millis === 'function' ? millis() : Date.now();
-        if (this._lastCloakDecisionTime && now - this._lastCloakDecisionTime < 1000) {
-            return false; // Already decided recently, don't re-roll
-        }
-        this._lastCloakDecisionTime = now;
 
         // EMERGENCY CLOAK: Cloak when recently damaged (defensive escape)
         // Check if we were attacked in the last 2 seconds
@@ -71,6 +67,12 @@ class EnemyAbilities {
             return random() < 0.6;
         }
 
+        // WEAPON COOLDOWN CLOAK: Cloak while waiting for weapon to recharge
+        // This prevents "sitting duck" behavior after firing a big weapon
+        if (this.shouldCloakWhileWeaponCooldown()) {
+            return true;
+        }
+
         // SURPRISE ATTACK CLOAK: Only at medium range, not during attack pass
         if (this.currentState !== AI_STATE.ATTACK_PASS && this.target && this.isTargetValid(this.target)) {
             const idealCloakRange = this.detectionRange * 0.8;
@@ -81,6 +83,42 @@ class EnemyAbilities {
         }
 
         return false;
+    }
+
+    /**
+     * Check if weapon is on a significant cooldown (e.g., after firing a missile)
+     * @return {boolean} Whether weapon has a notable remaining cooldown
+     */
+    hasSignificantWeaponCooldown() {
+        // Weapon must be on cooldown
+        if (!this.fireCooldown || this.fireCooldown <= 0) return false;
+
+        // Only consider it "significant" if more than 1 second remaining
+        // This distinguishes big weapons (missiles, beams) from rapid-fire lasers
+        return this.fireCooldown > 1.0;
+    }
+
+    /**
+     * AI decision: should we cloak while waiting for weapon to recharge?
+     * Cloaking during weapon cooldown makes the enemy harder to hit while they can't shoot back
+     * @return {boolean} Whether to cloak for weapon cooldown evasion
+     */
+    shouldCloakWhileWeaponCooldown() {
+        if (!this.hasCloakReady()) return false;
+        if (!this.hasSignificantWeaponCooldown()) return false;
+
+        // Must have a valid target (otherwise no need for evasion)
+        if (!this.target || !this.isTargetValid(this.target)) return false;
+
+        // Only evade in stationary combat states where we'd otherwise be a sitting duck
+        const stationaryStates = [AI_STATE.SNIPING, AI_STATE.APPROACHING];
+        if (!stationaryStates.includes(this.currentState)) return false;
+
+        // More likely to cloak if cooldown is long (over 2 seconds)
+        const longCooldown = this.fireCooldown > 2.0;
+        const cloakChance = longCooldown ? 0.6 : 0.35;
+
+        return random() < cloakChance;
     }
 
     /** AI decision: should we decloak to attack? */
@@ -144,12 +182,7 @@ class EnemyAbilities {
         if (!this.hasBoosterReady()) return false;
         if (this.currentState !== AI_STATE.FLEEING) return false;
 
-        // Throttle: only evaluate boost decision once per second
-        const now = typeof millis === 'function' ? millis() : Date.now();
-        if (this._lastBoostDecisionTime && now - this._lastBoostDecisionTime < 1000) {
-            return false;
-        }
-        this._lastBoostDecisionTime = now;
+        // NOTE: Throttling is now done in updateCombatAbilities() at entry point
 
         // Use lastAttacker if target is lost (common during flee)
         const threat = this.target && this.isTargetValid(this.target)
@@ -194,8 +227,64 @@ class EnemyAbilities {
         return random() < boostChance;
     }
 
+    /**
+     * AI decision: should we boost to evade while weapon is on cooldown?
+     * When weapon is recharging, boosting away prevents being a static target.
+     * Unlike repositioning boost, this is purely for evasion.
+     * @return {boolean} Whether to boost for weapon cooldown evasion
+     */
+    shouldBoostWhileWeaponCooldown() {
+        if (!this.hasBoosterReady()) return false;
+        if (!this.hasSignificantWeaponCooldown()) return false;
+
+        // Must have a valid target (otherwise no point evading)
+        if (!this.target || !this.isTargetValid(this.target)) return false;
+
+        // Only evade in stationary states where we'd be a sitting duck
+        // Don't boost from SNIPING - that breaks the sniping position advantage
+        // But DO boost from APPROACHING if we can't fire yet
+        if (this.currentState !== AI_STATE.SNIPING &&
+            this.currentState !== AI_STATE.APPROACHING) return false;
+
+        // Check if target is close enough to be a threat
+        const distToTarget = this.distanceTo(this.target);
+        const threatRange = this.firingRange * 1.2; // Within our firing range = threatening
+        if (distToTarget > threatRange) return false;
+
+        // More likely to boost-evade if cooldown is very long (over 2.5 seconds)
+        const longCooldown = this.fireCooldown > 2.5;
+        const boostChance = longCooldown ? 0.5 : 0.25;
+
+        return random() < boostChance;
+    }
+
+    /**
+     * Check if this enemy has any special abilities (cloak or booster).
+     * Used for early bailout to save CPU on ships without abilities.
+     * @return {boolean} Whether the enemy has any special ability
+     */
+    hasAnyAbility() {
+        return (this.cloakMaxDuration > 0) || (this.boostMaxDuration > 0);
+    }
+
     /** Main update for strategic ability usage - call from combat AI */
     updateCombatAbilities(distanceToTarget) {
+        // PERFORMANCE: Early bailout for enemies without any abilities.
+        // Most enemies don't have cloak or booster, so skip entirely for them.
+        if (!this.hasAnyAbility()) return;
+
+        // PERFORMANCE: Throttle ability decisions to once per second
+        // This prevents expensive random rolls and calculations every frame
+        const now = typeof millis === 'function' ? millis() : Date.now();
+        if (this._lastAbilityUpdateTime && now - this._lastAbilityUpdateTime < 1000) {
+            // Still need to check decloak conditions more frequently for responsiveness
+            if (this.isCloaked && this.shouldDecloakToAttack(distanceToTarget)) {
+                this.deactivateCloak();
+            }
+            return;
+        }
+        this._lastAbilityUpdateTime = now;
+
         // Cloak AI
         if (this.isCloaked) {
             // Check if should decloak
@@ -212,7 +301,7 @@ class EnemyAbilities {
         // Booster AI - only when NOT cloaked (cloaked ships sneak, don't boost)
         if (!this.isCloaked && this.hasBoosterReady()) {
             // EMERGENCY BOOST: When recently damaged and low on health, try to escape
-            const now = typeof millis === 'function' ? millis() : Date.now();
+            // Reuse the 'now' variable from above instead of calling millis() again
             const recentlyDamaged = this.lastAttackTime && (now - this.lastAttackTime < 2000);
             if (recentlyDamaged && this.hull < this.maxHull * 0.5) {
                 // Emergency boost to escape - high chance
@@ -227,6 +316,10 @@ class EnemyAbilities {
                 this.activateBoost();
             } else if (this.shouldBoostForReposition()) {
                 // Boost for rapid repositioning to get to optimal firing position
+                this.activateBoost();
+            } else if (this.shouldBoostWhileWeaponCooldown()) {
+                // Boost to evade while weapon is recharging - don't be a sitting duck
+                AI_LOG(`${this.shipTypeName} boosting to evade while weapon on cooldown (${(this.fireCooldown || 0).toFixed(1)}s remaining)`);
                 this.activateBoost();
             }
         }
