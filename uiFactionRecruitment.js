@@ -56,6 +56,16 @@ const FACTION_LORE = {
     }
 };
 
+// Layout and sizing constants
+const FACTION_UI_CONSTANTS = {
+    NEWS_ITEM_HEIGHT: 58,
+    MAX_DESC_LINES: 4,
+    MAX_NEWS_LINES: 3,
+    BTN_WIDTH: 180,
+    BTN_HEIGHT: 35,
+    PADDING: 15
+};
+
 /**
  * UIFactionRecruitment - Handles faction recruitment menu rendering.
  */
@@ -221,7 +231,7 @@ class UIFactionRecruitment {
         }
 
         let newsY = contentY + 45;
-        const newsItemHeight = 58;
+        const newsItemHeight = FACTION_UI_CONSTANTS.NEWS_ITEM_HEIGHT;
         const newsWidth = leftW - padding * 2;
 
         if (newsItems.length === 0) {
@@ -241,27 +251,9 @@ class UIFactionRecruitment {
                 const body = item.body || item.headline || 'No intel available';
                 const maxLineWidth = newsWidth - 16;
 
-                // Simple word wrap for 2-3 lines
-                const words = body.split(' ');
-                let lines = [];
-                let currentLine = '';
-
-                for (const word of words) {
-                    const testLine = currentLine ? currentLine + ' ' + word : word;
-                    if (textWidth(testLine) > maxLineWidth && currentLine) {
-                        lines.push(currentLine);
-                        currentLine = word;
-                        if (lines.length >= 2) break; // Limit to 2-3 lines
-                    } else {
-                        currentLine = testLine;
-                    }
-                }
-                if (currentLine && lines.length < 3) lines.push(currentLine);
-
-                // Add ellipsis if truncated
-                if (lines.length >= 2 && words.length > lines.join(' ').split(' ').length) {
-                    lines[lines.length - 1] = lines[lines.length - 1].slice(0, -3) + '...';
-                }
+                // Use shared word wrap utility
+                const wrappedBody = this._wrapText(body, maxLineWidth, STATION_TEXT_SIZE.SMALL);
+                const lines = wrappedBody.split('\n').slice(0, FACTION_UI_CONSTANTS.MAX_NEWS_LINES);
 
                 // Draw lines
                 let lineY = newsY + 8;
@@ -303,7 +295,7 @@ class UIFactionRecruitment {
         UIComponents.setTextStyle({ fill: [200, 200, 255], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
         const maxDescWidth = rightW - padding * 2;
         const wrappedDesc = this._wrapText(descText, maxDescWidth, 18);
-        const descLines = wrappedDesc.split('\n').slice(0, 4); // Limit lines
+        const descLines = wrappedDesc.split('\n').slice(0, FACTION_UI_CONSTANTS.MAX_DESC_LINES);
         for (const line of descLines) {
             text(line, rightX + padding, yPos);
             yPos += 22;
@@ -379,7 +371,11 @@ class UIFactionRecruitment {
                     }
                     yPos += 20;
                 }
-            } catch (e) { /* fail silently */ }
+            } catch (e) {
+                if (typeof DEBUG_UI !== 'undefined' && DEBUG_UI) {
+                    console.warn('getFactionKillsProgress failed:', e);
+                }
+            }
 
             // Secret base hint - only for factions that have secret bases (not Police)
             if (factionKey !== 'POLICE') {
@@ -398,8 +394,8 @@ class UIFactionRecruitment {
      * @private
      */
     _drawActionButtons(player, factionKey, factionName, themeColors, rightX, rightW, contentY, contentH, isWanted, canJoin, isMember, system) {
-        const btnW = 180;
-        const btnH = 35;
+        const btnW = FACTION_UI_CONSTANTS.BTN_WIDTH;
+        const btnH = FACTION_UI_CONSTANTS.BTN_HEIGHT;
         const btnX = rightX + (rightW - btnW) / 2;
         const btnY = contentY + contentH - 55;
 
@@ -499,6 +495,12 @@ class UIFactionRecruitment {
         this.factionRecruitmentButtonAreas = [];
         if (!player) return;
 
+        // Validate faction key
+        if (!FACTION_LORE[factionKey]) {
+            console.warn(`Unknown faction: ${factionKey}`);
+            return;
+        }
+
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
 
         // Layout constants (similar to ship detail screen)
@@ -584,11 +586,17 @@ class UIFactionRecruitment {
      * @param {StarSystem} system
      */
     drawMilitaryRecruitmentMenu(player, panelRect, headerHeight, system) {
+        const baseColor = (typeof FACTION_COLORS !== 'undefined' && FACTION_COLORS.MILITARY)
+            ? FACTION_COLORS.MILITARY
+            : [100, 120, 140];
+        const darkColor = baseColor.map(c => Math.floor(c * 0.5));
+        const lightColor = baseColor;
+
         this.drawFactionRecruitmentMenu(
             player,
             "Military Forces",
             "MILITARY",
-            [[50, 60, 70], [160, 170, 180]],
+            [darkColor, lightColor],
             panelRect,
             headerHeight,
             system
