@@ -3528,6 +3528,50 @@ const SHIP_DEFINITIONS = {
         aiRoles: ["ALIEN"],
         faction: "ALIEN",
         techLevel: 5 // Alien
+    },
+
+    // --- POSTHUMAN ---
+    "PosthumanMissionary": {
+        name: "Posthuman Missionary", role: "Missionary", upgrades: [], sizeCategory: "Medium", size: 45,
+        baseMaxSpeed: 4.5, baseThrust: 0.08, baseTurnRate: 0.05236,
+        baseHull: 80, baseShield: 180, shieldRecharge: 2.0, cargoCapacity: 20,
+        armament: ["Barrier Field", "Tangle Projector"],
+        costCategory: "N/A", description: "A serene, orb-like vessel used by Posthuman missionaries to spread the doctrine of transcendence. Equipped with tangle projectors to immobilize potential converts and barrier fields for protection. Non-lethal by design—they want to upgrade your consciousness, not destroy your ship.",
+        vertexLayers: [
+            // Outer shell - large purple-blue 16-sided polygon (nearly circular)
+            {
+                vertexData: [
+                    { x: 0.0, y: 1.0 }, { x: 0.38, y: 0.92 }, { x: 0.71, y: 0.71 }, { x: 0.92, y: 0.38 },
+                    { x: 1.0, y: 0.0 }, { x: 0.92, y: -0.38 }, { x: 0.71, y: -0.71 }, { x: 0.38, y: -0.92 },
+                    { x: 0.0, y: -1.0 }, { x: -0.38, y: -0.92 }, { x: -0.71, y: -0.71 }, { x: -0.92, y: -0.38 },
+                    { x: -1.0, y: 0.0 }, { x: -0.92, y: 0.38 }, { x: -0.71, y: 0.71 }, { x: -0.38, y: 0.92 }
+                ],
+                fillColor: [120, 80, 160]
+            },
+            // Mid ring - lighter purple
+            {
+                vertexData: [
+                    { x: 0.0, y: 0.7 }, { x: 0.27, y: 0.64 }, { x: 0.49, y: 0.49 }, { x: 0.64, y: 0.27 },
+                    { x: 0.7, y: 0.0 }, { x: 0.64, y: -0.27 }, { x: 0.49, y: -0.49 }, { x: 0.27, y: -0.64 },
+                    { x: 0.0, y: -0.7 }, { x: -0.27, y: -0.64 }, { x: -0.49, y: -0.49 }, { x: -0.64, y: -0.27 },
+                    { x: -0.7, y: 0.0 }, { x: -0.64, y: 0.27 }, { x: -0.49, y: 0.49 }, { x: -0.27, y: 0.64 }
+                ],
+                fillColor: [160, 120, 200]
+            },
+            // Inner core - cyan glow
+            {
+                vertexData: [
+                    { x: 0.0, y: 0.35 }, { x: 0.25, y: 0.25 }, { x: 0.35, y: 0.0 }, { x: 0.25, y: -0.25 },
+                    { x: 0.0, y: -0.35 }, { x: -0.25, y: -0.25 }, { x: -0.35, y: 0.0 }, { x: -0.25, y: 0.25 }
+                ],
+                fillColor: [100, 220, 255]
+            }
+        ],
+        typicalCargo: ["Medicine", "Computers", "Adv Components"],
+        price: 999999,
+        aiRoles: ["MISSIONARY"],
+        faction: "POSTHUMAN",
+        techLevel: 5 // Advanced posthuman tech
     }
 };
 
@@ -4198,6 +4242,59 @@ function drawPathfinderSurvey(s, thrusting = false, angle = 0, localSunAngle = -
     Draw3D.drawDome(-r * 0.5, 0, r * 0.35, 12, dishCol, depthAngle, localSunAngle, true);
 }
 
+function drawPosthumanMissionary(s, thrusting = false, angle = 0, localSunAngle = -0.785) {
+    let r = s / 2;
+    let def = SHIP_DEFINITIONS.PosthumanMissionary;
+    const now = millis();
+    let t = now * 0.002;
+
+    // Slow rotation for ethereal effect
+    let ringRotation = now * 0.0004;
+
+    // Pulsing effects for the "living" feel
+    let corePulse = 1.0 + sin(t * 0.6) * 0.1;
+    let glowPulse = sin(t * 1.0) * 0.5 + 0.5;
+
+    // 1. Draw base shape from vertex layers (the circular hull)
+    push();
+    drawGenericAlienShip(def, s, thrusting, angle, localSunAngle);
+    pop();
+
+    // 2. Outer floating ring - light purple, rotates around the ship
+    let ringCol = color(180, 140, 220, 120 + glowPulse * 80);
+    Draw3D.drawRing3D(0, 0, r * 1.15, r * 1.05, 24, s * 0.04, ringCol, angle, localSunAngle, ringRotation);
+
+    // 3. Central dome - the "eye" of the missionary
+    let domeColor = color(140, 100, 180);
+    let domeSize = r * 0.5 * corePulse;
+    Draw3D.drawDome(0, 0, domeSize, 12, domeColor, angle, localSunAngle);
+
+    // 4. Inner cyan core - glowing energy source
+    let coreColor = color(80, 200, 240, 180 + glowPulse * 70);
+    Draw3D.drawPrism(0, 0, r * 0.22 * corePulse, 8, s * 0.12, coreColor, angle, localSunAngle);
+
+    // 5. Floating holographic symbols (small prisms orbiting)
+    noStroke();
+    for (let i = 0; i < 4; i++) {
+        let symbolAngle = ringRotation * 2 + (i * PI / 2);
+        let symbolX = cos(symbolAngle) * r * 0.85;
+        let symbolY = sin(symbolAngle) * r * 0.85;
+        let symbolAlpha = 100 + sin(t + i * 0.5) * 50;
+        let symbolCol = color(200, 180, 255, symbolAlpha);
+        Draw3D.drawPrism(symbolX, symbolY, r * 0.08, 6, s * 0.03, symbolCol, angle, localSunAngle);
+    }
+
+    // 6. Subtle pulsing glow effect around the ship
+    if (glowPulse > 0.6) {
+        push();
+        noFill();
+        stroke(150, 200, 255, (glowPulse - 0.6) * 100);
+        strokeWeight(2);
+        ellipse(0, 0, s * 1.3 * corePulse, s * 1.3 * corePulse);
+        pop();
+    }
+}
+
 // --- Initialization Logic ---
 
 const CUSTOM_DRAW_FUNCTIONS = {
@@ -4216,7 +4313,8 @@ const CUSTOM_DRAW_FUNCTIONS = {
     "TesseractScout": drawTesseractScout,
     "LotusCarrier": drawLotusCarrier,
     "ProspectorMiner": drawProspectorMiner,
-    "PathfinderSurvey": drawPathfinderSurvey
+    "PathfinderSurvey": drawPathfinderSurvey,
+    "PosthumanMissionary": drawPosthumanMissionary
 };
 
 // Assign draw functions to definitions

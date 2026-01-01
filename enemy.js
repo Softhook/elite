@@ -820,6 +820,9 @@ class Enemy {
                             this.updateCombatAI(system);
                         }
                         break;
+                    case AI_ROLE.MISSIONARY:
+                        this.updateMissionaryAI(system);
+                        break;
                     default:
                         // Default behavior for unknown roles (frame-rate independent)
                         const defaultTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;

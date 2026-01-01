@@ -68,7 +68,8 @@ const AI_ROLE = {
     GUARD: 'Guard',
     COMBAT: 'Combat',  // Military, imperial, and separatist combat ships
     MINER: 'Miner',  // Mining ships that target asteroids
-    REPAIR: 'Repair'  // Field repair tenders that maintain space objects
+    REPAIR: 'Repair',  // Field repair tenders that maintain space objects
+    MISSIONARY: 'Missionary'  // Posthuman missionaries - use tangle to disable and preach
 };
 
 // -------------------------
@@ -184,7 +185,7 @@ const FACTION_ENEMY_MAP = {
 // and used by off-screen targeting optimization
 const ROLE_ENEMY_MAP = {
     [AI_ROLE.ALIEN]: ['MILITARY'], // Aliens specifically target military first, but hostile to all non-aliens
-    [AI_ROLE.PIRATE]: [AI_ROLE.HAULER, AI_ROLE.TRANSPORT, AI_ROLE.MINER], // Pirates prey on commerce
+    [AI_ROLE.PIRATE]: [AI_ROLE.HAULER, AI_ROLE.TRANSPORT, AI_ROLE.MINER, AI_ROLE.MISSIONARY], // Pirates prey on commerce and missionaries
     [AI_ROLE.POLICE]: [AI_ROLE.PIRATE, AI_ROLE.ALIEN], // Police hunt criminals and aliens
     [AI_ROLE.COMBAT]: [AI_ROLE.PIRATE, AI_ROLE.ALIEN],  // Combat ships hunt threats (+ faction rivalries)
     [AI_ROLE.BOUNTY_HUNTER]: ['BOUNTY_TARGET'], // Special: targets assigned bountyTarget (player, pirate, combat ship, etc.)
@@ -192,7 +193,8 @@ const ROLE_ENEMY_MAP = {
     [AI_ROLE.HAULER]: [], // Defensive only - retaliates when attacked
     [AI_ROLE.TRANSPORT]: [], // Defensive only - retaliates when attacked
     [AI_ROLE.MINER]: [], // Defensive only - focuses on mining asteroids
-    [AI_ROLE.REPAIR]: [] // Non-combatant - focuses on repair duties
+    [AI_ROLE.REPAIR]: [], // Non-combatant - focuses on repair duties
+    [AI_ROLE.MISSIONARY]: [] // Non-hostile - uses tangle to disable, then preaches
 };
 
 // -------------------------

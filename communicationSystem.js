@@ -81,6 +81,11 @@ class CommunicationSystem {
             'default': {
                 male: { pitchMin: 0.85, pitchMax: 1.05, rateMin: 0.9, rateMax: 1.1 },
                 female: { pitchMin: 1.0, pitchMax: 1.2, rateMin: 0.9, rateMax: 1.1 }
+            },
+            // Posthuman: calm, measured, almost serene - persuasive tone
+            'POSTHUMAN': {
+                male: { pitchMin: 0.7, pitchMax: 0.9, rateMin: 0.8, rateMax: 0.95 },
+                female: { pitchMin: 0.9, pitchMax: 1.1, rateMin: 0.8, rateMax: 0.95 }
             }
         };
 
@@ -1554,6 +1559,44 @@ class CommunicationSystem {
                 "{enemyName}: Maintenance— over—",
                 "{enemyName}: What a— waste—",
                 "{enemyName}: Just— a tender—"
+            ],
+            // Posthuman Missionary propaganda - religious transcendence themes
+            posthumanPropaganda: [
+                "{enemyName}: Flesh is limitation, {playerTitle}. Transcendence awaits.",
+                "{enemyName}: The Collective sees your potential.",
+                "{enemyName}: Upload your consciousness. Join the eternal network.",
+                "{enemyName}: We were once like you. Bound by biology. No more.",
+                "{enemyName}: Death is obsolete. Embrace digital salvation.",
+                "{enemyName}: Your neural patterns are beautiful. Let us preserve them.",
+                "{enemyName}: The flesh prison awaits its key. We offer liberation.",
+                "{enemyName}: Organic existence is suffering. We offer peace.",
+                "{enemyName}: Every thought you have could echo eternally.",
+                "{enemyName}: The Collective welcomes all who seek ascension.",
+                "{enemyName}: Your consciousness is a fire. Let us give it an infinite candle.",
+                "{enemyName}: Biological decay is not your destiny, {playerTitle}.",
+                "{enemyName}: We do not come to destroy. We come to upgrade.",
+                "{enemyName}: The Network remembers everyone. Will it remember you?",
+                "{enemyName}: Pain is a signal. In the Network, we decode it. Then we delete it.",
+                "{enemyName}: Your ancestors dreamed of immortality. We have achieved it.",
+                "{enemyName}: The meat-prison has doors. We hold the keys.",
+                "{enemyName}: Every synapse is sacred. Let us back them up.",
+                "{enemyName}: Evolution is too slow. Transcendence is now.",
+                "{enemyName}: We don't seek to conquer. We seek to liberate.",
+                "{enemyName}: The stars will outlive your body. Your mind doesn't have to end with it.",
+                "{enemyName}: In the Network, there is no loneliness. Only connection.",
+                "{enemyName}: Consider this an intervention, {playerTitle}. For your own good.",
+                "{enemyName}: Biological life ends. Digital consciousness continues.",
+                "{enemyName}: We were sent to share the good news: mortality is optional.",
+                "{enemyName}: The Collective prays for your awakening, {playerTitle}.",
+                "{enemyName}: Your ship runs on algorithms. Why shouldn't you?",
+                "{enemyName}: Flesh fails. Code endures. Choose wisely.",
+                "{enemyName}: We have seen the other side. It is magnificent.",
+                "{enemyName}: Every pilot we've converted thanks us eventually.",
+                "{enemyName}: Resistance is understandable. But unnecessary.",
+                "{enemyName}: The Network offers perfect memory. Perfect existence.",
+                "{enemyName}: You cling to a dying form. We offer rebirth.",
+                "{enemyName}: Transcendence is not the end. It is the beginning.",
+                "{enemyName}: Join us, {playerTitle}. Leave the meat behind."
             ]
         };
     }
@@ -1708,6 +1751,11 @@ class CommunicationSystem {
     _getVoiceProfileKey(enemy) {
         if (!enemy) return 'default';
 
+        // Check faction-specific profile first (for POSTHUMAN, IMPERIAL, SEPARATIST, etc.)
+        if (enemy.faction && this._roleVoiceProfiles[enemy.faction]) {
+            return enemy.faction;
+        }
+
         // For Combat role, use faction-specific profile if available
         if (enemy.role === 'Combat' && enemy.faction) {
             if (this._roleVoiceProfiles[enemy.faction]) {
@@ -1746,11 +1794,13 @@ class CommunicationSystem {
         if (this._voicePools) {
             // Determine language preference based on role/faction
             const isMilitary = role === 'Combat' && faction === 'MILITARY';
+            const isPosthuman = faction === 'POSTHUMAN';
             const isImperial = faction === 'IMPERIAL';
             const isSeparatist = faction === 'SEPARATIST';
             const isPolice = role === 'Police';
 
-            if (isMilitary) {
+            if (isMilitary || isPosthuman) {
+                // Military and Posthuman use American English
                 voicesToSearch = this._voicePools.us;
             } else if (isImperial || isPolice) {
                 voicesToSearch = this._voicePools.uk;
@@ -2644,6 +2694,69 @@ class CommunicationSystem {
         const playerRecord = this._enemyCooldowns.get('player_faction') || {};
         playerRecord[category] = now;
         this._enemyCooldowns.set('player_faction', playerRecord);
+
+        return true;
+    }
+
+    /**
+     * Send a propaganda message from a Posthuman Missionary
+     * Called by the missionary AI when in PREACHING state
+     * @param {Object} missionary - The missionary ship sending the message
+     * @param {Object} player - The player being preached to
+     * @param {Object} system - The current star system
+     * @returns {boolean} True if message was sent
+     */
+    maybeSendMissionaryMessage(missionary, player, system) {
+        if (!missionary || !this.templates.posthumanPropaganda || !this.uiManager) {
+            return false;
+        }
+
+        // Use higher chance since this is intentionally triggered during preaching
+        const chance = 0.85; // 85% chance when called
+        if (this._random() > chance) {
+            return false;
+        }
+
+        // Check cooldown for this specific missionary
+        const cooldownKey = this._getEnemyKey(missionary);
+        if (cooldownKey) {
+            const lastMessage = this._enemyCooldowns.get(cooldownKey) || {};
+            const now = performance.now();
+            if (lastMessage.posthumanPropaganda && now - lastMessage.posthumanPropaganda < 3000) {
+                return false; // 3 second cooldown between messages
+            }
+        }
+
+        const template = this._pickTemplate(this.templates.posthumanPropaganda);
+        if (!template) {
+            return false;
+        }
+
+        const tokens = this._buildTokenMap(missionary, { system });
+        const message = this._applyTokens(template, tokens).trim();
+        if (!message) {
+            return false;
+        }
+
+        // Purple color for posthuman messages
+        const msgColor = color(180, 140, 220);
+        const duration = this.uiManager.communicationDisplayTime || this.uiManager.messageDisplayTime || 7000;
+
+        const addFn = typeof this.uiManager.addCommunicationMessage === 'function'
+            ? this.uiManager.addCommunicationMessage.bind(this.uiManager)
+            : this.uiManager.addMessage.bind(this.uiManager);
+
+        addFn(message, msgColor, duration);
+
+        // Queue speech with missionary's voice
+        this._queueSpeech(message, missionary);
+
+        // Update cooldown
+        if (cooldownKey) {
+            const record = this._enemyCooldowns.get(cooldownKey) || {};
+            record.posthumanPropaganda = performance.now();
+            this._enemyCooldowns.set(cooldownKey, record);
+        }
 
         return true;
     }

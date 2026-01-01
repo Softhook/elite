@@ -92,7 +92,8 @@ const buildShipRoleArrays = () => {
         SEPARATIST_SHIPS: [],
         COMBAT_SHIPS: [],
         MINER_SHIPS: [],
-        REPAIR_SHIPS: []
+        REPAIR_SHIPS: [],
+        MISSIONARY_SHIPS: []
     };
 
     // Single loop iteration - more efficient than 11 includes() checks per ship
@@ -125,7 +126,8 @@ const {
     SEPARATIST_SHIPS,
     COMBAT_SHIPS,
     MINER_SHIPS,
-    REPAIR_SHIPS
+    REPAIR_SHIPS,
+    MISSIONARY_SHIPS
 } = buildShipRoleArrays();
 
 // Log the generated arrays to verify (gated behind debug flag)
@@ -1369,7 +1371,7 @@ class StarSystem {
             mining: () => this._selectMiningShip(),
             industrial: () => this._selectMiningShip(),
             refinery: () => this._selectMiningShip(),
-            'post human': () => this._selectOffworldShip()
+            'post human': () => this._selectPostHumanShip()
         };
 
         const handler = economyHandlers[econ];
@@ -1496,6 +1498,40 @@ class StarSystem {
         return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length > 0 ? HAULER_SHIPS : ["Krait"]) };
     }
 
+    /**
+     * Selects a ship for Post Human economy systems
+     * High chance of spawning Posthuman Missionaries
+     * @returns {{role: string, ship: string, faction?: string}}
+     * @private
+     */
+    _selectPostHumanShip() {
+        const rand = random();
+
+        // 60% chance to spawn a missionary if available
+        if (rand < 0.60 && MISSIONARY_SHIPS.length > 0) {
+            return {
+                role: AI_ROLE.MISSIONARY,
+                ship: random(MISSIONARY_SHIPS),
+                faction: 'POSTHUMAN'
+            };
+        }
+        // 20% chance for haulers/commerce
+        else if (rand < 0.80 && HAULER_SHIPS.length > 0) {
+            return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
+        }
+        // 10% chance for combat ships
+        else if (rand < 0.90 && COMBAT_SHIPS.length > 0) {
+            return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
+        }
+        // 10% chance for alien ships (posthuman systems attract aliens)
+        else if (ALIEN_SHIPS.length > 0) {
+            return { role: AI_ROLE.ALIEN, ship: random(ALIEN_SHIPS) };
+        }
+
+        // Fallback to offworld behavior
+        return this._selectOffworldShip();
+    }
+
     _selectFactionShip(primaryFaction, secondaryFaction) {
         // Check for police spawn (60% of normal probability - factions have organized law enforcement)
         if (this._shouldSpawnPolice(0.6)) {
@@ -1517,6 +1553,15 @@ class StarSystem {
     }
 
     _selectStandardShip(security) {
+        // 5% chance for rare Posthuman Missionary spawn in any system
+        if (random() < 0.05 && MISSIONARY_SHIPS.length > 0) {
+            return {
+                role: AI_ROLE.MISSIONARY,
+                ship: random(MISSIONARY_SHIPS),
+                faction: 'POSTHUMAN'
+            };
+        }
+
         const probs = this.getEnemyRoleProbabilities();
         let r = random();
         let chosenRole;

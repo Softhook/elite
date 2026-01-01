@@ -743,7 +743,8 @@ class EnemyTargeting {
                             const cargoBonus = TARGET_SCORE_PIRATE_CARGO_BASE + cargoAmount * TARGET_SCORE_PIRATE_CARGO_MULT;
                             _score += cargoBonus;
                         }
-                    } else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT || target.role === AI_ROLE.MINER) {
+                    } else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT || target.role === AI_ROLE.MINER || target.role === AI_ROLE.MISSIONARY) {
+                        // Pirates prey on commerce ships and missionaries (easy targets)
                         _score += TARGET_SCORE_PIRATE_PREY_HAULER;
                         _interesting = true;
                     } else if (target && target.constructor?.name === 'Cargo') {

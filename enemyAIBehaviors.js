@@ -2961,6 +2961,219 @@ class EnemyAIBehaviors {
             this.currentSystem.addExplosion(px, py, 4, [255, 200, 100]);
         }
     }
+
+    // ========================================
+    // MISSIONARY AI - POSTHUMAN EVANGELIST
+    // ========================================
+
+    /**
+     * Missionary AI Logic - Approaches player, uses tangle to disable, then preaches
+     * Non-lethal: Uses Barrier Field for protection, Tangle Projector to disable
+     * @param {Object} system - The current star system
+     */
+    updateMissionaryAI(system) {
+        // Base delta time for timers
+        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
+
+        // Initialize missionary-specific state
+        if (this._missionaryState === undefined) {
+            this._missionaryState = 'APPROACHING'; // APPROACHING, TANGLING, PREACHING, DISENGAGING
+            this._preachTimer = 0;
+            this._messagesSent = 0;
+            this._disengageTimer = 0;
+        }
+
+        const player = system?.player;
+        if (!player || player.destroyed) {
+            // No player target - reset state and patrol peacefully
+            this._missionaryState = 'APPROACHING';
+            this._messagesSent = 0;
+            this._preachTimer = 0;
+            this._updateMissionaryPatrol(system);
+            this.updatePhysics();
+            return;
+        }
+
+        const distToPlayer = this.distanceTo(player);
+        const tangleRange = this.firingRange || 400;
+        const preachRange = 600; // Maintain this distance while preaching
+        const approachRange = tangleRange * 0.8;
+
+        // Check if player is tangled (has active drag effect from Tangle Projector)
+        // Player uses dragEffectTimer and dragMultiplier, not a dragEffect object
+        const playerIsTangled = player.dragEffectTimer > 0 && player.dragMultiplier > 1.0;
+
+        // State machine
+        switch (this._missionaryState) {
+            case 'APPROACHING':
+                // Move towards player until in tangle range
+                if (distToPlayer > approachRange) {
+                    this.target = player;
+                    this.changeState(AI_STATE.APPROACHING);
+                    this.performSafeRotationAndThrust(system, player.pos);
+                } else {
+                    // Close enough - switch to tangling
+                    this._missionaryState = 'TANGLING';
+                }
+                break;
+
+            case 'TANGLING':
+                // Use tangle projector on player
+                if (!playerIsTangled && distToPlayer < tangleRange) {
+                    // Aim and fire tangle projector
+                    const angleToPlayer = atan2(
+                        player.pos.y - this.pos.y,
+                        player.pos.x - this.pos.x
+                    );
+
+                    // Rotate towards player
+                    let angleDiff = angleToPlayer - this.angle;
+                    while (angleDiff > PI) angleDiff -= TWO_PI;
+                    while (angleDiff < -PI) angleDiff += TWO_PI;
+
+                    const rotTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
+                    this.angle += angleDiff * 0.15 * rotTimeScale;
+
+                    // Fire tangle if aimed correctly
+                    if (Math.abs(angleDiff) < 0.3 && this.isWeaponReady()) {
+                        // Find and select tangle weapon as current weapon
+                        const tangleWeaponIndex = this.weapons?.findIndex(w =>
+                            w.name && w.name.toLowerCase().includes('tangle')
+                        );
+                        if (tangleWeaponIndex !== undefined && tangleWeaponIndex >= 0) {
+                            // Select the tangle weapon before firing
+                            this.weaponIndex = tangleWeaponIndex;
+                            this.currentWeapon = this.weapons[tangleWeaponIndex];
+                            this.fireRate = this.currentWeapon.fireRate;
+
+                            // Fire at the player
+                            this.fireWeapon(angleToPlayer, player);
+                        }
+                    }
+
+                    // Slow down while targeting
+                    const tangleTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
+                    this.vel.mult(Math.pow(0.9, tangleTimeScale));
+
+                } else if (playerIsTangled) {
+                    // Player is tangled! Switch to preaching
+                    this._missionaryState = 'PREACHING';
+                    this._preachTimer = 3.0; // Preach for 3 seconds between messages
+                    this._messagesSent = 0;
+                } else if (distToPlayer > tangleRange * 1.5) {
+                    // Player escaped range - go back to approaching
+                    this._missionaryState = 'APPROACHING';
+                }
+                break;
+
+            case 'PREACHING':
+                // Maintain distance and broadcast propaganda
+                if (playerIsTangled || this._messagesSent < 3) {
+                    // Stay at preaching distance
+                    if (distToPlayer < preachRange * 0.7) {
+                        // Too close - back off slowly
+                        const awayAngle = atan2(
+                            this.pos.y - player.pos.y,
+                            this.pos.x - player.pos.x
+                        );
+                        this.performRotationAndThrust(createVector(
+                            this.pos.x + cos(awayAngle) * 100,
+                            this.pos.y + sin(awayAngle) * 100
+                        ));
+                    } else if (distToPlayer > preachRange * 1.3) {
+                        // Too far - move closer
+                        this.performRotationAndThrust(player.pos);
+                    } else {
+                        // Good distance - just drift
+                        const preachBrakeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
+                        this.vel.mult(Math.pow(0.95, preachBrakeScale));
+                    }
+
+                    // Activate barrier field for protection when health is low
+                    if (typeof this.activateBarrierIfNeeded === 'function') {
+                        this.activateBarrierIfNeeded();
+                    }
+
+                    // Send propaganda messages on timer
+                    this._preachTimer -= dtSeconds;
+                    if (this._preachTimer <= 0 && this._messagesSent < 5) {
+                        // Send a propaganda message
+                        if (typeof communicationSystem !== 'undefined' && communicationSystem) {
+                            communicationSystem.maybeSendMissionaryMessage(this, player, system);
+                        }
+                        this._messagesSent++;
+                        this._preachTimer = 4.0 + random(2.0); // 4-6 seconds between messages
+                    }
+
+                    // Check if we've preached enough
+                    if (this._messagesSent >= 3 && !playerIsTangled) {
+                        this._missionaryState = 'DISENGAGING';
+                        this._disengageTimer = 10.0;
+                    }
+                } else {
+                    // Done preaching - disengage
+                    this._missionaryState = 'DISENGAGING';
+                    this._disengageTimer = 10.0;
+                }
+                break;
+
+            case 'DISENGAGING':
+                // Slowly drift away from player
+                this._disengageTimer -= dtSeconds;
+
+                const awayAngle = atan2(
+                    this.pos.y - player.pos.y,
+                    this.pos.x - player.pos.x
+                );
+
+                // Gentle movement away
+                const disengageTarget = createVector(
+                    this.pos.x + cos(awayAngle) * 500,
+                    this.pos.y + sin(awayAngle) * 500
+                );
+                this.performRotationAndThrust(disengageTarget);
+
+                // After disengaging for a while, reset to approach again
+                if (this._disengageTimer <= 0 || distToPlayer > 2000) {
+                    this._missionaryState = 'APPROACHING';
+                    this._messagesSent = 0;
+                }
+                break;
+        }
+
+        this.updatePhysics();
+    }
+
+    /**
+     * Peaceful patrol behavior for missionaries when no player is nearby
+     * @param {Object} system - The current star system
+     */
+    _updateMissionaryPatrol(system) {
+        const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
+
+        if (!this.patrolTargetPos || this.distanceTo({ pos: this.patrolTargetPos }) < 100) {
+            // Select random patrol point near station or in system
+            if (system?.station?.pos && random() < 0.4) {
+                const stationRadius = system.station.dockingRadius || 300;
+                const angle = random(TWO_PI);
+                const dist = random(stationRadius * 0.5, stationRadius * 1.5);
+                this.patrolTargetPos = createVector(
+                    system.station.pos.x + cos(angle) * dist,
+                    system.station.pos.y + sin(angle) * dist
+                );
+            } else {
+                const patrolAngle = random(TWO_PI);
+                const patrolDist = random(500, 2000);
+                this.patrolTargetPos = createVector(
+                    this.pos.x + cos(patrolAngle) * patrolDist,
+                    this.pos.y + sin(patrolAngle) * patrolDist
+                );
+            }
+        }
+
+        this.changeState(AI_STATE.PATROLLING);
+        this.performSafeRotationAndThrust(system, this.patrolTargetPos);
+    }
 }
 
 /**
