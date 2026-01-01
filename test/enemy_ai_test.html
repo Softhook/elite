@@ -150,7 +150,8 @@
                 projectiles: options.projectiles || [],
                 station: options.station || { pos: createVector(500, 500), size: 100 },
                 planets: options.planets || [],
-                jumpZoneCenter: createVector(0, 0)
+                jumpZoneCenter: createVector(0, 0),
+                player: options.player // Add player to mock system
             };
         }
 
@@ -844,6 +845,82 @@
                 const mockPlayer = createMockPlayer();
                 const enemy = new Enemy(0, 0, mockPlayer, 'Destroyer', AI_ROLE.COMBAT);
                 expect(typeof enemy.performSecondaryFiring).toBe('function');
+            });
+        });
+
+        // ============================================
+        // Missionary AI Tests
+        // ============================================
+
+        describe('Missionary AI Behavior', () => {
+            let missionary;
+            let mockPlayer;
+            let mockSystem;
+            let mockTarget;
+
+            beforeEach(() => {
+                mockPlayer = createMockPlayer({ x: 1000, y: 1000 });
+                // Missionary starts at 0,0
+                missionary = new Enemy(0, 0, mockPlayer, 'PosthumanMissionary', AI_ROLE.MISSIONARY);
+
+                // Create a mock enemy target at distance 500
+                mockTarget = new Enemy(500, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+                // Ensure target has drag properties
+                mockTarget.dragEffectTimer = 0;
+                mockTarget.dragMultiplier = 1.0;
+
+                mockSystem = createMockSystem({
+                    enemies: [missionary, mockTarget],
+                    player: mockPlayer
+                });
+                missionary.currentSystem = mockSystem;
+            });
+
+            it('should have missionary role', () => {
+                expect(missionary.role).toBe(AI_ROLE.MISSIONARY);
+            });
+
+            it('should initialize missionary state', () => {
+                missionary.updateMissionaryAI(mockSystem);
+                expect(missionary._missionaryState).toBeDefined();
+                expect(missionary._missionaryState).toBe('APPROACHING');
+            });
+
+            it('should target nearest ship (NPC) when player is far away', () => {
+                // Player is at 1000,1000 (dist ~1414)
+                // Target is at 500,0 (dist 500)
+                // Missionary should pick the closer target
+                missionary.updateMissionaryAI(mockSystem);
+                expect(missionary.target).toBe(mockTarget);
+            });
+
+            it('should target player if player is closer', () => {
+                mockPlayer.pos.set(100, 0); // Player very close
+                missionary.updateMissionaryAI(mockSystem);
+                // Should pick closest valid target
+                expect(missionary.target).toBe(mockPlayer);
+            });
+
+            it('should switch to TANGLING when close enough to generic target', () => {
+                // Set target close (distance 200, within 400 range)
+                missionary.target = mockTarget;
+                mockTarget.pos.set(200, 0);
+
+                missionary.updateMissionaryAI(mockSystem);
+                expect(missionary._missionaryState).toBe('TANGLING');
+            });
+
+            it('should switch to PREACHING when generic target is tangled', () => {
+                missionary.target = mockTarget;
+                mockTarget.pos.set(200, 0);
+                missionary._missionaryState = 'TANGLING';
+
+                // Simulate tangling on NPC
+                mockTarget.dragEffectTimer = 100;
+                mockTarget.dragMultiplier = 5.0;
+
+                missionary.updateMissionaryAI(mockSystem);
+                expect(missionary._missionaryState).toBe('PREACHING');
             });
         });
 

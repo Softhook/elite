@@ -2983,9 +2983,45 @@ class EnemyAIBehaviors {
             this._disengageTimer = 0;
         }
 
-        const player = system?.player;
-        if (!player || player.destroyed) {
-            // No player target - reset state and patrol peacefully
+        // --- Target Selection ---
+        // If we don't have a valid target, try to find one
+        if (!this.target || (this.target.destroyed) || (this.target.isDying)) {
+            // Find a new target: Player or other Enemy
+            let bestTarget = null;
+            let bestDistSq = Infinity;
+
+            // Consider player
+            const player = system?.player;
+            if (player && !player.destroyed && !player.isDying) {
+                const distSq = (player.pos.x - this.pos.x) ** 2 + (player.pos.y - this.pos.y) ** 2;
+                if (distSq < 2000 * 2000) { // Only target if somewhat nearby
+                    bestTarget = player;
+                    bestDistSq = distSq;
+                }
+            }
+
+            // Consider other enemies (convert them!)
+            if (system?.enemies) {
+                for (const potentialTarget of system.enemies) {
+                    if (potentialTarget === this) continue; // Don't preach to self
+                    if (potentialTarget.destroyed) continue;
+                    if (potentialTarget.role === AI_ROLE.MISSIONARY) continue; // Don't preach to the choir
+
+                    const distSq = (potentialTarget.pos.x - this.pos.x) ** 2 + (potentialTarget.pos.y - this.pos.y) ** 2;
+                    if (distSq < bestDistSq && distSq < 2000 * 2000) {
+                        bestTarget = potentialTarget;
+                        bestDistSq = distSq;
+                    }
+                }
+            }
+
+            this.target = bestTarget;
+        }
+
+        const target = this.target;
+
+        if (!target) {
+            // No target found - reset state and patrol peacefully
             this._missionaryState = 'APPROACHING';
             this._messagesSent = 0;
             this._preachTimer = 0;
@@ -2994,23 +3030,22 @@ class EnemyAIBehaviors {
             return;
         }
 
-        const distToPlayer = this.distanceTo(player);
+        const distToTarget = this.distanceTo(target);
         const tangleRange = this.firingRange || 400;
         const preachRange = 600; // Maintain this distance while preaching
         const approachRange = tangleRange * 0.8;
 
-        // Check if player is tangled (has active drag effect from Tangle Projector)
-        // Player uses dragEffectTimer and dragMultiplier, not a dragEffect object
-        const playerIsTangled = player.dragEffectTimer > 0 && player.dragMultiplier > 1.0;
+        // Check if target is tangled (has active drag effect from Tangle Projector)
+        // Ships (Player and Enemy) use dragEffectTimer and dragMultiplier for this
+        const targetIsTangled = (target.dragEffectTimer > 0 && target.dragMultiplier > 1.0);
 
         // State machine
         switch (this._missionaryState) {
             case 'APPROACHING':
-                // Move towards player until in tangle range
-                if (distToPlayer > approachRange) {
-                    this.target = player;
+                // Move towards target until in tangle range
+                if (distToTarget > approachRange) {
                     this.changeState(AI_STATE.APPROACHING);
-                    this.performSafeRotationAndThrust(system, player.pos);
+                    this.performSafeRotationAndThrust(system, target.pos);
                 } else {
                     // Close enough - switch to tangling
                     this._missionaryState = 'TANGLING';
@@ -3018,16 +3053,16 @@ class EnemyAIBehaviors {
                 break;
 
             case 'TANGLING':
-                // Use tangle projector on player
-                if (!playerIsTangled && distToPlayer < tangleRange) {
+                // Use tangle projector on target
+                if (!targetIsTangled && distToTarget < tangleRange * 1.2) {
                     // Aim and fire tangle projector
-                    const angleToPlayer = atan2(
-                        player.pos.y - this.pos.y,
-                        player.pos.x - this.pos.x
+                    const angleToTarget = atan2(
+                        target.pos.y - this.pos.y,
+                        target.pos.x - this.pos.x
                     );
 
-                    // Rotate towards player
-                    let angleDiff = angleToPlayer - this.angle;
+                    // Rotate towards target
+                    let angleDiff = angleToTarget - this.angle;
                     while (angleDiff > PI) angleDiff -= TWO_PI;
                     while (angleDiff < -PI) angleDiff += TWO_PI;
 
@@ -3046,8 +3081,8 @@ class EnemyAIBehaviors {
                             this.currentWeapon = this.weapons[tangleWeaponIndex];
                             this.fireRate = this.currentWeapon.fireRate;
 
-                            // Fire at the player
-                            this.fireWeapon(angleToPlayer, player);
+                            // Fire at the target
+                            this.fireWeapon(angleToTarget, target);
                         }
                     }
 
@@ -3055,34 +3090,34 @@ class EnemyAIBehaviors {
                     const tangleTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
                     this.vel.mult(Math.pow(0.9, tangleTimeScale));
 
-                } else if (playerIsTangled) {
-                    // Player is tangled! Switch to preaching
+                } else if (targetIsTangled) {
+                    // Target is tangled! Switch to preaching
                     this._missionaryState = 'PREACHING';
-                    this._preachTimer = 3.0; // Preach for 3 seconds between messages
+                    this._preachTimer = 3.0; // Wait before first message
                     this._messagesSent = 0;
-                } else if (distToPlayer > tangleRange * 1.5) {
-                    // Player escaped range - go back to approaching
+                } else if (distToTarget > tangleRange * 2.0) {
+                    // Target escaped range - go back to approaching
                     this._missionaryState = 'APPROACHING';
                 }
                 break;
 
             case 'PREACHING':
                 // Maintain distance and broadcast propaganda
-                if (playerIsTangled || this._messagesSent < 3) {
+                if (targetIsTangled || this._messagesSent < 3) {
                     // Stay at preaching distance
-                    if (distToPlayer < preachRange * 0.7) {
+                    if (distToTarget < preachRange * 0.7) {
                         // Too close - back off slowly
                         const awayAngle = atan2(
-                            this.pos.y - player.pos.y,
-                            this.pos.x - player.pos.x
+                            this.pos.y - target.pos.y,
+                            this.pos.x - target.pos.x
                         );
                         this.performRotationAndThrust(createVector(
                             this.pos.x + cos(awayAngle) * 100,
                             this.pos.y + sin(awayAngle) * 100
                         ));
-                    } else if (distToPlayer > preachRange * 1.3) {
+                    } else if (distToTarget > preachRange * 1.3) {
                         // Too far - move closer
-                        this.performRotationAndThrust(player.pos);
+                        this.performRotationAndThrust(target.pos);
                     } else {
                         // Good distance - just drift
                         const preachBrakeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
@@ -3098,15 +3133,36 @@ class EnemyAIBehaviors {
                     this._preachTimer -= dtSeconds;
                     if (this._preachTimer <= 0 && this._messagesSent < 5) {
                         // Send a propaganda message
+                        let sent = false;
                         if (typeof communicationSystem !== 'undefined' && communicationSystem) {
-                            communicationSystem.maybeSendMissionaryMessage(this, player, system);
+                            sent = communicationSystem.maybeSendMissionaryMessage(this, target, system);
                         }
-                        this._messagesSent++;
-                        this._preachTimer = 4.0 + random(2.0); // 4-6 seconds between messages
+
+                        // Only increment and reset timer if message was actually sent (or we failed/communication system missing)
+                        // If maybeSendMissionaryMessage returned false (e.g. cooldown/chance), we try again next frame
+                        // BUT maybeSendMissionaryMessage has chance logic inside. 
+                        // To avoid rapid-fire attempts when "chance" fails, we should reset timer anyway 
+                        // but only increment count on success. 
+                        // Actually, maybeSendMissionaryMessage handles cooldowns too.
+                        // Let's assume if it returns false we wait a bit before trying again?
+                        // No, let's just reset the timer to avoid spamming the function call.
+                        // If it didn't send, we'll try again in 4-6 seconds.
+                        // Wait, if chance fails (85%), we wait 4-6 seconds? That seems slow.
+                        // Let's increment count only on success and use a shorter retry if failed.
+
+                        if (sent) {
+                            this._messagesSent++;
+                            this._preachTimer = 4.0 + random(2.0); // 4-6 seconds between messages
+                        } else {
+                            // Failed to send (cooldown or chance)
+                            // Retry sooner
+                            this._preachTimer = 1.0;
+                        }
                     }
 
                     // Check if we've preached enough
-                    if (this._messagesSent >= 3 && !playerIsTangled) {
+                    // If target is no longer tangled, they might flee, so we disengage eventually
+                    if (this._messagesSent >= 3 && !targetIsTangled) {
                         this._missionaryState = 'DISENGAGING';
                         this._disengageTimer = 10.0;
                     }
@@ -3118,12 +3174,12 @@ class EnemyAIBehaviors {
                 break;
 
             case 'DISENGAGING':
-                // Slowly drift away from player
+                // Slowly drift away from target
                 this._disengageTimer -= dtSeconds;
 
                 const awayAngle = atan2(
-                    this.pos.y - player.pos.y,
-                    this.pos.x - player.pos.x
+                    this.pos.y - target.pos.y,
+                    this.pos.x - target.pos.x
                 );
 
                 // Gentle movement away
@@ -3133,10 +3189,11 @@ class EnemyAIBehaviors {
                 );
                 this.performRotationAndThrust(disengageTarget);
 
-                // After disengaging for a while, reset to approach again
-                if (this._disengageTimer <= 0 || distToPlayer > 2000) {
+                // After disengaging for a while, reset to approach again (maybe find new target)
+                if (this._disengageTimer <= 0 || distToTarget > 2000) {
                     this._missionaryState = 'APPROACHING';
                     this._messagesSent = 0;
+                    this.target = null; // Clear target to find a new one potentially
                 }
                 break;
         }

@@ -2271,6 +2271,9 @@ class StarSystem {
         const enemyCount = this.enemies.length;
         const asteroidCount = this.asteroids.length;
 
+        // Helper to determine if an active (not-broken) harpoon already links owner->target
+        const harpoonExists = (owner, target) => Array.isArray(this.harpoons) && this.harpoons.some(h => h && !h.broken && h.owner === owner && h.target === target);
+
         for (let i = projCount - 1; i >= 0; i--) {
             const proj = this.projectiles[i];
             if (!proj || !proj.pos) {
@@ -2302,11 +2305,23 @@ class StarSystem {
                 distCheckVector.set(this.player.pos.x - projPos.x, this.player.pos.y - projPos.y);
 
                 // Only register hit if distance check passes AND altitude is low enough
-                // Ground turrets are ~20-40 units high, so if player is > 100 units high, shots pass under
                 const hitAltitude = (this.player.altitude || 0) < 100;
 
                 if (hitAltitude && distCheckVector.magSq() <= combinedRadius * combinedRadius && proj.checkCollision(this.player)) {
                     WeaponSystem.handleHitEffects(this.player, projPos, proj.damage, proj.owner, this, proj.color);
+
+                    // Apply Tangle effect if available
+                    if (proj._isTangle && typeof this.player.applyDragEffect === 'function') {
+                        this.player.applyDragEffect(
+                            proj.tangleDuration || DRAG_EFFECT_DEFAULT_DURATION,
+                            proj.dragMultiplier || DRAG_EFFECT_DEFAULT_MULTIPLIER,
+                            proj.rotationBlockMultiplier || 0.1
+                        );
+                        if (typeof uiManager !== 'undefined') {
+                            uiManager.addMessage("Ship caught in energy tangle!", "#30FFB4");
+                        }
+                    }
+
                     this.removeProjectile(i);
                     continue;
                 }
@@ -2325,11 +2340,50 @@ class StarSystem {
                     distCheckVector.set(enemy.pos.x - projPos.x, enemy.pos.y - projPos.y);
 
                     if (distCheckVector.magSq() <= combinedRadiusSq && proj.checkCollision(enemy)) {
+
+                        // Harpoon special-case: spawn a Harpoon tether
+                        if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
+                            const owner = proj.owner;
+                            const target = enemy;
+                            const ownerHasPos = owner && owner.pos && Number.isFinite(owner.pos.x) && Number.isFinite(owner.pos.y);
+                            const targetHasPos = target && target.pos && Number.isFinite(target.pos.x) && Number.isFinite(target.pos.y);
+
+                            if (!ownerHasPos || !targetHasPos) {
+                                this.removeProjectile(i);
+                                hit = true;
+                                break;
+                            }
+
+                            try {
+                                if (typeof Harpoon !== 'undefined') {
+                                    if (!harpoonExists(owner, target)) {
+                                        const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
+                                        if (!this.harpoons) this.harpoons = [];
+                                        this.harpoons.push(har);
+                                    }
+                                }
+                                this.addExplosion(projPos.x, projPos.y, 6, [180, 220, 255]);
+                            } catch (e) { }
+                            this.removeProjectile(i);
+                            hit = true;
+                            break;
+                        }
+
                         WeaponSystem.handleHitEffects(enemy, projPos, proj.damage, proj.owner, this, proj.color);
                         if (proj._isMissile) {
                             const explosionColor = Array.isArray(proj.color) ? proj.color : [255, 150, 0];
                             this.addExplosion(projPos.x, projPos.y, 15, explosionColor);
                         }
+
+                        // Apply Tangle effect
+                        if (proj._isTangle && typeof enemy.applyDragEffect === 'function') {
+                            enemy.applyDragEffect(
+                                (proj.tangleDuration || DRAG_EFFECT_DEFAULT_DURATION),
+                                (proj.dragMultiplier || DRAG_EFFECT_DEFAULT_MULTIPLIER),
+                                (proj.rotationBlockMultiplier || 0.1)
+                            );
+                        }
+
                         this.removeProjectile(i);
                         hit = true;
                         break;
@@ -2354,11 +2408,40 @@ class StarSystem {
                     }
 
                     if (distCheckVector.magSq() <= combinedRadiusSq && proj.checkCollision(enemy)) {
+                        // Harpoon special-case
+                        if (proj.type === 'harpoon' || proj.type === 'HARPOON') {
+                            const owner = proj.owner;
+                            const target = enemy;
+                            try {
+                                if (typeof Harpoon !== 'undefined') {
+                                    if (!harpoonExists(owner, target)) {
+                                        const har = new Harpoon(owner, target, this, { segmentCount: 8, breakTension: 900, lifetime: 9000 });
+                                        if (!this.harpoons) this.harpoons = [];
+                                        this.harpoons.push(har);
+                                    }
+                                }
+                                this.addExplosion(projPos.x, projPos.y, 6, [180, 220, 255]);
+                            } catch (e) { }
+                            this.removeProjectile(i);
+                            hit = true;
+                            break;
+                        }
+
                         WeaponSystem.handleHitEffects(enemy, projPos, proj.damage, proj.owner, this, proj.color);
                         if (proj._isMissile) {
                             const explosionColor = Array.isArray(proj.color) ? proj.color : [255, 150, 0];
                             this.addExplosion(projPos.x, projPos.y, 15, explosionColor);
                         }
+
+                        // Apply Tangle effect
+                        if (proj._isTangle && typeof enemy.applyDragEffect === 'function') {
+                            enemy.applyDragEffect(
+                                (proj.tangleDuration || DRAG_EFFECT_DEFAULT_DURATION),
+                                (proj.dragMultiplier || DRAG_EFFECT_DEFAULT_MULTIPLIER),
+                                (proj.rotationBlockMultiplier || 0.1)
+                            );
+                        }
+
                         this.removeProjectile(i);
                         hit = true;
                         break;

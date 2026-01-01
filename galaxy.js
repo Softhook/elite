@@ -474,6 +474,11 @@ class Galaxy {
                 oldSystem.cleanupAmbientSounds();
             }
 
+            // Stop any active speech/propaganda when jumping
+            if (typeof communicationSystem !== 'undefined' && communicationSystem && typeof communicationSystem.stopSpeech === 'function') {
+                communicationSystem.stopSpeech();
+            }
+
             // Dispose planet buffers for the old system to free graphics memory
             try {
                 if (oldSystem && Array.isArray(oldSystem.planets)) {

@@ -445,6 +445,13 @@ class GameStateManager {
         this.showingMissionOverlay = false;
         this.showingInventory = false;
 
+        // Stop speech/propaganda on Game Over
+        if (newState === "GAME_OVER") {
+            if (typeof communicationSystem !== 'undefined' && communicationSystem && typeof communicationSystem.stopSpeech === 'function') {
+                communicationSystem.stopSpeech();
+            }
+        }
+
         // Execute transition handlers
         this._updateAmbientSoundState(newState);
         this._updateStationMusic(newState, this.previousState);

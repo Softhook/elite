@@ -1679,6 +1679,25 @@ class CommunicationSystem {
             this._speechEnabled = false;
         }
     }
+    /**
+     * Stop active speech and clear the queue without disabling the system.
+     * Use this when transitioning game states (jumps, death) but keeping the engine ready.
+     */
+    stopSpeech() {
+        if (this._speech) {
+            try {
+                this._speech.cancel();
+            } catch (e) {
+                // Ignore errors
+            }
+        }
+        this._speechQueue = [];
+        this._isSpeaking = false;
+
+        // Do NOT set _speechEnabled = false or nullify _speech
+        // This ensures speech can resume later (e.g. after jump or respawn)
+    }
+
 
     /**
      * Clean up speech synthesis - stop any active speech and clear queue
@@ -2357,11 +2376,14 @@ class CommunicationSystem {
 
     _buildTokenMap(enemy, options) {
         const tokens = Object.assign({}, options.tokens || {});
+        // If a specific target is provided (e.g. for missionary to NPC comms), use it for "player" tokens
+        const target = options.target || this.player;
+
         tokens.enemyName = tokens.enemyName ?? this._getEnemyName(enemy);
         tokens.enemyShip = tokens.enemyShip ?? (enemy?.shipTypeName || "ship");
-        tokens.playerShip = tokens.playerShip ?? (this.player?.shipTypeName || "ship");
-        tokens.playerTitle = tokens.playerTitle ?? this._playerTitle;
-        const systemName = enemy?.currentSystem?.name || this.player?.currentSystem?.name || "this sector";
+        tokens.playerShip = tokens.playerShip ?? (target?.shipTypeName || "ship");
+        tokens.playerTitle = tokens.playerTitle ?? (target === this.player ? this._playerTitle : (target?.name || this._getEnemyName(target)));
+        const systemName = enemy?.currentSystem?.name || target?.currentSystem?.name || "this sector";
         tokens.systemName = tokens.systemName ?? systemName;
         tokens.cargoWord = tokens.cargoWord ?? this._pick(this._cargoWords);
         tokens.pirateGroup = tokens.pirateGroup ?? this._pick(this._pirateGroups);
@@ -2732,11 +2754,30 @@ class CommunicationSystem {
             return false;
         }
 
-        const tokens = this._buildTokenMap(missionary, { system });
+        // Check if message should be perceptible to the player
+        // If target is YOU, always show it.
+        // If target is NPC, only show/hear if missionary is close to YOU (e.g. 1000px)
+        const isPlayerTarget = (player === this.player);
+        let distToPlayer = 0;
+        if (this.player && missionary.pos) {
+            distToPlayer = (this.player.pos.x - missionary.pos.x) ** 2 + (this.player.pos.y - missionary.pos.y) ** 2;
+        }
+
+        // If target is NPC and missionary is far away (> 1000px), skip it to avoid spam
+        if (!isPlayerTarget && distToPlayer > 1000 * 1000) {
+            return false;
+        }
+
+        // Pass 'target' (player argument) to build context-aware tokens
+        const tokens = this._buildTokenMap(missionary, { system, target: player });
         const message = this._applyTokens(template, tokens).trim();
         if (!message) {
             return false;
         }
+
+        // Only show text on UI if directed at player or very specific debug/ambient setting
+        // For now, let's show it if close enough to overheat, but maybe with less prominence?
+        // Reuse standard mechanism for now.
 
         // Purple color for posthuman messages
         const msgColor = color(180, 140, 220);
