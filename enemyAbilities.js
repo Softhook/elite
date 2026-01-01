@@ -166,24 +166,31 @@ class EnemyAbilities {
         return distSq < thresholdSq;
     }
 
-    /** AI decision: should we boost for surprise attack run? */
-    shouldBoostForAttack(distanceToTarget) {
+    /** AI decision: should we boost for repositioning? 
+     *  Note: Boosting during attack runs is NOT advisable because the high speed
+     *  makes it difficult to aim and track targets. Instead, we use boost for
+     *  tactical repositioning to get to cover or optimal firing positions faster.
+     */
+    shouldBoostForReposition() {
         if (!this.hasBoosterReady()) return false;
         if (!this.target || !this.isTargetValid(this.target)) return false;
 
-        // Boost during approach when at good distance
-        const idealBoostRange = this.detectionRange * 0.6;
-        const goodDistance = distanceToTarget > this.engageDistance * 1.2 &&
-            distanceToTarget < idealBoostRange;
+        // Only boost when repositioning
+        if (this.currentState !== AI_STATE.REPOSITIONING) return false;
 
-        if (!goodDistance) return false;
+        // Check if we have a reposition target and are far from it
+        if (!this.repositionTarget) return false;
 
-        // Only boost in approaching state
-        if (this.currentState !== AI_STATE.APPROACHING) return false;
+        const distToRepoTarget = dist(this.pos.x, this.pos.y,
+            this.repositionTarget.x, this.repositionTarget.y);
 
-        // Random chance (more likely if we have grudge)
+        // Only boost if we have a decent distance to cover (worthwhile to boost)
+        const worthwhileDistance = this.size * 8; // About 8x ship sizes
+        if (distToRepoTarget < worthwhileDistance) return false;
+
+        // Random chance (more likely if we have grudge - want to get back in the fight)
         const grudgeLevel = this._getGrudgeLevel ? this._getGrudgeLevel(this.target) : 0;
-        const boostChance = 0.2 + (grudgeLevel * 0.1); // 20% base, +10% per grudge level
+        const boostChance = 0.35 + (grudgeLevel * 0.1); // 35% base, +10% per grudge level
         return random() < boostChance;
     }
 
@@ -218,7 +225,8 @@ class EnemyAbilities {
             // Normal boost decisions
             if (this.shouldBoostForFlee()) {
                 this.activateBoost();
-            } else if (this.shouldBoostForAttack(distanceToTarget)) {
+            } else if (this.shouldBoostForReposition()) {
+                // Boost for rapid repositioning to get to optimal firing position
                 this.activateBoost();
             }
         }
