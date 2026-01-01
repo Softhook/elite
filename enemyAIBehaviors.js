@@ -523,7 +523,7 @@ class EnemyAIBehaviors {
                 // [FIX] Use simplified predictive aiming for off-screen - half the prediction time
                 // This improves off-screen combat accuracy without full computation cost
                 let shootingAngle;
-                const simplePredictionTime = (this.predictionTime || 0.4) * 0.5;
+                const simplePredictionTime = (this.predictionTime || 0.4) * OFF_SCREEN_PREDICTION_FACTOR;
                 if (this.target.vel && (this.target.vel.x !== 0 || this.target.vel.y !== 0)) {
                     const predictedX = this.target.pos.x + this.target.vel.x * simplePredictionTime * 60;
                     const predictedY = this.target.pos.y + this.target.vel.y * simplePredictionTime * 60;
@@ -549,8 +549,7 @@ class EnemyAIBehaviors {
                     shouldThrust = false; // Snipers don't charge
                 } else {
                     // [FIX] Prevent ramming: Stop thrusting if within optimal firing range
-                    // Use a simplified distance check (e.g. 70% of firing range)
-                    const optimalDist = (this.firingRange || 400) * 0.7;
+                    const optimalDist = (this.firingRange || 400) * OFF_SCREEN_OPTIMAL_RANGE_FACTOR;
                     if (distToTarget < optimalDist) {
                         shouldThrust = false;
                     }
@@ -804,10 +803,9 @@ class EnemyAIBehaviors {
             const nearStation = system?.station?.pos &&
                 dist(this.pos.x, this.pos.y, system.station.pos.x, system.station.pos.y) < this.stationProximityThreshold;
 
-            // Time delta for repairs
+            // Time delta for repairs (same rate on-screen and off-screen)
             const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
-            const isOffScreenFar = !this._isOnScreen && (!system?.player || this.distanceTo(system.player) >= 1500);
-            const timerDelta = dtSeconds * (isOffScreenFar ? 3 : 1);
+            const timerDelta = dtSeconds;
 
             if (distToPatrolTarget < 50) {
                 // If near station and damaged, pause for repairs
@@ -820,11 +818,11 @@ class EnemyAIBehaviors {
 
                     // Gradual repair
                     if (this.hull < this.maxHull) {
-                        const repairRate = this.maxHull * 0.10 * timerDelta; // 10% per second
+                        const repairRate = this.maxHull * POLICE_HULL_REPAIR_RATE_PCT * timerDelta;
                         this.hull = Math.min(this.maxHull, this.hull + repairRate);
                     }
                     if (this.shield < this.maxShield) {
-                        const shieldRepairRate = this.maxShield * 0.15 * timerDelta; // 15% per second
+                        const shieldRepairRate = this.maxShield * POLICE_SHIELD_REPAIR_RATE_PCT * timerDelta;
                         this.shield = Math.min(this.maxShield, this.shield + shieldRepairRate);
                     }
 
@@ -923,7 +921,7 @@ class EnemyAIBehaviors {
                     AI_LOG(`Hauler ${this.shipTypeName} retaliating against attack from ${this.lastAttacker.shipTypeName || 'Player'}`);
                     this.target = this.lastAttacker;
                     this.changeState(AI_STATE.APPROACHING);
-                    this.haulerCombatTimer = 10.0; // Timer to return to hauling
+                    this.haulerCombatTimer = HAULER_COMBAT_DURATION; // Timer to return to hauling
                     this.forcedCombatTimer = 5.0; // Force combat for 5 seconds
                     this.inCombat = true; // NEW FLAG: This explicitly marks the ship as in combat mode
                     this.attackCooldown = 3.0; // Prevent re-triggering this check for 3 seconds
@@ -947,7 +945,7 @@ class EnemyAIBehaviors {
                     this.lastAttacker = null; // Forget attacker
                     this.target = null; // Clear target
                     this.inCombat = false; // Clear combat flag
-                    this.attackCooldown = 5.0; // Prevent immediate re-engagement
+                    this.attackCooldown = HAULER_POST_COMBAT_COOLDOWN; // Prevent immediate re-engagement
 
                     // Return to previous state or default
                     this.changeState(this.previousHaulerState || AI_STATE.PATROLLING);
@@ -989,15 +987,24 @@ class EnemyAIBehaviors {
         }
 
         // Check the combat state flags as well (backup check)
+        // NOTE: This secondary check syncs `inCombat` flag with state machine.
+        // Both checks are needed because:
+        //   1. `inCombat` flag = explicit timer-based combat mode (with haulerCombatTimer)
+        //   2. State-based check = handles edge cases where state changed externally
+        // Consider consolidating to state-only in future refactor.
         if (this.currentState === AI_STATE.FLEEING ||
             this.currentState === AI_STATE.APPROACHING ||
             this.currentState === AI_STATE.ATTACK_PASS ||
             this.currentState === AI_STATE.REPOSITIONING ||
-            this.currentState === AI_STATE.SNIPING)  // Add sniping to combat states
-        {
-            // Set the inCombat flag if needed
-            this.inCombat = true;
-
+            this.currentState === AI_STATE.SNIPING) {
+            // Sync the inCombat flag with state machine
+            if (!this.inCombat) {
+                this.inCombat = true;
+                // Also ensure we have a combat timer running
+                if (this.haulerCombatTimer === undefined || this.haulerCombatTimer <= 0) {
+                    this.haulerCombatTimer = HAULER_COMBAT_DURATION; // Default combat duration
+                }
+            }
 
             this.updateCombatAI(system);
             this.updatePhysics();
@@ -1211,6 +1218,17 @@ class EnemyAIBehaviors {
     }
 
     /** Transport AI Logic - Moves between two endpoints. */
+    /**
+     * Transport AI - Manages inter-planetary shuttle behavior.
+     * 
+     * Architecture: Uses route-based navigation with SpaceObjects as waypoints.
+     * - Route helpers: _resolveSpaceObjectCommodities, _sellCargoToSpaceObject,
+     *   _buyFromSpaceObject, _tradeAtSpaceObject, _tradeAtStation
+     * - Arrival uses hysteresis (arrivalThreshold + releaseMargin) for stability
+     * - Off-screen time compensation via timerDelta multiplier
+     * 
+     * @param {Object} system - Current star system
+     */
     updateTransportAI(system) {
         if (!system) return;
 

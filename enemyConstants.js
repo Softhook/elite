@@ -105,6 +105,27 @@ const TIGHT_ANGLE_RAD = 0.17;  // ~10 degrees for weapon selection
 const WIDE_ANGLE_RAD = 0.52;   // ~30 degrees for weapon selection
 const CLOSE_RANGE_MULT = 0.4; // Multiplier of visualFiringRange
 const MEDIUM_RANGE_MULT = 0.7; // Multiplier of visualFiringRange
+const VERY_CLOSE_RANGE_MULT = 0.2; // 20% of firing range = very close
+
+// -------------------------
+// --- Off-Screen Combat Constants ---
+// -------------------------
+
+const OFF_SCREEN_OPTIMAL_RANGE_FACTOR = 0.7; // Stop thrusting at 70% of firing range (off-screen)
+const OFF_SCREEN_PREDICTION_FACTOR = 0.5;    // Use half prediction time for off-screen aiming
+
+// -------------------------
+// --- Guard Formation Constants ---
+// -------------------------
+
+const GUARD_FORMATION_SIZE_FACTOR = 0.5; // Multiplier of size for formation distance checks
+
+// -------------------------
+// --- Police AI Constants ---
+// -------------------------
+
+const POLICE_HULL_REPAIR_RATE_PCT = 0.10;    // 10% hull per second near station
+const POLICE_SHIELD_REPAIR_RATE_PCT = 0.15;  // 15% shield per second near station
 
 // -------------------------
 // --- Targeting Score Constants ---
@@ -229,9 +250,20 @@ const SNIPING_TACTIC_CHANGE_CHANCE = 0.15;    // 15% chance to change tactics ev
 // --- Guard Behavior Constants ---
 // -------------------------
 
+// NOTE: GUARD_PRINCIPAL_ATTACK_WINDOW_MS = 5000 is INTENTIONAL
+// Guards only react to attacks on their principal within this time window.
+// This creates tactical counterplay: players can cloak/flee for 5+ seconds
+// to avoid guard aggro. This balances guard effectiveness with player agency.
 const GUARD_PRINCIPAL_ATTACK_WINDOW_MS = 5000; // React to attacks on principal within 5 seconds
 const GUARD_ENGAGEMENT_LOCK_DURATION = 3.0;    // Lock engagement with target for 3 seconds
 const GUARD_REACTION_COOLDOWN = 5.0;           // Cooldown between guard reactions
+
+// -------------------------
+// --- Hauler Combat Constants ---
+// -------------------------
+
+const HAULER_COMBAT_DURATION = 10.0;           // Default combat engagement duration before returning to hauling
+const HAULER_POST_COMBAT_COOLDOWN = 5.0;       // Cooldown after disengaging before re-engaging
 
 // -------------------------
 // --- Tactical Decision Constants ---
