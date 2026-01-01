@@ -667,8 +667,10 @@ class EnemyAIBehaviors {
             }
 
             // MODIFIED: Immediately pursue if system-wide alert is active
+            // Police can interrupt patrol, idle, OR cargo collection to respond to alert
             if (system.policeAlertSent &&
-                (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.IDLE)) {
+                (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.IDLE || this.currentState === AI_STATE.COLLECTING_CARGO)) {
+                this.cargoTarget = null; // Clear cargo target when responding to alert
                 this.changeState(AI_STATE.APPROACHING);
 
                 // Force rotation toward player
@@ -732,7 +734,9 @@ class EnemyAIBehaviors {
         if (wantedTarget) {
             // Target any wanted ship
             this.target = wantedTarget;
-            if (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.IDLE) {
+            // Police can interrupt patrol, idle, OR cargo collection to pursue criminals
+            if (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.IDLE || this.currentState === AI_STATE.COLLECTING_CARGO) {
+                this.cargoTarget = null; // Clear cargo target when going to combat
                 this.changeState(AI_STATE.APPROACHING);
             }
 

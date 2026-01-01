@@ -725,6 +725,24 @@ class Enemy {
             }
         }
 
+        // For police: Check for cargo when patrolling (not fighting)
+        if (this.role === AI_ROLE.POLICE &&
+            this.currentState !== AI_STATE.COLLECTING_CARGO &&
+            this.currentState !== AI_STATE.APPROACHING &&
+            this.currentState !== AI_STATE.ATTACK_PASS &&
+            this.currentState !== AI_STATE.REPOSITIONING &&
+            this.currentState !== AI_STATE.SNIPING &&
+            this.cargoCollectionCooldown <= 0) {
+
+            const cargoTarget = this.detectCargo(system);
+            if (cargoTarget) {
+                this.previousState = this.currentState;
+                this.cargoTarget = cargoTarget;
+                this.changeState(AI_STATE.COLLECTING_CARGO);
+                CARGO_LOG(`Police ${this.shipTypeName} spotted cargo - moving to collect`);
+            }
+        }
+
         // Role-specific AI behavior updates
         try {
             if (this.role === AI_ROLE.TRANSPORT) {
@@ -770,7 +788,14 @@ class Enemy {
                         }
                         break;
                     case AI_ROLE.POLICE:
-                        this.updatePoliceAI(system);
+                        if (this.currentState === AI_STATE.COLLECTING_CARGO) {
+                            if (!this.updateCargoCollectionAI(system)) {
+                                // When done collecting, return to patrol
+                                this.changeState(this.previousState || AI_STATE.PATROLLING);
+                            }
+                        } else {
+                            this.updatePoliceAI(system);
+                        }
                         break;
                     case AI_ROLE.HAULER:
                         this.updateHaulerAI(system);

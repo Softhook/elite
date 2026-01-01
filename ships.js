@@ -1659,7 +1659,7 @@ const SHIP_DEFINITIONS = {
 
     // --- PIRATE ---
     "Sidewinder": {
-        name: "Sidewinder", role: "Starter", upgrades: ["Stealth Field Mark I", "Pulse Drive Igniter"], sizeCategory: "Tiny", size: 20,
+        name: "Sidewinder", role: "Starter", upgrades: [], sizeCategory: "Tiny", size: 20,
         baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.06981,
         baseHull: 50, baseShield: 50, shieldRecharge: 1.0, cargoCapacity: 10,
         armament: ["Pulse Laser"], // Starter weapon
