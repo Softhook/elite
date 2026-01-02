@@ -743,41 +743,51 @@ class SurfaceMode {
                     continue;
                 }
 
-                // 0. Habitation Check - Uninhabited planets are barren of buildings
-                if (this.planet && !this.planet.isInhabited) {
-                    this.objectCache.set(cellKey, null);
-                    // We return inside the loop? No, this is inside inner loop.
-                    // But we used 'continue' before.
-                    // Wait, we need to mark cache as null then continue.
-                    continue;
-                }
-
-                // 1. Robust GLSL-style hash for this cell
+                // Compute cell values FIRST (needed for both inhabited and uninhabited logic)
                 const x = activeGridX;
                 const y = activeGridY;
                 const cellHash = (Math.abs(Math.sin(x * 12.9898 + y * 78.233 + planetSeed) * 43758.5453) % 1);
-
-                // Settlement Zones: Large areas where buildings cluster
-                const settlementNoise = noise(activeGridX * 0.015 + 500, activeGridY * 0.015 + 500);
-                const isSettlementZone = settlementNoise > 0.45;
-
                 const wx = activeGridX * cellSize;
                 const wy = activeGridY * cellSize;
                 const h = this._getTerrainHeightAt(wx, wy);
-                const isHighTerrain = h > 100; // Lowered threshold for more defenses (was 120)
-
-                // Get civilization color for consistent theming
-                const civColor = (this.planet && this.planet.cityLightsColor) ? this.planet.cityLightsColor : null;
-
-                let obj;
                 const subHash = (cellHash * 123.45) % 1;
                 const objSeed = cellHash * 100000;
+
+                let obj;
+
+                // 0. Habitation Check - Uninhabited planets spawn secret caches instead
+                if (this.planet && !this.planet.isInhabited) {
+                    // SECRET CACHE SPAWNING for uninhabited planets
+                    // Very rare spawn rate (~0.5% per cell) for exploration reward
+                    if (cellHash < 0.005 && typeof SecretCache !== 'undefined') {
+                        obj = new SecretCache(wx, wy, objSeed);
+                        obj.yOffset = h;
+                        this.surfaceObjects.push(obj);
+                        this.objectCache.set(cellKey, obj);
+                    } else {
+                        this.objectCache.set(cellKey, null);
+                    }
+                    continue;
+                }
+
+                // Settlement Zones: Large areas where buildings cluster
+                // SPARSER: Raised threshold from 0.45 to 0.60 for much larger wilderness zones
+                const settlementNoise = noise(activeGridX * 0.015 + 500, activeGridY * 0.015 + 500);
+                const isSettlementZone = settlementNoise > 0.60;
+
+                const isHighTerrain = h > 100; // Lowered threshold for more defenses (was 120)
+
+                // Get civilization color and economy type for buildings
+                const civColor = (this.planet && this.planet.cityLightsColor) ? this.planet.cityLightsColor : null;
+                const economyType = this.planet?.economyType || 'Service';
+
+                const buildingSize = 40 + (subHash * 40);
 
                 // --- 1. Strategic Defense (High Ground) ---
                 // Turrets and drones guard the peaks
                 if (isHighTerrain) {
-                    // 30% density on peaks
-                    if (cellHash < 0.3) {
+                    // 25% density on peaks (reduced from 30%)
+                    if (cellHash < 0.25) {
                         // Increased ratio of Turrets vs Drones
                         if (subHash < 0.4) {
                             obj = new DefenseDrone(wx, wy);
@@ -795,8 +805,8 @@ class SurfaceMode {
                         continue;
                     }
 
-                    // Check local density within the settlement zone
-                    if (cellHash < 0.20) {
+                    // SPARSER: Reduced density from 0.20 to 0.10
+                    if (cellHash < 0.10) {
                         // Shield Generator: Exact spawn
                         if (activeGridX === 2 && activeGridY === 2 && typeof ShieldGenerator !== 'undefined') {
                             obj = new ShieldGenerator(wx, wy);
@@ -806,25 +816,18 @@ class SurfaceMode {
                             const stSize = 100 + (subHash * 1000);
                             obj = new SurfaceStation(wx, wy, stSize, civColor);
                         }
-                        // Standard Buildings (Common)
+                        // ECONOMY-SPECIFIC BUILDINGS
                         else {
-                            const bTypes = ['skyscraper', 'factory', 'silo'];
-                            const typeIndex = Math.floor(objSeed) % bTypes.length;
-                            const bType = bTypes[typeIndex];
-
-                            let bSize = 40 + (subHash * 40);
-                            if (bType === 'factory') bSize *= 1.2;
-
-                            obj = new Building(wx, wy, bSize, bType, objSeed, civColor);
+                            obj = this._createEconomyBuilding(economyType, wx, wy, buildingSize, objSeed);
                         }
                     }
                 }
                 // --- 3. Outskirts / Wilderness ---
                 else {
-                    // Very rare rogue buildings or pirates
-                    if (cellHash < 0.005) {
+                    // Very rare rogue buildings or pirates (reduced from 0.5%)
+                    if (cellHash < 0.003) {
                         if (subHash < 0.5) obj = new DefenseDrone(wx, wy);
-                        else obj = new Building(wx, wy, 30, 'silo', objSeed, civColor);
+                        else obj = this._createEconomyBuilding(economyType, wx, wy, 30, objSeed);
                     }
                 }
 
@@ -849,6 +852,62 @@ class SurfaceMode {
                     this.objectCache.delete(key);
                 }
             }
+        }
+    }
+
+    /**
+     * Create an economy-specific building based on the planet's economy type
+     * @param {string} economyType - The planet's economy type
+     * @param {number} x - World X coordinate
+     * @param {number} y - World Y coordinate
+     * @param {number} size - Building size
+     * @param {number} seed - Random seed for variation
+     * @returns {SurfaceObject} The created building
+     */
+    _createEconomyBuilding(economyType, x, y, size, seed) {
+        // Map economy types to their specific building classes
+        switch (economyType) {
+            case 'Imperial':
+                return typeof ImperialBuilding !== 'undefined'
+                    ? new ImperialBuilding(x, y, size, seed)
+                    : new Building(x, y, size, 'skyscraper', seed);
+            case 'Separatist':
+                return typeof SeparatistBuilding !== 'undefined'
+                    ? new SeparatistBuilding(x, y, size, seed)
+                    : new Building(x, y, size, 'factory', seed);
+            case 'Military':
+                return typeof MilitaryBuilding !== 'undefined'
+                    ? new MilitaryBuilding(x, y, size, seed)
+                    : new Building(x, y, size, 'factory', seed);
+            case 'Post Human':
+                return typeof PostHumanBuilding !== 'undefined'
+                    ? new PostHumanBuilding(x, y, size, seed)
+                    : new Building(x, y, size, 'skyscraper', seed);
+            case 'Offworld':
+                return typeof OffworldBuilding !== 'undefined'
+                    ? new OffworldBuilding(x, y, size, seed)
+                    : new Building(x, y, size, 'silo', seed);
+            case 'Mining':
+                return typeof MiningBuilding !== 'undefined'
+                    ? new MiningBuilding(x, y, size, seed)
+                    : new Building(x, y, size, 'factory', seed);
+            case 'Industrial':
+                return typeof IndustrialBuilding !== 'undefined'
+                    ? new IndustrialBuilding(x, y, size, seed)
+                    : new Building(x, y, size, 'factory', seed);
+            case 'Refinery':
+                return typeof RefineryBuilding !== 'undefined'
+                    ? new RefineryBuilding(x, y, size, seed)
+                    : new Building(x, y, size, 'silo', seed);
+            case 'Agricultural':
+                return typeof AgriculturalBuilding !== 'undefined'
+                    ? new AgriculturalBuilding(x, y, size, seed)
+                    : new Building(x, y, size, 'silo', seed);
+            case 'Service':
+            default:
+                return typeof ServiceBuilding !== 'undefined'
+                    ? new ServiceBuilding(x, y, size, seed)
+                    : new Building(x, y, size, 'skyscraper', seed);
         }
     }
 
@@ -1336,8 +1395,9 @@ class SurfaceMode {
             // Check for ShieldGenerator class name since we might not have imported the class in this scope
             const isShieldGen = (obj.constructor && obj.constructor.name === 'ShieldGenerator') || obj.isTarget;
             const isTurret = (obj.constructor && obj.constructor.name === 'Turret');
+            const isCache = obj.isCache === true; // Secret caches on uninhabited planets
 
-            if (!isShieldGen && !isTurret) continue;
+            if (!isShieldGen && !isTurret && !isCache) continue;
 
             const dx = obj.pos.x - this.player.pos.x;
             const dy = obj.pos.y - this.player.pos.y;
@@ -1362,9 +1422,15 @@ class SurfaceMode {
                 // Turrets - Orange, smaller
                 fill(255, 150, 0, 200);
                 ellipse(markerDist, 0, 4, 4);
+            } else if (isCache) {
+                // Secret Caches - Green, clamped to edge for discovery
+                // Always show at edge of compass to guide exploration
+                fill(50, 255, 100, 220);
+                ellipse(30, 0, 5, 5); // Clamped to edge
             }
             pop();
         }
+
 
         pop();
 
