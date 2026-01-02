@@ -4264,12 +4264,7 @@ function drawPosthumanMissionary(s, thrusting = false, angle = 0, localSunAngle 
     let ringCol = color(180, 140, 220, 120 + glowPulse * 80);
     Draw3D.drawRing3D(0, 0, r * 1.15, r * 1.05, 24, s * 0.04, ringCol, angle, localSunAngle, ringRotation);
 
-    // 3. Central dome - the "eye" of the missionary
-    let domeColor = color(140, 100, 180);
-    let domeSize = r * 0.5 * corePulse;
-    Draw3D.drawDome(0, 0, domeSize, 12, domeColor, angle, localSunAngle);
-
-    // 4. Inner cyan core - glowing energy source
+    // 3. Inner cyan core - glowing energy source (prism shape)
     let coreColor = color(80, 200, 240, 180 + glowPulse * 70);
     Draw3D.drawPrism(0, 0, r * 0.22 * corePulse, 8, s * 0.12, coreColor, angle, localSunAngle);
 

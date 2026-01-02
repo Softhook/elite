@@ -1265,9 +1265,9 @@ class SurfaceMode {
     _drawHUD() {
         push();
 
-        // Performance stats (top left, only if debugMode is active or stats are available)
+        // Performance stats (top left, only if debugMode is explicitly enabled)
         const terrainStats = this.terrain?.lastCullStats;
-        if (this.debugMode || terrainStats || this._lastObjectCullStats) {
+        if (this.debugMode) {
             push();
             const DEBUG_PANEL_HEIGHT_BASIC = 95;
             const DEBUG_PANEL_HEIGHT_EXTENDED = 110;
@@ -1468,12 +1468,7 @@ class SurfaceMode {
         if (key === 't' || key === 'T') { this.altitudeInput = 1; return true; }
         if (key === 'g' || key === 'G') { this.altitudeInput = -1; return true; }
 
-        // Toggle debug mode (shows culling stats) - 'P' for performance
-        if (key === 'p' || key === 'P') {
-            this.debugMode = !this.debugMode;
-            console.log(`Surface mode debug: ${this.debugMode ? 'ON' : 'OFF'}`);
-            return true;
-        }
+        // Debug mode toggle removed - set this.debugMode = true in code if needed for debugging
 
         // Toggle mission overlay - 'N' for missioN
         if (key === 'n' || key === 'N') {
