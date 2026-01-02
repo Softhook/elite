@@ -325,9 +325,12 @@ class SurfaceMode {
             this._checkSurfaceCollisions();
 
             // Update starSystem like when docked - NPCs move but player is invulnerable
+            // Commented out to prevent sound leaks from space combat while on surface
+            /*
             if (this.starSystem && typeof this.starSystem.updateWhileDocked === 'function') {
                 this.starSystem.updateWhileDocked();
             }
+            */
 
             // Note: altitude control happens BEFORE _updatePhysics() so player.altitude
             // is calculated with current radar altitude, ensuring turrets see accurate data
@@ -449,7 +452,7 @@ class SurfaceMode {
 
         // Check each projectile in the world
         for (let proj of this.starSystem.projectiles) {
-            if (proj.destroyed) continue;
+            if (!proj || proj.destroyed) continue;
             if (!proj.isSurface) continue; // Only check surface projectiles
 
             const projPos = proj.pos;
@@ -486,7 +489,7 @@ class SurfaceMode {
             // Player's projectiles hitting surface objects
             if (this.surfaceObjects && this.surfaceObjects.length > 0 && proj.owner === this.player) {
                 for (let obj of this.surfaceObjects) {
-                    if (obj.destroyed) continue;
+                    if (!obj || obj.destroyed) continue;
 
                     const bounds = this._getVisualBounds(obj);
 
@@ -518,7 +521,7 @@ class SurfaceMode {
 
         // Also check turret/pirate projectiles hitting the player
         for (let proj of this.starSystem.projectiles) {
-            if (proj.destroyed) continue;
+            if (!proj || proj.destroyed) continue;
             if (!proj.isSurface) continue;
             if (proj.owner === this.player) continue; // Skip player's own projectiles
             if (!this.player || this.player.destroyed) continue;
@@ -833,7 +836,7 @@ class SurfaceMode {
         let objectsCulled = 0;
 
         for (let obj of this.surfaceObjects) {
-            if (obj.destroyed) continue;
+            if (!obj || obj.destroyed) continue;
 
             // Viewport culling: check if object is within visible bounds
             // Use object size to create a bounding box
@@ -1017,6 +1020,7 @@ class SurfaceMode {
         }
 
         for (const wave of this.starSystem.forceWaves) {
+            if (!wave) continue;
             // Only draw surface mode force waves (filter out space combat)
             if (!wave.isSurface) continue;
 
@@ -1076,56 +1080,62 @@ class SurfaceMode {
         // Shadow size should be smaller than ship, and shrink more dramatically with altitude
         // At minimum altitude: shadow is ~0.7x ship size
         // At maximum altitude: shadow is ~0.3x ship size
+        // Shadow size should be smaller than ship, and shrink more dramatically with altitude
+        // At minimum altitude: shadow is ~0.7x ship size
+        // At maximum altitude: shadow is ~0.3x ship size
         const shadowScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 0.7, 0.3);
 
-        push();
-        // Position shadow relative to ship position, offset by sun direction
-        const shadowX = this.player.pos.x + shadowOffsetX;
-        const shadowY = this.player.pos.y + shadowOffsetY;
-        translate(shadowX, shadowY);
+        // Hide shadow when player is destroyed or dying/exploding
+        if (!this.player.destroyed && !this.player.isDying) {
+            push();
+            // Position shadow relative to ship position, offset by sun direction
+            const shadowX = this.player.pos.x + shadowOffsetX;
+            const shadowY = this.player.pos.y + shadowOffsetY;
+            translate(shadowX, shadowY);
 
-        // Apply terrain height at shadow position so it follows the ground
-        const terrainH = this._getTerrainHeightAt(shadowX, shadowY);
-        translate(0, -terrainH);
+            // Apply terrain height at shadow position so it follows the ground
+            const terrainH = this._getTerrainHeightAt(shadowX, shadowY);
+            translate(0, -terrainH);
 
-        rotate(this.player.angle);
-        scale(shadowScale);  // Shadow is smaller than ship
+            rotate(this.player.angle);
+            scale(shadowScale);  // Shadow is smaller than ship
 
-        // Shadow alpha: softer at higher altitudes
-        const shadowAlpha = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 80, 15);
-        fill(0, 0, 0, shadowAlpha);
-        noStroke();
+            // Shadow alpha: softer at higher altitudes
+            const shadowAlpha = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 80, 15);
+            fill(0, 0, 0, shadowAlpha);
+            noStroke();
 
-        // Draw shadow using first vertex layer of ship definition
-        // Try to get ship def from player's cache first, then fall back to SHIP_DEFINITIONS lookup
-        const shipTypeName = this.player.shipTypeName || 'Sidewinder';
-        let shipDef = this.player._cachedShipDef ||
-            (typeof SHIP_DEFINITIONS !== 'undefined' ? SHIP_DEFINITIONS[shipTypeName] : null);
-        const shipScale = this.player.size / 25;
+            // Draw shadow using first vertex layer of ship definition
+            // Try to get ship def from player's cache first, then fall back to SHIP_DEFINITIONS lookup
+            const shipTypeName = this.player.shipTypeName || 'Sidewinder';
+            let shipDef = this.player._cachedShipDef ||
+                (typeof SHIP_DEFINITIONS !== 'undefined' ? SHIP_DEFINITIONS[shipTypeName] : null);
+            const shipScale = this.player.size / 25;
 
-        // Get vertex data - handle both new vertexLayers format and legacy vertexData format
-        let vertices = null;
-        if (shipDef) {
-            if (shipDef.vertexLayers && shipDef.vertexLayers.length > 0 && shipDef.vertexLayers[0].vertexData) {
-                // New format: vertexLayers[0].vertexData
-                vertices = shipDef.vertexLayers[0].vertexData;
-            } else if (shipDef.vertexData && shipDef.vertexData.length > 0) {
-                // Legacy format: direct vertexData array (e.g., Sidewinder)
-                vertices = shipDef.vertexData;
+            // Get vertex data - handle both new vertexLayers format and legacy vertexData format
+            let vertices = null;
+            if (shipDef) {
+                if (shipDef.vertexLayers && shipDef.vertexLayers.length > 0 && shipDef.vertexLayers[0].vertexData) {
+                    // New format: vertexLayers[0].vertexData
+                    vertices = shipDef.vertexLayers[0].vertexData;
+                } else if (shipDef.vertexData && shipDef.vertexData.length > 0) {
+                    // Legacy format: direct vertexData array (e.g., Sidewinder)
+                    vertices = shipDef.vertexData;
+                }
             }
-        }
 
-        if (vertices && vertices.length > 0) {
-            beginShape();
-            for (const v of vertices) {
-                vertex(v.x * shipScale * 25, v.y * shipScale * 25);
+            if (vertices && vertices.length > 0) {
+                beginShape();
+                for (const v of vertices) {
+                    vertex(v.x * shipScale * 25, v.y * shipScale * 25);
+                }
+                endShape(CLOSE);
+            } else {
+                // Fallback to ellipse if no vertex data available
+                ellipse(0, 0, this.player.size, this.player.size * 0.8);
             }
-            endShape(CLOSE);
-        } else {
-            // Fallback to ellipse if no vertex data available
-            ellipse(0, 0, this.player.size, this.player.size * 0.8);
+            pop();
         }
-        pop();
 
         // 2. Draw actual ship model at its world position with counter-scale
         // This keeps the ship at constant screen size regardless of altitude
@@ -1141,7 +1151,7 @@ class SurfaceMode {
      * Draw game HUD elements (normal game HUD)
      */
     _drawGameHUD() {
-        if (typeof uiManager !== 'undefined' && uiManager) {
+        if (typeof uiManager !== 'undefined' && uiManager && this.player) {
             // Draw the normal game HUD (shields, hull, speed, etc.)
             uiManager.drawHUD(this.player);
         }

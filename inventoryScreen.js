@@ -16,9 +16,9 @@ class InventoryScreen {
     if (typeof font !== 'undefined') textFont(font);
 
     // Main panel background
-    fill(20, 25, 40, 240);
-    stroke(80, 120, 200);
-    strokeWeight(2);
+    fill(20, 30, 50, 240);
+    stroke(100, 150, 255);
+    strokeWeight(1);
     rect(pX, pY, pW, pH, 10);
 
     // Title

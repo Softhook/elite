@@ -593,7 +593,7 @@ class UIManager {
         }
         // Only access galaxy/system in states where it's expected to exist
         const statesExpectingSystem = [
-            "IN_FLIGHT", "DOCKED", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD",
+            "IN_FLIGHT", "DOCKED", "SURFACE_MODE", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD",
             "VIEWING_SHIP_DETAIL", "VIEWING_UPGRADES", "VIEWING_WEAPON_DETAIL", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE",
             "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT",
             "VIEWING_STORAGE", "VIEWING_RECORD", "VIEWING_NEWS",
@@ -623,11 +623,8 @@ class UIManager {
             return true;
         }
 
-        // --- Minimap click: target locking (zoom cycling moved to '.' key) ---
-        // Always use the expanded size for click region (minimap is always large).
-        const minimapActive = currentState === "IN_FLIGHT";
-        if (minimapActive) {
-            // Check HUD Mission Display Click (Open Overlay)
+        // Check HUD Mission Display Click (Open Overlay) - Active in Space and Surface modes
+        if (currentState === "IN_FLIGHT" || currentState === "SURFACE_MODE") {
             if (this.hud.checkMissionClick(mx, my)) {
                 if (gameStateManager) {
                     if (typeof soundManager !== 'undefined') soundManager.playSound('click');
@@ -635,7 +632,12 @@ class UIManager {
                 }
                 return true;
             }
+        }
 
+        // --- Minimap click: target locking (zoom cycling moved to '.' key) ---
+        // Always use the expanded size for click region (minimap is always large).
+        const minimapActive = currentState === "IN_FLIGHT";
+        if (minimapActive) {
             const curMinimapSize = this.minimapExpandedSize;
             const curMinimapX = width - curMinimapSize - this.minimapMargin;
             const curMinimapY = height - curMinimapSize - this.minimapMargin;

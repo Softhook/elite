@@ -1793,8 +1793,10 @@ class GameStateManager {
      * @private
      */
     _drawMissionOverlay(player) {
-        if (this.currentState === "IN_FLIGHT" && this.showingMissionOverlay && uiManager) {
-            uiManager.drawMissionOverlay(player);
+        // Draw mission overlay in both flight and surface modes if active
+        // Logic check simplified to prevent potential strict-mode scoping issues
+        if ((this.currentState === "IN_FLIGHT" || this.currentState === "SURFACE_MODE") && this.showingMissionOverlay) {
+            if (uiManager) uiManager.drawMissionOverlay(player);
         }
     }
 
