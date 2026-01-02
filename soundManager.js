@@ -1877,8 +1877,36 @@ class SoundManager {
      * Plays a UI or non-positioned sound, always using the single audio object.
      * @param {string} name - The name of the sound effect.
      * @param {number} [volMultiplier=1.0] - Optional multiplier for the base volume (only works reliably on standard HTMLAudioElements).
+     * @param {object} [sourceEntity=null] - Optional source entity for surface mode filtering.
      */
-    playSound(name, volMultiplier = 1.0) {
+    playSound(name, volMultiplier = 1.0, sourceEntity = null) {
+        // In surface mode, block combat sounds from space entities
+        // Uses cached Set to avoid allocation on every call
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+            // Lazy-init static cache for combat sounds
+            if (!SoundManager._combatSounds) {
+                SoundManager._combatSounds = new Set([
+                    'shieldUp', 'shieldDown', 'barrierUp', 'barrierDown',
+                    'targetlock', 'hit', 'explosion', 'explosionSmall', 'explosionLarge'
+                ]);
+            }
+
+            if (SoundManager._combatSounds.has(name)) {
+                // If sourceEntity is provided, check if it's a surface entity or player
+                if (sourceEntity) {
+                    const isSurfaceEntity = sourceEntity.isSurface === true;
+                    const isPlayer = sourceEntity === (typeof player !== 'undefined' ? player : null);
+                    if (!isSurfaceEntity && !isPlayer) {
+                        return; // Block space entity combat sounds
+                    }
+                } else {
+                    // No source entity for a combat sound in surface mode - likely from space, block it
+                    return;
+                }
+            }
+            // UI sounds (click, upgrade, error, missionComplete, etc.) always play
+        }
+
         const soundEntry = this.sounds[name];
         if (!soundEntry || !soundEntry.audio || typeof soundEntry.audio.play !== 'function') {
             console.warn(`playSound: Sound '${name}' not found or is not playable.`);

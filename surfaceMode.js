@@ -67,6 +67,8 @@ class SurfaceMode {
         this.player = null;
         this.starSystem = null;
 
+        // Terrain module
+        this.terrain = new SurfaceTerrain(SURFACE_CONFIG);
 
         // Surface position tracking
         this.surfaceX = 0;
@@ -81,12 +83,6 @@ class SurfaceMode {
 
         // Control inputs (only altitude for surface-specific control)
         this.altitudeInput = 0;
-
-        // Terrain mesh
-        this.terrainMesh = [];
-        this.terrainBuffer = null;
-        this.lastGridX = null;
-        this.lastGridY = null;
 
         // Projectiles
         this.projectiles = [];
@@ -170,18 +166,17 @@ class SurfaceMode {
             ambientSoundManager.stopAll();
         }
 
-        // Clear terrain
-        this.terrainMesh = [];
-        this.lastGridX = null;
-        this.lastGridY = null;
+        // Initialize terrain module
+        this.terrain.setPlanet(planet);
+        this.terrain.createBuffer(width, height);
         this.projectiles = [];
         this.surfaceObjects = [];
 
-        // Create terrain buffer
-        this._createTerrainBuffer();
-
         // Generate initial terrain
-        this._generateTerrainMesh(true);
+        if (this.terrain.generateMesh(this.surfaceX, this.surfaceY, true)) {
+            this.terrain.updateBuffer(this.altitude, width, height);
+            this._spawnObjects(this.terrain.getGridPosition().x, this.terrain.getGridPosition().y);
+        }
 
         // Set game state if gameStateManager available
         if (typeof gameStateManager !== 'undefined') {
@@ -229,14 +224,10 @@ class SurfaceMode {
             this.player.lastAttackTime = 0;
         }
 
-        // Cleanup terrain buffer
-        if (this.terrainBuffer) {
-            this.terrainBuffer.remove();
-            this.terrainBuffer = null;
-        }
+        // Cleanup terrain
+        this.terrain.cleanup();
 
         // Clear data
-        this.terrainMesh = [];
         this.projectiles = [];
         this.savedPlayerPos = null;
         this.planet = null;
@@ -282,14 +273,7 @@ class SurfaceMode {
         }
     }
 
-    /**
-     * Create terrain buffer for pre-rendering
-     */
-    _createTerrainBuffer() {
-        const bufSize = Math.max(width, height) * 2.5;
-        this.terrainBuffer = createGraphics(bufSize, bufSize);
-        this.terrainBuffer.noStroke();
-    }
+
 
     /**
      * Main update loop
@@ -317,7 +301,12 @@ class SurfaceMode {
             this.altitude = constrain(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE);
 
             this._updatePhysics(dt);
-            this._generateTerrainMesh();
+
+            // Update terrain - regenerate if player moved to new grid cell
+            if (this.terrain.generateMesh(this.surfaceX, this.surfaceY)) {
+                this.terrain.updateBuffer(this.altitude, width, height);
+                this._spawnObjects(this.terrain.getGridPosition().x, this.terrain.getGridPosition().y);
+            }
 
             // Update surface objects (single pass, dt-corrected)
             if (this.surfaceObjects) {
@@ -402,6 +391,31 @@ class SurfaceMode {
             base: { x: obj.pos.x, y: visualBaseY },
             // Hit detection radius should match the base footprint only
             radius: Math.max((obj.size || 40) / 2, 10)
+        };
+    }
+
+    /**
+     * Calculate viewport bounds for culling based on altitude and player position
+     * @param {number} padding - Extra padding to avoid pop-in at edges (default: 200)
+     * @returns {{left: number, right: number, top: number, bottom: number}} Viewport bounds
+     * @private
+     */
+    _getViewportBounds(padding = 200) {
+        // Defensive null check - surface mode should always have player,
+        // but guard against edge cases during initialization/cleanup
+        if (!this.player || !this.player.pos) {
+            return { left: 0, right: width, top: 0, bottom: height };
+        }
+
+        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
+        const viewportWidth = (width / perspectiveScale) + padding * 2;
+        const viewportHeight = (height / perspectiveScale) + padding * 2;
+
+        return {
+            left: this.player.pos.x - viewportWidth / 2,
+            right: this.player.pos.x + viewportWidth / 2,
+            top: this.player.pos.y - viewportHeight / 2,
+            bottom: this.player.pos.y + viewportHeight / 2
         };
     }
 
@@ -519,195 +533,6 @@ class SurfaceMode {
 
 
     /**
-     * Get terrain feature random seed with fallback
-     * @private
-     */
-    _getFeatureRand() {
-        return this.planet?.featureRand ?? SURFACE_CONFIG.DEFAULT_FEATURE_SEED;
-    }
-
-    /**
-     * Generate terrain mesh
-     */
-    _generateTerrainMesh(forceRegenerate = false) {
-        if (!this.planet) return;
-
-        const cellSize = SURFACE_CONFIG.MESH_SIZE / SURFACE_CONFIG.MESH_RESOLUTION;
-        const currentGridX = Math.floor(this.surfaceX / cellSize);
-        const currentGridY = Math.floor(this.surfaceY / cellSize);
-
-        // Only regenerate if moved to new grid cell
-        if (!forceRegenerate &&
-            this.lastGridX === currentGridX &&
-            this.lastGridY === currentGridY &&
-            this.terrainMesh.length > 0) {
-            return;
-        }
-
-        this.lastGridX = currentGridX;
-        this.lastGridY = currentGridY;
-
-
-        this.terrainMesh = [];
-
-        const featureRand = this._getFeatureRand();
-        const palette = this.planet.palette || [color(128, 128, 128)];
-        const resolution = SURFACE_CONFIG.MESH_RESOLUTION;
-
-        for (let gy = 0; gy < resolution; gy++) {
-            this.terrainMesh[gy] = [];
-            for (let gx = 0; gx < resolution; gx++) {
-                const gridX = currentGridX + (gx - Math.floor(resolution / 2));
-                const gridY = currentGridY + (gy - Math.floor(resolution / 2));
-
-                const worldX = gridX * cellSize;
-                const worldY = gridY * cellSize;
-
-                // Sample noise
-                const sampleMultiplier = 0.003;
-                const nx = worldX * sampleMultiplier + featureRand * 0.001;
-                const ny = worldY * sampleMultiplier + featureRand * 0.002;
-                const nz = featureRand * 0.6;
-
-                const noiseVal = noise(nx, ny, nz);
-
-                // Height from noise
-                const height = (noiseVal - 0.5) * 500;
-
-                // Color from palette
-                const paletteIdx = Math.floor(noiseVal * (palette.length - 1));
-                const paletteT = (noiseVal * (palette.length - 1)) - paletteIdx;
-                const col1 = palette[paletteIdx];
-                const col2 = palette[Math.min(paletteIdx + 1, palette.length - 1)];
-                const cellColor = lerpColor(col1, col2, paletteT);
-
-                this.terrainMesh[gy][gx] = {
-                    worldX: worldX,
-                    worldY: worldY,
-                    height: height,
-                    color: cellColor
-                };
-            }
-        }
-
-        this._spawnObjects(currentGridX, currentGridY);
-
-        this._updateTerrainBuffer();
-    }
-
-    /**
-     * Update terrain buffer with viewport culling optimization
-     */
-    _updateTerrainBuffer() {
-        if (!this.terrainBuffer || this.terrainMesh.length === 0) return;
-
-        this.terrainBuffer.background(10, 15, 25);
-        this.terrainBuffer.clear();
-
-        const cx = this.terrainBuffer.width / 2;
-        const cy = this.terrainBuffer.height / 2;
-        const resolution = SURFACE_CONFIG.MESH_RESOLUTION;
-        const resMinus1 = resolution - 1;
-        const cellSize = SURFACE_CONFIG.MESH_SIZE / resolution;
-        const meshCenterWX = this.lastGridX * cellSize;
-        const meshCenterWY = this.lastGridY * cellSize;
-
-        // Calculate viewport bounds in buffer space for culling
-        // Buffer is centered at (cx, cy) with the mesh center at world (meshCenterWX, meshCenterWY)
-        // At high altitude, perspective scale is smaller (0.6x), meaning we see MORE world space
-        // but the buffer size stays constant - so we can cull more aggressively based on what's actually visible
-        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
-        // Visible area = screen size / scale, so higher altitude = smaller visible area in buffer coords
-        // Add generous padding to prevent black edges at screen borders
-        const cullPadding = 300;
-        const visibleHalfWidth = (width / 2) / perspectiveScale + cullPadding;
-        const visibleHalfHeight = (height / 2) / perspectiveScale + cullPadding;
-        const bufferLeft = -visibleHalfWidth;
-        const bufferRight = visibleHalfWidth;
-        const bufferTop = -visibleHalfHeight;
-        const bufferBottom = visibleHalfHeight;
-
-        this.terrainBuffer.stroke(0, 0, 0, 40);
-        this.terrainBuffer.strokeWeight(0.5);
-
-        let cellsDrawn = 0;
-        let cellsCulled = 0;
-
-        for (let gy = 0; gy < resMinus1; gy++) {
-            const row0 = this.terrainMesh[gy];
-            const row1 = this.terrainMesh[gy + 1];
-            if (!row0 || !row1) continue;
-
-            for (let gx = 0; gx < resMinus1; gx++) {
-                const c00 = row0[gx];
-                const c10 = row0[gx + 1];
-                const c01 = row1[gx];
-                const c11 = row1[gx + 1];
-
-                if (!c00 || !c10 || !c01 || !c11) continue;
-
-                // Projection to buffer coordinates (calculate once for culling)
-                // Projection to buffer coordinates (calculate once for culling)
-                const dx00 = c00.worldX - meshCenterWX;
-                const dy00 = c00.worldY - meshCenterWY;
-                const dx10 = c10.worldX - meshCenterWX;
-                const dy10 = c10.worldY - meshCenterWY;
-                const dx11 = c11.worldX - meshCenterWX;
-                const dy11 = c11.worldY - meshCenterWY;
-                const dx01 = c01.worldX - meshCenterWX;
-                const dy01 = c01.worldY - meshCenterWY;
-
-                // Viewport culling optimization: skip if quad is completely outside buffer bounds
-                // Calculate screen-space bounds of this quad (including height offset)
-                const minHeight = Math.min(c00.height, c10.height, c01.height, c11.height);
-                const maxHeight = Math.max(c00.height, c10.height, c01.height, c11.height);
-
-                const quadLeft = Math.min(dx00, dx10, dx01, dx11);
-                const quadRight = Math.max(dx00, dx10, dx01, dx11);
-                const quadTop = Math.min(dy00, dy10, dy01, dy11) - maxHeight;
-                const quadBottom = Math.max(dy00, dy10, dy01, dy11) - minHeight;
-
-                // Early rejection for off-screen quads
-                if (quadRight < bufferLeft || quadLeft > bufferRight ||
-                    quadBottom < bufferTop || quadTop > bufferBottom) {
-                    cellsCulled++;
-                    continue;
-                }
-
-                cellsDrawn++;
-
-                // Lighting
-                const slopeX = ((c10.height - c00.height) + (c11.height - c01.height)) * 0.5;
-                const slopeY = ((c01.height - c00.height) + (c11.height - c10.height)) * 0.5;
-                const sunIntensity = slopeX * 0.004 + slopeY * 0.005;
-
-                const avgHeight = (c00.height + c10.height + c01.height + c11.height) * 0.25;
-                const heightLight = avgHeight * 0.0005;
-
-                let shade = 0.65 + sunIntensity + heightLight;
-                shade = constrain(shade, 0.25, 1.4);
-
-                const baseCol = c00.color;
-                this.terrainBuffer.fill(
-                    baseCol.levels[0] * shade,
-                    baseCol.levels[1] * shade,
-                    baseCol.levels[2] * shade
-                );
-
-                this.terrainBuffer.beginShape();
-                this.terrainBuffer.vertex(cx + dx00, cy + dy00 - c00.height);
-                this.terrainBuffer.vertex(cx + dx10, cy + dy10 - c10.height);
-                this.terrainBuffer.vertex(cx + dx11, cy + dy11 - c11.height);
-                this.terrainBuffer.vertex(cx + dx01, cy + dy01 - c01.height);
-                this.terrainBuffer.endShape(CLOSE);
-            }
-        }
-
-        // Store culling stats for debug overlay
-        this._lastCullStats = { drawn: cellsDrawn, culled: cellsCulled };
-    }
-
-    /**
      * Draw surface mode view
      */
     draw() {
@@ -775,38 +600,20 @@ class SurfaceMode {
 
     /**
      * Get terrain height at a specific world position
-     * Uses same noise sampling as terrain generation
+     * Delegates to terrain module for consistent height sampling
+     * @param {number} worldX - World X coordinate
+     * @param {number} worldY - World Y coordinate
+     * @returns {number} Height at the position
      */
     _getTerrainHeightAt(worldX, worldY) {
-        if (!this.planet) return 0;
-
-        const featureRand = this._getFeatureRand();
-        const sampleMultiplier = 0.003;
-
-        const nx = worldX * sampleMultiplier + featureRand * 0.001;
-        const ny = worldY * sampleMultiplier + featureRand * 0.002;
-        const nz = featureRand * 0.6;
-
-        const noiseVal = noise(nx, ny, nz);
-        return (noiseVal - 0.5) * 500;
+        return this.terrain.getHeightAt(worldX, worldY);
     }
 
     /**
-     * Draw terrain mesh
+     * Draw terrain mesh - delegates to terrain module
      */
     _drawTerrain() {
-        if (!this.terrainBuffer) return;
-
-        const cellSize = SURFACE_CONFIG.MESH_SIZE / SURFACE_CONFIG.MESH_RESOLUTION;
-        const meshCenterWX = this.lastGridX * cellSize;
-        const meshCenterWY = this.lastGridY * cellSize;
-
-        // Draw terrain buffer at its world position
-        const bx = meshCenterWX - this.terrainBuffer.width / 2;
-        const by = meshCenterWY - this.terrainBuffer.height / 2;
-
-        image(this.terrainBuffer, bx, by);
-
+        this.terrain.draw();
     }
 
     _spawnObjects(gridX, gridY) {
@@ -938,17 +745,8 @@ class SurfaceMode {
         // Use dynamic sun angle from planet position
         const sunAngle = this._getSunAngle();
 
-        // Calculate viewport bounds in world space for culling
-        // Account for perspective scale and camera transform
-        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
-        const viewportPadding = 200; // Extra padding to avoid pop-in at edges
-        const viewportWidth = (width / perspectiveScale) + viewportPadding * 2;
-        const viewportHeight = (height / perspectiveScale) + viewportPadding * 2;
-
-        const viewLeft = this.player.pos.x - viewportWidth / 2;
-        const viewRight = this.player.pos.x + viewportWidth / 2;
-        const viewTop = this.player.pos.y - viewportHeight / 2;
-        const viewBottom = this.player.pos.y + viewportHeight / 2;
+        // Calculate viewport bounds for culling
+        const viewport = this._getViewportBounds(200);
 
         let objectsDrawn = 0;
         let objectsCulled = 0;
@@ -962,8 +760,8 @@ class SurfaceMode {
             const objHeight = obj.height || (objSize * 2);
 
             // Check horizontal and vertical bounds
-            if (obj.pos.x + objSize < viewLeft || obj.pos.x - objSize > viewRight ||
-                obj.pos.y + objSize < viewTop || obj.pos.y - objHeight > viewBottom) {
+            if (obj.pos.x + objSize < viewport.left || obj.pos.x - objSize > viewport.right ||
+                obj.pos.y + objSize < viewport.top || obj.pos.y - objHeight > viewport.bottom) {
                 objectsCulled++;
                 continue;
             }
@@ -1002,15 +800,7 @@ class SurfaceMode {
         if (!this.player) return;
 
         // Calculate viewport bounds for culling
-        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
-        const viewportPadding = 100;
-        const viewportWidth = (width / perspectiveScale) + viewportPadding * 2;
-        const viewportHeight = (height / perspectiveScale) + viewportPadding * 2;
-
-        const viewLeft = this.player.pos.x - viewportWidth / 2;
-        const viewRight = this.player.pos.x + viewportWidth / 2;
-        const viewTop = this.player.pos.y - viewportHeight / 2;
-        const viewBottom = this.player.pos.y + viewportHeight / 2;
+        const viewport = this._getViewportBounds(100);
 
         push();
         // Clear shadow settings to prevent visual artifacts
@@ -1022,8 +812,8 @@ class SurfaceMode {
         for (const proj of this.starSystem.projectiles) {
             if (proj && !proj.destroyed && proj.isSurface) {
                 // Viewport culling for projectiles
-                if (proj.pos.x < viewLeft || proj.pos.x > viewRight ||
-                    proj.pos.y < viewTop || proj.pos.y > viewBottom) {
+                if (proj.pos.x < viewport.left || proj.pos.x > viewport.right ||
+                    proj.pos.y < viewport.top || proj.pos.y > viewport.bottom) {
                     continue;
                 }
 
@@ -1041,22 +831,14 @@ class SurfaceMode {
         if (!explosions) return;
 
         // Calculate viewport bounds for culling
-        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
-        const viewportPadding = 100;
-        const viewportWidth = (width / perspectiveScale) + viewportPadding * 2;
-        const viewportHeight = (height / perspectiveScale) + viewportPadding * 2;
-
-        const viewLeft = this.player.pos.x - viewportWidth / 2;
-        const viewRight = this.player.pos.x + viewportWidth / 2;
-        const viewTop = this.player.pos.y - viewportHeight / 2;
-        const viewBottom = this.player.pos.y + viewportHeight / 2;
+        const viewport = this._getViewportBounds(100);
 
         for (let i = 0; i < explosions.length; i++) {
             const exp = explosions[i];
             if (exp && !exp.destroyed && exp.isSurface) {
                 // Viewport culling for explosions
-                if (exp.pos.x < viewLeft || exp.pos.x > viewRight ||
-                    exp.pos.y < viewTop || exp.pos.y > viewBottom) {
+                if (exp.pos.x < viewport.left || exp.pos.x > viewport.right ||
+                    exp.pos.y < viewport.top || exp.pos.y > viewport.bottom) {
                     continue;
                 }
 
@@ -1118,6 +900,9 @@ class SurfaceMode {
         }
 
         for (const wave of this.starSystem.forceWaves) {
+            // Only draw surface mode force waves (filter out space combat)
+            if (!wave.isSurface) continue;
+
             // Fade out as the wave expands
             const alpha = map(wave.radius, 0, wave.maxRadius, 220, 0);
 
@@ -1252,7 +1037,8 @@ class SurfaceMode {
         push();
 
         // Performance stats (top left, only if debugMode is active or stats are available)
-        if (this.debugMode || this._lastCullStats || this._lastObjectCullStats) {
+        const terrainStats = this.terrain?.lastCullStats;
+        if (this.debugMode || terrainStats || this._lastObjectCullStats) {
             push();
             const DEBUG_PANEL_HEIGHT_BASIC = 95;
             const DEBUG_PANEL_HEIGHT_EXTENDED = 110;
@@ -1269,10 +1055,10 @@ class SurfaceMode {
             text('Surface Render Stats:', 15, 15);
 
             fill(200);
-            if (this._lastCullStats) {
-                const total = this._lastCullStats.drawn + this._lastCullStats.culled;
-                const cullPercent = total > 0 ? ((this._lastCullStats.culled / total) * 100).toFixed(1) : 0;
-                text(`Terrain: ${this._lastCullStats.drawn}/${total} (${cullPercent}% culled)`, 15, 30);
+            if (terrainStats) {
+                const total = terrainStats.drawn + terrainStats.culled;
+                const cullPercent = total > 0 ? ((terrainStats.culled / total) * 100).toFixed(1) : 0;
+                text(`Terrain: ${terrainStats.drawn}/${total} (${cullPercent}% culled)`, 15, 30);
             }
             if (this._lastObjectCullStats) {
                 const total = this._lastObjectCullStats.drawn + this._lastObjectCullStats.culled;

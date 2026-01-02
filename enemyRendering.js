@@ -692,7 +692,7 @@ class EnemyRendering {
 
                 if (!this.hasPlayedLockOnSound && globalCooldownOk && perEnemyCooldownOk) {
                     if (typeof soundManager !== 'undefined' && soundManager.playSound) {
-                        soundManager.playSound('targetlock');
+                        soundManager.playSound('targetlock', 1.0, this);
                     }
                     this.hasPlayedLockOnSound = true;
                     this._lastLockOnSoundTime = now;

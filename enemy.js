@@ -556,7 +556,7 @@ class Enemy {
                 this.isBarrierActive = false;
                 this.barrierDamageReduction = 0;
                 this.barrierDurationTimer = 0;
-                if (typeof soundManager !== 'undefined') { soundManager.playSound('barrierDown'); }
+                if (typeof soundManager !== 'undefined') { soundManager.playSound('barrierDown', 1.0, this); }
             }
         }
 

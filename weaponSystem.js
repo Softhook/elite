@@ -317,6 +317,9 @@ class WeaponSystem {
             entitiesToProcess = [];
         }
 
+        // Check if this is a surface mode force wave
+        const isSurfaceWave = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
+
         // Create force wave in the system (reuse objects to minimize allocation)
         system.forceWaves.push({
             pos: wavePos,
@@ -329,7 +332,8 @@ class WeaponSystem {
             color: color,
             processed: new Set(), // Initialize as Set directly
             // Add batch processing properties with pre-populated entities
-            entitiesToProcess: entitiesToProcess
+            entitiesToProcess: entitiesToProcess,
+            isSurface: isSurfaceWave // Track whether this wave belongs to surface mode
         });
 
         WEAPON_LOG(`Force wave added with damage=${damage}, maxRadius=${maxRadius}`);

@@ -1030,7 +1030,7 @@ class Player {
         }
 
         if (typeof soundManager !== 'undefined') {
-            soundManager.playSound('shieldUp');
+            soundManager.playSound('shieldUp', 1.0, this);
         }
 
         return true;
@@ -1051,7 +1051,7 @@ class Player {
         }
 
         if (typeof soundManager !== 'undefined') {
-            soundManager.playSound('shieldDown');
+            soundManager.playSound('shieldDown', 1.0, this);
         }
     }
 
@@ -1565,7 +1565,7 @@ class Player {
             const newShield = Math.min(this.maxShield, prevShield + rechargeAmount);
             // Play shield-up cue when recovering from 0
             if (prevShield === 0 && newShield > 0 && this._shieldWasZero) {
-                if (typeof soundManager !== 'undefined') { soundManager.playSound('shieldUp'); }
+                if (typeof soundManager !== 'undefined') { soundManager.playSound('shieldUp', 1.0, this); }
                 this._shieldWasZero = false;
             }
             this.shield = newShield;
@@ -1985,7 +1985,7 @@ class Player {
         }
         // Shield down cue on transition >0 -> 0
         if (prevShield > 0 && this.shield === 0) {
-            if (typeof soundManager !== 'undefined') { soundManager.playSound('shieldDown'); }
+            if (typeof soundManager !== 'undefined') { soundManager.playSound('shieldDown', 1.0, this); }
             this._shieldWasZero = true;
         }
 

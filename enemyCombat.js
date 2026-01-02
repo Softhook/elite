@@ -592,7 +592,7 @@ class EnemyCombat {
 
         // Feedback
         AI_LOG?.(`${this.shipTypeName} activated barrier (auto): ${this.barrierDurationTimer}s, ${(this.barrierDamageReduction * 100).toFixed(0)}% DR`);
-        if (typeof soundManager !== 'undefined') { soundManager.playSound('barrierUp'); }
+        if (typeof soundManager !== 'undefined') { soundManager.playSound('barrierUp', 1.0, this); }
         return true;
     }
 
@@ -612,7 +612,7 @@ class EnemyCombat {
                 AI_LOG(`${this.shipTypeName} activated barrier: ${this.barrierDurationTimer}s duration, ${(this.barrierDamageReduction * 100).toFixed(0)}% DR. Cooldown: ${this.barrierCooldown}s`);
 
                 // Sound effect for barrier activation (parity with player)
-                if (typeof soundManager !== 'undefined') { soundManager.playSound('barrierUp'); }
+                if (typeof soundManager !== 'undefined') { soundManager.playSound('barrierUp', 1.0, this); }
 
                 // Immediately switch weapon for next shot
                 this.cycleWeapon();
