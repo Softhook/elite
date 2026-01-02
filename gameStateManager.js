@@ -1261,6 +1261,10 @@ class GameStateManager {
                 if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
                     surfaceMode.draw();
                 }
+                // Draw mission overlay on top of surface mode (must be after surfaceMode.draw())
+                if (this.showingMissionOverlay && typeof uiManager !== 'undefined' && uiManager) {
+                    uiManager.drawMissionOverlay(player);
+                }
                 break;
 
             default:
@@ -2039,7 +2043,7 @@ class GameStateManager {
 
     // Add a method to toggle the mission overlay screen
     toggleMissionOverlay() {
-        if (this.currentState === "IN_FLIGHT") {
+        if (this.currentState === "IN_FLIGHT" || this.currentState === "SURFACE_MODE") {
             this.showingMissionOverlay = !this.showingMissionOverlay;
             if (this.showingMissionOverlay) this.showingInventory = false; // Close inventory if opening mission overlay
             return true;

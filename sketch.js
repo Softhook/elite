@@ -530,6 +530,8 @@ function handleSingleKeyActions() {
             return handleInventoryToggle();
         case 'm':
             return handleMapToggle();
+        case 'n':
+            return handleMissionOverlayToggle();
         case 'b':
             return handleSecretBaseNavigation();
         case 'l':
@@ -666,6 +668,20 @@ function handleMapToggle() {
         gameStateManager._previousState = null;
     }
     return true;
+}
+
+/**
+ * Toggle mission overlay with 'N' key
+ */
+function handleMissionOverlayToggle() {
+    const state = gameStateManager.currentState;
+    if (state === "IN_FLIGHT" || state === "SURFACE_MODE") {
+        if (gameStateManager.toggleMissionOverlay()) {
+            soundManager?.playSound('click');
+            return true;
+        }
+    }
+    return false;
 }
 
 /**

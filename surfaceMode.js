@@ -294,9 +294,10 @@ class SurfaceMode {
             (this.state === SURFACE_STATE.ENTERING && this._terrainReady);
 
         if (canProcessInput) {
-            // Make player invulnerable while on surface (like when docked)
+            // Player is NOT invulnerable on surface - they can take damage from turrets/drones
+            // Invulnerability is only used when actually docked at a station
             if (this.player) {
-                this.player.isDockedAndInvulnerable = true;
+                this.player.isDockedAndInvulnerable = false;
             }
 
             // Altitude control - BEFORE physics update so player.altitude uses current value
@@ -331,6 +332,37 @@ class SurfaceMode {
                 this.starSystem.updateWhileDocked();
             }
             */
+
+            // Update projectiles only (surface projectiles need to move)
+            // This is safe as it only updates existing projectiles without spawning/firing
+            if (this.starSystem && typeof this.starSystem._updateProjectiles === 'function') {
+                this.starSystem._updateProjectiles();
+            }
+
+            // Update explosions so they animate and fade
+            if (this.starSystem && typeof this.starSystem._updateExplosions === 'function') {
+                this.starSystem._updateExplosions();
+            }
+
+            // Update beams (laser beams have duration)
+            if (this.starSystem && typeof this.starSystem._updateBeams === 'function') {
+                this.starSystem._updateBeams();
+            }
+
+            // Update force waves (shockwaves)
+            if (this.starSystem && typeof this.starSystem._updateForceWaves === 'function') {
+                this.starSystem._updateForceWaves();
+            }
+
+            // Update mines (surface mines tick and arm)
+            if (this.starSystem && typeof this.starSystem._updateMines === 'function') {
+                this.starSystem._updateMines();
+            }
+
+            // Update harpoons (tethers and pulling)
+            if (this.starSystem && typeof this.starSystem._updateHarpoons === 'function') {
+                this.starSystem._updateHarpoons();
+            }
 
             // Note: altitude control happens BEFORE _updatePhysics() so player.altitude
             // is calculated with current radar altitude, ensuring turrets see accurate data
@@ -1139,12 +1171,15 @@ class SurfaceMode {
 
         // 2. Draw actual ship model at its world position with counter-scale
         // This keeps the ship at constant screen size regardless of altitude
-        push();
-        translate(this.player.pos.x, this.player.pos.y);
-        scale(counterScale);
-        translate(-this.player.pos.x, -this.player.pos.y);
-        this.player.draw();
-        pop();
+        // Hide ship when destroyed or dying/exploding
+        if (!this.player.destroyed && !this.player.isDying) {
+            push();
+            translate(this.player.pos.x, this.player.pos.y);
+            scale(counterScale);
+            translate(-this.player.pos.x, -this.player.pos.y);
+            this.player.draw();
+            pop();
+        }
     }
 
     /**
@@ -1364,6 +1399,15 @@ class SurfaceMode {
             this.debugMode = !this.debugMode;
             console.log(`Surface mode debug: ${this.debugMode ? 'ON' : 'OFF'}`);
             return true;
+        }
+
+        // Toggle mission overlay - 'N' for missioN
+        if (key === 'n' || key === 'N') {
+            if (typeof gameStateManager !== 'undefined' && gameStateManager) {
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                gameStateManager.toggleMissionOverlay();
+                return true;
+            }
         }
 
         // Let other keys pass through to normal game handling
