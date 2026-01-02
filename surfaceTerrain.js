@@ -172,11 +172,25 @@ class SurfaceTerrain {
                 const height = (noiseVal - 0.5) * 500;
 
                 // Color from palette
-                const paletteIdx = Math.floor(noiseVal * (palette.length - 1));
-                const paletteT = (noiseVal * (palette.length - 1)) - paletteIdx;
+                // Apply strict contrast curves to match Planet.js style for textures
+                // We keep the geometry (height) linear as requested, but warp the color selection
+
+                // 1. Power Curve: Push noise towards extremes
+                let nColor = Math.min(1, Math.max(0, Math.pow(noiseVal, 1.3)));
+
+                const paletteMaxIdx = palette.length - 1;
+                const nScaled = nColor * paletteMaxIdx;
+                const paletteIdx = Math.floor(nScaled);
+                const lerpFactor = nScaled - paletteIdx;
+
+                // 2. Contrast Bias: Sharpen transitions between bands
+                const contrastBias = 2.6;
+                let cf = ((lerpFactor - 0.5) * contrastBias) + 0.5;
+                cf = Math.min(1, Math.max(0, cf));
+
                 const col1 = palette[paletteIdx];
-                const col2 = palette[Math.min(paletteIdx + 1, palette.length - 1)];
-                const cellColor = lerpColor(col1, col2, paletteT);
+                const col2 = palette[Math.min(paletteIdx + 1, paletteMaxIdx)];
+                const cellColor = lerpColor(col1, col2, cf);
 
                 this.mesh[gy][gx] = {
                     worldX: worldX,
@@ -208,7 +222,7 @@ class SurfaceTerrain {
         }
         this.lastBufferAltitude = altitude;
 
-        this.buffer.background(10, 15, 25);
+        // Clear buffer to transparent so sky shows through
         this.buffer.clear();
 
         const cx = this.buffer.width / 2;
@@ -287,15 +301,23 @@ class SurfaceTerrain {
 
                 cellsDrawn++;
 
-                // Lighting calculation
+                // Lighting calculation (Enhanced for specific "Bright Top / Dark Valley" look)
+                // Increased coefficients to exaggerate relief
                 const slopeX = ((c10.height - c00.height) + (c11.height - c01.height)) * 0.5;
                 const slopeY = ((c01.height - c00.height) + (c11.height - c10.height)) * 0.5;
-                const sunIntensity = slopeX * 0.004 + slopeY * 0.005;
+
+                // Stronger sun effect
+                const sunIntensity = slopeX * 0.008 + slopeY * 0.010;
 
                 const avgHeight = (c00.height + c10.height + c01.height + c11.height) * 0.25;
-                const heightLight = avgHeight * 0.0005;
+                // Stronger height brightness (Snow caps pop more)
+                const heightLight = avgHeight * 0.0008;
 
-                let shade = 0.65 + sunIntensity + heightLight;
+                // Darken steep valleys (Ambient Occlusion approximation)
+                const steepness = Math.abs(slopeX) + Math.abs(slopeY);
+                const valleyDarken = steepness * 0.005;
+
+                let shade = 0.65 + sunIntensity + heightLight - valleyDarken;
                 shade = constrain(shade, 0.25, 1.4);
 
                 const baseCol = c00.color;

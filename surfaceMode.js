@@ -578,8 +578,16 @@ class SurfaceMode {
     draw() {
         if (this.state === SURFACE_STATE.INACTIVE) return;
 
-        // Dark gradient sky
-        background(10, 15, 25);
+        // Draw sky based on planet atmosphere
+        if (this.planet && this.planet.hasAtmosphere && this.planet.atmosphereColor) {
+            const c = this.planet.atmosphereColor;
+            // Tint sky with atmosphere color (opaque)
+            // Use 80% brightness for a slightly grounded feel
+            background(red(c) * 0.8, green(c) * 0.8, blue(c) * 0.8);
+        } else {
+            // Dark space sky (no atmosphere)
+            background(10, 15, 25);
+        }
 
         if (!this.planet) return;
 
@@ -700,72 +708,100 @@ class SurfaceMode {
                     continue;
                 }
 
+                // 0. Habitation Check - Uninhabited planets are barren of buildings
+                if (this.planet && !this.planet.isInhabited) {
+                    this.objectCache.set(cellKey, null);
+                    // We return inside the loop? No, this is inside inner loop.
+                    // But we used 'continue' before.
+                    // Wait, we need to mark cache as null then continue.
+                    continue;
+                }
+
                 // 1. Robust GLSL-style hash for this cell
                 const x = activeGridX;
                 const y = activeGridY;
                 const cellHash = (Math.abs(Math.sin(x * 12.9898 + y * 78.233 + planetSeed) * 43758.5453) % 1);
 
-                // 2. Large-scale noise density for clustering
-                const densityNoise = noise(activeGridX * 0.05 + 1000, activeGridY * 0.05 + 2000);
+                // Settlement Zones: Large areas where buildings cluster
+                const settlementNoise = noise(activeGridX * 0.015 + 500, activeGridY * 0.015 + 500);
+                const isSettlementZone = settlementNoise > 0.45;
 
-                if (densityNoise > 0.6) {
-                    if (cellHash < 0.25) { // Increased object density (was 0.15)
-                        const wx = activeGridX * cellSize;
-                        const wy = activeGridY * cellSize;
-                        const h = this._getTerrainHeightAt(wx, wy);
+                const wx = activeGridX * cellSize;
+                const wy = activeGridY * cellSize;
+                const h = this._getTerrainHeightAt(wx, wy);
+                const isHighTerrain = h > 100; // Lowered threshold for more defenses (was 120)
 
-                        const subHash = (cellHash * 123.45) % 1;
-                        const objSeed = cellHash * 100000;
+                // Get civilization color for consistent theming
+                const civColor = (this.planet && this.planet.cityLightsColor) ? this.planet.cityLightsColor : null;
 
-                        let obj;
+                let obj;
+                const subHash = (cellHash * 123.45) % 1;
+                const objSeed = cellHash * 100000;
 
-                        // Check terrain height - turrets go on high points (h > 100)
-                        const isHighTerrain = h > 100;
+                // --- 1. Strategic Defense (High Ground) ---
+                // Turrets and drones guard the peaks
+                if (isHighTerrain) {
+                    // 30% density on peaks
+                    if (cellHash < 0.3) {
+                        // Increased ratio of Turrets vs Drones
+                        if (subHash < 0.4) {
+                            obj = new DefenseDrone(wx, wy);
+                        } else {
+                            obj = new Turret(wx, wy);
+                        }
+                    }
+                }
+                // --- 2. Settlements (Low/Mid Ground) ---
+                else if (isSettlementZone) {
+                    // CHECKERBOARD SPACING: Strict Enforcement
+                    // Skip 'odd' cells to guarantee empty space between buildings
+                    if ((Math.abs(activeGridX) + Math.abs(activeGridY)) % 2 !== 0) {
+                        this.objectCache.set(cellKey, null);
+                        continue;
+                    }
 
-                        // Shield Generator Logic:
-                        // Spawn EXACTLY ONE per planet near the landing site
-                        // e.g. at grid (2, 2) relative to origin derived from seed
-                        // Force spawn at grid coordinates (2, 2) relative to spawn
+                    // Check local density within the settlement zone
+                    if (cellHash < 0.20) {
+                        // Shield Generator: Exact spawn
                         if (activeGridX === 2 && activeGridY === 2 && typeof ShieldGenerator !== 'undefined') {
                             obj = new ShieldGenerator(wx, wy);
-                        } else if (isHighTerrain) {
-                            // Turrets on high ground - HIGH density
-                            // 40% chance for a defense drone if not a turret
-                            if (Math.random() < 0.4) {
-                                obj = new DefenseDrone(wx, wy);
-                            } else {
-                                // 50% chance for turret if on high ground
-                                if (subHash < 0.5) {
-                                    obj = new Turret(wx, wy);
-                                }
-                                // Else leave empty (peaks shouldn't have cities)
-                            }
-                        } else if (subHash < 0.01) { // 5% chance for defense drone
-                            obj = new DefenseDrone(wx, wy);
-                        } else if (subHash < 0.1) {
-                            obj = new SurfaceStation(wx, wy);
-                        } else if (subHash < 0.15) { // Rare buildings
+                        }
+                        // Surface Station: The "Capital" or "Center" (Rare)
+                        else if (subHash < 0.03) { // 3% of buildings
+                            const stSize = 100 + (subHash * 1000);
+                            obj = new SurfaceStation(wx, wy, stSize, civColor);
+                        }
+                        // Standard Buildings (Common)
+                        else {
                             const bTypes = ['skyscraper', 'factory', 'silo'];
-                            const bIdx = Math.floor(subHash * 13) % bTypes.length;
-                            const size = 30 + (subHash * 50);
-                            obj = new Building(wx, wy, size, bTypes[bIdx], objSeed);
-                        }
+                            const typeIndex = Math.floor(objSeed) % bTypes.length;
+                            const bType = bTypes[typeIndex];
 
-                        // If no object created, skip adding to list
-                        if (obj) {
-                            obj.yOffset = h;
-                            this.surfaceObjects.push(obj);
-                            this.objectCache.set(cellKey, obj);
-                        } else {
-                            this.objectCache.set(cellKey, null);
+                            let bSize = 40 + (subHash * 40);
+                            if (bType === 'factory') bSize *= 1.2;
+
+                            obj = new Building(wx, wy, bSize, bType, objSeed, civColor);
                         }
-                    } else {
-                        // Mark cell as empty in cache
-                        this.objectCache.set(cellKey, null);
                     }
+                }
+                // --- 3. Outskirts / Wilderness ---
+                else {
+                    // Very rare rogue buildings or pirates
+                    if (cellHash < 0.005) {
+                        if (subHash < 0.5) obj = new DefenseDrone(wx, wy);
+                        else obj = new Building(wx, wy, 30, 'silo', objSeed, civColor);
+                    }
+                }
+
+                // If no object created, skip adding to list
+                if (obj) {
+                    obj.yOffset = h;
+                    this.surfaceObjects.push(obj);
+                    this.objectCache.set(cellKey, obj);
                 } else {
                     this.objectCache.set(cellKey, null);
                 }
+
             }
         }
 

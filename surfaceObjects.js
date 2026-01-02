@@ -40,12 +40,12 @@ class SurfaceObject {
 }
 
 class Building extends SurfaceObject {
-    constructor(x, y, size, type, seed = 0) {
+    constructor(x, y, size, type, seed = 0, customColor = null) {
         super(x, y, size);
         this.type = type || 'skyscraper';
         this.seed = seed;
 
-        this.color = this._getTypeColor();
+        this.color = this._getTypeColor(customColor);
         this.height = this._getTypeHeight();
 
         // Use type-specific max health
@@ -61,9 +61,21 @@ class Building extends SurfaceObject {
         }
     }
 
-    _getTypeColor() {
+    _getTypeColor(customBase) {
         const r = (Math.sin(this.seed) * 0.5 + 0.5) * 50;
         const g = (Math.cos(this.seed * 0.7) * 0.5 + 0.5) * 50;
+        // If custom base color is provided (from planet civ), use it with variation
+        if (customBase) {
+            const baseR = red(customBase);
+            const baseG = green(customBase);
+            const baseB = blue(customBase);
+            // Add variation but keep tone
+            return color(
+                Math.min(255, baseR + r - 25),
+                Math.min(255, baseG + g - 25),
+                Math.min(255, baseB + r - 25)
+            );
+        }
 
         switch (this.type) {
             case 'skyscraper': return color(60 + r, 70 + g, 90 + r);
@@ -416,16 +428,24 @@ class Turret extends SurfaceObject {
 }
 
 class SurfaceStation extends SurfaceObject {
-    constructor(x, y) {
-        super(x, y, 200);
+    constructor(x, y, size, customColor = null) {
+        super(x, y, size || 100); // Default to smaller size provided by generator
         this.health = 5000;
         this.maxHealth = 5000;
-        this.color = color(80, 80, 90);
+        if (customColor) {
+            this.color = customColor;
+        } else {
+            this.color = color(80, 80, 90);
+        }
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
         const extrusionAngle = 0.1;
         const now = millis();
+
+        // Derive component colors from base color for consistency
+        const headColor = lerpColor(this.color, color(220), 0.3);
+        const lightColor = lerpColor(this.color, color(255, 255, 200), 0.8);
 
         // --- Central Core Tower ---
         const coreH = 140;
@@ -446,23 +466,12 @@ class SurfaceStation extends SurfaceObject {
         const headRy = coreRy - headDvY;
 
         // Draw head on top of core
-        // We need to calculate the "start" of the head extrusion at the "end" of the core extrusion
-        // Core ended at coreRx, coreRy. We want head base there.
-        // Wait, drawBox3D/Cylinder draws "at" x,y then extrudes "back/up".
-        // Camera/Sun angle logic might be inverted in my check?
-        // Standard draw logic: (rx, ry) is TOP/FACE. (x,y) is BASE?
-        // drawCylinder(x, y ...): x,y is center of Front Face? No, Draw3D usually assumes x,y is center of BASE on ground.
-        // Let's re-verify Draw3D usage in `Building`.
-        // Building: rx = x - dvX. drawBox3D(rx, ry...).
-        // rx, ry is the ROOF position.
-        // So for the head to be on the roof, we simple continue offsetting.
-
-        Draw3D.drawCylinder(headRx, headRy, 90, headH, 16, color(100, 110, 130), extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(headRx, headRy, 90, headH, 16, headColor, extrusionAngle, sunAngle);
 
         // --- Windows/Lights ---
         // Simple ring of lights on the head
         noFill();
-        stroke(255, 255, 0, 200);
+        stroke(lightColor);
         strokeWeight(2);
         ellipse(headRx - headDvX, headRy - headDvY, 100, 30); // Top of head ring
 
