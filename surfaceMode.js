@@ -758,8 +758,8 @@ class SurfaceMode {
                 // 0. Habitation Check - Uninhabited planets spawn secret caches instead
                 if (this.planet && !this.planet.isInhabited) {
                     // SECRET CACHE SPAWNING for uninhabited planets
-                    // EXTREMELY rare (~0.02% per cell) - most planets have 0-3 caches
-                    if (cellHash < 0.0002 && typeof SecretCache !== 'undefined') {
+                    // EXTREMELY rare (~0.00001 per cell) - most planets have a few caches
+                    if (cellHash < 0.00001 && typeof SecretCache !== 'undefined') {
                         obj = new SecretCache(wx, wy, objSeed);
                         obj.yOffset = h;
                         this.surfaceObjects.push(obj);
