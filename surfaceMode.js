@@ -160,23 +160,22 @@ class SurfaceMode {
         // Start transition
         this.transitionStartTime = millis();
         this.transitionProgress = 0;
+        this._terrainReady = false; // Flag for deferred initialization
 
         // Mute space ambient sounds
         if (typeof ambientSoundManager !== 'undefined') {
             ambientSoundManager.stopAll();
         }
 
-        // Initialize terrain module
+        // Initialize terrain module (lightweight setup only)
         this.terrain.setPlanet(planet);
         this.terrain.createBuffer(width, height);
         this.projectiles = [];
         this.surfaceObjects = [];
 
-        // Generate initial terrain
-        if (this.terrain.generateMesh(this.surfaceX, this.surfaceY, true)) {
-            this.terrain.updateBuffer(this.altitude, width, height);
-            this._spawnObjects(this.terrain.getGridPosition().x, this.terrain.getGridPosition().y);
-        }
+        // NOTE: Heavy terrain operations (generateMesh, updateBuffer, _spawnObjects)
+        // are deferred to _updateTransition() to run during the fade animation,
+        // preventing the game from freezing during entry.
 
         // Set game state if gameStateManager available
         if (typeof gameStateManager !== 'undefined') {
@@ -289,8 +288,12 @@ class SurfaceMode {
             this._updateTransition();
         }
 
-        // Update gameplay
-        if (this.state === SURFACE_STATE.ACTIVE) {
+        // Start gameplay input handling as soon as terrain is ready (even during fade)
+        // This eliminates input lag at the end of the transition
+        const canProcessInput = this.state === SURFACE_STATE.ACTIVE ||
+            (this.state === SURFACE_STATE.ENTERING && this._terrainReady);
+
+        if (canProcessInput) {
             // Make player invulnerable while on surface (like when docked)
             if (this.player) {
                 this.player.isDockedAndInvulnerable = true;
@@ -329,8 +332,8 @@ class SurfaceMode {
             // Note: altitude control happens BEFORE _updatePhysics() so player.altitude
             // is calculated with current radar altitude, ensuring turrets see accurate data
 
-            // Check exit condition
-            if (this.altitude >= SURFACE_CONFIG.MAX_ALTITUDE) {
+            // Check exit condition (only when fully active)
+            if (this.state === SURFACE_STATE.ACTIVE && this.altitude >= SURFACE_CONFIG.MAX_ALTITUDE) {
                 this.exit();
             }
         }
@@ -343,13 +346,27 @@ class SurfaceMode {
         const elapsed = millis() - this.transitionStartTime;
         this.transitionProgress = Math.min(1, elapsed / SURFACE_CONFIG.TRANSITION_DURATION);
 
-        if (this.transitionProgress >= 1) {
-            if (this.state === SURFACE_STATE.ENTERING) {
+        // During ENTERING phase, perform deferred terrain initialization immediately
+        // This runs during the fade so the user sees the transition animation
+        if (this.state === SURFACE_STATE.ENTERING && !this._terrainReady) {
+            // Generate terrain mesh and buffer - this takes ~50-100ms
+            if (this.terrain.generateMesh(this.surfaceX, this.surfaceY, true)) {
+                this.terrain.updateBuffer(this.altitude, width, height);
+                this._spawnObjects(this.terrain.getGridPosition().x, this.terrain.getGridPosition().y);
+            }
+            this._terrainReady = true;
+        }
+
+        // Only transition to ACTIVE when BOTH fade is complete AND terrain is ready
+        // This ensures the fade holds at full coverage if terrain prep takes longer
+        if (this.state === SURFACE_STATE.ENTERING) {
+            if (this.transitionProgress >= 1 && this._terrainReady) {
                 this.state = SURFACE_STATE.ACTIVE;
                 console.log("Surface mode now active");
-            } else if (this.state === SURFACE_STATE.EXITING) {
-                this._completeExit();
             }
+            // Fade stays at 100% opacity until terrain is ready - user sees black screen
+        } else if (this.state === SURFACE_STATE.EXITING && this.transitionProgress >= 1) {
+            this._completeExit();
         }
     }
 
