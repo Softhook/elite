@@ -3,10 +3,15 @@ class SurfaceObject {
         this.pos = createVector(x, y);
         this.size = size || 50;
         this.health = 100;
+        this.maxHealth = 100;
         this.destroyed = false;
         this.color = color(150, 150, 150);
         this.yOffset = 0;
     }
+
+    // Aliases for HUD compatibility
+    get hull() { return this.health; }
+    get maxHull() { return this.maxHealth; }
 
     update(dt, player) {
     }
@@ -42,6 +47,18 @@ class Building extends SurfaceObject {
 
         this.color = this._getTypeColor();
         this.height = this._getTypeHeight();
+
+        // Use type-specific max health
+        if (this.type === 'factory') {
+            this.maxHealth = 400;
+            this.health = 400;
+        } else if (this.type === 'silo') {
+            this.maxHealth = 200;
+            this.health = 200;
+        } else {
+            this.maxHealth = 100;
+            this.health = 100;
+        }
     }
 
     _getTypeColor() {
@@ -402,67 +419,104 @@ class SurfaceStation extends SurfaceObject {
     constructor(x, y) {
         super(x, y, 200);
         this.health = 5000;
+        this.maxHealth = 5000;
         this.color = color(80, 80, 90);
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
         const extrusionAngle = 0.1;
+        const now = millis();
 
-        // --- Main Platform ---
-        const platH = 20;
-        const platDvX = platH * Math.sin(extrusionAngle);
-        const platDvY = platH * Math.cos(extrusionAngle);
-        const platRx = x - platDvX;
-        const platRy = y - platDvY;
+        // --- Central Core Tower ---
+        const coreH = 140;
+        const coreDvX = coreH * Math.sin(extrusionAngle);
+        const coreDvY = coreH * Math.cos(extrusionAngle);
+        const coreRx = x - coreDvX;
+        const coreRy = y - coreDvY;
 
-        Draw3D.drawCylinder(platRx, platRy, 100, platH, 16, this.color, extrusionAngle, sunAngle);
+        // Base structure (hexagonal feel)
+        Draw3D.drawCylinder(coreRx, coreRy, 60, coreH, 8, this.color, extrusionAngle, sunAngle);
 
-        // --- Control Tower ---
-        const towerH = 120;
-        const towerX = platRx - 30; // On platform roof
-        const towerY = platRy - 20;
+        // --- Command Center (Head) ---
+        // Wider section at top
+        const headH = 40;
+        const headDvX = headH * Math.sin(extrusionAngle);
+        const headDvY = headH * Math.cos(extrusionAngle);
+        const headRx = coreRx - headDvX; // Stack on top
+        const headRy = coreRy - headDvY;
 
-        const towerDvX = towerH * Math.sin(extrusionAngle);
-        const towerDvY = towerH * Math.cos(extrusionAngle);
-        const towerRx = towerX - towerDvX;
-        const towerRy = towerY - towerDvY;
+        // Draw head on top of core
+        // We need to calculate the "start" of the head extrusion at the "end" of the core extrusion
+        // Core ended at coreRx, coreRy. We want head base there.
+        // Wait, drawBox3D/Cylinder draws "at" x,y then extrudes "back/up".
+        // Camera/Sun angle logic might be inverted in my check?
+        // Standard draw logic: (rx, ry) is TOP/FACE. (x,y) is BASE?
+        // drawCylinder(x, y ...): x,y is center of Front Face? No, Draw3D usually assumes x,y is center of BASE on ground.
+        // Let's re-verify Draw3D usage in `Building`.
+        // Building: rx = x - dvX. drawBox3D(rx, ry...).
+        // rx, ry is the ROOF position.
+        // So for the head to be on the roof, we simple continue offsetting.
 
-        Draw3D.drawBox3D(towerRx, towerRy, 40, 40, towerH, color(100, 100, 120), extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(headRx, headRy, 90, headH, 16, color(100, 110, 130), extrusionAngle, sunAngle);
 
-        // --- Dome ---
-        // Sits on tower roof
-        // Dome "Base" = Tower Roof = (towerRx, towerRy)
-        // But drawDome takes Center Position.
-        // For Dome, extrudes from Base to Tip? Or Tip to Base?
-        // drawDome implementation:
-        // "Draw base/rim circle at specified position (top of dome, no offset)"
-        // "Height offset: starts at 0 (rim) and increases toward tip"
-        // Tip = Rim + dv * depthDir.
-        // So (x,y) is RIM.
-        // We want RIM to be on Tower Roof.
+        // --- Windows/Lights ---
+        // Simple ring of lights on the head
+        noFill();
+        stroke(255, 255, 0, 200);
+        strokeWeight(2);
+        ellipse(headRx - headDvX, headRy - headDvY, 100, 30); // Top of head ring
 
-        Draw3D.drawDome(towerRx, towerRy, 30, 8, color(200, 220, 255), extrusionAngle, sunAngle);
+        // --- Rotating Radar Dish ---
+        const radarH = 30;
+        const radarDvX = radarH * Math.sin(extrusionAngle);
+        const radarDvY = radarH * Math.cos(extrusionAngle);
+        const radarBaseX = headRx - headDvX;
+        const radarBaseY = headRy - headDvY;
 
-        // --- Pads --
-        // On Ground? Or Platform? Let's put on Ground for visual footprint extend
-        const padH = 10;
-        const padDvX = padH * Math.sin(extrusionAngle);
-        const padDvY = padH * Math.cos(extrusionAngle);
-        const padRy = y - padDvY;
-        const padRxLeft = (x - 80) - padDvX;
-        const padRxRight = (x + 80) - padDvX;
+        push();
+        translate(radarBaseX, radarBaseY);
+        const radarAngle = now * 0.001;
+        rotate(radarAngle);
 
-        Draw3D.drawCylinder(padRxLeft, padRy, 30, padH, 12, color(60), extrusionAngle, sunAngle);
-        Draw3D.drawCylinder(padRxRight, padRy, 30, padH, 12, color(60), extrusionAngle, sunAngle);
+        // Dish support
+        fill(60); noStroke();
+        rect(-5, -5, 10, 20);
 
-        // --- Details ---
-        // Add some "boxes" on the platform
-        const boxH = 15;
-        const bx = platRx + 40;
-        const by = platRy + 10;
-        const bdx = boxH * Math.sin(extrusionAngle);
-        const bdy = boxH * Math.cos(extrusionAngle);
-        Draw3D.drawBox3D(bx - bdx, by - bdy, 20, 20, boxH, color(40), extrusionAngle, sunAngle);
+        // Dish
+        fill(200); stroke(100); strokeWeight(1);
+        ellipse(0, -15, 60, 20); // The dish
+        pop();
+
+        // --- Landing Pads / Extensions ---
+        // 4 arms extending out
+        for (let i = 0; i < 4; i++) {
+            const angle = i * Math.PI / 2 + Math.PI / 4;
+            const dist = 90;
+            const armW = 40;
+            const armL = 100;
+
+            const ax = x + Math.cos(angle) * dist;
+            const ay = y + Math.sin(angle) * dist;
+
+            // Draw arms at ground level (base)
+            // But we need to use Draw3D to look right with perspective
+            // Draw a box for the arm
+
+            // Calculate visual pos
+            const armH = 20;
+            const armDvX = armH * Math.sin(extrusionAngle);
+            const armDvY = armH * Math.cos(extrusionAngle);
+            const armRx = ax - armDvX;
+            const armRy = ay - armDvY;
+
+            Draw3D.drawBox3D(armRx, armRy, armW, armL, armH, color(70, 75, 80), extrusionAngle, sunAngle);
+
+            // Landing lights
+            if ((now % 2000) < 1000) {
+                fill(255, 0, 0); noStroke();
+                ellipse(ax - armDvX, ay - armDvY, 5, 3);
+            }
+        }
     }
 }
 
@@ -550,9 +604,10 @@ class ShieldGenerator extends SurfaceObject {
  * Surface Pirate Ship - Flying hostile ship on planet surface
  * Patrols the surface and attacks the player
  */
-class SurfacePirate extends SurfaceObject {
+class DefenseDrone extends SurfaceObject {
     constructor(x, y) {
         super(x, y, 35);
+        this.type = "Defense Drone"; // Explicit type name for UI
         this.health = 150;
         this.maxHealth = 150;
         this.lastHitTime = 0;
@@ -727,7 +782,7 @@ class SurfacePirate extends SurfaceObject {
     takeDamage(amount) {
         this.health -= amount;
         this.lastHitTime = millis();
-        console.log(`Surface Pirate took ${amount} damage, health: ${this.health}/${this.maxHealth}`);
+        console.log(`Defense Drone took ${amount} damage, health: ${this.health}/${this.maxHealth}`);
         if (this.health <= 0) {
             this.destroyed = true;
             this.onDestroy();

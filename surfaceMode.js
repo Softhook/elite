@@ -730,13 +730,18 @@ class SurfaceMode {
                             obj = new ShieldGenerator(wx, wy);
                         } else if (isHighTerrain) {
                             // Turrets on high ground - HIGH density
-                            // 50% chance for turret if on high ground
-                            if (subHash < 0.5) {
-                                obj = new Turret(wx, wy);
+                            // 40% chance for a defense drone if not a turret
+                            if (Math.random() < 0.4) {
+                                obj = new DefenseDrone(wx, wy);
+                            } else {
+                                // 50% chance for turret if on high ground
+                                if (subHash < 0.5) {
+                                    obj = new Turret(wx, wy);
+                                }
+                                // Else leave empty (peaks shouldn't have cities)
                             }
-                            // Else leave empty (peaks shouldn't have cities)
-                        } else if (subHash < 0.01) { // 5% chance for surface pirates
-                            obj = new SurfacePirate(wx, wy);
+                        } else if (subHash < 0.01) { // 5% chance for defense drone
+                            obj = new DefenseDrone(wx, wy);
                         } else if (subHash < 0.1) {
                             obj = new SurfaceStation(wx, wy);
                         } else if (subHash < 0.15) { // Rare buildings
@@ -813,6 +818,42 @@ class SurfaceMode {
                 // Pass world coordinates. Object.draw translates to these.
                 // Camera will subtract player.pos automatically.
                 obj.draw(obj.pos.x, obj.pos.y - (obj.yOffset || 0), sunAngle);
+            }
+
+            // Draw Target Reticle if this object is the player's target
+            if (this.player && this.player.target === obj) {
+                const drawX = obj.pos.x;
+                const drawY = obj.pos.y - (obj.yOffset || 0);
+
+                push();
+                translate(drawX, drawY);
+                // Reticle drawing (consistent with EnemyRendering style)
+                noFill();
+                stroke(0, 255, 0, 200); // Green
+                strokeWeight(2);
+
+                const size = obj.size || 50;
+                // Draw circle slightly larger than object
+                ellipse(0, 0, size * 1.6, size * 1.6);
+
+                // Corner brackets
+                const bracketSize = size * 0.3;
+                const offset = size * 0.7;
+
+                // Top-left
+                line(-offset, -offset, -offset + bracketSize, -offset);
+                line(-offset, -offset, -offset, -offset + bracketSize);
+                // Top-right
+                line(offset, -offset, offset - bracketSize, -offset);
+                line(offset, -offset, offset, -offset + bracketSize);
+                // Bottom-left
+                line(-offset, offset, -offset + bracketSize, offset);
+                line(-offset, offset, -offset, offset - bracketSize);
+                // Bottom-right
+                line(offset, offset, offset - bracketSize, offset);
+                line(offset, offset, offset, offset - bracketSize);
+
+                pop();
             }
 
             // Debug visualization (only if debugMode is enabled)

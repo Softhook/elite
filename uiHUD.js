@@ -787,7 +787,13 @@ class UIHUD {
         const isAsteroid = target && (target.constructor && target.constructor.name === 'Asteroid');
         const isSpaceObject = target && (target.constructor && target.constructor.name === 'SpaceObject');
 
-        if (!hasShipIdentity && !isAsteroid && !isSpaceObject) return;
+        // Surface object detection
+        const isSurfaceObject = target && (
+            (target.isSurface === true) || // Explicit flag
+            (target.constructor && ['Turret', 'DefenseDrone', 'ShieldGenerator', 'Building', 'SurfaceStation'].includes(target.constructor.name))
+        );
+
+        if (!hasShipIdentity && !isAsteroid && !isSpaceObject && !isSurfaceObject) return;
 
         const panelWidth = Math.min(320, Math.max(240, width * 0.22));
         const padding = 12;
@@ -815,9 +821,15 @@ class UIHUD {
             }
         } else if (isSpaceObject) {
             pilotName = (typeof target.getDisplayName === 'function') ? target.getDisplayName() : 'Space Object';
+        } else if (isSurfaceObject) {
+            pilotName = target.type || target.constructor.name || 'Surface Feature';
         }
 
-        const shipName = this._getTargetShipName(target);
+        // For surface objects, use empty ship name (info is in pilotName) or same
+        let shipName = this._getTargetShipName(target);
+        if (isSurfaceObject) {
+            shipName = '';
+        }
         const roleLabel = this._formatRoleLabel(target.role);
         const factionLabel = this._formatFactionLabel(target.faction);
         const wantedLabel = (typeof target.isWanted === 'boolean') ? (target.isWanted ? 'Wanted' : null) : null;
@@ -898,6 +910,13 @@ class UIHUD {
                 infoLines.push(`Ore Quality: Rich (${multiplier}x yield)`);
             } else {
                 infoLines.push('Ore Quality: Standard');
+            }
+        }
+
+        // Add surface object-specific info
+        if (isSurfaceObject) {
+            if (target.health !== undefined) {
+                infoLines.push(`Health: ${Math.floor(target.health)}`);
             }
         }
 

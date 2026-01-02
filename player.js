@@ -2734,6 +2734,35 @@ class Player {
     // Ensure you have a way to set this.target, e.g., via mouse click on an enemy:
     handleMousePressedForTargeting() { // Call this from your main sketch mousePressed
         if (mouseButton === LEFT) { // Or whatever button you use for targeting
+            // Surface mode targeting - check surface objects (turrets, pirates, buildings)
+            if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+                const surfaceObj = this._checkSurfaceObjectClick();
+                if (surfaceObj) {
+                    if (this.target === surfaceObj) {
+                        this.target = null;
+                        if (typeof uiManager !== 'undefined') {
+                            uiManager.addMessage(`Target unlocked.`, [255, 255, 0]);
+                        }
+                    } else {
+                        this.target = surfaceObj;
+                        // Get display name from type property or constructor name
+                        const label = surfaceObj.type || surfaceObj.constructor?.name || 'Target';
+                        if (typeof uiManager !== 'undefined') {
+                            uiManager.addMessage(`Target locked: ${label}`, [0, 255, 0]);
+                        }
+                    }
+                    return;
+                }
+                // If clicking on empty space in surface mode, clear target
+                if (this.target !== null) {
+                    this.target = null;
+                    if (typeof uiManager !== 'undefined') {
+                        uiManager.addMessage(`Target unlocked.`, [255, 255, 0]);
+                    }
+                }
+                return;
+            }
+
             if (this.currentSystem && this.currentSystem.enemies) {
                 const worldMx = mouseX + (this.pos.x - width / 2);
                 const worldMy = mouseY + (this.pos.y - height / 2);
@@ -2841,6 +2870,39 @@ class Player {
                 }
             }
         }
+    }
+
+    /**
+     * Check if a surface object was clicked (for surface mode targeting)
+     * @returns {SurfaceObject|null} The clicked surface object, or null if none
+     * @private
+     */
+    _checkSurfaceObjectClick() {
+        if (!surfaceMode || !surfaceMode.surfaceObjects) return null;
+
+        // Convert screen coords to world coords (inverse of surface mode camera transform)
+        // Surface mode uses: translate(center) -> scale(perspective) -> translate(-player)
+        // So inverse is: (screen - center) / scale + player
+        const perspectiveScale = map(surfaceMode.altitude, 10, 500, 1.2, 0.6);
+        const worldX = (mouseX - width / 2) / perspectiveScale + this.pos.x;
+        const worldY = (mouseY - height / 2) / perspectiveScale + this.pos.y;
+
+        for (const obj of surfaceMode.surfaceObjects) {
+            if (!obj || obj.destroyed) continue;
+
+            // Use object's size for hit detection, with some buffer for easier clicking
+            const hitRadius = (obj.size || 40) / 2 + 15;
+
+            // Account for visual offset (drawing subtracts yOffset)
+            const visualY = obj.pos.y - (obj.yOffset || 0);
+            const d = dist(worldX, worldY, obj.pos.x, visualY);
+
+            if (d < hitRadius) {
+                return obj;
+            }
+        }
+
+        return null;
     }
 
     // =========================================================================
