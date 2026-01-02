@@ -558,6 +558,10 @@ class SurfacePirate extends SurfaceObject {
         this.lastHitTime = 0;
         this.isSurface = true; // Mark as surface entity for sound filtering
 
+        // Flying altitude - pirates fly at this height above terrain
+        this.flyingHeight = 80; // Units above ground
+        this.altitude = 0; // Absolute altitude (terrain + flyingHeight), updated each frame
+
         // Movement
         this.angle = Math.random() * Math.PI * 2;
         this.speed = 0;
@@ -655,6 +659,13 @@ class SurfacePirate extends SurfaceObject {
         this.pos.x += Math.cos(this.angle) * this.speed * dt;
         this.pos.y += Math.sin(this.angle) * this.speed * dt;
 
+        // Update yOffset and altitude based on terrain
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.terrain) {
+            const terrainHeight = surfaceMode.terrain.getHeightAt(this.pos.x, this.pos.y);
+            this.yOffset = terrainHeight;
+            this.altitude = terrainHeight + this.flyingHeight;
+        }
+
         // Apply drag
         this.speed *= Math.pow(0.95, dt * 60);
     }
@@ -663,14 +674,28 @@ class SurfacePirate extends SurfaceObject {
         if (typeof Projectile === 'undefined') return;
         if (!starSystem || !starSystem.projectiles) return;
 
-        // Muzzle offset
-        const muzzleOffset = 30;
-        const px = this.pos.x + Math.cos(this.angle) * muzzleOffset;
-        const py = this.pos.y + Math.sin(this.angle) * muzzleOffset;
+        // Calculate visual muzzle position matching the draw() method
+        // The ship is drawn at (pos.x, pos.y - yOffset) with extrusion applied
+        const extrusionAngle = 0.5;
+        const sz = this.size;
+        const bodyH = sz * 0.4;
+
+        // Visual base position (same as passed to draw)
+        const visualX = this.pos.x;
+        const visualY = this.pos.y - (this.yOffset || 0);
+
+        // Extrusion offset for the 3D visual effect
+        const extDvX = bodyH * Math.sin(extrusionAngle);
+        const extDvY = bodyH * Math.cos(extrusionAngle);
+
+        // Muzzle is at front of ship (angle direction) from the extruded center
+        const muzzleOffset = sz * 0.5; // Match the front vertex position
+        const muzzleX = visualX - extDvX + Math.cos(this.angle) * muzzleOffset;
+        const muzzleY = visualY - extDvY + Math.sin(this.angle) * muzzleOffset;
 
         const proj = new Projectile(
-            px,
-            py,
+            muzzleX,
+            muzzleY,
             this.angle,
             this,
             12,               // Speed
@@ -683,19 +708,19 @@ class SurfacePirate extends SurfaceObject {
 
         starSystem.projectiles.push(proj);
 
-        // Mark as surface projectile - use weaponSystem's standard method
-        if (typeof WeaponSystem !== 'undefined' && WeaponSystem._applySurfaceProperties) {
-            WeaponSystem._applySurfaceProperties(proj, this);
-        } else {
-            // Fallback if weaponSystem not available
-            proj.isSurface = true;
-            proj.ownerType = 'pirate';
-            proj.altitude = this.altitude || 0;
-        }
+        // Mark as surface projectile with proper altitude
+        proj.isSurface = true;
+        proj.ownerType = 'pirate';
+        proj.altitude = this.altitude; // Pirate's flying altitude
+
+        // Set target altitude for terrain-aware trajectory
+        // Projectile will descend/ascend toward player's altitude
+        proj.startAltitude = this.altitude;
+        proj.targetAltitude = player.altitude || 0;
 
         // Play laser sound with proper world positioning
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
-            soundManager.playWorldSound('laser', px, py, player.pos, this);
+            soundManager.playWorldSound('laser', muzzleX, muzzleY, player.pos, this);
         }
     }
 

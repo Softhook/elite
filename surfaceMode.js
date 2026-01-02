@@ -304,8 +304,12 @@ class SurfaceMode {
 
             // Update terrain - regenerate if player moved to new grid cell
             if (this.terrain.generateMesh(this.surfaceX, this.surfaceY)) {
-                this.terrain.updateBuffer(this.altitude, width, height);
+                // Force buffer update when mesh regenerates (player moved to new grid cell)
+                this.terrain.updateBuffer(this.altitude, width, height, true);
                 this._spawnObjects(this.terrain.getGridPosition().x, this.terrain.getGridPosition().y);
+            } else {
+                // Conditionally update buffer based on altitude change (skip if stable)
+                this.terrain.updateBuffer(this.altitude, width, height);
             }
 
             // Update surface objects (single pass, dt-corrected)
@@ -433,6 +437,17 @@ class SurfaceMode {
 
             const projPos = proj.pos;
 
+            // For enemy projectiles with trajectory data, interpolate altitude toward target
+            if (proj.startAltitude !== undefined && proj.targetAltitude !== undefined && proj.owner !== this.player) {
+                // Calculate travel progress based on remaining lifespan
+                const maxLife = 120; // Original lifespan
+                const elapsed = maxLife - (proj.lifespan || maxLife);
+                const progress = Math.min(1, elapsed / maxLife);
+
+                // Interpolate altitude from start to target
+                proj.altitude = proj.startAltitude + (proj.targetAltitude - proj.startAltitude) * progress;
+            }
+
             // Check terrain collision (ground hit)
             const terrainH = this._getTerrainHeightAt(projPos.x, projPos.y);
             const projAlt = proj.altitude || 0;
@@ -484,26 +499,34 @@ class SurfaceMode {
             }
         }
 
-        // Also check turret projectiles hitting the player
+        // Also check turret/pirate projectiles hitting the player
         for (let proj of this.starSystem.projectiles) {
             if (proj.destroyed) continue;
             if (!proj.isSurface) continue;
             if (proj.owner === this.player) continue; // Skip player's own projectiles
             if (!this.player || this.player.destroyed) continue;
 
-            // Check if turret projectile hits player
+            // Check if enemy projectile hits player
             const dx = proj.pos.x - this.player.pos.x;
             const dy = proj.pos.y - this.player.pos.y;
             const distSq = dx * dx + dy * dy;
             const hitRadiusSq = this.player.size * this.player.size;
 
             if (distSq < hitRadiusSq) {
-                console.log(`Player hit by surface projectile!`);
-                this.player.takeDamage(proj.damage || 5);
+                // Also verify altitude match - projectile must be near player's altitude
+                const playerAlt = this.player.altitude || 0;
+                const projAlt = proj.altitude || 0;
+                const altDiff = Math.abs(playerAlt - projAlt);
 
-                // Create explosion at hit point
-                this._createSurfaceExplosion(proj.pos.x, proj.pos.y, 0, 15, [255, 50, 50]);
-                proj.destroyed = true;
+                // Allow hit if altitude difference is within reasonable range (50 units)
+                if (altDiff < 50) {
+                    console.log(`Player hit by surface projectile!`);
+                    this.player.takeDamage(proj.damage || 5);
+
+                    // Create explosion at hit point
+                    this._createSurfaceExplosion(proj.pos.x, proj.pos.y, 0, 15, [255, 50, 50]);
+                    proj.destroyed = true;
+                }
             }
         }
     }

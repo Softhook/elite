@@ -2816,6 +2816,11 @@ class CommunicationSystem {
             return false;
         }
 
+        // Suppress missionary propaganda while on planet surface
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+            return false;
+        }
+
         // Use higher chance since this is intentionally triggered during preaching
         const chance = 0.85; // 85% chance when called
         if (this._random() > chance) {

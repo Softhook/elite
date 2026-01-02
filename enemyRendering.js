@@ -389,7 +389,8 @@ class EnemyRendering {
         // Turret drawing removed - bullets fire without visible turret
 
         // Draw tangle effect if active
-        if (this.dragMultiplier > 1.0) {
+        // Skip if in surface mode - don't leak space visuals onto the planet surface
+        if (this.dragMultiplier > 1.0 && (typeof surfaceMode === 'undefined' || !surfaceMode || !surfaceMode.isActive())) {
             // Simply check if we still have drag effect time remaining
             if (this.dragEffectTimer > 0) {
                 // Calculate opacity - fade out during last second
@@ -607,53 +608,61 @@ class EnemyRendering {
 
         // --- Repair Beam Effect (REPAIR role) ---
         // Use _isRepairingTarget flag to stay consistent with AI state
+        // Skip if in surface mode - don't leak space visuals onto the planet surface
         if (this.role === AI_ROLE.REPAIR && this._isRepairingTarget && this.repairTarget && this.repairTarget.pos) {
-            push();
+            // Only render repair beam if NOT in surface mode
+            if (typeof surfaceMode === 'undefined' || !surfaceMode || !surfaceMode.isActive()) {
+                push();
 
-            // Draw pulsing repair beam
-            const pulsePhase = (now * 0.003) % 1;
-            const alpha = 100 + 100 * Math.sin(pulsePhase * TWO_PI);
+                // Draw pulsing repair beam
+                const pulsePhase = (now * 0.003) % 1;
+                const alpha = 100 + 100 * Math.sin(pulsePhase * TWO_PI);
 
-            stroke(100, 255, 200, alpha);
-            strokeWeight(2 + Math.sin(pulsePhase * TWO_PI) * 0.5);
-            line(this.pos.x, this.pos.y, this.repairTarget.pos.x, this.repairTarget.pos.y);
+                stroke(100, 255, 200, alpha);
+                strokeWeight(2 + Math.sin(pulsePhase * TWO_PI) * 0.5);
+                line(this.pos.x, this.pos.y, this.repairTarget.pos.x, this.repairTarget.pos.y);
 
-            // Draw glow at endpoints
-            noStroke();
-            fill(100, 255, 200, alpha * 0.6);
-            ellipse(this.pos.x, this.pos.y, 8, 8);
-            ellipse(this.repairTarget.pos.x, this.repairTarget.pos.y, 12, 12);
+                // Draw glow at endpoints
+                noStroke();
+                fill(100, 255, 200, alpha * 0.6);
+                ellipse(this.pos.x, this.pos.y, 8, 8);
+                ellipse(this.repairTarget.pos.x, this.repairTarget.pos.y, 12, 12);
 
-            pop();
+                pop();
+            }
         }
 
         // --- Reconstruction Ring Effect (REPAIR role) ---
+        // Skip if in surface mode
         if (this.role === AI_ROLE.REPAIR && this._reconstructionTimer !== null && this._reconstructionTimer > 0) {
-            push();
-            translate(this.pos.x, this.pos.y);
+            // Only render reconstruction ring if NOT in surface mode
+            if (typeof surfaceMode === 'undefined' || !surfaceMode || !surfaceMode.isActive()) {
+                push();
+                translate(this.pos.x, this.pos.y);
 
-            const progress = 1 - (this._reconstructionTimer / 5.0); // 5 seconds total
-            const radius = this.size * (1 + progress * 2);
-            const alpha = 150 * (1 - progress);
+                const progress = 1 - (this._reconstructionTimer / 5.0); // 5 seconds total
+                const radius = this.size * (1 + progress * 2);
+                const alpha = 150 * (1 - progress);
 
-            noFill();
-            stroke(255, 200, 100, alpha);
-            strokeWeight(2);
-            ellipse(0, 0, radius * 2, radius * 2);
+                noFill();
+                stroke(255, 200, 100, alpha);
+                strokeWeight(2);
+                ellipse(0, 0, radius * 2, radius * 2);
 
-            // Rotating construction indicators
-            const rotation = (now * 0.002) % TWO_PI;
-            for (let i = 0; i < 4; i++) {
-                const angle = rotation + i * (TWO_PI / 4);
-                const x = Math.cos(angle) * radius;
-                const y = Math.sin(angle) * radius;
+                // Rotating construction indicators
+                const rotation = (now * 0.002) % TWO_PI;
+                for (let i = 0; i < 4; i++) {
+                    const angle = rotation + i * (TWO_PI / 4);
+                    const x = Math.cos(angle) * radius;
+                    const y = Math.sin(angle) * radius;
 
-                fill(255, 200, 100, alpha);
-                noStroke();
-                ellipse(x, y, 6, 6);
+                    fill(255, 200, 100, alpha);
+                    noStroke();
+                    ellipse(x, y, 6, 6);
+                }
+
+                pop();
             }
-
-            pop();
         }
         // --- End Other Effects ---
 

@@ -29,6 +29,13 @@ class SurfaceTerrain {
 
         // Culling statistics for debug overlay
         this.lastCullStats = null;
+
+        // Performance: Height sampling cache (cleared each frame)
+        this.heightCache = new Map();
+        this.heightCacheFrame = -1;
+
+        // Performance: Track last buffer altitude to avoid redundant updates
+        this.lastBufferAltitude = -1;
     }
 
     /**
@@ -86,6 +93,18 @@ class SurfaceTerrain {
     getHeightAt(worldX, worldY) {
         if (!this.planet) return 0;
 
+        // Performance: Clear cache each frame and use cached values
+        if (typeof frameCount !== 'undefined' && frameCount !== this.heightCacheFrame) {
+            this.heightCache.clear();
+            this.heightCacheFrame = frameCount;
+        }
+
+        // Use integer grid key for cache (reduces cache misses from floating point)
+        const key = `${Math.floor(worldX / 10)},${Math.floor(worldY / 10)}`;
+        if (this.heightCache.has(key)) {
+            return this.heightCache.get(key);
+        }
+
         const featureRand = this._getFeatureRand();
         const sampleMultiplier = 0.003;
 
@@ -94,7 +113,10 @@ class SurfaceTerrain {
         const nz = featureRand * 0.6;
 
         const noiseVal = noise(nx, ny, nz);
-        return (noiseVal - 0.5) * 500;
+        const height = (noiseVal - 0.5) * 500;
+
+        this.heightCache.set(key, height);
+        return height;
     }
 
     /**
@@ -175,8 +197,16 @@ class SurfaceTerrain {
      * @param {number} screenWidth - Screen width
      * @param {number} screenHeight - Screen height
      */
-    updateBuffer(altitude, screenWidth, screenHeight) {
+    updateBuffer(altitude, screenWidth, screenHeight, forceUpdate = false) {
         if (!this.buffer || this.mesh.length === 0) return;
+
+        // Performance: Skip buffer update if altitude hasn't changed significantly
+        // This avoids expensive redraws when player is moving horizontally at constant altitude
+        const altitudeDelta = Math.abs(altitude - this.lastBufferAltitude);
+        if (!forceUpdate && this.lastBufferAltitude >= 0 && altitudeDelta < 5) {
+            return;
+        }
+        this.lastBufferAltitude = altitude;
 
         this.buffer.background(10, 15, 25);
         this.buffer.clear();
@@ -205,8 +235,14 @@ class SurfaceTerrain {
         const bufferTop = -visibleHalfHeight;
         const bufferBottom = visibleHalfHeight;
 
-        this.buffer.stroke(0, 0, 0, 40);
-        this.buffer.strokeWeight(0.5);
+        // Performance: Disable strokes at high altitude when quads are small
+        // Strokes are expensive and barely visible when zoomed out
+        if (perspectiveScale > 0.8) {
+            this.buffer.stroke(0, 0, 0, 40);
+            this.buffer.strokeWeight(0.5);
+        } else {
+            this.buffer.noStroke();
+        }
 
         let cellsDrawn = 0;
         let cellsCulled = 0;
