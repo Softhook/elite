@@ -1800,7 +1800,7 @@ class Player {
             pop();
         }
 
-        // Draw force wave effect (skip in surface mode - handled by surfaceMode._drawForceWaves)
+        // Surface mode filter: skip force wave effect in surface mode (handled by surfaceMode._drawForceWaves)
         const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
         if (!inSurfaceMode && this.lastForceWave && millis() - this.lastForceWave.time < 300) {
             const timeSinceForce = millis() - this.lastForceWave.time;
@@ -2007,7 +2007,7 @@ class Player {
 
             // Create player explosion (larger, more dramatic)
             if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
-                // Check if we're in surface mode for proper explosion rendering
+                // Surface mode filter: check if we're in surface mode for proper explosion rendering
                 const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
 
                 // Main large explosion

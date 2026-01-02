@@ -2285,7 +2285,7 @@ class StarSystem {
             const projSize = proj.size || 3;
             let hit = false;
 
-            // In Surface Mode, surface projectiles should NOT hit space entities
+            // Surface mode filter: surface projectiles should NOT hit space entities
             const isSurfaceProj = proj.isSurface || (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive() && proj.owner === this.player);
 
             if (!isSurfaceProj) {
@@ -2299,7 +2299,7 @@ class StarSystem {
                 if (this._checkProjectileMineCollision(proj, i, distCheckVector)) continue;
             }
 
-            // Check player collision (normally skipped while docked, but enabled for surface mode)
+            // Surface mode filter: check player collision in surface mode (normally skipped while docked)
             if (typeof surfaceMode !== 'undefined' && surfaceMode.isActive() && !this.player.destroyed && proj.owner !== this.player) {
                 const combinedRadius = this.player.size + projSize;
                 distCheckVector.set(this.player.pos.x - projPos.x, this.player.pos.y - projPos.y);
@@ -2402,7 +2402,7 @@ class StarSystem {
                     const combinedRadiusSq = combinedRadius * combinedRadius;
                     distCheckVector.set(enemy.pos.x - projPos.x, enemy.pos.y - projPos.y);
 
-                    // FIX: Prevent surface player projectiles from hitting space enemies
+                    // Surface mode filter: prevent surface player projectiles from hitting space enemies
                     if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
                         continue;
                     }

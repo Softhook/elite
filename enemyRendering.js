@@ -389,7 +389,7 @@ class EnemyRendering {
         // Turret drawing removed - bullets fire without visible turret
 
         // Draw tangle effect if active
-        // Skip if in surface mode - don't leak space visuals onto the planet surface
+        // Surface mode filter: skip in surface mode - don't leak space visuals onto planet surface
         if (this.dragMultiplier > 1.0 && (typeof surfaceMode === 'undefined' || !surfaceMode || !surfaceMode.isActive())) {
             // Simply check if we still have drag effect time remaining
             if (this.dragEffectTimer > 0) {
@@ -610,7 +610,7 @@ class EnemyRendering {
         // Use _isRepairingTarget flag to stay consistent with AI state
         // Skip if in surface mode - don't leak space visuals onto the planet surface
         if (this.role === AI_ROLE.REPAIR && this._isRepairingTarget && this.repairTarget && this.repairTarget.pos) {
-            // Only render repair beam if NOT in surface mode
+            // Surface mode filter: skip in surface mode - don't leak space visuals onto planet surface
             if (typeof surfaceMode === 'undefined' || !surfaceMode || !surfaceMode.isActive()) {
                 push();
 
@@ -635,7 +635,7 @@ class EnemyRendering {
         // --- Reconstruction Ring Effect (REPAIR role) ---
         // Skip if in surface mode
         if (this.role === AI_ROLE.REPAIR && this._reconstructionTimer !== null && this._reconstructionTimer > 0) {
-            // Only render reconstruction ring if NOT in surface mode
+            // Surface mode filter: skip in surface mode - don't leak space visuals onto planet surface
             if (typeof surfaceMode === 'undefined' || !surfaceMode || !surfaceMode.isActive()) {
                 push();
                 translate(this.pos.x, this.pos.y);

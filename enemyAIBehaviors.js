@@ -2916,7 +2916,7 @@ class EnemyAIBehaviors {
         // Only spawn effects occasionally to avoid performance issues
         if (Math.random() > EnemyAIBehaviors.REPAIR_CONFIG.EFFECT_SPAWN_CHANCE.repair) return;
 
-        // Skip effects if player is in surface mode - don't leak space visuals
+        // Surface mode filter: skip in surface mode - don't leak space visuals onto planet surface
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) return;
 
         if (!this.currentSystem) return;
@@ -2951,7 +2951,7 @@ class EnemyAIBehaviors {
         // Spawn effects occasionally
         if (Math.random() > EnemyAIBehaviors.REPAIR_CONFIG.EFFECT_SPAWN_CHANCE.construction) return;
 
-        // Skip effects if player is in surface mode - don't leak space visuals
+        // Surface mode filter: skip in surface mode - don't leak space visuals onto planet surface
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) return;
 
         if (!this.currentSystem) return;

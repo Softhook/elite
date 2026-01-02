@@ -1593,7 +1593,7 @@ class SoundManager {
      * @param {p5.Vector} listenerPos - The world position of the listener (player).
      */
     playWorldSound(name, sourceX, sourceY, listenerPos, sourceEntity = null) {
-        // In surface mode, only allow sounds from surface entities
+        // Surface mode filter: only allow sounds from surface entities or player
         // Block all space battle sounds from enemies/NPCs updating in background
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
             // If sourceEntity is provided, check if it's a surface entity
@@ -1880,7 +1880,7 @@ class SoundManager {
      * @param {object} [sourceEntity=null] - Optional source entity for surface mode filtering.
      */
     playSound(name, volMultiplier = 1.0, sourceEntity = null) {
-        // In surface mode, block combat sounds from space entities
+        // Surface mode filter: block combat sounds from space entities
         // Uses cached Set to avoid allocation on every call
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
             // Lazy-init static cache for combat sounds

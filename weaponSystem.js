@@ -301,7 +301,7 @@ class WeaponSystem {
             // Player attacking enemies - use concat to avoid spread operator overhead
             entitiesToProcess = system.enemies.concat(system.asteroids);
 
-            // In surface mode, also target surface objects (turrets, buildings, etc.)
+            // Surface mode filter: also target surface objects (turrets, buildings) in surface mode
             if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
                 const surfaceObjects = surfaceMode.surfaceObjects;
                 if (surfaceObjects && surfaceObjects.length) {
@@ -317,7 +317,7 @@ class WeaponSystem {
             entitiesToProcess = [];
         }
 
-        // Check if this is a surface mode force wave
+        // Surface mode filter: track whether this is a surface mode force wave
         const isSurfaceWave = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
 
         // Create force wave in the system (reuse objects to minimize allocation)
@@ -615,6 +615,7 @@ class WeaponSystem {
      * @private
      */
     static _applySurfaceProperties(proj, owner) {
+        // Surface mode filter: apply surface-specific properties to projectiles
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
             proj.altitude = (owner.altitude || 0) + (owner.yOffset || 0);
             proj.ownerType = (owner.shipDef) ? 'ship' : 'turret';
@@ -922,7 +923,7 @@ class WeaponSystem {
             }
         }
 
-        // Allow beams to hit surface objects when in surface mode (turrets, buildings, etc.)
+        // Surface mode filter: allow beams to hit surface objects when in surface mode
         if (isPlayer && typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
             const surfaceObjects = surfaceMode.surfaceObjects;
             if (surfaceObjects && surfaceObjects.length) {
@@ -974,7 +975,7 @@ class WeaponSystem {
 
         // Find nearest enemy if player is firing
         if (owner instanceof Player) {
-            // In surface mode, target surface objects instead of space enemies
+            // Surface mode filter: target surface objects instead of space enemies in surface mode
             if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
                 const surfaceObjects = surfaceMode.surfaceObjects;
                 if (!surfaceObjects || surfaceObjects.length === 0) return null;
@@ -1314,7 +1315,7 @@ class WeaponSystem {
                         [255, 0, 0];
             }
 
-            // Pass isSurface flag so explosions render in surface mode
+            // Surface mode filter: pass isSurface flag so explosions render in surface mode
             const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
             system.addExplosion(hitPoint.x, hitPoint.y, hitSize, hitColor, inSurfaceMode);
         }

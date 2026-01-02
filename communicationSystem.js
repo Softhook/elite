@@ -2398,17 +2398,12 @@ class CommunicationSystem {
     }
 
     _maybeSend(enemy, category, templates, options = {}) {
-        // Suppress space chatter while on planet surface
-        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.state === SURFACE_STATE.ACTIVE) {
-            return; // Contextual chatter from space ships is suppressed
+        // Surface mode filter: suppress space chatter while on planet surface
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+            return false; // Contextual chatter from space ships is suppressed
         }
 
-        if (!enemy || !this.player || !this.uiManager) return;
-        // Suppress communications while on planet surface
-        if (typeof gameStateManager !== 'undefined' &&
-            gameStateManager.currentState === 'SURFACE_MODE') {
-            return false;
-        }
+        if (!enemy || !this.player || !this.uiManager) return false;
 
         if (!this.uiManager || !Array.isArray(templates) || templates.length === 0) {
             return false;
@@ -2816,7 +2811,7 @@ class CommunicationSystem {
             return false;
         }
 
-        // Suppress missionary propaganda while on planet surface
+        // Surface mode filter: suppress missionary propaganda while on planet surface
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
             return false;
         }
