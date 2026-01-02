@@ -255,7 +255,7 @@ class ImperialBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.5;
+        const extrusionAngle = 0.15;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -339,7 +339,7 @@ class SeparatistBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.5;
+        const extrusionAngle = 0.15;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -420,7 +420,7 @@ class MilitaryBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.5;
+        const extrusionAngle = 0.15;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -500,7 +500,7 @@ class PostHumanBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.5;
+        const extrusionAngle = 0.15;
         const sz = this.size;
         const pulse = (Math.sin(this.pulsePhase) * 0.5 + 0.5);
 
@@ -572,7 +572,7 @@ class OffworldBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.5;
+        const extrusionAngle = 0.15;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -651,7 +651,7 @@ class MiningBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.5;
+        const extrusionAngle = 0.15;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -728,7 +728,7 @@ class IndustrialBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.5;
+        const extrusionAngle = 0.15;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -802,7 +802,7 @@ class RefineryBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.5;
+        const extrusionAngle = 0.15;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -879,7 +879,7 @@ class AgriculturalBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.5;
+        const extrusionAngle = 0.15;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -947,7 +947,7 @@ class ServiceBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.5;
+        const extrusionAngle = 0.15;
         const sz = this.size;
 
         if (this.variant === 0) {

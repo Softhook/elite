@@ -758,8 +758,8 @@ class SurfaceMode {
                 // 0. Habitation Check - Uninhabited planets spawn secret caches instead
                 if (this.planet && !this.planet.isInhabited) {
                     // SECRET CACHE SPAWNING for uninhabited planets
-                    // Very rare spawn rate (~0.5% per cell) for exploration reward
-                    if (cellHash < 0.005 && typeof SecretCache !== 'undefined') {
+                    // EXTREMELY rare (~0.02% per cell) - most planets have 0-3 caches
+                    if (cellHash < 0.0002 && typeof SecretCache !== 'undefined') {
                         obj = new SecretCache(wx, wy, objSeed);
                         obj.yOffset = h;
                         this.surfaceObjects.push(obj);
@@ -781,15 +781,23 @@ class SurfaceMode {
                 const civColor = (this.planet && this.planet.cityLightsColor) ? this.planet.cityLightsColor : null;
                 const economyType = this.planet?.economyType || 'Service';
 
+                // TECH LEVEL affects defense density (0-5 scale)
+                // Higher tech = more turrets and drones
+                const techLevel = this.planet?.techLevel || 3;
+                const techModifier = 0.05 + (techLevel / 5) * 0.25; // Range: 0.05 to 0.30
+                // Military economies get extra defenses
+                const militaryBonus = (economyType === 'Military') ? 0.15 : 0;
+                const defenseDensity = Math.min(0.40, techModifier + militaryBonus);
+
                 const buildingSize = 40 + (subHash * 40);
 
                 // --- 1. Strategic Defense (High Ground) ---
-                // Turrets and drones guard the peaks
+                // Turrets and drones guard the peaks - density varies by tech level
                 if (isHighTerrain) {
-                    // 25% density on peaks (reduced from 30%)
-                    if (cellHash < 0.25) {
-                        // Increased ratio of Turrets vs Drones
-                        if (subHash < 0.4) {
+                    if (cellHash < defenseDensity) {
+                        // Higher tech = more turrets, lower tech = more drones
+                        const turretRatio = 0.3 + (techLevel / 5) * 0.4; // 0.3-0.7
+                        if (subHash < (1 - turretRatio)) {
                             obj = new DefenseDrone(wx, wy);
                         } else {
                             obj = new Turret(wx, wy);
