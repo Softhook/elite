@@ -446,7 +446,7 @@ function handleGameOverInput() {
             console.error("resetGame function not found, falling back to reload");
             window.location.reload();
         }
-        return true;
+        return false; // Indicate input was handled, prevent default behavior
     }
 
     // Toggle inventory with “I”
