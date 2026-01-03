@@ -1228,14 +1228,16 @@ class Turret extends SurfaceObject {
     constructor(x, y, size) {
         super(x, y, size || 40);
 
-        this.range = 1000;
-        this.detectionHeightThreshold = 30; // Height above turret's ground level for detection
+        const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.TURRET : {};
+
+        this.range = config.RANGE || 1000;
+        this.detectionHeightThreshold = config.DETECTION_HEIGHT_THRESHOLD || 30; // Height above turret's ground level for detection
         this.color = color(120, 120, 120);
         this.angle = 0;
         this.cooldown = 0;
         this.id = Math.floor(Math.random() * 10000);
-        this.health = 100; // Explicitly set health
-        this.maxHealth = 100;
+        this.health = config.HEALTH || 100; // Explicitly set health
+        this.maxHealth = config.HEALTH || 100;
         this.lastHitTime = 0; // For damage flash effect
         this.isSurface = true; // Mark as surface entity for sound filtering
     }
@@ -1302,7 +1304,9 @@ class Turret extends SurfaceObject {
             while (diff > Math.PI) diff -= TWO_PI;
 
             // Smoother, frame-rate independent rotation
-            this.angle += diff * 5 * dt;
+            const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.TURRET : {};
+            const turnSpeedVal = config.TURN_SPEED || 5;
+            this.angle += diff * turnSpeedVal * dt;
 
             // Normalize angle
             while (this.angle < -Math.PI) this.angle += TWO_PI;
@@ -1312,7 +1316,8 @@ class Turret extends SurfaceObject {
             if (this.cooldown <= 0 && starSystem) {
                 // Pass the calculated visual muzzle position
                 this.fire(starSystem, player, turretVisualX, turretVisualY);
-                this.cooldown = 2.0;
+                const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.TURRET : {};
+                this.cooldown = config.FIRE_RATE || 2.0;
             }
         }
     }
@@ -1344,17 +1349,19 @@ class Turret extends SurfaceObject {
         const px = muzzleX + muzzleOffset * Math.cos(this.angle);
         const py = muzzleY + muzzleOffset * Math.sin(this.angle);
 
+        const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.TURRET : {};
+
         const proj = new Projectile(
             px,
             py,
             this.angle,
             this,
-            15,               // Speed
-            5,                // Damage
+            config.PROJECTILE_SPEED || 15,      // Speed
+            config.PROJECTILE_DAMAGE || 5,      // Damage
             [255, 50, 50],    // Color (Red) - Array for consistency
             'enemy_projectile',
             null,
-            120               // Lifespan
+            config.PROJECTILE_LIFESPAN || 120   // Lifespan
         );
 
         if (starSystem.projectiles) {
@@ -1687,26 +1694,29 @@ class DefenseDrone extends SurfaceObject {
     constructor(x, y) {
         super(x, y, 35);
         this.type = "Defense Drone"; // Explicit type name for UI
-        this.health = 150;
-        this.maxHealth = 150;
+        // Use config if available, otherwise fallback to defaults
+        const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.DRONE : {};
+
+        this.health = config.HEALTH || 150;
+        this.maxHealth = config.HEALTH || 150;
         this.lastHitTime = 0;
         this.isSurface = true; // Mark as surface entity for sound filtering
 
         // Flying altitude - pirates fly at this height above terrain
-        this.flyingHeight = 80; // Units above ground
+        this.flyingHeight = config.FLYING_HEIGHT || 80; // Units above ground
         this.altitude = 0; // Absolute altitude (terrain + flyingHeight), updated each frame
 
         // Movement
         this.angle = Math.random() * Math.PI * 2;
         this.speed = 0;
-        this.maxSpeed = 150;
-        this.acceleration = 200;
-        this.turnRate = 2.5;
+        this.maxSpeed = config.MAX_SPEED || 150;
+        this.acceleration = config.ACCELERATION || 200;
+        this.turnRate = config.TURN_RATE || 2.5;
 
         // Combat
-        this.range = 800;
+        this.range = config.DETECTION_RANGE || 600;
         this.cooldown = 0;
-        this.fireRate = 1.5; // seconds between shots
+        this.fireRate = config.FIRE_RATE || 1.5; // seconds between shots
 
         // AI state
         this.patrolTarget = createVector(x + Math.random() * 1000 - 500, y + Math.random() * 1000 - 500);
@@ -1728,7 +1738,18 @@ class DefenseDrone extends SurfaceObject {
         const distSq = dx * dx + dy * dy;
         const dist = Math.sqrt(distSq);
 
-        if (dist < this.range) {
+        // Detection logic:
+        // 1. Must be within range (reduced to 600 for fairer gameplay)
+        // 2. Player must be above a certain altitude (50 units above terrain) to be detected
+        //    This allows players to fly "under the radar" by hugging the terrain
+
+        const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.DRONE : {};
+        const detectionAltitude = config.DETECTION_ALTITUDE || 50;
+
+        const playerHeightAboveGround = (player.altitude || 0) - (this.yOffset || 0);
+        const isDetected = dist < this.range && playerHeightAboveGround > detectionAltitude;
+
+        if (isDetected) {
             this.chasePlayer = true;
 
             // Aim at player
@@ -1751,7 +1772,7 @@ class DefenseDrone extends SurfaceObject {
             this.speed = Math.min(this.maxSpeed, this.speed + this.acceleration * dt);
 
             // Fire at player if ready and close enough
-            if (this.cooldown <= 0 && dist < 600) {
+            if (this.cooldown <= 0 && dist < this.range) {
                 this.fire(starSystem, player);
                 this.cooldown = this.fireRate;
             }
@@ -1827,13 +1848,15 @@ class DefenseDrone extends SurfaceObject {
         const muzzleX = visualX - extDvX + Math.cos(this.angle) * muzzleOffset;
         const muzzleY = visualY - extDvY + Math.sin(this.angle) * muzzleOffset;
 
+        const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.DRONE : {};
+
         const proj = new Projectile(
             muzzleX,
             muzzleY,
             this.angle,
             this,
-            12,               // Speed
-            8,                // Damage
+            config.PROJECTILE_SPEED || 12,    // Speed
+            config.PROJECTILE_DAMAGE || 8,    // Damage
             [255, 100, 50],   // Color (Orange)
             'enemy_projectile',
             null,

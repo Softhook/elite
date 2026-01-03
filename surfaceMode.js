@@ -31,7 +31,33 @@ const SURFACE_CONFIG = {
 
     // Shadow rendering
     SHADOW_BASE_OFFSET: 20,    // Base shadow offset distance
-    SHADOW_ALTITUDE_SCALE: 0.15 // Shadow offset multiplier per altitude unit
+    SHADOW_ALTITUDE_SCALE: 0.15, // Shadow offset multiplier per altitude unit
+
+    // Defense Drone Configuration
+    DRONE: {
+        DETECTION_RANGE: 800,      // Units
+        DETECTION_ALTITUDE: 50,    // Units above terrain
+        FLYING_HEIGHT: 80,         // Units above ground
+        MAX_SPEED: 150,
+        ACCELERATION: 200,
+        TURN_RATE: 2.5,
+        FIRE_RATE: 1.5,            // Seconds between shots
+        PROJECTILE_SPEED: 12,
+        PROJECTILE_DAMAGE: 8,
+        HEALTH: 100
+    },
+
+    // Turret Configuration
+    TURRET: {
+        RANGE: 1000,
+        DETECTION_HEIGHT_THRESHOLD: 30, // Units above turret base
+        HEALTH: 150,
+        FIRE_RATE: 2.0,                 // Seconds between shots
+        TURN_SPEED: 5,                  // Radians per second factor
+        PROJECTILE_SPEED: 15,
+        PROJECTILE_DAMAGE: 5,
+        PROJECTILE_LIFESPAN: 120
+    }
 };
 
 /**
@@ -798,7 +824,8 @@ class SurfaceMode {
                     if (cellHash < defenseDensity) {
                         // Higher tech = more turrets, lower tech = more drones
                         const turretRatio = 0.3 + (techLevel / 5) * 0.4; // 0.3-0.7
-                        if (subHash < (1 - turretRatio)) {
+                        // Reduced drone spawn rate by half as requested
+                        if (subHash < (1 - turretRatio) * 0.5) {
                             obj = new DefenseDrone(wx, wy);
                         } else {
                             obj = new Turret(wx, wy);
@@ -835,7 +862,8 @@ class SurfaceMode {
                 else {
                     // Very rare rogue buildings or pirates (reduced from 0.5%)
                     if (cellHash < 0.003) {
-                        if (subHash < 0.5) obj = new DefenseDrone(wx, wy);
+                        // Reduced drone spawn rate by half (was 0.5)
+                        if (subHash < 0.25) obj = new DefenseDrone(wx, wy);
                         else obj = this._createEconomyBuilding(economyType, wx, wy, 30, objSeed);
                     }
                 }
@@ -1446,9 +1474,10 @@ class SurfaceMode {
             // Check for ShieldGenerator class name since we might not have imported the class in this scope
             const isShieldGen = (obj.constructor && obj.constructor.name === 'ShieldGenerator') || obj.isTarget;
             const isTurret = (obj.constructor && obj.constructor.name === 'Turret');
+            const isDrone = (obj.constructor && obj.constructor.name === 'DefenseDrone');
             const isCache = obj.isCache === true; // Secret caches on uninhabited planets
 
-            if (!isShieldGen && !isTurret && !isCache) continue;
+            if (!isShieldGen && !isTurret && !isDrone && !isCache) continue;
 
             const dx = obj.pos.x - this.player.pos.x;
             const dy = obj.pos.y - this.player.pos.y;
@@ -1472,6 +1501,10 @@ class SurfaceMode {
             } else if (isTurret) {
                 // Turrets - Orange, smaller
                 fill(255, 150, 0, 200);
+                ellipse(markerDist, 0, 4, 4);
+            } else if (isDrone) {
+                // Defense Drones - Red, small
+                fill(255, 50, 50, 200);
                 ellipse(markerDist, 0, 4, 4);
             } else if (isCache) {
                 // Secret Caches - Green, clamped to edge for discovery
