@@ -385,32 +385,32 @@ class EnemyDamageSystem {
                 [MISSION_TYPE.IMPERIAL_ELIMINATION]: {
                     checkFn: () => this._isSeparatistShip() || this.role === AI_ROLE.PIRATE,
                     logName: 'Imperial',
-                    msgColor: [255, 215, 0]
+                    msgColor: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.IMPERIAL : [160, 80, 220]
                 },
                 [MISSION_TYPE.IMPERIAL_STRIKE]: {
                     checkFn: () => this._isSeparatistShip() || this.role === AI_ROLE.PIRATE,
                     logName: 'Imperial',
-                    msgColor: [255, 215, 0]
+                    msgColor: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.IMPERIAL : [160, 80, 220]
                 },
                 [MISSION_TYPE.SEPARATIST_RAID]: {
                     checkFn: () => this._isImperialShip() || this.role === AI_ROLE.POLICE,
                     logName: 'Separatist',
-                    msgColor: [100, 200, 100]
+                    msgColor: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.SEPARATIST : [140, 150, 60]
                 },
                 [MISSION_TYPE.SEPARATIST_STRIKE]: {
                     checkFn: () => this._isImperialShip() || this.role === AI_ROLE.POLICE,
                     logName: 'Separatist',
-                    msgColor: [100, 200, 100]
+                    msgColor: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.SEPARATIST : [140, 150, 60]
                 },
                 [MISSION_TYPE.MILITARY_EXTERMINATION]: {
                     validRoles: [AI_ROLE.ALIEN, AI_ROLE.PIRATE],
                     logName: 'Military',
-                    msgColor: [100, 200, 100]
+                    msgColor: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.MILITARY : [150, 150, 155]
                 },
                 [MISSION_TYPE.MILITARY_STRIKE]: {
                     validRoles: [AI_ROLE.ALIEN, AI_ROLE.PIRATE],
                     logName: 'Military',
-                    msgColor: [100, 200, 100]
+                    msgColor: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.MILITARY : [150, 150, 155]
                 }
             };
 

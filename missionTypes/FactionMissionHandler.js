@@ -74,10 +74,10 @@ class FactionMissionHandler extends MissionTypeHandler {
      */
     static getDisplayColor() {
         switch (this.requiredFaction) {
-            case 'IMPERIAL': return [200, 170, 100]; // Gold
-            case 'SEPARATIST': return [100, 200, 100]; // Green
-            case 'MILITARY': return [100, 150, 200]; // Blue
-            case 'POLICE': return [150, 150, 200]; // Light blue
+            case 'IMPERIAL': return (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.IMPERIAL : [160, 80, 220];
+            case 'SEPARATIST': return (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.SEPARATIST : [140, 150, 60];
+            case 'MILITARY': return (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.MILITARY : [150, 150, 155];
+            case 'POLICE': return (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.POLICE : [60, 140, 255];
             default: return [200, 200, 200];
         }
     }
