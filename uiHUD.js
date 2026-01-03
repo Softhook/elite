@@ -648,31 +648,63 @@ class UIHUD {
             this._missionBoxCacheKey = null;
         }
 
-        // Autopilot indicator
-        if (player.autopilotEnabled) {
-            let targetLabel = 'Unknown';
-            let hint = '';
-            try {
-                if (player.autopilotTarget === 'station') {
-                    targetLabel = 'Station';
-                    hint = '[J to cycle targets | H to cycle planets]';
-                } else if (player.autopilotTarget === 'jumpzone') {
-                    targetLabel = 'Jump Zone';
-                    hint = '[J to cycle targets | H to cycle planets]';
-                } else if (player.autopilotTarget === 'secretbase') {
-                    targetLabel = 'Secret Base';
-                    hint = '[J to cycle targets | H to cycle planets]';
-                } else if (player.autopilotTarget && typeof player.autopilotTarget === 'object' && player.autopilotTarget.type === 'planet') {
-                    const idx = Number.isFinite(player.autopilotTarget.index) ? player.autopilotTarget.index : player.autopilotPlanetIndex;
-                    const planet = player.currentSystem?.planets?.[idx];
-                    const pname = planet?.name || (`Planet ${idx + 1}`);
-                    targetLabel = `Planet: ${pname}`;
-                    hint = '[H to cycle planets | J to toggle station/jump]';
-                } else if (typeof player.autopilotTarget === 'object' && player.autopilotTarget?.type) {
-                    targetLabel = String(player.autopilotTarget.type);
+        // Autopilot and Planet Descent Indicator
+        // Checks if player is above a landable planet
+        let canDescendToPlanet = null;
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && player.currentSystem?.planets) {
+            for (const planet of player.currentSystem.planets) {
+                if (surfaceMode.canEnter(player, planet)) {
+                    canDescendToPlanet = planet;
+                    break;
                 }
-            } catch (e) {
-                targetLabel = 'Unknown';
+            }
+        }
+
+        // Show bar if either autopilot is on OR descent is possible
+        if (player.autopilotEnabled || canDescendToPlanet) {
+            let targetLabel = '';
+            let hint = '';
+
+            // 1. Determine Autopilot text if enabled
+            if (player.autopilotEnabled) {
+                try {
+                    if (player.autopilotTarget === 'station') {
+                        targetLabel = 'Station';
+                        hint = '[J: Cycle Targets | H: Cycle Planets]';
+                    } else if (player.autopilotTarget === 'jumpzone') {
+                        targetLabel = 'Jump Zone';
+                        hint = '[J: Cycle Targets | H: Cycle Planets]';
+                    } else if (player.autopilotTarget === 'secretbase') {
+                        targetLabel = 'Secret Base';
+                        hint = '[J: Cycle Targets | H: Cycle Planets]';
+                    } else if (player.autopilotTarget && typeof player.autopilotTarget === 'object' && player.autopilotTarget.type === 'planet') {
+                        const idx = Number.isFinite(player.autopilotTarget.index) ? player.autopilotTarget.index : player.autopilotPlanetIndex;
+                        const planet = player.currentSystem?.planets?.[idx];
+                        const pname = planet?.name || (`Planet ${idx + 1}`);
+                        targetLabel = `Planet: ${pname}`;
+                        hint = '[H: Cycle Planets | J: Toggle Mode]';
+                    } else if (typeof player.autopilotTarget === 'object' && player.autopilotTarget?.type) {
+                        targetLabel = String(player.autopilotTarget.type);
+                    } else {
+                        targetLabel = 'Unknown';
+                    }
+                } catch (e) {
+                    targetLabel = 'Unknown';
+                }
+            }
+
+            // 2. Construct final display string
+            let displayText = "";
+
+            if (player.autopilotEnabled) {
+                displayText = `Autopilot Engaged: ${targetLabel} ${hint}`;
+                // Append descent hint if available
+                if (canDescendToPlanet) {
+                    displayText += `   [PRESS G TO DESCEND]`;
+                }
+            } else {
+                // Autopilot OFF, but Descent POSSIBLE
+                displayText = `Orbiting - [PRESS G TO DESCEND]`;
             }
 
             const autopilotY = 45 + 24 + 5;
@@ -683,7 +715,7 @@ class UIHUD {
             textAlign(CENTER, CENTER);
             textSize(STATION_TEXT_SIZE.BODY);
             fill(255, 255, 100);
-            text(`Autopilot Engaged: ${targetLabel} ${hint}`, width / 2, autopilotY + 10);
+            text(displayText, width / 2, autopilotY + 10);
         }
 
         // Secret Base indicator (when B key navigation is active)

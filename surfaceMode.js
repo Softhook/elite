@@ -115,7 +115,8 @@ class SurfaceMode {
 
         // Check player is close enough to planet
         const dist = p5.Vector.dist(player.pos, planet.pos);
-        const approachThreshold = planet.radius * 2.5;
+        // Strict entry: must be effectively within the planet's visual radius (1.1x for slight buffer)
+        const approachThreshold = planet.radius * 1.1;
 
         return dist < approachThreshold;
     }
@@ -1320,6 +1321,19 @@ class SurfaceMode {
             }
             pop();
         }
+
+        // Surface Controls Hint (Top Center)
+        const hintY = 45 + 24 + 5;
+        fill(40, 80, 120, 200);
+        noStroke();
+        rect(0, hintY, width, 20);
+
+        textAlign(CENTER, CENTER);
+        // Ensure consistent typeface
+        if (typeof font !== 'undefined' && font) textFont(font);
+        textSize(STATION_TEXT_SIZE.BODY);
+        fill(255, 255, 100);
+        text("[T] Ascend [G] Descend", width / 2, hintY + 10);
 
         // Altitude bar
         const barX = width - 50;
