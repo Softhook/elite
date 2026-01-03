@@ -4264,9 +4264,6 @@ function drawPosthumanMissionary(s, thrusting = false, angle = 0, localSunAngle 
     let ringCol = color(180, 140, 220, 120 + glowPulse * 80);
     Draw3D.drawRing3D(0, 0, r * 1.15, r * 1.05, 24, s * 0.04, ringCol, angle, localSunAngle, ringRotation);
 
-    // 3. Inner cyan core - glowing energy source (prism shape)
-    let coreColor = color(80, 200, 240, 180 + glowPulse * 70);
-    Draw3D.drawPrism(0, 0, r * 0.22 * corePulse, 8, s * 0.12, coreColor, angle, localSunAngle);
 
     // 5. Floating holographic symbols (small prisms orbiting)
     noStroke();
