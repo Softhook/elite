@@ -617,6 +617,8 @@ class UIMinimap {
                         colArr = FACTION_COLORS.SEPARATIST;
                     } else if (enemy.faction === 'MILITARY') {
                         colArr = FACTION_COLORS.MILITARY;
+                    } else if (enemy.faction === 'POSTHUMAN') {
+                        colArr = FACTION_COLORS.POSTHUMAN;
                     }
                 }
                 if (!colArr && typeof ROLE_COLORS !== 'undefined') {

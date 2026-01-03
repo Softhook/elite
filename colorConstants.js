@@ -19,6 +19,7 @@ const FACTION_COLORS = {
     MILITARY: [150, 150, 155],      // Gray
     ALIEN: [50, 220, 80],           // Green
     POLICE: [60, 140, 255],         // Blue
+    POSTHUMAN: [0, 255, 255],       // Cyan
 };
 
 /**
