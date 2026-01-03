@@ -123,6 +123,9 @@ class SurfaceTerrain {
      * Generate terrain mesh centered on player position
      * Only regenerates when player moves to a new grid cell
      * 
+     * PERFORMANCE: Stores raw RGB values instead of p5.Color objects
+     * to avoid expensive lerpColor() allocations (~10,000 per generation)
+     * 
      * @param {number} playerX - Player world X position
      * @param {number} playerY - Player world Y position
      * @param {boolean} forceRegenerate - Force regeneration even if in same cell
@@ -151,52 +154,60 @@ class SurfaceTerrain {
         const palette = this.planet.palette || [color(128, 128, 128)];
         const resolution = this.config.MESH_RESOLUTION;
 
+        // Pre-extract palette RGB values (avoids repeated .levels access)
+        const paletteRGB = palette.map(c => ({
+            r: c.levels[0],
+            g: c.levels[1],
+            b: c.levels[2]
+        }));
+        const paletteMaxIdx = paletteRGB.length - 1;
+
+        // Pre-compute constants
+        const sampleMultiplier = 0.003;
+        const featureOffsetX = featureRand * 0.001;
+        const featureOffsetY = featureRand * 0.002;
+        const nz = featureRand * 0.6;
+        const halfRes = Math.floor(resolution / 2);
+
         for (let gy = 0; gy < resolution; gy++) {
             this.mesh[gy] = [];
+            const gridY = currentGridY + (gy - halfRes);
+            const worldY = gridY * cellSize;
+            const ny = worldY * sampleMultiplier + featureOffsetY;
+
             for (let gx = 0; gx < resolution; gx++) {
-                const gridX = currentGridX + (gx - Math.floor(resolution / 2));
-                const gridY = currentGridY + (gy - Math.floor(resolution / 2));
-
+                const gridX = currentGridX + (gx - halfRes);
                 const worldX = gridX * cellSize;
-                const worldY = gridY * cellSize;
-
-                // Sample noise
-                const sampleMultiplier = 0.003;
-                const nx = worldX * sampleMultiplier + featureRand * 0.001;
-                const ny = worldY * sampleMultiplier + featureRand * 0.002;
-                const nz = featureRand * 0.6;
+                const nx = worldX * sampleMultiplier + featureOffsetX;
 
                 const noiseVal = noise(nx, ny, nz);
 
                 // Height from noise
                 const height = (noiseVal - 0.5) * 500;
 
-                // Color from palette
-                // Apply strict contrast curves to match Planet.js style for textures
-                // We keep the geometry (height) linear as requested, but warp the color selection
-
-                // 1. Power Curve: Push noise towards extremes
-                let nColor = Math.min(1, Math.max(0, Math.pow(noiseVal, 1.3)));
-
-                const paletteMaxIdx = palette.length - 1;
+                // Color from palette (using raw RGB, no p5.Color allocation)
+                // Power curve pushes noise towards extremes
+                const nColor = Math.min(1, Math.max(0, Math.pow(noiseVal, 1.3)));
                 const nScaled = nColor * paletteMaxIdx;
                 const paletteIdx = Math.floor(nScaled);
                 const lerpFactor = nScaled - paletteIdx;
 
-                // 2. Contrast Bias: Sharpen transitions between bands
+                // Contrast bias sharpens transitions
                 const contrastBias = 2.6;
                 let cf = ((lerpFactor - 0.5) * contrastBias) + 0.5;
-                cf = Math.min(1, Math.max(0, cf));
+                cf = cf < 0 ? 0 : (cf > 1 ? 1 : cf); // Inline clamp
 
-                const col1 = palette[paletteIdx];
-                const col2 = palette[Math.min(paletteIdx + 1, paletteMaxIdx)];
-                const cellColor = lerpColor(col1, col2, cf);
+                const col1 = paletteRGB[paletteIdx];
+                const col2 = paletteRGB[Math.min(paletteIdx + 1, paletteMaxIdx)];
 
+                // Store raw RGB values (no p5.Color object allocation)
                 this.mesh[gy][gx] = {
                     worldX: worldX,
                     worldY: worldY,
                     height: height,
-                    color: cellColor
+                    r: col1.r + (col2.r - col1.r) * cf,
+                    g: col1.g + (col2.g - col1.g) * cf,
+                    b: col1.b + (col2.b - col1.b) * cf
                 };
             }
         }
@@ -205,7 +216,16 @@ class SurfaceTerrain {
     }
 
     /**
+    /**
      * Update the offscreen terrain buffer with viewport culling
+     * 
+     * PERFORMANCE OPTIMIZATIONS:
+     * - Uses quad() instead of beginShape()/endShape() for faster primitive drawing
+     * - Grid-based coordinate calculation (no per-cell worldX/Y subtraction)
+     * - Row-level viewport culling (skip entire out-of-view rows)
+     * - Inline shade clamping (no constrain() function call)
+     * - Raw RGB access (no .color.levels access)
+     * - No strokes
      * 
      * @param {number} altitude - Current player altitude for perspective scale
      * @param {number} screenWidth - Screen width
@@ -215,124 +235,93 @@ class SurfaceTerrain {
         if (!this.buffer || this.mesh.length === 0) return;
 
         // Performance: Skip buffer update if altitude hasn't changed significantly
-        // This avoids expensive redraws when player is moving horizontally at constant altitude
         const altitudeDelta = Math.abs(altitude - this.lastBufferAltitude);
-        if (!forceUpdate && this.lastBufferAltitude >= 0 && altitudeDelta < 5) {
+        if (!forceUpdate && this.lastBufferAltitude >= 0 && altitudeDelta < 15) {
             return;
         }
         this.lastBufferAltitude = altitude;
 
-        // Clear buffer to transparent so sky shows through
+        // Clear buffer
         this.buffer.clear();
+        this.buffer.noStroke();
 
         const cx = this.buffer.width / 2;
         const cy = this.buffer.height / 2;
         const resolution = this.config.MESH_RESOLUTION;
         const resMinus1 = resolution - 1;
         const cellSize = this.config.MESH_SIZE / resolution;
-        const meshCenterWX = this.lastGridX * cellSize;
-        const meshCenterWY = this.lastGridY * cellSize;
+        const halfRes = Math.floor(resolution / 2);
 
         // Calculate viewport bounds for culling
-        // At higher altitude (lower perspectiveScale), we see more world area,
-        // so we need a larger cull margin to prevent black edges
         const perspectiveScale = map(altitude, this.config.MIN_ALTITUDE, this.config.MAX_ALTITUDE, 1.2, 0.6);
-
-        // Scale padding inversely with perspective - more padding at high altitude
-        // At low altitude (scale=1.2): 200px padding, At high altitude (scale=0.6): 400px padding
-        const cullPadding = Math.round(250 / perspectiveScale);
-
+        const cullPadding = 250 / perspectiveScale;
         const visibleHalfWidth = (screenWidth / 2) / perspectiveScale + cullPadding;
         const visibleHalfHeight = (screenHeight / 2) / perspectiveScale + cullPadding;
-        const bufferLeft = -visibleHalfWidth;
-        const bufferRight = visibleHalfWidth;
-        const bufferTop = -visibleHalfHeight;
-        const bufferBottom = visibleHalfHeight;
 
-        // Performance: Disable strokes at high altitude when quads are small
-        // Strokes are expensive and barely visible when zoomed out
-        if (perspectiveScale > 0.8) {
-            this.buffer.stroke(0, 0, 0, 40);
-            this.buffer.strokeWeight(0.5);
-        } else {
-            this.buffer.noStroke();
-        }
+        // Grid-based culling bounds (in grid units from center)
+        const minVisibleGX = Math.max(0, Math.floor(halfRes - visibleHalfWidth / cellSize) - 1);
+        const maxVisibleGX = Math.min(resMinus1, Math.ceil(halfRes + visibleHalfWidth / cellSize) + 1);
+        const minVisibleGY = Math.max(0, Math.floor(halfRes - visibleHalfHeight / cellSize) - 1);
+        const maxVisibleGY = Math.min(resMinus1, Math.ceil(halfRes + visibleHalfHeight / cellSize) + 1);
 
         let cellsDrawn = 0;
         let cellsCulled = 0;
 
-        for (let gy = 0; gy < resMinus1; gy++) {
+        // Pre-compute base offset for grid-to-buffer coordinates
+        // Grid cell (halfRes, halfRes) is at buffer center
+        const baseOffsetX = -halfRes * cellSize;
+        const baseOffsetY = -halfRes * cellSize;
+
+        for (let gy = minVisibleGY; gy < maxVisibleGY; gy++) {
             const row0 = this.mesh[gy];
             const row1 = this.mesh[gy + 1];
             if (!row0 || !row1) continue;
 
-            for (let gx = 0; gx < resMinus1; gx++) {
+            // Row Y offset (shared by all cells in row)
+            const rowY0 = baseOffsetY + gy * cellSize;
+            const rowY1 = baseOffsetY + (gy + 1) * cellSize;
+
+            for (let gx = minVisibleGX; gx < maxVisibleGX; gx++) {
                 const c00 = row0[gx];
                 const c10 = row0[gx + 1];
                 const c01 = row1[gx];
                 const c11 = row1[gx + 1];
 
-                if (!c00 || !c10 || !c01 || !c11) continue;
-
-                // Calculate buffer-space coordinates
-                const dx00 = c00.worldX - meshCenterWX;
-                const dy00 = c00.worldY - meshCenterWY;
-                const dx10 = c10.worldX - meshCenterWX;
-                const dy10 = c10.worldY - meshCenterWY;
-                const dx11 = c11.worldX - meshCenterWX;
-                const dy11 = c11.worldY - meshCenterWY;
-                const dx01 = c01.worldX - meshCenterWX;
-                const dy01 = c01.worldY - meshCenterWY;
-
-                // Viewport culling
-                const minHeight = Math.min(c00.height, c10.height, c01.height, c11.height);
-                const maxHeight = Math.max(c00.height, c10.height, c01.height, c11.height);
-
-                const quadLeft = Math.min(dx00, dx10, dx01, dx11);
-                const quadRight = Math.max(dx00, dx10, dx01, dx11);
-                const quadTop = Math.min(dy00, dy10, dy01, dy11) - maxHeight;
-                const quadBottom = Math.max(dy00, dy10, dy01, dy11) - minHeight;
-
-                if (quadRight < bufferLeft || quadLeft > bufferRight ||
-                    quadBottom < bufferTop || quadTop > bufferBottom) {
+                if (!c00 || !c10 || !c01 || !c11) {
                     cellsCulled++;
                     continue;
                 }
 
                 cellsDrawn++;
 
-                // Lighting calculation (Enhanced for specific "Bright Top / Dark Valley" look)
-                // Increased coefficients to exaggerate relief
+                // Grid-based X offsets
+                const colX0 = baseOffsetX + gx * cellSize;
+                const colX1 = baseOffsetX + (gx + 1) * cellSize;
+
+                // Lighting calculation
                 const slopeX = ((c10.height - c00.height) + (c11.height - c01.height)) * 0.5;
                 const slopeY = ((c01.height - c00.height) + (c11.height - c10.height)) * 0.5;
 
-                // Stronger sun effect
                 const sunIntensity = slopeX * 0.008 + slopeY * 0.010;
-
                 const avgHeight = (c00.height + c10.height + c01.height + c11.height) * 0.25;
-                // Stronger height brightness (Snow caps pop more)
                 const heightLight = avgHeight * 0.0008;
-
-                // Darken steep valleys (Ambient Occlusion approximation)
-                const steepness = Math.abs(slopeX) + Math.abs(slopeY);
+                const steepness = (slopeX < 0 ? -slopeX : slopeX) + (slopeY < 0 ? -slopeY : slopeY);
                 const valleyDarken = steepness * 0.005;
 
+                // Inline clamp (no constrain() call)
                 let shade = 0.65 + sunIntensity + heightLight - valleyDarken;
-                shade = constrain(shade, 0.25, 1.4);
+                shade = shade < 0.25 ? 0.25 : (shade > 1.4 ? 1.4 : shade);
 
-                const baseCol = c00.color;
-                this.buffer.fill(
-                    baseCol.levels[0] * shade,
-                    baseCol.levels[1] * shade,
-                    baseCol.levels[2] * shade
+                // Direct RGB access (no .color.levels)
+                this.buffer.fill(c00.r * shade, c00.g * shade, c00.b * shade);
+
+                // Draw quad using grid-calculated positions
+                this.buffer.quad(
+                    cx + colX0, cy + rowY0 - c00.height,
+                    cx + colX1, cy + rowY0 - c10.height,
+                    cx + colX1, cy + rowY1 - c11.height,
+                    cx + colX0, cy + rowY1 - c01.height
                 );
-
-                this.buffer.beginShape();
-                this.buffer.vertex(cx + dx00, cy + dy00 - c00.height);
-                this.buffer.vertex(cx + dx10, cy + dy10 - c10.height);
-                this.buffer.vertex(cx + dx11, cy + dy11 - c11.height);
-                this.buffer.vertex(cx + dx01, cy + dy01 - c01.height);
-                this.buffer.endShape(CLOSE);
             }
         }
 
