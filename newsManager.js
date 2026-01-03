@@ -188,25 +188,65 @@ const HEADLINE_TEMPLATES = {
         "Trade routes under siege by marauders",
         "Shipping lanes crawling with raiders",
         "Merchants warned: {SYSTEM} is hot",
-        "Security firms overwhelmed by pirate wave"
+        "Security firms overwhelmed by pirate wave",
+        "Raider gangs terrorize {SYSTEM} freighters",
+        "Piracy epidemic sweeps through {SYSTEM}",
+        "Convoy attacks spike in lawless {SYSTEM}",
+        "{SYSTEM} declared red zone for cargo haulers",
+        "Insurance rates skyrocket as pirates ravage {SYSTEM}",
+        "Buccaneers run rampant in ungoverned {SYSTEM}",
+        "Merchants flee {SYSTEM} amid raider onslaught",
+        "Smuggler's paradise: {SYSTEM} overrun by outlaws",
+        "Patrol forces stretched thin as piracy explodes",
+        "Trade guilds issue stern warning about {SYSTEM}"
     ],
     PIRATE_LOW: [
         "Trade flows freely in peaceful {SYSTEM}",
         "Piracy at record lows near {SYSTEM}",
         "Merchants celebrate quiet shipping lanes",
-        "Security patrols report all clear"
+        "Security patrols report all clear",
+        "Golden age for traders in {SYSTEM}",
+        "{SYSTEM} enjoys unprecedented security",
+        "Cargo runs smooth in crime-free {SYSTEM}",
+        "Raiders scarce in well-patrolled {SYSTEM}",
+        "Shipping insurance drops in safe {SYSTEM}",
+        "Peace dividend: {SYSTEM} trade booms",
+        "Pirate gangs abandon {SYSTEM} territory",
+        "Merchants flock to secure {SYSTEM} routes",
+        "Law and order prevails in {SYSTEM}",
+        "{SYSTEM} rated safest trade corridor"
     ],
     MARKET_BOOM: [
         "Prices soar at {STATION}",
         "Commodity shortage drives {COMMODITY} prices up",
         "Traders rush to {STATION} for high margins",
-        "Demand surge hits {STATION} markets"
+        "Demand surge hits {STATION} markets",
+        "{COMMODITY} fever grips {STATION}",
+        "Bidding war erupts for {COMMODITY} at {STATION}",
+        "{STATION} traders see record {COMMODITY} profits",
+        "Gold rush atmosphere at {STATION} exchange",
+        "{COMMODITY} prices hit all-time highs at {STATION}",
+        "Speculators flood {STATION} chasing {COMMODITY}",
+        "Supply crunch sends {COMMODITY} soaring",
+        "{STATION} becomes hotspot for {COMMODITY} deals",
+        "Merchants strike it rich on {COMMODITY} at {STATION}",
+        "Price surge attracts haulers to {STATION}"
     ],
     MARKET_CRASH: [
         "Prices crash at {STATION}",
         "{COMMODITY} glut devastates local traders",
         "Oversupply tanks market at {STATION}",
-        "Buying opportunity: {COMMODITY} dirt cheap"
+        "Buying opportunity: {COMMODITY} dirt cheap",
+        "{STATION} drowning in unsold {COMMODITY}",
+        "Fire sale: {COMMODITY} prices collapse",
+        "Traders dump {COMMODITY} at {STATION}",
+        "{COMMODITY} bubble bursts at {STATION}",
+        "Market meltdown hits {STATION} exchange",
+        "{STATION} warehouses overflow with {COMMODITY}",
+        "Bargain hunters descend on {STATION}",
+        "{COMMODITY} worthless at flooded {STATION}",
+        "Economic crisis looms as {COMMODITY} crashes",
+        "Panic selling grips {STATION} markets"
     ],
 
     // --- Galaxy-Wide Headlines ---
@@ -215,25 +255,65 @@ const HEADLINE_TEMPLATES = {
         "Imperial forces clash with rebels in {SYSTEM}",
         "Separatist uprising rocks {SYSTEM}",
         "Military buildup reported near {SYSTEM}",
-        "Tensions escalate in {SYSTEM} quadrant"
+        "Tensions escalate in {SYSTEM} quadrant",
+        "Armed confrontation in {SYSTEM} turns deadly",
+        "Battle stations: {SYSTEM} on war footing",
+        "Conflict zone expands toward {SYSTEM}",
+        "Warships mass in {SYSTEM} staging grounds",
+        "Firefight erupts between factions in {SYSTEM}",
+        "Blood spilled as rivals clash in {SYSTEM}",
+        "{SYSTEM} becomes flashpoint for factional war",
+        "Fleet engagement reported in {SYSTEM} space",
+        "Diplomatic breakdown leads to {SYSTEM} hostilities",
+        "Violence flares in disputed {SYSTEM} territory"
     ],
     DISTANT_DISCOVERY: [
         "Explorers report anomaly near {SYSTEM}",
         "Mysterious signal detected from {SYSTEM}",
         "New hyperspace route found to {SYSTEM}",
-        "Scientists baffled by {SYSTEM} phenomenon"
+        "Scientists baffled by {SYSTEM} phenomenon",
+        "Strange readings emanate from {SYSTEM}",
+        "Uncharted phenomenon discovered in {SYSTEM}",
+        "Survey team finds oddity near {SYSTEM}",
+        "Enigmatic object spotted in {SYSTEM} space",
+        "{SYSTEM} yields startling new discovery",
+        "Research vessel investigates {SYSTEM} anomaly",
+        "Unexplained activity detected in {SYSTEM}",
+        "Frontier scouts report breakthrough in {SYSTEM}",
+        "Ancient artifact uncovered in {SYSTEM}",
+        "Scientific community buzzing about {SYSTEM} find"
     ],
     DISTANT_TRADE: [
         "New trade agreement benefits {SYSTEM}",
         "{SYSTEM} opens markets to foreign traders",
         "Economic boom transforms {SYSTEM}",
-        "Luxury goods flooding into {SYSTEM}"
+        "Luxury goods flooding into {SYSTEM}",
+        "Trade delegation arrives in {SYSTEM}",
+        "{SYSTEM} economy surging with new deals",
+        "Merchant guilds expand operations to {SYSTEM}",
+        "Prosperity wave reaches {SYSTEM}",
+        "{SYSTEM} becomes trade hub powerhouse",
+        "Credits flowing freely in booming {SYSTEM}",
+        "Commercial renaissance transforms {SYSTEM}",
+        "Investment rush sweeps through {SYSTEM}",
+        "{SYSTEM} signs lucrative export contracts",
+        "New shipping lanes boost {SYSTEM} commerce"
     ],
     DISTANT_DISASTER: [
         "Catastrophe strikes {SYSTEM}",
         "Station disaster claims lives in {SYSTEM}",
         "Asteroid impact devastates {SYSTEM} colony",
-        "Plague outbreak reported in {SYSTEM}"
+        "Plague outbreak reported in {SYSTEM}",
+        "Tragedy unfolds in {SYSTEM}",
+        "Emergency declared after {SYSTEM} disaster",
+        "Rescue teams rush to stricken {SYSTEM}",
+        "{SYSTEM} reels from devastating accident",
+        "Death toll rises in {SYSTEM} calamity",
+        "Humanitarian crisis grips {SYSTEM}",
+        "Survivors sought after {SYSTEM} catastrophe",
+        "{SYSTEM} infrastructure crippled by disaster",
+        "Relief efforts underway in {SYSTEM}",
+        "Mourning across {SYSTEM} after tragedy"
     ],
 
     // --- War Event Headlines ---
@@ -242,14 +322,34 @@ const HEADLINE_TEMPLATES = {
         "[SWORDS] Armed conflict breaks out near {SYSTEM}",
         "[SWORDS] Faction forces clash in {SYSTEM} sector",
         "[SWORDS] Border skirmish reported in {SYSTEM}",
-        "[SWORDS] Hostile engagement detected in {SYSTEM}"
+        "[SWORDS] Hostile engagement detected in {SYSTEM}",
+        "[SWORDS] Patrol units exchange fire in {SYSTEM}",
+        "[SWORDS] Tense standoff turns violent in {SYSTEM}",
+        "[SWORDS] Minor battle flares up in {SYSTEM}",
+        "[SWORDS] Shots fired in disputed {SYSTEM} space",
+        "[SWORDS] Rival squadrons engage in {SYSTEM}",
+        "[SWORDS] Limited combat reported in {SYSTEM}",
+        "[SWORDS] Skirmish leaves casualties in {SYSTEM}",
+        "[SWORDS] Frontier violence erupts in {SYSTEM}",
+        "[SWORDS] Armed encounter in {SYSTEM} corridor",
+        "[SWORDS] Flashpoint battle in {SYSTEM} territory"
     ],
     WAR_FULL: [
         "[FIRE] Full scale war erupts in {SYSTEM}",
         "[FIRE] All-out conflict engulfs {SYSTEM}",
         "[FIRE] Massive battle underway in {SYSTEM}",
         "[FIRE] War declared in {SYSTEM} sector",
-        "[FIRE] Sector-wide hostilities begin in {SYSTEM}"
+        "[FIRE] Sector-wide hostilities begin in {SYSTEM}",
+        "[FIRE] Total war consumes {SYSTEM}",
+        "[FIRE] Fleets clash in epic {SYSTEM} battle",
+        "[FIRE] {SYSTEM} becomes warzone",
+        "[FIRE] Devastating offensive launched in {SYSTEM}",
+        "[FIRE] Open warfare rages across {SYSTEM}",
+        "[FIRE] Major military campaign begins in {SYSTEM}",
+        "[FIRE] {SYSTEM} torn apart by factional war",
+        "[FIRE] Armada deploys to {SYSTEM} theater",
+        "[FIRE] Brutal combat escalates in {SYSTEM}",
+        "[FIRE] {SYSTEM} ablaze with widespread conflict"
     ],
 
     // --- Crisis Event Headlines ---
@@ -258,73 +358,193 @@ const HEADLINE_TEMPLATES = {
         "[SKULL] Contagion spreads across {SYSTEM}",
         "[SKULL] Medical emergency: Plague ravages {SYSTEM}",
         "[SKULL] Quarantine declared in {SYSTEM}",
-        "[SKULL] Disease outbreak overwhelms {SYSTEM} hospitals"
+        "[SKULL] Disease outbreak overwhelms {SYSTEM} hospitals",
+        "[SKULL] Pandemic grips {SYSTEM} population",
+        "[SKULL] Death toll mounts in {SYSTEM} plague",
+        "[SKULL] Viral horror sweeps through {SYSTEM}",
+        "[SKULL] {SYSTEM} stations locked down by disease",
+        "[SKULL] Authorities scramble to contain {SYSTEM} outbreak",
+        "[SKULL] Bodies pile up as plague consumes {SYSTEM}",
+        "[SKULL] Medicine shortages worsen {SYSTEM} crisis",
+        "[SKULL] Infected ships spread disease from {SYSTEM}",
+        "[SKULL] {SYSTEM} becomes plague epicenter",
+        "[SKULL] Desperate plea for medical aid from {SYSTEM}"
     ],
     CRISIS_FAMINE: [
         "[FAMINE] Severe famine grips {SYSTEM}",
         "[FAMINE] Food crisis devastates {SYSTEM}",
         "[FAMINE] Crop failures cause mass starvation in {SYSTEM}",
         "[FAMINE] Food shortage emergency in {SYSTEM}",
-        "[FAMINE] Hunger crisis spreads across {SYSTEM}"
+        "[FAMINE] Hunger crisis spreads across {SYSTEM}",
+        "[FAMINE] Starvation stalks {SYSTEM} colonies",
+        "[FAMINE] {SYSTEM} food reserves exhausted",
+        "[FAMINE] Riots erupt over scarce food in {SYSTEM}",
+        "[FAMINE] Mass exodus as {SYSTEM} faces starvation",
+        "[FAMINE] Emergency rations deployed to {SYSTEM}",
+        "[FAMINE] Children dying in {SYSTEM} famine",
+        "[FAMINE] Agricultural collapse dooms {SYSTEM}",
+        "[FAMINE] Desperate {SYSTEM} begs for food aid",
+        "[FAMINE] Humanitarian disaster unfolds in {SYSTEM}",
+        "[FAMINE] {SYSTEM} population faces extinction-level hunger"
     ],
     CRISIS_PLAGUE_DISTANT: [
         "[SKULL] Plague outbreak spreads to {SYSTEM}",
         "[SKULL] Neighboring system {SYSTEM} affected by contagion",
-        "[SKULL] Disease reaches {SYSTEM} from nearby outbreak"
+        "[SKULL] Disease reaches {SYSTEM} from nearby outbreak",
+        "[SKULL] Quarantine fails: plague hits {SYSTEM}",
+        "[SKULL] {SYSTEM} reports first plague cases",
+        "[SKULL] Infection vector traced to {SYSTEM}",
+        "[SKULL] Border closures fail to protect {SYSTEM}",
+        "[SKULL] {SYSTEM} braces for incoming pandemic",
+        "[SKULL] Secondary outbreak confirmed in {SYSTEM}",
+        "[SKULL] Plague spreads despite {SYSTEM} precautions"
     ],
     CRISIS_FAMINE_DISTANT: [
         "[FAMINE] Famine conditions worsen in {SYSTEM}",
         "[FAMINE] Food crisis spreads to {SYSTEM}",
-        "[FAMINE] {SYSTEM} suffers from regional crop failures"
+        "[FAMINE] {SYSTEM} suffers from regional crop failures",
+        "[FAMINE] Hunger spills over into {SYSTEM}",
+        "[FAMINE] {SYSTEM} food supplies dwindling fast",
+        "[FAMINE] Refugees flood {SYSTEM} fleeing famine",
+        "[FAMINE] {SYSTEM} stockpiles raided by starving mobs",
+        "[FAMINE] Regional blight threatens {SYSTEM} harvests",
+        "[FAMINE] {SYSTEM} drawn into widening food crisis",
+        "[FAMINE] Shortages hit {SYSTEM} as crisis expands"
     ],
 
     // --- Combat Report Headlines ---
     COMBAT_PIRATE_KILLS: [
         "Pirate fleet decimated in {SYSTEM}",
         "{COUNT} raiders destroyed in {SYSTEM} skirmish",
-        "Major pirate losses in {SYSTEM}: {NAME} among the fallen"
+        "Major pirate losses in {SYSTEM}: {NAME} among the fallen",
+        "Raider gang obliterated in {SYSTEM} ambush",
+        "Pirate armada shattered near {SYSTEM}",
+        "{COUNT} buccaneer ships blown apart in {SYSTEM}",
+        "Criminal fleet wiped out in {SYSTEM} engagement",
+        "Marauders suffer crushing defeat in {SYSTEM}",
+        "Pirate stronghold crumbles: {COUNT} killed in {SYSTEM}",
+        "Outlaw {NAME} meets end in {SYSTEM} firefight",
+        "Raider casualties mount in {SYSTEM} crackdown",
+        "{COUNT} pirate vessels reduced to scrap in {SYSTEM}",
+        "Major blow to piracy: {NAME} killed in {SYSTEM}"
     ],
     COMBAT_POLICE_CASUALTIES: [
         "Law enforcement takes casualties in {SYSTEM}",
         "Officer {NAME} killed in {SYSTEM} violence",
-        "{COUNT} officers fall in line of duty"
+        "{COUNT} officers fall in line of duty",
+        "Police patrol ambushed in {SYSTEM}",
+        "Badge count rises: {COUNT} deputies dead in {SYSTEM}",
+        "Officer {NAME} dies heroically in {SYSTEM}",
+        "Law enforcement mourns {COUNT} lost in {SYSTEM}",
+        "Police forces suffer heavy losses in {SYSTEM}",
+        "{COUNT} patrol ships destroyed in {SYSTEM} attack",
+        "Deputy {NAME} among {COUNT} casualties in {SYSTEM}",
+        "Thin blue line broken: {COUNT} dead in {SYSTEM}",
+        "Memorial service planned for {SYSTEM} officers",
+        "Police sacrifice: {NAME} gives life protecting {SYSTEM}"
     ],
     COMBAT_IMPERIAL_LOSSES: [
         "Imperial forces suffer setback in {SYSTEM}",
         "{COUNT} Imperial vessels lost in {SYSTEM}",
-        "Military casualties mount in {SYSTEM}"
+        "Military casualties mount in {SYSTEM}",
+        "Imperial fleet takes beating in {SYSTEM}",
+        "{COUNT} Navy ships destroyed in {SYSTEM} action",
+        "Imperial command mourns losses in {SYSTEM}",
+        "Military operation goes wrong: {COUNT} lost in {SYSTEM}",
+        "Empire bleeds in {SYSTEM}: {COUNT} casualties",
+        "Imperial pilots fall in {SYSTEM} engagement",
+        "{COUNT} warships downed in {SYSTEM} battle",
+        "Navy suffers {COUNT} losses in {SYSTEM} offensive",
+        "Imperial {NAME} among {COUNT} killed in {SYSTEM}",
+        "Heavy toll for Empire in {SYSTEM} campaign"
     ],
     COMBAT_SEPARATIST_LOSSES: [
         "Separatist cells crushed in {SYSTEM}",
         "Rebel forces take heavy losses in {SYSTEM}",
-        "{COUNT} resistance fighters eliminated in {SYSTEM}"
+        "{COUNT} resistance fighters eliminated in {SYSTEM}",
+        "Insurgent base destroyed in {SYSTEM}",
+        "Separatist casualties mount: {COUNT} dead in {SYSTEM}",
+        "Rebel {NAME} among {COUNT} killed in {SYSTEM}",
+        "Resistance crumbles in {SYSTEM}: {COUNT} losses",
+        "{COUNT} insurgent ships destroyed in {SYSTEM}",
+        "Separatist offensive stalls: heavy casualties in {SYSTEM}",
+        "Rebel cell leadership decapitated in {SYSTEM}",
+        "Revolutionary forces decimated in {SYSTEM}",
+        "{COUNT} freedom fighters fall in {SYSTEM} battle",
+        "Separatist dreams die in {SYSTEM}: {COUNT} casualties"
     ],
     COMBAT_ALIEN_KILLS: [
         "Alien threat repelled in {SYSTEM}",
         "{COUNT} xeno hostiles neutralized in {SYSTEM}",
-        "Humanity strikes back in {SYSTEM}"
+        "Humanity strikes back in {SYSTEM}",
+        "Alien incursion crushed in {SYSTEM}",
+        "{COUNT} extraterrestrial vessels destroyed in {SYSTEM}",
+        "Xeno menace pushed back from {SYSTEM}",
+        "Alien armada shattered in {SYSTEM} defense",
+        "{COUNT} otherworldly hostiles eliminated in {SYSTEM}",
+        "Human forces triumph over aliens in {SYSTEM}",
+        "Xeno casualties: {COUNT} craft destroyed in {SYSTEM}",
+        "Alien invasion force annihilated in {SYSTEM}",
+        "{COUNT} alien kills confirmed in {SYSTEM} battle",
+        "Humanity's defenders destroy {COUNT} xenos in {SYSTEM}"
     ],
 
     // --- Hero Headlines ---
     HERO_IMPERIAL: [
         "[MEDAL] Hero of the Imperium: {NAME} claims {COUNT} kills in {SYSTEM}",
         "[MEDAL] Imperial ace {NAME} devastates enemies in {SYSTEM}",
-        "[MEDAL] Decorated pilot {NAME} dominates {SYSTEM} skies"
+        "[MEDAL] Decorated pilot {NAME} dominates {SYSTEM} skies",
+        "[MEDAL] {NAME} awarded Imperial Cross after {COUNT} victories",
+        "[MEDAL] Unstoppable {NAME} racks up {COUNT} kills for Empire",
+        "[MEDAL] Imperial champion {NAME} crushes opposition in {SYSTEM}",
+        "[MEDAL] {NAME} becomes legend after {COUNT} kills in {SYSTEM}",
+        "[MEDAL] Navy ace {NAME} annihilates {COUNT} hostiles in {SYSTEM}",
+        "[MEDAL] {NAME} honored for {COUNT} kills in defense of {SYSTEM}",
+        "[MEDAL] Imperial hero {NAME} claims glory in {SYSTEM}",
+        "[MEDAL] Ace pilot {NAME}: {COUNT} confirmed kills in {SYSTEM}",
+        "[MEDAL] {NAME} earns highest honors after {SYSTEM} rampage"
     ],
     HERO_SEPARATIST: [
         "[FIST] Hero of the Resistance: {NAME} strikes back in {SYSTEM}",
         "[FIST] Freedom fighter {NAME} downs {COUNT} Imperial craft",
-        "[FIST] Rebel ace {NAME} terrorizes Imperial forces"
+        "[FIST] Rebel ace {NAME} terrorizes Imperial forces",
+        "[FIST] {NAME} becomes legend of the resistance in {SYSTEM}",
+        "[FIST] Revolutionary hero {NAME} claims {COUNT} victories",
+        "[FIST] {NAME} liberates {SYSTEM} skies with {COUNT} kills",
+        "[FIST] Separatist champion {NAME} humiliates Empire in {SYSTEM}",
+        "[FIST] {NAME} celebrated after {COUNT} kills against tyranny",
+        "[FIST] Resistance icon {NAME} strikes fear in {SYSTEM}",
+        "[FIST] Freedom's champion {NAME} racks up {COUNT} Imperial kills",
+        "[FIST] Rebel legend {NAME} dominates {SYSTEM} battlefield",
+        "[FIST] {NAME} hailed as hero after {COUNT} victories in {SYSTEM}"
     ],
     HERO_POLICE: [
         "[SHIELD] Police hero: Officer {NAME} neutralizes {COUNT} threats",
         "[SHIELD] Deputy {NAME} clears {SYSTEM} of pirate menace",
-        "[SHIELD] Law enforcement ace {NAME} keeps the peace"
+        "[SHIELD] Law enforcement ace {NAME} keeps the peace",
+        "[SHIELD] Officer {NAME} honored for {COUNT} arrests in {SYSTEM}",
+        "[SHIELD] {NAME} promoted after {COUNT} criminal takedowns",
+        "[SHIELD] Deputy {NAME} becomes {SYSTEM}'s most decorated officer",
+        "[SHIELD] Police legend {NAME} claims {COUNT} busts in {SYSTEM}",
+        "[SHIELD] Officer {NAME}: {COUNT} criminals stopped in {SYSTEM}",
+        "[SHIELD] Hero cop {NAME} single-handedly cleans up {SYSTEM}",
+        "[SHIELD] Badge of honor: {NAME} racks up {COUNT} interdictions",
+        "[SHIELD] {NAME} awarded Medal of Valor for {SYSTEM} heroics",
+        "[SHIELD] Officer {NAME} restores order with {COUNT} arrests"
     ],
     HERO_MILITARY: [
         "[STAR] Military ace {NAME} racks up {COUNT} victories",
         "[STAR] Decorated pilot {NAME} dominates {SYSTEM}",
-        "[STAR] Combat legend {NAME} adds to kill count"
+        "[STAR] Combat legend {NAME} adds to kill count",
+        "[STAR] {NAME} becomes top ace with {COUNT} kills in {SYSTEM}",
+        "[STAR] Military hero {NAME} earns {COUNT} confirmed victories",
+        "[STAR] Ace {NAME} unstoppable in {SYSTEM}: {COUNT} kills",
+        "[STAR] {NAME} awarded Distinguished Flying Cross for {SYSTEM}",
+        "[STAR] Combat champion {NAME} devastates hostiles in {SYSTEM}",
+        "[STAR] Pilot {NAME} enters hall of fame with {COUNT} victories",
+        "[STAR] Military legend: {NAME} claims {COUNT} kills in {SYSTEM}",
+        "[STAR] Top gun {NAME} dominates with {COUNT} confirmed kills",
+        "[STAR] {NAME} becomes most feared pilot in {SYSTEM}"
     ]
 };
 
@@ -370,27 +590,51 @@ const BODY_TEMPLATES = {
 // =============================================================================
 
 const BACKGROUND_STORY_TEMPLATES = [
-    // Ship stories (0-3)
+    // Ship stories (0-9)
     ['{SHIP} production hits record numbers', 'Shipyards across the sector report unprecedented demand for the {ship} as buyers rush to secure delivery slots. Manufacturing facilities operating at maximum capacity with waitlists extending well into the next quarter.'],
     ['Celebrity pilot {PILOT} endorses {SHIP}', 'Pre-orders for the {ship} exceed all expectations after famous combat ace {pilot} publicly praised its handling characteristics and combat performance. Dealers report showroom traffic has tripled since the endorsement.'],
     ['{SHIP} recall issued', 'Manufacturer issues voluntary recall affecting recent {ship} production runs citing minor thruster calibration issues discovered during routine quality testing. Owners advised to visit authorized service centers for free inspection and adjustment.'],
     ['New {SHIP} variant unveiled', 'Prototype {ship} variant featuring enhanced cargo capacity and improved jump range impresses at industry showcase. Test pilots report exceptional performance metrics. Mass production expected to begin within months.'],
-    // Pirate stories (4-7)
+    ['{SHIP} wins combat trials', 'Fleet evaluation trials conclude with {ship} outperforming competitors in simulated combat scenarios. Military procurement officers impressed by weapon mount flexibility and shield recharge rates. Major contract expected.'],
+    ['{SHIP} price drops after factory expansion', 'New manufacturing facility brings {ship} costs down significantly. Budget-conscious pilots celebrate access to previously premium vessel. Market analysts predict surge in sales across frontier systems.'],
+    ['Legendary {SHIP} goes to auction', 'Famous ship with storied combat history attracts bidders from across the galaxy. Previous owner {pilot} retired after decades of service. Winning bid expected to shatter records for vintage vessels.'],
+    ['{SHIP} modifications prove popular', 'Aftermarket upgrades for {ship} flying off dealer shelves. Performance enthusiasts swap tips on optimal configurations. Manufacturers struggle to keep pace with component demand.'],
+    ['Racing champion switches to {SHIP}', 'Controversial decision by top racer to abandon previous vessel for {ship} sparks debate. Team engineers confident in speed potential. Rivals dismissive but clearly nervous.'],
+    ['{SHIP} theft ring busted', 'Coordinated police action dismantles operation stealing {ship} vessels from station hangars. Dozens of stolen ships recovered. Owners urged to update security codes immediately.'],
+    // Pirate stories (10-19)
     ['{GANG} activity drops sharply', 'Intelligence analysts suggest internal power struggle within the {gang} has disrupted their operations significantly. Traders report quieter shipping lanes as the criminal organization deals with leadership disputes.'],
     ['{GANG} leader spotted', 'Unconfirmed reports place the notorious {gang} commander near frontier system outposts. Bounty hunters mobilizing to intercept. Authorities urge civilians to report any sightings immediately while avoiding direct contact.'],
     ['Bounty hunters target {GANG}', 'Coordinated multi-system bounty operation launches against {gang} cells with significant financial backing from shipping corporations. Premium rates offered for verified eliminations. Hunters gathering at staging areas.'],
     ['{GANG} demands protection fees', 'Station operators in outer systems report escalating extortion attempts by {gang} operatives threatening cargo interdiction. Security consultants recommend enhanced escort protocols for valuable shipments.'],
-    // Commodity stories (8-11)
+    ['{GANG} splinters after leadership dispute', 'Criminal organization fractures as rival factions vie for control. Violence between former allies disrupts previously coordinated operations. Opportunistic arrests made during chaos.'],
+    ['{GANG} recruits aggressively', 'Reports indicate {gang} expanding recruitment efforts among desperate populations. Economic downturn blamed for swelling pirate ranks. Authorities warn young pilots against criminal temptation.'],
+    ['{GANG} hideout raided', 'Military strike force descends on suspected {gang} base. Casualties on both sides reported. Captured supplies include weapons and stolen cargo. Leaders escaped but are being pursued.'],
+    ['{GANG} releases hostages', 'Kidnapping victims returned after ransom negotiations conclude. Negotiations mediated by neutral parties. Families express relief while authorities vow continued pursuit of perpetrators.'],
+    ['{GANG} attacks convoy', 'Heavily defended cargo convoy ambushed by coordinated {gang} assault. Several escort ships destroyed before reinforcements arrived. Losses estimated in millions. Investigation underway.'],
+    ['Former {GANG} member turns informant', 'Defector provides authorities with detailed intelligence on criminal operations. Arrests expected as information is verified. Protected witness location kept secret amid death threats.'],
+    // Commodity stories (20-29)
     ['{COMMODITY} prices stabilize', 'After weeks of dramatic price volatility driven by supply disruptions, {commodity} markets finally find equilibrium. Traders cautiously optimistic as futures contracts normalize across major exchanges.'],
     ['New {COMMODITY} trade route discovered', 'Explorers map highly efficient hyperspace corridor connecting previously isolated {commodity} producers to major markets. Transportation costs expected to drop significantly. Shipping volumes already increasing.'],
     ['{COMMODITY} shortage feared', 'Supply chain analysts warn of potential {commodity} deficit in coming months as production facilities struggle with aging infrastructure. Stockpiling reported by major distributors. Prices trending upward.'],
     ['{COMMODITY} smuggling ring exposed', 'Coordinated law enforcement operation dismantles sophisticated smuggling network moving illegal {commodity} shipments through frontier systems. Multiple arrests made. Seized cargo valued in millions.'],
-    // NPC stories (12-15)
+    ['{COMMODITY} demand surges unexpectedly', 'Market analysts scramble to explain sudden spike in {commodity} purchases. Speculation ranges from military stockpiling to new industrial applications. Traders rushing to capitalize before prices peak.'],
+    ['{COMMODITY} quality concerns raised', 'Consumer advocacy groups warn of substandard {commodity} flooding markets from unregulated producers. Buyers urged to verify source authenticity. Legitimate suppliers report increased inquiries.'],
+    ['New {COMMODITY} source discovered', 'Survey team locates rich {commodity} deposits in previously unexplored region. Rush of prospectors expected. Environmental impact assessments waived to accelerate development. Critics voice concerns.'],
+    ['{COMMODITY} futures trading suspended', 'Exchange halts trading amid allegations of market manipulation. Investigation focuses on coordinated buying patterns. Traders left in limbo as prices frozen pending resolution.'],
+    ['{COMMODITY} tariffs spark trade dispute', 'Import duties on {commodity} trigger retaliatory measures from affected systems. Diplomatic efforts underway to resolve escalating trade war. Consumers face higher prices in meantime.'],
+    ['{COMMODITY} production revolutionized', 'Breakthrough manufacturing process promises to slash {commodity} costs dramatically. Traditional producers face obsolescence. Investors rush to back new technology while workers fear displacement.'],
+    // NPC stories (30-39)
     ['{TITLED} announces retirement', 'After decades of distinguished service shaping interstellar policy, the decorated official steps down amid elaborate ceremony. Successor appointment expected within weeks. Legacy includes landmark trade agreements.'],
     ['{TITLED} calls for reform', 'Controversial speech delivered to packed assembly hall demands sweeping changes to outdated trade regulations. Reactions sharply divided along factional lines. Protests and counter-protests reported at government buildings.'],
     ['Pilot {PILOT} sets new record', 'Racing circuit achievement celebrated as {pilot} completes fastest hyperspace corridor run in sector history. Previous record stood for over a decade. Sponsors announce substantial bonus payments.'],
     ['{PILOT} survives alien encounter', 'Lone pilot {pilot} escapes Thargoid ambush against overwhelming odds in tale of survival inspiring bounty hunters and military pilots across human space. Interview requests flooding in from media outlets.'],
-    // Static stories (16-23)
+    ['{TITLED} under investigation', 'Allegations of corruption rock government as prominent figure faces scrutiny. Documents suggest improper financial dealings. Supporters cry political witch hunt while critics demand accountability.'],
+    ['{PILOT} rescues stranded crew', 'Heroic pilot {pilot} braves hazardous conditions to save crew of disabled vessel. All hands recovered alive despite deteriorating life support. Dramatic footage circulating widely on social networks.'],
+    ['{TITLED} announces ambitious initiative', 'Bold new program promises economic revitalization for struggling frontier communities. Critics question feasibility while supporters hail visionary leadership. Funding sources remain undisclosed.'],
+    ['{PILOT} joins racing team', 'Rising star {pilot} signs with premier racing organization after impressive independent season. Team hopes fresh talent will reverse recent performance slump. Fans debate potential impact.'],
+    ['{TITLED} visits disaster zone', 'High-profile official tours affected areas to assess damage and coordinate relief. Photo opportunities criticized by some as political theater. Emergency funds released following visit.'],
+    ['{PILOT} writes bestselling memoir', 'Autobiography by legendary combat veteran {pilot} tops sales charts. Candid accounts of famous battles and personal struggles resonate with readers. Film adaptation rumored in development.'],
+    // Static flavor stories (40-59)
     ['Imperial Clipper luxury cruise departs', 'VIP passengers embark on exclusive multi-system tour aboard the prestigious vessel. Security detail exceeds standard protocols with military escort through less secure regions. Passenger manifest includes notable celebrities.'],
     ['Separatist rally draws thousands', 'Frontier colony hosts largest political gathering in years as supporters demand greater autonomy from core world governance. Imperial observers maintain careful distance while monitoring communications. Speeches broadcast widely.'],
     ['Military exercises begin near frontier', 'Combined naval forces conduct extensive training operations involving hundreds of vessels. Civilian traffic rerouted during maneuvers. Officials describe exercises as routine preparedness drills. Critics question timing.'],
@@ -398,7 +642,19 @@ const BACKGROUND_STORY_TEMPLATES = [
     ['Starliner cruiser completes maiden voyage', 'Passengers disembarking from flagship tourism vessel report exceptional amenities and flawless service. Booking requests surge for upcoming voyages. Industry analysts predict tourism sector growth.'],
     ['Mining boom transforms asteroid belt', 'Independent prospectors and corporate operations flock to newly discovered Rare Ore deposits. Boom town atmosphere develops around makeshift stations. Environmental concerns raised about extraction pace.'],
     ['Police Viper squadron receives commendation', 'Officers formally recognized for exceptional service protecting vital trade lanes from pirate incursions. Ceremony attended by sector governor. Decorated pilots credited with dozens of criminal interdictions.'],
-    ['Cobra Mk III remains best-selling multi-role', 'Venerable design continues to dominate versatility rankings across all sectors despite newer competition. Manufacturers attribute success to proven reliability and extensive modification options. Sales remain strong.']
+    ['Cobra Mk III remains best-selling multi-role', 'Venerable design continues to dominate versatility rankings across all sectors despite newer competition. Manufacturers attribute success to proven reliability and extensive modification options. Sales remain strong.'],
+    ['Refugee crisis strains border systems', 'Thousands flee conflict zones seeking safety in stable territories. Reception facilities overwhelmed as arrivals exceed capacity. Humanitarian organizations appeal for donations and volunteers.'],
+    ['Ancient derelict discovered drifting', 'Survey expedition locates mysterious vessel of unknown origin. Initial scans suggest technology predating human spaceflight. Research teams dispatched to investigate while military maintains perimeter.'],
+    ['Entertainment complex opens on station', 'Residents celebrate inauguration of massive leisure facility featuring gaming, dining, and recreation. Economic boost expected for local businesses. Opening night crowds exceed all projections.'],
+    ['Labor shortage hits shipyard industry', 'Skilled workers in high demand as manufacturers struggle to meet order backlog. Wages rising across sector as companies compete for talent. Training programs expanding to address gap.'],
+    ['Archaeological dig yields artifacts', 'Excavation uncovers evidence of ancient civilization on remote world. Academic community excited by implications for galactic history. Funding secured for expanded research operations.'],
+    ['Weather satellite network expanded', 'New orbital platforms improve forecasting accuracy for agricultural worlds. Farmers express gratitude for reduced crop losses. Investment pays dividends in food security for millions.'],
+    ['Veteran pilots association holds reunion', 'Former military aviators gather to honor fallen comrades and share stories. Emotional ceremony features memorial flights. Younger generation pilots attend to learn from legends.'],
+    ['Deep space listening post goes online', 'Cutting-edge facility begins monitoring previously unexplored regions for signals of intelligence. Scientists cautiously optimistic about detection possibilities. First data transmissions eagerly awaited.'],
+    ['Trade union threatens strike action', 'Dockworkers demand improved conditions and higher wages. Negotiations stalled as management refuses key concessions. Cargo delays possible if dispute not resolved quickly.'],
+    ['Medical breakthrough announced', 'Research team develops treatment for previously incurable condition. Clinical trials show remarkable success rates. Pharmaceutical companies racing to secure production rights.'],
+    ['Hyperspace route survey completed', 'Mapping expedition returns after months charting new corridors between systems. Data promises to cut travel times significantly. Shipping companies eagerly await official route certification.'],
+    ['Station expansion project approved', 'Governing council authorizes major infrastructure investment. New docking bays and residential sections planned. Construction jobs will boost local economy for years.']
 ];
 
 /**
