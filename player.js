@@ -420,7 +420,7 @@ class Player {
             MISSION_LOG(`--- Mission "${this.activeMission.title}" ACCEPTED & ACTIVATED successfully. ---`);
             if (typeof saveGame === 'function') saveGame();
             // Play mission accept sound
-            if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+            if (soundManager?.playSound) {
                 soundManager.playSound('missionAccept');
             }
             return true; // Success
@@ -698,7 +698,7 @@ class Player {
             uiManager.addMessage(`Mission Complete: ${completedTitle} | Reward: ${reward}cr`);
 
             // Play mission complete sound
-            if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+            if (soundManager?.playSound) {
                 soundManager.playSound('missionComplete');
             }
 
@@ -970,7 +970,7 @@ class Player {
         }
 
         // Play sound effect if available
-        if (typeof soundManager !== 'undefined') {
+        if (soundManager) {
             soundManager.playWorldSound('electricField', this.pos.x, this.pos.y, this.pos);
         }
     }
@@ -1025,11 +1025,11 @@ class Player {
         this.cloakDurationTimer = this.cloakMaxDuration;
         this.cloakActivatedTime = millis();
 
-        if (typeof uiManager !== 'undefined') {
+        if (uiManager) {
             uiManager.addMessage("Cloaking device activated", [100, 200, 255]);
         }
 
-        if (typeof soundManager !== 'undefined') {
+        if (soundManager) {
             soundManager.playSound('shieldUp', 1.0, this);
         }
 
@@ -1046,11 +1046,11 @@ class Player {
         this.cloakCooldownTimer = this.cloakMaxCooldown;
         this.cloakDurationTimer = 0;
 
-        if (typeof uiManager !== 'undefined') {
+        if (uiManager) {
             uiManager.addMessage("Cloak deactivated", [200, 200, 200]);
         }
 
-        if (typeof soundManager !== 'undefined') {
+        if (soundManager) {
             soundManager.playSound('shieldDown', 1.0, this);
         }
     }
@@ -3002,7 +3002,7 @@ class Player {
             return;
         }
 
-        const planets = this.currentSystem.planets || [];
+        const planets = this.currentSystem.planets;
         if (!planets || planets.length === 0) {
             console.error(`Autopilot error: No planets in ${this.currentSystem.name}. staticElementsInitialized: ${this.currentSystem.staticElementsInitialized}`);
             if (uiManager) uiManager.addMessage('No planets in this system');

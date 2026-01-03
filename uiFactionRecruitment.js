@@ -687,14 +687,14 @@ class UIFactionRecruitment {
             if (typeof addMessageFn === 'function') {
                 addMessageFn(`Fine paid. Legal status cleared in ${player.currentSystem.name}.`, [144, 238, 144]);
             }
-            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+            if (soundManager) soundManager.playSound('upgrade');
             if (typeof saveGame === 'function') saveGame();
             return true;
         } else {
             if (typeof addMessageFn === 'function') {
                 addMessageFn('Not enough credits to pay fine.', [220, 20, 60]);
             }
-            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            if (soundManager) soundManager.playSound('error');
             return false;
         }
     }
@@ -733,7 +733,7 @@ class UIFactionRecruitment {
             if (typeof addMessageFn === 'function') {
                 addMessageFn(fx.text(), fx.color);
             }
-            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+            if (soundManager) soundManager.playSound('upgrade');
             if (typeof saveGame === 'function') saveGame();
             return true;
         } else {
@@ -746,7 +746,7 @@ class UIFactionRecruitment {
             if (typeof addMessageFn === 'function') {
                 addMessageFn(failTextByFaction[factionKey] || 'Failed to join faction.', [220, 20, 60]);
             }
-            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            if (soundManager) soundManager.playSound('error');
             return false;
         }
     }
@@ -772,14 +772,14 @@ class UIFactionRecruitment {
             if (typeof addMessageFn === 'function') {
                 addMessageFn(msgByFaction[factionKey] || 'You have left your faction.', [255, 180, 100]);
             }
-            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+            if (soundManager) soundManager.playSound('upgrade');
             if (typeof saveGame === 'function') saveGame();
             return true;
         } else {
             if (typeof addMessageFn === 'function') {
                 addMessageFn('Failed to leave faction.', [220, 20, 60]);
             }
-            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            if (soundManager) soundManager.playSound('error');
             return false;
         }
     }

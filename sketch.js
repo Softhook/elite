@@ -440,17 +440,13 @@ function handleGameOverInput() {
 
     if (player && (player.destroyed || player.isDying || player.hull <= 0)) {
         // Verify player is actually dead before allowing reset
-        if (player && (player.destroyed || player.isDying || player.hull <= 0)) {
-            if (typeof resetGame === 'function') {
-                resetGame();
-            } else {
-                console.error("resetGame function not found, falling back to reload");
-                window.location.reload();
-            }
+        if (typeof resetGame === 'function') {
+            resetGame();
         } else {
-            console.warn("Reset blocked: Player is not actually dead");
+            console.error("resetGame function not found, falling back to reload");
+            window.location.reload();
         }
-        return false;
+        return false; // Indicate input was handled, prevent default behavior
     }
 
     // Toggle inventory with “I”

@@ -352,7 +352,7 @@ class WeaponSystem {
         }
 
         // Play force blast sound
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player.pos) {
+        if (soundManager && player?.pos) {
             soundManager.playWorldSound('force', ownerX, ownerY, player.pos, owner);
         }
     }
@@ -519,7 +519,7 @@ class WeaponSystem {
         this._applySurfaceProperties(proj, owner);
 
         // Play weapon-specific sound using playWorldSound
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
+        if (soundManager && player?.pos) {
             let soundName = 'laser';
             const wType = weapon?.type;
             if (wType === WEAPON_TYPE.TURRET) {
@@ -578,7 +578,7 @@ class WeaponSystem {
         // Apply surface mode properties
         this._applySurfaceProperties(proj, owner);
 
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
+        if (soundManager && player?.pos) {
             // Consider adding a specific 'missileLaunch' sound
             soundManager.playWorldSound('missileLaunch', spawnX, spawnY, player.pos, owner);
         }
@@ -680,7 +680,7 @@ class WeaponSystem {
         }
 
         // Play sound once for all projectiles
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
+        if (soundManager && player?.pos) {
             soundManager.playWorldSound('laser', baseX, baseY, player.pos, owner);
         }
     }
@@ -761,7 +761,7 @@ class WeaponSystem {
         }
 
         // Play sound using playWorldSound
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
+        if (soundManager && player?.pos) {
             soundManager.playWorldSound('beam', spawnPos.x, spawnPos.y, player.pos, owner);
         }
 
@@ -1094,7 +1094,7 @@ class WeaponSystem {
         }
 
         // Play tangle sound
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
+        if (soundManager && player?.pos) {
             soundManager.playWorldSound('tangleCast', spawnX, spawnY, player.pos, owner);
         }
     }
@@ -1145,8 +1145,8 @@ class WeaponSystem {
             WEAPON_LOG('Harpoon fired', { owner: owner && owner.constructor ? owner.constructor.name : owner, spawnX, spawnY, speed, weaponName: weapon?.name });
         }
 
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
-            try { soundManager.playWorldSound('harpoonFire', spawnX, spawnY, player.pos, owner); } catch (_) { }
+        if (soundManager && player?.pos) {
+            soundManager.playWorldSound('harpoonFire', spawnX, spawnY, player.pos, owner);
         }
     }
 
@@ -1211,7 +1211,7 @@ class WeaponSystem {
         }
 
         // Play mine drop sound
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
+        if (soundManager && player?.pos) {
             soundManager.playWorldSound('mineDrop', ownerX, ownerY, player.pos, owner);
         }
     }
@@ -1289,12 +1289,14 @@ class WeaponSystem {
                 const now = millis ? millis() : Date.now();
                 const last = target._lastShieldHitSoundTime || 0;
                 if (now - last > 150) { // throttle to avoid spam on beams/rapid fire
-                    if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player?.pos) {
+                    if (soundManager && player?.pos) {
                         soundManager.playWorldSound('hit', hitPoint.x, hitPoint.y, player.pos, target);
                     }
                     target._lastShieldHitSoundTime = now;
                 }
-            } catch (e) { /* non-fatal */ }
+            } catch (e) {
+                console.error('Shield hit sound error:', e);
+            }
         }
 
         // Create explosion/spark effect for ALL hits (shields or hull)
