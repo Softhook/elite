@@ -1364,7 +1364,7 @@ class EventManager {
 
         if (!SHIP_DEFINITIONS) {
             console.error("SHIP_DEFINITIONS is not available.");
-            return selectionConfig.fallbackShip || null;
+            return selectionConfig.fallbackShip;
         }
 
         switch (selectionConfig.strategy) {
@@ -1592,7 +1592,7 @@ class EventManager {
     _pickRandomStation() {
         if (!this.starSystem) return null;
         // Only return the main station for events, never secret stations
-        return this.starSystem.station || null;
+        return this.starSystem.station;
     }
 
     _selectShipForRole(role) {

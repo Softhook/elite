@@ -6055,27 +6055,27 @@ class StarSystem {
             playerWantedLevel: this.playerWantedLevel ?? 0,
             playerWantedRemainingMs: (this.playerWantedExpiry ? Math.max(0, this.playerWantedExpiry - millis()) : null),
             policeAlertSent: !!this.policeAlertSent,
-            cachedDescription: this.cachedDescription ?? null,
+            cachedDescription: this.cachedDescription,
 
             // Dynamic entities
             // Filter out player bodyguards (saved with player.activeBodyguards) and destroyed enemies
             enemies: this._serializeEntityArray(
-                this.enemies.filter(e => e && !e?.isPlayerBodyguard && !e?.destroyed && e?.hull > 0),
+                this.enemies.filter(e => e && !e.isPlayerBodyguard && !e.destroyed && e.hull > 0),
                 (e) => ({
                     shipType: e.shipTypeName || e.shipType || null,
                     role: e.role || null,
                     pos: e.pos ? { x: e.pos.x, y: e.pos.y } : null,
                     vel: e.vel ? { x: e.vel.x, y: e.vel.y } : null,
-                    hp: e.hp ?? e.health ?? null,
-                    angle: e.angle ?? null,
-                    state: e.currentState ?? null,
-                    id: e.id ?? null
+                    hp: e.hp ?? e.health,
+                    angle: e.angle,
+                    state: e.currentState,
+                    id: e.id
                 })),
             projectiles: this._serializeEntityArray(this.projectiles, (p) => ({
                 type: p.type || null,
                 pos: p.pos ? { x: p.pos.x, y: p.pos.y } : null,
                 vel: p.vel ? { x: p.vel.x, y: p.vel.y } : null,
-                lifespan: p.lifespan ?? null,
+                lifespan: p.lifespan,
                 ownerId: p.owner ? (p.owner.id || p.owner.shipTypeName || null) : null
             })),
             asteroids: this._serializeEntityArray(this.asteroids, (a) => ({

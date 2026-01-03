@@ -47,7 +47,7 @@ const MissionTypeRegistry = {
      * @returns {typeof MissionTypeHandler|null}
      */
     getHandler(type) {
-        return this._handlers.get(type) || null;
+        return this._handlers.get(type);
     },
 
     /**
