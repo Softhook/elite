@@ -279,12 +279,14 @@ class EnemyDamageSystem {
                 // Shield down audio cue (world-positioned)
                 try {
                     if (!this._shieldWasZero) {
-                        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player?.pos) {
+                        if (soundManager && player?.pos) {
                             soundManager.playWorldSound('shieldDown', this.pos.x, this.pos.y, player.pos, this);
                         }
                     }
                     this._shieldWasZero = true;
-                } catch (e) { /* ignore */ }
+                } catch (e) {
+                    console.error('Shield down sound error:', e);
+                }
                 damageDealt += hullDamage; // Total damage dealt (shield + hull)
             }
         } else {
@@ -317,10 +319,12 @@ class EnemyDamageSystem {
         this.isSpeedBursting = false;
 
         try {
-            if (typeof communicationSystem !== 'undefined' && communicationSystem && typeof communicationSystem.handleEnemyDestroyed === 'function') {
+            if (communicationSystem?.handleEnemyDestroyed) {
                 communicationSystem.handleEnemyDestroyed(this);
             }
-        } catch (_) { /* ignore comm errors on destruction */ }
+        } catch (err) {
+            console.error('Communication system error on enemy destruction:', err);
+        }
 
         const system = this.getSystem();
         if (system) {
