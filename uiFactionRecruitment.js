@@ -540,7 +540,7 @@ class UIFactionRecruitment {
      * @param {StarSystem} system
      */
     drawImperialRecruitmentMenu(player, panelRect, headerHeight, system) {
-        const baseColor = (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.IMPERIAL : [255, 235, 180];
+        const baseColor = (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.IMPERIAL : [160, 80, 220];
         const darkColor = baseColor.map(c => Math.floor(c * 0.5));
         const lightColor = baseColor;
 
@@ -563,7 +563,7 @@ class UIFactionRecruitment {
      * @param {StarSystem} system
      */
     drawSeparatistRecruitmentMenu(player, panelRect, headerHeight, system) {
-        const baseColor = (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.SEPARATIST : [128, 128, 0];
+        const baseColor = (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.SEPARATIST : [140, 150, 60];
         const darkColor = baseColor.map(c => Math.floor(c * 0.5));
         const lightColor = baseColor;
 
@@ -588,7 +588,7 @@ class UIFactionRecruitment {
     drawMilitaryRecruitmentMenu(player, panelRect, headerHeight, system) {
         const baseColor = (typeof FACTION_COLORS !== 'undefined' && FACTION_COLORS.MILITARY)
             ? FACTION_COLORS.MILITARY
-            : [100, 120, 140];
+            : [150, 150, 155];
         const darkColor = baseColor.map(c => Math.floor(c * 0.5));
         const lightColor = baseColor;
 
@@ -611,7 +611,7 @@ class UIFactionRecruitment {
      * @param {StarSystem} system
      */
     drawPoliceRecruitmentMenu(player, panelRect, headerHeight, system) {
-        const baseColor = (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.POLICE : [30, 144, 255];
+        const baseColor = (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.POLICE : [60, 140, 255];
         const darkColor = baseColor.map(c => Math.floor(c * 0.5));
         const lightColor = baseColor;
 
@@ -714,22 +714,22 @@ class UIFactionRecruitment {
             const msgByFaction = {
                 IMPERIAL: {
                     text: () => `Welcome to the Imperial Navy! You have been assigned a ${player.factionShip}.`,
-                    color: [173, 216, 230]
+                    color: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.IMPERIAL : [160, 80, 220]
                 },
                 SEPARATIST: {
                     text: () => `Fight for freedom! You have been assigned a ${player.factionShip}.`,
-                    color: [255, 165, 0]
+                    color: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.SEPARATIST : [140, 150, 60]
                 },
                 MILITARY: {
                     text: () => `Serve with honor! You have been assigned a ${player.factionShip}.`,
-                    color: [173, 216, 230]
+                    color: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.MILITARY : [150, 150, 155]
                 },
                 POLICE: {
                     text: () => `Welcome to the Police Force! You have been assigned a ${player.factionShip}.`,
-                    color: [30, 144, 255]
+                    color: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.POLICE : [60, 140, 255]
                 }
             };
-            const fx = msgByFaction[factionKey] || { text: () => 'Joined faction.', color: [173, 216, 230] };
+            const fx = msgByFaction[factionKey] || { text: () => 'Joined faction.', color: [150, 150, 150] };
             if (typeof addMessageFn === 'function') {
                 addMessageFn(fx.text(), fx.color);
             }

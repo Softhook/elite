@@ -126,12 +126,12 @@ class Enemy {
         this.baseColorValue = [random(80, 180), random(80, 180), random(80, 180)]; // Store as [R, G, B] array
         this.strokeColorValue = [200, 200, 200]; // Default grey as [R, G, B]
         switch (this.role) {
-            case AI_ROLE.POLICE: this.strokeColorValue = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.POLICE : [30, 144, 255]; break;
-            case AI_ROLE.HAULER: this.strokeColorValue = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.HAULER : [255, 215, 0]; break;
-            case AI_ROLE.PIRATE: this.strokeColorValue = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.PIRATE : [220, 20, 20]; break;
+            case AI_ROLE.POLICE: this.strokeColorValue = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.POLICE : [60, 140, 255]; break;
+            case AI_ROLE.HAULER: this.strokeColorValue = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.HAULER : [255, 210, 60]; break;
+            case AI_ROLE.PIRATE: this.strokeColorValue = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.PIRATE : [255, 50, 50]; break;
             case AI_ROLE.ALIEN: this.strokeColorValue = shipDef.strokeColorValue || [0, 255, 150]; break;// Default Alien Green or from shipDef
             case AI_ROLE.BOUNTY_HUNTER:
-                this.strokeColorValue = shipDef.strokeColorValue || [255, 165, 0]; // Orange stroke
+                this.strokeColorValue = shipDef.strokeColorValue || (typeof ROLE_COLORS !== 'undefined' ? ROLE_COLORS.BOUNTY_HUNTER : [255, 80, 180]); // Magenta-Pink stroke
                 // Bounty hunters might have slightly better stats or use shipDef overrides
                 this.rotationSpeed = shipDef.rotationSpeed || this.baseTurnRate * 1.1; // Slightly faster turning
                 this.angleTolerance = shipDef.angleTolerance || (10 * PI / 180); // Standard tolerance
