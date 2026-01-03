@@ -147,12 +147,14 @@
         <div>
             <button id="btn-progressive" class="active current-mode" onclick="setMode('progressive')">Progressive
                 (CURRENT)</button>
+            <button id="btn-deferred" onclick="setMode('deferred')"
+                title="Deferred bitmap processing (new)">Deferred</button>
             <button id="btn-buffered" class="comparison-mode" onclick="setMode('buffered')"
                 title="For comparison only">Buffered</button>
             <button id="btn-legacy" class="comparison-mode" onclick="setMode('legacy')"
                 title="For comparison only">Legacy</button>
         </div>
-        <div class="section-label">Tile Size (for Progressive mode):</div>
+        <div class="section-label">Tile Size (for Progressive/Deferred modes):</div>
         <div>
             <select id="tile-size-select" onchange="setTileSize(parseInt(this.value))">
                 <option value="128">128px</option>
@@ -176,6 +178,8 @@
         <div style="margin-top: 10px;">
             <button onclick="runFeatureComparison()" style="background:#003; border-color:#fc0; color:#fc0;">Run Feature
                 Comparison</button>
+            <button onclick="runDeferredComparison()" style="background:#003; border-color:#0ff; color:#0ff;">Compare
+                Immediate vs Deferred</button>
             <button onclick="runTileSizeComparison()" style="background:#003;">Compare Tile Sizes</button>
             <button onclick="runBenchmark()">Run Full Benchmark</button>
             <button onclick="resetBenchmark()">Reset</button>
@@ -214,6 +218,10 @@
         <div class="result-row">
             <span>Jitter:</span>
             <span id="jitter">-</span>
+        </div>
+        <div class="result-row">
+            <span>Pending Queue:</span>
+            <span id="pending-queue">0</span>
         </div>
         <hr style="border-color: #0f0;">
         <div id="benchmark-results"></div>
@@ -254,6 +262,84 @@
         const workerEnabled = (typeof Worker !== 'undefined') && (typeof OffscreenCanvas !== 'undefined');
         let tileWorker = null;
 
+        // Deferred processing mode variables
+        let useDeferredProcessing = false; // Toggle for immediate vs deferred
+        const pendingBitmaps = []; // Queue for deferred bitmap processing
+        const MAX_PENDING_BITMAPS = 20;
+        const BITMAP_PROCESS_TIME_MS = 8; // Max ms per frame for processing
+        const BITMAP_PROCESS_MIN_COUNT = 1;
+
+        /**
+         * Safely closes an ImageBitmap
+         */
+        function safeCloseBitmap(bitmap) {
+            try {
+                if (bitmap && typeof bitmap.close === 'function') {
+                    bitmap.close();
+                }
+            } catch (_) { }
+        }
+
+        /**
+         * Processes pending bitmaps in deferred mode (called each frame)
+         */
+        function processPendingBitmaps() {
+            if (pendingBitmaps.length === 0) return 0;
+
+            const startTime = performance.now();
+            let processed = 0;
+
+            while (pendingBitmaps.length > 0) {
+                // Time limit check (but always process at least MIN_COUNT)
+                if (processed >= BITMAP_PROCESS_MIN_COUNT &&
+                    (performance.now() - startTime) > BITMAP_PROCESS_TIME_MS) {
+                    break;
+                }
+
+                const item = pendingBitmaps.shift();
+                if (!item || !item.bitmap) continue;
+
+                const { key, bitmap } = item;
+
+                // Check if tile was already completed
+                const existing = tiles.get(key);
+                if (existing && existing.buffer) {
+                    safeCloseBitmap(bitmap);
+                    processed++;
+                    continue;
+                }
+
+                // Create p5 graphics buffer from ImageBitmap
+                let buffer = null;
+                let success = false;
+
+                try {
+                    buffer = createGraphics(tileSize, tileSize);
+                    const ctx = buffer.drawingContext;
+                    if (ctx.imageSmoothingEnabled !== undefined) {
+                        ctx.imageSmoothingEnabled = false;
+                    }
+                    ctx.drawImage(bitmap, 0, 0, buffer.width, buffer.height);
+                    success = true;
+                } catch (err) {
+                    if (buffer) { try { buffer.remove(); } catch (_) { } }
+                    buffer = null;
+                }
+
+                safeCloseBitmap(bitmap);
+
+                if (success && buffer) {
+                    tiles.set(key, { buffer, lastUsed: millis() });
+                } else {
+                    tiles.delete(key); // Allow retry
+                }
+
+                processed++;
+            }
+
+            return processed;
+        }
+
         function initWorker() {
             if (!workerEnabled) {
                 document.getElementById('worker-indicator').textContent = 'Not Supported';
@@ -263,19 +349,45 @@
 
             try {
                 // Use the real starfield worker from the parent directory
-                tileWorker = new Worker('../starfield_worker.js');
+                tileWorker = new Worker('../starfield_worker.js?v=3');
                 tileWorker.onmessage = function (e) {
                     const data = e.data;
                     const key = data.key;
                     if (!key) return;
 
+                    const imgBitmap = data.bitmap;
+
                     if (data.error) {
+                        safeCloseBitmap(imgBitmap);
                         tiles.delete(key);
                         return;
                     }
 
-                    const imgBitmap = data.bitmap;
-                    const [tx, ty] = key.split(',').map(Number);
+                    if (!imgBitmap) {
+                        tiles.delete(key);
+                        return;
+                    }
+
+                    // DEFERRED MODE: Queue bitmap for processing later
+                    if (useDeferredProcessing) {
+                        // Queue overflow protection
+                        while (pendingBitmaps.length >= MAX_PENDING_BITMAPS) {
+                            const dropped = pendingBitmaps.shift();
+                            if (dropped) {
+                                safeCloseBitmap(dropped.bitmap);
+                                tiles.delete(dropped.key);
+                            }
+                        }
+
+                        pendingBitmaps.push({
+                            key,
+                            bitmap: imgBitmap,
+                            receivedAt: performance.now()
+                        });
+                        return;
+                    }
+
+                    // IMMEDIATE MODE: Process bitmap right away
                     const buffer = createGraphics(tileSize, tileSize);
                     const ctx = buffer.drawingContext;
                     try {
@@ -285,7 +397,7 @@
                     } catch (err) {
                         console.error('Error drawing tile:', err);
                     }
-                    try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch (e) { }
+                    safeCloseBitmap(imgBitmap);
                     tiles.set(key, { buffer, lastUsed: millis() });
                 };
                 tileWorker.onerror = function (e) {
@@ -347,6 +459,11 @@
             // Time the frame
             const frameStart = performance.now();
 
+            // Process pending bitmaps in deferred mode (rate-limited)
+            if (useDeferredProcessing) {
+                processPendingBitmaps();
+            }
+
             // Draw background using centralized color
             background(STARFIELD_BG_RGB.r, STARFIELD_BG_RGB.g, STARFIELD_BG_RGB.b);
 
@@ -356,6 +473,11 @@
             // Draw stars based on mode
             switch (currentMode) {
                 case 'progressive':
+                    drawProgressiveStarfield();
+                    break;
+                case 'deferred':
+                    // Deferred uses same rendering as progressive, 
+                    // but with deferred bitmap processing (handled above)
                     drawProgressiveStarfield();
                     break;
                 case 'buffered':
@@ -406,12 +528,28 @@
 
         function updatePlayer() {
             if (isAutoDriving) {
-                // Consistency benchmark movement: Large circle at high speed
+                // Directional benchmark movement: Long straight runs with direction changes
+                // This better tests the predictive tile generation during fast linear travel
                 const elapsed = millis() - autoDriveStartTime;
-                const progress = elapsed / 2000; // Period of circle
-                const speed = 25; // Max speed
-                player.vel.x = Math.cos(progress) * speed;
-                player.vel.y = Math.sin(progress) * speed;
+                const speed = 30; // High speed to stress test tile generation
+
+                // Change direction every 2 seconds for variety in testing
+                // Pattern: right, up-right, up, up-left, left, down-left, down, down-right
+                const directionPhase = Math.floor(elapsed / 2000) % 8;
+                const directions = [
+                    { x: 1, y: 0 },      // right
+                    { x: 0.707, y: -0.707 }, // up-right
+                    { x: 0, y: -1 },     // up  
+                    { x: -0.707, y: -0.707 }, // up-left
+                    { x: -1, y: 0 },     // left
+                    { x: -0.707, y: 0.707 }, // down-left
+                    { x: 0, y: 1 },      // down
+                    { x: 0.707, y: 0.707 }   // down-right
+                ];
+
+                const dir = directions[directionPhase];
+                player.vel.x = dir.x * speed;
+                player.vel.y = dir.y * speed;
                 player.pos.add(player.vel);
 
                 lastPlayerVelX = player.vel.x;
@@ -507,6 +645,99 @@
             html += '</table>';
 
             resultsDiv.innerHTML = html;
+        }
+
+        /**
+         * Compares Immediate vs Deferred bitmap processing
+         * This tests the new deferred processing approach against the traditional immediate approach
+         */
+        async function runDeferredComparison() {
+            const resultsDiv = document.getElementById('benchmark-results');
+            resultsDiv.innerHTML = '<div style="color:#0ff">Starting Immediate vs Deferred Comparison... Do not touch controls.</div>';
+
+            // Enable both boost and prediction for realistic conditions
+            document.getElementById('chk-boost').checked = true;
+            document.getElementById('chk-prediction').checked = true;
+            updateFeatures();
+
+            const testCases = [
+                { name: "Progressive (Immediate)", mode: 'progressive', deferred: false },
+                { name: "Deferred Processing", mode: 'deferred', deferred: true }
+            ];
+
+            const results = [];
+
+            for (const test of testCases) {
+                resultsDiv.innerHTML += `<div>Running: ${test.name}...</div>`;
+
+                // Setup mode
+                useDeferredProcessing = test.deferred;
+                currentMode = test.mode;
+
+                // Clear caches and pending queue
+                clearTiles();
+                while (pendingBitmaps.length > 0) {
+                    const item = pendingBitmaps.shift();
+                    safeCloseBitmap(item?.bitmap);
+                }
+                frameTimes = [];
+
+                // Run test with longer duration to capture steady-state behavior
+                await new Promise(resolve => {
+                    startAutoDrive(8000, resolve); // 8 seconds per test
+                });
+
+                // Collect metrics
+                const avgFrameTime = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+                const fps = 1000 / avgFrameTime;
+                const minApparentFps = 1000 / Math.max(...frameTimes);
+                const maxFrameTime = Math.max(...frameTimes);
+
+                // Calculate jitter (standard deviation)
+                const mean = avgFrameTime;
+                const sqDiffs = frameTimes.map(f => Math.pow(f - mean, 2));
+                const avgSqDiff = sqDiffs.reduce((a, b) => a + b, 0) / sqDiffs.length;
+                const jitter = Math.sqrt(avgSqDiff);
+
+                // Calculate frame time percentiles
+                const sortedFrameTimes = [...frameTimes].sort((a, b) => a - b);
+                const p95 = sortedFrameTimes[Math.floor(sortedFrameTimes.length * 0.95)];
+                const p99 = sortedFrameTimes[Math.floor(sortedFrameTimes.length * 0.99)];
+
+                results.push({
+                    name: test.name,
+                    fps: fps.toFixed(1),
+                    minFps: minApparentFps.toFixed(1),
+                    jitter: jitter.toFixed(2),
+                    maxFrameTime: maxFrameTime.toFixed(1),
+                    p95: p95.toFixed(1),
+                    p99: p99.toFixed(1)
+                });
+            }
+
+            // Display results
+            let html = '<h4 style="color:#0ff">Immediate vs Deferred Comparison</h4>';
+            html += '<table style="width:100%; text-align:left; border-collapse:collapse; margin-top:10px;">';
+            html += '<tr style="border-bottom:1px solid #0ff"><th style="padding:5px">Mode</th><th>Avg FPS</th><th>Min FPS</th><th>Jitter</th><th>P95</th><th>P99</th><th>Max</th></tr>';
+
+            results.forEach(r => {
+                html += `<tr style="border-bottom:1px solid #333">
+                    <td style="padding:5px">${r.name}</td>
+                    <td class="good">${r.fps}</td>
+                    <td class="${parseFloat(r.minFps) < 30 ? 'bad' : 'ok'}">${r.minFps}</td>
+                    <td class="${parseFloat(r.jitter) > 5 ? 'bad' : 'ok'}">${r.jitter}ms</td>
+                    <td>${r.p95}ms</td>
+                    <td>${r.p99}ms</td>
+                    <td class="${parseFloat(r.maxFrameTime) > 50 ? 'bad' : 'ok'}">${r.maxFrameTime}ms</td>
+                </tr>`;
+            });
+            html += '</table>';
+            html += '<p style="font-size:11px; color:#888; margin-top:10px;">Lower jitter and P95/P99 values indicate more consistent frame timing. Deferred mode should have lower spikes.</p>';
+
+            resultsDiv.innerHTML = html;
+
+            // Reset to progressive mode
+            setMode('progressive');
         }
 
         // ==================== PROGRESSIVE RENDERING ====================
@@ -1063,6 +1294,14 @@
         function updateUI() {
             document.getElementById('current-mode').textContent = currentMode;
 
+            // Show pending queue size
+            const queueEl = document.getElementById('pending-queue');
+            if (queueEl) {
+                queueEl.textContent = pendingBitmaps.length;
+                queueEl.className = pendingBitmaps.length === 0 ? 'good' :
+                    (pendingBitmaps.length < 10 ? 'ok' : 'bad');
+            }
+
             if (frameTimes.length > 0) {
                 const avgFrameTime = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
                 const maxFrameTime = Math.max(...frameTimes);
@@ -1092,6 +1331,9 @@
             currentMode = mode;
             frameTimes = [];
 
+            // Set deferred processing based on mode
+            useDeferredProcessing = (mode === 'deferred');
+
             // Update button states
             document.querySelectorAll('#controls button').forEach(btn => btn.classList.remove('active'));
             document.getElementById('btn-' + mode).classList.add('active');
@@ -1100,14 +1342,22 @@
             player.pos = createVector(0, 0);
             player.vel = createVector(0, 0);
 
-            // Clear caches
+            // Clear caches and pending bitmaps
             clearTiles();
+            while (pendingBitmaps.length > 0) {
+                const item = pendingBitmaps.shift();
+                safeCloseBitmap(item?.bitmap);
+            }
+
             if (starfieldBuffer) {
                 starfieldBuffer.remove();
                 starfieldBuffer = null;
             }
             lastBufferX = null;
             lastBufferY = null;
+
+            // Update mode display
+            document.getElementById('current-mode').textContent = mode;
         }
 
         function resetBenchmark() {

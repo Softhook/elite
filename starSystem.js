@@ -153,94 +153,253 @@ if (STAR_SYSTEM_DEBUG) {
  * STARFIELD WORKER INITIALIZATION
  * =============================================================================
  * Sets up the Web Worker for offscreen starfield tile generation.
+ * Uses deferred processing to prevent frame spikes from worker callbacks.
  */
 
 // Worker + OffscreenCanvas support for tile generation
 let STARFIELD_TILE_WORKER = null;
+
+/**
+ * Queue for pending ImageBitmaps from the worker.
+ * Bitmaps are queued here and processed at a controlled rate during rendering
+ * to prevent frame spikes when multiple worker messages arrive simultaneously.
+ * @type {Array<{key: string, bitmap: ImageBitmap, systemIndex: number, receivedAt: number}>}
+ */
+const PENDING_STARFIELD_BITMAPS = [];
+
+/**
+ * Safely closes an ImageBitmap, handling missing close method or errors.
+ * @param {ImageBitmap|null} bitmap - The bitmap to close
+ */
+function _safeCloseBitmap(bitmap) {
+    try {
+        if (bitmap && typeof bitmap.close === 'function') {
+            bitmap.close();
+        }
+    } catch (_) { /* Ignore close errors */ }
+}
+
+/**
+ * Processes pending starfield bitmaps into cached tile buffers.
+ * Called during rendering to convert worker-generated ImageBitmaps into p5 graphics buffers.
+ * Uses time-based limiting to prevent frame spikes.
+ * 
+ * @param {StarSystem} currentSystem - The current star system to process tiles for
+ * @returns {number} Number of bitmaps processed this call
+ */
+function processPendingStarfieldBitmaps(currentSystem) {
+    if (PENDING_STARFIELD_BITMAPS.length === 0) return 0;
+    if (!currentSystem) return 0;
+
+    const startTime = performance.now();
+    const maxTimeMs = STARFIELD_CONFIG.BITMAP_PROCESS_TIME_MS || 8;
+    const minCount = STARFIELD_CONFIG.BITMAP_PROCESS_MIN_COUNT || 1;
+    let processed = 0;
+
+    while (PENDING_STARFIELD_BITMAPS.length > 0) {
+        // Time limit check (but always process at least minCount)
+        if (processed >= minCount && (performance.now() - startTime) > maxTimeMs) {
+            break;
+        }
+
+        const item = PENDING_STARFIELD_BITMAPS.shift();
+        if (!item) continue;
+
+        const { key, bitmap, systemIndex } = item;
+
+        // Validate we have a bitmap
+        if (!bitmap) {
+            continue;
+        }
+
+        // Validate system still exists and is current
+        let targetSystem = null;
+        try {
+            if (typeof galaxy !== 'undefined' && galaxy && Array.isArray(galaxy.systems)) {
+                targetSystem = galaxy.systems[systemIndex];
+            }
+        } catch (_) { targetSystem = null; }
+
+        // If system doesn't exist or isn't current, discard the bitmap
+        if (!targetSystem) {
+            _safeCloseBitmap(bitmap);
+            continue;
+        }
+
+        // If this bitmap is for a different system than currentSystem, re-queue it
+        // (player might be switching between systems during load)
+        if (targetSystem !== currentSystem) {
+            // Don't re-queue indefinitely - check if it's been waiting too long
+            const age = performance.now() - (item.receivedAt || 0);
+            if (age < 5000) { // Keep for up to 5 seconds
+                PENDING_STARFIELD_BITMAPS.push(item);
+            } else {
+                _safeCloseBitmap(bitmap);
+            }
+            continue;
+        }
+
+        // Check if tile was already completed (race condition guard)
+        const existing = targetSystem._starfieldTiles?.get(key);
+        if (existing && existing.buffer) {
+            _safeCloseBitmap(bitmap);
+            processed++;
+            continue;
+        }
+
+        // Parse tile coordinates from key
+        const parts = String(key).split(',');
+        if (parts.length !== 2) {
+            _safeCloseBitmap(bitmap);
+            targetSystem._starfieldTiles?.delete(key);
+            processed++;
+            continue;
+        }
+
+        // Now do the expensive work: create p5 graphics buffer from ImageBitmap
+        let buffer = null;
+        let success = false;
+
+        try {
+            const tileSize = targetSystem._starfieldTileSize || STARFIELD_CONFIG.TILE_SIZE;
+            buffer = createGraphics(tileSize, tileSize);
+            const ctx = buffer.drawingContext;
+
+            // Disable image smoothing for pixel-perfect rendering
+            if (ctx.imageSmoothingEnabled !== undefined) {
+                ctx.imageSmoothingEnabled = false;
+            }
+
+            ctx.drawImage(bitmap, 0, 0, buffer.width, buffer.height);
+            success = true;
+        } catch (err) {
+            // Drawing failed - cleanup
+            if (buffer) {
+                try { buffer.remove(); } catch (_) { }
+            }
+            buffer = null;
+
+            if (STAR_SYSTEM_DEBUG) {
+                console.warn('Failed to create tile buffer:', key, err);
+            }
+        }
+
+        // Always close the bitmap after use
+        _safeCloseBitmap(bitmap);
+
+        // Update the tile cache
+        if (success && buffer && targetSystem._starfieldTiles) {
+            targetSystem._starfieldTiles.set(key, {
+                buffer,
+                lastUsed: typeof millis === 'function' ? millis() : Date.now()
+            });
+        } else if (targetSystem._starfieldTiles) {
+            // Remove failed tile so it can be re-queued for generation
+            targetSystem._starfieldTiles.delete(key);
+        }
+
+        processed++;
+    }
+
+    return processed;
+}
+
+// Initialize worker if supported
 if (STARFIELD_CONFIG.WORKER_ENABLED) {
     try {
-        // Added v2 to bust browser cache and ensure new background color is used
-        STARFIELD_TILE_WORKER = new Worker('starfield_worker.js?v=2');
+        // Cache-busting version parameter
+        STARFIELD_TILE_WORKER = new Worker('starfield_worker.js?v=3');
+
+        /**
+         * Worker message handler - queues bitmaps for deferred processing.
+         * This handler is intentionally lightweight to minimize impact on frame timing.
+         * The expensive buffer creation is deferred to processPendingStarfieldBitmaps().
+         */
         STARFIELD_TILE_WORKER.onmessage = function (e) {
             const data = e.data;
             if (!data) return;
-            const key = data.key;
-            const sysIdx = data.systemIndex;
-            const imgBitmap = data.bitmap;
 
-            // Locate system
-            let sys = null;
-            try { if (typeof galaxy !== 'undefined' && galaxy && Array.isArray(galaxy.systems)) sys = galaxy.systems[sysIdx]; } catch (_) { sys = null; }
+            const { key, bitmap, systemIndex, error } = data;
 
-            // If system no longer exists, close the ImageBitmap (if any) and bail
-            if (!sys) {
-                try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch (_) { }
-                return;
-            }
-
-            if (data.error) {
-                // Handle worker error - cleanup and remove tile so it can be re-generated
+            // Handle worker errors
+            if (error) {
+                _safeCloseBitmap(bitmap);
+                // Remove tile from pending state so it can be re-requested
                 try {
-                    try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch (_) { }
-                    // Remove tile from cache so it can be re-queued for generation
-                    sys._starfieldTiles.delete(key);
+                    if (typeof galaxy !== 'undefined' && galaxy?.systems?.[systemIndex]) {
+                        galaxy.systems[systemIndex]._starfieldTiles?.delete(key);
+                    }
                 } catch (_) { }
                 return;
             }
 
-            // Process tile ImageBitmap response from worker
+            // Validate we received a bitmap
+            if (!bitmap) {
+                try {
+                    if (typeof galaxy !== 'undefined' && galaxy?.systems?.[systemIndex]) {
+                        galaxy.systems[systemIndex]._starfieldTiles?.delete(key);
+                    }
+                } catch (_) { }
+                return;
+            }
+
+            // Validate key format
             const parts = String(key).split(',');
             if (parts.length !== 2) {
-                try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch (_) { }
-                // Remove invalid tile from cache
-                sys._starfieldTiles.delete(key);
+                _safeCloseBitmap(bitmap);
                 return;
             }
 
-            // Verify we have a valid ImageBitmap
-            if (!imgBitmap) {
-                sys._starfieldTiles.delete(key);
-                return;
+            // Queue overflow protection - drop oldest if at capacity
+            const maxPending = STARFIELD_CONFIG.MAX_PENDING_BITMAPS || 20;
+            while (PENDING_STARFIELD_BITMAPS.length >= maxPending) {
+                const dropped = PENDING_STARFIELD_BITMAPS.shift();
+                if (dropped) {
+                    _safeCloseBitmap(dropped.bitmap);
+                    // Mark tile as needing regeneration
+                    try {
+                        if (typeof galaxy !== 'undefined' && galaxy?.systems?.[dropped.systemIndex]) {
+                            galaxy.systems[dropped.systemIndex]._starfieldTiles?.delete(dropped.key);
+                        }
+                    } catch (_) { }
+                }
             }
 
-            const [tx, ty] = parts.map(Number);
-            let buffer = null;
-            let drawSuccess = false;
-
-            try {
-                buffer = createGraphics(sys._starfieldTileSize, sys._starfieldTileSize);
-                const ctx = buffer.drawingContext;
-                ctx.clearRect(0, 0, buffer.width, buffer.height);
-                if (ctx.imageSmoothingEnabled !== undefined) ctx.imageSmoothingEnabled = false;
-                ctx.drawImage(imgBitmap, 0, 0, buffer.width, buffer.height);
-                drawSuccess = true;
-            } catch (err) {
-                // Drawing failed - cleanup and let tile be regenerated
-                if (buffer) { try { buffer.remove(); } catch (_) { } }
-                buffer = null;
-            }
-
-            try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch (e) { }
-
-            if (drawSuccess && buffer) {
-                sys._starfieldTiles.set(key, { buffer, lastUsed: millis() });
-            } else {
-                // Remove failed tile so it can be re-queued
-                sys._starfieldTiles.delete(key);
-            }
+            // Queue the bitmap for deferred processing
+            PENDING_STARFIELD_BITMAPS.push({
+                key,
+                bitmap,
+                systemIndex,
+                receivedAt: performance.now()
+            });
         };
 
-        // Ensure the worker is terminated on page unload to free resources
+        // Cleanup on page unload
         try {
-            if (typeof window !== 'undefined' && window && STARFIELD_TILE_WORKER) {
-                const _terminateStarfieldWorker = () => {
-                    try { STARFIELD_TILE_WORKER.terminate(); } catch (e) { }
+            if (typeof window !== 'undefined' && window) {
+                window.addEventListener('beforeunload', () => {
+                    // Close any pending bitmaps
+                    while (PENDING_STARFIELD_BITMAPS.length > 0) {
+                        const item = PENDING_STARFIELD_BITMAPS.shift();
+                        _safeCloseBitmap(item?.bitmap);
+                    }
+                    // Terminate worker
+                    try {
+                        if (STARFIELD_TILE_WORKER) {
+                            STARFIELD_TILE_WORKER.terminate();
+                        }
+                    } catch (_) { }
                     STARFIELD_TILE_WORKER = null;
-                };
-                window.addEventListener('beforeunload', _terminateStarfieldWorker);
+                });
             }
-        } catch (e) { }
-    } catch (e) { STARFIELD_TILE_WORKER = null; }
+        } catch (_) { }
+
+    } catch (e) {
+        STARFIELD_TILE_WORKER = null;
+        if (STAR_SYSTEM_DEBUG) {
+            console.warn('Failed to initialize starfield worker:', e);
+        }
+    }
 }
 
 /**
@@ -1323,6 +1482,22 @@ class StarSystem {
         // Clear any legacy last-player position markers (harmless if unused)
         this._starfieldLastPlayerX = null;
         this._starfieldLastPlayerY = null;
+
+        // Clear pending bitmaps for this system to prevent stale tiles from being processed
+        // after a system change (bitmaps for other systems will be handled by age timeout)
+        if (typeof PENDING_STARFIELD_BITMAPS !== 'undefined' && Array.isArray(PENDING_STARFIELD_BITMAPS)) {
+            for (let i = PENDING_STARFIELD_BITMAPS.length - 1; i >= 0; i--) {
+                const item = PENDING_STARFIELD_BITMAPS[i];
+                if (item && item.systemIndex === this.systemIndex) {
+                    PENDING_STARFIELD_BITMAPS.splice(i, 1);
+                    if (typeof _safeCloseBitmap === 'function') {
+                        _safeCloseBitmap(item.bitmap);
+                    } else {
+                        try { item.bitmap?.close?.(); } catch (_) { }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -4588,6 +4763,12 @@ class StarSystem {
      * Supports worker-based offscreen generation for optimal performance.
      */
     drawBackground() {
+        // Process pending worker bitmaps at a controlled rate to prevent frame spikes
+        // This converts queued ImageBitmaps into drawable p5 graphics buffers
+        if (typeof processPendingStarfieldBitmaps === 'function') {
+            processPendingStarfieldBitmaps(this);
+        }
+
         // Clear background with dark space color (deep dark blue, not pure black)
         const bg = STARFIELD_CONFIG.BACKGROUND_COLOR;
         fill(bg.r, bg.g, bg.b);

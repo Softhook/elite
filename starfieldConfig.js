@@ -20,5 +20,10 @@ const STARFIELD_CONFIG = {
     WORKER_ENABLED: (typeof Worker !== 'undefined') && (typeof OffscreenCanvas !== 'undefined'),
     // Deep space dark blue background (not pure black for visual depth)
     BACKGROUND_COLOR: { r: 10, g: 15, b: 40 },
-    BACKGROUND_CSS: '#0a0f28'
+    BACKGROUND_CSS: '#0a0f28',
+
+    // Deferred bitmap processing - prevents frame spikes from worker callbacks
+    MAX_PENDING_BITMAPS: 20,           // Maximum bitmaps to queue before dropping oldest
+    BITMAP_PROCESS_TIME_MS: 8,         // Max milliseconds per frame for bitmap processing (~half a frame at 60fps)
+    BITMAP_PROCESS_MIN_COUNT: 1        // Always process at least this many per frame if available
 };
