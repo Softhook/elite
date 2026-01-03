@@ -64,7 +64,7 @@ class EnemyUtils {
      * @return {p5.Vector|null} Predicted position or null if no valid target
      */
     predictTargetPosition() {
-        if (!this.target?.pos || !this.target?.vel) return this.target?.pos || null;
+        if (!this.target?.pos || !this.target?.vel) return this.target?.pos;
 
         // Reuse the temp vector for calculation, but return a copy
         // to prevent corruption if caller stores the result

@@ -258,7 +258,7 @@ class TitleScreen {
 
     _getShipWeapon(shipDef) {
         const weaponName = shipDef.armament?.[0] || "PulseLaser";
-        return WEAPON_UPGRADES.find(w => w.name === weaponName) || WEAPON_UPGRADES[0] || null;
+        return WEAPON_UPGRADES.find(w => w.name === weaponName) || WEAPON_UPGRADES[0];
     }
 
     _assignChaseTargets() {
