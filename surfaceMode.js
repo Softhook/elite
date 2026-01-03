@@ -1365,34 +1365,49 @@ class SurfaceMode {
         text('ALT', barX + barWidth / 2, barY - 18);
         text(Math.floor(absAlt), barX + barWidth / 2, barY + barHeight + 5);
 
-        // Compass
+        // Compass - positioned at bottom-right corner (same as minimap in space), sized to match minimap
+        const compassSize = 250; // 
+        const compassMargin = 0;  // Match minimap margin
+        const compassX = width - compassSize / 2 - compassMargin;
+        const compassY = height - compassSize / 2 - compassMargin;
+        const compassRadius = compassSize / 2 - 20; // Slightly smaller for labels
+        const markerMaxRadius = compassRadius - 20; // Max distance for markers
+
         push();
-        translate(width / 2, height - 50);
+        translate(compassX, compassY);
 
-        fill(0, 0, 0, 100);
-        ellipse(0, 0, 70, 70);
+        // Background circle with semi-transparent fill (match minimap style)
+        fill(10, 15, 40, 180);
+        stroke(0, 200, 0, 200);
+        strokeWeight(1);
+        ellipse(0, 0, compassSize, compassSize);
 
+        // Inner reference circle
         noFill();
-        stroke(100, 100, 100, 150);
-        strokeWeight(2);
-        ellipse(0, 0, 60, 60);
+        stroke(100, 100, 100, 100);
+        strokeWeight(1);
+        ellipse(0, 0, compassSize - 40, compassSize - 40);
 
+        // Cardinal direction labels
         fill(200);
         noStroke();
         textSize(12);
         textAlign(CENTER, CENTER);
-        const compassRadius = 35;
         text('N', 0, -compassRadius);
         text('S', 0, compassRadius);
         text('E', compassRadius, 0);
         text('W', -compassRadius, 0);
 
+
+
+
+
         // Player heading indicator
         push();
         rotate(this.playerAngle);
         stroke(255, 50, 50);
-        strokeWeight(3);
-        line(0, 0, 25, 0);
+        strokeWeight(1);
+        line(0, 0, markerMaxRadius, 0);
         pop();
 
         // Surface object markers (Compass)
@@ -1413,9 +1428,9 @@ class SurfaceMode {
 
             // Calculate angle on compass
             const angle = Math.atan2(dy, dx);
-            // Map distance to compass radius (30 pixels)
+            // Map distance to compass radius - scaled for larger compass
             // Use 3000 as max tracking distance 
-            const markerDist = map(dist, 0, 3000, 0, 30, true);
+            const markerDist = map(dist, 0, 3000, 0, markerMaxRadius, true);
 
             push();
             rotate(angle);
@@ -1434,7 +1449,7 @@ class SurfaceMode {
                 // Secret Caches - Green, clamped to edge for discovery
                 // Always show at edge of compass to guide exploration
                 fill(50, 255, 100, 220);
-                ellipse(30, 0, 5, 5); // Clamped to edge
+                ellipse(markerMaxRadius, 0, 5, 5); // Clamped to edge
             }
             pop();
         }
