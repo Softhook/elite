@@ -3002,7 +3002,7 @@ class Player {
             return;
         }
 
-        const planets = this.currentSystem.planets || [];
+        const planets = this.currentSystem.planets;
         if (!planets || planets.length === 0) {
             console.error(`Autopilot error: No planets in ${this.currentSystem.name}. staticElementsInitialized: ${this.currentSystem.staticElementsInitialized}`);
             if (uiManager) uiManager.addMessage('No planets in this system');
