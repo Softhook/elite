@@ -134,6 +134,9 @@ class UIHUD {
      * @param {Player} player
      */
     drawEventMarkers(player) {
+        // Filter out space event markers when on surface
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.state === 'active') return;
+
         if (!player || !player.pos || !this.eventMarkers || this.eventMarkers.length === 0) return;
         this._cleanupEventMarkers();
         if (this.eventMarkers.length === 0) return;

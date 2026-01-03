@@ -868,6 +868,9 @@ class UIMinimap {
      * Draw event markers that were added to the HUD (so events are visible on minimap).
      */
     _drawEventMarkersFromHUD(player, system, uiManager, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom) {
+        // Filter out space event markers when on surface
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.state === 'active') return;
+
         try {
             if (!uiManager || !uiManager.hud || !Array.isArray(uiManager.hud.eventMarkers)) return;
             const markers = uiManager.hud.eventMarkers;
