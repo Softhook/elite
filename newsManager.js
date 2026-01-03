@@ -68,52 +68,118 @@ const NEWS_COMMODITIES = [
 // =============================================================================
 
 const HEADLINE_TEMPLATES = {
-    // --- Player Action Headlines ---
+    // --- Player Action Headlines (Covert/Anonymous) ---
     ASSASSINATION_SUCCESS: [
         "Notorious {TARGET} eliminated in daring strike",
         "Shadowy operative silences {TARGET}",
         "Contract fulfilled: {TARGET} meets violent end",
         "{TARGET} found dead amid debris field",
-        "Bounty claimed on infamous {TARGET}"
+        "Bounty claimed on infamous {TARGET}",
+        "Unknown assailant terminates {TARGET}",
+        "{TARGET} assassinated in precision attack",
+        "Professional hit leaves {TARGET} dead",
+        "Masked avenger claims {TARGET}",
+        "{TARGET} dies in suspected contract killing",
+        "Ghost pilot ends {TARGET}'s reign",
+        "Untraceable strike eliminates {TARGET}",
+        "{TARGET} vanishes in flash of light",
+        "Anonymous hunter collects on {TARGET}",
+        "Clean kill: {TARGET} erased from existence"
     ],
     SABOTAGE_SUCCESS: [
         "Industrial sabotage rocks {LOCATION}",
         "Explosion destroys {TARGET} near {LOCATION}",
         "Infrastructure attack leaves {LOCATION} reeling",
         "Covert operation cripples {TARGET}",
-        "Mysterious blast devastates {LOCATION} facility"
+        "Mysterious blast devastates {LOCATION} facility",
+        "Unknown agents demolish {TARGET}",
+        "Terror attack strikes {LOCATION}",
+        "{TARGET} reduced to debris in {LOCATION}",
+        "Saboteurs wreak havoc at {LOCATION}",
+        "Anonymous strike cripples {LOCATION} operations",
+        "Shadow war escalates: {TARGET} destroyed",
+        "Insurgent action levels {TARGET}",
+        "{LOCATION} counts cost of covert attack",
+        "Unexplained explosion obliterates {TARGET}",
+        "Guerrilla tactics claim {TARGET} at {LOCATION}"
     ],
+    // --- Player Action Headlines (Praiseworthy) ---
     BOUNTY_PIRATE: [
-        "Freelancer claims bounty on {COUNT} pirates",
-        "Pirate hunters celebrate {COUNT} kills",
-        "Marauder wing decimated by lone pilot",
-        "Piracy dealt major blow in {SYSTEM}",
-        "{COUNT} raiders meet fiery end"
+        "Commander Jameson claims bounty on {COUNT} pirates",
+        "Commander Jameson celebrates {COUNT} pirate kills",
+        "Commander Jameson decimates marauder wing",
+        "Commander Jameson deals major blow to piracy in {SYSTEM}",
+        "{COUNT} raiders eliminated by Commander Jameson",
+        "Hero pilot Commander Jameson bags {COUNT} pirates",
+        "Commander Jameson: scourge of {SYSTEM} pirates",
+        "Pirate hunters salute Commander Jameson's {COUNT} kills",
+        "Commander Jameson clears {SYSTEM} of {COUNT} raiders",
+        "{COUNT} buccaneer ships fall to Commander Jameson",
+        "Commander Jameson's crusade claims {COUNT} more pirates",
+        "Legendary pilot Commander Jameson strikes again",
+        "Commander Jameson racks up {COUNT} pirate victories",
+        "Bounty boards light up after Commander Jameson's rampage",
+        "Commander Jameson: {COUNT} pirates, zero mercy"
     ],
     BOUNTY_POLICE: [
         "Rogue cop killer strikes again",
         "Authorities mourn {COUNT} fallen officers",
         "Vigilante violence claims {COUNT} police",
         "Law enforcement under siege",
-        "Cop killer on the loose in {SYSTEM}"
+        "Cop killer on the loose in {SYSTEM}",
+        "Massacre: {COUNT} officers slain in {SYSTEM}",
+        "Unknown assailant guns down {COUNT} deputies",
+        "Badge-killer terrorizes {SYSTEM}",
+        "Police manhunt intensifies after {COUNT} deaths",
+        "{COUNT} officers dead in ambush attack",
+        "Outlaw menace claims {COUNT} police lives",
+        "Patrol ships destroyed: {COUNT} officers lost",
+        "Deadly fugitive evades capture in {SYSTEM}",
+        "{SYSTEM} reels from law enforcement massacre",
+        "Cold-blooded attack leaves {COUNT} deputies dead"
     ],
     BOUNTY_ALIEN: [
-        "Xeno-hunter bags {COUNT} alien hostiles",
-        "Alien menace pushed back in {SYSTEM}",
-        "Otherworldly threat neutralized",
-        "{COUNT} alien craft destroyed by human pilot",
-        "Humanity strikes back against xeno incursion"
+        "Commander Jameson bags {COUNT} alien hostiles",
+        "Commander Jameson pushes back alien menace in {SYSTEM}",
+        "Commander Jameson neutralizes otherworldly threat",
+        "Commander Jameson destroys {COUNT} alien craft",
+        "Commander Jameson strikes back against xeno incursion",
+        "Humanity's champion Jameson claims {COUNT} xeno kills",
+        "Commander Jameson: defender against the unknown",
+        "Xeno-hunter Jameson scores {COUNT} confirmed kills",
+        "Commander Jameson repels alien assault in {SYSTEM}",
+        "{COUNT} extraterrestrial vessels fall to Jameson",
+        "Commander Jameson's alien tally reaches {COUNT}",
+        "Earth's finest: Jameson annihilates {COUNT} alien ships",
+        "Commander Jameson stands firm against xeno horde",
+        "Interstellar hero Jameson racks up {COUNT} alien victories",
+        "Commander Jameson: humanity's shield against the stars"
     ],
     POLICE_JOINED: [
-        "New deputy joins {SYSTEM} patrol",
-        "Authorities bolster ranks with new recruit",
-        "Freelancer sworn in as law enforcement",
-        "Police welcome combat veteran to force"
+        "Commander Jameson joins {SYSTEM} patrol",
+        "Authorities welcome Commander Jameson to the force",
+        "Commander Jameson sworn in as law enforcement",
+        "Police welcome Commander Jameson to force",
+        "Decorated pilot Jameson takes up badge in {SYSTEM}",
+        "Commander Jameson answers call to serve in {SYSTEM}",
+        "{SYSTEM} patrol bolstered by Commander Jameson",
+        "New deputy: Commander Jameson joins the thin blue line",
+        "Commander Jameson trades freelancing for law enforcement",
+        "Veteran ace Jameson honored with {SYSTEM} commission",
+        "Commander Jameson pledges to protect and serve",
+        "Police chief welcomes Commander Jameson aboard"
     ],
     FACTION_JOINED: [
-        "New recruit swears allegiance to {FACTION}",
-        "{FACTION} ranks swell with new blood",
-        "Pilot pledges loyalty to {FACTION} cause"
+        "Commander Jameson swears allegiance to {FACTION}",
+        "Commander Jameson joins {FACTION} ranks",
+        "Commander Jameson pledges loyalty to {FACTION} cause",
+        "Renowned pilot Jameson enlists with {FACTION}",
+        "{FACTION} celebrates Commander Jameson's arrival",
+        "Commander Jameson throws weight behind {FACTION}",
+        "Major recruit: Jameson signs on with {FACTION}",
+        "Commander Jameson declares for {FACTION}",
+        "{FACTION} gains legendary ace Commander Jameson",
+        "Commander Jameson answers {FACTION}'s call to arms"
     ],
 
     // --- Environmental Headlines ---
