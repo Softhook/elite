@@ -1402,6 +1402,12 @@ function loadGame(slotIndex) {
                         eventManager.initializeReferences(player.currentSystem, player, uiManager);
                     }
 
+                    // Pre-warm starfield tiles around player position on load
+                    // This queues tiles for background generation to reduce initial stuttering
+                    if (player.pos && typeof player.currentSystem.prewarmStarfieldTiles === 'function') {
+                        player.currentSystem.prewarmStarfieldTiles(player.pos.x, player.pos.y);
+                    }
+
                     // Respawn bodyguards ONLY if loading into IN_FLIGHT state
                     // If docked, undocking will handle spawning them properly
                     const willRestoreToDocked = dockingState && (

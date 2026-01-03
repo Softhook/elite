@@ -1191,6 +1191,12 @@ class StarSystem {
         // Reset starfield buffer to force regeneration with new player position
         this.resetStarfieldBuffer();
 
+        // Pre-warm starfield tiles around player's arrival position
+        // This queues a 5x5 grid of tiles for background worker generation
+        if (player && player.pos) {
+            this.prewarmStarfieldTiles(player.pos.x, player.pos.y);
+        }
+
         // Queue planet buffer creation on enter to avoid hitches during arrival
         try {
             if (typeof window !== 'undefined') {
@@ -1317,6 +1323,63 @@ class StarSystem {
         // Clear any legacy last-player position markers (harmless if unused)
         this._starfieldLastPlayerX = null;
         this._starfieldLastPlayerY = null;
+    }
+
+    /**
+     * Pre-warms starfield tiles around a given position.
+     * Queues a grid of tiles for background generation, giving the worker a head start
+     * before gameplay begins. This reduces stuttering on system entry.
+     * @param {number} centerX - X coordinate to center the pre-warming around
+     * @param {number} centerY - Y coordinate to center the pre-warming around
+     * @param {number} [gridRadius=2] - Number of tiles to pre-warm in each direction (default 2 = 5x5 grid)
+     */
+    prewarmStarfieldTiles(centerX, centerY, gridRadius = 2) {
+        const tileSize = this._starfieldTileSize;
+        const centerTileX = Math.floor(centerX / tileSize);
+        const centerTileY = Math.floor(centerY / tileSize);
+
+        const tilesToQueue = [];
+
+        // Build a grid of tiles around the center
+        for (let dx = -gridRadius; dx <= gridRadius; dx++) {
+            for (let dy = -gridRadius; dy <= gridRadius; dy++) {
+                const tx = centerTileX + dx;
+                const ty = centerTileY + dy;
+                const key = `${tx},${ty}`;
+
+                // Skip if already cached or pending
+                if (!this._starfieldTiles.has(key)) {
+                    // Calculate distance from center for priority (closer = higher priority)
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    tilesToQueue.push({ tx, ty, key, priority: dist });
+                }
+            }
+        }
+
+        // Sort by distance (closest first)
+        tilesToQueue.sort((a, b) => a.priority - b.priority);
+
+        // Queue all tiles for generation
+        for (const tile of tilesToQueue) {
+            const alreadyQueued = this._starfieldTileQueue.some(q => q.key === tile.key);
+            if (!alreadyQueued) {
+                this._starfieldTileQueue.push(tile);
+            }
+        }
+
+        // Immediately process some tiles to get things started
+        // Process 9 tiles (covers the 3x3 center grid) since new games have no fade transition
+        const burstCount = Math.min(tilesToQueue.length, 9);
+        for (let i = 0; i < burstCount && this._starfieldTileQueue.length > 0; i++) {
+            const tile = this._starfieldTileQueue.shift();
+            if (tile && !this._starfieldTiles.has(tile.key)) {
+                this._generateTile(tile.tx, tile.ty);
+            }
+        }
+
+        if (STAR_SYSTEM_DEBUG) {
+            console.log(`Prewarmed ${tilesToQueue.length} starfield tiles around (${centerX.toFixed(0)}, ${centerY.toFixed(0)})`);
+        }
     }
 
     /** Call this method when the system is discovered by the player. */

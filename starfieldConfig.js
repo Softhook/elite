@@ -7,14 +7,14 @@
  */
 const STARFIELD_CONFIG = {
     TILE_SIZE: 768,
-    MAX_TILES_PER_FRAME: 2,
+    MAX_TILES_PER_FRAME: 3,   // Increased from 2 to clear queue faster during fast travel
     MAX_CACHED_TILES: 64,
     // Optimization Tuning:
     // Benchmark at 768px tiles shows 'Baseline' (no boost/prediction) is fastest (~2890 FPS).
     // Boost/Prediction caused a regression to ~2200-2400 FPS.
     // Setting these to 0 effectively disables them.
-    DIRECTION_BOOST: 500,      // Was 500
-    PREDICTION_FRAMES: 30,    // Was 30
+    DIRECTION_BOOST: 500,
+    PREDICTION_FRAMES: 60,    // Increased from 30 to predict further ahead during fast travel
 
     CLEANUP_INTERVAL_MS: 5000,
     WORKER_ENABLED: (typeof Worker !== 'undefined') && (typeof OffscreenCanvas !== 'undefined'),
