@@ -2548,8 +2548,8 @@ class StarSystem {
             const dy = asteroid.pos.y - playerY;
             const distSq = dx * dx + dy * dy;
 
-            // Throttle updates for distant asteroids
-            if (distSq > THROTTLE_DISTANCE_SQ) {
+            // Throttle updates for distant asteroids (but NEVER throttle comets - they're important events)
+            if (distSq > THROTTLE_DISTANCE_SQ && !asteroid.isComet) {
                 // Initialize timer if not set (stagger updates across asteroids)
                 if (asteroid._throttleTimer === undefined) {
                     asteroid._throttleTimer = Math.random() * 166; // ~10 frames at 60fps in ms
