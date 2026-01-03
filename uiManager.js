@@ -632,6 +632,15 @@ class UIManager {
                 }
                 return true;
             }
+
+            // Check Weapon Slot Click - allows selecting weapons by clicking on HUD
+            const clickedSlotIndex = this.hud.checkWeaponSlotClick(mx, my);
+            if (clickedSlotIndex >= 0 && player) {
+                if (player.setCurrentWeapon(clickedSlotIndex)) {
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                }
+                return true;
+            }
         }
 
         // --- Minimap click: target locking (zoom cycling moved to '.' key) ---

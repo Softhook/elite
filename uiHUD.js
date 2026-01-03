@@ -33,8 +33,13 @@ class UIHUD {
         // Event markers for location-based events (visible on HUD/minimap)
         this.eventMarkers = []; // { id, x, y, label, color, expires }
 
-        // Mission display area for click detection
+        // Mission display area for click detection (cached)
         this.missionBoxArea = null;
+        this._missionBoxCacheKey = null; // Cache key to detect when recalculation is needed
+
+        // Weapon slot areas for click detection (cached)
+        this.weaponSlotAreas = [];
+        this._weaponSlotCacheKey = null; // Cache key to detect when recalculation is needed
     }
 
     /**
@@ -519,6 +524,10 @@ class UIHUD {
         const weaponBarY = 45;
         const weaponBarH = 24;
 
+        // Build cache key from weapon names to detect changes
+        const cacheKey = player.weapons.map(w => w?.name || '').join('|');
+        const needsRecalc = (cacheKey !== this._weaponSlotCacheKey);
+
         push();
         fill(0, 50, 80, 150);
         noStroke();
@@ -527,6 +536,11 @@ class UIHUD {
         textAlign(LEFT, CENTER);
         textSize(STATION_TEXT_SIZE.BODY);
         let xPos = 10;
+
+        // Only recalculate slot areas when weapons have changed
+        if (needsRecalc) {
+            this.weaponSlotAreas.length = 0;
+        }
 
         const weaponIdx = player.weaponIndex;
         for (let index = 0; index < player.weapons.length; index++) {
@@ -543,6 +557,17 @@ class UIHUD {
                 fill(0, 80, 120, 120);
             }
             rect(xPos, weaponBarY + 3, slotW, weaponBarH - 6, 5);
+
+            // Store this slot's area for click detection (only when recalculating)
+            if (needsRecalc) {
+                this.weaponSlotAreas.push({
+                    x: xPos,
+                    y: weaponBarY + 3,
+                    w: slotW,
+                    h: weaponBarH - 6,
+                    index: index
+                });
+            }
 
             if (isSelected) {
                 fill(255, 255, 100);
@@ -576,9 +601,18 @@ class UIHUD {
             xPos += slotW + 5;
         }
 
+        // Update cache key after successful calculation
+        if (needsRecalc) {
+            this._weaponSlotCacheKey = cacheKey;
+        }
+
         // Active mission display on right side
-        if (player.activeMission?.title) {
-            const missionText = `Mission: ${player.activeMission.title}`;
+        const missionTitle = player.activeMission?.title || null;
+        const missionCacheKey = missionTitle; // Simple cache key: just the title
+        const missionNeedsRecalc = (missionCacheKey !== this._missionBoxCacheKey);
+
+        if (missionTitle) {
+            const missionText = `Mission: ${missionTitle}`;
             const missionPadding = 10;
             textSize(STATION_TEXT_SIZE.BODY);
             const missionTextW = textWidth(missionText);
@@ -598,15 +632,20 @@ class UIHUD {
             fill(255, 200, 0);
             circle(missionBoxX + 6, weaponBarY + weaponBarH / 2, 5);
 
-            // Store area for click handling
-            this.missionBoxArea = {
-                x: missionBoxX,
-                y: weaponBarY + 3,
-                w: missionBoxW,
-                h: weaponBarH - 6
-            };
-        } else {
+            // Store area for click handling (only when recalculating)
+            if (missionNeedsRecalc) {
+                this.missionBoxArea = {
+                    x: missionBoxX,
+                    y: weaponBarY + 3,
+                    w: missionBoxW,
+                    h: weaponBarH - 6
+                };
+                this._missionBoxCacheKey = missionCacheKey;
+            }
+        } else if (missionNeedsRecalc) {
+            // Mission was cleared
             this.missionBoxArea = null;
+            this._missionBoxCacheKey = null;
         }
 
         // Autopilot indicator
@@ -1599,6 +1638,24 @@ class UIHUD {
         const b = this.missionBoxArea;
         return (mx >= b.x && mx <= b.x + b.w &&
             my >= b.y && my <= b.y + b.h);
+    }
+
+    /**
+     * Checks if a click occurred on a weapon slot
+     * @param {number} mx - Mouse X
+     * @param {number} my - Mouse Y
+     * @returns {number} The weapon slot index if clicked, or -1 if no slot was clicked
+     */
+    checkWeaponSlotClick(mx, my) {
+        if (!this.weaponSlotAreas || this.weaponSlotAreas.length === 0) return -1;
+
+        for (const slot of this.weaponSlotAreas) {
+            if (mx >= slot.x && mx <= slot.x + slot.w &&
+                my >= slot.y && my <= slot.y + slot.h) {
+                return slot.index;
+            }
+        }
+        return -1;
     }
 }
 
