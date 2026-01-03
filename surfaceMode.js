@@ -1021,6 +1021,10 @@ class SurfaceMode {
         // Calculate viewport bounds for culling
         const viewport = this._getViewportBounds(100);
 
+        // Calculate counter-scale so projectiles stay constant screen size
+        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
+        const counterScale = 1 / perspectiveScale;
+
         push();
         // Clear shadow settings to prevent visual artifacts
         if (typeof drawingContext !== 'undefined') {
@@ -1036,7 +1040,13 @@ class SurfaceMode {
                     continue;
                 }
 
+                // Apply counter-scale to projectile
+                push();
+                translate(proj.pos.x, proj.pos.y);
+                scale(counterScale);
+                translate(-proj.pos.x, -proj.pos.y);
                 proj.draw();
+                pop();
             }
         }
         pop();
@@ -1082,6 +1092,10 @@ class SurfaceMode {
         // Only draw if beam was recently fired (within 150ms)
         if (now - beam.time >= 150) return;
 
+        // Calculate scale to maintain constant beam thickness
+        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
+        const counterScale = 1 / perspectiveScale;
+
         push();
         // Clear shadow settings to prevent visual artifacts
         if (typeof drawingContext !== 'undefined') {
@@ -1091,12 +1105,12 @@ class SurfaceMode {
 
         // Draw main beam line
         stroke(beam.color);
-        strokeWeight(3);
+        strokeWeight(3 * counterScale);
         line(beam.start.x, beam.start.y, beam.end.x, beam.end.y);
 
         // Draw glow effect
         stroke(beam.color[0], beam.color[1], beam.color[2], 100);
-        strokeWeight(6);
+        strokeWeight(6 * counterScale);
         line(beam.start.x, beam.start.y, beam.end.x, beam.end.y);
 
         pop();
