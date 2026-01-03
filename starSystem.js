@@ -226,16 +226,11 @@ function processPendingStarfieldBitmaps(currentSystem) {
             continue;
         }
 
-        // If this bitmap is for a different system than currentSystem, re-queue it
-        // (player might be switching between systems during load)
+        // If this bitmap is for a different system than currentSystem, discard it immediately.
+        // We used to re-queue, but that clogs the queue with stale data during system jumps,
+        // triggering backpressure and blocking new generation for the new system.
         if (targetSystem !== currentSystem) {
-            // Don't re-queue indefinitely - check if it's been waiting too long
-            const age = performance.now() - (item.receivedAt || 0);
-            if (age < 5000) { // Keep for up to 5 seconds
-                PENDING_STARFIELD_BITMAPS.push(item);
-            } else {
-                _safeCloseBitmap(bitmap);
-            }
+            _safeCloseBitmap(bitmap);
             continue;
         }
 
@@ -5016,6 +5011,16 @@ class StarSystem {
      * @private
      */
     _processTileQueue() {
+        // Backpressure: Halt generation if the pending bitmap queue is 80% full.
+        // This prevents the worker from flooding the main thread and wasting resources 
+        // on tiles that would simply be dropped by the overflow protection.
+        if (typeof PENDING_STARFIELD_BITMAPS !== 'undefined') {
+            const maxPending = STARFIELD_CONFIG.MAX_PENDING_BITMAPS || 20;
+            if (PENDING_STARFIELD_BITMAPS.length > maxPending * 0.8) {
+                return;
+            }
+        }
+
         const maxPerFrame = this._starfieldMaxTilesPerFrame;
         let generated = 0;
 
