@@ -8,16 +8,21 @@
  * @returns {boolean} True if the player is in the jump zone, false otherwise
  */
 function isPlayerInJumpZone(playerObj, systemObj) {
+    // --- DEBUG LOGGING for Quantum Gate Issue ---
     if (!playerObj?.pos) {
-        console.log("Jump zone check failed: Invalid player position");
+        console.warn("[isPlayerInJumpZone] Check failed: Invalid player position", playerObj);
         return false;
     }
-    if (!systemObj?.jumpZoneCenter) {
-        console.log("Jump zone check failed: Invalid jump zone center");
+    if (!systemObj) {
+        console.warn("[isPlayerInJumpZone] Check failed: System object is undefined/null");
+        return false;
+    }
+    if (!systemObj.jumpZoneCenter) {
+        console.warn(`[isPlayerInJumpZone] Check failed: System '${systemObj.name}' has no jumpZoneCenter! Value:`, systemObj.jumpZoneCenter);
         return false;
     }
     if (!(systemObj.jumpZoneRadius > 0)) {
-        console.log(`Jump zone check failed: Invalid radius: ${systemObj.jumpZoneRadius}`);
+        console.warn(`[isPlayerInJumpZone] Check failed: Invalid radius in ${systemObj.name}: ${systemObj.jumpZoneRadius}`);
         return false;
     }
 
@@ -25,7 +30,14 @@ function isPlayerInJumpZone(playerObj, systemObj) {
         (playerObj.pos.y - systemObj.jumpZoneCenter.y) ** 2;
     const radiusSq = systemObj.jumpZoneRadius ** 2;
 
-    return distanceSq <= radiusSq;
+    const inZone = distanceSq <= radiusSq;
+
+    // Optional: Log when CLOSE but not inside, to help debug "visual mismatch"
+    if (!inZone && distanceSq <= radiusSq * 1.5 && (frameCount % 60 === 0)) {
+        console.log(`[isPlayerInJumpZone] Player close to zone in ${systemObj.name}. Dist: ${Math.sqrt(distanceSq).toFixed(0)} / ${systemObj.jumpZoneRadius}`);
+    }
+
+    return inZone;
 }
 
 /**
@@ -969,17 +981,28 @@ class GameStateManager {
      */
     _checkAutoJump(player, currentSystem) {
         if (!uiManager || uiManager.lockedDestinationIndex === -1) return;
-        if (!isPlayerInJumpZone(player, currentSystem)) return;
+
+        // Ensure we check against the actual system passed in
+        const inZone = isPlayerInJumpZone(player, currentSystem);
+        if (!inZone) return;
 
         const lockedIdx = uiManager.lockedDestinationIndex;
+        // Verify currentSystem is valid
+        if (!currentSystem) {
+            console.error("[_checkAutoJump] currentSystem is null!");
+            return;
+        }
+
         const reachable = currentSystem.connectedSystemIndices || [];
+
+        console.log(`[_checkAutoJump] Attempting jump from ${currentSystem.name} to index ${lockedIdx}. Reachable: ${reachable.join(',')}`);
 
         if (reachable.includes(lockedIdx)) {
             GS_LOG(`Auto-jump triggered: Player in jump zone with locked destination ${lockedIdx}`);
             this.startJump(lockedIdx);
-            uiManager.lockedDestinationIndex = -1;
+            uiManager.lockedDestinationIndex = -1; // Clear lock after initiating
         } else {
-            GS_LOG(`Auto-jump aborted: Locked destination ${lockedIdx} not reachable. Clearing.`);
+            GS_LOG(`Auto-jump aborted: Locked destination ${lockedIdx} not reachable from ${currentSystem.name}. Clearing.`);
             uiManager.addMessage("Locked destination is not reachable. Cleared.", [255, 200, 100]);
             uiManager.lockedDestinationIndex = -1;
         }
@@ -1014,6 +1037,7 @@ class GameStateManager {
             console.error("Error updating game during galaxy map view:", e);
         }
     }
+
 
     /**
      * Updates JUMPING state logic
@@ -1094,6 +1118,11 @@ class GameStateManager {
                     player.currentSystem = galaxy?.getCurrentSystem();
                     player.vel.mult(0.3);
                     this.quantumGateTeleportPending = false;
+
+                    // CRITICAL FIX: Ensure state data is reset even though we don't switch states
+                    // This prevents stale data from interfering with subsequent jumps
+                    this._resetStateSpecificData("IN_FLIGHT");
+
                     GS_LOG("Quantum gate teleport executed");
                 } else {
                     // Regular hyperdrive jump
@@ -1134,7 +1163,17 @@ class GameStateManager {
             if (this.jumpFadeOpacity <= 0) {
                 this.jumpFadeOpacity = 0;
                 this.jumpFadeState = "NONE";
-                this.setState("IN_FLIGHT");
+
+                // Only call setState if we actually need to change state or force a refresh
+                if (this.currentState !== "IN_FLIGHT") {
+                    this.setState("IN_FLIGHT");
+                } else {
+                    // Start intro zoom or other post-jump effects if needed?
+                    // Usually setState handles this, but since we stayed IN_FLIGHT for Quantum Gate...
+                    // We might want to manually trigger 'introZoomTriggered' logic if desired, 
+                    // but usually that's for new games.
+                }
+
                 this.jumpJustCompleted = true;
                 GS_LOG("Jump transition complete: FADE_IN → IN_FLIGHT");
             }
