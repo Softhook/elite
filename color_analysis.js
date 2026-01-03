@@ -2,38 +2,48 @@
 // This script calculates the perceptual distance between all colors to ensure good visual separation
 
 const FACTION_COLORS = {
-    IMPERIAL: [255, 235, 180],
-    SEPARATIST: [128, 128, 0],
-    MILITARY: [160, 160, 170],
-    ALIEN: [50, 205, 50],
+    IMPERIAL: [160, 80, 220],       // Purple
+    SEPARATIST: [140, 150, 60],     // Olive Green
+    MILITARY: [150, 150, 155],      // Gray
+    ALIEN: [50, 220, 80],           // Green
+    POLICE: [60, 140, 255],         // Blue
 };
 
 const ROLE_COLORS = {
-    PIRATE: [220, 20, 20],
-    POLICE: [30, 144, 255],
-    HAULER: [255, 215, 0],
-    TRANSPORT: [204, 119, 34],
-    MINER: [204, 119, 34],
-    ALIEN: [50, 205, 50],
-    BOUNTY_HUNTER: [255, 69, 0],
-    GUARD: [100, 100, 255],
-    COMBAT: [255, 100, 100],
+    POLICE: [60, 140, 255],         // Blue
+    PIRATE: [255, 50, 50],          // Bright Red
+    ALIEN: [50, 220, 80],           // Green
+    MILITARY: [150, 150, 155],      // Gray
+    IMPERIAL: [160, 80, 220],       // Purple
+    SEPARATIST: [140, 150, 60],     // Olive Green
+    // Commercial ships: Yellow/Orange/Brown spectrum (spread out)
+    HAULER: [255, 210, 60],         // Bright Yellow
+    TRANSPORT: [255, 150, 80],      // Light Orange
+    REPAIR: [180, 220, 140],        // Light Green-Yellow (distinct from browns)
+    MINER: [160, 120, 80],          // Dark Brown
+    // Combat-adjacent roles
+    BOUNTY_HUNTER: [255, 80, 180],  // Magenta-Pink (distinct from orange)
+    GUARD: [220, 200, 120],         // Light Khaki/Cream
+    COMBAT: [200, 60, 100]          // Dark Pink/Maroon (distinct from pirate red)
 };
 
 const ECONOMY_COLORS = {
-    Industrial: [60, 120, 200],
-    Agricultural: [180, 120, 40],
-    Mining: [160, 160, 170],
-    Refinery: [160, 40, 40],
-    "Post Human": [0, 200, 200],
-    Tourism: [200, 80, 200],
-    Service: [200, 255, 255],
-    Military: [200, 50, 50],
-    Offworld: [100, 180, 100],
-    Separatist: [128, 128, 0],
-    Imperial: [255, 235, 180],
-    Alien: [50, 205, 50],
-    Default: [150, 150, 150]
+    Industrial: [60, 120, 200, 210],        // Blue
+    Agricultural: [180, 120, 40, 210],      // Brown/Orange
+    Mining: [160, 160, 170, 210],           // Light Grey/Silver
+    Refinery: [160, 40, 40, 210],           // Maroon
+    "Post Human": [0, 200, 200, 210],       // Cyan
+    Tourism: [200, 80, 200, 210],           // Purple/Pink
+    Service: [200, 255, 255, 210],          // Light cyan
+    Military: [160, 160, 170, 210],         // Neutral gray (matches MILITARY faction)
+    Offworld: [100, 180, 100, 210],         // Light Green
+
+    // Faction-based economies
+    Separatist: [128, 128, 0, 210],         // Olive (matches faction)
+    Imperial: [255, 235, 180, 210],         // White gold (matches faction)
+    Alien: [50, 205, 50, 210],              // Green (matches faction)
+
+    Default: [150, 150, 150, 210]           // Default grey if type unknown
 };
 
 // Calculate Euclidean distance in RGB space

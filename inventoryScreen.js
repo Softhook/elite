@@ -82,11 +82,12 @@ class InventoryScreen {
     curY = this._drawSectionHeader("Faction Standing", leftColX, curY, leftColW);
     curY += 4;
 
+    // Use centralized faction colors from colorConstants.js
     const factionColors = {
-      POLICE: [100, 150, 255],
-      MILITARY: [100, 200, 100],
-      IMPERIAL: [255, 215, 0],
-      SEPARATIST: [255, 100, 100]
+      POLICE: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.POLICE : [60, 140, 255],
+      MILITARY: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.MILITARY : [150, 150, 155],
+      IMPERIAL: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.IMPERIAL : [160, 80, 220],
+      SEPARATIST: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.SEPARATIST : [140, 150, 60]
     };
 
     const factionNames = {

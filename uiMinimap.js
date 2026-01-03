@@ -495,11 +495,11 @@ class UIMinimap {
             let stationColor = [200, 100, 200]; // Default purple
             const subtype = secretStation.stationSubtype || '';
             if (subtype.includes('imperial')) {
-                stationColor = [255, 215, 0]; // Gold for Imperial
+                stationColor = (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.IMPERIAL : [160, 80, 220];
             } else if (subtype.includes('separatist')) {
-                stationColor = [255, 80, 80]; // Red for Separatist
+                stationColor = (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.SEPARATIST : [140, 150, 60];
             } else if (subtype.includes('military')) {
-                stationColor = [100, 200, 100]; // Green for Military
+                stationColor = (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.MILITARY : [150, 150, 155];
             }
 
             if (fullyOutside) {

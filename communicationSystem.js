@@ -2299,9 +2299,9 @@ class CommunicationSystem {
         let templateList = null;
         let color = [255, 190, 140];
         switch (enemy.role) {
-            case AI_ROLE.PIRATE: templateList = this.templates.pirateDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.PIRATE : [220, 20, 20]; break;
-            case AI_ROLE.POLICE: templateList = this.templates.policeDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.POLICE : [30, 144, 255]; break;
-            case AI_ROLE.HAULER: templateList = this.templates.haulerDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.HAULER : [204, 119, 34]; break;
+            case AI_ROLE.PIRATE: templateList = this.templates.pirateDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.PIRATE : [255, 50, 50]; break;
+            case AI_ROLE.POLICE: templateList = this.templates.policeDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.POLICE : [60, 140, 255]; break;
+            case AI_ROLE.HAULER: templateList = this.templates.haulerDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.HAULER : [255, 210, 60]; break;
             case AI_ROLE.TRANSPORT: templateList = this.templates.transporterDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.TRANSPORT : [255, 150, 80]; break;
             case AI_ROLE.ALIEN: templateList = this.templates.alienDeath; color = [180, 100, 255]; break;
             case AI_ROLE.GUARD: templateList = this.templates.guardDeath; color = [200, 160, 255]; break;
@@ -2352,11 +2352,11 @@ class CommunicationSystem {
         switch (enemy.role) {
             case AI_ROLE.PIRATE:
                 templateList = this.templates.pirateGloat;
-                color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.PIRATE : [220, 20, 20];
+                color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.PIRATE : [255, 50, 50];
                 break;
             case AI_ROLE.POLICE:
                 templateList = this.templates.policeGloat;
-                color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.POLICE : [30, 144, 255];
+                color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.POLICE : [60, 140, 255];
                 break;
             case AI_ROLE.ALIEN:
                 templateList = this.templates.alienGloat;

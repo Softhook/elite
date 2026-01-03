@@ -1438,18 +1438,22 @@ class UIManager {
                     const msgByFaction = {
                         IMPERIAL: {
                             text: () => `Welcome to the Imperial Navy! You have been assigned a ${player.factionShip}.`,
-                            color: 'lightblue'
+                            color: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.IMPERIAL : [160, 80, 220]
                         },
                         SEPARATIST: {
                             text: () => `Fight for freedom! You have been assigned a ${player.factionShip}.`,
-                            color: 'orange'
+                            color: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.SEPARATIST : [140, 150, 60]
                         },
                         MILITARY: {
                             text: () => `Serve with honor! You have been assigned a ${player.factionShip}.`,
-                            color: 'lightblue'
+                            color: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.MILITARY : [150, 150, 155]
+                        },
+                        POLICE: {
+                            text: () => `Welcome to the Police Force! You have been assigned a ${player.factionShip}.`,
+                            color: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.POLICE : [60, 140, 255]
                         }
                     };
-                    const fx = msgByFaction[area.faction] || { text: () => 'Joined faction.', color: 'lightblue' };
+                    const fx = msgByFaction[area.faction] || { text: () => 'Joined faction.', color: [150, 150, 150] };
                     this.addMessage(fx.text(), fx.color);
                     if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
                     if (typeof saveGame === 'function') saveGame();
