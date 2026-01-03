@@ -349,8 +349,29 @@ class UIHUD {
         // Weapon bar defaults (kept in sync with drawWeaponSelector)
         const weaponBarY = 45;
         const weaponBarH = 24;
+
+        // Determine overlapping bars (Autopilot, Planet Descent, or Surface Mode Controls)
+        let hasTopBar = player?.autopilotEnabled;
+
+        if (!hasTopBar && typeof surfaceMode !== 'undefined' && surfaceMode) {
+            // 1. Check if Surface Mode is ACTIVE (Controls Hint Bar)
+            if (surfaceMode.state === 'active') {
+                hasTopBar = true;
+            }
+            // 2. Check if Orbiting/Descent is possible (Descent Hint Bar)
+            // Note: canEnter returns false if already active, so this covers the orbital case
+            else if (player && player.currentSystem?.planets && typeof surfaceMode.canEnter === 'function') {
+                for (const planet of player.currentSystem.planets) {
+                    if (surfaceMode.canEnter(player, planet)) {
+                        hasTopBar = true;
+                        break;
+                    }
+                }
+            }
+        }
+
         // Autopilot area sits below the weapon bar when enabled
-        const autopilotExtra = (player?.autopilotEnabled) ? 25 : 0;
+        const autopilotExtra = (hasTopBar) ? 25 : 0;
 
         const startY = weaponBarY + weaponBarH + 6 + autopilotExtra;
         const lineHeight = 22;
@@ -358,10 +379,7 @@ class UIHUD {
         for (let i = 0; i < this.persistentMessages.length; i++) {
             const msg = this.persistentMessages[i];
 
-            // Draw background for readability
-            fill(0, 0, 0, 150);
-            const textW = textWidth(msg.text);
-            rect(width / 2 - textW / 2 - 10, startY + i * lineHeight, textW + 20, lineHeight);
+            // Removed opaque background as requested
 
             // Draw text
             if (Array.isArray(msg.color)) {
@@ -369,7 +387,18 @@ class UIHUD {
             } else {
                 fill(msg.color);
             }
+
+            // Add drop shadow for readability without background
+            if (typeof drawingContext !== 'undefined') {
+                drawingContext.shadowColor = 'rgba(0,0,0,0.8)';
+                drawingContext.shadowBlur = 3;
+            }
+
             text(msg.text, width / 2, startY + i * lineHeight + 2);
+
+            if (typeof drawingContext !== 'undefined') {
+                drawingContext.shadowBlur = 0;
+            }
         }
         pop();
     }
