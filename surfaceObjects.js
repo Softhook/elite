@@ -109,6 +109,11 @@ class SecretCache extends SurfaceObject {
             player.credits += this.lootValue;
             console.log(`Secret Cache opened! Found ${this.lootValue} credits!`);
 
+            // Play cargo collected sound
+            if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+                soundManager.playSound('pickupCoin');
+            }
+
             // Show message to player
             if (typeof showMessage === 'function') {
                 showMessage(`Secret cache discovered! +${this.lootValue} Cr`, [100, 255, 100]);
