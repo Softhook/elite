@@ -874,7 +874,7 @@ class Market {
 
     _getCommodity(name) {
         if (!Array.isArray(this.commodities)) { return null; }
-        return this.commodities.find(c => c.name === name) || null;
+        return this.commodities.find(c => c.name === name);
     }
 
     _applyStockChange(comm, delta) {

@@ -355,7 +355,7 @@ class EnemyCargo {
             if (resolved) { return resolved; }
         }
         if (Array.isArray(market.commodities)) {
-            return market.commodities.find(comm => comm && comm.name === commodityName) || null;
+            return market.commodities.find(comm => comm && comm.name === commodityName);
         }
         return null;
     }
@@ -394,7 +394,7 @@ class EnemyCargo {
             return;
         }
 
-        const market = station?.market ?? null;
+        const market = station?.market;
         const attempted = new Set();
         let guard = 0;
 
@@ -495,8 +495,7 @@ class EnemyCargo {
         if (candidates.length === 0) {
             return null;
         }
-        const entry = random(candidates);
-        return entry || null;
+        return random(candidates);
     }
 
     _spawnCargo(context, override = null) {
