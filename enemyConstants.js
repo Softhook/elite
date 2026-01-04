@@ -200,6 +200,52 @@ const ROLE_ENEMY_MAP = {
 };
 
 // -------------------------
+// --- Healer AI Constants ---
+// -------------------------
+
+// Timing
+const HEALER_TARGET_SWITCH_COOLDOWN = 2.0;  // Seconds to wait before finding new target after completing heal
+const HEALER_SEARCH_INTERVAL = 1.0;         // Seconds between target search attempts
+
+// Healing range and positioning
+const HEALER_BASE_RANGE = 550;              // Base healing beam range (pixels)
+const HEALER_COLLISION_ZONE_ENTER = 0.35;   // Fraction of heal range to start backing up
+const HEALER_COLLISION_ZONE_EXIT = 0.45;    // Fraction of heal range to stop backing up
+const HEALER_BOOST_DISTANCE = 800;          // Distance threshold to activate boost when approaching
+
+// Movement (uses REVERSE_THRUST_MULTIPLIER from Thrust Multipliers section)
+const HEALER_FRICTION_LIGHT = 0.98;         // Velocity multiplier for gentle braking (backing up, holding position)
+const HEALER_FRICTION_HEAVY = 0.95;         // Velocity multiplier for stronger braking (idle, formation)
+const HEALER_ROTATION_THRESHOLD = 0.1;      // Radians (~6 degrees) - only rotate if misaligned more than this
+
+// Patrol behavior
+const HEALER_PATROL_FAR_THRESHOLD = 150;    // Distance to patrol point for full thrust
+const HEALER_PATROL_CLOSE_THRESHOLD = 50;   // Distance to patrol point for gentle approach
+const HEALER_PATROL_SPEED_THRESHOLD = 0.5;  // Speed threshold to consider "nearly stopped"
+// Note: Patrol uses HEALER_FRICTION_LIGHT for gentle braking, HEALER_FRICTION_HEAVY for idle
+
+// Healing rates
+const HEALER_HULL_REPAIR_RATE = 60;         // Hull/health points per second
+const HEALER_SHIELD_REPAIR_RATE = 100;      // Shield points per second
+
+// Target scoring
+const HEALER_SPEED_CHASE_MULT = 1.2;        // Only chase targets up to this multiple of healer's speed
+const HEALER_SCORE_HULL_WEIGHT = 50;        // Base score weight for hull deficit
+const HEALER_SCORE_SHIELD_WEIGHT = 25;      // Score weight for shield deficit
+const HEALER_SCORE_CAPITAL_BONUS = 100;     // Score bonus for capital ships (size > 60)
+const HEALER_SCORE_HEAVY_BONUS = 50;        // Score bonus for heavy ships (size > 40)
+const HEALER_SCORE_DRONE_PENALTY = 20;      // Score penalty for tiny drones (size < 25)
+const HEALER_SCORE_PLAYER_BONUS = 30;       // Score bonus for player
+const HEALER_SCORE_DISTANCE_MULT = 0.01;    // Score penalty multiplier per pixel of distance
+const HEALER_SIZE_CAPITAL_THRESHOLD = 60;   // Size threshold for capital ship bonus
+const HEALER_SIZE_HEAVY_THRESHOLD = 40;     // Size threshold for heavy ship bonus
+const HEALER_SIZE_DRONE_THRESHOLD = 25;     // Size threshold for drone penalty
+
+// Spawning probabilities
+const HEALER_SPAWN_CHANCE_PEACETIME = 0.08; // 8% chance in Separatist systems during peace
+const HEALER_SPAWN_CHANCE_WARTIME = 0.10;   // 10% chance during Separatist vs Imperial war
+
+// -------------------------
 // --- Movement & Combat Constants ---
 // -------------------------
 

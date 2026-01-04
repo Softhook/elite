@@ -1601,8 +1601,8 @@ class StarSystem {
             military: () => this._selectMilitaryShip(),
             alien: () => this._selectAlienShip(),
             offworld: () => this._selectOffworldShip(),
-            separatist: () => this._selectFactionShip(SEPARATIST_SHIPS, IMPERIAL_SHIPS),
-            imperial: () => this._selectFactionShip(IMPERIAL_SHIPS, SEPARATIST_SHIPS),
+            separatist: () => this._selectFactionShip(SEPARATIST_SHIPS, IMPERIAL_SHIPS, 'SEPARATIST'),
+            imperial: () => this._selectFactionShip(IMPERIAL_SHIPS, SEPARATIST_SHIPS, 'IMPERIAL'),
             mining: () => this._selectMiningShip(),
             industrial: () => this._selectMiningShip(),
             refinery: () => this._selectMiningShip(),
@@ -1630,6 +1630,12 @@ class StarSystem {
 
         if (warState.factions === 'SEPARATIST_VS_IMPERIAL') {
             if (rand < mods.SEPARATIST && SEPARATIST_SHIPS.length > 0) {
+                // Chance to spawn a healer instead of combat ship during war (support role)
+                // NOTE: Effective healer rate = mods.SEPARATIST * HEALER_SPAWN_CHANCE_WARTIME
+                // e.g., if SEPARATIST spawn rate is 40%, healer rate is 40% * 10% = 4% of total war spawns
+                if (HEALER_SHIPS.length > 0 && random() < HEALER_SPAWN_CHANCE_WARTIME) {
+                    return { role: AI_ROLE.HEALER, ship: random(HEALER_SHIPS), faction: 'SEPARATIST' };
+                }
                 return { role: AI_ROLE.COMBAT, ship: random(SEPARATIST_SHIPS) };
             } else if (rand < mods.SEPARATIST + mods.IMPERIAL && IMPERIAL_SHIPS.length > 0) {
                 return { role: AI_ROLE.COMBAT, ship: random(IMPERIAL_SHIPS) };
@@ -1767,10 +1773,26 @@ class StarSystem {
         return this._selectOffworldShip();
     }
 
-    _selectFactionShip(primaryFaction, secondaryFaction) {
+    /**
+     * Selects a ship for faction-controlled systems (Separatist, Imperial).
+     * @param {Array} primaryFaction - Primary faction's ship array
+     * @param {Array} secondaryFaction - Secondary faction's ship array (rival faction)
+     * @param {string|null} factionId - Faction identifier ('SEPARATIST', 'IMPERIAL') for special spawns
+     * @returns {{role: string, ship: string, faction?: string}} Selected ship configuration
+     * @private
+     */
+    _selectFactionShip(primaryFaction, secondaryFaction, factionId = null) {
         // Check for police spawn (60% of normal probability - factions have organized law enforcement)
         if (this._shouldSpawnPolice(0.6)) {
             return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["ViperPol"]) };
+        }
+
+        // Check for healer spawn (Separatist faction only - they have medical support ships)
+        // NOTE: This check happens AFTER police check, so effective rate depends on security level.
+        // In a High security Separatist system: ~60% police * ~8% healer = lower effective healer rate
+        // In an Anarchy Separatist system: 0% police, full 8% healer rate applies
+        if (factionId === 'SEPARATIST' && HEALER_SHIPS.length > 0 && random() < HEALER_SPAWN_CHANCE_PEACETIME) {
+            return { role: AI_ROLE.HEALER, ship: random(HEALER_SHIPS), faction: 'SEPARATIST' };
         }
 
         const rand = random();

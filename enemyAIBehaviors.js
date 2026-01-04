@@ -3006,17 +3006,25 @@ class EnemyAIBehaviors {
                 this.healingTarget = null;
                 this._isHealing = false;
                 this.changeState(AI_STATE.PATROLLING);
+                // Set cooldown before searching for new target (prevents rapid switching)
+                this._healerTargetSwitchCooldown = HEALER_TARGET_SWITCH_COOLDOWN;
             }
         }
 
-        // 2. Find new target if we don't have one (frame-rate independent search)
-        if (!this.healingTarget) {
+        // 2. Count down target switch cooldown
+        if (this._healerTargetSwitchCooldown === undefined) this._healerTargetSwitchCooldown = 0;
+        if (this._healerTargetSwitchCooldown > 0) {
+            this._healerTargetSwitchCooldown -= dtSeconds;
+        }
+
+        // 3. Find new target if we don't have one and cooldown has expired
+        if (!this.healingTarget && this._healerTargetSwitchCooldown <= 0) {
             // Initialize search timer if needed
             if (this._healerSearchTimer === undefined) this._healerSearchTimer = 0;
             this._healerSearchTimer -= dtSeconds;
 
             if (this._healerSearchTimer <= 0) {
-                this._healerSearchTimer = 1.0; // Search once per second
+                this._healerSearchTimer = HEALER_SEARCH_INTERVAL;
                 this.healingTarget = this.findDamagedAlly(system);
                 if (this.healingTarget) {
                     this.changeState(AI_STATE.APPROACHING);
@@ -3031,11 +3039,11 @@ class EnemyAIBehaviors {
             // Dynamic Healing Range
             const targetRadius = (this.healingTarget.size || 20) * 0.5;
             const myRadius = (this.size || 20) * 0.5;
-            const healRange = 550 + targetRadius + myRadius;
+            const healRange = HEALER_BASE_RANGE + targetRadius + myRadius;
 
             // Hysteresis zones to prevent oscillation
-            const collisionZoneEnter = healRange * 0.35; // Start backing up at this distance
-            const collisionZoneExit = healRange * 0.45;  // Stop backing up at this distance
+            const collisionZoneEnter = healRange * HEALER_COLLISION_ZONE_ENTER;
+            const collisionZoneExit = healRange * HEALER_COLLISION_ZONE_EXIT;
 
             // Track if we're currently backing up (hysteresis state)
             if (this._healerBackingUp === undefined) this._healerBackingUp = false;
@@ -3056,17 +3064,17 @@ class EnemyAIBehaviors {
                     // TOO CLOSE: Very gentle reverse thrust
                     const angleToTarget = atan2(this.healingTarget.pos.y - this.pos.y, this.healingTarget.pos.x - this.pos.x);
                     this.rotateTowards(angleToTarget);
-                    this.thrustReverse(0.15); // Very gentle
-                    this.vel.mult(0.98); // Slight friction while backing
+                    this.thrustReverse(REVERSE_THRUST_MULTIPLIER);
+                    this.vel.mult(HEALER_FRICTION_LIGHT);
                 } else {
                     // SWEET SPOT: Hold position, minimal movement
                     this.changeState(AI_STATE.IDLE);
-                    this.vel.mult(0.98); // Very gentle friction
+                    this.vel.mult(HEALER_FRICTION_LIGHT);
 
                     // Smooth rotation - only rotate if significantly misaligned
                     const angleToTarget = atan2(this.healingTarget.pos.y - this.pos.y, this.healingTarget.pos.x - this.pos.x);
                     const angleDiff = abs(this.normalizeAngle(angleToTarget - this.angle));
-                    if (angleDiff > 0.1) { // Only rotate if more than ~6 degrees off
+                    if (angleDiff > HEALER_ROTATION_THRESHOLD) {
                         this.rotateTowards(angleToTarget);
                     }
                 }
@@ -3081,7 +3089,7 @@ class EnemyAIBehaviors {
                 this.performSafeRotationAndThrust(system, this.healingTarget.pos);
 
                 // Boost if very far away
-                if (distToTarget > 800 && this.boostCooldownTimer <= 0) {
+                if (distToTarget > HEALER_BOOST_DISTANCE && this.boostCooldownTimer <= 0) {
                     this.activateBoost();
                 }
             }
@@ -3116,19 +3124,19 @@ class EnemyAIBehaviors {
             const distToPatrol = dist(this.pos.x, this.pos.y, patrolTarget.x, patrolTarget.y);
             const currentSpeed = this.vel.mag();
 
-            if (distToPatrol > 150) {
+            if (distToPatrol > HEALER_PATROL_FAR_THRESHOLD) {
                 // Too far from centroid - actively pursue at full speed
                 this.changeState(AI_STATE.PATROLLING);
                 this.performSafeRotationAndThrust(system, patrolTarget);
-            } else if (distToPatrol > 50 || currentSpeed > 0.5) {
+            } else if (distToPatrol > HEALER_PATROL_CLOSE_THRESHOLD || currentSpeed > HEALER_PATROL_SPEED_THRESHOLD) {
                 // Close but still moving - gentle approach
                 this.changeState(AI_STATE.PATROLLING);
                 this.performSafeRotationAndThrust(system, patrolTarget);
-                this.vel.mult(0.97); // Gentle braking
+                this.vel.mult(HEALER_FRICTION_LIGHT);
             } else {
                 // Very close and nearly stopped - drift in formation
                 this.changeState(AI_STATE.IDLE);
-                this.vel.mult(0.95);
+                this.vel.mult(HEALER_FRICTION_HEAVY);
                 // Face a random ally for visual interest
                 if (system?.enemies?.length > 1) {
                     const randomAlly = random(system.enemies.filter(e => e !== this && e.faction === this.faction && !e.destroyed));
@@ -3164,7 +3172,7 @@ class EnemyAIBehaviors {
         let highestScore = -Infinity;
 
         // "Chasing" limit: Don't chase ships significantly faster than us
-        const speedLimit = (this.maxSpeed || 5) * 1.2;
+        const speedLimit = (this.maxSpeed || 5) * HEALER_SPEED_CHASE_MULT;
 
         // Build list of potential healing targets
         const candidates = [];
@@ -3217,26 +3225,26 @@ class EnemyAIBehaviors {
 
             // Base Score: Hull Deficit (0.0 to 1.0) - Lower hull = higher score
             const hullPct = hull / maxHull;
-            let score = (1.0 - hullPct) * 50;
+            let score = (1.0 - hullPct) * HEALER_SCORE_HULL_WEIGHT;
 
             // Shield Deficit Bonus (weighted less than hull)
             const shieldPct = maxShield > 0 ? (shield / maxShield) : 1;
-            score += (1.0 - shieldPct) * 25;
+            score += (1.0 - shieldPct) * HEALER_SCORE_SHIELD_WEIGHT;
 
             // Size Bonus: Prioritize larger ships (and players)
             const size = ally.size || 50; // Players are medium-sized
-            if (size > 60) score += 100; // Capital/Station priority
-            else if (size > 40) score += 50; // Heavy ships
-            else if (size < 25) score -= 20; // Ignore tiny drones
+            if (size > HEALER_SIZE_CAPITAL_THRESHOLD) score += HEALER_SCORE_CAPITAL_BONUS;
+            else if (size > HEALER_SIZE_HEAVY_THRESHOLD) score += HEALER_SCORE_HEAVY_BONUS;
+            else if (size < HEALER_SIZE_DRONE_THRESHOLD) score -= HEALER_SCORE_DRONE_PENALTY;
 
             // Player bonus: Prioritize player slightly (they're more important)
             if (ally === system.player) {
-                score += 30;
+                score += HEALER_SCORE_PLAYER_BONUS;
             }
 
             // Proximity Bonus: Closer is slightly better (tie-breaker)
             const distToAlly = dist(this.pos.x, this.pos.y, ally.pos.x, ally.pos.y);
-            score -= distToAlly * 0.01;
+            score -= distToAlly * HEALER_SCORE_DISTANCE_MULT;
 
             if (score > highestScore) {
                 highestScore = score;
@@ -3254,8 +3262,8 @@ class EnemyAIBehaviors {
         // Prevent self-healing
         if (target === this) return;
 
-        const healRate = 60; // Hull/Health per second
-        const shieldRate = 100; // Shield per second
+        const healRate = HEALER_HULL_REPAIR_RATE;
+        const shieldRate = HEALER_SHIELD_REPAIR_RATE;
         const deltaSeconds = (typeof deltaTime === 'number') ? deltaTime / 1000 : 0.016;
 
         // Determine target properties (Enemy uses hull, Player uses health)
