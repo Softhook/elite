@@ -1560,6 +1560,81 @@ class CommunicationSystem {
                 "{enemyName}: What a— waste—",
                 "{enemyName}: Just— a tender—"
             ],
+            // Mining ships - want to be left alone to work asteroids
+            minerPleas: [
+                "{enemyName}: Just a miner! Leave us alone!",
+                "{enemyName}: Mining rig! No threat here!",
+                "{enemyName}: We're harvesting asteroids, not fighting!",
+                "{enemyName}: Rock breaker! Non-combatant!",
+                "{enemyName}: Ore hauler! Stand down!",
+                "{enemyName}: Drilling in progress! Back off!",
+                "{enemyName}: Mining contract! We're authorized!",
+                "{enemyName}: Guild certified! Let us work!",
+                "{enemyName}: Just extracting ore! Please!",
+                "{enemyName}: Mining laser, not a weapon!",
+                "{enemyName}: Cargo's just rocks! Not worth it!",
+                "{enemyName}: Asteroid claim filed! Legal work!",
+                "{enemyName}: Mineral prospector! Leave us be!",
+                "{enemyName}: Rock hound crew! We're unarmed!",
+                "{enemyName}: Station needs this ore! Back off!",
+                "{enemyName}: Just ore in the hold! Stop!",
+                "{enemyName}: Mining shift! Let us finish!",
+                "{enemyName}: Extraction vessel! Not hostile!",
+                "{enemyName}: We break rocks, not ships!",
+                "{enemyName}: Ore processing active! Don't interfere!",
+                "{enemyName}: Claim jumper? We're registered!",
+                "{enemyName}: Hull's for asteroids, not combat!",
+                "{enemyName}: Mining permits in order! Go away!",
+                "{enemyName}: Drillers, not fighters! Cease fire!",
+                "{enemyName}: Rocks don't shoot back! Neither do we!",
+                "{enemyName}: Ore quota to meet! Please leave!",
+                "{enemyName}: Mining guild! We're protected!",
+                "{enemyName}: Just prospectors! Stand down!",
+                "{enemyName}: Asteroid belt work! Non-combat!",
+                "{enemyName}: Extraction crew! We're civilian!",
+                "{enemyName}: Miners have families too! Stop!",
+                "{enemyName}: Guild contract active! Leave!",
+                "{enemyName}: We're the ore supply! Think!",
+                "{enemyName}: Mining rig! Not worth your ammo!",
+                "{enemyName}: Rock crusher! Not a threat!",
+                "{enemyName}: Shift pay barely covers fuel! Please!",
+                "{enemyName}: Ore hauler! Just doing our job!",
+                "{enemyName}: Asteroid mining! Legal work!",
+                "{enemyName}: Hull thin for weight! Can't take hits!",
+                "{enemyName}: Prospecting license! We're legit!",
+                "{enemyName}: Mining drone carrier! Non-combat!",
+                "{enemyName}: Refinery shipment pending! Let us go!",
+                "{enemyName}: Just rocks! Worthless to pirates!",
+                "{enemyName}: Drill crew! Leave us alone!",
+                "{enemyName}: Mining vessel! Cease fire!"
+            ],
+            minerDeath: [
+                "{enemyName}: Hull— breached—",
+                "{enemyName}: Ore— everywhere—",
+                "{enemyName}: Mining— rig— lost—",
+                "{enemyName}: Just— rocks—",
+                "{enemyName}: Drill— offline—",
+                "{enemyName}: Extraction— failed—",
+                "{enemyName}: Guild— will know—",
+                "{enemyName}: Quota— unmet—",
+                "{enemyName}: Crew— lost—",
+                "{enemyName}: Why— target— miners—",
+                "{enemyName}: Cargo— floating—",
+                "{enemyName}: Shift— over—",
+                "{enemyName}: Asteroids— calling—",
+                "{enemyName}: Reactor— critical—",
+                "{enemyName}: Mining— permit— void—",
+                "{enemyName}: Just— wanted— ore—",
+                "{enemyName}: Claim— abandoned—",
+                "{enemyName}: Refinery— waiting—",
+                "{enemyName}: Tell— the guild—",
+                "{enemyName}: Prospecting— done—",
+                "{enemyName}: Rock— hounds— down—",
+                "{enemyName}: Extraction— terminated—",
+                "{enemyName}: Mining— drones— lost—",
+                "{enemyName}: Family— sorry—",
+                "{enemyName}: Just— a miner—"
+            ],
             // Posthuman Missionary propaganda - religious transcendence themes
             posthumanPropaganda: [
                 "{enemyName}: Flesh is limitation, {playerTitle}. Transcendence awaits.",
@@ -2233,6 +2308,15 @@ class CommunicationSystem {
             });
             return;
         }
+        if (enemy.role === AI_ROLE.MINER) {
+            this._maybeSend(enemy, "miner_plea", this.templates.minerPleas, {
+                chance: 0.85,
+                cooldown: 22000,
+                color: [160, 120, 80],
+                tokens: { damageAmount: Math.round(damage) }
+            });
+            return;
+        }
         if (enemy.role === AI_ROLE.POLICE) {
             this._maybeSend(enemy, "police_warning", this.templates.policeWarnings, {
                 chance: 0.95,
@@ -2306,6 +2390,7 @@ class CommunicationSystem {
             case AI_ROLE.ALIEN: templateList = this.templates.alienDeath; color = [180, 100, 255]; break;
             case AI_ROLE.GUARD: templateList = this.templates.guardDeath; color = [200, 160, 255]; break;
             case AI_ROLE.REPAIR: templateList = this.templates.repairDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.REPAIR : [180, 220, 140]; break;
+            case AI_ROLE.MINER: templateList = this.templates.minerDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.MINER : [160, 120, 80]; break;
             case AI_ROLE.COMBAT:
                 // Determine faction for combat ships
                 const faction = this._getShipFaction(enemy);

@@ -94,7 +94,11 @@ const buildShipRoleArrays = () => {
         MINER_SHIPS: [],
         REPAIR_SHIPS: [],
         MISSIONARY_SHIPS: [],
-        HEALER_SHIPS: []
+        HEALER_SHIPS: [],
+        // Faction-specific hauler arrays for economy spawning
+        IMPERIAL_HAULERS: [],
+        SEPARATIST_HAULERS: [],
+        MILITARY_HAULERS: []
     };
 
     // Single loop iteration - more efficient than 11 includes() checks per ship
@@ -106,6 +110,31 @@ const buildShipRoleArrays = () => {
             const arrayKey = `${role}_SHIPS`;
             if (roleArrays[arrayKey]) {
                 roleArrays[arrayKey].push(shipKey);
+            }
+        }
+
+        // Additionally, populate faction-specific arrays based on the 'faction' property
+        // This handles ships that use generic roles but belong to specific factions
+        if (shipData.faction) {
+            // Faction combat ships: aiRoles: ["COMBAT"] with faction property
+            if (shipData.aiRoles.includes('COMBAT')) {
+                if (shipData.faction === 'IMPERIAL' && !roleArrays.IMPERIAL_SHIPS.includes(shipKey)) {
+                    roleArrays.IMPERIAL_SHIPS.push(shipKey);
+                } else if (shipData.faction === 'SEPARATIST' && !roleArrays.SEPARATIST_SHIPS.includes(shipKey)) {
+                    roleArrays.SEPARATIST_SHIPS.push(shipKey);
+                } else if (shipData.faction === 'MILITARY' && !roleArrays.MILITARY_SHIPS.includes(shipKey)) {
+                    roleArrays.MILITARY_SHIPS.push(shipKey);
+                }
+            }
+            // Faction hauler ships: aiRoles: ["HAULER"] with faction property
+            if (shipData.aiRoles.includes('HAULER')) {
+                if (shipData.faction === 'IMPERIAL') {
+                    roleArrays.IMPERIAL_HAULERS.push(shipKey);
+                } else if (shipData.faction === 'SEPARATIST') {
+                    roleArrays.SEPARATIST_HAULERS.push(shipKey);
+                } else if (shipData.faction === 'MILITARY') {
+                    roleArrays.MILITARY_HAULERS.push(shipKey);
+                }
             }
         }
     }
@@ -129,7 +158,10 @@ const {
     MINER_SHIPS,
     REPAIR_SHIPS,
     MISSIONARY_SHIPS,
-    HEALER_SHIPS
+    HEALER_SHIPS,
+    IMPERIAL_HAULERS,
+    SEPARATIST_HAULERS,
+    MILITARY_HAULERS
 } = buildShipRoleArrays();
 
 // Log the generated arrays to verify (gated behind debug flag)
@@ -148,6 +180,9 @@ if (STAR_SYSTEM_DEBUG) {
     console.log("COMBAT_SHIPS:", COMBAT_SHIPS);
     console.log("MINER_SHIPS:", MINER_SHIPS);
     console.log("REPAIR_SHIPS:", REPAIR_SHIPS);
+    console.log("IMPERIAL_HAULERS:", IMPERIAL_HAULERS);
+    console.log("SEPARATIST_HAULERS:", SEPARATIST_HAULERS);
+    console.log("MILITARY_HAULERS:", MILITARY_HAULERS);
 }
 
 /**
@@ -1668,8 +1703,13 @@ class StarSystem {
         const rand = random();
         if (rand < 0.60 && MILITARY_SHIPS.length > 0) {
             return { role: AI_ROLE.COMBAT, ship: random(MILITARY_SHIPS) };
-        } else if (rand < 0.75 && HAULER_SHIPS.length > 0) {
-            return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
+        } else if (rand < 0.75) {
+            // Prefer military-specific haulers, fallback to generic haulers
+            if (MILITARY_HAULERS.length > 0) {
+                return { role: AI_ROLE.HAULER, ship: random(MILITARY_HAULERS) };
+            } else if (HAULER_SHIPS.length > 0) {
+                return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
+            }
         } else if (rand < 0.85 && PIRATE_SHIPS.length > 0) {
             return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS) };
         } else if (rand < 0.92 && ALIEN_SHIPS.length > 0) {
@@ -1795,11 +1835,24 @@ class StarSystem {
             return { role: AI_ROLE.HEALER, ship: random(HEALER_SHIPS), faction: 'SEPARATIST' };
         }
 
+        // Determine faction-specific hauler array
+        let factionHaulers = [];
+        if (factionId === 'IMPERIAL') {
+            factionHaulers = IMPERIAL_HAULERS;
+        } else if (factionId === 'SEPARATIST') {
+            factionHaulers = SEPARATIST_HAULERS;
+        }
+
         const rand = random();
         if (rand < 0.60 && primaryFaction.length > 0) {
             return { role: AI_ROLE.COMBAT, ship: random(primaryFaction) };
-        } else if (rand < 0.75 && HAULER_SHIPS.length > 0) {
-            return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
+        } else if (rand < 0.75) {
+            // Prefer faction-specific haulers, fallback to generic haulers
+            if (factionHaulers.length > 0) {
+                return { role: AI_ROLE.HAULER, ship: random(factionHaulers) };
+            } else if (HAULER_SHIPS.length > 0) {
+                return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
+            }
         } else if (rand < 0.85 && TRANSPORT_SHIPS.length > 0) {
             return { role: AI_ROLE.TRANSPORT, ship: random(TRANSPORT_SHIPS) };
         }
