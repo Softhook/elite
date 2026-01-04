@@ -1554,28 +1554,20 @@ const SHIP_DEFINITIONS = {
         armament: ["Barrier Field"],
         costCategory: "Medium", description: "A converted transport painted in olive drab with a prominent red cross. While officially a non-combatant vessel, Separatist combat medics operate on the front lines, stitching up ships and crews while under heavy fire. Its advanced repair projectors can restore hull integrity to allies in seconds.",
         vertexLayers: [
-            // Main Hull (Green Camo)
             {
-                vertexData: [{ x: 0.8, y: 0.0 }, { x: 0.4, y: 0.4 }, { x: -0.8, y: 0.4 }, { x: -1.0, y: 0.2 }, { x: -1.0, y: -0.2 }, { x: -0.8, y: -0.4 }, { x: 0.4, y: -0.4 }],
+                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.5000, y: 0.4000 }, { x: -0.7000, y: 0.4000 }, { x: -0.9000, y: 0.2000 }, { x: -0.9000, y: -0.2000 }, { x: -0.7000, y: -0.4000 }, { x: 0.5000, y: -0.4000 }],
                 fillColor: [70, 90, 70]
             },
-            // Cockpit/Bridge area
             {
-                vertexData: [{ x: 0.5, y: 0.0 }, { x: 0.3, y: 0.2 }, { x: 0.3, y: -0.2 }],
-                fillColor: [200, 200, 220] // Glass
+                vertexData: [{ x: 0.6000, y: 0.0000 }, { x: 0.4000, y: 0.2000 }, { x: 0.4000, y: -0.2000 }],
+                fillColor: [200, 200, 220]
             },
-            // Red Cross - Vertical
             {
-                vertexData: [{ x: -0.3, y: 0.3 }, { x: -0.5, y: 0.3 }, { x: -0.5, y: -0.3 }, { x: -0.3, y: -0.3 }],
-                fillColor: [200, 20, 20]
-            },
-            // Red Cross - Horizontal
-            {
-                vertexData: [{ x: -0.1, y: 0.1 }, { x: -0.7, y: 0.1 }, { x: -0.7, y: -0.1 }, { x: -0.1, y: -0.1 }],
+                vertexData: [{ x: -0.6700, y: -0.1100 }, { x: -0.4500, y: -0.1100 }, { x: -0.4500, y: -0.3300 }, { x: -0.2300, y: -0.3300 }, { x: -0.2300, y: -0.1100 }, { x: -0.0100, y: -0.1100 }, { x: -0.0100, y: 0.1100 }, { x: -0.2300, y: 0.1100 }, { x: -0.2300, y: 0.3300 }, { x: -0.4500, y: 0.3300 }, { x: -0.4500, y: 0.1100 }, { x: -0.6700, y: 0.1100 }],
                 fillColor: [200, 20, 20]
             }
         ],
-        typicalCargo: ["Medical Supplies", "Food"],
+        typicalCargo: ["Medicine", "Food"],
         price: 85000,
         aiRoles: ["HEALER"],
         faction: "SEPARATIST",
