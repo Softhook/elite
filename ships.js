@@ -1547,7 +1547,40 @@ const SHIP_DEFINITIONS = {
         faction: "SEPARATIST",
         techLevel: 4,
     },
-    "SeparatistDefiant": {
+    "SeparatistMedic": {
+        name: "Separatist Medic", role: "Support Frigate", upgrades: ["Shield Booster"], sizeCategory: "Medium", size: 50,
+        baseMaxSpeed: 5.5, baseThrust: 0.1, baseTurnRate: 0.05,
+        baseHull: 150, baseShield: 180, shieldRecharge: 1.5, cargoCapacity: 50,
+        armament: ["Barrier Field"],
+        costCategory: "Medium", description: "A converted transport painted in olive drab with a prominent red cross. While officially a non-combatant vessel, Separatist combat medics operate on the front lines, stitching up ships and crews while under heavy fire. Its advanced repair projectors can restore hull integrity to allies in seconds.",
+        vertexLayers: [
+            // Main Hull (Green Camo)
+            {
+                vertexData: [{ x: 0.8, y: 0.0 }, { x: 0.4, y: 0.4 }, { x: -0.8, y: 0.4 }, { x: -1.0, y: 0.2 }, { x: -1.0, y: -0.2 }, { x: -0.8, y: -0.4 }, { x: 0.4, y: -0.4 }],
+                fillColor: [70, 90, 70]
+            },
+            // Cockpit/Bridge area
+            {
+                vertexData: [{ x: 0.5, y: 0.0 }, { x: 0.3, y: 0.2 }, { x: 0.3, y: -0.2 }],
+                fillColor: [200, 200, 220] // Glass
+            },
+            // Red Cross - Vertical
+            {
+                vertexData: [{ x: -0.3, y: 0.3 }, { x: -0.5, y: 0.3 }, { x: -0.5, y: -0.3 }, { x: -0.3, y: -0.3 }],
+                fillColor: [200, 20, 20]
+            },
+            // Red Cross - Horizontal
+            {
+                vertexData: [{ x: -0.1, y: 0.1 }, { x: -0.7, y: 0.1 }, { x: -0.7, y: -0.1 }, { x: -0.1, y: -0.1 }],
+                fillColor: [200, 20, 20]
+            }
+        ],
+        typicalCargo: ["Medical Supplies", "Food"],
+        price: 85000,
+        aiRoles: ["HEALER"],
+        faction: "SEPARATIST",
+        techLevel: 4,
+    }, "SeparatistDefiant": {
         name: "Separatist Defiant", role: "Gunship", upgrades: [], sizeCategory: "Medium", size: 58,
         baseMaxSpeed: 4.8, baseThrust: 0.1, baseTurnRate: 0.04,
         baseHull: 250, baseShield: 180, shieldRecharge: 0.9, cargoCapacity: 30,

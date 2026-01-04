@@ -815,7 +815,11 @@ class EnemyCombat {
      * @return {boolean} Whether ship has any weapons
      */
     isArmed() {
-        return !!this.currentWeapon;
+        // A ship is only "armed" if it has offensive weapons.
+        // Purely defensive weapons (Barrier) do not count as armed for combat logic.
+        if (!this.weapons || this.weapons.length === 0) return false;
+
+        return this.weapons.some(w => w.type !== WEAPON_TYPE.BARRIER);
     }
 
     /**

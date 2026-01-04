@@ -664,6 +664,51 @@ class EnemyRendering {
                 pop();
             }
         }
+
+        // --- Healing Beam Effect (HEALER role) ---
+        // Draw green healing beam with pulsing glow and cross pattern at target
+        if (this.role === AI_ROLE.HEALER && this._isHealing && this._healingBeamTarget && this._healingBeamTarget.pos) {
+            // Surface mode filter
+            if (typeof surfaceMode === 'undefined' || !surfaceMode || !surfaceMode.isActive()) {
+                push();
+
+                const target = this._healingBeamTarget;
+                const pulsePhase = (now * 0.004) % 1;
+                const alpha = this._healingBeamAlpha || (150 + 80 * Math.sin(pulsePhase * TWO_PI));
+
+                // Main healing beam (bright green)
+                stroke(50, 255, 100, alpha);
+                strokeWeight(3 + Math.sin(pulsePhase * TWO_PI) * 1);
+                line(this.pos.x, this.pos.y, target.pos.x, target.pos.y);
+
+                // Secondary inner beam (white core)
+                stroke(200, 255, 200, alpha * 0.7);
+                strokeWeight(1.5);
+                line(this.pos.x, this.pos.y, target.pos.x, target.pos.y);
+
+                // Glow at healer position
+                noStroke();
+                fill(50, 255, 100, alpha * 0.5);
+                ellipse(this.pos.x, this.pos.y, 10, 10);
+
+                // Cross symbol at target position (medical cross)
+                const crossSize = 8 + Math.sin(pulsePhase * TWO_PI * 2) * 2;
+                fill(50, 255, 100, alpha * 0.8);
+                // Vertical bar
+                rectMode(CENTER);
+                rect(target.pos.x, target.pos.y, crossSize * 0.4, crossSize);
+                // Horizontal bar
+                rect(target.pos.x, target.pos.y, crossSize, crossSize * 0.4);
+
+                // Outer glow ring at target
+                noFill();
+                stroke(50, 255, 100, alpha * 0.4);
+                strokeWeight(2);
+                ellipse(target.pos.x, target.pos.y, crossSize * 3, crossSize * 3);
+
+                pop();
+            }
+        }
         // --- End Other Effects ---
 
     } // End draw()

@@ -128,8 +128,9 @@ class EnemyStateMachine {
                     this.changeState(AI_STATE.FLEEING);
                     return;
                 }
-                // Otherwise, engage if we're armed
-                if (this.isArmed()) {
+                // Otherwise, engage if we're armed OR if we are a Healer (who should stay and support)
+                // Healers are technically "unarmed" (Barrier only) but should not flee immediately.
+                if (this.isArmed() || this.role === AI_ROLE.HEALER) {
                     this.target = this.lastAttacker;
                     this.changeState(AI_STATE.APPROACHING);
                     return;
@@ -637,7 +638,11 @@ class EnemyStateMachine {
      */
     changeState(newState, stateData = {}) {
         // Prevent unarmed ships from entering combat states
+        // EXCEPTION: Healers can enter APPROACHING to reach healing targets (they won't attack)
+        const isHealerApproaching = (this.role === AI_ROLE.HEALER && newState === AI_STATE.APPROACHING);
+
         if (!this.isArmed() &&
+            !isHealerApproaching &&
             (newState === AI_STATE.APPROACHING ||
                 newState === AI_STATE.ATTACK_PASS ||
                 newState === AI_STATE.REPOSITIONING ||

@@ -69,6 +69,7 @@ const AI_ROLE = {
     COMBAT: 'Combat',  // Military, imperial, and separatist combat ships
     MINER: 'Miner',  // Mining ships that target asteroids
     REPAIR: 'Repair',  // Field repair tenders that maintain space objects
+    HEALER: 'Healer', // Medical ships that heal other ships
     MISSIONARY: 'Missionary'  // Posthuman missionaries - use tangle to disable and preach
 };
 
@@ -194,6 +195,7 @@ const ROLE_ENEMY_MAP = {
     [AI_ROLE.TRANSPORT]: [], // Defensive only - retaliates when attacked
     [AI_ROLE.MINER]: [], // Defensive only - focuses on mining asteroids
     [AI_ROLE.REPAIR]: [], // Non-combatant - focuses on repair duties
+    [AI_ROLE.HEALER]: [], // Non-combatant - focuses on healing faction members
     [AI_ROLE.MISSIONARY]: [] // Non-hostile - uses tangle to disable, then preaches
 };
 

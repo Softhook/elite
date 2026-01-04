@@ -2948,25 +2948,379 @@ class EnemyAIBehaviors {
      * @param {Object} planet - The planet where reconstruction is happening
      */
     spawnConstructionEffects(planet) {
-        // Spawn effects occasionally
-        if (Math.random() > EnemyAIBehaviors.REPAIR_CONFIG.EFFECT_SPAWN_CHANCE.construction) return;
+        // Only spawn effects occasionally
+        if (Math.random() > 0.3) return;
 
-        // Surface mode filter: skip in surface mode - don't leak space visuals onto planet surface
+        // Surface mode filter: skip in surface mode
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) return;
 
         if (!this.currentSystem) return;
 
-        // Spawn particles in a ring around the repair tender
-        const angle = Math.random() * TWO_PI;
-        const radius = this.size * 1.5;
-        const px = this.pos.x + Math.cos(angle) * radius;
-        const py = this.pos.y + Math.sin(angle) * radius;
+        // Create sparks around the ship
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 30;
+        const px = this.pos.x + Math.cos(angle) * dist;
+        const py = this.pos.y + Math.sin(angle) * dist;
 
-        // Yellow/orange construction particles
         if (typeof this.currentSystem.addExplosion === 'function') {
-            this.currentSystem.addExplosion(px, py, 4, [255, 200, 100]);
+            this.currentSystem.addExplosion(px, py, 2, [255, 180, 0]);
         }
     }
+
+    // ========================================
+    // HEALER AI BEHAVIOR
+    // ========================================
+
+    /**
+     * Update function for Healer role
+     * Finds damaged allies and heals them
+     * @param {Object} system - Current star system
+     */
+    updateHealerAI(system) {
+        // Frame-rate independent delta time
+        const dtSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : 0.016;
+
+        // Defensive: Always keep barrier up if available (Aggressive Defense)
+        if (this.weapons && this.weapons.length > 0) {
+            const barrier = this.weapons.find(w => w.type === WEAPON_TYPE.BARRIER);
+            if (barrier && this.barrierCooldown <= 0) {
+                this.isBarrierActive = true;
+                this.barrierDamageReduction = barrier.damageReduction;
+                this.barrierDurationTimer = barrier.duration;
+                this.barrierColor = barrier.color || [100, 100, 255];
+                this.barrierCooldown = barrier.fireRate;
+                if (typeof soundManager !== 'undefined') { soundManager.playSound('barrierUp', 1.0, this); }
+            }
+        }
+
+        // 1. Validate current healing target
+        if (this.healingTarget) {
+            const isValid = this.isHealingTargetValid(this.healingTarget);
+
+            // Check if fully healed (use hull/maxHull for enemies)
+            const isFullyHealed = isValid &&
+                (this.healingTarget.hull >= this.healingTarget.maxHull) &&
+                (this.healingTarget.shield >= this.healingTarget.maxShield);
+
+            if (!isValid || isFullyHealed) {
+                this.healingTarget = null;
+                this._isHealing = false;
+                this.changeState(AI_STATE.PATROLLING);
+            }
+        }
+
+        // 2. Find new target if we don't have one (frame-rate independent search)
+        if (!this.healingTarget) {
+            // Initialize search timer if needed
+            if (this._healerSearchTimer === undefined) this._healerSearchTimer = 0;
+            this._healerSearchTimer -= dtSeconds;
+
+            if (this._healerSearchTimer <= 0) {
+                this._healerSearchTimer = 1.0; // Search once per second
+                this.healingTarget = this.findDamagedAlly(system);
+                if (this.healingTarget) {
+                    this.changeState(AI_STATE.APPROACHING);
+                }
+            }
+        }
+
+        // 3. Execute State Behavior
+        if (this.healingTarget) {
+            const distToTarget = dist(this.pos.x, this.pos.y, this.healingTarget.pos.x, this.healingTarget.pos.y);
+
+            // Dynamic Healing Range
+            const targetRadius = (this.healingTarget.size || 20) * 0.5;
+            const myRadius = (this.size || 20) * 0.5;
+            const healRange = 550 + targetRadius + myRadius;
+
+            // Hysteresis zones to prevent oscillation
+            const collisionZoneEnter = healRange * 0.35; // Start backing up at this distance
+            const collisionZoneExit = healRange * 0.45;  // Stop backing up at this distance
+
+            // Track if we're currently backing up (hysteresis state)
+            if (this._healerBackingUp === undefined) this._healerBackingUp = false;
+
+            if (distToTarget <= healRange) {
+                // In range: Heal
+                this._isHealing = true;
+
+                // Hysteresis: only start backing up if we cross into collision zone
+                // Only stop backing up once we've exited the zone
+                if (distToTarget < collisionZoneEnter) {
+                    this._healerBackingUp = true;
+                } else if (distToTarget > collisionZoneExit) {
+                    this._healerBackingUp = false;
+                }
+
+                if (this._healerBackingUp) {
+                    // TOO CLOSE: Very gentle reverse thrust
+                    const angleToTarget = atan2(this.healingTarget.pos.y - this.pos.y, this.healingTarget.pos.x - this.pos.x);
+                    this.rotateTowards(angleToTarget);
+                    this.thrustReverse(0.15); // Very gentle
+                    this.vel.mult(0.98); // Slight friction while backing
+                } else {
+                    // SWEET SPOT: Hold position, minimal movement
+                    this.changeState(AI_STATE.IDLE);
+                    this.vel.mult(0.98); // Very gentle friction
+
+                    // Smooth rotation - only rotate if significantly misaligned
+                    const angleToTarget = atan2(this.healingTarget.pos.y - this.pos.y, this.healingTarget.pos.x - this.pos.x);
+                    const angleDiff = abs(this.normalizeAngle(angleToTarget - this.angle));
+                    if (angleDiff > 0.1) { // Only rotate if more than ~6 degrees off
+                        this.rotateTowards(angleToTarget);
+                    }
+                }
+
+                this.performHealing(system, this.healingTarget);
+
+            } else {
+                // Out of range: Approach smoothly
+                this._isHealing = false;
+                this._healerBackingUp = false;
+                this.changeState(AI_STATE.APPROACHING);
+                this.performSafeRotationAndThrust(system, this.healingTarget.pos);
+
+                // Boost if very far away
+                if (distToTarget > 800 && this.boostCooldownTimer <= 0) {
+                    this.activateBoost();
+                }
+            }
+        } else {
+            // NO HEALING TARGET: Patrol near allies, DO NOT chase enemies
+            this._isHealing = false;
+
+            // Find centroid of allied ships to patrol near
+            let patrolTarget = null;
+            if (system && system.enemies) {
+                const allies = system.enemies.filter(e => e !== this && e.faction === this.faction && !e.destroyed);
+                if (allies.length > 0) {
+                    // Calculate centroid of allies
+                    let cx = 0, cy = 0;
+                    for (const ally of allies) {
+                        cx += ally.pos.x;
+                        cy += ally.pos.y;
+                    }
+                    cx /= allies.length;
+                    cy /= allies.length;
+                    patrolTarget = createVector(cx, cy);
+                }
+            }
+
+            // Fallback to station or current position
+            if (!patrolTarget) {
+                patrolTarget = system?.station?.pos || this.pos.copy();
+            }
+
+            // ALWAYS stay in PATROLLING state so we can thrust
+            // Only truly stop if we're close AND moving slowly (i.e., already arrived)
+            const distToPatrol = dist(this.pos.x, this.pos.y, patrolTarget.x, patrolTarget.y);
+            const currentSpeed = this.vel.mag();
+
+            if (distToPatrol > 150) {
+                // Too far from centroid - actively pursue at full speed
+                this.changeState(AI_STATE.PATROLLING);
+                this.performSafeRotationAndThrust(system, patrolTarget);
+            } else if (distToPatrol > 50 || currentSpeed > 0.5) {
+                // Close but still moving - gentle approach
+                this.changeState(AI_STATE.PATROLLING);
+                this.performSafeRotationAndThrust(system, patrolTarget);
+                this.vel.mult(0.97); // Gentle braking
+            } else {
+                // Very close and nearly stopped - drift in formation
+                this.changeState(AI_STATE.IDLE);
+                this.vel.mult(0.95);
+                // Face a random ally for visual interest
+                if (system?.enemies?.length > 1) {
+                    const randomAlly = random(system.enemies.filter(e => e !== this && e.faction === this.faction && !e.destroyed));
+                    if (randomAlly) {
+                        this.rotateTowards(atan2(randomAlly.pos.y - this.pos.y, randomAlly.pos.x - this.pos.x));
+                    }
+                }
+            }
+        }
+
+        this.updatePhysics();
+    }
+
+    isHealingTargetValid(target) {
+        // Works for both Enemy (hull) and Player (health)
+        if (!target || target.destroyed) return false;
+        // Prevent self-healing
+        if (target === this) return false;
+        // Check hull (Enemy) or health (Player)
+        const currentHull = target.hull !== undefined ? target.hull : target.health;
+        return currentHull > 0;
+    }
+
+    /**
+     * Find a damaged ally in the system (including player if same faction)
+     * @param {Object} system 
+     * @returns {Object|null} The ally to heal
+     */
+    findDamagedAlly(system) {
+        if (!system) return null;
+
+        let bestTarget = null;
+        let highestScore = -Infinity;
+
+        // "Chasing" limit: Don't chase ships significantly faster than us
+        const speedLimit = (this.maxSpeed || 5) * 1.2;
+
+        // Build list of potential healing targets
+        const candidates = [];
+
+        // 1. Add damaged enemy allies (same faction)
+        if (system.enemies) {
+            for (const e of system.enemies) {
+                // CRITICAL: Exclude self to prevent self-healing
+                if (e === this) continue;
+                if (e.destroyed) continue;
+                if (e.faction !== this.faction) continue;
+
+                const needsHealing = (e.hull < e.maxHull) || (e.shield < e.maxShield);
+                if (needsHealing) {
+                    candidates.push(e);
+                }
+            }
+        }
+
+        // 2. Add player if same faction and damaged
+        if (system.player && !system.player.destroyed && !system.player.isDying) {
+            const player = system.player;
+            const playerFaction = player.playerFaction || 'UNKNOWN';
+
+            // Check if player is same faction as healer
+            if (playerFaction === this.faction) {
+                const playerHull = player.health !== undefined ? player.health : player.hull;
+                const playerMaxHull = player.maxHealth !== undefined ? player.maxHealth : player.maxHull;
+                const playerShield = player.shield || 0;
+                const playerMaxShield = player.maxShield || 0;
+
+                const needsHealing = (playerHull < playerMaxHull) || (playerShield < playerMaxShield);
+                if (needsHealing) {
+                    candidates.push(player);
+                }
+            }
+        }
+
+        // Score each candidate
+        for (const ally of candidates) {
+            // Speed Check: Ignore if too fast to catch
+            const allySpeed = ally.maxSpeed || 5;
+            if (allySpeed > speedLimit) continue;
+
+            // Determine hull and shield values (handle both Enemy and Player)
+            const hull = ally.hull !== undefined ? ally.hull : ally.health;
+            const maxHull = ally.maxHull !== undefined ? ally.maxHull : ally.maxHealth;
+            const shield = ally.shield || 0;
+            const maxShield = ally.maxShield || 1; // Avoid division by zero
+
+            // Base Score: Hull Deficit (0.0 to 1.0) - Lower hull = higher score
+            const hullPct = hull / maxHull;
+            let score = (1.0 - hullPct) * 50;
+
+            // Shield Deficit Bonus (weighted less than hull)
+            const shieldPct = maxShield > 0 ? (shield / maxShield) : 1;
+            score += (1.0 - shieldPct) * 25;
+
+            // Size Bonus: Prioritize larger ships (and players)
+            const size = ally.size || 50; // Players are medium-sized
+            if (size > 60) score += 100; // Capital/Station priority
+            else if (size > 40) score += 50; // Heavy ships
+            else if (size < 25) score -= 20; // Ignore tiny drones
+
+            // Player bonus: Prioritize player slightly (they're more important)
+            if (ally === system.player) {
+                score += 30;
+            }
+
+            // Proximity Bonus: Closer is slightly better (tie-breaker)
+            const distToAlly = dist(this.pos.x, this.pos.y, ally.pos.x, ally.pos.y);
+            score -= distToAlly * 0.01;
+
+            if (score > highestScore) {
+                highestScore = score;
+                bestTarget = ally;
+            }
+        }
+
+        return bestTarget;
+    }
+
+    /**
+     * Perform healing on target (supports both Enemy and Player)
+     */
+    performHealing(system, target) {
+        // Prevent self-healing
+        if (target === this) return;
+
+        const healRate = 60; // Hull/Health per second
+        const shieldRate = 100; // Shield per second
+        const deltaSeconds = (typeof deltaTime === 'number') ? deltaTime / 1000 : 0.016;
+
+        // Determine target properties (Enemy uses hull, Player uses health)
+        const isPlayer = target.health !== undefined && target.maxHealth !== undefined;
+
+        if (isPlayer) {
+            // Heal Player
+            if (target.health < target.maxHealth) {
+                target.health = Math.min(target.maxHealth, target.health + healRate * deltaSeconds);
+            }
+        } else {
+            // Heal Enemy
+            if (target.hull < target.maxHull) {
+                target.hull = Math.min(target.maxHull, target.hull + healRate * deltaSeconds);
+            }
+        }
+
+        // Heal Shields (same for both)
+        if (target.shield < target.maxShield) {
+            target.shield = Math.min(target.maxShield, target.shield + shieldRate * deltaSeconds);
+        }
+
+        // Visual: Healing Beam + Particles
+        this.drawHealingBeam(target);
+        this.spawnHealerEffects(target);
+    }
+
+    /**
+     * Draw a visible healing beam between healer and target
+     */
+    drawHealingBeam(target) {
+        if (!target || !target.pos) return;
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) return;
+
+        // Store beam data for rendering (will be drawn in enemyRendering.js or here)
+        this._healingBeamTarget = target;
+        this._healingBeamAlpha = 180 + Math.sin(millis() * 0.01) * 50; // Pulsing
+    }
+
+    /**
+     * Visual particle effects for healing
+     */
+    spawnHealerEffects(target) {
+        if (Math.random() > 0.3) return; // Throttle
+
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) return;
+
+        const sys = this.currentSystem;
+        if (sys && typeof sys.addExplosion === 'function') {
+            // Spawn particles along the beam
+            const lerpT = Math.random();
+            const px = this.pos.x + (target.pos.x - this.pos.x) * lerpT;
+            const py = this.pos.y + (target.pos.y - this.pos.y) * lerpT;
+
+            // Green healing particles with slight variance
+            const g = 200 + Math.floor(Math.random() * 55);
+            sys.addExplosion(px, py, 2 + Math.random(), [50, g, 50]);
+
+            // Occasional white sparkle for "life force" effect
+            if (Math.random() < 0.15) {
+                sys.addExplosion(px, py, 1.5, [255, 255, 220]);
+            }
+        }
+    }
+
 
     // ========================================
     // MISSIONARY AI - POSTHUMAN EVANGELIST

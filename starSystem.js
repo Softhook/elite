@@ -93,7 +93,8 @@ const buildShipRoleArrays = () => {
         COMBAT_SHIPS: [],
         MINER_SHIPS: [],
         REPAIR_SHIPS: [],
-        MISSIONARY_SHIPS: []
+        MISSIONARY_SHIPS: [],
+        HEALER_SHIPS: []
     };
 
     // Single loop iteration - more efficient than 11 includes() checks per ship
@@ -127,7 +128,8 @@ const {
     COMBAT_SHIPS,
     MINER_SHIPS,
     REPAIR_SHIPS,
-    MISSIONARY_SHIPS
+    MISSIONARY_SHIPS,
+    HEALER_SHIPS
 } = buildShipRoleArrays();
 
 // Log the generated arrays to verify (gated behind debug flag)
@@ -2003,7 +2005,24 @@ class StarSystem {
      * @private
      */
     _createEnemy(x, y, shipTypeName, role) {
-        const newEnemy = new Enemy(x, y, this.player, shipTypeName, role);
+        // Check if the ship definition has a specialized aiRole that should override the generic role
+        // This ensures ships like SeparatistMedic (aiRoles: ["HEALER"]) get the correct AI_ROLE.HEALER
+        let effectiveRole = role;
+        const shipDef = SHIP_DEFINITIONS[shipTypeName];
+        if (shipDef && Array.isArray(shipDef.aiRoles) && shipDef.aiRoles.length > 0) {
+            const primaryRole = shipDef.aiRoles[0]; // Use first role as primary
+            // Map string role names to AI_ROLE enum values for specialized roles
+            const roleMapping = {
+                'HEALER': AI_ROLE.HEALER,
+                'REPAIR': AI_ROLE.REPAIR,
+                'MISSIONARY': AI_ROLE.MISSIONARY
+            };
+            if (roleMapping[primaryRole]) {
+                effectiveRole = roleMapping[primaryRole];
+            }
+        }
+
+        const newEnemy = new Enemy(x, y, this.player, shipTypeName, effectiveRole);
         newEnemy.calculateRadianProperties();
         newEnemy.initializeColors();
         this.addEnemy(newEnemy);
