@@ -1621,6 +1621,15 @@ class StarSystem {
      * @returns {{role: string, ship: string}} Selected ship role and type
      * @private
      */
+    /**
+     * Selects appropriate ship type based on system economy and security level.
+     * Uses centralized SpawnConfig for data-driven probabilities.
+     * 
+     * @param {string} economy - System economy type
+     * @param {string} security - System security level
+     * @returns {{role: string, ship: string, faction?: string}} Selected ship role and type
+     * @private
+     */
     _selectShipForEconomy(economy, security) {
         // Check for active war state - influences spawn distribution
         const em = typeof eventManager !== 'undefined' ? eventManager : null;
@@ -1629,34 +1638,109 @@ class StarSystem {
             if (warSelection) return warSelection;
         }
 
-        const econ = (economy || "").toLowerCase();
+        // Use centralized SpawnConfig for all spawn probabilities
+        const probs = SpawnConfig.getProbabilities(economy, security);
 
-        // Economy-specific spawn logic
-        const economyHandlers = {
-            military: () => this._selectMilitaryShip(),
-            alien: () => this._selectAlienShip(),
-            offworld: () => this._selectOffworldShip(),
-            separatist: () => this._selectFactionShip(SEPARATIST_SHIPS, IMPERIAL_SHIPS, 'SEPARATIST'),
-            imperial: () => this._selectFactionShip(IMPERIAL_SHIPS, SEPARATIST_SHIPS, 'IMPERIAL'),
-            mining: () => this._selectMiningShip(),
-            industrial: () => this._selectMiningShip(),
-            refinery: () => this._selectMiningShip(),
-            'post human': () => this._selectPostHumanShip()
-        };
+        // Select role based on probabilities
+        const chosenRoleKey = this._selectRoleFromProbabilities(probs);
 
-        const handler = economyHandlers[econ];
-        if (handler) {
-            return handler();
+        // Resolve role key to actual ship instance
+        return this._resolveShipForRole(chosenRoleKey, economy);
+    }
+
+    /**
+     * Helper to select a role key from a probability map.
+     * @param {Object} probs - Map of role keys to probabilities (e.g., { COMBAT: 0.6, HAULER: 0.4 })
+     * @returns {string} Selected role key
+     * @private
+     */
+    _selectRoleFromProbabilities(probs) {
+        // Validation for safety
+        if (!probs) return 'HAULER';
+
+        let r = random();
+        let cumulative = 0;
+
+        for (const [key, chance] of Object.entries(probs)) {
+            cumulative += chance;
+            if (r < cumulative) return key;
         }
 
-        // Standard spawn logic based on security
-        return this._selectStandardShip(security);
+        // Fallback to last key or default
+        return Object.keys(probs).pop() || 'HAULER';
+    }
+
+    /**
+     * Resolves a configuration role key to a concrete ship and AI role.
+     * Maps abstract config roles (FACTION_COMBAT) to specific game data.
+     * 
+     * @param {string} roleKey - The selected role key from config
+     * @param {string} economy - The current economy (context for specific arrays)
+     * @returns {{role: string, ship: string, faction?: string}}
+     * @private
+     */
+    _resolveShipForRole(roleKey, economy) {
+        const econ = (economy || '').toUpperCase();
+
+        switch (roleKey) {
+            case 'COMBAT':
+                // Context-aware combat ships
+                if (econ === 'MILITARY') return { role: AI_ROLE.COMBAT, ship: random(MILITARY_SHIPS.length ? MILITARY_SHIPS : COMBAT_SHIPS) };
+                if (econ === 'POST HUMAN') return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
+                if (econ === 'OFFWORLD') return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
+                return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
+
+            case 'FACTION_COMBAT':
+                if (econ === 'SEPARATIST') return { role: AI_ROLE.COMBAT, ship: random(SEPARATIST_SHIPS) };
+                if (econ === 'IMPERIAL') return { role: AI_ROLE.COMBAT, ship: random(IMPERIAL_SHIPS) };
+                return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
+
+            case 'RIVAL_COMBAT':
+                if (econ === 'SEPARATIST') return { role: AI_ROLE.COMBAT, ship: random(IMPERIAL_SHIPS) }; // Imperials invading Separatist
+                if (econ === 'IMPERIAL') return { role: AI_ROLE.COMBAT, ship: random(SEPARATIST_SHIPS) }; // Separatists invading Imperial
+                return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS) };
+
+            case 'PIRATE':
+                return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS.length ? PIRATE_SHIPS : ['Krait']) };
+
+            case 'POLICE':
+                return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length ? POLICE_SHIPS : ['ViperPol']) };
+
+            case 'HAULER':
+                // Context-aware haulers
+                if (econ === 'MILITARY' && MILITARY_HAULERS.length) return { role: AI_ROLE.HAULER, ship: random(MILITARY_HAULERS) };
+                return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length ? HAULER_SHIPS : ['CobraMkIII']) };
+
+            case 'FACTION_HAULER':
+                if (econ === 'SEPARATIST' && SEPARATIST_HAULERS.length) return { role: AI_ROLE.HAULER, ship: random(SEPARATIST_HAULERS) };
+                if (econ === 'IMPERIAL' && IMPERIAL_HAULERS.length) return { role: AI_ROLE.HAULER, ship: random(IMPERIAL_HAULERS) };
+                return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
+
+            case 'MINER':
+                return { role: AI_ROLE.MINER, ship: random(MINER_SHIPS.length ? MINER_SHIPS : ['Krait']) };
+
+            case 'TRANSPORT':
+                return { role: AI_ROLE.TRANSPORT, ship: random(TRANSPORT_SHIPS.length ? TRANSPORT_SHIPS : ['Type6Transporter']) };
+
+            case 'ALIEN':
+                return { role: AI_ROLE.ALIEN, ship: random(ALIEN_SHIPS.length ? ALIEN_SHIPS : ['Thargoid']) };
+
+            case 'HEALER':
+                return { role: AI_ROLE.HEALER, ship: random(HEALER_SHIPS.length ? HEALER_SHIPS : ['Krait']), faction: 'SEPARATIST' };
+
+            case 'MISSIONARY':
+                return { role: AI_ROLE.MISSIONARY, ship: random(MISSIONARY_SHIPS.length ? MISSIONARY_SHIPS : ['Krait']), faction: 'POSTHUMAN' };
+
+            default:
+                console.warn(`Unresolved role key: ${roleKey}, defaulting to Hauler`);
+                return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
+        }
     }
 
     /**
      * Selects a ship based on active war state spawn modifiers.
      * @param {Object} warState - Active war state with spawnModifiers
-     * @returns {{role: string, ship: string}|null} Selected ship or null for standard selection
+     * @returns {{role: string, ship: string, faction?: string}|null} Selected ship or null for standard selection
      * @private
      */
     _selectWarInfluencedShip(warState) {
@@ -1665,12 +1749,6 @@ class StarSystem {
 
         if (warState.factions === 'SEPARATIST_VS_IMPERIAL') {
             if (rand < mods.SEPARATIST && SEPARATIST_SHIPS.length > 0) {
-                // Chance to spawn a healer instead of combat ship during war (support role)
-                // NOTE: Effective healer rate = mods.SEPARATIST * HEALER_SPAWN_CHANCE_WARTIME
-                // e.g., if SEPARATIST spawn rate is 40%, healer rate is 40% * 10% = 4% of total war spawns
-                if (HEALER_SHIPS.length > 0 && random() < HEALER_SPAWN_CHANCE_WARTIME) {
-                    return { role: AI_ROLE.HEALER, ship: random(HEALER_SHIPS), faction: 'SEPARATIST' };
-                }
                 return { role: AI_ROLE.COMBAT, ship: random(SEPARATIST_SHIPS) };
             } else if (rand < mods.SEPARATIST + mods.IMPERIAL && IMPERIAL_SHIPS.length > 0) {
                 return { role: AI_ROLE.COMBAT, ship: random(IMPERIAL_SHIPS) };
@@ -1690,226 +1768,6 @@ class StarSystem {
         return null;
     }
 
-    /**
-     * Helper methods for ship selection by economy type
-     * @private
-     */
-    _selectMilitaryShip() {
-        // Check for police spawn (50% of normal probability - military has law enforcement)
-        if (this._shouldSpawnPolice(0.5)) {
-            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["ViperPol"]) };
-        }
-
-        const rand = random();
-        if (rand < 0.60 && MILITARY_SHIPS.length > 0) {
-            return { role: AI_ROLE.COMBAT, ship: random(MILITARY_SHIPS) };
-        } else if (rand < 0.75) {
-            // Prefer military-specific haulers, fallback to generic haulers
-            if (MILITARY_HAULERS.length > 0) {
-                return { role: AI_ROLE.HAULER, ship: random(MILITARY_HAULERS) };
-            } else if (HAULER_SHIPS.length > 0) {
-                return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
-            }
-        } else if (rand < 0.85 && PIRATE_SHIPS.length > 0) {
-            return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS) };
-        } else if (rand < 0.92 && ALIEN_SHIPS.length > 0) {
-            return { role: AI_ROLE.ALIEN, ship: random(ALIEN_SHIPS) };
-        } else {
-            return random() < 0.6 && TRANSPORT_SHIPS.length > 0
-                ? { role: AI_ROLE.TRANSPORT, ship: random(TRANSPORT_SHIPS) }
-                : { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length > 0 ? HAULER_SHIPS : ["Krait"]) };
-        }
-    }
-
-    _selectAlienShip() {
-        // Check for police spawn (20% of normal probability - aliens suppress law enforcement)
-        if (this._shouldSpawnPolice(0.2)) {
-            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["ViperPol"]) };
-        }
-
-        if (random() < 0.8 && ALIEN_SHIPS.length > 0) {
-            return { role: AI_ROLE.ALIEN, ship: random(ALIEN_SHIPS) };
-        }
-
-        const alternatives = [];
-        if (PIRATE_SHIPS.length > 0) alternatives.push({ role: AI_ROLE.PIRATE, ships: PIRATE_SHIPS });
-        if (HAULER_SHIPS.length > 0) alternatives.push({ role: AI_ROLE.HAULER, ships: HAULER_SHIPS });
-
-        if (alternatives.length > 0) {
-            const selected = random(alternatives);
-            return { role: selected.role, ship: random(selected.ships) };
-        }
-        return { role: AI_ROLE.HAULER, ship: "Krait" };
-    }
-
-    _selectMiningShip() {
-        // Check for police spawn (40% of normal probability - industrial law enforcement)
-        if (this._shouldSpawnPolice(0.4)) {
-            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["ViperPol"]) };
-        }
-
-        const rand = random();
-        if (rand < 0.40 && MINER_SHIPS.length > 0) {
-            return { role: AI_ROLE.MINER, ship: random(MINER_SHIPS) };
-        } else if (rand < 0.70 && HAULER_SHIPS.length > 0) {
-            return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
-        } else if (rand < 0.90 && TRANSPORT_SHIPS.length > 0) {
-            return { role: AI_ROLE.TRANSPORT, ship: random(TRANSPORT_SHIPS) };
-        } else if (PIRATE_SHIPS.length > 0) {
-            return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS) };
-        } else {
-            return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length > 0 ? HAULER_SHIPS : ['Type6Transporter']) };
-        }
-    }
-
-    _selectOffworldShip() {
-        // Check for police spawn (30% of normal probability - frontier law enforcement)
-        if (this._shouldSpawnPolice(0.3)) {
-            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["ViperPol"]) };
-        }
-
-        const rand = random();
-        if (rand < 0.30 && HAULER_SHIPS.length > 0) {
-            return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
-        } else if (rand < 0.50 && COMBAT_SHIPS.length > 0) {
-            return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
-        } else if (rand < 0.65 && PIRATE_SHIPS.length > 0) {
-            return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS) };
-        }
-        return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length > 0 ? HAULER_SHIPS : ["Krait"]) };
-    }
-
-    /**
-     * Selects a ship for Post Human economy systems
-     * High chance of spawning Posthuman Missionaries
-     * @returns {{role: string, ship: string, faction?: string}}
-     * @private
-     */
-    _selectPostHumanShip() {
-        const rand = random();
-
-        // 60% chance to spawn a missionary if available
-        if (rand < 0.60 && MISSIONARY_SHIPS.length > 0) {
-            return {
-                role: AI_ROLE.MISSIONARY,
-                ship: random(MISSIONARY_SHIPS),
-                faction: 'POSTHUMAN'
-            };
-        }
-        // 20% chance for haulers/commerce
-        else if (rand < 0.80 && HAULER_SHIPS.length > 0) {
-            return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
-        }
-        // 10% chance for combat ships
-        else if (rand < 0.90 && COMBAT_SHIPS.length > 0) {
-            return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
-        }
-        // 10% chance for alien ships (posthuman systems attract aliens)
-        else if (ALIEN_SHIPS.length > 0) {
-            return { role: AI_ROLE.ALIEN, ship: random(ALIEN_SHIPS) };
-        }
-
-        // Fallback to offworld behavior
-        return this._selectOffworldShip();
-    }
-
-    /**
-     * Selects a ship for faction-controlled systems (Separatist, Imperial).
-     * @param {Array} primaryFaction - Primary faction's ship array
-     * @param {Array} secondaryFaction - Secondary faction's ship array (rival faction)
-     * @param {string|null} factionId - Faction identifier ('SEPARATIST', 'IMPERIAL') for special spawns
-     * @returns {{role: string, ship: string, faction?: string}} Selected ship configuration
-     * @private
-     */
-    _selectFactionShip(primaryFaction, secondaryFaction, factionId = null) {
-        // Check for police spawn (60% of normal probability - factions have organized law enforcement)
-        if (this._shouldSpawnPolice(0.6)) {
-            return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["ViperPol"]) };
-        }
-
-        // Check for healer spawn (Separatist faction only - they have medical support ships)
-        // NOTE: This check happens AFTER police check, so effective rate depends on security level.
-        // In a High security Separatist system: ~60% police * ~8% healer = lower effective healer rate
-        // In an Anarchy Separatist system: 0% police, full 8% healer rate applies
-        if (factionId === 'SEPARATIST' && HEALER_SHIPS.length > 0 && random() < HEALER_SPAWN_CHANCE_PEACETIME) {
-            return { role: AI_ROLE.HEALER, ship: random(HEALER_SHIPS), faction: 'SEPARATIST' };
-        }
-
-        // Determine faction-specific hauler array
-        let factionHaulers = [];
-        if (factionId === 'IMPERIAL') {
-            factionHaulers = IMPERIAL_HAULERS;
-        } else if (factionId === 'SEPARATIST') {
-            factionHaulers = SEPARATIST_HAULERS;
-        }
-
-        const rand = random();
-        if (rand < 0.60 && primaryFaction.length > 0) {
-            return { role: AI_ROLE.COMBAT, ship: random(primaryFaction) };
-        } else if (rand < 0.75) {
-            // Prefer faction-specific haulers, fallback to generic haulers
-            if (factionHaulers.length > 0) {
-                return { role: AI_ROLE.HAULER, ship: random(factionHaulers) };
-            } else if (HAULER_SHIPS.length > 0) {
-                return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
-            }
-        } else if (rand < 0.85 && TRANSPORT_SHIPS.length > 0) {
-            return { role: AI_ROLE.TRANSPORT, ship: random(TRANSPORT_SHIPS) };
-        }
-        return {
-            role: AI_ROLE.COMBAT,
-            ship: random(secondaryFaction.length > 0 ? secondaryFaction : COMBAT_SHIPS)
-        };
-    }
-
-    _selectStandardShip(security) {
-        // 5% chance for rare Posthuman Missionary spawn in any system
-        if (random() < 0.05 && MISSIONARY_SHIPS.length > 0) {
-            return {
-                role: AI_ROLE.MISSIONARY,
-                ship: random(MISSIONARY_SHIPS),
-                faction: 'POSTHUMAN'
-            };
-        }
-
-        const probs = this.getEnemyRoleProbabilities();
-        let r = random();
-        let chosenRole;
-
-        if (r < probs.PIRATE) chosenRole = AI_ROLE.PIRATE;
-        else if (r < probs.PIRATE + probs.POLICE) chosenRole = AI_ROLE.POLICE;
-        else chosenRole = AI_ROLE.HAULER;
-
-        const roleToShip = {
-            [AI_ROLE.PIRATE]: () => random(PIRATE_SHIPS.length > 0 ? PIRATE_SHIPS : ["Krait"]),
-            [AI_ROLE.POLICE]: () => random(POLICE_SHIPS.length > 0 ? POLICE_SHIPS : ["ViperPol"]),
-            [AI_ROLE.HAULER]: () => random(HAULER_SHIPS.length > 0 ? HAULER_SHIPS : ["CobraMkIII"])
-        };
-
-        let chosenShip = roleToShip[chosenRole] ? roleToShip[chosenRole]() : "Krait";
-
-        // Optional transport override
-        if (random() < 0.25 && TRANSPORT_SHIPS.length > 0) {
-            chosenRole = AI_ROLE.TRANSPORT;
-            chosenShip = random(TRANSPORT_SHIPS);
-        }
-
-        return { role: chosenRole, ship: chosenShip };
-    }
-
-    /**
-     * Helper to check if police should spawn based on security level.
-     * Used by economy-specific ship selection to include police.
-     * 
-     * @param {number} multiplier - Probability multiplier (0.0-1.0) to scale police chance
-     * @returns {boolean} True if police should spawn
-     * @private
-     */
-    _shouldSpawnPolice(multiplier = 1.0) {
-        const probs = this.getEnemyRoleProbabilities();
-        const policeChance = probs.POLICE * multiplier;
-        return random() < policeChance;
-    }
 
     /**
      * Spawn guards for large haulers
@@ -6021,47 +5879,7 @@ class StarSystem {
         return []; // Return empty if cannot generate
     }
 
-    getEnemyRoleProbabilities() {
-        // Base probabilities by security level
-        let probs;
-        switch ((this.securityLevel || '').toLowerCase()) {
-            case 'high':
-                probs = { PIRATE: 0.15, POLICE: 0.55, HAULER: 0.3 };
-                break;
-            case 'medium':
-                probs = { PIRATE: 0.35, POLICE: 0.35, HAULER: 0.3 };
-                break;
-            case 'low':
-                probs = { PIRATE: 0.55, POLICE: 0.2, HAULER: 0.25 };
-                break;
-            case 'anarchy':
-                probs = { PIRATE: 0.8, POLICE: 0.05, HAULER: 0.15 };
-                break;
-            default:
-                probs = { PIRATE: 0.4, POLICE: 0.3, HAULER: 0.3 };
-        }
 
-        // Apply crisis modifiers (plague/famine increase hauler spawns)
-        if (typeof eventManager !== 'undefined' && eventManager.getHaulerSpawnModifier) {
-            const modifier = eventManager.getHaulerSpawnModifier();
-            if (modifier > 1.0) {
-                // Calculate boost amount
-                const boost = (modifier - 1.0); // e.g., 0.25 for 25% boost
-
-                // Increase hauler probability, decrease pirate probability
-                probs.HAULER = Math.min(0.6, probs.HAULER + boost);
-                probs.PIRATE = Math.max(0.1, probs.PIRATE - boost * 0.5);
-
-                // Normalize probabilities to sum to 1
-                const total = probs.PIRATE + probs.POLICE + probs.HAULER;
-                probs.PIRATE /= total;
-                probs.POLICE /= total;
-                probs.HAULER /= total;
-            }
-        }
-
-        return probs;
-    }
 
     /**
      * ==========================================================================

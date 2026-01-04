@@ -136,10 +136,10 @@ function generateSystemDescription(system, env = {}) {
             return mapping[lbl] || lbl.toString().toLowerCase();
         };
 
-        // Prefer spawn composition data when available
+        // Prefer spawn composition data from centralized SpawnConfig
         let labels = [];
-        if (typeof system.getEnemyRoleProbabilities === 'function') {
-            const probs = system.getEnemyRoleProbabilities() || {};
+        if (typeof SpawnConfig !== 'undefined' && typeof SpawnConfig.getProbabilities === 'function') {
+            const probs = SpawnConfig.getProbabilities(system.economyType || system.economy, system.securityLevel) || {};
             const agg = {};
             for (const [k, v] of Object.entries(probs)) {
                 const label = mapRoleToLabel(k);
