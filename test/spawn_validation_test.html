@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spawn Configuration Validation Test</title>
+    <script src="../ships.js"></script>
+    <script src="../spawnConfig.js"></script>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #00ffff;
+            border-bottom: 2px solid #00ffff;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #ffff00;
+            margin-top: 30px;
+        }
+
+        .test-section {
+            background: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .pass {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .fail {
+            color: #ff0000;
+            font-weight: bold;
+        }
+
+        .warn {
+            color: #ffaa00;
+            font-weight: bold;
+        }
+
+        .info {
+            color: #00aaff;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+
+        th,
+        td {
+            border: 1px solid #444;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background: #333;
+            color: #ffff00;
+        }
+
+        tr:nth-child(even) {
+            background: #252525;
+        }
+
+        .summary {
+            background: #1a3a1a;
+            border: 2px solid #00ff00;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        button {
+            background: #4db8ff;
+            border: none;
+            padding: 10px 20px;
+            color: #1a1a1a;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #3399cc;
+        }
+
+        .progress {
+            color: #888;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Spawn Configuration Validation Test</h1>
+    <div class="test-section">
+        <p><strong>Purpose:</strong> Validate that the spawn configuration system works correctly from end-to-end:</p>
+        <ul>
+            <li>✓ Configuration probabilities sum to ~100%</li>
+            <li>✓ Role selection respects probability distribution</li>
+            <li>✓ Ship arrays are populated correctly from ship definitions</li>
+            <li>✓ Ships selected match their assigned roles</li>
+            <li>✓ Security modifiers are applied correctly</li>
+        </ul>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        // ============================================================================
+        // TEST FRAMEWORK
+        // ============================================================================
+
+        let testResults = [];
+        let currentSection = "";
+
+        function startSection(name) {
+            currentSection = name;
+            log(`<h2>${name}</h2><div class="test-section" id="section-${testResults.length}">`, 'section');
+        }
+
+        function endSection() {
+            log('</div>', 'section');
+        }
+
+        function log(message, type = 'info') {
+            const entry = { message, type, section: currentSection };
+            testResults.push(entry);
+            updateDisplay();
+        }
+
+        function pass(message) {
+            log(`✓ <span class="pass">PASS:</span> ${message}`);
+        }
+
+        function fail(message) {
+            log(`✗ <span class="fail">FAIL:</span> ${message}`);
+        }
+
+        function warn(message) {
+            log(`⚠ <span class="warn">WARN:</span> ${message}`);
+        }
+
+        function info(message) {
+            log(`<span class="info">ℹ INFO:</span> ${message}`);
+        }
+
+        function updateDisplay() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = testResults.map(r => r.message).join('\n');
+        }
+
+        function clearResults() {
+            testResults = [];
+            updateDisplay();
+        }
+
+        // ============================================================================
+        // SHIP ROLE ARRAY BUILDER (mirroring starSystem.js logic)
+        // ============================================================================
+
+        function buildShipRoleArrays() {
+            const roleArrays = {
+                POLICE_SHIPS: [],
+                PIRATE_SHIPS: [],
+                HAULER_SHIPS: [],
+                TRANSPORT_SHIPS: [],
+                MILITARY_SHIPS: [],
+                ALIEN_SHIPS: [],
+                BOUNTY_HUNTER_SHIPS: [],
+                GUARD_SHIPS: [],
+                IMPERIAL_SHIPS: [],
+                SEPARATIST_SHIPS: [],
+                COMBAT_SHIPS: [],
+                MINER_SHIPS: [],
+                REPAIR_SHIPS: [],
+                MISSIONARY_SHIPS: [],
+                HEALER_SHIPS: [],
+                IMPERIAL_HAULERS: [],
+                SEPARATIST_HAULERS: [],
+                MILITARY_HAULERS: []
+            };
+
+            for (const [shipKey, shipData] of Object.entries(SHIP_DEFINITIONS)) {
+                if (!shipData.aiRoles || !Array.isArray(shipData.aiRoles)) continue;
+
+                for (const role of shipData.aiRoles) {
+                    const arrayKey = `${role}_SHIPS`;
+                    if (roleArrays[arrayKey]) {
+                        roleArrays[arrayKey].push(shipKey);
+                    }
+                }
+
+                // Faction-specific arrays
+                if (shipData.faction) {
+                    if (shipData.aiRoles.includes('COMBAT')) {
+                        if (shipData.faction === 'IMPERIAL' && !roleArrays.IMPERIAL_SHIPS.includes(shipKey)) {
+                            roleArrays.IMPERIAL_SHIPS.push(shipKey);
+                        } else if (shipData.faction === 'SEPARATIST' && !roleArrays.SEPARATIST_SHIPS.includes(shipKey)) {
+                            roleArrays.SEPARATIST_SHIPS.push(shipKey);
+                        } else if (shipData.faction === 'MILITARY' && !roleArrays.MILITARY_SHIPS.includes(shipKey)) {
+                            roleArrays.MILITARY_SHIPS.push(shipKey);
+                        }
+                    }
+                    if (shipData.aiRoles.includes('HAULER')) {
+                        if (shipData.faction === 'IMPERIAL') {
+                            roleArrays.IMPERIAL_HAULERS.push(shipKey);
+                        } else if (shipData.faction === 'SEPARATIST') {
+                            roleArrays.SEPARATIST_HAULERS.push(shipKey);
+                        } else if (shipData.faction === 'MILITARY') {
+                            roleArrays.MILITARY_HAULERS.push(shipKey);
+                        }
+                    }
+                }
+            }
+
+            return roleArrays;
+        }
+
+        // ============================================================================
+        // TEST SUITE
+        // ============================================================================
+
+        function testProbabilitySums() {
+            startSection("1. Probability Configuration Validation");
+
+            // Test SPAWN_PROBABILITIES
+            for (const [economy, roles] of Object.entries(SpawnConfig.PROBABILITIES)) {
+                let total = 0;
+                for (const [role, prob] of Object.entries(roles)) {
+                    total += prob;
+                }
+
+                const percent = Math.round(total * 100);
+                if (percent >= 99 && percent <= 101) {
+                    pass(`${economy}: Probabilities sum to ${percent}%`);
+                } else {
+                    fail(`${economy}: Probabilities sum to ${percent}% (expected ~100%)`);
+                }
+            }
+
+            // Test SECURITY_MODIFIERS
+            log('<br><strong>Security Modifiers:</strong>');
+            for (const [level, roles] of Object.entries(SpawnConfig.SECURITY_MODIFIERS)) {
+                let total = 0;
+                for (const [role, prob] of Object.entries(roles)) {
+                    total += prob;
+                }
+
+                const percent = Math.round(total * 100);
+                if (percent >= 99 && percent <= 101) {
+                    pass(`${level}: Probabilities sum to ${percent}%`);
+                } else {
+                    fail(`${level}: Probabilities sum to ${percent}% (expected ~100%)`);
+                }
+            }
+
+            endSection();
+        }
+
+        function testShipRoleArrays() {
+            startSection("2. Ship Role Array Population");
+
+            const roleArrays = buildShipRoleArrays();
+
+            log('<table>');
+            log('<tr><th>Role Array</th><th>Count</th><th>Ships</th></tr>');
+
+            for (const [arrayName, ships] of Object.entries(roleArrays)) {
+                const shipList = ships.length > 0 ? ships.join(', ') : '<em>None</em>';
+                const statusClass = ships.length > 0 ? 'pass' : 'warn';
+
+                log(`<tr><td>${arrayName}</td><td class="${statusClass}">${ships.length}</td><td>${shipList}</td></tr>`);
+
+                if (ships.length === 0 && !arrayName.includes('HAULER') && !arrayName.includes('IMPERIAL') && !arrayName.includes('SEPARATIST')) {
+                    warn(`${arrayName} is empty - no ships have this role`);
+                }
+            }
+
+            log('</table>');
+
+            // Store for later tests
+            window.testRoleArrays = roleArrays;
+
+            endSection();
+        }
+
+        function testRoleToShipMapping() {
+            startSection("3. Role to Ship Mapping Verification");
+
+            const roleArrays = window.testRoleArrays || buildShipRoleArrays();
+
+            // Define the role mapping used in _resolveShipForRole
+            const roleTests = [
+                { roleKey: 'COMBAT', arrays: ['COMBAT_SHIPS', 'MILITARY_SHIPS'], contextDependent: true },
+                { roleKey: 'FACTION_COMBAT', arrays: ['SEPARATIST_SHIPS', 'IMPERIAL_SHIPS'], contextDependent: true },
+                { roleKey: 'RIVAL_COMBAT', arrays: ['SEPARATIST_SHIPS', 'IMPERIAL_SHIPS', 'PIRATE_SHIPS'], contextDependent: true },
+                { roleKey: 'PIRATE', arrays: ['PIRATE_SHIPS'], contextDependent: false },
+                { roleKey: 'POLICE', arrays: ['POLICE_SHIPS'], contextDependent: false },
+                { roleKey: 'HAULER', arrays: ['HAULER_SHIPS', 'MILITARY_HAULERS'], contextDependent: true },
+                { roleKey: 'FACTION_HAULER', arrays: ['SEPARATIST_HAULERS', 'IMPERIAL_HAULERS', 'HAULER_SHIPS'], contextDependent: true },
+                { roleKey: 'MINER', arrays: ['MINER_SHIPS'], contextDependent: false },
+                { roleKey: 'TRANSPORT', arrays: ['TRANSPORT_SHIPS'], contextDependent: false },
+                { roleKey: 'ALIEN', arrays: ['ALIEN_SHIPS'], contextDependent: false },
+                { roleKey: 'HEALER', arrays: ['HEALER_SHIPS'], contextDependent: false },
+                { roleKey: 'MISSIONARY', arrays: ['MISSIONARY_SHIPS'], contextDependent: false }
+            ];
+
+            for (const test of roleTests) {
+                let hasShips = false;
+                let availableShips = [];
+
+                for (const arrayName of test.arrays) {
+                    const ships = roleArrays[arrayName] || [];
+                    if (ships.length > 0) {
+                        hasShips = true;
+                        availableShips = availableShips.concat(ships);
+                    }
+                }
+
+                if (hasShips) {
+                    const uniqueShips = [...new Set(availableShips)];
+                    pass(`${test.roleKey}: Can spawn ${uniqueShips.length} unique ship type(s)`);
+                    if (uniqueShips.length <= 3) {
+                        info(`  Ships: ${uniqueShips.join(', ')}`);
+                    }
+                } else {
+                    fail(`${test.roleKey}: No ships available! Will fall back to default.`);
+                }
+            }
+
+            endSection();
+        }
+
+        function testSecuritySlotResolution() {
+            startSection("4. Security Slot Resolution");
+
+            const economies = Object.keys(SpawnConfig.PROBABILITIES);
+            const securityLevels = ['HIGH', 'MEDIUM', 'LOW', 'ANARCHY'];
+
+            log('<table>');
+            log('<tr><th>Economy</th><th>Security</th><th>Security Slot %</th><th>Police %</th><th>Pirate %</th><th>Status</th></tr>');
+
+            for (const economy of economies) {
+                const baseProbs = SpawnConfig.PROBABILITIES[economy];
+                const securitySlot = baseProbs.SECURITY_SLOT || 0;
+
+                if (securitySlot > 0) {
+                    for (const security of securityLevels) {
+                        const resolved = SpawnConfig.getProbabilities(economy, security);
+
+                        const policePercent = (resolved.POLICE || 0) * 100;
+                        const piratePercent = (resolved.PIRATE || 0) * 100;
+                        const slotPercent = securitySlot * 100;
+
+                        // Check that SECURITY_SLOT was removed and distributed
+                        if (resolved.SECURITY_SLOT === undefined) {
+                            const statusMsg = `✓`;
+                            log(`<tr><td>${economy}</td><td>${security}</td><td>${slotPercent.toFixed(1)}%</td><td>${policePercent.toFixed(1)}%</td><td>${piratePercent.toFixed(1)}%</td><td class="pass">${statusMsg}</td></tr>`);
+                        } else {
+                            log(`<tr><td>${economy}</td><td>${security}</td><td>${slotPercent.toFixed(1)}%</td><td colspan="3" class="fail">SECURITY_SLOT not resolved!</td></tr>`);
+                            fail(`${economy}/${security}: SECURITY_SLOT not properly resolved`);
+                        }
+                    }
+                }
+            }
+
+            log('</table>');
+
+            endSection();
+        }
+
+        function testProbabilityDistribution() {
+            startSection("5. Probability Distribution Simulation");
+
+            info("Running 10,000 spawn simulations for STANDARD/MEDIUM...");
+
+            const economy = 'STANDARD';
+            const security = 'MEDIUM';
+            const iterations = 10000;
+            const probs = SpawnConfig.getProbabilities(economy, security);
+
+            const counts = {};
+            for (const role of Object.keys(probs)) {
+                counts[role] = 0;
+            }
+
+            // Simulate role selection (mimicking _selectRoleFromProbabilities)
+            for (let i = 0; i < iterations; i++) {
+                const r = Math.random();
+                let cumulative = 0;
+
+                for (const [key, chance] of Object.entries(probs)) {
+                    cumulative += chance;
+                    if (r < cumulative) {
+                        counts[key]++;
+                        break;
+                    }
+                }
+            }
+
+            log('<table>');
+            log('<tr><th>Role</th><th>Expected %</th><th>Actual %</th><th>Difference</th><th>Status</th></tr>');
+
+            for (const [role, expectedProb] of Object.entries(probs)) {
+                const actualCount = counts[role] || 0;
+                const actualPercent = (actualCount / iterations) * 100;
+                const expectedPercent = expectedProb * 100;
+                const diff = Math.abs(actualPercent - expectedPercent);
+
+                let status = '✓';
+                let statusClass = 'pass';
+
+                // Allow 1% tolerance for randomness
+                if (diff > 1.0) {
+                    status = '⚠';
+                    statusClass = 'warn';
+                }
+                if (diff > 2.0) {
+                    status = '✗';
+                    statusClass = 'fail';
+                }
+
+                log(`<tr><td>${role}</td><td>${expectedPercent.toFixed(2)}%</td><td>${actualPercent.toFixed(2)}%</td><td class="${statusClass}">${diff.toFixed(2)}%</td><td class="${statusClass}">${status}</td></tr>`);
+            }
+
+            log('</table>');
+
+            endSection();
+        }
+
+        function testAllEconomies() {
+            startSection("6. All Economy Types Coverage");
+
+            const economies = Object.keys(SpawnConfig.PROBABILITIES);
+
+            log(`<p>Found ${economies.length} economy types configured:</p>`);
+            log('<ul>');
+            for (const economy of economies) {
+                const roleCount = Object.keys(SpawnConfig.PROBABILITIES[economy]).length;
+                log(`<li class="info">${economy} (${roleCount} role types)</li>`);
+            }
+            log('</ul>');
+
+            // Test each economy can resolve to valid ships
+            const roleArrays = window.testRoleArrays || buildShipRoleArrays();
+            let issues = 0;
+
+            for (const economy of economies) {
+                // Get resolved probabilities (SECURITY_SLOT should be converted to POLICE/PIRATE)
+                const probs = SpawnConfig.getProbabilities(economy, 'MEDIUM');
+
+                for (const roleKey of Object.keys(probs)) {
+                    // Skip zero-probability roles (they won't spawn)
+                    if (probs[roleKey] === 0) continue;
+
+                    // Check if we can find ships for this role
+                    const canResolve = checkRoleCanResolve(roleKey, roleArrays);
+                    if (!canResolve) {
+                        fail(`${economy}: Role '${roleKey}' (${(probs[roleKey]*100).toFixed(1)}%) cannot be resolved to any ships`);
+                        issues++;
+                    }
+                }
+            }
+
+            if (issues === 0) {
+                pass(`All economy types can resolve to valid ships`);
+            } else {
+                warn(`Found ${issues} role resolution issues`);
+            }
+
+            endSection();
+        }
+
+        function checkRoleCanResolve(roleKey, roleArrays) {
+            switch (roleKey) {
+                case 'COMBAT':
+                    return roleArrays.COMBAT_SHIPS.length > 0;
+                case 'FACTION_COMBAT':
+                    return roleArrays.SEPARATIST_SHIPS.length > 0 || roleArrays.IMPERIAL_SHIPS.length > 0;
+                case 'RIVAL_COMBAT':
+                    return roleArrays.SEPARATIST_SHIPS.length > 0 || roleArrays.IMPERIAL_SHIPS.length > 0 || roleArrays.PIRATE_SHIPS.length > 0;
+                case 'PIRATE':
+                    return roleArrays.PIRATE_SHIPS.length > 0;
+                case 'POLICE':
+                    return roleArrays.POLICE_SHIPS.length > 0;
+                case 'HAULER':
+                    return roleArrays.HAULER_SHIPS.length > 0;
+                case 'FACTION_HAULER':
+                    return roleArrays.SEPARATIST_HAULERS.length > 0 || roleArrays.IMPERIAL_HAULERS.length > 0 || roleArrays.HAULER_SHIPS.length > 0;
+                case 'MINER':
+                    return roleArrays.MINER_SHIPS.length > 0;
+                case 'TRANSPORT':
+                    return roleArrays.TRANSPORT_SHIPS.length > 0;
+                case 'ALIEN':
+                    return roleArrays.ALIEN_SHIPS.length > 0;
+                case 'HEALER':
+                    return roleArrays.HEALER_SHIPS.length > 0;
+                case 'MISSIONARY':
+                    return roleArrays.MISSIONARY_SHIPS.length > 0;
+                default:
+                    return false;
+            }
+        }
+
+        function runAllTests() {
+            clearResults();
+
+            log('<div class="summary">');
+            log('<h2>🚀 Starting Spawn Configuration Tests...</h2>');
+            log('<p class="progress">Please wait while tests run...</p>');
+            log('</div>');
+
+            // Run tests sequentially
+            setTimeout(() => {
+                testProbabilitySums();
+                testShipRoleArrays();
+                testRoleToShipMapping();
+                testSecuritySlotResolution();
+                testProbabilityDistribution();
+                testAllEconomies();
+
+                // Summary
+                const passCount = testResults.filter(r => r.message.includes('PASS')).length;
+                const failCount = testResults.filter(r => r.message.includes('FAIL')).length;
+                const warnCount = testResults.filter(r => r.message.includes('WARN')).length;
+
+                log('<div class="summary">');
+                log('<h2>📊 Test Summary</h2>');
+                log(`<p><span class="pass">✓ Passed: ${passCount}</span></p>`);
+                log(`<p><span class="fail">✗ Failed: ${failCount}</span></p>`);
+                log(`<p><span class="warn">⚠ Warnings: ${warnCount}</span></p>`);
+
+                if (failCount === 0 && warnCount === 0) {
+                    log('<p class="pass"><strong>🎉 All tests passed! Spawn configuration is working correctly.</strong></p>');
+                } else if (failCount === 0) {
+                    log('<p class="warn"><strong>⚠ Tests passed with warnings. Review warnings above.</strong></p>');
+                } else {
+                    log('<p class="fail"><strong>❌ Tests failed! Review failures above and fix configuration.</strong></p>');
+                }
+                log('</div>');
+            }, 100);
+        }
+    </script>
+
+</body>
+
+</html>
