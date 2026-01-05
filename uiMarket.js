@@ -134,9 +134,9 @@ class UIMarket {
             'Medicine': 120,
             'Adv Components': 280,
             'Luxury Goods': 320,
-            'Narcotics': 350,
-            'Weapons': 380,
-            'Slaves': 400
+            'Narcotics': 700,
+            'Weapons': 760,
+            'Slaves': 800
         };
         return basePrices[commodityName] || 50;
     }

@@ -138,9 +138,9 @@ class Market {
             { name: 'Medicine', baseBuy: 120, baseSell: 105, isLegal: true },
             { name: 'Adv Components', baseBuy: 280, baseSell: 250, isLegal: true },
             { name: 'Luxury Goods', baseBuy: 320, baseSell: 290, isLegal: true },
-            { name: 'Narcotics', baseBuy: 350, baseSell: 310, isLegal: false },
-            { name: 'Weapons', baseBuy: 380, baseSell: 340, isLegal: false },
-            { name: 'Slaves', baseBuy: 400, baseSell: 360, isLegal: false },
+            { name: 'Narcotics', baseBuy: 700, baseSell: 620, isLegal: false },
+            { name: 'Weapons', baseBuy: 760, baseSell: 680, isLegal: false },
+            { name: 'Slaves', baseBuy: 800, baseSell: 720, isLegal: false },
         ];
 
         this.commodities = definitions.map(def => {

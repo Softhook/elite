@@ -267,7 +267,7 @@
         // ============================================
 
         describe('Price Balance Validation', () => {
-            it('should have no commodity more than 50x the minimum', () => {
+            it('should have no commodity more than 100x the minimum', () => {
                 const market = new Market('Industrial');
                 const commodities = market.getPrices();
                 
@@ -276,8 +276,8 @@
                 const minPrice = Math.min(...prices);
                 const ratio = maxPrice / minPrice;
                 
-                // 50x is a reasonable upper bound for gameplay balance
-                expect(ratio).toBeLessThan(50);
+                // 100x is a reasonable upper bound for gameplay balance (illegal goods premium)
+                expect(ratio).toBeLessThan(100);
             });
 
             it('should have reasonable profit margins for all goods', () => {
