@@ -50,6 +50,7 @@
     <script src="../weapons.js"></script>
     <script src="../enemyConstants.js"></script>
     <script src="../objectPool.js"></script>
+    <script src="../commodityDefinitions.js"></script>
     <script src="../mission.js"></script>
     <script src="../market.js"></script>
     <script src="../projectile.js"></script>
@@ -71,12 +72,12 @@
     <script src="../eventManager.js"></script>
 
     <script>
-        // Constants needed for Cargo tests
-        const LEGAL_CARGO = ['Food', 'Textiles', 'Machinery', 'Metals', 'Minerals', 'Chemicals', 'Computers', 'Medicine', 'Adv Components', 'Luxury Goods'];
-        const ILLEGAL_CARGO = ['Narcotics', 'Weapons', 'Slaves'];
-
         // Setup mock p5 before tests
         setupMockP5();
+
+        // Constants needed for Cargo tests - use centralized definitions
+        const LEGAL_CARGO = getLegalCommodities();
+        const ILLEGAL_CARGO = getIllegalCommodities();
 
         // ============================================
         // Player Serialization Tests
