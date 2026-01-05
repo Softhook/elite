@@ -1,7 +1,12 @@
 # Elite Game Development TODO
 
-Implement three levels of boosters 
-the siderwinder has the bsic state
+
+more events 
+jump zone closed
+
+make the faction missions work properly
+
+
 
 -----
 
@@ -13,8 +18,6 @@ Make the war state affect the enemy behavior
 war event change sapwn drencency
 
 make events less often
-
-make events more dramtic bigger cargo drops
 
 
 ## Core Gameplay Enhancements
@@ -30,7 +33,6 @@ organised invasion missions that invovle jump to another system with 10 team mem
 
 Create a new weapon called an EMP mine which basically drops. Energy storms 
 
-In a war situation, change the spawn distribution in the different systems.
 
 
 Integrate the nrrative class
