@@ -134,13 +134,13 @@ class Market {
             { name: 'Metals', baseBuy: 50, baseSell: 40, isLegal: true },
             { name: 'Minerals', baseBuy: 40, baseSell: 30, isLegal: true },
             { name: 'Chemicals', baseBuy: 70, baseSell: 60, isLegal: true },
-            { name: 'Computers', baseBuy: 250, baseSell: 220, isLegal: true },
-            { name: 'Medicine', baseBuy: 150, baseSell: 130, isLegal: true },
-            { name: 'Adv Components', baseBuy: 400, baseSell: 350, isLegal: true },
-            { name: 'Luxury Goods', baseBuy: 500, baseSell: 450, isLegal: true },
-            { name: 'Narcotics', baseBuy: 800, baseSell: 700, isLegal: false },
-            { name: 'Weapons', baseBuy: 1200, baseSell: 1000, isLegal: false },
-            { name: 'Slaves', baseBuy: 1500, baseSell: 1300, isLegal: false },
+            { name: 'Computers', baseBuy: 200, baseSell: 180, isLegal: true },
+            { name: 'Medicine', baseBuy: 120, baseSell: 105, isLegal: true },
+            { name: 'Adv Components', baseBuy: 280, baseSell: 250, isLegal: true },
+            { name: 'Luxury Goods', baseBuy: 320, baseSell: 290, isLegal: true },
+            { name: 'Narcotics', baseBuy: 700, baseSell: 620, isLegal: false },
+            { name: 'Weapons', baseBuy: 760, baseSell: 680, isLegal: false },
+            { name: 'Slaves', baseBuy: 800, baseSell: 720, isLegal: false },
         ];
 
         this.commodities = definitions.map(def => {

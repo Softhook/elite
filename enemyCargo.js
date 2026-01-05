@@ -524,6 +524,21 @@ class EnemyCargo {
         }
         quantity = Math.max(1, Math.floor(quantity));
 
+        // Reduce cargo drop quantities for high-value goods to avoid dramatic economic impact
+        // High-value goods: Narcotics, Weapons, Slaves, Luxury Goods, Adv Components
+        if (context === 'destruction') {
+            const highValueGoods = ['Narcotics', 'Weapons', 'Slaves'];
+            const mediumValueGoods = ['Luxury Goods', 'Adv Components', 'Computers'];
+            
+            if (highValueGoods.includes(cargoType)) {
+                // Reduce to 33% for highest value illegal goods
+                quantity = Math.max(1, Math.floor(quantity * 0.33));
+            } else if (mediumValueGoods.includes(cargoType)) {
+                // Reduce to 50% for medium-high value goods
+                quantity = Math.max(1, Math.floor(quantity * 0.5));
+            }
+        }
+
         let position = createVector(this.pos.x, this.pos.y);
         let velocity = createVector(0, 0);
         let message = '';

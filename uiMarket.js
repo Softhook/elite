@@ -130,13 +130,13 @@ class UIMarket {
             'Metals': 50,
             'Minerals': 40,
             'Chemicals': 70,
-            'Computers': 250,
-            'Medicine': 150,
-            'Adv Components': 400,
-            'Luxury Goods': 500,
-            'Narcotics': 800,
-            'Weapons': 1200,
-            'Slaves': 1500
+            'Computers': 200,
+            'Medicine': 120,
+            'Adv Components': 280,
+            'Luxury Goods': 320,
+            'Narcotics': 700,
+            'Weapons': 760,
+            'Slaves': 800
         };
         return basePrices[commodityName] || 50;
     }
