@@ -884,7 +884,7 @@ class MissionGenerator {
             const reward = Math.floor((baseReward + random(500, 1500)) * rankMultiplier);
 
             return new Mission({
-                type: 'IMPERIAL_ELIMINATION',
+                type: MISSION_TYPE.IMPERIAL_ELIMINATION,
                 title: `Imperial Order: Eliminate ${targetCount} Separatist Vessels`,
                 description: `Intelligence reports Separatist activity in the region. Imperial Command authorizes lethal force against ${targetCount} rebel vessels. Glory to the Empire.`,
                 originSystem: originSystem.name,
@@ -931,7 +931,7 @@ class MissionGenerator {
             const destName = destinationInfo?.system?.name || 'designated sector';
 
             return new Mission({
-                type: 'IMPERIAL_STRIKE',
+                type: MISSION_TYPE.IMPERIAL_STRIKE,
                 title: `Imperial Strike: Assault ${destName}`,
                 description: `High Command has authorized a strike operation against rebel forces in ${destName}. Destroy ${targetCount} enemy vessels and any infrastructure supporting the insurrection. Expect heavy resistance.`,
                 originSystem: originSystem.name,
@@ -962,7 +962,7 @@ class MissionGenerator {
             const jumpText = jumpDistance === 1 ? '1 jump' : `${jumpDistance} jumps`;
 
             return new Mission({
-                type: 'IMPERIAL_SABOTAGE',
+                type: MISSION_TYPE.IMPERIAL_SABOTAGE,
                 title: `Imperial Sabotage: Destroy ${targetType} (${jumpText})`,
                 description: `Intelligence has identified a critical rebel ${targetType} in ${destSystem.name}. Infiltrate the system and destroy this infrastructure to cripple Separatist operations in the region.`,
                 originSystem: originSystem.name,
@@ -994,7 +994,7 @@ class MissionGenerator {
             const reward = Math.floor((baseReward + random(400, 1200)) * rankMultiplier);
 
             return new Mission({
-                type: 'SEPARATIST_RAID',
+                type: MISSION_TYPE.SEPARATIST_RAID,
                 title: `Freedom Strike: Destroy ${targetCount} Imperial Ships`,
                 description: `The cause requires action. Eliminate ${targetCount} Imperial vessels to weaken their grip on the sector. For freedom!`,
                 originSystem: originSystem.name,
@@ -1024,7 +1024,7 @@ class MissionGenerator {
             const jumpText = jumpDistance === 1 ? '1 jump' : `${jumpDistance} jumps`;
 
             return new Mission({
-                type: 'SEPARATIST_SUPPLY',
+                type: MISSION_TYPE.SEPARATIST_SUPPLY,
                 title: `Supply Run: ${quantity}t ${cargo} to Rebel Cell (${jumpText})`,
                 description: `Our operatives need supplies. Deliver ${quantity}t of ${cargo} to resistance contacts at ${destinationInfo.station.name}. Discretion advised.`,
                 originSystem: originSystem.name,
@@ -1048,7 +1048,7 @@ class MissionGenerator {
             const destName = destinationInfo?.system?.name || 'Imperial territory';
 
             return new Mission({
-                type: 'SEPARATIST_STRIKE',
+                type: MISSION_TYPE.SEPARATIST_STRIKE,
                 title: `Liberation Strike: Attack ${destName}`,
                 description: `Command has authorized a strike operation to liberate ${destName} from Imperial occupation. Destroy ${targetCount} enemy forces and disrupt their control. Strike hard, strike fast!`,
                 originSystem: originSystem.name,
@@ -1079,7 +1079,7 @@ class MissionGenerator {
             const jumpText = jumpDistance === 1 ? '1 jump' : `${jumpDistance} jumps`;
 
             return new Mission({
-                type: 'SEPARATIST_SABOTAGE',
+                type: MISSION_TYPE.SEPARATIST_SABOTAGE,
                 title: `Sabotage: Destroy ${targetType} (${jumpText})`,
                 description: `The ${targetType} in ${destSystem.name} is a symbol of Imperial oppression. Destroy it to inspire resistance and disrupt enemy operations. The people are counting on you.`,
                 originSystem: originSystem.name,
@@ -1111,7 +1111,7 @@ class MissionGenerator {
             const reward = Math.floor((baseReward + random(500, 2000)) * rankMultiplier);
 
             return new Mission({
-                type: 'MILITARY_EXTERMINATION',
+                type: MISSION_TYPE.MILITARY_EXTERMINATION,
                 title: `Xeno Command: Exterminate ${targetCount} Alien Threats`,
                 description: `Military Command has declared a xeno-purge operation. Eliminate ${targetCount} alien vessels with extreme prejudice. Humanity's survival depends on vigilance.`,
                 originSystem: originSystem.name,
@@ -1159,7 +1159,7 @@ class MissionGenerator {
             const targetType = random(targetTypes);
 
             return new Mission({
-                type: 'MILITARY_STRIKE',
+                type: MISSION_TYPE.MILITARY_STRIKE,
                 title: `Military Strike: Assault ${targetType}`,
                 description: `Intelligence has located a ${targetType} in ${destName}. Deploy to the sector, neutralize ${targetCount} hostiles, and eliminate the threat. This is a high-priority operation.`,
                 originSystem: originSystem.name,
@@ -1190,7 +1190,7 @@ class MissionGenerator {
             const jumpText = jumpDistance === 1 ? '1 jump' : `${jumpDistance} jumps`;
 
             return new Mission({
-                type: 'MILITARY_SABOTAGE',
+                type: MISSION_TYPE.MILITARY_SABOTAGE,
                 title: `Tactical Sabotage: Destroy ${targetType} (${jumpText})`,
                 description: `A ${targetType} has been identified in ${destSystem.name}. This asset poses a strategic threat and must be eliminated. Infiltrate the system and complete the objective with minimal collateral damage.`,
                 originSystem: originSystem.name,
