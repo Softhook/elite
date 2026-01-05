@@ -274,9 +274,9 @@ class Cargo {
 
     getValue() {
         const baseValues = {
-            'Food': 8, 'Textiles': 12, 'Machinery': 95, 'Metals': 45, 'Minerals': 35,
-            'Chemicals': 65, 'Computers': 220, 'Medicine': 140, 'Adv Components': 350,
-            'Luxury Goods': 400, 'Narcotics': 300, 'Weapons': 250, 'Slaves': 350
+            'Food': 8, 'Textiles': 12, 'Machinery': 90, 'Metals': 40, 'Minerals': 30,
+            'Chemicals': 60, 'Computers': 180, 'Medicine': 105, 'Adv Components': 250,
+            'Luxury Goods': 290, 'Narcotics': 310, 'Weapons': 340, 'Slaves': 360
         };
         const baseValue = baseValues[this.type] || 50;
         return Math.floor(baseValue * this.quantity * random(0.8, 1.2));
