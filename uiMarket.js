@@ -100,21 +100,7 @@ class UIMarket {
      * @returns {Array}
      */
     getDefaultCommodityList() {
-        return [
-            { name: 'Food' },
-            { name: 'Textiles' },
-            { name: 'Machinery' },
-            { name: 'Metals' },
-            { name: 'Minerals' },
-            { name: 'Chemicals' },
-            { name: 'Computers' },
-            { name: 'Medicine' },
-            { name: 'Adv Components' },
-            { name: 'Luxury Goods' },
-            { name: 'Narcotics' },
-            { name: 'Weapons' },
-            { name: 'Slaves' }
-        ];
+        return getAllCommodityNames().map(name => ({ name }));
     }
 
     /**
@@ -123,22 +109,7 @@ class UIMarket {
      * @returns {number}
      */
     getCommodityBasePrice(commodityName) {
-        const basePrices = {
-            'Food': 10,
-            'Textiles': 15,
-            'Machinery': 100,
-            'Metals': 50,
-            'Minerals': 40,
-            'Chemicals': 70,
-            'Computers': 200,
-            'Medicine': 120,
-            'Adv Components': 280,
-            'Luxury Goods': 320,
-            'Narcotics': 700,
-            'Weapons': 760,
-            'Slaves': 800
-        };
-        return basePrices[commodityName] || 50;
+        return getCommodityBaseBuyPrice(commodityName);
     }
 
     /**
