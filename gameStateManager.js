@@ -532,12 +532,11 @@ class GameStateManager {
             this.selectedMissionIndex = -1;
         }
 
-        // Force mission list refresh when entering mission board with no active mission
-        // This handles cases where missions auto-complete in space (bounty, assassination, etc.)
-        if (newState === "VIEWING_MISSIONS" && typeof player !== 'undefined' && !player.activeMission) {
-            this.currentStationMissions = null;
-            this.selectedMissionIndex = -1;
-        }
+        // DO NOT clear missions when entering mission board - missions should persist
+        // within the same docking session. They are only regenerated when:
+        // 1. Player docks at a station (see handleDocking)
+        // 2. Player undocks and docks again
+        // 3. Player jumps to another system and returns
 
         // Reset market selection
         if (newState !== "VIEWING_MARKET" && this.previousState === "VIEWING_MARKET") {
