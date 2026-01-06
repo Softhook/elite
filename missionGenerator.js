@@ -2,11 +2,8 @@
 
 // --- Helper Data ---
 // Define ALL legal commodities that can appear in missions/market
-const LEGAL_CARGO = [
-    'Food', 'Textiles', 'Machinery', 'Metals', 'Minerals',
-    'Chemicals', 'Computers', 'Medicine', 'Adv Components', 'Luxury Goods'
-];
-const ILLEGAL_CARGO = ['Narcotics', 'Weapons', 'Slaves']; // Keep separate
+const LEGAL_CARGO = getLegalCommodities();
+const ILLEGAL_CARGO = getIllegalCommodities();
 const PIRATE_SHIP_TYPES = ['Krait', 'Adder', 'Sidewinder', 'CobraMkIII'];
 
 // --- Economy-Specific Cargo Biases ---

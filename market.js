@@ -14,24 +14,6 @@ const IMPORT_PREMIUM_BUY = 1.8;        // Systems import needed goods at premium
 const IMPORT_PREMIUM_SELL = 1.5;       // Selling price for imported goods (was 1.1)
 const SELL_RATIO_SAFETY = 0.75;        // Ensure sell price is at most this % of buy price (was 0.8)
 
-// Stock profile constants
-const DEFAULT_BASE_STOCK = 120;
-const BASE_STOCK_LEVELS = {
-    'Food': 480,
-    'Textiles': 360,
-    'Machinery': 120,
-    'Metals': 260,
-    'Minerals': 240,
-    'Chemicals': 140,
-    'Computers': 90,
-    'Medicine': 110,
-    'Adv Components': 60,
-    'Luxury Goods': 40,
-    'Narcotics': 30,
-    'Weapons': 55,
-    'Slaves': 18
-};
-
 const STOCK_ABUNDANT_MULT = 2.2;
 const STOCK_SCARCE_MULT = 0.45;
 const STOCK_CEILING_MULT = 3.5;
@@ -126,31 +108,17 @@ class Market {
      * @private
      */
     _initializeCommodities() {
-        const definitions = [
-            // Name, Base Buy, Base Sell, Player Stock, Legal Status
-            { name: 'Food', baseBuy: 10, baseSell: 8, isLegal: true },
-            { name: 'Textiles', baseBuy: 15, baseSell: 12, isLegal: true },
-            { name: 'Machinery', baseBuy: 100, baseSell: 90, isLegal: true },
-            { name: 'Metals', baseBuy: 50, baseSell: 40, isLegal: true },
-            { name: 'Minerals', baseBuy: 40, baseSell: 30, isLegal: true },
-            { name: 'Chemicals', baseBuy: 70, baseSell: 60, isLegal: true },
-            { name: 'Computers', baseBuy: 200, baseSell: 180, isLegal: true },
-            { name: 'Medicine', baseBuy: 120, baseSell: 105, isLegal: true },
-            { name: 'Adv Components', baseBuy: 280, baseSell: 250, isLegal: true },
-            { name: 'Luxury Goods', baseBuy: 320, baseSell: 290, isLegal: true },
-            { name: 'Narcotics', baseBuy: 700, baseSell: 620, isLegal: false },
-            { name: 'Weapons', baseBuy: 760, baseSell: 680, isLegal: false },
-            { name: 'Slaves', baseBuy: 800, baseSell: 720, isLegal: false },
-        ];
-
-        this.commodities = definitions.map(def => {
-            const defaultBaseStock = BASE_STOCK_LEVELS[def.name] ?? DEFAULT_BASE_STOCK;
+        this.commodities = COMMODITY_DEFINITIONS.map(def => {
+            const defaultBaseStock = def.baseStock ?? DEFAULT_BASE_STOCK;
             const baseStock = Math.max(1, Math.round(defaultBaseStock));
             const stockCeiling = Math.max(baseStock, Math.round(baseStock * STOCK_CEILING_MULT));
             const stockFloor = Math.max(0, Math.floor(baseStock * STOCK_FLOOR_MULT));
 
             return {
-                ...def,
+                name: def.name,
+                baseBuy: def.baseBuy,
+                baseSell: def.baseSell,
+                isLegal: def.isLegal,
                 buyPrice: 0,
                 sellPrice: 0,
                 playerStock: 0,

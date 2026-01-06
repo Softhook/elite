@@ -273,12 +273,8 @@ class Cargo {
     }
 
     getValue() {
-        const baseValues = {
-            'Food': 8, 'Textiles': 12, 'Machinery': 90, 'Metals': 40, 'Minerals': 30,
-            'Chemicals': 60, 'Computers': 180, 'Medicine': 105, 'Adv Components': 250,
-            'Luxury Goods': 290, 'Narcotics': 620, 'Weapons': 680, 'Slaves': 720
-        };
-        const baseValue = baseValues[this.type] || 50;
+        // Use centralized base sell prices (what you get for selling the cargo)
+        const baseValue = getCommodityBaseSellPrice(this.type);
         return Math.floor(baseValue * this.quantity * random(0.8, 1.2));
     }
 
