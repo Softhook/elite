@@ -159,6 +159,9 @@ class EnemyStateMachine {
         }
         if (this.role === AI_ROLE.GUARD && this.principal && this.isTargetValid(this.principal)) {
             return AI_STATE.GUARDING;
+        } else if (this.role === AI_ROLE.GUARD) {
+            // Guard without valid principal - depart the system
+            return AI_STATE.LEAVING_SYSTEM;
         } else if (this.role === AI_ROLE.POLICE) {
             return AI_STATE.PATROLLING;
         } else {
@@ -601,6 +604,9 @@ class EnemyStateMachine {
         // Determine base state based on role
         if (this.role === AI_ROLE.GUARD && this.principal && this.isTargetValid(this.principal)) {
             state = AI_STATE.GUARDING;
+        } else if (this.role === AI_ROLE.GUARD) {
+            // Guard without valid principal after fleeing - depart the system
+            state = AI_STATE.LEAVING_SYSTEM;
         } else if (this.role === AI_ROLE.POLICE) {
             state = AI_STATE.PATROLLING;
         } else if (this.role === AI_ROLE.HAULER) {
