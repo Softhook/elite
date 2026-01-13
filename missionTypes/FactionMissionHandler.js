@@ -99,4 +99,5 @@ class FactionMissionHandler extends MissionTypeHandler {
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = FactionMissionHandler;
+    global.FactionMissionHandler = FactionMissionHandler;
 }

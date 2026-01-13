@@ -858,3 +858,10 @@ class Market {
     }
 
 } // End of Market Class
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { Market, ECONOMY_STOCK_BEHAVIOR };
+    global.Market = Market;
+    global.ECONOMY_STOCK_BEHAVIOR = ECONOMY_STOCK_BEHAVIOR;
+}

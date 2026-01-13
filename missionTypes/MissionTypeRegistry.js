@@ -110,4 +110,5 @@ const MissionTypeRegistry = {
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = MissionTypeRegistry;
+    global.MissionTypeRegistry = MissionTypeRegistry;
 }

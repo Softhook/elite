@@ -211,3 +211,8 @@ const SHIP_UPGRADES = [
     }
 ];
 
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = SHIP_UPGRADES;
+    global.SHIP_UPGRADES = SHIP_UPGRADES;
+}

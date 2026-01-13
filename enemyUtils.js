@@ -441,3 +441,12 @@ function applyEnemyUtilityMethods() {
         }
     });
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { EnemyUtils, applyEnemyUtilityMethods, getDeltaSeconds, getTimeScale };
+    global.EnemyUtils = EnemyUtils;
+    global.applyEnemyUtilityMethods = applyEnemyUtilityMethods;
+    global.getDeltaSeconds = getDeltaSeconds;
+    global.getTimeScale = getTimeScale;
+}

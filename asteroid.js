@@ -437,3 +437,9 @@ class Asteroid {
         return a;
     }
 } // End of Asteroid Class
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { Asteroid };
+    global.Asteroid = Asteroid;
+}

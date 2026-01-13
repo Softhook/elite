@@ -578,3 +578,10 @@ function applyEnemyDamageSystemMethods() {
         }
     });
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { EnemyDamageSystem, applyEnemyDamageSystemMethods };
+    global.EnemyDamageSystem = EnemyDamageSystem;
+    global.applyEnemyDamageSystemMethods = applyEnemyDamageSystemMethods;
+}

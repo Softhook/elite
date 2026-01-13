@@ -308,3 +308,9 @@ class Cargo {
         return c;
     }
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { Cargo };
+    global.Cargo = Cargo;
+}

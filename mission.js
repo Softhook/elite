@@ -116,6 +116,10 @@ class Mission {
         this.targetObjectId = data.targetObjectId || null;
         this.targetPlanetName = data.targetPlanetName || null;
 
+        // Assassination target upgrade data
+        this.targetUpgrades = data.targetUpgrades || [];
+        this.targetUpgradeDetails = data.targetUpgradeDetails || [];
+
         // Persisted IDs for runtime linking
         this._targetEnemyId = data._targetEnemyId || null;
         this._guardIds = data._guardIds || [];
@@ -1037,6 +1041,8 @@ class Mission {
             targetCount: this.targetCount,
             targetName: this.targetName,
             targetShipType: this.targetShipType,
+            targetUpgrades: this.targetUpgrades,
+            targetUpgradeDetails: this.targetUpgradeDetails,
             guardCount: this.guardCount,
             guardShipType: this.guardShipType,
             cargoType: this.cargoType,
@@ -1071,3 +1077,25 @@ class Mission {
         return new Mission(json);
     }
 } // End of Mission Class
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        Mission,
+        MISSION_TYPE,
+        BOUNTY_TYPES,
+        DELIVERY_TYPES,
+        FACTION_KILL_TYPES,
+        FACTION_PATROL_TYPES,
+        FACTION_SABOTAGE_TYPES,
+        FACTION_DELIVERY_TYPES
+    };
+    global.Mission = Mission;
+    global.MISSION_TYPE = MISSION_TYPE;
+    global.BOUNTY_TYPES = BOUNTY_TYPES;
+    global.DELIVERY_TYPES = DELIVERY_TYPES;
+    global.FACTION_KILL_TYPES = FACTION_KILL_TYPES;
+    global.FACTION_PATROL_TYPES = FACTION_PATROL_TYPES;
+    global.FACTION_SABOTAGE_TYPES = FACTION_SABOTAGE_TYPES;
+    global.FACTION_DELIVERY_TYPES = FACTION_DELIVERY_TYPES;
+}

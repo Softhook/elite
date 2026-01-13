@@ -523,3 +523,39 @@ function generateTitledNPCName() {
     const title = getRandomNamePart(NPC_TITLES);
     return `${title} ${generateNPCName()}`;
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        AI_ROLE,
+        AI_STATE,
+        AI_STATE_NAME,
+        FACTION_ENEMY_MAP,
+        ROLE_ENEMY_MAP,
+        PIRATE_GANG_NAMES,
+        NPC_FIRST_NAMES,
+        NPC_LAST_NAMES,
+        NPC_TITLES,
+        generateNPCName,
+        generateTitledNPCName,
+        DRAG_EFFECT_DEFAULT_DURATION,
+        DRAG_EFFECT_DEFAULT_MULTIPLIER,
+        DRAG_CONSECUTIVE_HIT_MULT
+    };
+
+    // Assign globals for test environment
+    global.AI_ROLE = AI_ROLE;
+    global.AI_STATE = AI_STATE;
+    global.AI_STATE_NAME = AI_STATE_NAME;
+    global.FACTION_ENEMY_MAP = FACTION_ENEMY_MAP;
+    global.ROLE_ENEMY_MAP = ROLE_ENEMY_MAP;
+    global.PIRATE_GANG_NAMES = PIRATE_GANG_NAMES;
+    global.NPC_FIRST_NAMES = NPC_FIRST_NAMES;
+    global.NPC_LAST_NAMES = NPC_LAST_NAMES;
+    global.NPC_TITLES = NPC_TITLES;
+    global.generateNPCName = generateNPCName;
+    global.generateTitledNPCName = generateTitledNPCName;
+    global.DRAG_EFFECT_DEFAULT_DURATION = DRAG_EFFECT_DEFAULT_DURATION;
+    global.DRAG_EFFECT_DEFAULT_MULTIPLIER = DRAG_EFFECT_DEFAULT_MULTIPLIER;
+    global.DRAG_CONSECUTIVE_HIT_MULT = DRAG_CONSECUTIVE_HIT_MULT;
+}

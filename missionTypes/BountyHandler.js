@@ -172,3 +172,9 @@ class BountyHandler extends MissionTypeHandler {
 if (typeof MissionTypeRegistry !== 'undefined') {
     MissionTypeRegistry.register(BountyHandler);
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = BountyHandler;
+    global.BountyHandler = BountyHandler;
+}

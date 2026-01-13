@@ -243,3 +243,10 @@ function monitorThrustReuse() {
 // Run every 5 seconds
 window.thrustMonitor = setInterval(monitorThrustReuse, 5000);
  */
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { ThrustParticle, ThrustManager };
+    global.ThrustParticle = ThrustParticle;
+    global.ThrustManager = ThrustManager;
+}

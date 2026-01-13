@@ -1,0 +1,42 @@
+{
+  "name": "elite",
+  "version": "1.0.0",
+  "description": "Elite: A space trading and combat game",
+  "main": "sketch.js",
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Softhook/elite.git"
+  },
+  "keywords": ["game", "space", "trading", "elite"],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Softhook/elite/issues"
+  },
+  "homepage": "https://github.com/Softhook/elite#readme",
+  "devDependencies": {
+    "jest": "^30.2.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/test/**/*.test.js"],
+    "setupFilesAfterEnv": ["<rootDir>/test/jest.setup.js"],
+    "verbose": true,
+    "collectCoverageFrom": [
+      "*.js",
+      "missionTypes/**/*.js",
+      "!sketch.js",
+      "!test/**",
+      "!libraries/**"
+    ]
+  }
+}

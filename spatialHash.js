@@ -226,3 +226,8 @@ class SpatialHash {
 if (typeof window !== 'undefined') {
     window.SpatialHash = SpatialHash;
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = SpatialHash;
+}

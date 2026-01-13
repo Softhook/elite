@@ -802,3 +802,10 @@ function applyEnemyRenderingMethods() {
         }
     });
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { EnemyRendering, applyEnemyRenderingMethods };
+    global.EnemyRendering = EnemyRendering;
+    global.applyEnemyRenderingMethods = applyEnemyRenderingMethods;
+}

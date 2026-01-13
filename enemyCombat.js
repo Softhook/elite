@@ -1085,3 +1085,11 @@ function applyEnemyCombatMethods() {
         AI_LOG(`Applied ${methodNames.length} combat methods to Enemy prototype:`, methodNames.join(', '));
     }
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { EnemyCombat, getBaseWeaponType, applyEnemyCombatMethods };
+    global.EnemyCombat = EnemyCombat;
+    global.getBaseWeaponType = getBaseWeaponType;
+    global.applyEnemyCombatMethods = applyEnemyCombatMethods;
+}

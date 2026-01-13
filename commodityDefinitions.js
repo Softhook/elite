@@ -99,3 +99,29 @@ function isCommodityLegal(name) {
     const def = getCommodityDefinition(name);
     return def ? def.isLegal : true;
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        COMMODITY_DEFINITIONS,
+        DEFAULT_BASE_STOCK,
+        getCommodityDefinition,
+        getCommodityBaseBuyPrice,
+        getCommodityBaseSellPrice,
+        getCommodityBaseStock,
+        getAllCommodityNames,
+        getLegalCommodities,
+        getIllegalCommodities,
+        isCommodityLegal
+    };
+    global.COMMODITY_DEFINITIONS = COMMODITY_DEFINITIONS;
+    global.DEFAULT_BASE_STOCK = DEFAULT_BASE_STOCK;
+    global.getCommodityDefinition = getCommodityDefinition;
+    global.getCommodityBaseBuyPrice = getCommodityBaseBuyPrice;
+    global.getCommodityBaseSellPrice = getCommodityBaseSellPrice;
+    global.getCommodityBaseStock = getCommodityBaseStock;
+    global.getAllCommodityNames = getAllCommodityNames;
+    global.getLegalCommodities = getLegalCommodities;
+    global.getIllegalCommodities = getIllegalCommodities;
+    global.isCommodityLegal = isCommodityLegal;
+}

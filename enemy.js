@@ -1119,3 +1119,10 @@ if (typeof applyEnemyAbilityMethods === 'function') {
     applyEnemyAbilityMethods();
 }
 
+// Export for module systems
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { Enemy };
+    global.Enemy = Enemy;
+}
+

@@ -395,3 +395,9 @@ const WEAPON_UPGRADES = [
     }
 
 ];
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = WEAPON_UPGRADES;
+    global.WEAPON_UPGRADES = WEAPON_UPGRADES;
+}

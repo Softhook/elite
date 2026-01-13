@@ -438,3 +438,10 @@ function applyEnemyMovementMethods() {
         console.log(`Applied ${methodNames.length} movement methods to Enemy prototype:`, methodNames.join(', '));
     }
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { EnemyMovement, applyEnemyMovementMethods };
+    global.EnemyMovement = EnemyMovement;
+    global.applyEnemyMovementMethods = applyEnemyMovementMethods;
+}

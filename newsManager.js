@@ -1453,3 +1453,11 @@ class NewsManager {
         if (typeof data.lastHeroReportTime === 'number') this.lastHeroReportTime = data.lastHeroReportTime;
     }
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { NewsManager, newsManager: new NewsManager(), NEWS_PRIORITY, NEWS_CATEGORY };
+    global.NewsManager = NewsManager;
+    global.NEWS_PRIORITY = NEWS_PRIORITY;
+    global.NEWS_CATEGORY = NEWS_CATEGORY;
+}

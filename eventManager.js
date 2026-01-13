@@ -2017,3 +2017,9 @@ class EventManager {
         }
     }
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { EventManager };
+    global.EventManager = EventManager;
+}

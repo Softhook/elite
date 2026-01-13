@@ -6,14 +6,14 @@ class ObjectPool {
     this.maxSize = maxSize;
     this.totalCreated = 0;
     this.totalReused = 0;
-    
+
     // Type name for debugging
     this.typeName = objectType.name || "Object";
-    
+
     // Pre-populate pool (without running constructor logic yet)
     this.growPool(initialSize);
   }
-  
+
   // Create additional objects for the pool
   growPool(count) {
     const newCount = Math.min(count, this.maxSize - this.pool.length);
@@ -22,11 +22,11 @@ class ObjectPool {
       this.totalCreated++;
     }
   }
-  
+
   // Get an object from the pool or create one if needed
   get(...args) {
     let object;
-    
+
     if (this.pool.length > 0) {
       object = this.pool.pop();
       this.totalReused++;
@@ -40,28 +40,28 @@ class ObjectPool {
         return null;
       }
     }
-    
+
     // Reset if it has a reset method, otherwise initialize fresh
     if (typeof object.reset === 'function') {
       object.reset(...args);
     }
-    
+
     this.active.add(object);
     return object;
   }
-  
+
   // Return an object to the pool
   release(object) {
     if (!object || !this.active.has(object)) return;
-    
+
     this.active.delete(object);
-    
+
     // Only add to pool if it's not already full
     if (this.pool.length < this.maxSize) {
       this.pool.push(object);
     }
   }
-  
+
   // Release all active objects
   releaseAll() {
     this.active.forEach(object => {
@@ -69,7 +69,7 @@ class ObjectPool {
     });
     this.active.clear();
   }
-  
+
   // Get usage statistics
   getStats() {
     return {
@@ -80,4 +80,10 @@ class ObjectPool {
       reused: this.totalReused
     };
   }
+}
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = ObjectPool;
+  global.ObjectPool = ObjectPool;
 }

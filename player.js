@@ -199,6 +199,8 @@ class Player {
 
         // Weapons
         this.weapons = [];
+        this.loadWeaponsFromShipDefinition(this.shipTypeName);
+
         // Use armament array length as base weapon slots since ships don't have a weaponSlots property
         this.weaponSlots = (shipDef.armament && shipDef.armament.length) || 1;
         this.maxWeapons = this.weaponSlots;
@@ -4071,3 +4073,12 @@ const FACTION_RANKS = {
         usesPrestige: true // Separatist uses prestige
     }
 };
+
+// Export for module systems
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Player;
+    global.Player = Player;
+    global.PLAYER_CONFIG = PLAYER_CONFIG;
+    global.FACTION_RANKS = FACTION_RANKS;
+}

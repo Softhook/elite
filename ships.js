@@ -4334,6 +4334,15 @@ const CUSTOM_DRAW_FUNCTIONS = {
     "PosthumanMissionary": drawPosthumanMissionary
 };
 
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    // Export constants and functions if needed, mainly SHIP_DEFINITIONS
+    module.exports = {
+        SHIP_DEFINITIONS
+    };
+    global.SHIP_DEFINITIONS = SHIP_DEFINITIONS;
+}
+
 // Assign draw functions to definitions
 for (const key in SHIP_DEFINITIONS) {
     const def = SHIP_DEFINITIONS[key];

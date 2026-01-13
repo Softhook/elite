@@ -204,3 +204,9 @@ class DeliveryHandler extends MissionTypeHandler {
 if (typeof MissionTypeRegistry !== 'undefined') {
     MissionTypeRegistry.register(DeliveryHandler);
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = DeliveryHandler;
+    global.DeliveryHandler = DeliveryHandler;
+}

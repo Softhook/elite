@@ -134,7 +134,8 @@ class MissionTypeHandler {
     }
 }
 
-// Export for module systems, but also attach to global for browser
+// Export for module systems, but also attach to global for browser/Node.js
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = MissionTypeHandler;
+    global.MissionTypeHandler = MissionTypeHandler;
 }

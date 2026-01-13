@@ -2,14 +2,13 @@
 
 Use NLP to help diversify the news, mission, and dialogue. 
 
-On The news screen. Add buttons at the top that allow you to filter by different news sources. 
-
 more events 
 jump zone closed
 
-make the faction missions work properly
+Make more interesting faction specific missions. such as finding enemy faction bases, 
+leading a war war group 
 
-
+Give assassination targets. Ship upgrades. Mention the ship upgrades in the mission description to warn the player. And reward the player for very hard upgrade such a stealth upgrades 
 
 -----
 

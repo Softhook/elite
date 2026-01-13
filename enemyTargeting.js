@@ -964,3 +964,10 @@ function applyEnemyTargetingMethods() {
         }
     });
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { EnemyTargeting, applyEnemyTargetingMethods };
+    global.EnemyTargeting = EnemyTargeting;
+    global.applyEnemyTargetingMethods = applyEnemyTargetingMethods;
+}

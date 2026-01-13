@@ -341,3 +341,9 @@ class SabotageHandler extends MissionTypeHandler {
 if (typeof MissionTypeRegistry !== 'undefined') {
     MissionTypeRegistry.register(SabotageHandler);
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = SabotageHandler;
+    global.SabotageHandler = SabotageHandler;
+}

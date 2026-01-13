@@ -3622,3 +3622,10 @@ function applyEnemyAIBehaviorMethods() {
         }
     });
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { EnemyAIBehaviors, applyEnemyAIBehaviorMethods };
+    global.EnemyAIBehaviors = EnemyAIBehaviors;
+    global.applyEnemyAIBehaviorMethods = applyEnemyAIBehaviorMethods;
+}

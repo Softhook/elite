@@ -8,6 +8,76 @@ class AssassinationHandler extends MissionTypeHandler {
     static types = [MISSION_TYPE.ASSASSINATION];
     static requiredFaction = null; // Public missions
 
+    // Ship upgrade configuration for assassination targets
+    // Each upgrade type has a base chance and reward bonus
+    static UPGRADE_CONFIG = {
+        armor: {
+            chance: 0.35,        // 35% base chance
+            rewardPerLevel: 300, // Extra credits per level
+            names: ['Faulcon DeLacy Composite', 'Core Dynamics Reactive Plates', 'Vodel Military Grade'],
+            warnings: ['reinforced hull', 'heavy armor plating', 'military-grade armor']
+        },
+        engine: {
+            chance: 0.30,        // 30% base chance
+            rewardPerLevel: 250,
+            names: ['Sirius Efficiency Drive', 'Gutamaya Performance Thrusters', 'Achilles Overdrive Injectors'],
+            warnings: ['enhanced engines', 'high-performance thrusters', 'experimental overdrive']
+        },
+        shield: {
+            chance: 0.30,        // 30% base chance
+            rewardPerLevel: 350,
+            names: ['Supratech Shield Booster', 'Aegis Systems Deflector', 'Prismatic Shield Generator'],
+            warnings: ['boosted shields', 'advanced deflectors', 'prismatic shielding']
+        },
+        cloak: {
+            chance: 0.12,        // 12% base chance - rare and dangerous!
+            rewardPerLevel: 800, // High reward for stealth targets
+            names: ['Stealth Field Mark I', 'Shadow Matrix', 'Phantom Drive'],
+            warnings: ['basic cloaking device', 'advanced stealth system', 'military-grade cloaking']
+        },
+        booster: {
+            chance: 0.25,        // 25% base chance
+            rewardPerLevel: 200,
+            names: ['Pulse Drive Igniter', 'Turbocharged Injector', 'Nova Drive System'],
+            warnings: ['afterburner system', 'enhanced speed burst', 'military boost system']
+        }
+    };
+
+    /**
+     * Select upgrades for an assassination target.
+     * @returns {Object} { upgrades: string[], upgradeDetails: {type, level, name}[], totalBonusReward: number, warnings: string[] }
+     */
+    static _selectTargetUpgrades() {
+        const upgrades = [];
+        const upgradeDetails = [];
+        const warnings = [];
+        let totalBonusReward = 0;
+
+        // Check each upgrade type
+        for (const [type, config] of Object.entries(this.UPGRADE_CONFIG)) {
+            if (Math.random() < config.chance) {
+                // Weighted level selection: level 1 is most common, level 3 is rare
+                const levelRoll = Math.random();
+                let level;
+                if (levelRoll < 0.55) {
+                    level = 1; // 55% chance
+                } else if (levelRoll < 0.85) {
+                    level = 2; // 30% chance
+                } else {
+                    level = 3; // 15% chance
+                }
+
+                const upgradeName = config.names[level - 1];
+                upgrades.push(upgradeName);
+                upgradeDetails.push({ type, level, name: upgradeName });
+                warnings.push(config.warnings[level - 1]);
+                totalBonusReward += config.rewardPerLevel * level;
+            }
+        }
+
+        return { upgrades, upgradeDetails, totalBonusReward, warnings };
+    }
+
     /**
      * Create an assassination mission.
      * @param {Object} context - Generation context
@@ -60,10 +130,13 @@ class AssassinationHandler extends MissionTypeHandler {
             shipType = 'Krait';
         }
 
-        // Calculate reward
+        // Select target upgrades
+        const { upgrades, upgradeDetails, totalBonusReward, warnings } = this._selectTargetUpgrades();
+
+        // Calculate reward (now includes upgrade bonus)
         const baseReward = 2500 + (originSystem.techLevel || 5) * 150;
         const securityBonus = originSystem.securityLevel === 'Anarchy' ? 400 : 0;
-        const reward = Math.floor(baseReward + securityBonus + random(500, 2000));
+        const reward = Math.floor(baseReward + securityBonus + random(500, 2000) + totalBonusReward);
 
         // Determine legality
         const targetIsPirateShip = (typeof PIRATE_SHIP_TYPES !== 'undefined' &&
@@ -81,18 +154,41 @@ class AssassinationHandler extends MissionTypeHandler {
             guardShipType = 'Krait';
         }
 
-        // Create flavorful description
+        // Build upgrade warning string for description
+        let upgradeWarning = '';
+        if (warnings.length > 0) {
+            // Check for stealth upgrade (special warning)
+            const hasCloak = upgradeDetails.some(u => u.type === 'cloak');
+            if (hasCloak) {
+                upgradeWarning = `\n\n⚠️ CAUTION: Target is equipped with ${warnings.join(', ')}. STEALTH CAPABILITY DETECTED - target may vanish from sensors!`;
+            } else {
+                upgradeWarning = `\n\nIntelligence reports the target's ship has ${warnings.join(', ')}.`;
+            }
+        }
+
+        // Create flavorful description with upgrade warnings
         const descriptionTemplates = [
-            `A contract has been issued by ${source} to eliminate ${targetName}, the ${background}. The target is known to pilot a ${shipType} and may be accompanied by security personnel. Complete the mission discreetly to avoid unwanted attention.`,
-            `${source} requires the permanent removal of ${targetName}, a ${background} whose activities threaten their interests. Intelligence indicates the target travels in a ${shipType}. The operation must be executed with precision.`,
-            `Eliminate ${targetName}, the ${background}, at the behest of ${source}. The target operates a ${shipType} and maintains a security detail. Success will be rewarded handsomely, but failure may have consequences.`,
-            `${source} seeks the assassination of ${targetName}, notorious as a ${background}. The target commands a ${shipType} and is rarely without protection. The target may attempt to flee the system if threatened.`,
-            `A high-priority contract from ${source} demands the death of ${targetName}, the ${background}. Expect heavy resistance from the target's ${shipType} and escort vessels. The mission cancels if the target escapes the system.`
+            `A contract has been issued by ${source} to eliminate ${targetName}, the ${background}. The target is known to pilot a ${shipType} and may be accompanied by security personnel. Complete the mission discreetly to avoid unwanted attention.${upgradeWarning}`,
+            `${source} requires the permanent removal of ${targetName}, a ${background} whose activities threaten their interests. Intelligence indicates the target travels in a ${shipType}. The operation must be executed with precision.${upgradeWarning}`,
+            `Eliminate ${targetName}, the ${background}, at the behest of ${source}. The target operates a ${shipType} and maintains a security detail. Success will be rewarded handsomely, but failure may have consequences.${upgradeWarning}`,
+            `${source} seeks the assassination of ${targetName}, notorious as a ${background}. The target commands a ${shipType} and is rarely without protection. The target may attempt to flee the system if threatened.${upgradeWarning}`,
+            `A high-priority contract from ${source} demands the death of ${targetName}, the ${background}. Expect heavy resistance from the target's ${shipType} and escort vessels. The mission cancels if the target escapes the system.${upgradeWarning}`
         ];
+
+        // Build title with upgrade indicator
+        let titleSuffix = '';
+        if (upgradeDetails.length > 0) {
+            const maxLevel = Math.max(...upgradeDetails.map(u => u.level));
+            if (maxLevel >= 3 || upgradeDetails.some(u => u.type === 'cloak')) {
+                titleSuffix = ' ⚠️'; // Dangerous target
+            } else if (maxLevel >= 2 || upgradeDetails.length >= 2) {
+                titleSuffix = ' ⚡'; // Upgraded target
+            }
+        }
 
         return new Mission({
             type: MISSION_TYPE.ASSASSINATION,
-            title: `Assassinate ${targetName} (${shipType})`,
+            title: `Assassinate ${targetName} (${shipType})${titleSuffix}`,
             description: random(descriptionTemplates),
             originSystem: originSystem.name,
             originStation: originStation.name,
@@ -107,8 +203,68 @@ class AssassinationHandler extends MissionTypeHandler {
             targetShipType: shipType,
             canLeaveSystem: true,
             guardCount: 1,
-            guardShipType: guardShipType
+            guardShipType: guardShipType,
+            // Store upgrade data for spawning
+            targetUpgrades: upgrades,
+            targetUpgradeDetails: upgradeDetails
         });
+    }
+
+    /**
+     * Apply upgrades to an enemy based on upgrade names array.
+     * @param {Enemy} enemy - The enemy to upgrade
+     * @param {string[]} upgradeNames - Array of upgrade names to apply
+     * @private
+     */
+    static _applyUpgradesToEnemy(enemy, upgradeNames) {
+        if (!upgradeNames || !Array.isArray(upgradeNames) || upgradeNames.length === 0) return;
+        if (typeof SHIP_UPGRADES === 'undefined') return;
+
+        for (const upgradeName of upgradeNames) {
+            const upgDef = SHIP_UPGRADES.find(u => u.name === upgradeName);
+            if (!upgDef) continue;
+
+            // Apply based on type (same logic as Enemy constructor)
+            switch (upgDef.type) {
+                case 'armor':
+                    enemy.maxHull += (upgDef.hullBonus || 0);
+                    enemy.hull = enemy.maxHull; // Heal to full
+                    break;
+                case 'engine':
+                    if (upgDef.speedMultiplier) {
+                        enemy.baseMaxSpeed *= upgDef.speedMultiplier;
+                        enemy.maxSpeed = enemy.baseMaxSpeed;
+                    }
+                    if (upgDef.thrustMultiplier) {
+                        enemy.baseThrust *= upgDef.thrustMultiplier;
+                        enemy.thrustForce = enemy.baseThrust;
+                    }
+                    break;
+                case 'shield':
+                    enemy.maxShield += (upgDef.shieldBonus || 0);
+                    enemy.shield = enemy.maxShield;
+                    break;
+                case 'cloak':
+                    enemy.cloakMaxDuration = upgDef.cloakDuration;
+                    enemy.cloakMaxCooldown = upgDef.cloakCooldown;
+                    // Reset cloak state to ready
+                    enemy.isCloaked = false;
+                    enemy.cloakDurationTimer = 0;
+                    enemy.cloakCooldownTimer = 0;
+                    break;
+                case 'booster':
+                    enemy.boostMultiplier = upgDef.boostMultiplier;
+                    enemy.boostMaxDuration = upgDef.boostDuration;
+                    enemy.boostMaxCooldown = upgDef.boostCooldown;
+                    // Reset booster state to ready
+                    enemy.isSpeedBursting = false;
+                    enemy.boostDurationTimer = 0;
+                    enemy.boostCooldownTimer = 0;
+                    break;
+            }
+
+            MISSION_LOG(`Applied upgrade "${upgradeName}" to assassination target`);
+        }
     }
 
     /**
@@ -134,6 +290,21 @@ class AssassinationHandler extends MissionTypeHandler {
         newEnemy.initializeColors?.();
         if (mission.targetName) newEnemy.displayName = mission.targetName;
         newEnemy.isAssassinationTarget = true;
+
+        // Apply upgrades from mission to the spawned target
+        if (mission.targetUpgrades && mission.targetUpgrades.length > 0) {
+            this._applyUpgradesToEnemy(newEnemy, mission.targetUpgrades);
+
+            // Log upgrade summary
+            const upgradeTypes = mission.targetUpgradeDetails?.map(u => u.type) || [];
+            const hasCloak = upgradeTypes.includes('cloak');
+            if (hasCloak) {
+                MISSION_LOG(`⚠️ STEALTH target spawned with upgrades: ${mission.targetUpgrades.join(', ')}`);
+            } else {
+                MISSION_LOG(`Upgraded target spawned with: ${mission.targetUpgrades.join(', ')}`);
+            }
+        }
+
         sys.addEnemy(newEnemy);
 
         // Spawn guards
@@ -145,7 +316,10 @@ class AssassinationHandler extends MissionTypeHandler {
 
         MISSION_LOG(`Assassination target spawned: ${newEnemy.displayName || newEnemy.shipTypeName}`);
         if (typeof uiManager !== 'undefined') {
-            uiManager.addMessage(`Target spotted: ${newEnemy.displayName || newEnemy.shipTypeName}`);
+            const upgradeWarning = (mission.targetUpgrades && mission.targetUpgrades.length > 0)
+                ? ' (upgraded vessel!)'
+                : '';
+            uiManager.addMessage(`Target spotted: ${newEnemy.displayName || newEnemy.shipTypeName}${upgradeWarning}`);
         }
         return true;
     }
@@ -259,6 +433,22 @@ class AssassinationHandler extends MissionTypeHandler {
         let details = '';
         if (mission.targetName) details += `Named Target: ${mission.targetName}\n`;
         if (mission.targetShipType) details += `Target Ship: ${mission.targetShipType}\n`;
+
+        // Show upgrade information
+        if (mission.targetUpgradeDetails && mission.targetUpgradeDetails.length > 0) {
+            const upgradeList = mission.targetUpgradeDetails.map(u => {
+                const levelStr = u.level === 3 ? 'Mk III' : (u.level === 2 ? 'Mk II' : 'Mk I');
+                const typeLabel = u.type.charAt(0).toUpperCase() + u.type.slice(1);
+                return `${typeLabel} ${levelStr}`;
+            });
+            details += `\n⚡ Ship Upgrades:\n  • ${upgradeList.join('\n  • ')}\n`;
+
+            // Special warning for cloaked targets
+            if (mission.targetUpgradeDetails.some(u => u.type === 'cloak')) {
+                details += `\n⚠️ STEALTH EQUIPPED - Target can vanish!\n`;
+            }
+        }
+
         return details;
     }
 
@@ -287,4 +477,10 @@ class AssassinationHandler extends MissionTypeHandler {
 // Register with the registry
 if (typeof MissionTypeRegistry !== 'undefined') {
     MissionTypeRegistry.register(AssassinationHandler);
+}
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = AssassinationHandler;
+    global.AssassinationHandler = AssassinationHandler;
 }
