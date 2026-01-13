@@ -1306,6 +1306,56 @@ class UIHUD {
     _getActivityStatus(target) {
         if (!target || !target.currentState) return null;
 
+        // Compute the raw status first
+        const rawStatus = this._computeRawActivityStatus(target);
+
+        // Apply hysteresis for guard ships and bounty hunters to prevent rapid text flickering
+        // Guards frequently switch between GUARDING and combat states, causing visual jitter
+        // Bounty hunters can also flicker between combat states and LEAVING_SYSTEM
+        const needsHysteresis = (
+            target.role === AI_ROLE.GUARD ||
+            target.role === AI_ROLE.BOUNTY_HUNTER
+        );
+
+        if (needsHysteresis) {
+            return this._applyStatusHysteresis(target, rawStatus);
+        }
+
+        return rawStatus;
+    }
+
+    /**
+     * Applies hysteresis to status display to prevent rapid text flickering.
+     * Stores cache directly on the target entity (no separate Map needed).
+     * @param {Object} target - The target entity
+     * @param {string|null} newStatus - The newly computed status
+     * @returns {string|null} The status to display (may be cached)
+     */
+    _applyStatusHysteresis(target, newStatus) {
+        const now = (typeof millis === 'function') ? millis() : Date.now();
+        const hysteresisMs = 300;
+        const cached = target._hudStatusCache;
+
+        if (!cached) {
+            target._hudStatusCache = { status: newStatus, timestamp: now };
+            return newStatus;
+        }
+
+        // Update only if enough time has passed or status is the same
+        if (now - cached.timestamp >= hysteresisMs || newStatus === cached.status) {
+            target._hudStatusCache = { status: newStatus, timestamp: now };
+            return newStatus;
+        }
+
+        return cached.status;
+    }
+
+    /**
+     * Computes the raw activity status without any hysteresis.
+     * @param {Object} target - The target entity
+     * @returns {string|null} The computed status
+     */
+    _computeRawActivityStatus(target) {
         const state = target.currentState;
         const role = target.role;
 
