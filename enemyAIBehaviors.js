@@ -2553,6 +2553,7 @@ class EnemyAIBehaviors {
         const planetNeedingReconstruction = this.findPlanetNeedingReconstruction(system);
 
         if (planetNeedingReconstruction) {
+            this._stationPatrolTarget = null; // Clear station target when work found
             // Move to planet and reconstruct space object
             this.handleSpaceObjectReconstruction(system, planetNeedingReconstruction);
             this.updatePhysics();
@@ -2564,7 +2565,11 @@ class EnemyAIBehaviors {
 
         // If no target or target is fully repaired, find new target
         if (!this.repairTarget || !this.isRepairTargetValid(this.repairTarget)) {
-            this.repairTarget = this.selectRepairTarget(damagedObjects);
+            const nextTarget = this.selectRepairTarget(damagedObjects);
+            if (nextTarget !== this.repairTarget) {
+                this.repairTarget = nextTarget;
+                this._stationPatrolTarget = null; // Clear station target when new work found
+            }
         }
 
         // Priority 3: Repair damaged objects
@@ -2637,6 +2642,7 @@ class EnemyAIBehaviors {
 
         if (distToStation < this.stationProximityThreshold) {
             // At station - idle and wait (frame-rate independent)
+            this._stationPatrolTarget = null; // Arrived
             this.changeState(AI_STATE.NEAR_STATION);
             const stationTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
             this.vel.mult(Math.pow(0.8, stationTimeScale));
@@ -2651,16 +2657,20 @@ class EnemyAIBehaviors {
                 this.shield = Math.min(this.maxShield, this.shield + shieldRepairRate);
             }
         } else {
-            // Move towards random point within station radius
+            // Move towards random point within station radius (LATCHED)
             this.changeState(AI_STATE.PATROLLING);
-            const stationRadius = system.station.dockingRadius || system.station.size * 0.5 || 200;
-            const angle = random(TWO_PI);
-            const offsetDist = random(stationRadius * 0.3, stationRadius * 0.9);
-            const patrolTarget = createVector(
-                system.station.pos.x + cos(angle) * offsetDist,
-                system.station.pos.y + sin(angle) * offsetDist
-            );
-            this.performRotationAndThrust(patrolTarget);
+
+            if (!this._stationPatrolTarget) {
+                const stationRadius = system.station.dockingRadius || system.station.size * 0.5 || 200;
+                const angle = random(TWO_PI);
+                const offsetDist = random(stationRadius * 0.3, stationRadius * 0.9);
+                this._stationPatrolTarget = createVector(
+                    system.station.pos.x + cos(angle) * offsetDist,
+                    system.station.pos.y + sin(angle) * offsetDist
+                );
+            }
+
+            this.performRotationAndThrust(this._stationPatrolTarget);
         }
 
         this.updatePhysics();
