@@ -199,7 +199,11 @@ function generateSystemDescription(system, env = {}) {
     // Attempt to derive two most attractively priced local goods and two most-sought goods
     // "Attractively priced" is computed by comparing local buy price to a galaxy-wide average when available,
     // otherwise falls back to local sell-buy margin.
+    // Note: For "most sought-after", we exclude illegal goods in non-Anarchy systems.
     const describeLocalGoods = (sys, gal) => {
+        // Check if this system allows illegal goods trading
+        const secLevel = sys?.securityLevel || 'Unknown';
+        const allowsIllegal = secLevel === 'Anarchy';
         try {
             let market = null;
             if (sys && sys.market) market = sys.market;
@@ -246,11 +250,13 @@ function generateSystemDescription(system, env = {}) {
 
             if (parsed.length === 0) return '';
 
-            // Build galaxy averages for comparison if galaxy provides other systems
-            const galaxyAverages = {};
+            // Build galaxy averages for both buy and sell prices
+            const galaxyAvgBuy = {};
+            const galaxyAvgSell = {};
             try {
                 if (gal && Array.isArray(gal.systems)) {
-                    const collector = {};
+                    const collectorBuy = {};
+                    const collectorSell = {};
                     for (const s of gal.systems) {
                         if (!s) continue;
                         let m = null;
@@ -269,29 +275,67 @@ function generateSystemDescription(system, env = {}) {
                             if (!it) continue;
                             const nm = it.name || it.id || it.commodity || (it.commodity && it.commodity.name) || (typeof it === 'string' ? it : null);
                             const b = parseNum(it.buyPrice ?? it.purchasePrice ?? it.priceBuy ?? it.price ?? it.buy ?? it.b);
-                            if (!nm || !Number.isFinite(b)) continue;
-                            collector[nm] = collector[nm] || { sum: 0, count: 0 };
-                            collector[nm].sum += b;
-                            collector[nm].count += 1;
+                            const s = parseNum(it.sellPrice ?? it.priceSell ?? it.sell ?? it.s);
+                            if (!nm) continue;
+                            if (Number.isFinite(b)) {
+                                collectorBuy[nm] = collectorBuy[nm] || { sum: 0, count: 0 };
+                                collectorBuy[nm].sum += b;
+                                collectorBuy[nm].count += 1;
+                            }
+                            if (Number.isFinite(s)) {
+                                collectorSell[nm] = collectorSell[nm] || { sum: 0, count: 0 };
+                                collectorSell[nm].sum += s;
+                                collectorSell[nm].count += 1;
+                            }
                         }
                     }
-                    for (const [k, v] of Object.entries(collector)) galaxyAverages[k] = v.sum / v.count;
+                    for (const [k, v] of Object.entries(collectorBuy)) galaxyAvgBuy[k] = v.sum / v.count;
+                    for (const [k, v] of Object.entries(collectorSell)) galaxyAvgSell[k] = v.sum / v.count;
                 }
             } catch (e) { /* ignore galaxy parse errors */ }
 
-            // Compute attractiveness: if galaxy average exists, attractiveness = avgBuy - localBuy (higher is better)
-            // fallback to local margin (sell - buy) or inverse buy price
-            const scored = parsed.map(p => {
-                let score = 0;
-                if (Number.isFinite(p.buy) && galaxyAverages[p.name]) score = (galaxyAverages[p.name] - p.buy);
-                else if (Number.isFinite(p.sell) && Number.isFinite(p.buy)) score = (p.sell - p.buy);
-                else if (Number.isFinite(p.buy)) score = (1 / p.buy);
-                else score = 0;
-                return { ...p, score };
+            // Attractively priced = local buy price BELOW galaxy average (good deals to buy here)
+            const attractiveScored = parsed.map(p => {
+                let discountPercent = 0;
+                if (Number.isFinite(p.buy) && p.buy > 0 && galaxyAvgBuy[p.name] && galaxyAvgBuy[p.name] > 0) {
+                    // Percentage discount: (average - local) / average
+                    // Higher percentage = better deal
+                    discountPercent = (galaxyAvgBuy[p.name] - p.buy) / galaxyAvgBuy[p.name];
+                }
+                return { ...p, discountPercent };
             });
+            const attractive = attractiveScored.slice()
+                .filter(p => p.discountPercent > 0)  // Only goods cheaper than galaxy average
+                .sort((a, b) => b.discountPercent - a.discountPercent)  // Sort by biggest % discount first
+                .slice(0, 2)
+                .map(p => p.name);
 
-            const attractive = scored.slice().sort((a, b) => b.score - a.score).slice(0, 2).map(p => p.name);
-            const sought = parsed.slice().sort((a, b) => (b.demand - a.demand) || ((b.sell || 0) - (a.sell || 0))).slice(0, 2).map(p => p.name);
+            // For "most sought-after", exclude illegal goods in non-Anarchy systems
+            const legalForSought = allowsIllegal
+                ? parsed
+                : parsed.filter(p => {
+                    // Use isCommodityLegal if available, otherwise assume legal
+                    if (typeof isCommodityLegal === 'function') {
+                        return isCommodityLegal(p.name);
+                    }
+                    return true;
+                });
+
+            // Most sought-after = local sell price ABOVE galaxy average (what this system pays premium for)
+            const soughtScored = legalForSought.map(p => {
+                let premiumPercent = 0;
+                if (Number.isFinite(p.sell) && p.sell > 0 && galaxyAvgSell[p.name] && galaxyAvgSell[p.name] > 0) {
+                    // Percentage premium: (local - average) / average
+                    // Higher percentage = better profit opportunity
+                    premiumPercent = (p.sell - galaxyAvgSell[p.name]) / galaxyAvgSell[p.name];
+                }
+                return { ...p, premiumPercent };
+            });
+            const sought = soughtScored.slice()
+                .filter(p => p.premiumPercent > 0)  // Only goods that pay more than galaxy average
+                .sort((a, b) => b.premiumPercent - a.premiumPercent)  // Sort by biggest % premium first
+                .slice(0, 2)
+                .map(p => p.name);
 
             if ((attractive && attractive.length > 0) || (sought && sought.length > 0)) {
                 const attractText = attractive.length === 2 ? `${attractive[0]} and ${attractive[1]}` : (attractive[0] || 'varied goods');

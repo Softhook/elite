@@ -406,8 +406,13 @@ class UIGalaxyMap {
             // Alternate row background
             UIComponents.drawAlternatingRow(i, overlayX + 5, yPos - 2, overlayW - 10, rowHeight - 2);
 
-            // Commodity name
-            UIComponents.setTextStyle({ fill: 255, size: 15, align: [LEFT, TOP] });
+            // Check if commodity is illegal in this system
+            const isIllegalInSystem = typeof isCommodityLegal === 'function'
+                ? (!isCommodityLegal(comm.name) && system.securityLevel !== 'Anarchy')
+                : (comm.isLegal === false && system.securityLevel !== 'Anarchy');
+
+            // Commodity name (red if illegal in this system)
+            UIComponents.setTextStyle({ fill: isIllegalInSystem ? [255, 80, 80] : 255, size: 15, align: [LEFT, TOP] });
             text(comm.name, col1X, yPos);
 
             // Buy price with color coding
