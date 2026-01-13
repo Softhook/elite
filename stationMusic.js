@@ -696,7 +696,7 @@ class StationMusicManager {
             // Apply theme volume multiplier if present so certain themes (e.g. refinery)
             // can be louder to remain audible.
             this.targetVolume = this.baseVolume * (this.theme && this.theme.volumeMultiplier ? this.theme.volumeMultiplier : 1);
-            this.lastNoteTime = millis();
+            this.lastNoteTime = performance.now();
             console.log('StationMusicManager: Music started for', this.stationType, 'station');
         } catch (e) {
             console.error('StationMusicManager: Error starting music:', e);
@@ -770,7 +770,7 @@ class StationMusicManager {
         }
 
         // Play notes at interval (slower = more ambient)
-        const now = millis();
+        const now = performance.now();
         if (now - this.lastNoteTime >= this.noteInterval) {
             this.lastNoteTime = now;
             this.playNextNote();
@@ -892,12 +892,15 @@ class StationMusicManager {
     cleanup() {
         this.stop();
 
+        // Create local references to stop oscillators even if this.osc is nulled
         try {
             if (this.osc) {
+                try { this.osc.stop(); } catch (_) { }
                 this.osc.disconnect();
                 this.osc = null;
             }
             if (this.osc2) {
+                try { this.osc2.stop(); } catch (_) { }
                 this.osc2.disconnect();
                 this.osc2 = null;
             }
