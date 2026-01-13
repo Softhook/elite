@@ -1,5 +1,8 @@
 # Elite Game Development TODO
 
+Use NLP to help diversify the news, mission, and dialogue. 
+
+On The news screen. Add buttons at the top that allow you to filter by different news sources. 
 
 more events 
 jump zone closed

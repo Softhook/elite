@@ -903,15 +903,7 @@ class UIManager {
         }
         // --- VIEWING_NEWS State ---
         else if (currentState === "VIEWING_NEWS") {
-            for (const btn of this.newsButtonAreas) {
-                if (this.isClickInArea(mx, my, btn)) {
-                    if (btn.action === "BACK") {
-                        gameStateManager.setState("DOCKED");
-                        return true;
-                    }
-                }
-            }
-            return false;
+            return this.stationMenus.handleNewsClick(mx, my);
         }
 
         // --- 

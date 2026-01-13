@@ -37,7 +37,7 @@ const NEWS_FACTIONS = {
         color: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.IMPERIAL : [255, 235, 180]
     },
     SEPARATIST: {
-        name: "Free Flow Channel",
+        name: "Freedom",
         tone: "agitative",
         bias: "resistance",
         color: (typeof FACTION_COLORS !== 'undefined') ? FACTION_COLORS.SEPARATIST : [128, 128, 0]

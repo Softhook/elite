@@ -29,7 +29,7 @@ The system utilizes a structured matrix to map game events onto the resource-bas
 To reflect the ideological superstructure built upon the material base, the news engine will generate reports from at least three distinct, biased perspectives. While the core **material event** remains the same, the **interpretation** reflects the faction's resource goals.
 
 1.  **Imperial State Media (The Core Echo):** *Tone: Formal, authoritative.* **Interpretation:** Events are framed as successes for **Order, Efficiency, and the unified control** necessary for stable resource production. Piracy is described as *anarchy* threatening vital supply.
-2.  **Separatist Underground Feed (The Free Flow Channel):** *Tone: Agitative, populist.* **Interpretation:** Events are framed as resistance against **Imperial Exploitation and Resource Monopoly**. Piracy is often recast as a *necessary privateering action* against oppressive resource control.
+2.  **Separatist Underground Feed (Freedom):** *Tone: Agitative, populist.* **Interpretation:** Events are framed as resistance against **Imperial Exploitation and Resource Monopoly**. Piracy is often recast as a *necessary privateering action* against oppressive resource control.
 3.  **Independent Hauler's Blog (The Freight Log):** *Tone: Pragmatic, commodity-focused.* **Interpretation:** Events are strictly measured by their immediate **impact on profit margins, fuel costs, and transit risk**. A clash is not political, but an expensive "supply chain disruption."
 
 ## IV. Procedural Generation Steps

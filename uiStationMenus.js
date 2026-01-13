@@ -73,6 +73,7 @@ class UIStationMenus {
         this.newsButtonAreas = [];
         this.newsScrollOffset = 0;
         this.newsScrollMax = 0;
+        this.newsSourceFilter = 'ALL';
     }
 
     /**
@@ -91,16 +92,48 @@ class UIStationMenus {
         const contentH = pH - headerHeight - 60;
 
         // Get news items
-        const newsItems = (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager)
+        let newsItems = (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager)
             ? GameGlobals.newsManager.getNewsItems()
             : [];
 
-        let currentY = contentY;
-        const availableHeight = contentH;
+        // Apply source filter
+        if (this.newsSourceFilter !== 'ALL') {
+            newsItems = newsItems.filter(item => item.source === this.newsSourceFilter);
+        }
+
+        // Draw Filter Buttons at the top
+        const filterY = pY + headerHeight;
+        const filterSources = [
+            { id: 'ALL', label: 'All Sources' },
+            { id: 'The Core Echo', label: 'The Core Echo' },
+            { id: 'Freedom', label: 'Freedom' },
+            { id: 'The Freight Log', label: 'The Freight Log' }
+        ];
+
+        const filterBtnW = (pW - 60) / 4;
+        const filterBtnH = 30;
+
+        for (let i = 0; i < filterSources.length; i++) {
+            const src = filterSources[i];
+            const btnX = pX + 30 + i * (filterBtnW + 5);
+            const isActive = this.newsSourceFilter === src.id;
+
+            // Highlight active button
+            const fillCol = isActive ? [100, 150, 255] : [40, 40, 60];
+            const textCol = isActive ? [255] : [180];
+
+            const btnArea = UIComponents.drawButton(btnX, filterY, filterBtnW, filterBtnH, src.label, fillCol, [120, 180, 255], 3, { action: 'FILTER', source: src.id });
+            this.newsButtonAreas.push(btnArea);
+        }
+
+        const listStartY = filterY + filterBtnH + 10;
+        const listContentH = contentH - (filterBtnH + 10);
+        let currentY = listStartY;
+        const availableHeight = listContentH;
 
         if (newsItems.length === 0) {
             UIComponents.setTextStyle({ fill: 180, size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
-            text("No news reports available.", pX + pW / 2, currentY + availableHeight / 2);
+            text("No news reports available for this source.", pX + pW / 2, listStartY + availableHeight / 2);
         } else {
             // Compact 2-line layout: much smaller item height
             const itemHeight = 58;
@@ -115,7 +148,7 @@ class UIStationMenus {
 
             for (let i = startIndex; i < endIndex; i++) {
                 const item = newsItems[i];
-                const itemY = currentY + (i - startIndex) * itemHeight;
+                const itemY = listStartY + (i - startIndex) * itemHeight;
 
                 // Determine border color based on category/priority
                 let borderColor = [60, 60, 80];
@@ -2809,6 +2842,28 @@ class UIStationMenus {
                         if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                     }
                 }
+                return true;
+            }
+        }
+        return false;
+    }
+    /**
+     * Handles clicks on the news menu.
+     */
+    handleNewsClick(mx, my) {
+        if (!Array.isArray(this.newsButtonAreas)) return false;
+        for (const btn of this.newsButtonAreas) {
+            if (!UIComponents.isClickInArea(mx, my, btn)) continue;
+
+            if (btn.action === "BACK") {
+                if (typeof gameStateManager !== 'undefined') gameStateManager.setState("DOCKED");
+                return true;
+            }
+
+            if (btn.action === "FILTER") {
+                this.newsSourceFilter = btn.source;
+                this.newsScrollOffset = 0; // Reset scroll on filter change
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
                 return true;
             }
         }

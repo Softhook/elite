@@ -215,7 +215,7 @@ class UIFactionRecruitment {
             IMPERIAL: ["The Core Echo"],
             MILITARY: ["The Core Echo"],
             POLICE: ["The Core Echo"],
-            SEPARATIST: ["Free Flow Channel"]
+            SEPARATIST: ["Freedom"]
         };
         const factionSources = allowedSources[factionKey] || ["The Core Echo"];
 
