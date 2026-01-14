@@ -97,9 +97,30 @@ class InventoryScreen {
     };
 
     for (const [faction, displayName] of Object.entries(factionNames)) {
-      const prestige = player.factionPrestige?.[faction] || 0;
+      // Check membership
+      let isMember = false;
+      if (faction === 'POLICE') {
+        isMember = player.isPolice;
+      } else {
+        isMember = (player.playerFaction === faction);
+      }
+
+      // Get accurate rank name (e.g. "Recruit", "Sergeant", "Knight") or "" if not member
+      const rank = isMember && player.getFactionRank ? player.getFactionRank(faction) : '';
+
+      // Get correct progress metric (Prestige vs Kills)
+      let progress = 0;
+      let unit = 'pts';
+
+      if (player.getFactionKillsProgress) {
+        const pData = player.getFactionKillsProgress(faction);
+        progress = pData.progress;
+        unit = pData.usesPrestige ? 'pts' : 'kills';
+      } else {
+        progress = player.factionPrestige?.[faction] || 0;
+      }
+
       const color = factionColors[faction];
-      const rank = this._getPrestigeRank(prestige);
 
       textAlign(LEFT, TOP);
       textSize(STATION_TEXT_SIZE.BODY);
@@ -111,7 +132,7 @@ class InventoryScreen {
 
       fill(150, 150, 150);
       textSize(STATION_TEXT_SIZE.HELPER);
-      text(`(${prestige} pts)`, leftColX + 180, curY + 2);
+      text(`(${progress} ${unit})`, leftColX + 220, curY + 2); // Adjusted X position slightly
       curY += rowH;
     }
     curY += sectionGap;
@@ -387,15 +408,7 @@ class InventoryScreen {
     return color(255, 100, 100);
   }
 
-  _getPrestigeRank(prestige) {
-    if (prestige >= 1000) return 'Elite';
-    if (prestige >= 500) return 'Deadly';
-    if (prestige >= 250) return 'Dangerous';
-    if (prestige >= 100) return 'Competent';
-    if (prestige >= 50) return 'Mostly Harmless';
-    if (prestige >= 10) return 'Novice';
-    return 'Neutral';
-  }
+
 
   handleClick(mx, my, player) {
     if (this._hit(mx, my, this.closeButton)) return 'close';
