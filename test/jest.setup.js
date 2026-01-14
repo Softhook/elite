@@ -280,6 +280,10 @@ global.SHIP_UPGRADES = [
 global.LEGAL_CARGO = ['Food', 'Textiles', 'Machinery', 'Alloys', 'Minerals', 'Computers', 'Medicine'];
 global.ILLEGAL_CARGO = ['Narcotics', 'Firearms', 'Slaves'];
 
+// Commodity functions (needed by missionGenerator)
+global.getLegalCommodities = () => global.LEGAL_CARGO;
+global.getIllegalCommodities = () => global.ILLEGAL_CARGO;
+
 // ============================================
 // Debug/Logging Functions
 // ============================================

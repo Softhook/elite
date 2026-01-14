@@ -1,10 +1,12 @@
 /**
  * Mission Tests
  * Jest tests for Mission and MissionGenerator: creation, lifecycle, progress tracking, and completion.
+ * Includes comprehensive faction mission testing.
  */
 
 // Load source files
 require('../mission.js');
+require('../missionGenerator.js');
 
 // ============================================
 // Test Helpers
@@ -51,7 +53,14 @@ function createMockSystem(options = {}) {
         securityLevel: options.securityLevel || 'Medium',
         techLevel: options.techLevel || 5,
         connectedSystemIndices: options.connectedSystemIndices || [],
-        station: options.station || { name: 'Test Station', pos: createVector(500, 500) }
+        station: options.station || { name: 'Test Station', pos: createVector(500, 500) },
+        planets: options.planets || [
+            { name: 'Star', pos: createVector(0, 0), size: 100 },
+            { name: 'Planet I', pos: createVector(1000, 0), size: 50 }
+        ],
+        spaceObjects: options.spaceObjects || [],
+        enemies: options.enemies || [],
+        enemiesById: new Map()
     };
 }
 
@@ -74,6 +83,14 @@ function createMockGalaxy(numSystems = 4) {
         systems,
         getSystemByIndex(idx) { return this.systems[idx]; },
         getJumpDistance(from, to) { return Math.abs(to - from); }
+    };
+}
+
+function createMockSecretStation(factionType) {
+    return {
+        name: `Secret ${factionType} Base`,
+        stationSubtype: `secret_${factionType.toLowerCase()}`,
+        pos: createVector(500, 500)
     };
 }
 
@@ -516,6 +533,22 @@ describe('Faction Mission Classification Sets', () => {
     test('should include supply missions in FACTION_DELIVERY_TYPES', () => {
         expect(FACTION_DELIVERY_TYPES.has(MISSION_TYPE.SEPARATIST_SUPPLY)).toBe(true);
     });
+
+    test('should define combined type sets', () => {
+        expect(ALL_KILL_TYPES).toBeDefined();
+        expect(ALL_SABOTAGE_TYPES).toBeDefined();
+        expect(ALL_DELIVERY_TYPES).toBeDefined();
+    });
+
+    test('ALL_KILL_TYPES should include both bounty and faction kills', () => {
+        expect(ALL_KILL_TYPES.has(MISSION_TYPE.BOUNTY_PIRATE)).toBe(true);
+        expect(ALL_KILL_TYPES.has(MISSION_TYPE.IMPERIAL_ELIMINATION)).toBe(true);
+    });
+
+    test('ALL_SABOTAGE_TYPES should include regular and faction sabotage', () => {
+        expect(ALL_SABOTAGE_TYPES.has(MISSION_TYPE.SABOTAGE)).toBe(true);
+        expect(ALL_SABOTAGE_TYPES.has(MISSION_TYPE.IMPERIAL_SABOTAGE)).toBe(true);
+    });
 });
 
 // ============================================
@@ -572,6 +605,23 @@ describe('Faction Kill Missions', () => {
 
         expect(mission.status).toBe('Completed');
         expect(player.credits).toBe(7000);
+    });
+
+    test('should check isCompletable for faction kill missions', () => {
+        const mission = new Mission({
+            id: 103,
+            title: 'Imperial Strike',
+            type: MISSION_TYPE.IMPERIAL_STRIKE,
+            targetCount: 4,
+            rewardCredits: 8000
+        });
+        mission.status = 'Active';
+        mission.progressCount = 2;
+
+        expect(mission.isCompletable()).toBe(false);
+
+        mission.progressCount = 4;
+        expect(mission.isCompletable()).toBe(true);
     });
 });
 
@@ -641,6 +691,19 @@ describe('Faction Sabotage Missions', () => {
 
         expect(mission.status).toBe('Completed');
         expect(player.credits).toBe(8000);
+    });
+
+    test('should generate backstory for faction sabotage missions', () => {
+        const mission = new Mission({
+            id: 302,
+            title: 'Military Sabotage',
+            type: MISSION_TYPE.MILITARY_SABOTAGE,
+            targetObjectType: 'Alien Artifact',
+            offeringFaction: 'Military Command'
+        });
+
+        expect(mission.description).toBeTruthy();
+        expect(mission.description.length).toBeGreaterThan(0);
     });
 });
 
@@ -787,6 +850,21 @@ describe('Mission Serialization', () => {
         expect(restored.progressCount).toBe(1);
         expect(restored.targetName).toBe('Captain Vex');
         expect(restored.targetUpgrades).toEqual(['Shadow Matrix']);
+    });
+
+    test('should serialize faction mission properties', () => {
+        const mission = new Mission({
+            id: 1000,
+            title: 'Imperial Patrol',
+            type: MISSION_TYPE.IMPERIAL_PATROL,
+            requiredFaction: 'IMPERIAL',
+            prestigeReward: 3,
+            rewardCredits: 2000
+        });
+
+        const json = mission.toJSON();
+        expect(json.requiredFaction).toBe('IMPERIAL');
+        expect(json.prestigeReward).toBe(3);
     });
 });
 
@@ -1033,6 +1111,21 @@ describe('Mission Display Logic', () => {
         const details = mission.getDetails();
         expect(details).toContain('illegal activity');
     });
+
+    test('should show progress for faction kill missions', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Imperial Elimination',
+            type: MISSION_TYPE.IMPERIAL_ELIMINATION,
+            targetCount: 3,
+            rewardCredits: 5000
+        });
+        mission.status = 'Active';
+        mission.progressCount = 1;
+
+        const summary = mission.getSummary();
+        expect(summary).toContain('(1/3)');
+    });
 });
 
 // ============================================
@@ -1148,5 +1241,379 @@ describe('Edge Cases and Boundary Conditions', () => {
 
         const summary = mission.getSummary();
         expect(summary).toContain('999999cr');
+    });
+});
+
+// ============================================
+// MissionGenerator Core Helper Tests
+// ============================================
+
+describe('MissionGenerator Core Helpers', () => {
+    test('should have getJumpDistance method', () => {
+        expect(typeof MissionGenerator.getJumpDistance).toBe('function');
+    });
+
+    test('should calculate jump distance between systems', () => {
+        const galaxy = createMockGalaxy(4);
+        const origin = galaxy.systems[0];
+        const dest = galaxy.systems[2];
+
+        const distance = MissionGenerator.getJumpDistance(origin, dest, galaxy);
+        expect(distance).toBe(2);
+    });
+
+    test('should return Infinity for invalid systems', () => {
+        const galaxy = createMockGalaxy(4);
+        const distance = MissionGenerator.getJumpDistance(null, galaxy.systems[0], galaxy);
+        expect(distance).toBe(Infinity);
+    });
+
+    test('should format jump text correctly', () => {
+        expect(MissionGenerator.formatJumpText(1)).toBe('1 jump');
+        expect(MissionGenerator.formatJumpText(3)).toBe('3 jumps');
+    });
+
+    test('should validate jump distance', () => {
+        expect(MissionGenerator.isValidJumpDistance(2)).toBe(true);
+        expect(MissionGenerator.isValidJumpDistance(0)).toBe(false);
+        expect(MissionGenerator.isValidJumpDistance(Infinity)).toBe(false);
+    });
+
+    test('should select combat ship', () => {
+        const ship = MissionGenerator.selectCombatShip();
+        expect(typeof ship).toBe('string');
+        expect(ship.length).toBeGreaterThan(0);
+    });
+
+    test('should select guard ship', () => {
+        const ship = MissionGenerator.selectGuardShip();
+        expect(typeof ship).toBe('string');
+        expect(ship.length).toBeGreaterThan(0);
+    });
+
+    test('should extract origin data', () => {
+        const system = createMockSystem({ name: 'Origin System' });
+        system.station = { name: 'Origin Station' };
+        const originData = MissionGenerator.getOriginData(system, system.station);
+
+        expect(originData.originSystem).toBe('Origin System');
+        expect(originData.originStation).toBe('Origin Station');
+    });
+
+    test('should calculate bounty reward', () => {
+        const system = createMockSystem({ techLevel: 5, securityLevel: 'Medium' });
+        const reward = MissionGenerator.calculateBountyReward(3, 300, system);
+
+        expect(reward).toBeGreaterThan(0);
+        expect(reward).toBeGreaterThanOrEqual(100);
+    });
+
+    test('should calculate faction reward with rank multiplier', () => {
+        const baseReward = 1500;
+        const reward = MissionGenerator.calculateFactionReward(baseReward, 5, 1.2, 500, 1500);
+
+        expect(reward).toBeGreaterThan(baseReward);
+    });
+});
+
+// ============================================
+// MissionGenerator Mission Creation Tests
+// ============================================
+
+describe('MissionGenerator Mission Creation', () => {
+    let system, station, galaxy, player;
+
+    beforeEach(() => {
+        galaxy = createMockGalaxy(4);
+        system = galaxy.systems[0];
+        station = system.station;
+        player = createMockPlayer();
+    });
+
+    test('should have generateMissions method', () => {
+        expect(typeof MissionGenerator.generateMissions).toBe('function');
+    });
+
+    test('should return empty array for missing arguments', () => {
+        const missions = MissionGenerator.generateMissions(null, null, null, null);
+        expect(missions).toEqual([]);
+    });
+
+    test('should create bounty mission', () => {
+        const mission = MissionGenerator.createBountyMission(system, station, galaxy, player);
+
+        expect(mission).toBeDefined();
+        expect(mission.type).toBe(MISSION_TYPE.BOUNTY_PIRATE);
+        expect(mission.targetCount).toBeGreaterThan(0);
+        expect(mission.rewardCredits).toBeGreaterThan(0);
+    });
+
+    test('should create cop killer mission', () => {
+        const mission = MissionGenerator.createCopKillerMission(system, station, galaxy, player);
+
+        expect(mission).toBeDefined();
+        expect(mission.type).toBe(MISSION_TYPE.BOUNTY_POLICE);
+        expect(mission.isIllegal).toBe(true);
+    });
+
+    test('should create alien bounty mission', () => {
+        const mission = MissionGenerator.createAlienBountyMission(system, station, galaxy, player);
+
+        expect(mission).toBeDefined();
+        expect(mission.type).toBe(MISSION_TYPE.BOUNTY_ALIEN);
+        expect(mission.isIllegal).toBe(false);
+    });
+
+    test('should create assassination mission with upgrades and mention them', () => {
+        const mission = MissionGenerator.createAssassinationMission(system, station, galaxy, player);
+
+        expect(mission).toBeDefined();
+        expect(mission.type).toBe(MISSION_TYPE.ASSASSINATION);
+        expect(mission.targetUpgrades).toBeDefined();
+        expect(Array.isArray(mission.targetUpgrades)).toBe(true);
+
+        if (mission.targetUpgrades.length > 0) {
+            // Check description mentions upgrades
+            expect(mission.description).toMatch(/Intel suggests the vessel is equipped with/);
+            // Check details mentions upgrades
+            const details = mission.getDetails();
+            expect(details).toMatch(/Estimated Upgrades:/);
+        }
+    });
+});
+
+// ============================================
+// MissionGenerator Destination Finding Tests
+// ============================================
+
+describe('MissionGenerator Destination Finding', () => {
+    test('should find nearby destination', () => {
+        const galaxy = createMockGalaxy(4);
+        const origin = galaxy.systems[0];
+
+        const dest = MissionGenerator.findNearbyDestination(origin, galaxy, true, 4);
+
+        expect(dest).not.toBeNull();
+        expect(dest.system).toBeDefined();
+    });
+
+    test('should return null for isolated system', () => {
+        const galaxy = createMockGalaxy(1);
+        galaxy.systems[0].connectedSystemIndices = [];
+
+        const dest = MissionGenerator.findNearbyDestination(galaxy.systems[0], galaxy, true, 4);
+
+        expect(dest).toBeNull();
+    });
+});
+
+// ============================================
+// MissionGenerator Faction Mission Tests
+// ============================================
+
+describe('MissionGenerator Faction Missions', () => {
+    let system, station, galaxy, player;
+
+    beforeEach(() => {
+        galaxy = createMockGalaxy(4);
+        system = galaxy.systems[0];
+        player = createMockPlayer({ playerFaction: 'IMPERIAL' });
+    });
+
+    test('should identify station faction from subtype', () => {
+        expect(MissionGenerator._getStationFaction('secret_military')).toBe('MILITARY');
+        expect(MissionGenerator._getStationFaction('secret_separatist')).toBe('SEPARATIST');
+        expect(MissionGenerator._getStationFaction('secret_imperial')).toBe('IMPERIAL');
+        expect(MissionGenerator._getStationFaction('secret_police')).toBe('POLICE');
+        expect(MissionGenerator._getStationFaction('secret_generic')).toBeNull();
+    });
+
+    test('should generate Imperial faction mission', () => {
+        station = createMockSecretStation('Imperial');
+        player.playerFaction = 'IMPERIAL';
+
+        const context = { originSystem: system, originStation: station, galaxy, player };
+        const mission = MissionGenerator._generateFactionMission('IMPERIAL', context);
+
+        expect(mission).toBeDefined();
+        expect(mission.type).toMatch(/^Imperial/);
+    });
+
+    test('should generate Separatist faction mission', () => {
+        station = createMockSecretStation('Separatist');
+        player.playerFaction = 'SEPARATIST';
+
+        const context = { originSystem: system, originStation: station, galaxy, player };
+        const mission = MissionGenerator._generateFactionMission('SEPARATIST', context);
+
+        expect(mission).toBeDefined();
+        expect(mission.type).toMatch(/^Separatist/);
+    });
+
+    test('should generate Military faction mission', () => {
+        station = createMockSecretStation('Military');
+        player.playerFaction = 'MILITARY';
+
+        const context = { originSystem: system, originStation: station, galaxy, player };
+        const mission = MissionGenerator._generateFactionMission('MILITARY', context);
+
+        expect(mission).toBeDefined();
+        expect(mission.type).toMatch(/^Military/);
+    });
+
+    test('should return empty array for non-member at secret base', () => {
+        station = createMockSecretStation('Imperial');
+        player.playerFaction = 'SEPARATIST'; // Wrong faction
+
+        const missions = MissionGenerator.generateMissions(system, station, galaxy, player);
+
+        expect(missions).toEqual([]);
+    });
+
+    test('should generate faction missions for member at secret base', () => {
+        station = createMockSecretStation('Imperial');
+        player.playerFaction = 'IMPERIAL';
+
+        const missions = MissionGenerator.generateMissions(system, station, galaxy, player);
+
+        expect(missions.length).toBeGreaterThan(0);
+        missions.forEach(m => {
+            expect(m.type).toMatch(/^Imperial/);
+        });
+    });
+
+    test('should apply rank multiplier to faction rewards', () => {
+        player.getFactionRank = () => 5; // High rank
+        station = createMockSecretStation('Imperial');
+        player.playerFaction = 'IMPERIAL';
+
+        const context = { originSystem: system, originStation: station, galaxy, player };
+        const mission = MissionGenerator._generateFactionMission('IMPERIAL', context);
+
+        expect(mission.rewardCredits).toBeGreaterThan(0);
+    });
+});
+
+// ============================================
+// MissionGenerator Probability Tests
+// ============================================
+
+describe('MissionGenerator Probability Calculations', () => {
+    test('should adjust probabilities for High security', () => {
+        const baseProbs = { legal: 0.45, bounty: 0.35, illegal: 0.15, alienBounty: 0.2, sabotage: 0.06, other: 0.05 };
+        const adjusted = MissionGenerator._applySecurityModifiers(baseProbs, 'High');
+
+        expect(adjusted.bounty).toBeLessThan(baseProbs.bounty);
+        expect(adjusted.illegal).toBeLessThan(baseProbs.illegal);
+        expect(adjusted.legal).toBeGreaterThan(baseProbs.legal);
+    });
+
+    test('should adjust probabilities for Anarchy security', () => {
+        const baseProbs = { legal: 0.45, bounty: 0.35, illegal: 0.15, alienBounty: 0.2, sabotage: 0.06, other: 0.05 };
+        const adjusted = MissionGenerator._applySecurityModifiers(baseProbs, 'Anarchy');
+
+        expect(adjusted.bounty).toBeGreaterThan(baseProbs.bounty);
+        expect(adjusted.illegal).toBeGreaterThan(baseProbs.illegal);
+        expect(adjusted.legal).toBeLessThan(baseProbs.legal);
+    });
+
+    test('should adjust probabilities for Military economy', () => {
+        const baseProbs = { legal: 0.45, bounty: 0.35, illegal: 0.15, alienBounty: 0.2, sabotage: 0.06, other: 0.05 };
+        const adjusted = MissionGenerator._applyEconomyModifiers(baseProbs, 'Military');
+
+        expect(adjusted.alienBounty).toBeGreaterThan(baseProbs.alienBounty);
+    });
+
+    test('should normalize probabilities to sum to ~1', () => {
+        const probs = { legal: 0.5, bounty: 0.3, illegal: 0.2, alienBounty: 0.1, sabotage: 0.05, other: 0.02 };
+        const normalized = MissionGenerator._normalizeProbabilities(probs);
+
+        const sum = Object.values(normalized).reduce((a, b) => a + b, 0);
+        expect(sum).toBeCloseTo(1.0, 5);
+    });
+});
+
+// ============================================
+// MissionGenerator Faction Helper Methods (DRY)
+// ============================================
+
+describe('MissionGenerator Faction Helper Methods', () => {
+    let system, station, galaxy;
+
+    beforeEach(() => {
+        galaxy = createMockGalaxy(4);
+        system = galaxy.systems[0];
+        station = { name: 'Test Station' };
+    });
+
+    test('should create faction kill mission with correct structure', () => {
+        const mission = MissionGenerator._createFactionKillMission(
+            MISSION_TYPE.IMPERIAL_ELIMINATION,
+            'Imperial Order',
+            'Separatist',
+            system, station, galaxy, 1.0,
+            { baseReward: 1500, prestigeReward: 3, targetMin: 2, targetMax: 4 }
+        );
+
+        expect(mission).toBeDefined();
+        expect(mission.type).toBe(MISSION_TYPE.IMPERIAL_ELIMINATION);
+        expect(mission.targetCount).toBeGreaterThanOrEqual(2);
+        expect(mission.targetCount).toBeLessThanOrEqual(4);
+        expect(mission.prestigeReward).toBe(3);
+    });
+
+    test('should create faction patrol mission with correct structure', () => {
+        const mission = MissionGenerator._createFactionPatrolMission(
+            MISSION_TYPE.IMPERIAL_PATROL,
+            'Imperial Patrol',
+            system, station, galaxy, 1.0,
+            { baseReward: 800, prestigeReward: 1, targetMin: 2, targetMax: 5 }
+        );
+
+        expect(mission).toBeDefined();
+        expect(mission.type).toBe(MISSION_TYPE.IMPERIAL_PATROL);
+        expect(mission.targetCount).toBeGreaterThanOrEqual(2);
+        expect(mission.prestigeReward).toBe(1);
+    });
+
+    test('should create faction strike mission with destination', () => {
+        const mission = MissionGenerator._createFactionStrikeMission(
+            MISSION_TYPE.IMPERIAL_STRIKE,
+            'Imperial Strike',
+            'rebel forces',
+            system, station, galaxy, 1.0,
+            { baseReward: 3000, prestigeReward: 4, targetMin: 3, targetMax: 6 }
+        );
+
+        expect(mission).toBeDefined();
+        expect(mission.type).toBe(MISSION_TYPE.IMPERIAL_STRIKE);
+        expect(mission.destinationSystem).toBeDefined();
+        expect(mission.prestigeReward).toBe(4);
+    });
+
+    test('should create faction sabotage mission', () => {
+        const mission = MissionGenerator._createFactionSabotageMission(
+            MISSION_TYPE.IMPERIAL_SABOTAGE,
+            'Imperial',
+            ['Comm Relay', 'Supply Depot'],
+            system, station, galaxy, 1.0,
+            { baseReward: 4000, prestigeReward: 5 }
+        );
+
+        expect(mission).toBeDefined();
+        expect(mission.targetObjectType).toBeDefined();
+        expect(mission.prestigeReward).toBe(5);
+    });
+
+    test('should create faction supply mission', () => {
+        const mission = MissionGenerator._createFactionSupplyMission(
+            MISSION_TYPE.SEPARATIST_SUPPLY,
+            system, station, galaxy, 1.0,
+            { baseReward: 600, prestigeReward: 2 }
+        );
+
+        expect(mission).toBeDefined();
+        expect(mission.cargoType).toBeDefined();
+        expect(mission.cargoQuantity).toBeGreaterThan(0);
     });
 });

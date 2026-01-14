@@ -364,36 +364,8 @@ class Enemy {
 
         // --- Apply Default Ship Upgrades (MUST be at end of constructor) ---
         // This ensures all properties are initialized before upgrades modify them
-        if (shipDef.upgrades && Array.isArray(shipDef.upgrades) && typeof SHIP_UPGRADES !== 'undefined') {
-            shipDef.upgrades.forEach(upgradeName => {
-                const upgDef = SHIP_UPGRADES.find(u => u.name === upgradeName);
-                if (upgDef) {
-                    // Apply based on type
-                    if (upgDef.type === 'armor') {
-                        this.maxHull += (upgDef.hullBonus || 0);
-                        this.hull = this.maxHull; // Heal to full
-                    } else if (upgDef.type === 'engine') {
-                        if (upgDef.speedMultiplier) {
-                            this.baseMaxSpeed *= upgDef.speedMultiplier;
-                            this.maxSpeed = this.baseMaxSpeed;
-                        }
-                        if (upgDef.thrustMultiplier) {
-                            this.baseThrust *= upgDef.thrustMultiplier;
-                            this.thrustForce = this.baseThrust;
-                        }
-                    } else if (upgDef.type === 'shield') {
-                        this.maxShield += (upgDef.shieldBonus || 0);
-                        this.shield = this.maxShield;
-                    } else if (upgDef.type === 'cloak') {
-                        this.cloakMaxDuration = upgDef.cloakDuration;
-                        this.cloakMaxCooldown = upgDef.cloakCooldown;
-                    } else if (upgDef.type === 'booster') {
-                        this.boostMultiplier = upgDef.boostMultiplier;
-                        this.boostMaxDuration = upgDef.boostDuration;
-                        this.boostMaxCooldown = upgDef.boostCooldown;
-                    }
-                }
-            });
+        if (shipDef.upgrades && Array.isArray(shipDef.upgrades)) {
+            this.applyUpgrades(shipDef.upgrades);
         }
     }
 
@@ -425,6 +397,92 @@ class Enemy {
             this.p5StrokeColor = color(this.strokeColorValue[0], this.strokeColorValue[1], this.strokeColorValue[2]);
             // console.log(` Enemy ${this.shipTypeName} Colors Initialized.`); // Optional
         } catch (e) { console.error(`Error creating colors for Enemy ${this.shipTypeName}:`, e); this.p5FillColor = color(180); this.p5StrokeColor = color(255); } // Fallbacks
+    }
+
+    /**
+     * Applies a list of ship upgrades to the enemy ship.
+     * Maps to player upgrade logic for consistency.
+     * @param {string[]} upgradeNames - Array of upgrade names to apply.
+     */
+    applyUpgrades(upgradeNames) {
+        if (!upgradeNames || !Array.isArray(upgradeNames) || typeof SHIP_UPGRADES === 'undefined') return;
+
+        upgradeNames.forEach(upgradeName => {
+            const upgDef = SHIP_UPGRADES.find(u => u.name === upgradeName);
+            if (upgDef) {
+                // Apply based on type
+                if (upgDef.type === 'armor') {
+                    this.maxHull += (upgDef.hullBonus || 0);
+                    this.hull = this.maxHull; // Heal to full
+                } else if (upgDef.type === 'engine') {
+                    // 'engine' upgrades are permanent hardware tuning for base speed
+                    if (upgDef.speedMultiplier) {
+                        this.baseMaxSpeed *= upgDef.speedMultiplier;
+                        this.maxSpeed = this.baseMaxSpeed;
+                    }
+                    if (upgDef.thrustMultiplier) {
+                        this.baseThrust *= upgDef.thrustMultiplier;
+                        this.thrustForce = this.baseThrust;
+                    }
+                } else if (upgDef.type === 'shield') {
+                    this.maxShield += (upgDef.shieldBonus || 0);
+                    this.shield = this.maxShield;
+                } else if (upgDef.type === 'cloak') {
+                    this.cloakMaxDuration = upgDef.cloakDuration;
+                    this.cloakMaxCooldown = upgDef.cloakCooldown;
+                } else if (upgDef.type === 'booster') {
+                    // 'booster' upgrades provide temporary bursts (handled in updatePhysics and activateBoost)
+                    this.boostMultiplier = upgDef.boostMultiplier;
+                    this.boostMaxDuration = upgDef.boostDuration;
+                    this.boostMaxCooldown = upgDef.boostCooldown;
+                } else if (upgDef.type === 'cargo') {
+                    if (this.cargoCapacity !== undefined) {
+                        this.cargoCapacity += (upgDef.cargoBonus || 0);
+                    }
+                } else if (upgDef.type === 'hardpoints') {
+                    // NPCs have weapon slots; fill them with random appropriate weapons
+                    const bonusCount = upgDef.bonusSlots || 0;
+                    if (bonusCount > 0 && typeof WEAPON_UPGRADES !== 'undefined' && WEAPON_UPGRADES.length > 0) {
+                        const pool = this._getWeaponPoolForRole();
+                        for (let i = 0; i < bonusCount; i++) {
+                            const weaponName = random(pool);
+                            const wDef = WEAPON_UPGRADES.find(w => w.name === weaponName);
+                            // Avoid filling slots with identical weapons if possible
+                            if (wDef && this.weapons.length < 8) {
+                                const alreadyHas = this.weapons.some(w => w.name === weaponName);
+                                // If we already have it, 60% chance to try a different pick from the pool
+                                if (alreadyHas && random() < 0.6) {
+                                    const altPick = random(pool);
+                                    const altDef = WEAPON_UPGRADES.find(w => w.name === altPick);
+                                    if (altDef) {
+                                        this.weapons.push({ ...altDef });
+                                        continue;
+                                    }
+                                }
+                                this.weapons.push({ ...wDef });
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * Helper to get a pool of appropriate weapons for this ship's role
+     * @private
+     */
+    _getWeaponPoolForRole() {
+        const isPirate = this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN;
+        const isMilitary = this.role === AI_ROLE.POLICE || this.role === AI_ROLE.GUARD || this.role === AI_ROLE.MILITARY;
+
+        if (isMilitary) {
+            return ["Beam Laser", "Twin Pulse", "Triple Pulse", "Guardian Missile", "Barrier Field", "Sniper Rail"];
+        } else if (isPirate) {
+            return ["Burst Blaster", "Multi-Cannon", "V Spread", "Loiter Munition", "Disruptor", "Basic Mine"];
+        }
+        // Default pool for generic combatants/Bounty Hunters
+        return ["Twin Pulse", "Pulse Laser", "Multi-Cannon", "Guardian Missile", "Basic Mine"];
     }
 
     // -------------------------

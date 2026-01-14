@@ -1,7 +1,11 @@
 // ****** mission.js ******
 
-// Define Mission Types using a constant object for better readability and safety
+// ═══════════════════════════════════════════════════════════════════════════
+// MISSION TYPE CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════
+
 const MISSION_TYPE = {
+    // Standard missions
     DELIVERY_LEGAL: 'Legal delivery',
     DELIVERY_ILLEGAL: 'Illegal delivery',
     BOUNTY_PIRATE: 'Pirate Bounty',
@@ -26,9 +30,20 @@ const MISSION_TYPE = {
     MILITARY_SABOTAGE: 'Military Sabotage'
 };
 
-// Type classification helpers for cleaner conditional logic
-const BOUNTY_TYPES = new Set([MISSION_TYPE.BOUNTY_PIRATE, MISSION_TYPE.BOUNTY_POLICE, MISSION_TYPE.BOUNTY_ALIEN]);
-const DELIVERY_TYPES = new Set([MISSION_TYPE.DELIVERY_LEGAL, MISSION_TYPE.DELIVERY_ILLEGAL]);
+// ═══════════════════════════════════════════════════════════════════════════
+// MISSION TYPE CLASSIFICATION SETS
+// ═══════════════════════════════════════════════════════════════════════════
+
+const BOUNTY_TYPES = new Set([
+    MISSION_TYPE.BOUNTY_PIRATE,
+    MISSION_TYPE.BOUNTY_POLICE,
+    MISSION_TYPE.BOUNTY_ALIEN
+]);
+
+const DELIVERY_TYPES = new Set([
+    MISSION_TYPE.DELIVERY_LEGAL,
+    MISSION_TYPE.DELIVERY_ILLEGAL
+]);
 
 // Faction kill-based missions (target enemies of specific factions)
 const FACTION_KILL_TYPES = new Set([
@@ -58,86 +73,105 @@ const FACTION_DELIVERY_TYPES = new Set([
     MISSION_TYPE.SEPARATIST_SUPPLY
 ]);
 
+// Combined sets for easier type checking
+const ALL_KILL_TYPES = new Set([...BOUNTY_TYPES, ...FACTION_KILL_TYPES]);
+const ALL_SABOTAGE_TYPES = new Set([MISSION_TYPE.SABOTAGE, ...FACTION_SABOTAGE_TYPES]);
+const ALL_DELIVERY_TYPES = new Set([...DELIVERY_TYPES, ...FACTION_DELIVERY_TYPES]);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MISSION CLASS
+// ═══════════════════════════════════════════════════════════════════════════
+
 class Mission {
-    // ═══════════════════════════════════════════════════════════════════════════
-    // STATIC MEMBERS
-    // ═══════════════════════════════════════════════════════════════════════════
+    // Static ID counter for unique mission identification
     static nextId = 1;
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // CONSTRUCTOR
-    // ═══════════════════════════════════════════════════════════════════════════
     /**
-     * Represents an available or active mission.
-     * @param {object} data - Configuration object OR loaded save data object.
+     * Creates a new Mission instance.
+     * @param {Object} data - Configuration object OR loaded save data.
      */
     constructor(data = {}) {
-        // Core identity
+        this._initializeCoreProperties(data);
+        this._initializeLocationData(data);
+        this._initializeTargetData(data);
+        this._initializeCargoData(data);
+        this._initializeRewardsAndConstraints(data);
+        this._initializeSabotageFields(data);
+        this._initializePersistedIds(data);
+        this._defineRuntimeRefs();
+        this._handleSpecialCases(data);
+
+        MISSION_LOG(`Mission created: ID=${this.id.toString().slice(-5)}, Title=${this.title}, Status=${this.status}`);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // INITIALIZATION METHODS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /** Initialize core identity properties */
+    _initializeCoreProperties(data) {
         this.id = data.id || Mission.nextId++;
         this.title = data.title || 'Unknown Mission';
         this.type = data.type || MISSION_TYPE.DELIVERY_LEGAL;
         this.description = data.description || '';
         this.status = data.status || 'Available';
         this.progressCount = data.progressCount || 0;
+    }
 
-        // Location data - use nullish coalescing to preserve explicit null (for "anywhere" missions)
+    /** Initialize location-related data */
+    _initializeLocationData(data) {
+        // Use nullish coalescing to preserve explicit null (for "anywhere" missions)
         this.originSystem = data.originSystem ?? 'Unknown';
         this.originStation = data.originStation ?? 'Unknown';
-        this.destinationSystem = data.destinationSystem ?? null;  // null = can complete anywhere
-        this.destinationStation = data.destinationStation ?? null;  // null = can complete at any station
+        this.destinationSystem = data.destinationSystem ?? null;
+        this.destinationStation = data.destinationStation ?? null;
         this.destinationSystemIndex = data.destinationSystemIndex;
         this.spawnSystemIndex = data.spawnSystemIndex ?? data.systemIndex ?? null;
+    }
 
-        // Target data (bounty/assassination)
+    /** Initialize target-related data (bounty/assassination) */
+    _initializeTargetData(data) {
         this.targetCount = data.targetCount || 0;
         this.targetName = data.targetName || null;
         this.targetShipType = data.targetShipType || null;
+        this.targetDesc = data.targetDesc || null;
         this.guardCount = data.guardCount || 0;
         this.guardShipType = data.guardShipType || null;
         this.canLeaveSystem = data.canLeaveSystem ?? true;
+        this.targetUpgrades = data.targetUpgrades || [];
+        this.targetUpgradeDetails = data.targetUpgradeDetails || [];
+    }
 
-        // Cargo data (delivery)
+    /** Initialize cargo-related data (delivery) */
+    _initializeCargoData(data) {
         this.cargoType = data.cargoType || null;
         this.cargoQuantity = data.cargoQuantity || 0;
+    }
 
-        // Rewards & constraints
+    /** Initialize rewards and constraints */
+    _initializeRewardsAndConstraints(data) {
         this.rewardCredits = data.rewardCredits || data.reward || 0;
-        this.prestigeReward = data.prestigeReward || 0;  // Prestige for faction missions
-        this.requiredFaction = data.requiredFaction || null;  // Faction requirement
+        this.prestigeReward = data.prestigeReward || 0;
+        this.requiredFaction = data.requiredFaction || null;
         this.isIllegal = data.isIllegal || false;
         this.requiredRep = data.requiredRep || 0;
         this.timeLimit = (typeof data.timeLimit === 'number') ? data.timeLimit : null;
         this.activatedAt = data.activatedAt || null;
+    }
 
-        // Sabotage-specific fields
+    /** Initialize sabotage-specific fields */
+    _initializeSabotageFields(data) {
         this.offeringFaction = data.offeringFaction || null;
         this.targetFaction = data.targetFaction || null;
         this.targetObjectType = data.targetObjectType || null;
         this.targetObjectId = data.targetObjectId || null;
         this.targetPlanetName = data.targetPlanetName || null;
+    }
 
-        // Assassination target upgrade data
-        this.targetUpgrades = data.targetUpgrades || [];
-        this.targetUpgradeDetails = data.targetUpgradeDetails || [];
-
-        // Persisted IDs for runtime linking
+    /** Initialize persisted IDs for runtime linking */
+    _initializePersistedIds(data) {
         this._targetEnemyId = data._targetEnemyId || null;
         this._guardIds = data._guardIds || [];
-
-        // Non-enumerable runtime references (not serialized)
-        this._defineRuntimeRefs();
-
-        // Generate sabotage backstory if needed
-        if (this.type === MISSION_TYPE.SABOTAGE) {
-            if (!data.description || data.description === 'No description provided.') {
-                this.description = this._generateSabotageBackstory();
-            }
-            if (data.rewardCredits == null) {
-                this.rewardCredits = 100000;
-            }
-        }
-
-        MISSION_LOG(`Mission created: ID=${this.id.toString().slice(-5)}, Title=${this.title}, Status=${this.status}`);
     }
 
     /** Define non-enumerable runtime reference properties */
@@ -146,15 +180,32 @@ class Mission {
             _targetEnemyRef: { value: null, writable: true, enumerable: false, configurable: true },
             _guardRefs: { value: [], writable: true, enumerable: false, configurable: true },
             _targetObjectRef: { value: null, writable: true, enumerable: false, configurable: true },
-            _nextGalaxySearchTime: { value: 0, writable: true, enumerable: false, configurable: true }
+            _nextGalaxySearchTime: { value: 0, writable: true, enumerable: false, configurable: true },
+            _lastUpdateTime: { value: 0, writable: true, enumerable: false, configurable: true }
         });
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // ACTIVATION METHODS
-    // ═══════════════════════════════════════════════════════════════════════════
+    /** Handle special initialization cases */
+    _handleSpecialCases(data) {
+        // Generate sabotage backstory if needed
+        if (ALL_SABOTAGE_TYPES.has(this.type)) {
+            if (!data.description || data.description === 'No description provided.' || data.description === '') {
+                this.description = this._generateSabotageBackstory();
+            }
+            if (data.rewardCredits == null && this.type === MISSION_TYPE.SABOTAGE) {
+                this.rewardCredits = 100000;
+            }
+        }
+    }
 
-    /** Sets the mission status to 'Active'. Called by Player.acceptMission. */
+    // ═══════════════════════════════════════════════════════════════════════
+    // ACTIVATION METHODS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Activates the mission. Called by Player.acceptMission.
+     * @returns {boolean} True if activation succeeded
+     */
     activate() {
         MISSION_LOG(`>>> Mission.activate() called for: ${this.title}`);
 
@@ -167,13 +218,19 @@ class Mission {
         this.activatedAt = Date.now();
         MISSION_LOG(`<<< Mission status set to: ${this.status}`);
 
-        // Type-specific activation
-        if (DELIVERY_TYPES.has(this.type)) {
+        // Type-specific activation using strategy pattern
+        return this._executeActivationStrategy();
+    }
+
+    /** Execute activation strategy based on mission type */
+    _executeActivationStrategy() {
+        if (ALL_DELIVERY_TYPES.has(this.type)) {
             return this._activateDelivery();
-        } else if (this.type === MISSION_TYPE.ASSASSINATION) {
+        }
+        if (this.type === MISSION_TYPE.ASSASSINATION) {
             return this._activateAssassination();
         }
-
+        // Bounty, patrol, kill, and sabotage missions don't need special activation
         return true;
     }
 
@@ -187,26 +244,26 @@ class Mission {
 
         if (availableSpace < this.cargoQuantity) {
             console.warn(`Not enough cargo space! Need ${this.cargoQuantity}t, have ${availableSpace}t`);
-            if (typeof uiManager !== 'undefined') {
-                uiManager.addMessage(`Insufficient cargo space! Need ${this.cargoQuantity}t, have ${availableSpace}t available`, [255, 100, 100]);
-            }
+            this._notifyPlayer(`Insufficient cargo space! Need ${this.cargoQuantity}t, have ${availableSpace}t available`, [255, 100, 100]);
             this.status = 'Available';
             return false;
         }
 
-        // Add cargo to player
-        const existingItem = player.cargo.find(item => item.name === this.cargoType);
+        this._addCargoToPlayer(player);
+        return true;
+    }
+
+    /** Add cargo to player's hold */
+    _addCargoToPlayer(playerRef) {
+        const existingItem = playerRef.cargo.find(item => item.name === this.cargoType);
         if (existingItem) {
             existingItem.quantity += this.cargoQuantity;
         } else {
-            player.cargo.push({ name: this.cargoType, quantity: this.cargoQuantity });
+            playerRef.cargo.push({ name: this.cargoType, quantity: this.cargoQuantity });
         }
 
         MISSION_LOG(`Added ${this.cargoQuantity}t ${this.cargoType} to player cargo`);
-        if (typeof uiManager !== 'undefined') {
-            uiManager.addMessage(`Loaded ${this.cargoQuantity}t ${this.cargoType} into cargo hold`);
-        }
-        return true;
+        this._notifyPlayer(`Loaded ${this.cargoQuantity}t ${this.cargoType} into cargo hold`);
     }
 
     /** Handle assassination mission target spawning */
@@ -215,35 +272,57 @@ class Mission {
         if (this._targetEnemyRef) return true; // Already spawned
 
         const sys = player.currentSystem;
-        const angle = random(TWO_PI);
-        const spawnDist = (sys._getDiagonalDistance?.() || 500) + random(150, 400);
-        const spawnX = player.pos.x + cos(angle) * spawnDist;
-        const spawnY = player.pos.y + sin(angle) * spawnDist;
+        const spawnData = this._calculateSpawnPosition(sys);
 
         // Spawn main target
-        const shipType = this.targetShipType ||
-            (typeof PIRATE_SHIP_TYPES !== 'undefined' ? random(PIRATE_SHIP_TYPES) : 'Krait');
-        const role = AI_ROLE?.COMBAT ?? 'COMBAT';
-
-        const newEnemy = new Enemy(spawnX, spawnY, player, shipType, role);
-        newEnemy.calculateRadianProperties?.();
-        newEnemy.initializeColors?.();
-        if (this.targetName) newEnemy.displayName = this.targetName;
-        newEnemy.isAssassinationTarget = true;
-        sys.addEnemy(newEnemy);
+        const newEnemy = this._spawnAssassinationTarget(spawnData, sys);
+        if (!newEnemy) return true;
 
         // Spawn guards
-        this._spawnGuards(newEnemy, sys, angle, spawnDist);
+        this._spawnGuards(newEnemy, sys, spawnData.angle, spawnData.distance);
 
         // Store references
         this._targetEnemyRef = newEnemy;
         this._targetEnemyId = newEnemy.id;
 
-        MISSION_LOG(`Assassination target spawned: ${newEnemy.displayName || newEnemy.shipTypeName} at (${spawnX.toFixed(0)},${spawnY.toFixed(0)})`);
-        if (typeof uiManager !== 'undefined') {
-            uiManager.addMessage(`Target spotted: ${newEnemy.displayName || newEnemy.shipTypeName}`);
-        }
+        MISSION_LOG(`Assassination target spawned: ${newEnemy.displayName || newEnemy.shipTypeName}`);
+        this._notifyPlayer(`Target spotted: ${newEnemy.displayName || newEnemy.shipTypeName}`);
         return true;
+    }
+
+    /** Calculate spawn position for assassination target */
+    _calculateSpawnPosition(system) {
+        const angle = random(TWO_PI);
+        const baseDist = system._getDiagonalDistance?.() || 500;
+        const distance = baseDist + random(150, 400);
+        return {
+            angle,
+            distance,
+            x: player.pos.x + cos(angle) * distance,
+            y: player.pos.y + sin(angle) * distance
+        };
+    }
+
+    /** Spawn the main assassination target */
+    _spawnAssassinationTarget(spawnData, system) {
+        const shipType = this.targetShipType ||
+            (typeof PIRATE_SHIP_TYPES !== 'undefined' ? random(PIRATE_SHIP_TYPES) : 'Krait');
+        const role = AI_ROLE?.COMBAT ?? 'COMBAT';
+
+        const newEnemy = new Enemy(spawnData.x, spawnData.y, player, shipType, role);
+        newEnemy.calculateRadianProperties?.();
+        newEnemy.initializeColors?.();
+        if (this.targetName) newEnemy.displayName = this.targetName;
+        newEnemy.isAssassinationTarget = true;
+
+        // Apply mission-specific upgrades
+        if (this.targetUpgrades && Array.isArray(this.targetUpgrades)) {
+            newEnemy.applyUpgrades?.(this.targetUpgrades);
+        }
+
+        system.addEnemy(newEnemy);
+
+        return newEnemy;
     }
 
     /** Spawn guard NPCs around the assassination target */
@@ -254,63 +333,82 @@ class Mission {
         MISSION_LOG(`Spawning ${guardCount} guards for assassination mission.`);
 
         for (let g = 0; g < guardCount; g++) {
-            const gAngle = baseAngle + (TWO_PI * (g + 1) / (guardCount + 1)) + random(-0.25, 0.25);
-            const gDist = baseDist * 0.4 + random(80, 220);
-            const gx = target.pos.x + cos(gAngle) * gDist;
-            const gy = target.pos.y + sin(gAngle) * gDist;
-
-            const gShip = this.guardShipType ||
-                (COMBAT_SHIPS?.length > 0 ? random(COMBAT_SHIPS) :
-                    (typeof PIRATE_SHIP_TYPES !== 'undefined' ? random(PIRATE_SHIP_TYPES) : 'Krait'));
-
-            const guardRole = AI_ROLE?.GUARD ?? 'GUARD';
-            const guardNPC = new Enemy(gx, gy, player, gShip, guardRole);
-            guardNPC.calculateRadianProperties?.();
-            guardNPC.initializeColors?.();
-            guardNPC.displayName = "Escort";
-            guardNPC.isAssassinationGuard = true;
-            guardNPC.principal = target;
-
-            try {
-                guardNPC.guardFormationOffset = createVector(cos(gAngle) * (80 + g * 30), sin(gAngle) * (80 + g * 30));
-            } catch (e) { /* createVector may be unavailable */ }
-
+            const guardData = this._calculateGuardPosition(g, guardCount, target, baseAngle, baseDist);
+            const guardNPC = this._createGuardNPC(guardData, target);
             sys.addEnemy(guardNPC);
             this._guardRefs.push(guardNPC);
             this._guardIds.push(guardNPC.id);
-
-            MISSION_LOG(`  -> Spawned guard: ${guardNPC.shipTypeName} at (${gx.toFixed(0)},${gy.toFixed(0)})`);
+            MISSION_LOG(`  -> Spawned guard: ${guardNPC.shipTypeName}`);
         }
 
         MISSION_LOG(`Spawned ${guardCount} guards successfully.`);
-        if (typeof uiManager !== 'undefined') {
-            uiManager.addMessage(`${guardCount} escort(s) detected around the target.`);
-        }
+        this._notifyPlayer(`${guardCount} escort(s) detected around the target.`);
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // UPDATE & MONITORING
-    // ═══════════════════════════════════════════════════════════════════════════
+    /** Calculate guard spawn position */
+    _calculateGuardPosition(index, totalGuards, target, baseAngle, baseDist) {
+        const gAngle = baseAngle + (TWO_PI * (index + 1) / (totalGuards + 1)) + random(-0.25, 0.25);
+        const gDist = baseDist * 0.4 + random(80, 220);
+        return {
+            x: target.pos.x + cos(gAngle) * gDist,
+            y: target.pos.y + sin(gAngle) * gDist,
+            angle: gAngle,
+            index
+        };
+    }
 
-    /** 
-     * Throttled update called from Player.update to monitor special mission targets. 
-     * Only performs expensive checks once per second instead of every frame.
+    /** Create a guard NPC */
+    _createGuardNPC(guardData, target) {
+        const gShip = this.guardShipType ||
+            (typeof COMBAT_SHIPS !== 'undefined' && COMBAT_SHIPS.length > 0 ? random(COMBAT_SHIPS) :
+                (typeof PIRATE_SHIP_TYPES !== 'undefined' ? random(PIRATE_SHIP_TYPES) : 'Krait'));
+
+        const guardRole = AI_ROLE?.GUARD ?? 'GUARD';
+        const guardNPC = new Enemy(guardData.x, guardData.y, player, gShip, guardRole);
+        guardNPC.calculateRadianProperties?.();
+        guardNPC.initializeColors?.();
+        guardNPC.displayName = "Escort";
+        guardNPC.isAssassinationGuard = true;
+        guardNPC.principal = target;
+
+        try {
+            guardNPC.guardFormationOffset = createVector(
+                cos(guardData.angle) * (80 + guardData.index * 30),
+                sin(guardData.angle) * (80 + guardData.index * 30)
+            );
+        } catch (e) { /* createVector may be unavailable */ }
+
+        return guardNPC;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // UPDATE & MONITORING
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Throttled update called from Player.update to monitor mission state.
+     * @param {Object} currentSystem - The current star system
      */
     update(currentSystem) {
         if (this.status !== 'Active') return;
 
-        // Throttle updates to once per second (1000ms) - mission state rarely changes faster
+        // Throttle updates to once per second (1000ms)
         const now = (typeof millis === 'function') ? millis() : Date.now();
         if (this._lastUpdateTime && (now - this._lastUpdateTime) < 1000) return;
         this._lastUpdateTime = now;
 
         this._ensureRuntimeLinked(currentSystem);
+        this._executeUpdateStrategy(currentSystem);
+    }
 
+    /** Execute update strategy based on mission type */
+    _executeUpdateStrategy(currentSystem) {
         if (this.type === MISSION_TYPE.ASSASSINATION) {
             this._updateAssassination(currentSystem);
-        } else if (this.type === MISSION_TYPE.SABOTAGE) {
+        } else if (ALL_SABOTAGE_TYPES.has(this.type)) {
             this._updateSabotage(currentSystem);
         }
+        // Kill/bounty/patrol missions are tracked via event handlers, not polling
     }
 
     /** Monitor assassination target state */
@@ -319,21 +417,28 @@ class Mission {
         if (!enemy) return;
 
         if (enemy.destroyed) {
-            if (typeof player !== 'undefined' && player?.activeMission === this) {
-                this.progressCount = Math.max(1, this.progressCount);
-                this.complete(player);
-                this._cleanupAssassinationRuntime(currentSystem);
-                if (player.activeMission === this) player.activeMission = null;
-            }
+            this._handleAssassinationComplete(currentSystem);
             return;
         }
 
-        // Check if target left the system
+        this._checkTargetLeftSystem(enemy, currentSystem);
+    }
+
+    /** Handle assassination mission completion */
+    _handleAssassinationComplete(currentSystem) {
+        if (typeof player === 'undefined' || player?.activeMission !== this) return;
+
+        this.progressCount = Math.max(1, this.progressCount);
+        this.complete(player);
+        this._cleanupAssassinationRuntime(currentSystem);
+        if (player.activeMission === this) player.activeMission = null;
+    }
+
+    /** Check if assassination target left the system */
+    _checkTargetLeftSystem(enemy, currentSystem) {
         if (enemy.currentSystem && currentSystem && enemy.currentSystem !== currentSystem) {
             this.fail();
-            if (typeof uiManager !== 'undefined') {
-                uiManager.addMessage(`Mission canceled: target ${enemy.displayName || enemy.shipTypeName} left the system.`, [255, 120, 80]);
-            }
+            this._notifyPlayer(`Mission canceled: target ${enemy.displayName || enemy.shipTypeName} left the system.`, [255, 120, 80]);
             this._cleanupAssassinationRuntime(currentSystem);
             if (typeof player !== 'undefined' && player?.activeMission === this) {
                 player.activeMission = null;
@@ -343,43 +448,39 @@ class Mission {
 
     /** Monitor sabotage target state */
     _updateSabotage(currentSystem) {
-        // Try to link target object if needed
-        if (!this._targetObjectRef && this.targetObjectId && currentSystem?.spaceObjects) {
-            const so = currentSystem.spaceObjects.find(o => o?.id === this.targetObjectId);
-            if (so) this._targetObjectRef = so;
-        }
+        this._linkSabotageTarget(currentSystem);
 
         const targetObj = this._targetObjectRef;
-
-        // Check if target is destroyed
         if (targetObj?.destroyed) {
-            if (typeof player !== 'undefined' && player) {
-                this.complete(player);
-                this._targetObjectRef = null;
-                if (player.activeMission === this) player.activeMission = null;
-            }
+            this._handleSabotageComplete();
             return;
         }
 
         // Galaxy-wide search for target if not found locally
         if (!targetObj && this.targetObjectId) {
             const foundObj = this._searchGalaxyForTarget();
-            if (foundObj === true) return; // Mission completed (object was destroyed)
-            if (foundObj) {
-                this._targetObjectRef = foundObj;
-            }
+            if (foundObj === true) return; // Mission completed
+            if (foundObj) this._targetObjectRef = foundObj;
         }
     }
 
-    /** Search galaxy for sabotage target object. Returns object, true if completed, or null. */
+    /** Handle sabotage mission completion */
+    _handleSabotageComplete() {
+        if (typeof player === 'undefined' || !player) return;
+
+        this.complete(player);
+        this._targetObjectRef = null;
+        if (player.activeMission === this) player.activeMission = null;
+    }
+
+    /** Search galaxy for sabotage target object */
     _searchGalaxyForTarget() {
         if (typeof galaxy === 'undefined' || !Array.isArray(galaxy.systems)) return null;
 
-        // Early exit: Don't scan all systems if we know the target is in a specific system
-        // and the player is not there. Only do full galaxy scan when player reaches target system.
+        // Only scan when player is in target system
         if (typeof this.spawnSystemIndex === 'number' &&
             typeof player !== 'undefined' && player?.currentSystem?.index !== this.spawnSystemIndex) {
-            return null; // Not in target system, skip expensive galaxy-wide search
+            return null;
         }
 
         for (const sys of galaxy.systems) {
@@ -387,9 +488,7 @@ class Mission {
             const so = sys.spaceObjects.find(o => o?.id === this.targetObjectId);
             if (so) {
                 if (so.destroyed) {
-                    this.complete(player);
-                    this._targetObjectRef = null;
-                    if (player?.activeMission === this) player.activeMission = null;
+                    this._handleSabotageComplete();
                     return true;
                 }
                 return so;
@@ -397,17 +496,15 @@ class Mission {
         }
 
         // Object not found anywhere - assume destroyed
-        this.complete(player);
-        this._targetObjectRef = null;
-        if (player?.activeMission === this) player.activeMission = null;
+        this._handleSabotageComplete();
         return true;
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
     // RUNTIME LINKING
-    // ═══════════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
 
-    /** Link runtime enemy and guard objects from saved IDs. Safe to call frequently. */
+    /** Link runtime references from saved IDs */
     _ensureRuntimeLinked(currentSystem) {
         if (!currentSystem) return;
 
@@ -416,22 +513,20 @@ class Mission {
         this._linkSabotageTarget(currentSystem);
     }
 
-    /** Link assassination target enemy reference - uses O(1) Map lookup */
+    /** Link assassination target enemy reference */
     _linkTargetEnemy(currentSystem) {
         if (this._targetEnemyRef || !this._targetEnemyId) return;
 
-        // Use O(1) Map lookup if available, fallback to O(n) array search
         const found = currentSystem.enemiesById?.get(this._targetEnemyId)
             || currentSystem.enemies?.find(e => e?.id === this._targetEnemyId);
         if (found) this._targetEnemyRef = found;
     }
 
-    /** Link guard enemy references - uses O(1) Map lookup */
+    /** Link guard enemy references */
     _linkGuards(currentSystem) {
         if (!this._guardIds?.length || this._guardRefs?.length > 0) return;
 
         for (const gid of this._guardIds) {
-            // Use O(1) Map lookup if available, fallback to O(n) array search
             const guard = currentSystem.enemiesById?.get(gid)
                 || currentSystem.enemies?.find(e => e?.id === gid);
             if (guard) {
@@ -447,7 +542,6 @@ class Mission {
     _linkSabotageTarget(currentSystem) {
         if (this._targetObjectRef || !this.targetObjectId) return;
 
-        // Ensure remote system has spawned objects if needed
         this._ensureRemoteSystemSpawned();
 
         // Search current system first
@@ -459,11 +553,10 @@ class Mission {
             }
         }
 
-        // Throttled galaxy-wide search
         this._throttledGalaxySearch();
 
         // Fallback for sabotage missions
-        if (this.type === MISSION_TYPE.SABOTAGE && !this._targetObjectRef) {
+        if (ALL_SABOTAGE_TYPES.has(this.type) && !this._targetObjectRef) {
             this._sabotageTargetFallback(currentSystem);
         }
     }
@@ -502,7 +595,6 @@ class Mission {
 
     /** Sabotage mission fallback: try proximity match or create new target */
     _sabotageTargetFallback(currentSystem) {
-        // Ensure objects are spawned
         if (typeof currentSystem.spawnSpaceObjectsForPlanets === 'function') {
             try { currentSystem.spawnSpaceObjectsForPlanets(); } catch (e) { /* ignore */ }
         }
@@ -516,10 +608,7 @@ class Mission {
             }
         }
 
-        // Try proximity match
         if (this._tryProximityMatch(currentSystem)) return;
-
-        // Last resort: create mission-specific object
         this._createMissionTarget(currentSystem);
     }
 
@@ -566,21 +655,8 @@ class Mission {
         if (typeof currentSystem.index !== 'number') return;
         if (currentSystem.index !== this.spawnSystemIndex && currentSystem.index !== this.destinationSystemIndex) return;
 
-        // Determine spawn position
-        let sx = 0, sy = 0;
-        const planet = currentSystem.planets?.find(p => p?.name === this.targetPlanetName);
-
-        if (typeof player !== 'undefined' && player?.pos) {
-            const angle = (typeof random === 'function') ? random(TWO_PI) : (Math.random() * Math.PI * 2);
-            const dist = 600 + Math.max(planet?.size || 0, 200, 800);
-            sx = player.pos.x + Math.cos(angle) * dist;
-            sy = player.pos.y + Math.sin(angle) * dist;
-        } else if (planet?.pos) {
-            sx = planet.pos.x + 800;
-            sy = planet.pos.y + 120;
-        }
-
-        const soNew = new SpaceObject(sx, sy, this.targetObjectType || 'satellite');
+        const spawnPos = this._calculateMissionTargetPosition(currentSystem);
+        const soNew = new SpaceObject(spawnPos.x, spawnPos.y, this.targetObjectType || 'satellite');
         soNew.isMissionSpecific = true;
         currentSystem.spaceObjects = currentSystem.spaceObjects || [];
         currentSystem.spaceObjects.push(soNew);
@@ -588,18 +664,33 @@ class Mission {
         this.targetObjectId = soNew.id;
         this._targetObjectRef = soNew;
 
-        if (typeof uiManager !== 'undefined') {
-            uiManager.addMessage('Mission target established for sabotage operation.');
-        }
+        this._notifyPlayer('Mission target established for sabotage operation.');
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
+    /** Calculate position for mission-created target */
+    _calculateMissionTargetPosition(currentSystem) {
+        const planet = currentSystem.planets?.find(p => p?.name === this.targetPlanetName);
+
+        if (typeof player !== 'undefined' && player?.pos) {
+            const angle = (typeof random === 'function') ? random(TWO_PI) : (Math.random() * Math.PI * 2);
+            const dist = 600 + Math.max(planet?.size || 0, 200, 800);
+            return {
+                x: player.pos.x + Math.cos(angle) * dist,
+                y: player.pos.y + Math.sin(angle) * dist
+            };
+        } else if (planet?.pos) {
+            return { x: planet.pos.x + 800, y: planet.pos.y + 120 };
+        }
+        return { x: 0, y: 0 };
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // COMPLETION & FAILURE
-    // ═══════════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
 
     /**
-     * Marks the mission as completed, adds reward to player.
-     * @param {Player} playerRef - Reference to the player object.
+     * Marks the mission as completed and grants rewards.
+     * @param {Player} playerRef - Reference to the player object
      */
     complete(playerRef) {
         MISSION_LOG(`Mission.complete() called for: ${this.title}`);
@@ -613,18 +704,13 @@ class Mission {
         playerRef.addCredits(this.rewardCredits);
         this.status = 'Completed';
 
-        // Record completion
         this._recordCompletion(playerRef);
-
-        // Generate news
         this._generateCompletionNews(playerRef);
 
-        // Apply illegal consequences
         if (this.isIllegal) {
             this._applyIllegalConsequences(playerRef);
         }
 
-        // Cleanup
         this._cleanupAssassinationRuntime(playerRef.currentSystem);
     }
 
@@ -654,16 +740,24 @@ class Mission {
         try {
             if (this.type === MISSION_TYPE.ASSASSINATION) {
                 GameGlobals.newsManager.addAssassinationNews(this.targetName, systemName);
-            } else if (this.type === MISSION_TYPE.SABOTAGE) {
+            } else if (ALL_SABOTAGE_TYPES.has(this.type)) {
                 GameGlobals.newsManager.addSabotageNews(this.targetObjectType, this.targetPlanetName, systemName);
-            } else if (BOUNTY_TYPES.has(this.type)) {
-                const bountyType = this.type === MISSION_TYPE.BOUNTY_PIRATE ? 'pirate' :
-                    this.type === MISSION_TYPE.BOUNTY_POLICE ? 'police' : 'alien';
+            } else if (ALL_KILL_TYPES.has(this.type)) {
+                const bountyType = this._getBountyTypeForNews();
                 GameGlobals.newsManager.addBountyNews(bountyType, this.targetCount || this.progressCount || 1, systemName);
             }
         } catch (e) {
             MISSION_LOG('Error generating news:', e);
         }
+    }
+
+    /** Get bounty type string for news generation */
+    _getBountyTypeForNews() {
+        if (this.type === MISSION_TYPE.BOUNTY_PIRATE) return 'pirate';
+        if (this.type === MISSION_TYPE.BOUNTY_POLICE) return 'police';
+        if (this.type === MISSION_TYPE.BOUNTY_ALIEN || this.type === MISSION_TYPE.MILITARY_EXTERMINATION) return 'alien';
+        if (FACTION_KILL_TYPES.has(this.type)) return 'faction';
+        return 'hostile';
     }
 
     /** Apply consequences for completing illegal missions */
@@ -678,17 +772,14 @@ class Mission {
 
         if (playerRef.currentSystem?.setPlayerWanted) {
             playerRef.currentSystem.setPlayerWanted(true, wantedLevel, 60);
-            if (typeof uiManager !== 'undefined') {
-                uiManager.addMessage('WANTED: Authorities alerted by this assassination!', '#ff4444');
-            }
+            this._notifyPlayer('WANTED: Authorities alerted by this assassination!', '#ff4444');
         } else {
             playerRef.isWanted = true;
-            if (typeof uiManager !== 'undefined') {
-                uiManager.addMessage('WANTED: Authorities alerted!', '#ff4444');
-            }
+            this._notifyPlayer('WANTED: Authorities alerted!', '#ff4444');
         }
     }
 
+    /** Mark mission as failed */
     fail() {
         MISSION_LOG(`Mission Failed: ${this.title}`);
         this.status = 'Failed';
@@ -697,7 +788,7 @@ class Mission {
 
     /**
      * Abandons the mission.
-     * @param {Player} playerRef - Reference to the player object.
+     * @param {Player} playerRef - Reference to the player object
      */
     abandon(playerRef) {
         MISSION_LOG(`Mission Abandoned: ${this.title}`);
@@ -708,14 +799,11 @@ class Mission {
             playerRef.activeMission = null;
         }
 
-        if (typeof uiManager !== 'undefined') {
-            uiManager.addMessage(`Mission Abandoned: ${this.title}`, [200, 200, 200]);
-        }
+        this._notifyPlayer(`Mission Abandoned: ${this.title}`, [200, 200, 200]);
     }
 
     /** Cleanup runtime references for assassination mission */
     _cleanupAssassinationRuntime(currentSystem) {
-        // Clear guard principals
         if (Array.isArray(this._guardRefs)) {
             for (const guard of this._guardRefs) {
                 if (guard) {
@@ -725,20 +813,19 @@ class Mission {
             }
         }
 
-        // Reset runtime refs
         this._targetEnemyRef = null;
         this._guardRefs = [];
         this._targetEnemyId = null;
         this._guardIds = [];
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
     // PROGRESS TRACKING
-    // ═══════════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
 
     /**
      * Updates the progress of the mission.
-     * @param {number} amount - Amount to increment progress by (default 1).
+     * @param {number} amount - Amount to increment progress by (default 1)
      */
     updateProgress(amount = 1) {
         if (this.status !== 'Active') return;
@@ -747,73 +834,91 @@ class Mission {
 
         if (this.targetCount > 0 && this.progressCount >= this.targetCount) {
             this.status = 'Completable';
-            if (typeof uiManager !== 'undefined') {
-                uiManager.addMessage(`Mission Objective Updated: ${this.progressCount}/${this.targetCount}`);
-            }
+            this._notifyPlayer(`Mission Objective Updated: ${this.progressCount}/${this.targetCount}`);
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
+    /**
+     * Check if mission is completable (target reached for kill missions, or cargo delivered)
+     * @returns {boolean}
+     */
+    isCompletable() {
+        if (ALL_KILL_TYPES.has(this.type) || FACTION_PATROL_TYPES.has(this.type)) {
+            return this.progressCount >= this.targetCount;
+        }
+        return this.status === 'Completable' || this.status === 'Active';
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // DISPLAY METHODS
-    // ═══════════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
 
-    /** Returns a short summary string for display on the mission board list. */
+    /** Returns a short summary string for mission board list */
     getSummary() {
-        let statusPrefix = '';
-        if (this.status === 'Completed') statusPrefix = '[COMPLETED] ';
-        else if (this.status === 'Failed') statusPrefix = '[FAILED] ';
-
-        // Progress info for active bounty missions
-        let progressInfo = '';
-        if (this.status === 'Active' && BOUNTY_TYPES.has(this.type) && this.progressCount > 0) {
-            progressInfo = ` (${this.progressCount}/${this.targetCount})`;
-        }
-
-        // Reward string with optional prestige
-        let rewardStr = `${this.rewardCredits}cr`;
-        if (this.prestigeReward && this.prestigeReward > 0) {
-            rewardStr += ` +${this.prestigeReward}★`;
-        }
+        const statusPrefix = this._getStatusPrefix();
+        const progressInfo = this._getProgressSuffix();
+        const rewardStr = this._formatRewardString();
 
         return `${statusPrefix}${this.title}${progressInfo} - ${rewardStr}`;
     }
 
-    /** Returns a detailed multi-line string for the mission details panel. */
-    getDetails() {
-        let details = `Title: ${this.title}\n--------------------\n`;
-        details += `Status: ${this.status}\n\n`;
-        details += `Type: ${this.type}\n`;
-        details += `Origin: ${this.originStation} (${this.originSystem})\n`;
-        details += `Location: ${this._getLocationString()}\n`;
-        details += this._getObjectiveString();
-        details += this._getRewardString();
-        details += this._getDescriptionString();
-        details += this._getSupplementalDetails();
-        details += this._getWarningsAndMeta();
-        details += this._getProgressString();
+    _getStatusPrefix() {
+        if (this.status === 'Completed') return '[COMPLETED] ';
+        if (this.status === 'Failed') return '[FAILED] ';
+        return '';
+    }
 
-        return details;
+    _getProgressSuffix() {
+        if (this.status === 'Active' && ALL_KILL_TYPES.has(this.type) && this.progressCount > 0) {
+            return ` (${this.progressCount}/${this.targetCount})`;
+        }
+        return '';
+    }
+
+    _formatRewardString() {
+        let rewardStr = `${this.rewardCredits}cr`;
+        if (this.prestigeReward && this.prestigeReward > 0) {
+            rewardStr += ` +${this.prestigeReward}★`;
+        }
+        return rewardStr;
+    }
+
+    /** Returns a detailed multi-line string for the mission details panel */
+    getDetails() {
+        return [
+            `Title: ${this.title}`,
+            '--------------------',
+            `Status: ${this.status}`,
+            '',
+            `Type: ${this.type}`,
+            `Origin: ${this.originStation} (${this.originSystem})`,
+            `Location: ${this._getLocationString()}`,
+            this._getObjectiveString(),
+            this._getRewardString(),
+            this._getDescriptionString(),
+            this._getSupplementalDetails(),
+            this._getWarningsAndMeta(),
+            this._getProgressString()
+        ].filter(Boolean).join('\n');
     }
 
     /** Get location string for details */
     _getLocationString() {
         // Sabotage missions - show planet/system location
-        if (this.type === MISSION_TYPE.SABOTAGE || FACTION_SABOTAGE_TYPES?.has(this.type)) {
+        if (ALL_SABOTAGE_TYPES.has(this.type)) {
             if (this.targetPlanetName) return `Near ${this.targetPlanetName} in ${this.destinationSystem || 'the target system'}`;
             if (this.destinationSystem) return this.destinationSystem;
             return 'Target system specified in mission';
         }
 
         // Strike missions - require specific system
-        if (this.type === MISSION_TYPE.IMPERIAL_STRIKE ||
-            this.type === MISSION_TYPE.SEPARATIST_STRIKE ||
-            this.type === MISSION_TYPE.MILITARY_STRIKE) {
+        if (this._isStrikeMission()) {
             if (this.destinationSystem) return `Target: ${this.destinationSystem}`;
             return 'Designated strike zone';
         }
 
         // Delivery/Supply missions - need station and system
-        if (DELIVERY_TYPES?.has(this.type) || FACTION_DELIVERY_TYPES?.has(this.type)) {
+        if (ALL_DELIVERY_TYPES.has(this.type)) {
             if (this.destinationSystem && this.destinationStation) {
                 return `${this.destinationStation} (${this.destinationSystem})`;
             }
@@ -822,17 +927,13 @@ class Mission {
         }
 
         // Bounty/Elimination/Raid/Defense/Patrol - can complete anywhere
-        if (BOUNTY_TYPES?.has(this.type) ||
-            FACTION_KILL_TYPES?.has(this.type) ||
-            FACTION_PATROL_TYPES?.has(this.type)) {
+        if (ALL_KILL_TYPES.has(this.type) || FACTION_PATROL_TYPES.has(this.type)) {
             return 'Any System';
         }
 
         // Assassination - target spawns in destination system or local space
         if (this.type === MISSION_TYPE.ASSASSINATION) {
-            if (this.destinationSystem) {
-                return `Target Location: ${this.destinationSystem}`;
-            }
+            if (this.destinationSystem) return `Target Location: ${this.destinationSystem}`;
             return 'Target will appear in local space';
         }
 
@@ -844,39 +945,37 @@ class Mission {
         return 'N/A';
     }
 
+    _isStrikeMission() {
+        return this.type === MISSION_TYPE.IMPERIAL_STRIKE ||
+            this.type === MISSION_TYPE.SEPARATIST_STRIKE ||
+            this.type === MISSION_TYPE.MILITARY_STRIKE;
+    }
+
     /** Get objective string for details */
     _getObjectiveString() {
-        // All delivery missions (legal, illegal, and faction supply)
-        const isDeliveryType = DELIVERY_TYPES.has(this.type) || FACTION_DELIVERY_TYPES?.has(this.type);
-        if (isDeliveryType && this.cargoType) {
-            return `Objective: Deliver ${this.cargoQuantity}t ${this.cargoType}\n`;
+        if (ALL_DELIVERY_TYPES.has(this.type) && this.cargoType) {
+            return `Objective: Deliver ${this.cargoQuantity}t ${this.cargoType}`;
         }
 
-        // Bounty missions (pirates, police, aliens) and faction kill missions
-        const isKillType = BOUNTY_TYPES.has(this.type) || FACTION_KILL_TYPES?.has(this.type);
-        if (isKillType) {
-            if (this.targetDesc) return `Objective: ${this.targetDesc}\n`;
-            if (this.targetCount) return `Objective: Destroy ${this.targetCount} enemy vessels\n`;
+        if (ALL_KILL_TYPES.has(this.type)) {
+            if (this.targetDesc) return `Objective: ${this.targetDesc}`;
+            if (this.targetCount) return `Objective: Destroy ${this.targetCount} enemy vessels`;
         }
 
-        // Faction patrol missions (scan/defense)
-        if (FACTION_PATROL_TYPES?.has(this.type)) {
-            if (this.targetDesc) return `Objective: ${this.targetDesc}\n`;
-            if (this.targetCount) return `Objective: Neutralize ${this.targetCount} hostiles\n`;
+        if (FACTION_PATROL_TYPES.has(this.type)) {
+            if (this.targetDesc) return `Objective: ${this.targetDesc}`;
+            if (this.targetCount) return `Objective: Neutralize ${this.targetCount} hostiles`;
         }
 
-        // All sabotage missions (regular and faction)
-        const isSabotageType = this.type === MISSION_TYPE.SABOTAGE || FACTION_SABOTAGE_TYPES?.has(this.type);
-        if (isSabotageType) {
-            if (this.targetObjectType) return `Objective: Destroy ${this.targetObjectType}\n`;
-            return `Objective: Sabotage enemy infrastructure\n`;
+        if (ALL_SABOTAGE_TYPES.has(this.type)) {
+            if (this.targetObjectType) return `Objective: Destroy ${this.targetObjectType}`;
+            return `Objective: Sabotage enemy infrastructure`;
         }
 
-        // Assassination
         if (this.type === MISSION_TYPE.ASSASSINATION) {
             return this.targetName ?
-                `Objective: Eliminate ${this.targetName}\n` :
-                `Objective: Eliminate designated target\n`;
+                `Objective: Eliminate ${this.targetName}` :
+                `Objective: Eliminate designated target`;
         }
 
         return '';
@@ -884,73 +983,73 @@ class Mission {
 
     /** Get reward string for details */
     _getRewardString() {
-        const label = this.type === MISSION_TYPE.SABOTAGE ? 'Reward (High)' : 'Reward';
+        const label = ALL_SABOTAGE_TYPES.has(this.type) ? 'Reward (High)' : 'Reward';
         let rewardStr = `${label}: ${this.rewardCredits} Credits`;
 
-        // Add prestige reward for faction missions
         if (this.prestigeReward && this.prestigeReward > 0) {
             rewardStr += ` + ${this.prestigeReward} Prestige`;
         }
 
-        return rewardStr + '\n';
+        return rewardStr;
     }
 
     /** Get description string for details */
     _getDescriptionString() {
         if (!this.description) return '';
-        const suffix = this.type === MISSION_TYPE.SABOTAGE ? '\n' : '\n\n';
-        return `\n${this.description}${suffix}`;
+        return `\n${this.description}`;
     }
 
     /** Get supplemental details based on mission type */
     _getSupplementalDetails() {
-        let details = '';
+        const details = [];
 
         if (this.type === MISSION_TYPE.ASSASSINATION) {
-            if (this.targetName) details += `Named Target: ${this.targetName}\n`;
-            if (this.targetShipType) details += `Target Ship: ${this.targetShipType}\n`;
+            if (this.targetName) details.push(`Named Target: ${this.targetName}`);
+            if (this.targetShipType) details.push(`Target Ship: ${this.targetShipType}`);
+            if (this.targetUpgrades && this.targetUpgrades.length > 0) {
+                details.push(`Estimated Upgrades: ${this.targetUpgrades.join(', ')}`);
+            }
         }
 
-        if (this.type === MISSION_TYPE.SABOTAGE) {
-            if (this.offeringFaction) details += `Offered By: ${this.offeringFaction}\n`;
-            if (this.targetFaction) details += `Target Faction: ${this.targetFaction}\n`;
+        if (ALL_SABOTAGE_TYPES.has(this.type)) {
+            if (this.offeringFaction) details.push(`Offered By: ${this.offeringFaction}`);
+            if (this.targetFaction) details.push(`Target Faction: ${this.targetFaction}`);
         }
 
         // Cargo info for non-delivery missions
-        if (this.cargoType && !DELIVERY_TYPES.has(this.type)) {
-            details += `Cargo: ${this.cargoQuantity}t ${this.cargoType}\n`;
+        if (this.cargoType && !ALL_DELIVERY_TYPES.has(this.type)) {
+            details.push(`Cargo: ${this.cargoQuantity}t ${this.cargoType}`);
         }
 
-        return details;
+        return details.length > 0 ? '\n' + details.join('\n') : '';
     }
 
     /** Get warnings and meta information */
     _getWarningsAndMeta() {
-        let details = '';
-        if (this.isIllegal) details += `\n!! This mission involves illegal activity.\n`;
-        if (this.timeLimit) details += `Time Limit: ${this.timeLimit} seconds\n`;
-        if (this.requiredRep) details += `Requires Reputation: ${this.requiredRep}\n`;
-        return details;
+        const warnings = [];
+        if (this.isIllegal) warnings.push(`!! This mission involves illegal activity.`);
+        if (this.timeLimit) warnings.push(`Time Limit: ${this.timeLimit} seconds`);
+        if (this.requiredRep) warnings.push(`Requires Reputation: ${this.requiredRep}`);
+        return warnings.length > 0 ? '\n' + warnings.join('\n') : '';
     }
 
     /** Get progress string for bounty missions */
     _getProgressString() {
-        if (BOUNTY_TYPES.has(this.type) && this.progressCount > 0) {
-            return `Progress: ${this.progressCount}/${this.targetCount}\n`;
+        if (ALL_KILL_TYPES.has(this.type) && this.progressCount > 0) {
+            return `\nProgress: ${this.progressCount}/${this.targetCount}`;
         }
         return '';
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
     // BACKSTORY GENERATION
-    // ═══════════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
 
-    /** Generate a flavorful backstory for sabotage missions. */
+    /** Generate a flavorful backstory for sabotage missions */
     _generateSabotageBackstory() {
         const offer = this.offeringFaction || 'A local faction';
         const target = this._deriveSabotageTargetFaction(offer);
         const obj = this.targetObjectType || 'strategic installation';
-        const planet = this.targetPlanetName ? `close to ${this.targetPlanetName}` : 'in orbit of a nearby planet';
 
         return this._getSabotageReason(offer.toLowerCase(), offer, target, obj);
     }
@@ -994,29 +1093,45 @@ class Mission {
         return `Intelligence suggests the ${obj} is a critical node for ${target}. Removing it would significantly weaken their presence in the region.`;
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // SERIALIZATION
-    // ═══════════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
+    // UTILITY METHODS
+    // ═══════════════════════════════════════════════════════════════════════
 
-    /** Serializes the mission to a JSON-compatible object. */
+    /** Notify player via UI manager if available */
+    _notifyPlayer(message, color) {
+        if (typeof uiManager !== 'undefined' && uiManager?.addMessage) {
+            uiManager.addMessage(message, color);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SERIALIZATION
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /** Serializes the mission to a JSON-compatible object */
     toJSON() {
         return {
             id: this.id,
             title: this.title,
             type: this.type,
             description: this.description,
+            status: this.status,
+            progressCount: this.progressCount,
             originSystem: this.originSystem,
             originStation: this.originStation,
             destinationSystem: this.destinationSystem,
             destinationStation: this.destinationStation,
             destinationSystemIndex: this.destinationSystemIndex,
+            spawnSystemIndex: this.spawnSystemIndex,
             targetCount: this.targetCount,
             targetName: this.targetName,
             targetShipType: this.targetShipType,
+            targetDesc: this.targetDesc,
             targetUpgrades: this.targetUpgrades,
             targetUpgradeDetails: this.targetUpgradeDetails,
             guardCount: this.guardCount,
             guardShipType: this.guardShipType,
+            canLeaveSystem: this.canLeaveSystem,
             cargoType: this.cargoType,
             cargoQuantity: this.cargoQuantity,
             rewardCredits: this.rewardCredits,
@@ -1026,31 +1141,30 @@ class Mission {
             requiredRep: this.requiredRep,
             timeLimit: this.timeLimit,
             activatedAt: this.activatedAt,
-            canLeaveSystem: this.canLeaveSystem,
-            _targetEnemyId: this._targetEnemyId,
-            _guardIds: this._guardIds,
             offeringFaction: this.offeringFaction,
             targetFaction: this.targetFaction,
             targetObjectType: this.targetObjectType,
             targetObjectId: this.targetObjectId,
             targetPlanetName: this.targetPlanetName,
-            spawnSystemIndex: this.spawnSystemIndex,
-            status: this.status,
-            progressCount: this.progressCount
+            _targetEnemyId: this._targetEnemyId,
+            _guardIds: this._guardIds
         };
     }
 
     /**
      * Creates a new Mission instance from a JSON object.
-     * @param {Object} json - The JSON object to deserialize.
-     * @returns {Mission} The rehydrated Mission object.
+     * @param {Object} json - The JSON object to deserialize
+     * @returns {Mission} The rehydrated Mission object
      */
     static fromJSON(json) {
         return new Mission(json);
     }
-} // End of Mission Class
+}
 
-// Export for module systems
+// ═══════════════════════════════════════════════════════════════════════════
+// MODULE EXPORTS
+// ═══════════════════════════════════════════════════════════════════════════
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         Mission,
@@ -1060,7 +1174,10 @@ if (typeof module !== 'undefined' && module.exports) {
         FACTION_KILL_TYPES,
         FACTION_PATROL_TYPES,
         FACTION_SABOTAGE_TYPES,
-        FACTION_DELIVERY_TYPES
+        FACTION_DELIVERY_TYPES,
+        ALL_KILL_TYPES,
+        ALL_SABOTAGE_TYPES,
+        ALL_DELIVERY_TYPES
     };
     global.Mission = Mission;
     global.MISSION_TYPE = MISSION_TYPE;
@@ -1070,4 +1187,7 @@ if (typeof module !== 'undefined' && module.exports) {
     global.FACTION_PATROL_TYPES = FACTION_PATROL_TYPES;
     global.FACTION_SABOTAGE_TYPES = FACTION_SABOTAGE_TYPES;
     global.FACTION_DELIVERY_TYPES = FACTION_DELIVERY_TYPES;
+    global.ALL_KILL_TYPES = ALL_KILL_TYPES;
+    global.ALL_SABOTAGE_TYPES = ALL_SABOTAGE_TYPES;
+    global.ALL_DELIVERY_TYPES = ALL_DELIVERY_TYPES;
 }
