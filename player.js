@@ -206,11 +206,12 @@ class Player {
         this.maxWeapons = this.weaponSlots;
         this.weaponIndex = 0;
         this.weaponHeat = {};
+        this.weaponCooldowns = []; // Per-weapon cooldown timers
         this.currentWeapon = (typeof WEAPON_UPGRADES !== 'undefined')
             ? (WEAPON_UPGRADES.find(w => w.name === "Pulse Laser") || WEAPON_UPGRADES[0])
             : null;
         this.fireRate = this.currentWeapon?.fireRate || 0.5;
-        this.fireCooldown = 0;
+        this.fireCooldown = 0; // Legacy/Global cooldown (mostly unused now, kept for safety)
 
         // Targeting
         this.target = null;
@@ -852,15 +853,26 @@ class Player {
         if (this.weaponSlots !== totalSlots) {
             this.maxWeapons = totalSlots; // Sync maxWeapons with totalSlots for UI compatibility
             this.weaponSlots = totalSlots;
-            // Resize weapons array if needed
-            if (this.weapons.length < totalSlots) {
-                // Expand
-                while (this.weapons.length < totalSlots) {
-                    this.weapons.push(null);
-                }
+
+            // Resize weapons array
+            while (this.weapons.length < totalSlots) {
+                this.weapons.push(null);
+            }
+
+            // Resize cooldowns array
+            if (!this.weaponCooldowns) this.weaponCooldowns = [];
+            while (this.weaponCooldowns.length < totalSlots) {
+                this.weaponCooldowns.push(0);
             }
             // Note: We don't truncate on downgrade here to avoid deleting items accidentally.
-            // If we wanted to enforce strict limits on downgrade, we'd need complex logic to decide what to drop.
+        }
+
+        // Ensure cooldown array matches weapon count (safety check)
+        if (!this.weaponCooldowns) this.weaponCooldowns = [];
+        if (this.weaponCooldowns.length < this.weapons.length) {
+            while (this.weaponCooldowns.length < this.weapons.length) {
+                this.weaponCooldowns.push(0);
+            }
         }
 
         // 5. Shield Upgrades
@@ -1083,9 +1095,10 @@ class Player {
         this.weaponIndex = index;
         this.currentWeapon = weapon;
         this.fireRate = weapon.fireRate || 0.5;
-        // EXPLOIT FIX: Preserve existing cooldown when switching weapons
-        // This prevents bypassing fire rate by rapidly switching weapons
-        // The cooldown remains from the previous weapon to prevent instant firing
+
+        // Note: We do NOT reset or carry over fireCooldown here.
+        // Each weapon slot tracks its own cooldown in this.weaponCooldowns.
+        // The fireWeapon() method will check the specific cooldown for this slot.
 
         // Check if switching to an overheated beam and notify player
         if (weapon.type === WEAPON_TYPE.BEAM && typeof WeaponSystem !== 'undefined') {
@@ -1107,9 +1120,9 @@ class Player {
 
     /** Handles mouse click for firing attempt. */
     handleFireInput() {
-        if (this.fireCooldown <= 0) {
-            this.fireWeapon();
-        }
+        // Per-weapon cooldown checks are handled inside fireWeapon()
+        // Don't block at this level with global cooldown - let fireWeapon() decide based on current weapon
+        this.fireWeapon();
     }
 
     // =========================================================================
@@ -1178,6 +1191,16 @@ class Player {
         // 5) Cooldowns & angle wrap (optimized)
         if (this.fireCooldown > 0) {
             this.fireCooldown -= deltaTime * 0.001;
+        }
+
+        // Update per-weapon cooldowns
+        if (this.weaponCooldowns && this.weaponCooldowns.length > 0) {
+            const dtSec = deltaTime * 0.001;
+            for (let i = 0; i < this.weaponCooldowns.length; i++) {
+                if (this.weaponCooldowns[i] > 0) {
+                    this.weaponCooldowns[i] -= dtSec;
+                }
+            }
         }
         // Normalize angle using cached TWO_PI
         const twoPi = this._TWO_PI || TWO_PI;
@@ -1344,12 +1367,19 @@ class Player {
 
         // Barrier Activation
         if (this.currentWeapon.type === WEAPON_TYPE.BARRIER) {
-            if (this.fireCooldown <= 0) { // Check cooldown for barrier itself
+            // Barrier uses its own separate timer logic usually, but let's respect slot cooldown too
+            const currentCooldown = this.weaponCooldowns[this.weaponIndex] || 0;
+            if (currentCooldown <= 0) { // Check cooldown for barrier itself
                 this.isBarrierActive = true;
                 this.barrierDamageReduction = this.currentWeapon.damageReduction;
                 this.barrierDurationTimer = this.currentWeapon.duration;
                 this.barrierColor = this.currentWeapon.color;
-                this.fireCooldown = this.computeCooldown(this.currentWeapon.fireRate); // Set cooldown for the barrier
+
+                // Set cooldown for THIS specific weapon slot (not global fireCooldown)
+                // This matches enemy behavior and prevents blocking other weapons
+                const cooldownTime = this.computeCooldown(this.currentWeapon.fireRate);
+                this.weaponCooldowns[this.weaponIndex] = cooldownTime;
+
                 if (typeof uiManager !== 'undefined') {
                     uiManager.addMessage("Barrier Activated!", this.barrierColor, 2000);
                 }
@@ -1381,9 +1411,20 @@ class Player {
         // For turrets, WeaponSystem.fireTurret handles its own aiming if no target is passed.
         // If a target is passed (effectiveTarget), it will be used.
 
+        // Check weapon slot cooldown (except Barriers which handle it above)
+        if (this.currentWeapon.type !== WEAPON_TYPE.BARRIER) {
+            const cd = (this.weaponCooldowns && this.weaponCooldowns[this.weaponIndex]) || 0;
+            if (cd > 0) return false;
+        }
+
         const fired = WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, effectiveTarget);
         if (fired) {
-            this.fireCooldown = this.computeCooldown(this.fireRate);
+            // Set cooldown for THIS specific weapon slot
+            const cooldownTime = this.computeCooldown(this.fireRate);
+            this.weaponCooldowns[this.weaponIndex] = cooldownTime;
+
+            // Keep legacy fireCooldown for backward compat (e.g. barriers or external checks)
+            this.fireCooldown = cooldownTime;
 
             // Firing breaks cloak
             if (this.isCloaked) {

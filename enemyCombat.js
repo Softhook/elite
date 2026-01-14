@@ -599,6 +599,15 @@ class EnemyCombat {
     fireWeapon(preferredAngle = null, targetToPass = null) {
         if (!this.currentWeapon || !this.currentSystem) return;
 
+        // Determine current weapon index for cooldown management
+        const weaponIdx = (this.weapons && this.weapons.indexOf(this.currentWeapon)) > -1
+            ? this.weapons.indexOf(this.currentWeapon)
+            : 0;
+
+        // Check specific weapon cooldown
+        const currentCooldown = (this.weaponCooldowns && this.weaponCooldowns[weaponIdx]) || 0;
+        if (currentCooldown > 0) return; // Weapon is cooling down
+
         // Barrier Activation: Check cooldown first, similar to player
         if (this.currentWeapon.type === WEAPON_TYPE.BARRIER) {
             if (this.barrierCooldown <= 0) {
@@ -666,7 +675,10 @@ class EnemyCombat {
         if (weaponType === WEAPON_TYPE.MINE) {
             const firedMine = WeaponSystem.fire(this, this.currentSystem, fireAngle, this.currentWeapon.type, targetToPass);
             if (firedMine) {
-                this.fireCooldown = this.computeCooldown(this.fireRate); // General weapon fire cooldown
+                // Set cooldown for THIS specific weapon slot
+                const cd = this.computeCooldown(this.fireRate);
+                if (this.weaponCooldowns) this.weaponCooldowns[weaponIdx] = cd;
+                this.fireCooldown = cd;
             }
 
             // Immediately switch to a different weapon after dropping mine
@@ -741,7 +753,10 @@ class EnemyCombat {
 
         const fired = WeaponSystem.fire(this, this.currentSystem, fireAngle, weaponType, targetToPass);
         if (fired) {
-            this.fireCooldown = this.computeCooldown(this.fireRate); // General weapon fire cooldown
+            // Set cooldown for THIS specific weapon slot
+            const cd = this.computeCooldown(this.fireRate);
+            if (this.weaponCooldowns) this.weaponCooldowns[weaponIdx] = cd;
+            this.fireCooldown = cd;
         } else if (weaponType === WEAPON_TYPE.BEAM && typeof WeaponSystem !== 'undefined' &&
             WeaponSystem.isBeamOverheated(this, this.currentWeapon)) {
             this._switchWeaponAfterBeamOverheat();

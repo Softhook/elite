@@ -177,12 +177,16 @@ class Enemy {
         this.weapons = [];
         this.currentWeapon = null;
         this.fireRate = 0;
+        this.weaponCooldowns = []; // Per-weapon cooldown timers
 
         const intendedArmament = Array.isArray(shipDef.armament) ? shipDef.armament : [];
         if (intendedArmament.length > 0 && typeof WEAPON_UPGRADES !== 'undefined' && WEAPON_UPGRADES.length > 0) {
             for (let weaponName of intendedArmament) {
                 const weaponDef = WEAPON_UPGRADES.find(w => w.name === weaponName);
-                if (weaponDef) this.weapons.push(weaponDef);
+                if (weaponDef) {
+                    this.weapons.push(weaponDef);
+                    this.weaponCooldowns.push(0); // Initialize cooldown for this weapon
+                }
             }
         }
 
@@ -204,6 +208,7 @@ class Enemy {
                     desc: "Fallback weapon."
                 };
                 this.weapons = [this.currentWeapon];
+                this.weaponCooldowns = [0];
                 this.fireRate = this.currentWeapon.fireRate;
                 if (typeof uiManager !== 'undefined' && uiManager?.addMessage) {
                     uiManager.addMessage(`Arming ${this.shipTypeName} with fallback weapon due to missing defs`);
@@ -577,10 +582,21 @@ class Enemy {
             this.attackCooldown -= deltaSeconds;
         }
 
-        // Process target switch cooldown
+        // Update target switch cooldown
         if (this.targetSwitchCooldown > 0) {
             this.targetSwitchCooldown -= deltaSeconds;
         }
+
+        // Update per-weapon cooldowns independently
+        if (this.weaponCooldowns && this.weaponCooldowns.length > 0) {
+            for (let i = 0; i < this.weaponCooldowns.length; i++) {
+                if (this.weaponCooldowns[i] > 0) {
+                    this.weaponCooldowns[i] -= deltaSeconds;
+                }
+            }
+        }
+
+        // Process guard engagement lock timer
 
         // Process guard engagement lock timer
         if (this.guardEngagementLock > 0) {

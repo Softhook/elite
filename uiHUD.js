@@ -619,8 +619,12 @@ class UIHUD {
                             ? [255, 120, 40, 230]
                             : [255, 200, 80, 200];
                     }
-                } else if (player.fireCooldown > 0 && player.fireRate > 0) {
-                    indicatorRatio = constrain(map(player.fireCooldown, player.fireRate, 0, 0, 1), 0, 1);
+                } else {
+                    // Use per-weapon cooldown for accurate status
+                    const weaponCooldown = (player.weaponCooldowns && player.weaponCooldowns[index]) || 0;
+                    if (weaponCooldown > 0 && player.fireRate > 0) {
+                        indicatorRatio = constrain(map(weaponCooldown, player.fireRate, 0, 0, 1), 0, 1);
+                    }
                 }
 
                 if (indicatorRatio > 0) {
