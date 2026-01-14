@@ -1579,7 +1579,7 @@ class Player {
         // Per-frame mission monitoring (ensure mission logic runs each update)
         if (this.activeMission && typeof this.activeMission.update === 'function') {
             try {
-                this.activeMission.update(this.currentSystem);
+                this.activeMission.update(this.currentSystem, this);
             } catch (e) {
                 console.error('Error during mission update:', e);
             }

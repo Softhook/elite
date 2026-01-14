@@ -388,8 +388,9 @@ class Mission {
     /**
      * Throttled update called from Player.update to monitor mission state.
      * @param {Object} currentSystem - The current star system
+     * @param {Object} [playerRef] - Reference to the player (defaults to global player if omitted)
      */
-    update(currentSystem) {
+    update(currentSystem, playerRef) {
         if (this.status !== 'Active') return;
 
         // Throttle updates to once per second (1000ms)
@@ -397,16 +398,18 @@ class Mission {
         if (this._lastUpdateTime && (now - this._lastUpdateTime) < 1000) return;
         this._lastUpdateTime = now;
 
+        const pRef = playerRef || (typeof player !== 'undefined' ? player : null);
+
         this._ensureRuntimeLinked(currentSystem);
-        this._executeUpdateStrategy(currentSystem);
+        this._executeUpdateStrategy(currentSystem, pRef);
     }
 
     /** Execute update strategy based on mission type */
-    _executeUpdateStrategy(currentSystem) {
+    _executeUpdateStrategy(currentSystem, playerRef) {
         if (this.type === MISSION_TYPE.ASSASSINATION) {
             this._updateAssassination(currentSystem);
         } else if (ALL_SABOTAGE_TYPES.has(this.type)) {
-            this._updateSabotage(currentSystem);
+            this._updateSabotage(currentSystem, playerRef);
         }
         // Kill/bounty/patrol missions are tracked via event handlers, not polling
     }
@@ -447,48 +450,55 @@ class Mission {
     }
 
     /** Monitor sabotage target state */
-    _updateSabotage(currentSystem) {
+    _updateSabotage(currentSystem, playerRef) {
         this._linkSabotageTarget(currentSystem);
 
         const targetObj = this._targetObjectRef;
         if (targetObj?.destroyed) {
-            this._handleSabotageComplete();
+            this._handleSabotageComplete(playerRef);
             return;
         }
 
         // Galaxy-wide search for target if not found locally
         if (!targetObj && this.targetObjectId) {
-            const foundObj = this._searchGalaxyForTarget();
+            const foundObj = this._searchGalaxyForTarget(playerRef);
             if (foundObj === true) return; // Mission completed
             if (foundObj) this._targetObjectRef = foundObj;
         }
     }
 
     /** Handle sabotage mission completion */
-    _handleSabotageComplete() {
-        if (typeof player === 'undefined' || !player) return;
+    _handleSabotageComplete(playerRef) {
+        const p = playerRef || (typeof player !== 'undefined' ? player : null);
+        if (!p) return;
 
-        this.complete(player);
+        this.complete(p);
         this._targetObjectRef = null;
-        if (player.activeMission === this) player.activeMission = null;
+        if (p.activeMission === this) p.activeMission = null;
     }
 
     /** Search galaxy for sabotage target object */
-    _searchGalaxyForTarget() {
-        if (typeof galaxy === 'undefined' || !Array.isArray(galaxy.systems)) return null;
+    _searchGalaxyForTarget(playerRef) {
+        // Use global galaxy or GameGlobals.galaxy
+        const gal = (typeof galaxy !== 'undefined' ? galaxy : null) ||
+            (typeof GameGlobals !== 'undefined' ? GameGlobals.galaxy : null);
+
+        if (!gal || !Array.isArray(gal.systems)) return null;
+
+        const p = playerRef || (typeof player !== 'undefined' ? player : null);
 
         // Only scan when player is in target system
         if (typeof this.spawnSystemIndex === 'number' &&
-            typeof player !== 'undefined' && player?.currentSystem?.index !== this.spawnSystemIndex) {
+            p && p.currentSystem?.index !== this.spawnSystemIndex) {
             return null;
         }
 
-        for (const sys of galaxy.systems) {
+        for (const sys of gal.systems) {
             if (!sys?.spaceObjects) continue;
             const so = sys.spaceObjects.find(o => o?.id === this.targetObjectId);
             if (so) {
                 if (so.destroyed) {
-                    this._handleSabotageComplete();
+                    this._handleSabotageComplete(p);
                     return true;
                 }
                 return so;
@@ -496,7 +506,7 @@ class Mission {
         }
 
         // Object not found anywhere - assume destroyed
-        this._handleSabotageComplete();
+        this._handleSabotageComplete(p);
         return true;
     }
 

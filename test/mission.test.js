@@ -1380,6 +1380,17 @@ describe('MissionGenerator Mission Creation', () => {
             expect(details).toMatch(/Estimated Upgrades:/);
         }
     });
+
+    test('should create standard sabotage mission', () => {
+        const mission = MissionGenerator.createSabotageMission(system, station, galaxy, player);
+
+        expect(mission).toBeDefined();
+        expect(mission.type).toBe(MISSION_TYPE.SABOTAGE);
+        expect(mission.targetObjectId).toBeDefined();
+        expect(mission.destinationSystem).toBeDefined();
+        // Should have backstory generated
+        expect(mission.description).toBeTruthy();
+    });
 });
 
 // ============================================
@@ -1615,5 +1626,92 @@ describe('MissionGenerator Faction Helper Methods', () => {
         expect(mission).toBeDefined();
         expect(mission.cargoType).toBeDefined();
         expect(mission.cargoQuantity).toBeGreaterThan(0);
+    });
+});
+
+// ============================================
+// Mission Completion Logic (Advanced)
+// ============================================
+
+describe('Mission Completion Logic (Advanced)', () => {
+    let player, system, galaxy;
+
+    beforeEach(() => {
+        player = createMockPlayer();
+        global.player = player;
+
+        galaxy = createMockGalaxy(4);
+        global.galaxy = galaxy;
+        system = galaxy.systems[0];
+    });
+
+    afterEach(() => {
+        delete global.player;
+        delete global.galaxy;
+    });
+
+    test('should auto-complete sabotage mission when target object is destroyed', () => {
+        const mission = new Mission({
+            id: 801,
+            title: 'Sabotage Reactor',
+            type: MISSION_TYPE.SABOTAGE,
+            targetObjectId: 'reactor_123',
+            rewardCredits: 5000
+        });
+        mission.status = 'Active';
+
+        // Mock target object in system
+        const reactor = { id: 'reactor_123', destroyed: false };
+        system.spaceObjects = [reactor];
+
+        // First update: Object exists, not destroyed
+        mission.update(system);
+        expect(mission.status).toBe('Active');
+
+        // Destroy object
+        reactor.destroyed = true;
+
+        // Second update: Object destroyed -> Mission should complete
+        // Force update by bypassing throttle
+        mission._lastUpdateTime = 0;
+        mission.update(system);
+
+        expect(mission.status).toBe('Completed');
+        expect(player.credits).toBe(10000); // 5000 initial + 5000 reward
+    });
+
+    test('should detect valid kill mission completion state', () => {
+        const mission = new Mission({
+            id: 802,
+            title: 'Kill Pirates',
+            type: MISSION_TYPE.BOUNTY_PIRATE,
+            targetCount: 5
+        });
+        mission.status = 'Active';
+        mission.progressCount = 4;
+
+        expect(mission.isCompletable()).toBe(false);
+
+        mission.updateProgress(1); // progress -> 5
+        expect(mission.isCompletable()).toBe(true);
+    });
+
+    test('should auto-complete sabotage if target not found (assumed destroyed)', () => {
+        const mission = new Mission({
+            id: 803,
+            title: 'Destroy Missing Target',
+            type: MISSION_TYPE.SABOTAGE,
+            targetObjectId: 'ghost_target',
+            rewardCredits: 3000
+        });
+        mission.status = 'Active';
+        mission.destinationSystemIndex = system.index;
+        system.spaceObjects = []; // Empty system
+
+        // Force update
+        mission._lastUpdateTime = 0;
+        mission.update(system);
+
+        expect(mission.status).toBe('Completed');
     });
 });

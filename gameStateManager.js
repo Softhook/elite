@@ -781,7 +781,7 @@ class GameStateManager {
                     // but do NOT run full player.update() which could process damage/death
                     if (player.activeMission && typeof player.activeMission.update === 'function') {
                         try {
-                            player.activeMission.update(currentSystem);
+                            player.activeMission.update(currentSystem, player);
                         } catch (e) {
                             console.error('Error updating mission while docked:', e);
                         }
