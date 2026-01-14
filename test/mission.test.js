@@ -1126,6 +1126,21 @@ describe('Mission Display Logic', () => {
         const summary = mission.getSummary();
         expect(summary).toContain('(1/3)');
     });
+
+    test('should include progress in details for multi-target missions', () => {
+        const mission = new Mission({
+            id: 2,
+            title: 'Pirate Hunt',
+            type: MISSION_TYPE.BOUNTY_PIRATE,
+            targetCount: 5,
+            rewardCredits: 1000
+        });
+        mission.status = 'Active';
+        mission.progressCount = 2;
+
+        const details = mission.getDetails();
+        expect(details).toContain('Progress: 2/5');
+    });
 });
 
 // ============================================

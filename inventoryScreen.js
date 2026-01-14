@@ -229,6 +229,30 @@ class InventoryScreen {
         rightY += rowH - 4;
       }
 
+      // Show progress for multi-target missions
+      const m = player.activeMission;
+      const killTypes = ['Pirate Bounty', 'Police Bounty', 'Alien Bounty', 'Imperial Elimination', 'Imperial Strike', 'Separatist Raid', 'Separatist Strike', 'Military Extermination', 'Military Strike'];
+      const patrolTypes = ['Imperial Patrol', 'Military Defense'];
+      const targetTypes = [...killTypes, ...patrolTypes];
+
+      if (targetTypes.includes(m.type) && m.targetCount > 0) {
+        fill(150, 255, 150);
+        text(`Progress: ${m.progressCount}/${m.targetCount}`, rightColX + 10, rightY);
+        rightY += rowH - 4;
+      }
+
+      // Show progress for Sabotage missions
+      if (m.type === 'Sabotage' || m.type === 'Imperial Sabotage' || m.type === 'Separatist Sabotage' || m.type === 'Military Sabotage') {
+        if (m.status === 'Completable' || m.progressCount >= 1) {
+          fill(100, 255, 100);
+          text(`Objective: DESTROYED`, rightColX + 10, rightY);
+        } else {
+          fill(255, 150, 150);
+          text(`Objective: Active`, rightColX + 10, rightY);
+        }
+        rightY += rowH - 4;
+      }
+
       if (player.activeMission.rewardCredits) {
         fill(255, 220, 100);
         text(`Reward: ${player.activeMission.rewardCredits.toLocaleString()} CR`, rightColX + 10, rightY);

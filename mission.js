@@ -879,7 +879,9 @@ class Mission {
     }
 
     _getProgressSuffix() {
-        if (this.status === 'Active' && ALL_KILL_TYPES.has(this.type) && this.progressCount > 0) {
+        if (this.status === 'Active' &&
+            (ALL_KILL_TYPES.has(this.type) || FACTION_PATROL_TYPES.has(this.type)) &&
+            this.targetCount > 0) {
             return ` (${this.progressCount}/${this.targetCount})`;
         }
         return '';
@@ -1043,9 +1045,9 @@ class Mission {
         return warnings.length > 0 ? '\n' + warnings.join('\n') : '';
     }
 
-    /** Get progress string for bounty missions */
+    /** Get progress string for bounty/patrol missions */
     _getProgressString() {
-        if (ALL_KILL_TYPES.has(this.type) && this.progressCount > 0) {
+        if ((ALL_KILL_TYPES.has(this.type) || FACTION_PATROL_TYPES.has(this.type)) && this.targetCount > 0) {
             return `\nProgress: ${this.progressCount}/${this.targetCount}`;
         }
         return '';
