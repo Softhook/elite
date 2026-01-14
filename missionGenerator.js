@@ -43,6 +43,75 @@ const ECONOMY_IMPORTS = {
 
 class MissionGenerator {
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DRY HELPER METHODS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /** Calculate jump distance between two systems safely */
+    static getJumpDistance(originSystem, destSystem, galaxy) {
+        const originIndex = originSystem?.systemIndex;
+        const destIndex = destSystem?.systemIndex;
+        if (typeof originIndex !== 'number' || typeof destIndex !== 'number') return Infinity;
+        try {
+            return galaxy.getJumpDistance(originIndex, destIndex);
+        } catch (e) {
+            console.error("Error calculating jump distance:", e);
+            return Infinity;
+        }
+    }
+
+    /** Format jump distance as human-readable string */
+    static formatJumpText(jumpDistance) {
+        return jumpDistance === 1 ? "1 jump" : `${jumpDistance} jumps`;
+    }
+
+    /** Get cargo base value from station market */
+    static getCargoValue(station, cargoName, fallback = 50) {
+        const cargoData = station?.market?.commodities?.find(c => c.name === cargoName);
+        return cargoData?.baseSell || fallback;
+    }
+
+    /** Select combat ship type with fallbacks */
+    static selectCombatShip() {
+        if (typeof COMBAT_SHIPS !== 'undefined' && COMBAT_SHIPS.length > 0) return random(COMBAT_SHIPS);
+        if (typeof PIRATE_SHIP_TYPES !== 'undefined' && PIRATE_SHIP_TYPES.length > 0) return random(PIRATE_SHIP_TYPES);
+        return 'Krait';
+    }
+
+    /** Select guard/escort ship type with fallbacks */
+    static selectGuardShip() {
+        if (typeof POLICE_SHIPS !== 'undefined' && POLICE_SHIPS.length > 0) return random(POLICE_SHIPS);
+        if (typeof COMBAT_SHIPS !== 'undefined' && COMBAT_SHIPS.length > 0) return random(COMBAT_SHIPS);
+        if (typeof PIRATE_SHIP_TYPES !== 'undefined') return random(PIRATE_SHIP_TYPES);
+        return 'Krait';
+    }
+
+    /** Extract common origin data from system/station */
+    static getOriginData(originSystem, originStation) {
+        return {
+            originSystem: originSystem.name,
+            originStation: originStation.name
+        };
+    }
+
+    /** Calculate bounty-style reward with tech/security modifiers */
+    static calculateBountyReward(targetCount, basePerTarget, originSystem, randomMin = 50, randomMax = 300) {
+        const techBonus = (originSystem.techLevel || 5) * 10;
+        const securityMod = originSystem.securityLevel === 'High' ? -50 :
+            originSystem.securityLevel === 'Anarchy' ? 100 : 0;
+        const reward = targetCount * basePerTarget + techBonus + securityMod + floor(random(randomMin, randomMax));
+        return Math.max(100, Math.floor(reward));
+    }
+
+    /** Validate jump distance is usable */
+    static isValidJumpDistance(jumpDistance) {
+        return isFinite(jumpDistance) && jumpDistance > 0;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MISSION GENERATION
+    // ═══════════════════════════════════════════════════════════════════════════
+
     // ... (generateMissions function remains the same) ...
     static generateMissions(currentSystem, currentStation, galaxy, player) {
         let availableMissions = [];
@@ -387,33 +456,20 @@ class MissionGenerator {
 
         let quantity = floor(random(5, 16)); // Keep quantity range the same for now
 
-        // --- Calculate Jumps Bonus (remains the same) ---
-        let jumpDistance = Infinity;
-        const jumpRewardFactor = 250; // Base reward per jump
-        const originIndex = originSystem?.systemIndex;
-        const destinationIndex = destinationInfo.system?.systemIndex;
-        if (typeof originIndex === 'number' && typeof destinationIndex === 'number') {
-            try { jumpDistance = galaxy.getJumpDistance(originIndex, destinationIndex); }
-            catch (e) { console.error("Err getJumpDistance:", e); jumpDistance = Infinity; }
-        }
-        if (!isFinite(jumpDistance) || jumpDistance <= 0) return null; // Skip if unreachable
+        // Calculate jump distance using helper
+        const jumpDistance = this.getJumpDistance(originSystem, destinationInfo.system, galaxy);
+        if (!this.isValidJumpDistance(jumpDistance)) return null;
 
-        // --- Calculate Reward (ensure integer) ---
-        // Find the base price of the cargo to add a value bonus
-        const market = originStation?.market;
-        const cargoData = market?.commodities?.find(c => c.name === cargo);
-        const baseCargoValue = cargoData?.baseSell || 50; // Fallback value
+        // Calculate reward: base + jump bonus + cargo value bonus + random
+        const baseCargoValue = this.getCargoValue(originStation, cargo, 50);
+        const reward = Math.floor(
+            100 +
+            jumpDistance * 250 +
+            quantity * baseCargoValue * 0.15 +
+            floor(random(50, 250))
+        );
 
-        // Calculate reward: base + jump bonus + cargo value bonus + random element
-        let reward = 100 + // Base reward
-            Math.floor(jumpDistance * jumpRewardFactor) + // Jump bonus (floored)
-            Math.floor(quantity * baseCargoValue * 0.15) + // Cargo value bonus (floored)
-            floor(random(50, 250)); // Random bonus (floored)
-
-        reward = Math.floor(reward); // Final floor just in case
-
-        // --- Create Mission Object ---
-        let jumpText = jumpDistance === 1 ? "1 jump" : `${jumpDistance} jumps`;
+        const jumpText = this.formatJumpText(jumpDistance);
         return new Mission({
             type: MISSION_TYPE.DELIVERY_LEGAL,
             title: `Deliver ${quantity}t ${cargo} to ${destinationInfo.station.name} (${jumpText})`,
@@ -435,31 +491,20 @@ class MissionGenerator {
         let cargo = random(ILLEGAL_CARGO);
         let quantity = floor(random(3, 10));
 
-        // --- Calculate Jumps Bonus ---
-        let jumpDistance = Infinity;
-        const jumpRewardFactor = 400; // Higher reward for illegal jumps
-        const originIndex = originSystem?.systemIndex;
-        const destinationIndex = destinationInfo.system?.systemIndex;
-        if (typeof originIndex === 'number' && typeof destinationIndex === 'number') {
-            try { jumpDistance = galaxy.getJumpDistance(originIndex, destinationIndex); }
-            catch (e) { console.error("Err getJumpDistance (Illegal):", e); jumpDistance = Infinity; }
-        }
-        if (!isFinite(jumpDistance) || jumpDistance <= 0) return null;
+        // Calculate jump distance using helper
+        const jumpDistance = this.getJumpDistance(originSystem, destinationInfo.system, galaxy);
+        if (!this.isValidJumpDistance(jumpDistance)) return null;
 
-        // --- Calculate Reward (ensure integer) ---
-        const market = originStation?.market;
-        const cargoData = market?.commodities?.find(c => c.name === cargo); // Find base value if possible
-        const baseCargoValue = cargoData?.baseSell || 100; // Higher fallback for illegal goods
+        // Calculate reward: higher base + jump bonus + cargo value bonus + random
+        const baseCargoValue = this.getCargoValue(originStation, cargo, 100);
+        const reward = Math.floor(
+            300 +
+            jumpDistance * 400 +
+            quantity * baseCargoValue * 0.25 +
+            floor(random(100, 500))
+        );
 
-        let reward = 300 + // Higher base reward
-            Math.floor(jumpDistance * jumpRewardFactor) + // Jump bonus (floored)
-            Math.floor(quantity * baseCargoValue * 0.25) + // Higher cargo value bonus (floored)
-            floor(random(100, 500)); // Higher random bonus (floored)
-
-        reward = Math.floor(reward); // Final floor
-
-        // --- Create Mission Object ---
-        let jumpText = jumpDistance === 1 ? "1 jump" : `${jumpDistance} jumps`;
+        const jumpText = this.formatJumpText(jumpDistance);
         return new Mission({
             type: MISSION_TYPE.DELIVERY_ILLEGAL,
             title: `Smuggle ${quantity}t ${cargo} to ${destinationInfo.station.name} (${jumpText})`,
@@ -470,25 +515,17 @@ class MissionGenerator {
         });
     }
 
-    /** Creates a Bounty Hunting Mission - maybe target specific ship types? */
+    /** Creates a Bounty Hunting Mission */
     static createBountyMission(originSystem, originStation, galaxy, player) {
-        let targetCount = floor(random(2, 6));
-
-        const baseBountyPerShip = 300;
-        // Reward can still be influenced by the origin system's properties, as that's where the contract is given.
-        const techLevelBonus = (originSystem.techLevel || 5) * 10;
-        const securityPenalty = (originSystem.securityLevel === 'High' ? -50 : (originSystem.securityLevel === 'Anarchy' ? 100 : 0));
-
-        let reward = Math.floor(targetCount * baseBountyPerShip + techLevelBonus + securityPenalty + random(50, 300));
-        reward = Math.max(100, Math.floor(reward));
+        const targetCount = floor(random(2, 6));
+        const reward = this.calculateBountyReward(targetCount, 300, originSystem);
 
         return new Mission({
             type: MISSION_TYPE.BOUNTY_PIRATE,
             title: `Pirate Cull: Destroy ${targetCount} Pirates`,
             description: `Pirate activity is a scourge across the galaxy. Eliminate ${targetCount} pirate vessels. Payment will be processed automatically upon fulfilling the contract.`,
-            originSystem: originSystem.name,
-            originStation: originStation.name,
-            destinationSystem: null, // No specific destination system
+            ...this.getOriginData(originSystem, originStation),
+            destinationSystem: null,
             destinationStation: null,
             targetDesc: `${targetCount} Pirate vessels (any system)`,
             targetCount: targetCount,
@@ -498,41 +535,28 @@ class MissionGenerator {
         });
     }
 
-    /** 
-     * Creates a Cop Killer Mission - Targets (Police) can be destroyed anywhere.
-     * This mission is typically offered in Anarchy or Separatist systems.
-     */
+    /** Creates a Cop Killer Mission - typically offered in Anarchy or Separatist systems */
     static createCopKillerMission(originSystem, originStation, galaxy, player) {
-        // Target count can be based on general difficulty or origin system's context
-        let targetCount = floor(random(2, 5)); // e.g., 2-4 police ships
+        let targetCount = floor(random(2, 5));
         if (originSystem.securityLevel === 'Anarchy') {
-            targetCount = floor(random(3, 6)); // Slightly more for anarchy origin
+            targetCount = floor(random(3, 6));
         }
 
-        const baseBountyPerCop = 300;
-        const techLevelBonus = (originSystem.techLevel || 5) * 15; // Origin system's tech can influence perceived difficulty/reward
-
-        let reward = Math.floor(targetCount * baseBountyPerCop + techLevelBonus + random(200, 600));
-        reward = Math.max(250, Math.floor(reward));
-
-        // The completion flag name should be generic if the target system is not specific.
-        // Or, it could be tied to the origin system if that makes sense for your game's event tracking.
-        // For now, let's make it more generic or tied to origin.
-        const completionFlagName = `copKillerMission_${originSystem.name}_${targetCount}_${Date.now() % 10000}`;
+        // Use higher tech bonus multiplier for cop killer missions
+        const techBonus = (originSystem.techLevel || 5) * 15;
+        const reward = Math.max(250, Math.floor(targetCount * 300 + techBonus + random(200, 600)));
 
         return new Mission({
             type: MISSION_TYPE.BOUNTY_POLICE,
             title: `Eliminate ${targetCount} Police Ships`,
             description: `Certain parties require the disruption of security operations. Eliminate ${targetCount} police vessels anywhere you can find them. Payment will be processed automatically upon completion. Warning: This action will result in WANTED status in multiple systems.`,
-            originSystem: originSystem.name,
-            originStation: originStation.name,
-            destinationSystem: null, // No specific destination system
+            ...this.getOriginData(originSystem, originStation),
+            destinationSystem: null,
             destinationStation: null,
             targetDesc: `${targetCount} Police vessels (any system)`,
             targetCount: targetCount,
             rewardCredits: reward,
-            isIllegal: true,
-            completionFlagName: completionFlagName
+            isIllegal: true
         });
     }
 
@@ -572,11 +596,8 @@ class MissionGenerator {
         const source = random(missionSources);
         const background = random(targetBackgrounds);
 
-        // Pick a ship type to travel in (try combat ships, fall back to pirate list)
-        let shipType = null;
-        if (typeof COMBAT_SHIPS !== 'undefined' && COMBAT_SHIPS.length > 0) shipType = random(COMBAT_SHIPS);
-        else if (typeof PIRATE_SHIP_TYPES !== 'undefined' && PIRATE_SHIP_TYPES.length > 0) shipType = random(PIRATE_SHIP_TYPES);
-        else shipType = 'Krait';
+        // Pick a ship type to travel in using helper
+        const shipType = this.selectCombatShip();
 
         // Reward calculation: named target carries influence/value
         const baseReward = 2500 + (originSystem.techLevel || 5) * 150; // Increased base from 1500 to 2500, tech multiplier from 100 to 150
@@ -599,13 +620,8 @@ class MissionGenerator {
         const illegalFlag = !targetIsPirateShip;
 
         // Compute guard count based on reward magnitude (higher reward -> more guards)
-        let guardCount = 1; // Base 1 guard
-
-        // Choose guard ship types - prefer combat/police ships if available
-        let guardShipType = null;
-        if (typeof POLICE_SHIPS !== 'undefined' && POLICE_SHIPS.length > 0) guardShipType = random(POLICE_SHIPS);
-        else if (typeof COMBAT_SHIPS !== 'undefined' && COMBAT_SHIPS.length > 0) guardShipType = random(COMBAT_SHIPS);
-        else guardShipType = (typeof PIRATE_SHIP_TYPES !== 'undefined' ? random(PIRATE_SHIP_TYPES) : 'Krait');
+        const guardCount = 1;
+        const guardShipType = this.selectGuardShip();
 
         // Create flavorful description
         const descriptionTemplates = [
@@ -616,24 +632,21 @@ class MissionGenerator {
             `A high-priority contract from ${source} demands the death of ${targetName}, the ${background}. Expect heavy resistance from the target's ${shipType} and escort vessels. The mission cancels if the target escapes the system.`
         ];
 
-        const description = random(descriptionTemplates);
-
         return new Mission({
             type: MISSION_TYPE.ASSASSINATION,
             title: `Assassinate ${targetName} (${shipType})`,
-            description: description,
-            originSystem: originSystem.name, originStation: originStation.name,
+            description: random(descriptionTemplates),
+            ...this.getOriginData(originSystem, originStation),
             destinationSystem: null,
             destinationStation: null,
             targetDesc: `Target: ${targetName} in a ${shipType}`,
             targetCount: 1,
             rewardCredits: reward,
-            isIllegal: illegalFlag,
+            isIllegal: !targetIsPirateShip,
             progressCount: 0,
             targetName: targetName,
             targetShipType: shipType,
             canLeaveSystem: true,
-            // Extra fields to drive guard spawning at activation (runtime-only semantics handled in Mission.activate)
             guardCount: guardCount,
             guardShipType: guardShipType
         });

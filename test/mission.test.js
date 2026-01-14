@@ -26,7 +26,18 @@ function createMockPlayer(options = {}) {
         addCredits(amount) { this.credits += Math.floor(amount); },
         hasCargo(name, qty) {
             const item = this.cargo.find(c => c.name === name);
-            return item && item.quantity >= qty;
+            if (!item) return false;
+            return item.quantity >= qty;
+        },
+        removeCargo(name, qty) {
+            const item = this.cargo.find(c => c.name === name);
+            if (!item) return false;
+            if (item.quantity < qty) return false;
+            item.quantity -= qty;
+            if (item.quantity <= 0) {
+                this.cargo = this.cargo.filter(c => c.name !== name);
+            }
+            return true;
         }
     };
 }
@@ -776,5 +787,366 @@ describe('Mission Serialization', () => {
         expect(restored.progressCount).toBe(1);
         expect(restored.targetName).toBe('Captain Vex');
         expect(restored.targetUpgrades).toEqual(['Shadow Matrix']);
+    });
+});
+
+// ============================================
+// Mission Progress State Transitions (Advanced)
+// ============================================
+
+describe('Mission Progress State Transitions', () => {
+    test('should transition to Completable when target reached', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Bounty Hunt',
+            type: MISSION_TYPE.BOUNTY_PIRATE,
+            targetCount: 3,
+            rewardCredits: 5000
+        });
+        mission.status = 'Active';
+        mission.progressCount = 0;
+
+        mission.updateProgress(1);
+        expect(mission.status).toBe('Active');
+        expect(mission.progressCount).toBe(1);
+
+        mission.updateProgress(2);
+        expect(mission.status).toBe('Completable');
+        expect(mission.progressCount).toBe(3);
+    });
+
+    test('should not update progress when not active', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Test',
+            type: MISSION_TYPE.BOUNTY_PIRATE,
+            targetCount: 5,
+            rewardCredits: 3000
+        });
+        mission.status = 'Available';
+        mission.progressCount = 0;
+
+        mission.updateProgress(2);
+        expect(mission.progressCount).toBe(0);
+    });
+
+    test('should handle progress exceeding target', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Excessive Kills',
+            type: MISSION_TYPE.BOUNTY_PIRATE,
+            targetCount: 3,
+            rewardCredits: 3000
+        });
+        mission.status = 'Active';
+        mission.progressCount = 0;
+
+        mission.updateProgress(5);
+        expect(mission.progressCount).toBe(5);
+        expect(mission.status).toBe('Completable');
+    });
+});
+
+// ============================================
+// Delivery Mission Activation (Advanced)
+// ============================================
+
+describe('Delivery Mission Activation', () => {
+    let player, mission;
+
+    beforeEach(() => {
+        player = createMockPlayer({ credits: 5000, cargoCapacity: 50, cargo: [] });
+        global.player = player; // Make player globally available for activation
+
+        mission = new Mission({
+            id: 1,
+            title: 'Deliver Food',
+            type: MISSION_TYPE.DELIVERY_LEGAL,
+            cargoType: 'Food',
+            cargoQuantity: 10,
+            rewardCredits: 2000
+        });
+    });
+
+    afterEach(() => {
+        delete global.player;
+    });
+
+    test('should load cargo on activation', () => {
+        const result = mission.activate();
+        expect(result).toBe(true);
+        expect(mission.status).toBe('Active');
+        expect(player.cargo).toHaveLength(1);
+        expect(player.cargo[0].name).toBe('Food');
+        expect(player.cargo[0].quantity).toBe(10);
+    });
+
+    test('should stack cargo with existing items', () => {
+        player.cargo = [{ name: 'Food', quantity: 5 }];
+
+        mission.activate();
+        expect(player.cargo).toHaveLength(1);
+        expect(player.cargo[0].quantity).toBe(15);
+    });
+
+    test('should reject activation if insufficient cargo space', () => {
+        player.cargoCapacity = 50;
+        player.cargo = [{ name: 'Metals', quantity: 45 }]; // 45t used, only 5t free
+
+        const result = mission.activate();
+        expect(result).toBe(false);
+        expect(mission.status).toBe('Available');
+        expect(player.hasCargo('Food', 1)).toBe(false);
+    });
+
+    test('should not reactivate delivery mission twice', () => {
+        mission.activate();
+        expect(player.cargo[0].quantity).toBe(10);
+
+        const result2 = mission.activate();
+        expect(result2).toBe(false);
+        expect(player.cargo[0].quantity).toBe(10); // Should not double-load
+    });
+
+    test('should handle delivery with zero quantity gracefully', () => {
+        mission.cargoQuantity = 0;
+        const result = mission.activate();
+        expect(result).toBe(true); // Should activate but not add cargo
+        expect(player.cargo).toHaveLength(0);
+    });
+});
+
+// ============================================
+// Mission Completion Rewards (Advanced)
+// ============================================
+
+describe('Mission Completion Rewards', () => {
+    test('should add integer credits only', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Test',
+            type: MISSION_TYPE.BOUNTY_PIRATE,
+            rewardCredits: 2500.75 // Non-integer reward
+        });
+        mission.status = 'Active';
+        const player = createMockPlayer({ credits: 1000 });
+
+        mission.complete(player);
+        expect(player.credits).toBe(3500); // Should floor to 3500 (1000 + 2500)
+    });
+
+    test('should not complete mission without valid player', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Test',
+            type: MISSION_TYPE.BOUNTY_PIRATE,
+            rewardCredits: 5000
+        });
+        mission.status = 'Active';
+
+        mission.complete(null);
+        expect(mission.status).toBe('Active'); // Should remain active
+    });
+
+    test('should handle prestige rewards for faction missions', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Imperial Elimination',
+            type: MISSION_TYPE.IMPERIAL_ELIMINATION,
+            rewardCredits: 5000,
+            prestigeReward: 3
+        });
+        expect(mission.prestigeReward).toBe(3);
+        expect(mission.getSummary()).toContain('+3★');
+    });
+});
+
+// ============================================
+// Mission Display Logic (Advanced)
+// ============================================
+
+describe('Mission Display Logic', () => {
+    test('should show progress in summary for active bounty missions', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Hunt Pirates',
+            type: MISSION_TYPE.BOUNTY_PIRATE,
+            targetCount: 5,
+            rewardCredits: 3000
+        });
+        mission.status = 'Active';
+        mission.progressCount = 2;
+
+        const summary = mission.getSummary();
+        expect(summary).toContain('(2/5)');
+    });
+
+    test('should not show progress for non-bounty missions', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Deliver Cargo',
+            type: MISSION_TYPE.DELIVERY_LEGAL,
+            rewardCredits: 2000
+        });
+        mission.status = 'Active';
+        mission.progressCount = 1;
+
+        const summary = mission.getSummary();
+        expect(summary).not.toContain('(');
+    });
+
+    test('should show completion status prefix', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Test Mission',
+            type: MISSION_TYPE.BOUNTY_PIRATE,
+            rewardCredits: 3000
+        });
+        mission.status = 'Completed';
+
+        const summary = mission.getSummary();
+        expect(summary).toContain('[COMPLETED]');
+    });
+
+    test('should show failed status prefix', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Failed Mission',
+            type: MISSION_TYPE.ASSASSINATION,
+            rewardCredits: 10000
+        });
+        mission.status = 'Failed';
+
+        const summary = mission.getSummary();
+        expect(summary).toContain('[FAILED]');
+    });
+
+    test('should include illegal warning in details', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Smuggle Goods',
+            type: MISSION_TYPE.DELIVERY_ILLEGAL,
+            isIllegal: true,
+            rewardCredits: 5000
+        });
+
+        const details = mission.getDetails();
+        expect(details).toContain('illegal activity');
+    });
+});
+
+// ============================================
+// Sabotage Mission Backstory (Advanced)
+// ============================================
+
+describe('Sabotage Mission Backstory', () => {
+    test('should generate backstory for sabotage missions', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Destroy Relay',
+            type: MISSION_TYPE.SABOTAGE,
+            targetObjectType: 'Comm Relay',
+            targetPlanetName: 'Hades II',
+            offeringFaction: 'Separatist Movement',
+            destinationSystem: 'Imperial Sector'
+        });
+
+        expect(mission.description).toBeTruthy();
+        expect(mission.description.length).toBeGreaterThan(50);
+        expect(mission.description).toContain('Comm Relay');
+    });
+
+    test('should not override provided description for sabotage', () => {
+        const customDesc = 'Custom sabotage description for testing';
+        const mission = new Mission({
+            id: 1,
+            title: 'Sabotage',
+            type: MISSION_TYPE.SABOTAGE,
+            description: customDesc,
+            targetObjectType: 'Beacon',
+            rewardCredits: 8000
+        });
+
+        expect(mission.description).toBe(customDesc);
+    });
+});
+
+// ============================================
+// Edge Cases and Boundary Conditions
+// ============================================
+
+describe('Edge Cases and Boundary Conditions', () => {
+    test('should handle mission with null destination (anywhere missions)', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Hunt Anywhere',
+            type: MISSION_TYPE.BOUNTY_PIRATE,
+            targetCount: 3,
+            destinationSystem: null,
+            destinationStation: null,
+            rewardCredits: 3000
+        });
+
+        expect(mission.destinationSystem).toBeNull();
+        expect(mission.destinationStation).toBeNull();
+    });
+
+    test('should preserve explicit null values with nullish coalescing', () => {
+        const mission = new Mission({
+            destinationSystem: null,
+            destinationStation: null
+        });
+
+        expect(mission.destinationSystem).toBeNull();
+        expect(mission.destinationStation).toBeNull();
+    });
+
+    test('should auto-increment mission ID if not provided', () => {
+        const startId = Mission.nextId;
+        const mission1 = new Mission({ title: 'First' });
+        const mission2 = new Mission({ title: 'Second' });
+
+        expect(mission1.id).toBe(startId);
+        expect(mission2.id).toBe(startId + 1);
+    });
+
+    test('should handle zero reward gracefully', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Free Mission',
+            type: MISSION_TYPE.BOUNTY_PIRATE,
+            rewardCredits: 0
+        });
+        const player = createMockPlayer({ credits: 1000 });
+        mission.status = 'Active';
+
+        mission.complete(player);
+        expect(player.credits).toBe(1000);
+        expect(mission.status).toBe('Completed');
+    });
+
+    test('should handle mission abandonment from any state', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Abandoned',
+            type: MISSION_TYPE.DELIVERY_LEGAL,
+            rewardCredits: 2000
+        });
+
+        mission.status = 'Available';
+        mission.abandon();
+        expect(mission.status).toBe('Abandoned');
+    });
+
+    test('should stringify large rewards correctly', () => {
+        const mission = new Mission({
+            id: 1,
+            title: 'Big Reward',
+            type: MISSION_TYPE.ASSASSINATION,
+            rewardCredits: 999999
+        });
+
+        const summary = mission.getSummary();
+        expect(summary).toContain('999999cr');
     });
 });

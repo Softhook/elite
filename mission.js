@@ -846,46 +846,29 @@ class Mission {
 
     /** Get objective string for details */
     _getObjectiveString() {
-        // Normal delivery missions
-        if (DELIVERY_TYPES.has(this.type) && this.cargoType) {
+        // All delivery missions (legal, illegal, and faction supply)
+        const isDeliveryType = DELIVERY_TYPES.has(this.type) || FACTION_DELIVERY_TYPES?.has(this.type);
+        if (isDeliveryType && this.cargoType) {
             return `Objective: Deliver ${this.cargoQuantity}t ${this.cargoType}\n`;
         }
 
-        // Faction delivery/supply missions
-        if (FACTION_DELIVERY_TYPES?.has(this.type) && this.cargoType) {
-            return `Objective: Deliver ${this.cargoQuantity}t ${this.cargoType}\n`;
-        }
-
-        // Bounty missions (pirates, police, aliens)
-        if (BOUNTY_TYPES.has(this.type) && this.targetDesc) {
-            return `Objective: ${this.targetDesc}\n`;
-        }
-
-        // Faction kill missions (elimination, raid, strike)
-        if (FACTION_KILL_TYPES?.has(this.type)) {
-            if (this.targetDesc) {
-                return `Objective: ${this.targetDesc}\n`;
-            }
-            if (this.targetCount) {
-                return `Objective: Destroy ${this.targetCount} enemy vessels\n`;
-            }
+        // Bounty missions (pirates, police, aliens) and faction kill missions
+        const isKillType = BOUNTY_TYPES.has(this.type) || FACTION_KILL_TYPES?.has(this.type);
+        if (isKillType) {
+            if (this.targetDesc) return `Objective: ${this.targetDesc}\n`;
+            if (this.targetCount) return `Objective: Destroy ${this.targetCount} enemy vessels\n`;
         }
 
         // Faction patrol missions (scan/defense)
         if (FACTION_PATROL_TYPES?.has(this.type)) {
-            if (this.targetDesc) {
-                return `Objective: ${this.targetDesc}\n`;
-            }
-            if (this.targetCount) {
-                return `Objective: Neutralize ${this.targetCount} hostiles\n`;
-            }
+            if (this.targetDesc) return `Objective: ${this.targetDesc}\n`;
+            if (this.targetCount) return `Objective: Neutralize ${this.targetCount} hostiles\n`;
         }
 
-        // Faction sabotage missions
-        if (FACTION_SABOTAGE_TYPES?.has(this.type)) {
-            if (this.targetObjectType) {
-                return `Objective: Destroy ${this.targetObjectType}\n`;
-            }
+        // All sabotage missions (regular and faction)
+        const isSabotageType = this.type === MISSION_TYPE.SABOTAGE || FACTION_SABOTAGE_TYPES?.has(this.type);
+        if (isSabotageType) {
+            if (this.targetObjectType) return `Objective: Destroy ${this.targetObjectType}\n`;
             return `Objective: Sabotage enemy infrastructure\n`;
         }
 
@@ -894,17 +877,6 @@ class Mission {
             return this.targetName ?
                 `Objective: Eliminate ${this.targetName}\n` :
                 `Objective: Eliminate designated target\n`;
-        }
-
-        // Regular sabotage
-        if (this.type === MISSION_TYPE.SABOTAGE) {
-            const desc = this.description || '';
-            const hasObjective = desc.includes('Sabotage Objective:') ||
-                desc.includes('Objective: Destroy') ||
-                desc.toLowerCase().includes('destroy');
-            if (!hasObjective) {
-                return `Objective: Destroy ${this.targetObjectType || 'Strategic Object'}\n`;
-            }
         }
 
         return '';

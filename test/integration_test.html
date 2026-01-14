@@ -100,7 +100,7 @@
                     player: player,
                     asteroids: []
                 };
-                system.addProjectile = function(proj) { this.projectiles.push(proj); };
+                system.addProjectile = function (proj) { this.projectiles.push(proj); };
             });
 
             it('should allow player to fire at enemy', () => {
@@ -633,8 +633,8 @@
                 // 2. Kill targets (attach a minimal system so destruction callbacks run)
                 const system = { player: player, name: 'TestSystem' };
                 // Minimal stubs used by _processDestruction
-                system.addExplosion = function() { /* noop for tests */ };
-                system.setPlayerWanted = function() { /* noop for tests */ };
+                system.addExplosion = function () { /* noop for tests */ };
+                system.setPlayerWanted = function () { /* noop for tests */ };
                 const enemies = [
                     new Enemy(100, 0, player, 'Sidewinder', AI_ROLE.PIRATE),
                     new Enemy(200, 100, player, 'Sidewinder', AI_ROLE.PIRATE),
