@@ -181,6 +181,62 @@ class EnemyCombat {
                 }
             }
 
+            // --- STORM WEAPON LOGIC ---
+            // Storm weapons are tactical area-denial weapons, not primary damage
+            if (baseType === WEAPON_TYPE.STORM && target) {
+                const stormType = weapon.stormType || 'electromagnetic';
+
+                // Check if target is already in a storm or affected by storm effects
+                const targetInStorm = (target.targetingDisruption > 0) ||
+                    target.shieldsDisabled ||
+                    target.inNebula;
+
+                if (targetInStorm) {
+                    score -= 8; // Strong penalty if target already affected
+                } else {
+                    // Type-specific scoring
+                    switch (stormType) {
+                        case 'electromagnetic':
+                            // EMP storms disrupt targeting - good vs accurate opponents
+                            if (isLongRange || isMediumRange) score += 4;
+                            // Bonus if we're taking hits (they're accurate)
+                            if (this.hull < this.maxHull * 0.7) score += 2;
+                            break;
+
+                        case 'gravitational':
+                            // Gravity wells trap enemies - good vs fleeing or fast targets
+                            if (target.vel && target.vel.mag() > 4) score += 5;
+                            if (target.currentState === AI_STATE.FLEEING) score += 6;
+                            if (isMediumRange) score += 2;
+                            break;
+
+                        case 'radiation':
+                            // Radiation does DoT - good vs shieldless or low shield targets
+                            if (target.shield !== undefined) {
+                                const shieldPct = target.maxShield > 0 ? target.shield / target.maxShield : 1;
+                                if (shieldPct < 0.3) score += 5;
+                                else if (target.shieldsDisabled) score += 6;
+                            }
+                            if (isShortRange) score += 2;
+                            break;
+
+                        case 'ion':
+                            // Ion storms disable shields - good vs high shield targets
+                            if (target.shield !== undefined && target.maxShield > 0) {
+                                const shieldPct = target.shield / target.maxShield;
+                                if (shieldPct > 0.5) score += 6;
+                                else if (shieldPct > 0.2) score += 3;
+                                else score -= 2; // Already low shields
+                            }
+                            break;
+                    }
+
+                    // General storm considerations
+                    if (isMediumRange) score += 1;
+                    // Long cooldowns mean slight penalty to prevent over-reliance
+                    score -= 1;
+                }
+            }
             // Score based on weapon type and range
             if (baseType === WEAPON_TYPE.BEAM && isLongRange) {
                 score += 3; // Beams are good at long range

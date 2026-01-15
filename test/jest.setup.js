@@ -408,6 +408,7 @@ global.generateGenderedNPCName = () => ({
     gender: Math.random() > 0.5 ? 'male' : 'female'
 });
 
+
 // ============================================
 // Other Global Mocks
 // ============================================
@@ -429,6 +430,25 @@ global.EventManager = class EventManager {
     constructor() { }
     update() { }
 };
+
+// ============================================
+// Weapon Constants (needed by projectile.js)
+// ============================================
+
+global.DEFAULT_WEAPON_CONFIG = {
+    PROJECTILE_SPEED: 8,
+    PROJECTILE_DAMAGE: 10,
+    PROJECTILE_LIFESPAN: 120,
+    MISSILE_SPEED: 6,
+    MISSILE_LIFESPAN: 180,
+    MISSILE_TURN_RATE: 0.08
+};
+
+global.DRAG_EFFECT_DEFAULT_DURATION = 5.0;
+global.DRAG_EFFECT_DEFAULT_MULTIPLIER = 10.0;
+global.WEAPON_LOG = jest.fn();
+global.ENV_LOG = jest.fn();
+
 
 // ============================================
 // Helper: Clear all mocks between tests

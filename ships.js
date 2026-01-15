@@ -1687,7 +1687,7 @@ const SHIP_DEFINITIONS = {
         name: "Sidewinder", role: "Starter", upgrades: [], sizeCategory: "Tiny", size: 20,
         baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.06981,
         baseHull: 50, baseShield: 50, shieldRecharge: 1.0, cargoCapacity: 10,
-        armament: ["Pulse Laser"], // Starter weapon
+        armament: ["Pulse Laser", "Ion Disruptor"], // Starter weapon
         costCategory: "N/A", description: "The bargain bin starter ship that new pilots either treasure forever or sell within hours. Balanced 50/50 hull/shields and just enough cargo (10 tons) to learn the hauling trade. Cheap, agile, expendable. Sort of like a puppy, if puppies exploded when shot.",
         vertexData: [{ x: 0.9, y: 0 }, { x: -0.7, y: 0.8 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.8 }],
         fillColor: [180, 100, 20],
@@ -3332,7 +3332,7 @@ const SHIP_DEFINITIONS = {
         name: "Geometric Drone (Alien)", role: "Alien Scout?", upgrades: [], sizeCategory: "Tiny", size: 15,
         baseMaxSpeed: 9.0, baseThrust: 0.2, baseTurnRate: 0.13963,
         baseHull: 20, baseShield: 40, shieldRecharge: 1.5, cargoCapacity: 0,
-        armament: ["Scatter Beam"], // Alien tech
+        armament: ["Scatter Beam", "Ion Disruptor"], // Alien tech + storm weapon
         costCategory: "N/A", description: "Small, fast, rotating alien drone. Unknown purpose.",
         vertexData: [{ x: 1, y: 0 }, { x: 0.5, y: 0.87 }, { x: -0.5, y: 0.87 }, { x: -1, y: 0 }, { x: -0.5, y: -0.87 }, { x: 0.5, y: -0.87 }], // Regular Hexagon
         fillColor: [50, 50, 60], // Dark metallic, light stroke
@@ -3411,7 +3411,7 @@ const SHIP_DEFINITIONS = {
         name: "Crescent Marauder (Alien)", role: "Alien Raider", upgrades: [], sizeCategory: "Medium", size: 38,
         baseMaxSpeed: 7.5, baseThrust: 0.16, baseTurnRate: 0.10,
         baseHull: 100, baseShield: 120, shieldRecharge: 1.8, cargoCapacity: 10,
-        armament: ["Disruptor", "Scatter Beam"],
+        armament: ["Disruptor", "Scatter Beam", "EMP Storm"], // Alien raider with EMP storm
         costCategory: "N/A", description: "Alien ship with a crescent, blade-like hull.",
         vertexLayers: [
             { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.8, y: 0.3 }, { x: 1.0, y: 0.0 }, { x: 0.8, y: -0.3 }, { x: 0.0, y: -1.0 }, { x: -0.8, y: -0.3 }, { x: -1.0, y: 0.0 }, { x: -0.8, y: 0.3 }], fillColor: [180, 255, 255] },
@@ -3425,7 +3425,7 @@ const SHIP_DEFINITIONS = {
         name: "Obelisk Sentinel (Alien)", role: "Alien Guardian", upgrades: [], sizeCategory: "Medium", size: 40,
         baseMaxSpeed: 6.2, baseThrust: 0.13, baseTurnRate: 0.075,
         baseHull: 120, baseShield: 180, shieldRecharge: 2.0, cargoCapacity: 0,
-        armament: ["Disruptor", "Scatter Beam"],
+        armament: ["Disruptor", "Scatter Beam", "Gravity Well"], // Guardian with gravity trap
         costCategory: "N/A", description: "Tall, monolithic alien ship with layered crystal armor.",
         vertexLayers: [
             {
@@ -3445,7 +3445,7 @@ const SHIP_DEFINITIONS = {
         name: "Hexa-Manta (Alien)", role: "Alien Cruiser", upgrades: [], sizeCategory: "Large", size: 70,
         baseMaxSpeed: 6.0, baseThrust: 0.12, baseTurnRate: 0.07,
         baseHull: 220, baseShield: 320, shieldRecharge: 2.2, cargoCapacity: 30,
-        armament: ["Disruptor", "Force Blaster"],
+        armament: ["Disruptor", "Force Blaster", "Gravity Well"], // Cruiser with gravity well
         costCategory: "N/A", description: "Wide, six-winged alien ship with layered fins.",
         vertexLayers: [
             { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.8, y: 0.6 }, { x: 1.0, y: 0.0 }, { x: 0.8, y: -0.6 }, { x: 0.0, y: -1.0 }, { x: -0.8, y: -0.6 }, { x: -1.0, y: 0.0 }, { x: -0.8, y: 0.6 }], fillColor: [0, 255, 180] },
@@ -3460,7 +3460,7 @@ const SHIP_DEFINITIONS = {
         name: "Fractal Ray (Alien)", role: "Alien Destroyer", upgrades: [], sizeCategory: "Large", size: 85,
         baseMaxSpeed: 7.0, baseThrust: 0.15, baseTurnRate: 0.09,
         baseHull: 260, baseShield: 350, shieldRecharge: 2.5, cargoCapacity: 40,
-        armament: ["Force Blaster", "Disruptor", "Scatter Beam"],
+        armament: ["Force Blaster", "Disruptor", "Radiation Burst"], // Destroyer with radiation
         costCategory: "N/A", description: "Alien ship with fractal, lightning-like arms.",
         vertexLayers: [
             { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.5, y: 0.5 }, { x: 1.0, y: 0.0 }, { x: 0.5, y: -0.5 }, { x: 0.0, y: -1.0 }, { x: -0.5, y: -0.5 }, { x: -1.0, y: 0.0 }, { x: -0.5, y: 0.5 }], fillColor: [255, 255, 180] },
@@ -3474,7 +3474,7 @@ const SHIP_DEFINITIONS = {
         name: "Obsidian Orb (Alien)", role: "Alien Tank", upgrades: [], sizeCategory: "Large", size: 90,
         baseMaxSpeed: 4.5, baseThrust: 0.09, baseTurnRate: 0.05,
         baseHull: 400, baseShield: 500, shieldRecharge: 3.0, cargoCapacity: 60,
-        armament: ["Force Blaster", "Disruptor"],
+        armament: ["Force Blaster", "Disruptor", "Ion Disruptor"], // Tank with shield breaker
         costCategory: "N/A", description: "Massive, spherical alien ship with layered crystalline armor.",
         vertexLayers: [
             // Outer shell - large dark obsidian octagon
@@ -3527,7 +3527,7 @@ const SHIP_DEFINITIONS = {
         name: "Thargoid Interceptor", role: "Alien Combat", upgrades: [], sizeCategory: "Large", size: 60,
         baseMaxSpeed: 8.0, baseThrust: 0.20, baseTurnRate: 0.10472,
         baseHull: 200, baseShield: 300, shieldRecharge: 2.0, cargoCapacity: 0,
-        armament: ["Force Blaster", "Disruptor", "Scatter Beam"], // Alien arsenal
+        armament: ["Force Blaster", "Disruptor", "Scatter Beam", "EMP Storm"], // Thargoid with EMP
         costCategory: "N/A", description: "Hostile alien murder-flower from the void that considers humanity a fascinating pest problem. Hits 8.0 speed while regenerating shields faster than you can damage them. Conventional weapons bounce off its incomprehensible hull. Intelligence suggests talking doesn't work. Intelligence is correct. Run or die. Preferably run then die anyway.",
         vertexData: [], // Not editable via vertex data in this setup
         typicalCargo: ["Chemicals", "Weapons", "Narcotics"],
@@ -3540,7 +3540,7 @@ const SHIP_DEFINITIONS = {
         name: "Lotus Carrier (Alien)", role: "Alien Carrier", upgrades: [], sizeCategory: "Very Large", size: 120,
         baseMaxSpeed: 3.5, baseThrust: 0.06, baseTurnRate: 0.025,
         baseHull: 800, baseShield: 900, shieldRecharge: 4.0, cargoCapacity: 200,
-        armament: ["Force Blaster", "Disruptor", "Scatter Beam", "Halo"],
+        armament: ["Force Blaster", "Disruptor", "Scatter Beam", "Halo", "Gravity Well"], // Carrier with all weapons
         costCategory: "N/A", description: "Enormous alien carrier with layered, lotus-like petals.",
         vertexLayers: [
             { vertexData: [{ x: 0.0, y: 1.0 }, { x: 0.6, y: 0.8 }, { x: 1.0, y: 0.0 }, { x: 0.6, y: -0.8 }, { x: 0.0, y: -1.0 }, { x: -0.6, y: -0.8 }, { x: -1.0, y: 0.0 }, { x: -0.6, y: 0.8 }], fillColor: [255, 200, 255] },

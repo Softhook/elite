@@ -25,6 +25,10 @@ class CosmicStorm {
         this.affectedEntities = new Set();
         this.lastEffectTime = 0;
         this.effectCount = 0;
+
+        // Weapon-spawned storm properties (set externally when created by storm weapon)
+        this.isWeaponSpawned = false;  // True for weapon-deployed mini-storms
+        this.owner = null;              // Entity that fired the storm weapon
     }
 
     // --- Color and Particle Helpers ---
@@ -33,6 +37,7 @@ class CosmicStorm {
             case 'electromagnetic': return [80, 100, 255];
             case 'radiation': return [100, 255, 50];
             case 'gravitational': return [255, 200, 50];
+            case 'ion': return [180, 100, 255];  // Purple for ion storms
             default: return [100, 150, 255];
         }
     }
@@ -299,6 +304,7 @@ class CosmicStorm {
             if (this.affectedEntities.has(entityId)) {
                 this.affectedEntities.delete(entityId);
                 if (this.type === 'electromagnetic') entity.targetingDisruption = 0;
+                if (this.type === 'ion') entity.shieldsDisabled = false;  // Re-enable shields when leaving ion storm
                 if (this.debug) console.log(`Entity ${entityId} left ${this.type} storm`);
             }
             return;
@@ -322,11 +328,24 @@ class CosmicStorm {
             case 'electromagnetic': message = "Warning: Electromagnetic storm disrupting targeting!"; break;
             case 'gravitational': message = "Caution: Gravitational storm affecting navigation!"; break;
             case 'radiation': message = "Alert: Radiation storm causing hull damage!"; break;
+            case 'ion': message = "Warning: Ion storm disabling shields!"; break;
         }
         uiManager.addMessage(message, '#ff0000');
     }
 
     applyTypeEffect(entity, effectStrength, entityId) {
+        // Skip applying effects to the storm's owner (for weapon-spawned storms)
+        if (this.isWeaponSpawned && this.owner && entity === this.owner) {
+            return;
+        }
+
+        // Skip applying effects to faction allies (for weapon-spawned storms)
+        if (this.isWeaponSpawned && this.owner && this.owner.faction && entity.faction) {
+            if (this.owner.faction === entity.faction) {
+                return; // Same faction - no friendly fire
+            }
+        }
+
         switch (this.type) {
             case 'electromagnetic':
                 entity.targetingDisruption = effectStrength;
@@ -354,6 +373,19 @@ class CosmicStorm {
                     if (this.debug) {
                         console.log(`Radiation damage: ${damage.toFixed(1)} to ${entityId}`);
                     }
+                }
+                break;
+            case 'ion':
+                // Ion storms drain shields continuously rather than instant disable
+                entity.shieldsDisabled = true;
+                // Drain shields over time instead of instantly zeroing
+                if (entity.shield > 0 && typeof entity.maxShield !== 'undefined') {
+                    const drainRate = effectStrength * 0.1; // Drain 10% of max shield per effect tick at full strength
+                    const drainAmount = (entity.maxShield || 100) * drainRate * (typeof deltaTime === 'number' ? deltaTime / 1000 : 0.016);
+                    entity.shield = Math.max(0, entity.shield - drainAmount);
+                }
+                if (this.debug && entity instanceof Player) {
+                    console.log(`Ion storm draining shields for ${entityId}, shields: ${entity.shield?.toFixed(1)}`);
                 }
                 break;
         }

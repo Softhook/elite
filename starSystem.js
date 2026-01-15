@@ -2985,8 +2985,65 @@ class StarSystem {
             proj.update();
 
             if (proj.lifespan <= 0) {
+                // Check if this is a storm projectile - spawn mini-storm before removing
+                if (proj._isStorm && proj.stormConfig) {
+                    this._spawnWeaponStorm(proj);
+                }
                 this.removeProjectile(i);
             }
+        }
+    }
+
+    /**
+     * Spawns a miniature storm from a storm weapon projectile.
+     * @param {Projectile} proj - The storm projectile that expired
+     * @private
+     */
+    _spawnWeaponStorm(proj) {
+        if (!proj?.stormConfig || typeof CosmicStorm === 'undefined') return;
+
+        const config = proj.stormConfig;
+
+        // Create the mini-storm
+        const storm = new CosmicStorm(
+            proj.pos.x,
+            proj.pos.y,
+            config.radius || 80,
+            config.type || 'electromagnetic'
+        );
+
+        // Configure as weapon-spawned mini-storm
+        storm.isWeaponSpawned = true;
+        storm.owner = config.owner || proj.owner;
+        storm.maxLifetime = config.duration || 8000;
+        storm.lifetime = storm.maxLifetime;
+        storm.intensity = 0.8;  // Slightly weaker than natural storms
+        storm.velocity.mult(0);  // Stationary
+
+        // Reduce particles for mini-storms (less visual clutter)
+        storm.maxParticles = Math.min(storm.radius / 10, 30);
+        // Reinitialize particles with reduced count
+        storm.particles = [];
+        storm.initParticles();
+
+        // Add to cosmic storms array
+        this.cosmicStorms.push(storm);
+
+        // Create ambient sound for the storm if sound manager is available
+        try {
+            this._createStormAmbientSound(this.cosmicStorms.length - 1, config.type);
+        } catch (e) {
+            // Sound errors are non-fatal
+        }
+
+        // Add explosion effect at spawn point to indicate storm creation
+        if (typeof this.addExplosion === 'function') {
+            const col = storm.color || [100, 150, 255];
+            this.addExplosion(proj.pos.x, proj.pos.y, config.radius * 0.3, col);
+        }
+
+        if (typeof ENV_LOG === 'function') {
+            ENV_LOG(`Weapon-spawned ${config.type} mini-storm at (${proj.pos.x.toFixed(0)}, ${proj.pos.y.toFixed(0)})`);
         }
     }
 
@@ -4104,9 +4161,16 @@ class StarSystem {
             if (!asteroid || asteroid.isDestroyed()) continue;
 
             if (this._checkProjectileBroadphase(proj, asteroid, distCheckVector) && asteroid.checkCollision(proj)) {
-                asteroid.takeDamage(proj.damage || 1, proj.owner, this);
+                // Storm projectiles don't damage asteroids - they spawn storms
+                if (!proj._isStorm) {
+                    asteroid.takeDamage(proj.damage || 1, proj.owner, this);
+                    this.addExplosion(proj.pos.x, proj.pos.y, 10, [255, 120, 20]);
+                }
+                // Spawn storm on impact if this is a storm projectile
+                if (proj._isStorm && proj.stormConfig) {
+                    this._spawnWeaponStorm(proj);
+                }
                 this.removeProjectile(i);
-                this.addExplosion(proj.pos.x, proj.pos.y, 10, [255, 120, 20]);
                 return true;
             }
         }
@@ -4132,9 +4196,16 @@ class StarSystem {
             if (!so || soDestroyed) continue;
 
             if (this._checkProjectileBroadphase(proj, so, distCheckVector) && so.checkCollision && so.checkCollision(proj)) {
-                try { so.takeDamage(proj.damage || 1, proj.owner, this); } catch (e) { console.error('Error damaging spaceObject', e); }
+                // Storm projectiles don't damage space objects - they spawn storms
+                if (!proj._isStorm) {
+                    try { so.takeDamage(proj.damage || 1, proj.owner, this); } catch (e) { console.error('Error damaging spaceObject', e); }
+                    this.addExplosion(proj.pos.x, proj.pos.y, 8, [200, 100, 255]);
+                }
+                // Spawn storm on impact if this is a storm projectile
+                if (proj._isStorm && proj.stormConfig) {
+                    this._spawnWeaponStorm(proj);
+                }
                 this.removeProjectile(i);
-                this.addExplosion(proj.pos.x, proj.pos.y, 8, [200, 100, 255]);
                 return true;
             }
         }
@@ -4157,9 +4228,16 @@ class StarSystem {
             if (mine.destroyed || proj.owner === mine.owner) continue;
 
             if (this._checkProjectileBroadphase(proj, mine, distCheckVector)) {
-                mine.takeDamage(proj.damage || 10, proj.owner, this);
+                // Storm projectiles don't damage mines - they spawn storms
+                if (!proj._isStorm) {
+                    mine.takeDamage(proj.damage || 10, proj.owner, this);
+                    this.addExplosion(proj.pos.x, proj.pos.y, 5, [200, 100, 0]);
+                }
+                // Spawn storm on impact if this is a storm projectile
+                if (proj._isStorm && proj.stormConfig) {
+                    this._spawnWeaponStorm(proj);
+                }
                 this.removeProjectile(i);
-                this.addExplosion(proj.pos.x, proj.pos.y, 5, [200, 100, 0]);
                 return true;
             }
         }
@@ -4318,15 +4396,20 @@ class StarSystem {
                         continue;
                     }
 
-                    // Use centralized hit handler from WeaponSystem
-                    WeaponSystem.handleHitEffects(
-                        this.player,
-                        projPos,
-                        proj.damage,
-                        proj.owner,
-                        this,
-                        proj.color
-                    );
+                    // Storm projectiles don't apply damage - they only spawn storms
+                    if (proj._isStorm) {
+                        // Spawn storm and exit (handled at end of this block)
+                    } else {
+                        // Use centralized hit handler from WeaponSystem
+                        WeaponSystem.handleHitEffects(
+                            this.player,
+                            projPos,
+                            proj.damage,
+                            proj.owner,
+                            this,
+                            proj.color
+                        );
+                    }
 
                     // Apply Tangle effect if it's a tangle projectile
                     if (proj._isTangle && typeof this.player.applyDragEffect === 'function') {
@@ -4348,6 +4431,11 @@ class StarSystem {
                             (proj.color && proj.color.levels) ? [proj.color.levels[0], proj.color.levels[1], proj.color.levels[2]] :
                                 [255, 150, 0];
                         this.addExplosion(projPos.x, projPos.y, 15, explosionColor);
+                    }
+
+                    // Spawn storm on impact if this is a storm projectile
+                    if (proj._isStorm && proj.stormConfig) {
+                        this._spawnWeaponStorm(proj);
                     }
 
                     this.removeProjectile(i);
@@ -4418,15 +4506,18 @@ class StarSystem {
                             break;
                         }
 
-                        // Use centralized hit handler from WeaponSystem
-                        WeaponSystem.handleHitEffects(
-                            enemy,
-                            projPos,
-                            proj.damage,
-                            proj.owner,
-                            this,
-                            proj.color
-                        );
+                        // Storm projectiles don't apply damage - they only spawn storms
+                        if (!proj._isStorm) {
+                            // Use centralized hit handler from WeaponSystem
+                            WeaponSystem.handleHitEffects(
+                                enemy,
+                                projPos,
+                                proj.damage,
+                                proj.owner,
+                                this,
+                                proj.color
+                            );
+                        }
 
                         // Apply Tangle effect if it's a tangle projectile
                         if (proj._isTangle && typeof enemy.applyDragEffect === 'function') {
@@ -4440,6 +4531,11 @@ class StarSystem {
                             if (typeof uiManager !== 'undefined') {
                                 uiManager.addMessage(`${enemy.shipTypeName} caught in energy tangle!`, "#30FFB4");
                             }
+                        }
+
+                        // Spawn storm on impact if this is a storm projectile
+                        if (proj._isStorm && proj.stormConfig) {
+                            this._spawnWeaponStorm(proj);
                         }
 
                         this.removeProjectile(i);
@@ -4502,15 +4598,18 @@ class StarSystem {
                             break;
                         }
 
-                        // Use centralized hit handler from WeaponSystem for other projectile types
-                        WeaponSystem.handleHitEffects(
-                            enemy,
-                            proj.pos,
-                            proj.damage / 2, // Reduce damage for friendly fire
-                            proj.owner,
-                            this,
-                            proj.color
-                        );
+                        // Storm projectiles don't apply damage - they only spawn storms
+                        if (!proj._isStorm) {
+                            // Use centralized hit handler from WeaponSystem for other projectile types
+                            WeaponSystem.handleHitEffects(
+                                enemy,
+                                proj.pos,
+                                proj.damage / 2, // Reduce damage for friendly fire
+                                proj.owner,
+                                this,
+                                proj.color
+                            );
+                        }
 
                         // Apply Tangle effect if it's a tangle projectile
                         if (proj._isTangle && typeof enemy.applyDragEffect === 'function') {
@@ -4519,6 +4618,11 @@ class StarSystem {
                                 (proj.dragMultiplier || DRAG_EFFECT_DEFAULT_MULTIPLIER),
                                 (proj.rotationBlockMultiplier || 0.1)
                             );
+                        }
+
+                        // Spawn storm on impact if this is a storm projectile
+                        if (proj._isStorm && proj.stormConfig) {
+                            this._spawnWeaponStorm(proj);
                         }
 
                         this.removeProjectile(i);

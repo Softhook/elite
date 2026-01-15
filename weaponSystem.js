@@ -12,7 +12,8 @@ const WEAPON_TYPE = {
     TANGLE: 'tangle',
     BARRIER: 'barrier', // Added Barrier type
     MINE: 'mine', // Added Mine type
-    HARPOON: 'harpoon' // Harpoon tether
+    HARPOON: 'harpoon', // Harpoon tether
+    STORM: 'storm' // Storm weapons - alien specialty area-denial
 };
 
 class WeaponSystem {
@@ -459,6 +460,10 @@ class WeaponSystem {
                 break;
             case WEAPON_TYPE.MINE: // Added Mine case
                 this.fireMine(owner, system);
+                fired = true;
+                break;
+            case WEAPON_TYPE.STORM: // Storm weapons - alien specialty
+                this.fireStorm(owner, system, angle, target);
                 fired = true;
                 break;
             default:
@@ -1216,6 +1221,84 @@ class WeaponSystem {
         }
     }
 
+    /**
+     * Fire a storm weapon projectile that spawns a miniature storm on impact/timeout
+     * @param {Object} owner - Entity firing the weapon
+     * @param {Object} system - Current star system
+     * @param {number} angle - Firing angle in radians
+     * @param {Object} target - Optional target for predictive aiming
+     */
+    static fireStorm(owner, system, angle, target) {
+        if (!owner?.currentWeapon || !system) return;
+
+        const weapon = owner.currentWeapon;
+
+        // Predictive aiming: fire where the target WILL BE
+        if (target && target.pos && target.vel) {
+            const projectileSpeed = weapon.projectileSpeed || 5;
+            const distToTarget = Math.sqrt(
+                (target.pos.x - owner.pos.x) ** 2 +
+                (target.pos.y - owner.pos.y) ** 2
+            );
+            const timeToImpact = distToTarget / projectileSpeed;
+
+            // Predict target position (0.7 factor for imperfect prediction)
+            const predictedX = target.pos.x + (target.vel.x || 0) * timeToImpact * 0.7;
+            const predictedY = target.pos.y + (target.vel.y || 0) * timeToImpact * 0.7;
+
+            angle = Math.atan2(predictedY - owner.pos.y, predictedX - owner.pos.x);
+        }
+
+        // Get spawn position at ship's forward edge
+        const spawnPos = this._getSpawnPosition(owner, angle);
+        const spawnX = spawnPos.x;
+        const spawnY = spawnPos.y;
+
+        // Get storm weapon properties
+        const speed = weapon.projectileSpeed || 5;
+        const colorArr = weapon.color || [100, 100, 255];
+
+        // Create storm projectile
+        let proj;
+        if (this.projectilePool) {
+            proj = this.projectilePool.get(
+                spawnX, spawnY, angle, owner,
+                speed, 0, colorArr, 'storm', target, 120, 0.02, speed, 5.0, 10.0, 0.1, system
+            );
+        }
+
+        if (!proj) {
+            proj = new Projectile(
+                spawnX, spawnY, angle, owner,
+                speed, 0, colorArr, 'storm', target, 120, 0.02, speed
+            );
+            proj.system = system;
+        }
+
+        // Attach storm configuration to projectile
+        proj.stormConfig = {
+            type: weapon.stormType || 'electromagnetic',
+            radius: weapon.stormRadius || 80,
+            duration: weapon.stormDuration || 8000,
+            owner: owner
+        };
+        proj.size = weapon.projectileSize || 6;
+        proj._isStorm = true;
+
+        // Add to system
+        if (system && typeof system.addProjectile === 'function') {
+            system.addProjectile(proj);
+        } else if (system && Array.isArray(system.projectiles)) {
+            system.projectiles.push(proj);
+        }
+
+        // Play storm launch sound (uses force sound - similar energy weapon)
+        if (soundManager && player?.pos) {
+            soundManager.playWorldSound('force', spawnX, spawnY, player.pos, owner);
+        }
+
+        WEAPON_LOG(`Storm weapon fired: ${weapon.name} by ${owner.shipTypeName || owner.constructor.name}`);
+    }
 
     /** 
      * Fire a turret weapon that auto-aims at targets

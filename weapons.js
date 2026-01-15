@@ -420,6 +420,66 @@ const WEAPON_UPGRADES = [
         color: [255, 215, 0], // Gold for visual effect
         price: 18000,
         desc: "Top-tier defensive system providing near-complete damage immunity. Named for its distinctive golden glow."
+    },
+
+    // -----------------------------
+    // Storm Weapons (Alien Specialty)
+    // -----------------------------
+    {
+        name: "EMP Storm",
+        type: "storm",
+        stormType: "electromagnetic",
+        damage: 0,
+        color: [80, 100, 255], // Blue - matches electromagnetic storm
+        fireRate: 8.0,         // Long cooldown
+        stormRadius: 200,       // Miniature storm radius
+        stormDuration: 8000,   // 8 seconds
+        projectileSpeed: 6,
+        projectileSize: 6,
+        price: 999999,         // Not purchasable
+        desc: "Deploys a localized electromagnetic disturbance that disrupts targeting systems."
+    },
+    {
+        name: "Gravity Well",
+        type: "storm",
+        stormType: "gravitational",
+        damage: 0,
+        color: [255, 200, 50], // Gold - matches gravitational storm
+        fireRate: 10.0,
+        stormRadius: 200,
+        stormDuration: 10000,  // 10 seconds
+        projectileSpeed: 5,
+        projectileSize: 8,
+        price: 999999,
+        desc: "Creates a temporary gravitational anomaly that pulls nearby vessels toward its center."
+    },
+    {
+        name: "Radiation Burst",
+        type: "storm",
+        stormType: "radiation",
+        damage: 0,
+        color: [100, 255, 50], // Green - matches radiation storm
+        fireRate: 6.0,
+        stormRadius: 200,
+        stormDuration: 6000,   // 6 seconds
+        projectileSpeed: 7,
+        projectileSize: 5,
+        price: 999999,
+        desc: "Releases a concentrated radiation cloud that damages hull integrity over time."
+    },
+    {
+        name: "Ion Disruptor",
+        type: "storm",
+        stormType: "ion",
+        damage: 0,
+        color: [180, 100, 255], // Purple - matches ion storm
+        fireRate: 7.0,
+        stormRadius: 200,
+        stormDuration: 7000,   // 7 seconds
+        projectileSpeed: 6,
+        projectileSize: 6,
+        price: 999999,
+        desc: "Generates an ion field that completely disables enemy shields."
     }
 
 ];

@@ -45,6 +45,8 @@ class Projectile {
         this._isMissile = false;
         this._isTangle = false;
         this._isHarpoon = false;
+        this._isStorm = false;  // Storm weapon projectile
+        this.stormConfig = null; // Storm configuration for spawning mini-storms
         this.destroyed = false;
         this.altitude = 0; // Altitude for surface mode
         this.isSurface = false; // Whether this is a surface mode projectile
@@ -160,6 +162,7 @@ class Projectile {
         this._isMissile = (this.type === "missile");
         this._isTangle = (this.type === "tangle");
         this._isHarpoon = (this.type === "harpoon" || this.type === "HARPOON");
+        this._isStorm = (this.type === "storm");
 
         this.lifespan = this.initialLifespan;
         this.destroyed = false;
@@ -316,6 +319,38 @@ class Projectile {
             } else {
                 // Fallback to a short line pointing to the projectile
                 line(this.pos.x - (this.size * 2), this.pos.y, this.pos.x, this.pos.y);
+            }
+            pop();
+        } else if (this._isStorm) {
+            // Storm projectile: swirling energy orb
+            push();
+            translate(this.pos.x, this.pos.y);
+            const timeNow = (typeof millis === 'function') ? millis() : Date.now();
+            const pulse = 1 + Math.sin(timeNow * 0.01) * 0.2;
+            const rot = timeNow * 0.003;
+            rotate(rot);
+
+            // Get color components
+            const c0 = this.color.levels ? this.color.levels[0] : (Array.isArray(this.color) ? this.color[0] : 100);
+            const c1 = this.color.levels ? this.color.levels[1] : (Array.isArray(this.color) ? this.color[1] : 100);
+            const c2 = this.color.levels ? this.color.levels[2] : (Array.isArray(this.color) ? this.color[2] : 255);
+
+            // Outer glow
+            noStroke();
+            fill(c0, c1, c2, 80);
+            ellipse(0, 0, this.size * 4 * pulse, this.size * 4 * pulse);
+
+            // Core
+            fill(c0, c1, c2, 200);
+            ellipse(0, 0, this.size * 2, this.size * 2);
+
+            // Energy tendrils
+            stroke(255, 255, 255, 150);
+            strokeWeight(1);
+            noFill();
+            for (let i = 0; i < 3; i++) {
+                const a = (i * TWO_PI / 3) + rot;
+                line(0, 0, Math.cos(a) * this.size * 2.5, Math.sin(a) * this.size * 2.5);
             }
             pop();
         } else {
