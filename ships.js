@@ -1687,7 +1687,7 @@ const SHIP_DEFINITIONS = {
         name: "Sidewinder", role: "Starter", upgrades: [], sizeCategory: "Tiny", size: 20,
         baseMaxSpeed: 5.0, baseThrust: 0.08, baseTurnRate: 0.06981,
         baseHull: 50, baseShield: 50, shieldRecharge: 1.0, cargoCapacity: 10,
-        armament: ["Pulse Laser", "Ion Disruptor"], // Starter weapon
+        armament: ["Pulse Laser"], // Starter weapon
         costCategory: "N/A", description: "The bargain bin starter ship that new pilots either treasure forever or sell within hours. Balanced 50/50 hull/shields and just enough cargo (10 tons) to learn the hauling trade. Cheap, agile, expendable. Sort of like a puppy, if puppies exploded when shot.",
         vertexData: [{ x: 0.9, y: 0 }, { x: -0.7, y: 0.8 }, { x: -0.9, y: 0 }, { x: -0.7, y: -0.8 }],
         fillColor: [180, 100, 20],

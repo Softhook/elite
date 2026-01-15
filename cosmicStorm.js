@@ -29,6 +29,7 @@ class CosmicStorm {
         // Weapon-spawned storm properties (set externally when created by storm weapon)
         this.isWeaponSpawned = false;  // True for weapon-deployed mini-storms
         this.owner = null;              // Entity that fired the storm weapon
+        this.attachedTo = null;         // Entity to follow (storm moves with this entity)
     }
 
     // --- Color and Particle Helpers ---
@@ -79,10 +80,42 @@ class CosmicStorm {
                 return false;
             }
         }
-        // Frame-rate independent storm movement
+
+        // Follow attached entity if one exists (for weapon-spawned storms)
+        if (this.attachedTo) {
+            const target = this.attachedTo;
+            // Check if target is still valid
+            if (target.pos && !target.destroyed &&
+                (typeof target.isDestroyed !== 'function' || !target.isDestroyed())) {
+                // Move storm to follow attached entity
+                this.pos.set(target.pos.x, target.pos.y);
+                // Update particle positions relative to new center
+                const posX = this.pos.x;
+                const posY = this.pos.y;
+                for (let i = 0, len = this.particles.length; i < len; i++) {
+                    const particle = this.particles[i];
+                    const dist = particle.distFromCenter * particle.spiralFactor;
+                    particle.pos.set(
+                        posX + cos(particle.angle) * dist,
+                        posY + sin(particle.angle) * dist
+                    );
+                }
+                // Skip normal movement since we're attached
+            } else {
+                // Target died or became invalid - detach and stay in place
+                this.attachedTo = null;
+                ENV_LOG(`Storm detached - target destroyed`);
+            }
+        } else {
+            // Normal storm drift movement (only if not attached)
+            // Frame-rate independent storm movement
+            const timeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+            this.pos.add(p5.Vector.mult(this.velocity, timeScale));
+            this.velocity.rotate(random(-0.1, 0.1) * timeScale);
+        }
+
+        // Update particles (rotation and spiral)
         const timeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
-        this.pos.add(p5.Vector.mult(this.velocity, timeScale));
-        this.velocity.rotate(random(-0.1, 0.1) * timeScale);
         const posX = this.pos.x;
         const posY = this.pos.y;
         for (let i = 0, len = this.particles.length; i < len; i++) {

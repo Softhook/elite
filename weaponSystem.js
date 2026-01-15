@@ -1233,24 +1233,18 @@ class WeaponSystem {
 
         const weapon = owner.currentWeapon;
 
-        // Predictive aiming: fire where the target WILL BE
-        if (target && target.pos && target.vel) {
-            const projectileSpeed = weapon.projectileSpeed || 5;
-            const distToTarget = Math.sqrt(
-                (target.pos.x - owner.pos.x) ** 2 +
-                (target.pos.y - owner.pos.y) ** 2
-            );
-            const timeToImpact = distToTarget / projectileSpeed;
+        let firingAngle = angle;
+        const isPlayer = !!(owner && (owner.isPlayer || (owner.constructor && owner.constructor.name === 'Player')));
 
-            // Predict target position (0.7 factor for imperfect prediction)
-            const predictedX = target.pos.x + (target.vel.x || 0) * timeToImpact * 0.7;
-            const predictedY = target.pos.y + (target.vel.y || 0) * timeToImpact * 0.7;
-
-            angle = Math.atan2(predictedY - owner.pos.y, predictedX - owner.pos.x);
+        // For player, prioritize ship facing for storms to ensure they fire straight ahead.
+        // For non-players (AI), we trust the passed 'angle' which is already predictively 
+        // calculated in enemyCombat.js, ensuring consistency with other weapons.
+        if (isPlayer) {
+            firingAngle = (owner.angle !== undefined && !isNaN(owner.angle)) ? owner.angle : angle;
         }
 
-        // Get spawn position at ship's forward edge
-        const spawnPos = this._getSpawnPosition(owner, angle);
+        // Get spawn position at ship's forward edge (using calculated firing angle)
+        const spawnPos = this._getSpawnPosition(owner, firingAngle);
         const spawnX = spawnPos.x;
         const spawnY = spawnPos.y;
 
@@ -1262,18 +1256,21 @@ class WeaponSystem {
         let proj;
         if (this.projectilePool) {
             proj = this.projectilePool.get(
-                spawnX, spawnY, angle, owner,
-                speed, 0, colorArr, 'storm', target, 120, 0.02, speed, 5.0, 10.0, 0.1, system
+                spawnX, spawnY, firingAngle, owner,
+                speed, 0, colorArr, 'storm', null, 120, 0.02, speed, 5.0, 10.0, 0.1, system
             );
         }
 
         if (!proj) {
             proj = new Projectile(
-                spawnX, spawnY, angle, owner,
-                speed, 0, colorArr, 'storm', target, 120, 0.02, speed
+                spawnX, spawnY, firingAngle, owner,
+                speed, 0, colorArr, 'storm', null, 120, 0.02, speed
             );
             proj.system = system;
         }
+
+        // IMPORTANT: Clear any stale target reference that might cause aiming issues in pooled projectiles
+        proj.target = null;
 
         // Attach storm configuration to projectile
         proj.stormConfig = {

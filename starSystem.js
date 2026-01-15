@@ -2999,7 +2999,7 @@ class StarSystem {
      * @param {Projectile} proj - The storm projectile that expired
      * @private
      */
-    _spawnWeaponStorm(proj) {
+    _spawnWeaponStorm(proj, attachTarget = null) {
         if (!proj?.stormConfig || typeof CosmicStorm === 'undefined') return;
 
         const config = proj.stormConfig;
@@ -3018,7 +3018,13 @@ class StarSystem {
         storm.maxLifetime = config.duration || 8000;
         storm.lifetime = storm.maxLifetime;
         storm.intensity = 0.8;  // Slightly weaker than natural storms
-        storm.velocity.mult(0);  // Stationary
+        storm.velocity.mult(0);  // Stationary (unless attached)
+
+        // Attach to hit entity if provided (storm follows target)
+        if (attachTarget && attachTarget.pos) {
+            storm.attachedTo = attachTarget;
+            ENV_LOG(`Storm attached to ${attachTarget.shipTypeName || attachTarget.constructor?.name || 'entity'}`);
+        }
 
         // Reduce particles for mini-storms (less visual clutter)
         storm.maxParticles = Math.min(storm.radius / 10, 30);
@@ -4433,9 +4439,9 @@ class StarSystem {
                         this.addExplosion(projPos.x, projPos.y, 15, explosionColor);
                     }
 
-                    // Spawn storm on impact if this is a storm projectile
+                    // Spawn storm on impact if this is a storm projectile - attach to player
                     if (proj._isStorm && proj.stormConfig) {
-                        this._spawnWeaponStorm(proj);
+                        this._spawnWeaponStorm(proj, this.player);
                     }
 
                     this.removeProjectile(i);
@@ -4533,9 +4539,9 @@ class StarSystem {
                             }
                         }
 
-                        // Spawn storm on impact if this is a storm projectile
+                        // Spawn storm on impact if this is a storm projectile - attach to enemy
                         if (proj._isStorm && proj.stormConfig) {
-                            this._spawnWeaponStorm(proj);
+                            this._spawnWeaponStorm(proj, enemy);
                         }
 
                         this.removeProjectile(i);
@@ -4620,9 +4626,9 @@ class StarSystem {
                             );
                         }
 
-                        // Spawn storm on impact if this is a storm projectile
+                        // Spawn storm on impact if this is a storm projectile - attach to enemy
                         if (proj._isStorm && proj.stormConfig) {
-                            this._spawnWeaponStorm(proj);
+                            this._spawnWeaponStorm(proj, enemy);
                         }
 
                         this.removeProjectile(i);
