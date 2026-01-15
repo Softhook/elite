@@ -759,6 +759,9 @@ class UIStationMenus {
         const systemTechLevel = system?.techLevel || 1;
         const economyType = system?.economyType || "";
         const availableWeapons = typeof WEAPON_UPGRADES !== 'undefined' ? WEAPON_UPGRADES.filter(weapon => {
+            // [STORM CRITICAL FIX] Hide alien storm weapons from player menu
+            if (weapon.type === 'storm') return false;
+
             // Use weapon's explicit techLevel, or calculate from damage/price
             // For barrier weapons (no damage property), use price-based calculation with fallback
             const damage = weapon.damage || 1; // Fallback for barrier weapons that use damageReduction

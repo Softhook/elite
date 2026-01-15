@@ -433,7 +433,7 @@ const WEAPON_UPGRADES = [
         color: [80, 100, 255], // Blue - matches electromagnetic storm
         fireRate: 8.0,         // Long cooldown
         stormRadius: 200,       // Miniature storm radius
-        stormDuration: 8000,   // 8 seconds
+        stormDuration: 10000,     // 10 seconds
         projectileSpeed: 6,
         projectileSize: 6,
         price: 999999,         // Not purchasable
@@ -461,7 +461,7 @@ const WEAPON_UPGRADES = [
         color: [100, 255, 50], // Green - matches radiation storm
         fireRate: 6.0,
         stormRadius: 200,
-        stormDuration: 6000,   // 6 seconds
+        stormDuration: 10000,   // 10 seconds
         projectileSpeed: 7,
         projectileSize: 5,
         price: 999999,
@@ -475,7 +475,7 @@ const WEAPON_UPGRADES = [
         color: [180, 100, 255], // Purple - matches ion storm
         fireRate: 7.0,
         stormRadius: 200,
-        stormDuration: 7000,   // 7 seconds
+        stormDuration: 10000,   // 10 seconds
         projectileSpeed: 6,
         projectileSize: 6,
         price: 999999,
