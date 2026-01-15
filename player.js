@@ -3165,7 +3165,7 @@ class Player {
         // Planet target: object with {type:'planet', index: n}
         else if (this.autopilotTarget && typeof this.autopilotTarget === 'object' && this.autopilotTarget.type === 'planet') {
             const idx = Number.isFinite(this.autopilotTarget.index) ? this.autopilotTarget.index : this.autopilotPlanetIndex;
-            const planets = this.currentSystem.planets || [];
+            const planets = this.currentSystem.planets;
             if (!planets || planets.length === 0 || idx < 0 || idx >= planets.length) {
                 console.error(`Autopilot planet target invalid. Planets: ${planets?.length || 0}, Index: ${idx}, staticElementsInitialized: ${this.currentSystem?.staticElementsInitialized}`);
 
