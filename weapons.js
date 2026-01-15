@@ -48,6 +48,19 @@ const WEAPON_UPGRADES = [
         desc: "Sustained coherent light projection derived from alien technology. Watch the heat gauge—overheating can be catastrophic."
     },
     {
+        name: "Mining Laser",
+        type: "beam",
+        damage: 4,
+        color: [255, 165, 0], // Orange
+        fireRate: 0.15,
+        maxHeat: 1.0,
+        heatPerShot: 0.08, // More efficient than combat beam
+        heatDissipation: 0.35,
+        heatRecoveryFactor: 0.3,
+        price: 2200,
+        desc: "High-intensity industrial beam tuned for mineral extraction. Exceptionally effective against asteroids."
+    },
+    {
         name: "Scatter Beam",
         type: "beam",
         damage: 3,

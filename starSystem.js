@@ -3568,10 +3568,11 @@ class StarSystem {
     }
 
     /** Adds an explosion to the system's list. */
-    addExplosion(x, y, size, color, isSurface = false) {
+    /** Adds an explosion to the system's list. */
+    addExplosion(x, y, size, color, isSurface = false, silent = false) {
         // Use object pooling if WeaponSystem is available
         if (typeof WeaponSystem !== 'undefined' && typeof WeaponSystem.getPooledObject === 'function') {
-            const explosion = WeaponSystem.getPooledObject('explosion', x, y, size, color, isSurface);
+            const explosion = WeaponSystem.getPooledObject('explosion', x, y, size, color, isSurface, silent);
 
             if (explosion) {
                 this.explosions.push(explosion);
@@ -3585,7 +3586,7 @@ class StarSystem {
         // Fall back to direct instantiation if pooling is unavailable or failed
         if (STAR_SYSTEM_DEBUG) console.log(`Creating new explosion directly at (${x.toFixed(1)},${y.toFixed(1)})`);
         try {
-            const explosion = new Explosion(x, y, size, color, isSurface);
+            const explosion = new Explosion(x, y, size, color, isSurface, silent);
             this.explosions.push(explosion);
             if (STAR_SYSTEM_DEBUG) console.log(`Successfully added direct explosion, total explosions: ${this.explosions.length}`);
         } catch (error) {

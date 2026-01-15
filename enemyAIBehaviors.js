@@ -2608,6 +2608,8 @@ class EnemyAIBehaviors {
                 this.changeState(AI_STATE.IDLE);
                 this.performRepair(system, this.repairTarget);
 
+
+
                 // Slow down and stay near target (frame-rate independent braking)
                 const repairTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
                 this.vel.mult(Math.pow(0.85, repairTimeScale));
@@ -2958,8 +2960,9 @@ class EnemyAIBehaviors {
             const py = this.pos.y + dy * t;
 
             // Use explosion system for particle effects (cyan/green repair color)
+            // SILENT explosion for repair
             if (typeof this.currentSystem.addExplosion === 'function') {
-                this.currentSystem.addExplosion(px, py, 3, [100, 255, 200]);
+                this.currentSystem.addExplosion(px, py, 3, [100, 255, 200], false, true);
             }
         }
     }

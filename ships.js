@@ -2877,7 +2877,7 @@ const SHIP_DEFINITIONS = {
         name: "Prospector Miner", role: "Mining Vessel", upgrades: [], sizeCategory: "Medium", size: 48,
         baseMaxSpeed: 2.5, baseThrust: 0.08, baseTurnRate: 0.03840,
         baseHull: 200, baseShield: 80, shieldRecharge: 0.9, cargoCapacity: 40, // Includes refinery space
-        armament: ["Beam Laser"], // Mining lasers for asteroid destruction
+        armament: ["Mining Laser"], // Mining lasers for asteroid destruction
         costCategory: "Medium", description: "The space excavator nobody respects until they're filthy rich. Top speed of 2.5 means 'chase' isn't in its vocabulary, but that 40-ton hold fills up fast when you're atomizing asteroids. Runs on dreams of profit and the optimistic belief that those rocks contain something valuable.",
         vertexData: [{ x: 0.6, y: 0 }, { x: 0.4, y: 0.8 }, { x: -0.4, y: 0.9 }, { x: -0.9, y: 0.6 }, { x: -1.0, y: -0.3 }, { x: -0.9, y: -0.6 }, { x: -0.4, y: -0.9 }, { x: 0.4, y: -0.8 }], // Bulky, functional
         fillColor: [180, 170, 160], // Industrial grey/brown

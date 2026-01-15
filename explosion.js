@@ -3,7 +3,7 @@
  * The animation has multiple phases - initial flash, debris ejection, and fading smoke.
  */
 class Explosion {
-    constructor(x, y, size, baseColor = [255, 160, 30], isSurface = false) {
+    constructor(x, y, size, baseColor = [255, 160, 30], isSurface = false, silent = false) {
         // Create position vector just once (reused by reset)
         this.pos = createVector(0, 0);
 
@@ -17,10 +17,11 @@ class Explosion {
         this.duration = 60;
         this.currentFrame = 0;
         this.isSurface = isSurface;
+        this.silent = silent;
 
         // Call reset if parameters provided
         if (x !== undefined) {
-            this.reset(x, y, size, baseColor, isSurface);
+            this.reset(x, y, size, baseColor, isSurface, silent);
         }
     }
 
@@ -31,8 +32,9 @@ class Explosion {
      * @param {number} size - Size of explosion
      * @param {Array} baseColor - Base color of explosion
      * @param {boolean} isSurface - Whether this is a surface mode explosion
+     * @param {boolean} silent - Whether to suppress sound
      */
-    reset(x, y, size, baseColor = [255, 160, 30], isSurface = false) {
+    reset(x, y, size, baseColor = [255, 160, 30], isSurface = false, silent = false) {
         // Update position vector
         this.pos.set(x, y);
 
@@ -42,6 +44,7 @@ class Explosion {
         this.duration = 60; // Frames until complete
         this.currentFrame = 0;
         this.isSurface = isSurface;
+        this.silent = silent;
 
         // Clear arrays for reuse
         this.particles.length = 0;
@@ -53,7 +56,7 @@ class Explosion {
 
         // Play sound via the manager, passing position and listener
         // Ensure 'player' global object is accessible
-        if (soundManager && player?.pos) {
+        if (!this.silent && soundManager && player?.pos) {
             soundManager.playExplosion(this.size, this.pos.x, this.pos.y, player.pos, this);
         }
     }

@@ -1272,7 +1272,16 @@ class WeaponSystem {
         // (some targets may not have currentSystem populated at the instant of hit)
         if (typeof target.takeDamage === 'function') {
             try {
-                target.takeDamage(damage, owner, system);
+                // Mining Laser Bonus: 2x effectiveness against asteroids
+                let finalDamage = damage;
+                if (owner && owner.currentWeapon && owner.currentWeapon.name === "Mining Laser") {
+                    // Check if target is an asteroid (by class name or property)
+                    if (target.constructor && target.constructor.name === "Asteroid") {
+                        finalDamage *= 2;
+                    }
+                }
+
+                target.takeDamage(finalDamage, owner, system);
             } catch (e) {
                 console.error('Error calling takeDamage on target:', e);
             }
