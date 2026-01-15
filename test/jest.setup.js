@@ -75,6 +75,9 @@ global.createVector = (x = 0, y = 0) => ({
         const dy = this.y - v.y;
         return Math.sqrt(dx * dx + dy * dy);
     },
+    dot: function (v) {
+        return this.x * v.x + this.y * v.y;
+    },
     set: function (x, y) { this.x = x; this.y = y; return this; }
 });
 
@@ -112,6 +115,8 @@ global.min = Math.min;
 global.max = Math.max;
 global.sqrt = Math.sqrt;
 global.pow = Math.pow;
+global.sq = (x) => x * x;
+global.square = (x) => x * x;
 global.constrain = (val, low, high) => Math.max(low, Math.min(high, val));
 global.map = (value, start1, stop1, start2, stop2) => {
     return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
@@ -126,6 +131,9 @@ global.lerp = (start, stop, amt) => start + (stop - start) * amt;
 // Canvas dimensions (defaults)
 global.width = 1920;
 global.height = 1080;
+
+// Global player mock
+global.player = null;
 
 // Frame timing
 global.deltaTime = 16.67; // ~60fps
@@ -156,6 +164,35 @@ global.color = (r, g, b, a = 255) => {
         toString: function () { return `rgba(${this.levels[0]},${this.levels[1]},${this.levels[2]},${this.levels[3] / 255})`; }
     };
 };
+
+// p5.js Drawing functions (empty mocks)
+global.fill = jest.fn();
+global.noFill = jest.fn();
+global.stroke = jest.fn();
+global.noStroke = jest.fn();
+global.strokeWeight = jest.fn();
+global.ellipse = jest.fn();
+global.circle = jest.fn();
+global.line = jest.fn();
+global.rect = jest.fn();
+global.triangle = jest.fn();
+global.arc = jest.fn();
+global.point = jest.fn();
+global.quad = jest.fn();
+global.beginShape = jest.fn();
+global.endShape = jest.fn();
+global.vertex = jest.fn();
+global.push = jest.fn();
+global.pop = jest.fn();
+global.translate = jest.fn();
+global.rotate = jest.fn();
+global.scale = jest.fn();
+global.textAlign = jest.fn();
+global.textSize = jest.fn();
+global.text = jest.fn();
+global.image = jest.fn();
+global.background = jest.fn();
+global.clear = jest.fn();
 
 // Noise function mock
 global.noise = (x, y = 0, z = 0) => {
@@ -245,6 +282,23 @@ global.AI_ROLE = {
     BOUNTY_HUNTER: 'BOUNTY_HUNTER'
 };
 
+// Mock Player and Enemy classes for instanceof checks
+global.Player = class Player {
+    constructor(x = 0, y = 0) {
+        this.pos = global.createVector(x, y);
+        this.vel = global.createVector(0, 0);
+        this.isPlayer = true;
+    }
+};
+
+global.Enemy = class Enemy {
+    constructor(x = 0, y = 0) {
+        this.pos = global.createVector(x, y);
+        this.vel = global.createVector(0, 0);
+        this.isEnemy = true;
+    }
+};
+
 // AI States
 global.AI_STATE = {
     IDLE: 'IDLE',
@@ -317,6 +371,7 @@ global.uiManager = {
 
 global.soundManager = {
     playSound: jest.fn(),
+    playWorldSound: jest.fn(),
     playMusic: jest.fn(),
     stopMusic: jest.fn()
 };
@@ -349,9 +404,31 @@ global.generateNPCName = () => {
 global.generateHumanEnemyName = generateNPCName;
 
 global.generateGenderedNPCName = () => ({
-    name: generateNPCName(),
+    name: global.generateNPCName(),
     gender: Math.random() > 0.5 ? 'male' : 'female'
 });
+
+// ============================================
+// Other Global Mocks
+// ============================================
+
+global.surfaceMode = false;
+global.EVENT_LOG = jest.fn();
+global.gameStateManager = {
+    currentState: 'IN_FLIGHT'
+};
+global.ThrustManager = class ThrustManager {
+    constructor() {
+        this.particles = new Set();
+    }
+    createThrust() { }
+    update() { }
+    draw() { }
+};
+global.EventManager = class EventManager {
+    constructor() { }
+    update() { }
+};
 
 // ============================================
 // Helper: Clear all mocks between tests
@@ -360,3 +437,47 @@ global.generateGenderedNPCName = () => ({
 beforeEach(() => {
     jest.clearAllMocks();
 });
+// ============================================
+// Test Helper Functions
+// ============================================
+
+global.createMockPlayer = (options = {}) => {
+    return {
+        pos: global.createVector(options.x || 0, options.y || 0),
+        vel: global.createVector(0, 0),
+        size: options.size || 30,
+        hull: options.hull || 100,
+        maxHull: 100,
+        shield: options.shield || 50,
+        maxShield: 50,
+        wantedLevel: options.wantedLevel || 0,
+        cargo: options.cargo || [],
+        isPlayer: true,
+        faction: options.faction || null,
+        constructor: { name: 'Player' },
+        getCargoAmount: () => (options.cargo ? options.cargo.length : 0),
+        // Mock common methods
+        hasUpgrade: () => false,
+        getUpgradeLevel: () => 0
+    };
+};
+
+global.createMockSystem = (options = {}) => {
+    return {
+        asteroids: options.asteroids || [],
+        enemies: options.enemies || [],
+        projectiles: options.projectiles || [],
+        station: options.station || { pos: global.createVector(500, 500), size: 100 },
+        planets: options.planets || [],
+        jumpZoneCenter: global.createVector(0, 0),
+        player: options.player,
+        harpoons: options.harpoons || [],
+        // Common methods
+        addProjectile: function (p) { this.projectiles.push(p); },
+        addExplosion: jest.fn(),
+        isPlayerWanted: function () { return this.player ? this.player.wantedLevel > 0 : false; },
+        setPlayerWanted: jest.fn(),
+        getJumpDistance: () => 100,
+        _getDiagonalDistance: () => 1000
+    };
+};

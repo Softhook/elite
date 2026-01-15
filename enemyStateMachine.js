@@ -939,3 +939,10 @@ function applyEnemyStateMachineMethods() {
         }
     });
 }
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { EnemyStateMachine, applyEnemyStateMachineMethods };
+    global.EnemyStateMachine = EnemyStateMachine;
+    global.applyEnemyStateMachineMethods = applyEnemyStateMachineMethods;
+}

@@ -33,6 +33,7 @@
             margin: 0 0 10px;
             background: linear-gradient(90deg, #64b5f6, #81c784);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -180,11 +181,11 @@
     <div class="status-bar">
         <span>
             <span class="label">Test Files:</span>
-            <span class="value">18</span>
+            <span class="value">20</span>
         </span>
         <span>
             <span class="label">Framework:</span>
-            <span class="value">Custom Harness (Jest-like API)</span>
+            <span class="value">Jest & Custom Harness</span>
         </span>
         <span>
             <span class="label">Last Updated:</span>
@@ -193,108 +194,66 @@
     </div>
 
     <div class="test-grid">
-        <a href="utility_tests.html" class="test-card">
-            <h2><span class="icon">⚙️</span> Utility Tests</h2>
-            <p>Core utilities including ObjectPool, vector math, and helper functions.</p>
-            <span class="test-count">~30 tests</span>
+        <!-- Visual & Manual Tests -->
+        <a href="ship_viewer.html" class="test-card">
+            <h2><span class="icon">🚀</span> Ship Viewer</h2>
+            <p>Visual inspection of ship models, textures, and thruster effects.</p>
         </a>
 
-        <a href="player_test.html" class="test-card">
-            <h2><span class="icon">🚀</span> Player Tests</h2>
-            <p>Player mechanics: movement, combat, cargo, missions, and serialization.</p>
-            <span class="test-count">~50 tests</span>
+        <a href="space_objects_viewer.html" class="test-card">
+            <h2><span class="icon">🛰️</span> Object Viewer</h2>
+            <p>Visual inspection of stations, asteroids, cargo, and other space objects.</p>
         </a>
 
-        <a href="enemy_ai_test.html" class="test-card">
-            <h2><span class="icon">🤖</span> Enemy AI Tests</h2>
-            <p>AI state machine, targeting logic, role behaviors, and cover mechanics.</p>
-            <span class="test-count">~60 tests</span>
+        <a href="draw3d_test.html" class="test-card">
+            <h2><span class="icon">🎨</span> Draw 3D Test</h2>
+            <p>Interactive test for the custom pseudo-3D rendering engine.</p>
         </a>
 
-        <a href="weapon_system_test.html" class="test-card">
-            <h2><span class="icon">🔫</span> Weapon System Tests</h2>
-            <p>Weapon firing, heat management, beam detection, and projectile pooling.</p>
-            <span class="test-count">~55 tests</span>
+        <a href="cover_behavior_test.html" class="test-card">
+            <h2><span class="icon">🛡️</span> Cover Behavior</h2>
+            <p>Visual verification of AI ships seeking cover behind asteroids.</p>
         </a>
 
-        <a href="market_test.html" class="test-card">
-            <h2><span class="icon">💰</span> Market Tests</h2>
-            <p>Trading mechanics: buy/sell, pricing, stock management, economy types.</p>
-            <span class="test-count">~45 tests</span>
+        <a href="planet_test.html" class="test-card">
+            <h2><span class="icon">🌍</span> Planet Rendering</h2>
+            <p>Visual verification of planet textures, layers, and rotation.</p>
         </a>
 
-        <a href="mission_test.html" class="test-card">
-            <h2><span class="icon">📋</span> Mission Tests</h2>
-            <p>Mission creation, lifecycle, progress tracking, and reward handling.</p>
-            <span class="test-count">~40 tests</span>
+        <a href="starfield_benchmark.html" class="test-card">
+            <h2><span class="icon">✨</span> Starfield</h2>
+            <p>Performance benchmark and visual test for parallax starfield rendering.</p>
         </a>
 
-        <a href="mission_types_test.html" class="test-card">
-            <h2><span class="icon">🎯</span> Mission Types Handler Tests</h2>
-            <p>Modular mission type handlers: registry, factory pattern, faction missions (2025-12-21).</p>
-            <span class="test-count">~30 tests</span>
+        <a href="ambient_sound_test.html" class="test-card">
+            <h2><span class="icon">🎵</span> Station Sound</h2>
+            <p>Interactive test for station ambient music and sound effects.</p>
         </a>
 
-        <a href="collision_test.html" class="test-card">
-            <h2><span class="icon">💥</span> Collision Tests</h2>
-            <p>Physics and collision detection for projectiles, asteroids, and cargo.</p>
-            <span class="test-count">~35 tests</span>
+        <a href="../editor/index.html" class="test-card">
+            <h2><span class="icon">🛠️</span> System Editor</h2>
+            <p>Game world editor for creating and modifying star systems.</p>
         </a>
 
-        <a href="serialization_test.html" class="test-card">
-            <h2><span class="icon">💾</span> Serialization Tests</h2>
-            <p>Save/load round-trips for all game entities and state persistence.</p>
-            <span class="test-count">~45 tests</span>
+        <a href="spawn_probability_viewer.html" class="test-card">
+            <h2><span class="icon">📊</span> Spawn Probability</h2>
+            <p>Visual tool to inspect and balance ship spawn rates across systems.</p>
         </a>
 
-        <a href="integration_test.html" class="test-card">
-            <h2><span class="icon">🔗</span> Integration Tests</h2>
-            <p>End-to-end scenarios: combat, trading, missions, and state transitions.</p>
-            <span class="test-count">~25 tests</span>
-        </a>
-
-        <a href="event_manager_test.html" class="test-card">
-            <h2><span class="icon">📅</span> Event Manager Tests</h2>
-            <p>Random events, spawning, and probability management.</p>
-            <span class="test-count">~30 tests</span>
-        </a>
-
-        <a href="ai_targeting_avoidance_test.html" class="test-card">
-            <h2><span class="icon">🎯</span> AI Targeting & Avoidance Tests</h2>
-            <p>Distance-aware targeting, ally engagement penalties, and space object avoidance (2025-12-14).</p>
-            <span class="test-count">~25 tests</span>
-        </a>
-
-        <a href="spatial_partitioning_test.html" class="test-card">
-            <h2><span class="icon">🗺️</span> Spatial Partitioning Tests</h2>
-            <p>Grid-based spatial hash for O(1) collision queries. Benchmarks vs brute-force (2025-12-18).</p>
-            <span class="test-count">~28 tests</span>
-        </a>
-
-        <a href="frame_rate_test.html" class="test-card">
-            <h2><span class="icon">⏱️</span> Frame-Rate Independence Tests</h2>
-            <p>Verifies movement consistency across 30/60/75fps. Validates time-based physics (2025-12-20).</p>
-            <span class="test-count">~8 tests</span>
-        </a>
-
-        <a href="role_interaction_test.html" class="test-card">
-            <h2><span class="icon">🎯</span> Role &amp; Faction Interaction Tests</h2>
-            <p>Interactive matrix showing targeting scores between all AI roles and factions. Tests
-                evaluateTargetScore() logic (2025-12-27).</p>
-            <span class="test-count">~15 tests</span>
+        <a href="surface_render_benchmark.html" class="test-card">
+            <h2><span class="icon">⛰️</span> Surface Benchmark</h2>
+            <p>Performance benchmark for surface rendering with culling optimization.</p>
         </a>
     </div>
 
     <div class="existing-tests">
-        <h3>🗂️ Visual / Manual Tests</h3>
-        <a href="draw3d_test.html">Draw 3D Test</a>
-        <a href="ship_viewer.html">Ship Viewer</a>
-        <a href="space_objects_viewer.html">Space Objects Viewer</a>
-        <a href="cover_behavior_test.html">Cover Behavior Test</a>
-        <a href="planet_test.html">Planet Rendering Test</a>
-        <a href="starfield_benchmark.html">Starfield Benchmark</a>
-        <a href="ambient_sound_test.html">🎵 Station Sound Test</a>
-        <a href="../editor/index.html">🛠️ Editor</a>
+        <h3>📂 Other Diagnostic Tests</h3>
+
+
+        <a href="spawn_empirical_test.html">Empirical Spawning</a>
+        <a href="surface_test.html">Surface Rendering</a>
+
+
     </div>
 
     <footer>

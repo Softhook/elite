@@ -363,4 +363,9 @@ if (typeof window !== 'undefined') {
     window.CollisionUtils = CollisionUtils;
 }
 
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { CollisionUtils };
+    global.CollisionUtils = CollisionUtils;
+}
+
 console.log('collisionUtils.js loaded - polygon collision detection for on-screen entities');

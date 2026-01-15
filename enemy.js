@@ -1144,6 +1144,16 @@ class Enemy {
      */
 }
 
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    global.Enemy = Enemy;
+    module.exports = { Enemy };
+}
+
+// ---------------------------------
+// --- Applied Mixins & Extensions ---
+// ---------------------------------
+
 // Apply utility methods from enemyUtils.js to Enemy prototype
 // This is called after Enemy class definition is complete
 if (typeof applyEnemyUtilityMethods === 'function') {
@@ -1188,16 +1198,3 @@ if (typeof applyEnemyDamageSystemMethods === 'function') {
 if (typeof applyEnemyRenderingMethods === 'function') {
     applyEnemyRenderingMethods();
 }
-
-// Apply ability methods from enemyAbilities.js to Enemy prototype
-if (typeof applyEnemyAbilityMethods === 'function') {
-    applyEnemyAbilityMethods();
-}
-
-// Export for module systems
-// Export for module systems
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Enemy };
-    global.Enemy = Enemy;
-}
-

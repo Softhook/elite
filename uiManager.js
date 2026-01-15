@@ -1530,3 +1530,8 @@ class UIManager {
         return 'Target';
     }
 } // End of UIManager Class
+
+if (typeof module !== 'undefined') {
+    module.exports = UIManager;
+    global.UIManager = UIManager;
+}

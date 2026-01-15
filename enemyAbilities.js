@@ -340,3 +340,10 @@ function applyEnemyAbilityMethods() {
     });
 }
 
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { EnemyAbilities, applyEnemyAbilityMethods };
+    global.EnemyAbilities = EnemyAbilities;
+    global.applyEnemyAbilityMethods = applyEnemyAbilityMethods;
+}
+

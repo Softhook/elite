@@ -22,7 +22,7 @@ class WeaponSystem {
         let totalJitter = 0;
 
         // Disruption-based jitter (affects all weapons)
-        const d = owner && owner.targetingDisruption ? owner.targetingDisruption : 0;
+        const d = owner && owner.disruption ? owner.disruption : 0;
         if (d > 0) {
             const maxDisruptionJitter = 0.55 * d;
             totalJitter += (Math.random() * 2 - 1) * maxDisruptionJitter;
@@ -57,7 +57,7 @@ class WeaponSystem {
 
     // Whether targeting/locks should be disabled at this disruption level
     static _isLockDisabled(owner) {
-        const d = owner && owner.targetingDisruption ? owner.targetingDisruption : 0;
+        const d = owner && owner.disruption ? owner.disruption : 0;
         return d > 0.15; // disable auto-target/locks when notable disruption
     }
 
@@ -1355,5 +1355,12 @@ class WeaponSystem {
     static getPoolStats() {
         return this.projectilePool ? this.projectilePool.getStats() : null;
     }
+}
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { WeaponSystem, WEAPON_TYPE };
+    global.WeaponSystem = WeaponSystem;
+    global.WEAPON_TYPE = WEAPON_TYPE;
 }
 

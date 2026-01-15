@@ -595,7 +595,8 @@ class EnemyTargeting {
             // Create completely private scoring variables
             let _score = 0;
             let _interesting = false;
-            const isPlayer = target instanceof Player;
+            // Robust check: instanceof Player OR explicit flag (useful for tests/mixins)
+            const isPlayer = (typeof Player !== 'undefined' && target instanceof Player) || (target && target.isPlayer === true);
 
             if (isPlayer) {
                 //console.log(`%c🔍 DEBUG: ${enemy.shipTypeName} evaluating player - starting score calculation`, 'color:purple');

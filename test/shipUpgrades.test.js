@@ -4,6 +4,9 @@
  */
 
 // Load source files
+require('../debug.js');
+require('../ships.js');
+require('../weapons.js');
 require('../shipUpgrades.js');
 
 // ============================================
@@ -226,5 +229,125 @@ describe('Booster Upgrades', () => {
 
         expect(booster2.boostCooldown).toBeLessThan(booster1.boostCooldown);
         expect(booster3.boostCooldown).toBeLessThan(booster2.boostCooldown);
+    });
+});
+
+// ============================================
+// Logic Tests (Player Upgrade Application)
+// ============================================
+
+const Player = require('../player.js');
+
+describe('Player Upgrade Logic', () => {
+    let player;
+
+    beforeEach(() => {
+        // Mock p5 globals needed for Player
+        global.createVector = jest.fn((x, y) => ({ x: x || 0, y: y || 0, mult: jest.fn(), add: jest.fn() }));
+        global.color = jest.fn();
+
+        player = new Player('Sidewinder');
+    });
+
+    describe('Armor Application', () => {
+        let baseHull;
+        beforeEach(() => { baseHull = player.maxHull; });
+
+        test('should increase maxHull and current hull when applying armor level 1', () => {
+            const armor1 = SHIP_UPGRADES.find(u => u.type === 'armor' && u.level === 1);
+            player.applyUpgrade('armor', 1);
+            expect(player.maxHull).toBe(baseHull + armor1.hullBonus);
+            expect(player.hull).toBe(baseHull + armor1.hullBonus);
+        });
+
+        test('should maintain damage relative to new max when upgrading', () => {
+            const armor1 = SHIP_UPGRADES.find(u => u.type === 'armor' && u.level === 1);
+            const armor2 = SHIP_UPGRADES.find(u => u.type === 'armor' && u.level === 2);
+
+            player.applyUpgrade('armor', 1);
+            player.hull = 10; // Damaged
+
+            player.applyUpgrade('armor', 2);
+            // Hull should increase by difference in bonuses
+            const expectedHull = 10 + (armor2.hullBonus - armor1.hullBonus);
+            expect(player.hull).toBe(expectedHull);
+        });
+
+        test('should handle downgrading correctly', () => {
+            const armor1 = SHIP_UPGRADES.find(u => u.type === 'armor' && u.level === 1);
+            player.applyUpgrade('armor', 2);
+            player.applyUpgrade('armor', 1);
+            expect(player.maxHull).toBe(baseHull + armor1.hullBonus);
+            expect(player.installedUpgrades.armor).toBe(1);
+        });
+    });
+
+    describe('Engine Application', () => {
+        let baseSpeed, baseThrust;
+        beforeEach(() => {
+            baseSpeed = player.baseMaxSpeed;
+            baseThrust = player.thrustForce;
+        });
+
+        test('should increase speed and thrust', () => {
+            const engine1 = SHIP_UPGRADES.find(u => u.type === 'engine' && u.level === 1);
+            player.applyUpgrade('engine', 1);
+
+            expect(Math.abs(player.baseMaxSpeed - baseSpeed * engine1.speedMultiplier)).toBeLessThan(0.1);
+            expect(Math.abs(player.thrustForce - baseThrust * engine1.thrustMultiplier)).toBeLessThan(0.001);
+        });
+    });
+
+    describe('Hardpoints Application', () => {
+        let baseSlots;
+        beforeEach(() => { baseSlots = player.maxWeapons; });
+
+        test('should increase weapon slots', () => {
+            const hp1 = SHIP_UPGRADES.find(u => u.type === 'hardpoints' && u.level === 1);
+            player.applyUpgrade('hardpoints', 1);
+            expect(player.maxWeapons).toBe(baseSlots + hp1.bonusSlots);
+            expect(player.weapons.length).toBe(baseSlots + hp1.bonusSlots);
+        });
+    });
+
+    describe('Cargo Application', () => {
+        let baseCargo;
+        beforeEach(() => { baseCargo = player.cargoCapacity; });
+
+        test('should increase cargo capacity', () => {
+            const cargo1 = SHIP_UPGRADES.find(u => u.type === 'cargo' && u.level === 1);
+            player.applyUpgrade('cargo', 1);
+            expect(player.cargoCapacity).toBe(baseCargo + cargo1.cargoBonus);
+        });
+    });
+
+    describe('Shield Application', () => {
+        let baseShield;
+        beforeEach(() => { baseShield = player.maxShield; });
+
+        test('should increase maxShield', () => {
+            const shield1 = SHIP_UPGRADES.find(u => u.type === 'shield' && u.level === 1);
+            player.applyUpgrade('shield', 1);
+            expect(player.maxShield).toBe(baseShield + shield1.shieldBonus);
+        });
+    });
+
+    describe('Serialization', () => {
+        test('should save and load installed upgrades', () => {
+            player.applyUpgrade('armor', 2);
+            player.applyUpgrade('engine', 1);
+
+            const data = player.getSaveData();
+            // Restore
+            const player2 = new Player('Sidewinder');
+            player2.loadSaveData(data);
+
+            expect(player2.installedUpgrades.armor).toBe(2);
+            expect(player2.installedUpgrades.engine).toBe(1);
+
+            // Stats should be re-applied on load
+            const armor2 = SHIP_UPGRADES.find(u => u.type === 'armor' && u.level === 2);
+            expect(player2.maxHull).toBe(player.maxHull);
+        });
     });
 });

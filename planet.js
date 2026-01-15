@@ -1887,3 +1887,8 @@ class Planet {
         });
     }
 } // End of Planet Class
+
+if (typeof module !== 'undefined') {
+    module.exports = Planet;
+    global.Planet = Planet;
+}

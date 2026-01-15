@@ -263,6 +263,11 @@ Harpoon.prototype.isDone = function () {
 // Export for environments that expect global constructor
 if (typeof window !== 'undefined') window.Harpoon = Harpoon;
 
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Harpoon;
+    global.Harpoon = Harpoon;
+}
+
 // Serialization helpers for Harpoon
 Harpoon.prototype.toJSON = function () {
     return {

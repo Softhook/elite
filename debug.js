@@ -195,4 +195,4 @@
   api.disable = function (name) { if (name in defaults) return api.set({ [name]: false }); return api.get(); };
   api.toggle = function (name) { if (name in defaults) return api.set({ [name]: !global[name] }); return api.get(); };
 
-})(typeof window !== 'undefined' ? window : this);
+})(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : (typeof self !== 'undefined' ? self : this)));

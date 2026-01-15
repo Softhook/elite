@@ -529,7 +529,7 @@ class EnemyCargo {
         if (context === 'destruction') {
             const highValueGoods = ['Narcotics', 'Weapons', 'Slaves'];
             const mediumValueGoods = ['Luxury Goods', 'Adv Components', 'Computers'];
-            
+
             if (highValueGoods.includes(cargoType)) {
                 // Reduce to 33% for highest value illegal goods
                 quantity = Math.max(1, Math.floor(quantity * 0.33));
@@ -681,4 +681,11 @@ function applyEnemyCargoMethods() {
             Enemy.prototype[methodName] = EnemyCargo.prototype[methodName];
         }
     });
+}
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { EnemyCargo, applyEnemyCargoMethods };
+    global.EnemyCargo = EnemyCargo;
+    global.applyEnemyCargoMethods = applyEnemyCargoMethods;
 }

@@ -1949,3 +1949,24 @@ class DefenseDrone extends SurfaceObject {
         pop();
     }
 }
+
+if (typeof module !== 'undefined') {
+    module.exports = {
+        SurfaceObject,
+        SecretCache,
+        Building,
+        ImperialBuilding,
+        SeparatistBuilding,
+        MilitaryBuilding,
+        PostHumanBuilding,
+        OffworldBuilding,
+        MiningBuilding,
+        IndustrialBuilding,
+        RefineryBuilding,
+        AgriculturalBuilding,
+        ServiceBuilding,
+        Turret,
+        SurfaceStation
+    };
+    global.Turret = Turret;
+}

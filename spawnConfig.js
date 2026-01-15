@@ -165,3 +165,11 @@ window.SpawnConfig = {
     SECURITY_MODIFIERS: SECURITY_MODIFIERS,
     getProbabilities: getSpawnProbabilities
 };
+
+if (typeof module !== 'undefined') {
+    module.exports = {
+        PROBABILITIES: SPAWN_PROBABILITIES,
+        SECURITY_MODIFIERS: SECURITY_MODIFIERS,
+        getProbabilities: getSpawnProbabilities
+    };
+}
