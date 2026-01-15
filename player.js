@@ -3131,7 +3131,7 @@ class Player {
         }
         else if (this.autopilotTarget === 'secretbase') {
             // Target the closest discovered secret station
-            const secretStations = this.currentSystem.secretStations || [];
+            const secretStations = this.currentSystem.secretStations;
             const discoveredSecrets = secretStations.filter(s => s.discovered && s.pos);
 
             if (discoveredSecrets.length === 0) {

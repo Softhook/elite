@@ -553,7 +553,7 @@ class UIMinimap {
     }
 
     _drawPlanets(player, system, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom) {
-        const planets = system.planets || [];
+        const planets = system.planets;
         for (let i = 0; i < planets.length; i++) {
             const planet = planets[i];
             if (!planet?.pos) continue;
@@ -596,7 +596,7 @@ class UIMinimap {
     }
 
     _drawEnemies(player, system, mapCenterX, mapCenterY, isFullyWithinBounds) {
-        const enemies = system.enemies || [];
+        const enemies = system.enemies;
         for (let i = 0; i < enemies.length; i++) {
             const enemy = enemies[i];
             if (!enemy?.pos || enemy.isDestroyed()) continue;
@@ -641,7 +641,7 @@ class UIMinimap {
     }
 
     _drawSpaceObjects(player, system, mapCenterX, mapCenterY, isFullyWithinBounds) {
-        const spaceObjects = system.spaceObjects || [];
+        const spaceObjects = system.spaceObjects;
         for (let i = 0; i < spaceObjects.length; i++) {
             const obj = spaceObjects[i];
             if (!obj?.pos) continue;
@@ -660,7 +660,7 @@ class UIMinimap {
     }
 
     _drawComets(player, system, mapCenterX, mapCenterY, mapLeft, mapRight, mapTop, mapBottom) {
-        const asteroids = system.asteroids || [];
+        const asteroids = system.asteroids;
         if (!asteroids || asteroids.length === 0) return;
 
         // Clip to minimap area so long trajectory lines don't draw over UI
@@ -951,7 +951,7 @@ class UIMinimap {
                 label = 'JMP';
             } else if (target === 'secretbase') {
                 // Find closest discovered secret station
-                const secretStations = system.secretStations || [];
+                const secretStations = system.secretStations;
                 const discoveredSecrets = secretStations.filter(s => s.discovered && s.pos);
                 if (discoveredSecrets.length === 0) return;
 
@@ -970,7 +970,7 @@ class UIMinimap {
                 label = 'SEC';
             } else if (typeof target === 'object' && target.type === 'planet') {
                 const idx = Number.isFinite(target.index) ? target.index : player.autopilotPlanetIndex;
-                const planets = system.planets || [];
+                const planets = system.planets;
                 if (!planets || idx < 0 || idx >= planets.length) return;
                 const p = planets[idx];
                 if (!p || !p.pos) return;
@@ -1079,8 +1079,8 @@ class UIMinimap {
             }
         };
 
-        checkEntities(system.enemies || []);
-        checkEntities(system.spaceObjects || []);
+        checkEntities(system.enemies);
+        checkEntities(system.spaceObjects);
 
         if (closestEntity) {
             if (player.target === closestEntity) {
