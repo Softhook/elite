@@ -157,7 +157,7 @@ const WEAPON_UPGRADES = [
         type: "spread3",
         damage: 6,
         color: [255, 100, 100], // Pinkish
-        fireRate: 0.18,
+        fireRate: 0.2,
         price: 2000,
         desc: "Rapid-fire spread weapon designed for engaging multiple hostiles. Achilles Corporation's answer to pirate swarms."
     },
