@@ -3021,7 +3021,8 @@ class StarSystem {
         storm.velocity.mult(0);  // Stationary (unless attached)
 
         // Attach to hit entity if provided (storm follows target)
-        if (attachTarget && attachTarget.pos) {
+        // [MODIFIED] Gravitational storms (Gravity Well) do NOT attach; they act as stationary hazards
+        if (attachTarget && attachTarget.pos && (config.type !== 'gravitational')) {
             storm.attachedTo = attachTarget;
             ENV_LOG(`Storm attached to ${attachTarget.shipTypeName || attachTarget.constructor?.name || 'entity'}`);
         }
