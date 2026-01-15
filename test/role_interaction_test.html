@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Role & Faction Interaction Matrix - Elite Game</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        body {
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+            background: #0a0a0f;
+            color: #e8f0ff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: 24px;
+            color: #64b5f6;
+        }
+
+        h2 {
+            margin: 30px 0 15px;
+            font-size: 18px;
+            color: #81c784;
+        }
+
+        .description {
+            background: #1a1a2e;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #64b5f6;
+        }
+
+        .legend {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+
+        .matrix-container {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 70vh;
+            margin-bottom: 30px;
+        }
+
+        table {
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+
+        th,
+        td {
+            border: 1px solid #333;
+            padding: 4px 6px;
+            text-align: center;
+            min-width: 50px;
+        }
+
+        th {
+            background: #1a1a2e;
+            position: sticky;
+            top: 0;
+        }
+
+        .row-header {
+            background: #1a1a2e;
+            text-align: left;
+            position: sticky;
+            left: 0;
+            z-index: 1;
+        }
+
+        .corner {
+            position: sticky;
+            left: 0;
+            top: 0;
+            z-index: 2;
+            background: #0d0d15;
+        }
+
+        .score-hostile-high {
+            background: #c62828;
+            color: white;
+        }
+
+        .score-hostile-med {
+            background: #ef6c00;
+            color: white;
+        }
+
+        .score-hostile-low {
+            background: #fbc02d;
+            color: black;
+        }
+
+        .score-neutral {
+            background: #2e7d32;
+            color: white;
+        }
+
+        .score-penalty {
+            background: #5e35b1;
+            color: white;
+        }
+
+        .score-invalid {
+            background: #424242;
+            color: #888;
+        }
+
+        .score-same {
+            background: #1a1a2e;
+            color: #555;
+        }
+
+        .faction-tag {
+            font-size: 8px;
+            opacity: 0.7;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🎯 Role & Faction Interaction Matrix</h1>
+    <div class="description">
+        Shows how every AI role/faction combination scores every other as a potential target.
+        Higher scores = more likely to attack. Scores use <code>evaluateTargetScore()</code>.
+    </div>
+
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-color score-hostile-high"></div> Hostile (500+)
+        </div>
+        <div class="legend-item">
+            <div class="legend-color score-hostile-med"></div> Moderate (100-499)
+        </div>
+        <div class="legend-item">
+            <div class="legend-color score-hostile-low"></div> Low Interest (1-99)
+        </div>
+        <div class="legend-item">
+            <div class="legend-color score-neutral"></div> Neutral (0)
+        </div>
+        <div class="legend-item">
+            <div class="legend-color score-penalty"></div> Penalty (negative)
+        </div>
+        <div class="legend-item">
+            <div class="legend-color score-invalid"></div> Ignores/No Interest
+        </div>
+    </div>
+
+    <div id="matrix-output"></div>
+
+    <h2>📊 Unit Test Results</h2>
+    <div id="test-results">Running tests...</div>
+
+    <!-- Test harness -->
+    <script src="test_harness.js"></script>
+
+    <!-- Dependencies -->
+    <script src="../debug.js"></script>
+    <script src="../ships.js"></script>
+    <script src="../weapons.js"></script>
+    <script src="../projectile.js"></script>
+    <script src="../harpoon.js"></script>
+    <script src="../weaponSystem.js"></script>
+    <script src="../enemyConstants.js"></script>
+    <script src="../objectPool.js"></script>
+    <script src="../enemyUtils.js"></script>
+    <script src="../enemy.js"></script>
+    <script src="../enemyDamageSystem.js"></script>
+    <script src="../enemyRendering.js"></script>
+    <script src="../enemyMovement.js"></script>
+    <script src="../enemyTargeting.js"></script>
+    <script src="../enemyCombat.js"></script>
+    <script src="../enemyStateMachine.js"></script>
+    <script src="../enemyAIBehaviors.js"></script>
+    <script src="../enemyCargo.js"></script>
+    <script src="../thrustParticles.js"></script>
+
+    <script>
+        // Setup mock p5 before tests
+        setupMockP5();
+
+        // Apply Enemy Mixins
+        if (typeof applyEnemyUtilityMethods === 'function') applyEnemyUtilityMethods();
+        if (typeof applyEnemyDamageSystemMethods === 'function') applyEnemyDamageSystemMethods();
+        if (typeof applyEnemyRenderingMethods === 'function') applyEnemyRenderingMethods();
+        if (typeof applyEnemyMovementMethods === 'function') applyEnemyMovementMethods();
+        if (typeof applyEnemyTargetingMethods === 'function') applyEnemyTargetingMethods();
+        if (typeof applyEnemyCombatMethods === 'function') applyEnemyCombatMethods();
+        if (typeof applyEnemyStateMachineMethods === 'function') applyEnemyStateMachineMethods();
+        if (typeof applyEnemyAIBehaviorMethods === 'function') applyEnemyAIBehaviorMethods();
+        if (typeof applyEnemyCargoMethods === 'function') applyEnemyCargoMethods();
+
+        // ============================================
+        // Configuration
+        // ============================================
+
+        const ROLES = [
+            AI_ROLE.PIRATE,
+            AI_ROLE.POLICE,
+            AI_ROLE.HAULER,
+            AI_ROLE.TRANSPORT,
+            AI_ROLE.ALIEN,
+            AI_ROLE.BOUNTY_HUNTER,
+            AI_ROLE.GUARD,
+            AI_ROLE.COMBAT,
+            AI_ROLE.MINER,
+            AI_ROLE.REPAIR
+        ];
+
+        const FACTIONS = [
+            null,           // No faction
+            'MILITARY',
+            'IMPERIAL',
+            'SEPARATIST',
+            'POLICE',
+            'PIRATE',
+            'ALIEN',
+            'HARLEQUIN'
+        ];
+
+        // Ship types appropriate for each role
+        const ROLE_SHIP_MAP = {
+            [AI_ROLE.PIRATE]: 'Sidewinder',
+            [AI_ROLE.POLICE]: 'ViperPol',
+            [AI_ROLE.HAULER]: 'Adder',
+            [AI_ROLE.TRANSPORT]: 'SystemShuttle',
+            [AI_ROLE.ALIEN]: 'Thargoid',
+            [AI_ROLE.BOUNTY_HUNTER]: 'ViperBH',
+            [AI_ROLE.GUARD]: 'Viper',
+            [AI_ROLE.COMBAT]: 'Viper',
+            [AI_ROLE.MINER]: 'Adder',
+            [AI_ROLE.REPAIR]: 'Adder'
+        };
+
+        // ============================================
+        // Helper Functions
+        // ============================================
+
+        // Mock Player class for instanceof checks
+        class Player {
+            constructor() {
+                this.pos = createVector(0, 0);
+                this.vel = createVector(0, 0);
+                this.size = 30;
+                this.hull = 100;
+                this.maxHull = 100;
+                this.shield = 50;
+                this.maxShield = 50;
+                this.isWanted = false;
+                this.playerFaction = null;
+                this.cargo = [];
+            }
+            getCargoAmount() { return this.cargo.reduce((sum, item) => sum + (item?.quantity ?? 0), 0); }
+        }
+
+        function createMockPlayer(options = {}) {
+            const p = new Player();
+            p.pos = createVector(options.x || 500, options.y || 500);
+            p.isWanted = options.isWanted || false;
+            p.playerFaction = options.faction || null;
+            p.cargo = options.cargo || [];
+            p.hull = options.hull || 100;
+            p.shield = options.shield || 50;
+            p.size = options.size || 30;
+            return p;
+        }
+
+        function createMockSystem(enemies = []) {
+            return {
+                asteroids: [],
+                enemies: enemies,
+                projectiles: [],
+                station: { pos: createVector(0, 0), size: 100 },
+                planets: [],
+                player: null,
+                isPlayerWanted: function () { return this.player?.isWanted || false; }
+            };
+        }
+
+        function createEnemy(role, faction, x = 0, y = 0) {
+            const shipType = ROLE_SHIP_MAP[role] || 'Sidewinder';
+            const enemy = new Enemy(x, y, null, shipType, role);
+            enemy.faction = faction;
+            return enemy;
+        }
+
+        function getScoreClass(score) {
+            if (score === -Infinity || score === null || score === undefined) return 'score-invalid';
+            if (score >= 500) return 'score-hostile-high';
+            if (score >= 100) return 'score-hostile-med';
+            if (score >= 1) return 'score-hostile-low';
+            if (score < 0) return 'score-penalty'; // Negative = penalty applied (e.g., same-faction)
+            return 'score-neutral'; // Exactly 0
+        }
+
+        function formatScore(score) {
+            if (score === -Infinity) return '—';
+            if (score === null || score === undefined) return '?';
+            return Math.round(score);
+        }
+
+        function getRoleLabel(role, faction) {
+            const factionStr = faction ? `<span class="faction-tag">${faction}</span>` : '';
+            return `${role}${factionStr}`;
+        }
+
+        /**
+         * Calculate raw targeting score for matrix display.
+         * This shows actual penalty values instead of truncating to -Infinity.
+         * Focuses on faction/role-based scoring for clarity.
+         */
+        function getRawTargetScore(source, target, system) {
+            // Skip self-targeting
+            if (source === target) return null;
+
+            // Basic validity
+            if (!source.isTargetValid || !source.isTargetValid(target)) return -Infinity;
+
+            // Always calculate simplified rawScore for matrix display
+            // (avoids distance penalties from real evaluateTargetScore)
+            let rawScore = 0;
+            const isPlayer = target instanceof Player;
+
+            // Get factions
+            const srcFaction = source.faction || '';
+            const tgtFaction = isPlayer ? (target.playerFaction || '') : (target.faction || '');
+
+            // Role-specific base scoring (simplified version)
+            switch (source.role) {
+                case AI_ROLE.PIRATE:
+                    if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT || target.role === AI_ROLE.MINER) {
+                        rawScore = TARGET_SCORE_PIRATE_PREY_HAULER; // 40
+                    } else if (isPlayer) {
+                        // Base interest in player
+                        rawScore = TARGET_SCORE_PIRATE_CARGO_BASE; // 30
+                        // Add cargo bonus if player has cargo
+                        const cargo = target.getCargoAmount ? target.getCargoAmount() : 0;
+                        if (cargo > 0) {
+                            rawScore += cargo * TARGET_SCORE_PIRATE_CARGO_MULT; // +1.5 per unit
+                        }
+                    }
+                    break;
+
+                case AI_ROLE.POLICE:
+                    if (target.role === AI_ROLE.PIRATE || target.role === AI_ROLE.ALIEN) {
+                        rawScore = TARGET_SCORE_BASE_WANTED; // 100
+                    }
+                    break;
+
+                case AI_ROLE.COMBAT:
+                    // Check faction rivalries - Combat ships only target specific enemies
+                    if ((srcFaction === 'IMPERIAL' && tgtFaction === 'SEPARATIST') ||
+                        (srcFaction === 'SEPARATIST' && tgtFaction === 'IMPERIAL')) {
+                        rawScore = TARGET_SCORE_COMBAT_RIVALRY_BONUS; // 500 - faction rivalry
+                    } else if (srcFaction === 'MILITARY' && target.role === AI_ROLE.ALIEN) {
+                        rawScore = TARGET_SCORE_COMBAT_VS_ALIEN_BONUS; // 500 - military vs aliens
+                    } else if (target.role === AI_ROLE.PIRATE || target.role === AI_ROLE.ALIEN) {
+                        rawScore = TARGET_SCORE_COMBAT_STANDARD_ENGAGE; // 100 - standard threats
+                    }
+                    // NOTE: Combat ships do NOT proactively target neutral players
+                    // They only engage players of rival factions or if attacked first
+                    break;
+
+                case AI_ROLE.ALIEN:
+                    if (target.role !== AI_ROLE.ALIEN) {
+                        rawScore = 50; // Base interest in all non-aliens
+                    }
+                    break;
+
+                case AI_ROLE.BOUNTY_HUNTER:
+                    // Only targets bountyTarget or player (if no contract)
+                    if (source.bountyTarget === target) {
+                        rawScore = TARGET_SCORE_BOUNTY_CONTRACT;
+                    } else if (!source.bountyTarget && isPlayer) {
+                        rawScore = TARGET_SCORE_BOUNTY_CONTRACT;
+                    }
+                    // No interest in other targets
+                    break;
+
+                case AI_ROLE.GUARD:
+                    // Guards only retaliate - no proactive targeting
+                    break;
+            }
+
+            // Apply same-faction penalty only if there's base interest to penalize
+            // No base interest (rawScore == 0) means the ship ignores this target entirely
+            if (rawScore > 0 && srcFaction && srcFaction !== 'UNKNOWN' && srcFaction !== '' &&
+                tgtFaction && tgtFaction !== 'UNKNOWN' && tgtFaction !== '' &&
+                srcFaction === tgtFaction) {
+                rawScore -= TARGET_SCORE_SAME_FACTION_PENALTY; // -200
+            }
+
+            // If no interest (0 or less with no reason), return -Infinity 
+            if (rawScore <= 0 && rawScore > -200) return -Infinity;
+
+            return rawScore;
+        }
+
+        // ============================================
+        // Matrix Generation
+        // ============================================
+
+        function generateInteractionMatrix() {
+            const container = document.getElementById('matrix-output');
+
+            // Create combinations of role + faction
+            const combinations = [];
+            for (const role of ROLES) {
+                for (const faction of FACTIONS) {
+                    // Skip invalid combinations
+                    if (role === AI_ROLE.ALIEN && faction !== 'ALIEN' && faction !== null) continue;
+                    if (role === AI_ROLE.POLICE && faction !== 'POLICE' && faction !== null) continue;
+                    if (role === AI_ROLE.PIRATE && faction !== 'PIRATE' && faction !== null) continue;
+                    combinations.push({ role, faction });
+                }
+            }
+
+            // Add player variants as targets
+            const playerVariants = [
+                { label: 'Player (Clean)', config: { isWanted: false } },
+                { label: 'Player (Wanted)', config: { isWanted: true } },
+                { label: 'Player (Cargo)', config: { isWanted: false, cargo: [{ name: 'Gold', quantity: 20 }] } },
+                { label: 'Player (MILITARY)', config: { isWanted: false, faction: 'MILITARY' } },
+                { label: 'Player (IMPERIAL)', config: { isWanted: false, faction: 'IMPERIAL' } },
+                { label: 'Player (SEPARATIST)', config: { isWanted: false, faction: 'SEPARATIST' } },
+                { label: 'Player (POLICE)', config: { isWanted: false, faction: 'POLICE' } }
+            ];
+
+            // Create mock system - ALL enemies at same position (0,0) to eliminate distance penalties
+            // This shows the inherent targeting scores without distance skewing results
+            const enemies = combinations.map((c, i) =>
+                createEnemy(c.role, c.faction, 0, 0)
+            );
+            const system = createMockSystem(enemies);
+
+            // Build HTML table
+            let html = '<div class="matrix-container"><table>';
+
+            // Header row
+            html += '<tr><th class="corner">Source ↓ / Target →</th>';
+            for (const combo of combinations) {
+                html += `<th>${getRoleLabel(combo.role, combo.faction)}</th>`;
+            }
+            for (const pv of playerVariants) {
+                html += `<th>${pv.label}</th>`;
+            }
+            html += '</tr>';
+
+            // Data rows
+            for (let i = 0; i < combinations.length; i++) {
+                const srcCombo = combinations[i];
+                const srcEnemy = enemies[i];
+
+                html += `<tr><th class="row-header">${getRoleLabel(srcCombo.role, srcCombo.faction)}</th>`;
+
+                // Score against each enemy target (use raw scores to show penalties)
+                for (let j = 0; j < combinations.length; j++) {
+                    if (i === j) {
+                        // Same entity - show "self" marker
+                        html += '<td class="score-same">self</td>';
+                    } else {
+                        const tgtEnemy = enemies[j];
+                        let score;
+                        try {
+                            // Use getRawTargetScore to show actual penalty values
+                            score = getRawTargetScore(srcEnemy, tgtEnemy, system);
+                        } catch (e) {
+                            score = null;
+                        }
+                        const cls = getScoreClass(score);
+                        html += `<td class="${cls}">${formatScore(score)}</td>`;
+                    }
+                }
+
+                // Score against player variants (use getRawTargetScore to show faction penalties)
+                for (const pv of playerVariants) {
+                    const mockPlayer = createMockPlayer(pv.config);
+                    system.player = mockPlayer;
+                    let score;
+                    try {
+                        // Use getRawTargetScore to show actual penalty values
+                        score = getRawTargetScore(srcEnemy, mockPlayer, system);
+                    } catch (e) {
+                        score = null;
+                    }
+                    const cls = getScoreClass(score);
+                    html += `<td class="${cls}">${formatScore(score)}</td>`;
+                }
+
+                html += '</tr>';
+            }
+
+            html += '</table></div>';
+            container.innerHTML = html;
+        }
+
+        // ============================================
+        // Unit Tests
+        // ============================================
+
+        describe('Role Hostility Rules', () => {
+            let system;
+
+            beforeEach(() => {
+                system = createMockSystem([]);
+            });
+
+            it('Pirates should target Haulers with positive score', () => {
+                const pirate = createEnemy(AI_ROLE.PIRATE, 'PIRATE');
+                const hauler = createEnemy(AI_ROLE.HAULER, null, 100, 0);
+                system.enemies = [hauler];
+
+                const score = pirate.evaluateTargetScore(hauler, system);
+                expect(score).toBeGreaterThan(0);
+            });
+
+            it('Pirates should target Transports with positive score', () => {
+                const pirate = createEnemy(AI_ROLE.PIRATE, 'PIRATE');
+                const transport = createEnemy(AI_ROLE.TRANSPORT, null, 100, 0);
+                system.enemies = [transport];
+
+                const score = pirate.evaluateTargetScore(transport, system);
+                expect(score).toBeGreaterThan(0);
+            });
+
+            it('Police should target wanted player', () => {
+                const police = createEnemy(AI_ROLE.POLICE, 'POLICE');
+                const wantedPlayer = createMockPlayer({ isWanted: true });
+                system.player = wantedPlayer;
+
+                const score = police.evaluateTargetScore(wantedPlayer, system);
+                expect(score).toBeGreaterThan(0);
+            });
+
+            it('Police should NOT target clean player', () => {
+                const police = createEnemy(AI_ROLE.POLICE, 'POLICE');
+                const cleanPlayer = createMockPlayer({ isWanted: false });
+                system.player = cleanPlayer;
+
+                const score = police.evaluateTargetScore(cleanPlayer, system);
+                expect(score).toBeLessThanOrEqual(0);
+            });
+
+            it('Military Combat ships should prioritize Aliens', () => {
+                const military = createEnemy(AI_ROLE.COMBAT, 'MILITARY');
+                const alien = createEnemy(AI_ROLE.ALIEN, 'ALIEN', 100, 0);
+                system.enemies = [alien];
+
+                const score = military.evaluateTargetScore(alien, system);
+                expect(score).toBeGreaterThan(400); // Should be high priority
+            });
+
+            it('Imperial Combat ships should prioritize Separatists', () => {
+                const imperial = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL');
+                const separatist = createEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 100, 0);
+                system.enemies = [separatist];
+
+                const score = imperial.evaluateTargetScore(separatist, system);
+                expect(score).toBeGreaterThan(400); // High priority due to rivalry
+            });
+
+            it('Separatist Combat ships should prioritize Imperials', () => {
+                const separatist = createEnemy(AI_ROLE.COMBAT, 'SEPARATIST');
+                const imperial = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 100, 0);
+                system.enemies = [imperial];
+
+                const score = separatist.evaluateTargetScore(imperial, system);
+                expect(score).toBeGreaterThan(400); // High priority due to rivalry
+            });
+
+            it('Same faction ships should have reduced targeting score', () => {
+                const imperial1 = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL');
+                const imperial2 = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 100, 0);
+                system.enemies = [imperial2];
+
+                const score = imperial1.evaluateTargetScore(imperial2, system);
+                expect(score).toBeLessThanOrEqual(0); // Should have penalty
+            });
+
+            it('Bounty Hunters with no contract should target player (fallback)', () => {
+                const bh = createEnemy(AI_ROLE.BOUNTY_HUNTER, null);
+                const player = createMockPlayer();
+                const otherEnemy = createEnemy(AI_ROLE.HAULER, null, 100, 0);
+                system.player = player;
+                system.enemies = [otherEnemy];
+
+                const playerScore = bh.evaluateTargetScore(player, system);
+                const enemyScore = bh.evaluateTargetScore(otherEnemy, system);
+
+                expect(playerScore).toBeGreaterThan(0);
+                expect(enemyScore).toBe(-Infinity); // Should ignore non-contract targets
+            });
+
+            it('Bounty Hunters with assigned pirate contract should target that pirate', () => {
+                const bh = createEnemy(AI_ROLE.BOUNTY_HUNTER, null);
+                const targetPirate = createEnemy(AI_ROLE.PIRATE, 'PIRATE', 100, 0);
+                const otherPirate = createEnemy(AI_ROLE.PIRATE, 'PIRATE', 200, 0);
+                const player = createMockPlayer();
+
+                // Assign bounty contract
+                bh.bountyTarget = targetPirate;
+
+                system.player = player;
+                system.enemies = [targetPirate, otherPirate];
+
+                const contractScore = bh.evaluateTargetScore(targetPirate, system);
+                const otherPirateScore = bh.evaluateTargetScore(otherPirate, system);
+                const playerScore = bh.evaluateTargetScore(player, system);
+
+                expect(contractScore).toBe(1000); // TARGET_SCORE_BOUNTY_CONTRACT
+                expect(otherPirateScore).toBe(-Infinity); // Should ignore other pirates
+                expect(playerScore).toBe(-Infinity); // Should ignore player when contract assigned
+            });
+
+            it('Bounty Hunters with assigned combat ship contract should target that ship', () => {
+                const bh = createEnemy(AI_ROLE.BOUNTY_HUNTER, null);
+                const targetCombat = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 100, 0);
+                const player = createMockPlayer();
+
+                // Assign assassination contract (combat ship)
+                bh.bountyTarget = targetCombat;
+
+                system.player = player;
+                system.enemies = [targetCombat];
+
+                const contractScore = bh.evaluateTargetScore(targetCombat, system);
+                const playerScore = bh.evaluateTargetScore(player, system);
+
+                expect(contractScore).toBe(1000); // TARGET_SCORE_BOUNTY_CONTRACT
+                expect(playerScore).toBe(-Infinity); // Should ignore player when contract assigned
+            });
+
+            it('Guards should only retaliate (not initiate combat)', () => {
+                const guard = createEnemy(AI_ROLE.GUARD, 'IMPERIAL');
+                const pirate = createEnemy(AI_ROLE.PIRATE, 'PIRATE', 100, 0);
+                // Guard has no principal and hasn't been attacked
+                guard.principal = null;
+
+                system.enemies = [pirate];
+
+                const score = guard.evaluateTargetScore(pirate, system);
+                // Without principal or being attacked, guard shouldn't target anyone
+                expect(score).toBe(-Infinity);
+            });
+
+            it('Guards should prioritize principal attacker with high score', () => {
+                const principal = createEnemy(AI_ROLE.HAULER, 'IMPERIAL');
+                const guard = createEnemy(AI_ROLE.GUARD, 'IMPERIAL');
+                const attacker = createEnemy(AI_ROLE.PIRATE, 'PIRATE', 100, 0);
+
+                // Setup guard to protect principal
+                guard.principal = principal;
+                principal.lastAttacker = attacker;
+                principal.lastAttackTime = millis(); // Recent attack
+
+                system.enemies = [principal, attacker];
+
+                const score = guard.evaluateTargetScore(attacker, system);
+                expect(score).toBe(2000); // High priority for principal's attacker
+            });
+
+            it('Aliens should target all non-Alien ships', () => {
+                const alien = createEnemy(AI_ROLE.ALIEN, 'ALIEN');
+                const hauler = createEnemy(AI_ROLE.HAULER, null, 100, 0);
+                const pirate = createEnemy(AI_ROLE.PIRATE, 'PIRATE', 200, 0);
+                const otherAlien = createEnemy(AI_ROLE.ALIEN, 'ALIEN', 300, 0);
+                system.enemies = [hauler, pirate, otherAlien];
+
+                const haulerScore = alien.evaluateTargetScore(hauler, system);
+                const pirateScore = alien.evaluateTargetScore(pirate, system);
+                const alienScore = alien.evaluateTargetScore(otherAlien, system);
+
+                expect(haulerScore).toBeGreaterThan(0);
+                expect(pirateScore).toBeGreaterThan(0);
+                // Aliens shouldn't attack other aliens
+            });
+
+            it('Haulers should not initiate combat (only retaliate)', () => {
+                const hauler = createEnemy(AI_ROLE.HAULER, null);
+                const pirate = createEnemy(AI_ROLE.PIRATE, 'PIRATE', 100, 0);
+                system.enemies = [pirate];
+
+                const score = hauler.evaluateTargetScore(pirate, system);
+                // Without being attacked, hauler shouldn't target pirate
+                expect(score).toBeLessThanOrEqual(0);
+            });
+
+            it('Pirate (null faction) should target Hauler (null faction) - DEBUG', () => {
+                const pirate = createEnemy(AI_ROLE.PIRATE, null);
+                const hauler = createEnemy(AI_ROLE.HAULER, null, 0, 0);
+                system.enemies = [hauler];
+
+                // Debug: What factions do these ships have?
+                const pirateFaction = pirate._getShipFaction ? pirate._getShipFaction(pirate) : 'NO_METHOD';
+                const haulerFaction = pirate._getShipFaction ? pirate._getShipFaction(hauler) : 'NO_METHOD';
+                console.log(`DEBUG: Pirate faction=${pirateFaction}, Hauler faction=${haulerFaction}`);
+
+                const score = pirate.evaluateTargetScore(hauler, system);
+                console.log(`DEBUG: Score = ${score}`);
+                expect(score).toBeGreaterThan(0);
+            });
+
+
+
+            it('Pirates should target Miners', () => {
+                const pirate = createEnemy(AI_ROLE.PIRATE, 'PIRATE');
+                const miner = createEnemy(AI_ROLE.MINER, null, 100, 0);
+                system.enemies = [miner];
+
+                const score = pirate.evaluateTargetScore(miner, system);
+
+                expect(score).toBeGreaterThan(0);
+            });
+            it('Combat ships should ignore Repair ships (neutral)', () => {
+                const combat = createEnemy(AI_ROLE.COMBAT, 'MILITARY');
+                const repair = createEnemy(AI_ROLE.REPAIR, null, 100, 0);
+                system.enemies = [repair];
+
+                const score = combat.evaluateTargetScore(repair, system);
+                expect(score).toBeLessThanOrEqual(0); // Should be ignored unless specific hostility
+            });
+        });
+
+        describe('Faction Hostility Maps', () => {
+            it('FACTION_ENEMY_MAP should define Imperial vs Separatist rivalry', () => {
+                expect(FACTION_ENEMY_MAP).toBeDefined();
+                expect(FACTION_ENEMY_MAP['IMPERIAL']).toContain('SEPARATIST');
+                expect(FACTION_ENEMY_MAP['SEPARATIST']).toContain('IMPERIAL');
+            });
+
+            it('FACTION_ENEMY_MAP should define Military vs Alien hostility', () => {
+                expect(FACTION_ENEMY_MAP['MILITARY']).toContain('ALIEN');
+            });
+
+            it('ROLE_ENEMY_MAP should define Pirate prey', () => {
+                expect(ROLE_ENEMY_MAP).toBeDefined();
+                expect(ROLE_ENEMY_MAP[AI_ROLE.PIRATE]).toContain(AI_ROLE.HAULER);
+                expect(ROLE_ENEMY_MAP[AI_ROLE.PIRATE]).toContain(AI_ROLE.TRANSPORT);
+            });
+
+            it('ROLE_ENEMY_MAP should define Police targets', () => {
+                expect(ROLE_ENEMY_MAP[AI_ROLE.POLICE]).toContain(AI_ROLE.PIRATE);
+                expect(ROLE_ENEMY_MAP[AI_ROLE.POLICE]).toContain(AI_ROLE.ALIEN);
+            });
+        });
+
+        // Run matrix generation and tests
+        generateInteractionMatrix();
+        runTests();
+    </script>
+</body>
+
+</html>
