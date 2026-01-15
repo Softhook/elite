@@ -400,7 +400,9 @@ class CosmicStorm {
                     // Try to provide a system reference for consistent targeting behavior
                     const activeSystem = (window.gameStateManager && gameStateManager.activeSystem) ? gameStateManager.activeSystem : null;
                     if (typeof entity.takeDamage === 'function') {
-                        entity.takeDamage(damage, null, activeSystem);
+                        // Pass storm owner as attacker if available (for kill credit)
+                        const attacker = (this.isWeaponSpawned && this.owner) ? this.owner : null;
+                        entity.takeDamage(damage, attacker, activeSystem);
                     }
                     this.effectCount++;
                     if (this.debug) {
