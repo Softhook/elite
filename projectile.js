@@ -9,8 +9,8 @@
 // - Removed try-catch from hot path (reset) for better JIT optimization
 
 class Projectile {
-    constructor(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null,
-        type = "projectile", target = null, lifespan = 90, turnRate = 0,
+    constructor(x, y, angle, owner, speed = DEFAULT_WEAPON_CONFIG.PROJECTILE_SPEED, damage = DEFAULT_WEAPON_CONFIG.PROJECTILE_DAMAGE, colorOverride = null,
+        type = "projectile", target = null, lifespan = DEFAULT_WEAPON_CONFIG.PROJECTILE_LIFESPAN, turnRate = 0,
         missileSpeed = 0, tangleDuration = DRAG_EFFECT_DEFAULT_DURATION, dragMultiplier = DRAG_EFFECT_DEFAULT_MULTIPLIER,
         rotationBlockMultiplier = 0.1) {
         // Create vectors just once at construction time (reused for entire lifecycle)
@@ -60,8 +60,8 @@ class Projectile {
     }
 
     // Reset method for object pooling
-    reset(x, y, angle, owner, speed = 8, damage = 10, colorOverride = null,
-        type = "projectile", target = null, lifespan = 90, turnRate = 0,
+    reset(x, y, angle, owner, speed = DEFAULT_WEAPON_CONFIG.PROJECTILE_SPEED, damage = DEFAULT_WEAPON_CONFIG.PROJECTILE_DAMAGE, colorOverride = null,
+        type = "projectile", target = null, lifespan = DEFAULT_WEAPON_CONFIG.PROJECTILE_LIFESPAN, turnRate = 0,
         missileSpeed = 0, tangleDuration = DRAG_EFFECT_DEFAULT_DURATION, dragMultiplier = DRAG_EFFECT_DEFAULT_MULTIPLIER,
         rotationBlockMultiplier = 0.1, system = null) {
         // Validate position inputs (early return on invalid)
@@ -426,8 +426,8 @@ class Projectile {
         if (!data) return null;
         // Create with minimal sensible defaults. Owner/target linking should happen after full system is restored.
         const angle = 0;
-        const speed = (data.vel && (Math.hypot(data.vel.x || 0, data.vel.y || 0))) || (data._meta && data._meta.missileSpeed) || 8;
-        const proj = new Projectile((data.pos && data.pos.x) || 0, (data.pos && data.pos.y) || 0, angle, null, speed, data.damage || 10, data.color || null, data.type || 'projectile', null, data.lifespan || 90, (data._meta && data._meta.turnRate) || 0, (data._meta && data._meta.missileSpeed) || 0);
+        const speed = (data.vel && (Math.hypot(data.vel.x || 0, data.vel.y || 0))) || (data._meta && data._meta.missileSpeed) || DEFAULT_WEAPON_CONFIG.PROJECTILE_SPEED;
+        const proj = new Projectile((data.pos && data.pos.x) || 0, (data.pos && data.pos.y) || 0, angle, null, speed, data.damage || DEFAULT_WEAPON_CONFIG.PROJECTILE_DAMAGE, data.color || null, data.type || 'projectile', null, data.lifespan || DEFAULT_WEAPON_CONFIG.PROJECTILE_LIFESPAN, (data._meta && data._meta.turnRate) || 0, (data._meta && data._meta.missileSpeed) || 0);
         if (data.vel) proj.vel.set(data.vel.x || 0, data.vel.y || 0);
         if (typeof data.lifespan === 'number') proj.lifespan = data.lifespan;
         if (typeof data.hull === 'number') proj.hull = data.hull;

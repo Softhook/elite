@@ -1356,7 +1356,7 @@ class Turret extends SurfaceObject {
             py,
             this.angle,
             this,
-            config.PROJECTILE_SPEED || 15,      // Speed
+            config.PROJECTILE_SPEED || DEFAULT_WEAPON_CONFIG.TURRET_SPEED,      // Speed
             config.PROJECTILE_DAMAGE || 5,      // Damage
             [255, 50, 50],    // Color (Red) - Array for consistency
             'enemy_projectile',
@@ -1855,7 +1855,7 @@ class DefenseDrone extends SurfaceObject {
             muzzleY,
             this.angle,
             this,
-            config.PROJECTILE_SPEED || 12,    // Speed
+            config.PROJECTILE_SPEED || DEFAULT_WEAPON_CONFIG.DRONE_SPEED,    // Speed
             config.PROJECTILE_DAMAGE || 8,    // Damage
             [255, 100, 50],   // Color (Orange)
             'enemy_projectile',

@@ -1,6 +1,7 @@
 const { WeaponSystem, WEAPON_TYPE } = require('../weaponSystem');
 const { Projectile } = require('../projectile');
-const WEAPON_UPGRADES = require('../weapons');
+const { WEAPON_UPGRADES, DEFAULT_WEAPON_CONFIG } = require('../weapons');
+global.DEFAULT_WEAPON_CONFIG = DEFAULT_WEAPON_CONFIG;
 require('../enemyConstants');
 require('../objectPool');
 require('../debug');

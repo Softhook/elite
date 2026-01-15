@@ -1031,7 +1031,7 @@ class UIComponents {
             }
 
             // Calculate common physics parameters
-            const speed = weaponDef.speed || 8;
+            const speed = weaponDef.speed || DEFAULT_WEAPON_CONFIG.PROJECTILE_SPEED;
             const speedPPS = speed * 60; // Pixels per second
             const maxDist = panelRightEdge - gunBarrelX;
             const maxLifetime = maxDist / speedPPS;
@@ -1063,7 +1063,7 @@ class UIComponents {
                         const projY = Math.sin(angle) * dist;
 
                         const proj = new Projectile(projX, projY, angle, mockOwner,
-                            weaponDef.speed || 8, weaponDef.damage, weaponDef.color, type);
+                            weaponDef.speed || DEFAULT_WEAPON_CONFIG.PROJECTILE_SPEED, weaponDef.damage, weaponDef.color, type);
                         proj.draw();
                     }
                 } else if (baseType === 'straight') {
@@ -1078,7 +1078,7 @@ class UIComponents {
                         // Here we just modify the y coordinate directly for drawing
 
                         const proj = new Projectile(projX, y, 0, mockOwner,
-                            weaponDef.speed || 8, weaponDef.damage, weaponDef.color, type);
+                            weaponDef.speed || DEFAULT_WEAPON_CONFIG.PROJECTILE_SPEED, weaponDef.damage, weaponDef.color, type);
                         proj.draw();
                     }
                 } else if (type === 'force') {
@@ -1112,7 +1112,7 @@ class UIComponents {
                     const projY = Math.sin(mockTargetAngleAtEmission) * dist;
 
                     const proj = new Projectile(projX, projY, mockTargetAngleAtEmission, mockOwner,
-                        weaponDef.speed || 8, weaponDef.damage, weaponDef.color, type);
+                        weaponDef.speed || DEFAULT_WEAPON_CONFIG.PROJECTILE_SPEED, weaponDef.damage, weaponDef.color, type);
                     proj.draw();
 
                 } else {
@@ -1120,7 +1120,7 @@ class UIComponents {
                     const projX = gunBarrelX + dist;
 
                     const proj = new Projectile(projX, 0, 0, mockOwner,
-                        weaponDef.speed || 8, weaponDef.damage, weaponDef.color, type);
+                        weaponDef.speed || DEFAULT_WEAPON_CONFIG.PROJECTILE_SPEED, weaponDef.damage, weaponDef.color, type);
 
                     if (type === 'harpoon') {
                         stroke(180, 220, 255);

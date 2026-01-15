@@ -1,3 +1,18 @@
+const DEFAULT_WEAPON_CONFIG = {
+    PROJECTILE_SPEED: 10,
+    MISSILE_SPEED: 4,
+    TANGLE_SPEED: 6,
+    HARPOON_SPEED: 30,
+    TURRET_SPEED: 15,
+    DRONE_SPEED: 12,
+    PROJECTILE_DAMAGE: 10,
+    PROJECTILE_LIFESPAN: 90,
+    MISSILE_LIFESPAN: 180,
+    TANGLE_LIFESPAN: 60,
+    HARPOON_LIFESPAN: 120,
+    MISSILE_TURN_RATE: 0.05
+};
+
 const WEAPON_UPGRADES = [
     // -----------------------------
     // Single Shot Projectiles
@@ -409,8 +424,12 @@ const WEAPON_UPGRADES = [
 
 ];
 
-// Export for module systems
+// Export for module systems and browsers
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = WEAPON_UPGRADES;
+    module.exports = { WEAPON_UPGRADES, DEFAULT_WEAPON_CONFIG };
     global.WEAPON_UPGRADES = WEAPON_UPGRADES;
+    global.DEFAULT_WEAPON_CONFIG = DEFAULT_WEAPON_CONFIG;
+} else if (typeof window !== 'undefined') {
+    window.WEAPON_UPGRADES = WEAPON_UPGRADES;
+    window.DEFAULT_WEAPON_CONFIG = DEFAULT_WEAPON_CONFIG;
 }

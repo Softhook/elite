@@ -486,7 +486,7 @@ class WeaponSystem {
         if (!owner?.currentWeapon) return;
 
         const weapon = owner.currentWeapon;
-        const speed = weapon.speed || 8; // Use defined speed with fallback
+        const speed = weapon.speed || DEFAULT_WEAPON_CONFIG.PROJECTILE_SPEED; // Use defined speed with fallback
 
         // Get spawn position at ship's forward edge (or center for turrets)
         const spawnPos = this._getSpawnPosition(owner, angle, fromCenter);
@@ -498,7 +498,7 @@ class WeaponSystem {
         if (this.projectilePool) {
             proj = this.projectilePool.get(
                 spawnX, spawnY, angle, owner,
-                speed, weapon.damage, weapon.color, "projectile", null, 90, 0, 0, 5.0, 10.0, 0.1, system
+                speed, weapon.damage, weapon.color, "projectile", null, DEFAULT_WEAPON_CONFIG.PROJECTILE_LIFESPAN, 0, 0, 5.0, 10.0, 0.1, system
             );
         }
 
@@ -547,12 +547,12 @@ class WeaponSystem {
         let proj;
 
         // Get missile-specific properties from the weapon definition
-        const speed = weapon.speed || 4; // Missile's own travel speed
+        const speed = weapon.speed || DEFAULT_WEAPON_CONFIG.MISSILE_SPEED; // Missile's own travel speed
         const damage = weapon.damage;
         const color = weapon.color;
         const weaponType = weapon.type;
-        const lifespan = weapon.lifespan || 180; // Missile's lifespan
-        const turnRate = weapon.turnRate || 0.05; // Missile's turn rate
+        const lifespan = weapon.lifespan || DEFAULT_WEAPON_CONFIG.MISSILE_LIFESPAN; // Missile's lifespan
+        const turnRate = weapon.turnRate || DEFAULT_WEAPON_CONFIG.MISSILE_TURN_RATE; // Missile's turn rate
 
         if (this.projectilePool) {
             // Pass all necessary parameters including target, lifespan, turnRate, missileSpeed, and system
@@ -643,7 +643,7 @@ class WeaponSystem {
         const perpDirY = sin(perpAngle);
 
         const weapon = owner.currentWeapon;
-        const speed = weapon.speed || 8; // Use defined speed with fallback
+        const speed = weapon.speed || DEFAULT_WEAPON_CONFIG.PROJECTILE_SPEED; // Use defined speed with fallback
         const damage = weapon.damage;
         const color = weapon.color;
 
@@ -663,7 +663,7 @@ class WeaponSystem {
             if (this.projectilePool) {
                 proj = this.projectilePool.get(
                     x, y, angle, owner,
-                    speed, damage, color, "projectile", null, 90, 0, 0, 5.0, 10.0, 0.1, system
+                    speed, damage, color, "projectile", null, DEFAULT_WEAPON_CONFIG.PROJECTILE_LIFESPAN, 0, 0, 5.0, 10.0, 0.1, system
                 );
             } else {
                 proj = new Projectile(
@@ -1054,7 +1054,7 @@ class WeaponSystem {
         const spawnX = spawnPos.x;
         const spawnY = spawnPos.y;
 
-        const speed = weapon.speed || 6; // Slower than regular projectiles
+        const speed = weapon.speed || DEFAULT_WEAPON_CONFIG.TANGLE_SPEED; // Slower than regular projectiles
         const tangleDuration = weapon.tangleDuration || 5.0;
         const dragMultiplier = weapon.dragMultiplier || 10.0;
         const rotationBlockMultiplier = weapon.rotationBlockMultiplier || 0.1;
@@ -1066,7 +1066,7 @@ class WeaponSystem {
             proj = this.projectilePool.get(
                 spawnX, spawnY, angle, owner,
                 speed, weapon.damage, weapon.color,
-                "tangle", null, 60, 0, 0,
+                "tangle", null, DEFAULT_WEAPON_CONFIG.TANGLE_LIFESPAN, 0, 0,
                 tangleDuration, dragMultiplier,
                 rotationBlockMultiplier, system
             );
@@ -1074,7 +1074,7 @@ class WeaponSystem {
             proj = new Projectile(
                 spawnX, spawnY, angle, owner,
                 speed, weapon.damage, weapon.color,
-                "tangle", null, 60, 0, 0,
+                "tangle", null, DEFAULT_WEAPON_CONFIG.TANGLE_LIFESPAN, 0, 0,
                 tangleDuration, dragMultiplier,
                 rotationBlockMultiplier
             );
@@ -1111,13 +1111,13 @@ class WeaponSystem {
         const spawnX = spawnPos.x;
         const spawnY = spawnPos.y;
 
-        const speed = weapon.speed || 30; // increased default harpoon projectile speed to fly quickly
+        const speed = weapon.speed || DEFAULT_WEAPON_CONFIG.HARPOON_SPEED; // increased default harpoon projectile speed to fly quickly
 
         let proj;
         if (this.projectilePool) {
             proj = this.projectilePool.get(
                 spawnX, spawnY, angle, owner,
-                speed, weapon.damage, weapon.color, "harpoon", null, 120, 0, 0, 5.0, 10.0, 0.1, system
+                speed, weapon.damage, weapon.color, "harpoon", null, DEFAULT_WEAPON_CONFIG.HARPOON_LIFESPAN, 0, 0, 5.0, 10.0, 0.1, system
             );
         }
         if (!proj) {
