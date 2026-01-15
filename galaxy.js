@@ -748,7 +748,7 @@ class Galaxy {
         console.log("Loaded systems after fromJSON:", this.systems);
 
         this.systems.forEach((sys, idx) => {
-            sys.connectedSystems = (sys.connectedSystemIndices || []).map(i => this.systems[i]);
+            sys.connectedSystems = sys.connectedSystemIndices.map(i => this.systems[i]);
             // Debug: Log each system's connections
             console.log(`System ${idx} (${sys.name}) connections:`, sys.connectedSystemIndices);
         });

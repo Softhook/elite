@@ -1,7 +1,6 @@
 // harpoon.js
 // Simple Verlet-based rope for a harpoon tether between two ships
-function Harpoon(owner, target, system, opts) {
-    opts = opts || {};
+function Harpoon(owner, target, system, opts = {}) {
     this.owner = owner;
     this.target = target;
     this.system = system || null; // Optional reference to containing system (for audio/cleanup)

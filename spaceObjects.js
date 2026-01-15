@@ -2647,8 +2647,8 @@ const SpaceObjectRenderers = {
     },
 
     solarFarm: function (obj, size, anim, bob, sunAngle) {
-        const a = anim || obj._anim || {};
-
+        // anim parameter is obj._anim, which is always initialized to {} in constructor
+        // However, individual animation properties may be undefined
         // Floating frame / base
         Draw3D.drawBox3D(0, bob + size * 0.02, size * 0.95, size * 0.26, size * 0.05, color(32, 38, 50), obj.angle, sunAngle);
 
@@ -2664,8 +2664,8 @@ const SpaceObjectRenderers = {
         const cols = 5;
         const panelW = size * 0.16;
         const panelH = size * 0.08;
-        const tiltBase = (typeof a.panelTiltAngle === 'number') ? a.panelTiltAngle : 0;
-        const trackPhase = (typeof a.trackerPhase === 'number') ? a.trackerPhase : obj.bobPhase * 0.001;
+        const tiltBase = (typeof anim.panelTiltAngle === 'number') ? anim.panelTiltAngle : 0;
+        const trackPhase = (typeof anim.trackerPhase === 'number') ? anim.trackerPhase : obj.bobPhase * 0.001;
 
         for (let r = 0; r < rows; r++) {
             const yOff = bob - size * 0.06 + r * (panelH * 1.2);
@@ -2701,7 +2701,7 @@ const SpaceObjectRenderers = {
         }
 
         // Wiring bus and pulse glow
-        const pulse = 0.6 + 0.4 * Math.sin((a.wiringPulse || obj.bobPhase) * 0.006);
+        const pulse = 0.6 + 0.4 * Math.sin((anim.wiringPulse || obj.bobPhase) * 0.006);
         Draw3D.drawBox3D(0, bob + size * 0.12, size * 0.5, size * 0.04, size * 0.04, color(90, 200, 255, 80 + 80 * pulse), obj.angle, sunAngle);
 
         // Small power node

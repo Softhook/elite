@@ -348,7 +348,7 @@ class UIGalaxyMap {
         };
 
         // Prepare lists: planets (all) and dockable space objects (filtered)
-        const planets = system.planets || [];
+        const planets = system.planets;
         let dockableObjects = [];
         if (system.spaceObjects && system.spaceObjects.length) {
             if (typeof DOCKABLE_SPACE_OBJECT_TYPES !== 'undefined') {

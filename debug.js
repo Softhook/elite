@@ -28,8 +28,14 @@
   // Load persisted flags if any
   let persisted = {};
   try {
-    persisted = JSON.parse(global.localStorage?.getItem(STORE_KEY) || '{}') || {};
-  } catch (e) { persisted = {}; }
+    const stored = global.localStorage?.getItem(STORE_KEY);
+    if (stored) {
+      persisted = JSON.parse(stored);
+    }
+  } catch (e) { 
+    console.warn('Failed to parse debug flags from localStorage:', e);
+    persisted = {};
+  }
 
   const flags = Object.assign({}, defaults, persisted);
 

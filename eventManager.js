@@ -1131,7 +1131,7 @@ class EventManager {
                 const baseRadius = (this.starSystem.jumpZoneRadius || 600) + random(300, 700);
 
                 // Collect available pirates to assign as targets
-                const availablePirates = (this.starSystem.enemies || []).filter(
+                const availablePirates = this.starSystem.enemies.filter(
                     e => e && e.role === AI_ROLE.PIRATE && !e.destroyed
                 );
                 let pirateIndex = 0;
