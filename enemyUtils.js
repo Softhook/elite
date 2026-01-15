@@ -169,10 +169,11 @@ class EnemyUtils {
      * Applies forward thrust in current facing direction
      * @param {number} [multiplier=1.0] - Optional thrust multiplier
      * @param {boolean} [createParticles=true] - Whether to create visual thrust particles
+     * @param {number|null} [dt=null] - Delta time in seconds (optional, for precise timing)
      */
-    thrustForward(multiplier = 1.0, createParticles = true) {
+    thrustForward(multiplier = 1.0, createParticles = true, dt = null) {
         if (typeof SharedPhysics !== 'undefined') {
-            SharedPhysics.thrustForward(this, multiplier, createParticles);
+            SharedPhysics.thrustForward(this, multiplier, createParticles, dt);
         }
     }
 

@@ -1265,9 +1265,12 @@ class Player {
             SharedPhysics.thrustReverse(this, PLAYER_CONFIG.REVERSE_THRUST_MULTIPLIER, false);
         } else {
             // Fallback if SharedPhysics missing (though unlikely to happen if setup correct)
+            // IMPORTANT: Must apply timeScale for frame-rate independence
+            const dt = (typeof deltaTime !== 'undefined' ? deltaTime / 1000 : 1 / 60);
+            const timeScale = dt / (1 / 60);
             const reverseAngle = this.angle + PI;
             const reducedForce = this.thrustForce * PLAYER_CONFIG.REVERSE_THRUST_MULTIPLIER;
-            this.vel.add(cos(reverseAngle) * reducedForce, sin(reverseAngle) * reducedForce);
+            this.vel.add(cos(reverseAngle) * reducedForce * timeScale, sin(reverseAngle) * reducedForce * timeScale);
         }
 
         // Create thrust particles at ship's front sides for reverse thrusters
@@ -1323,9 +1326,13 @@ class Player {
             // Enable particles here since we removed them from update() loop
             SharedPhysics.thrustForward(this, 1.0, true);
         } else {
+            // Fallback if SharedPhysics missing
+            // IMPORTANT: Must apply timeScale for frame-rate independence
             if (isNaN(this.angle)) { this.angle = 0; }
+            const dt = (typeof deltaTime !== 'undefined' ? deltaTime / 1000 : 1 / 60);
+            const timeScale = dt / (1 / 60);
             const force = this.thrustForce;
-            this.vel.add(cos(this.angle) * force, sin(this.angle) * force);
+            this.vel.add(cos(this.angle) * force * timeScale, sin(this.angle) * force * timeScale);
         }
     }
 

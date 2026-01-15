@@ -2,6 +2,16 @@
  * Shared Physics Module
  * Contains common physics and movement logic shared between Player and Enemy classes.
  * Reduces duplication and ensures consistent behavior for thrust, drag, and effects.
+ * 
+ * FRAME-RATE INDEPENDENCE:
+ * All physics calculations use a 60 FPS baseline (16.67ms per frame) as the reference.
+ * The timeScale multiplier normalizes all frame rates to this baseline:
+ * - At 60fps: timeScale = 1.0 (baseline)
+ * - At 30fps: timeScale = 2.0 (apply 2x force per frame to compensate for half the frames)
+ * - At 120fps: timeScale = 0.5 (apply half force per frame to compensate for double frames)
+ * 
+ * This ensures consistent game speed regardless of frame rate.
+ * All thrust and drag operations MUST apply timeScale or behavior will be frame-rate dependent.
  */
 
 // Constants for shared physics behavior
