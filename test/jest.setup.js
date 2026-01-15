@@ -33,7 +33,17 @@ global.createVector = (x = 0, y = 0) => ({
     x,
     y,
     copy: function () { return createVector(this.x, this.y); },
-    add: function (v) { this.x += v.x; this.y += v.y; return this; },
+    add: function (v, y2) {
+        // Handle both add(vector) and add(x, y) forms (SharedPhysics uses the latter)
+        if (typeof v === 'number') {
+            this.x += v;
+            this.y += (y2 !== undefined ? y2 : 0);
+        } else {
+            this.x += v.x;
+            this.y += v.y;
+        }
+        return this;
+    },
     sub: function (v) { this.x -= v.x; this.y -= v.y; return this; },
     mult: function (n) { this.x *= n; this.y *= n; return this; },
     div: function (n) { this.x /= n; this.y /= n; return this; },

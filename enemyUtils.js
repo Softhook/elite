@@ -171,23 +171,8 @@ class EnemyUtils {
      * @param {boolean} [createParticles=true] - Whether to create visual thrust particles
      */
     thrustForward(multiplier = 1.0, createParticles = true) {
-        // [FIX] Persist thrust intent for off-screen throttling (re-applied in skipped frames)
-        this._persistedThrust = multiplier;
-
-        // Skip negligible thrust and particle work
-        if (!(multiplier > MIN_THRUST_THRESHOLD)) { return; }
-
-        // Apply thrust in the direction we're facing
-        this._ensureThrustVector();
-        this.thrustVector.set(cos(this.angle), sin(this.angle));
-        this.thrustVector.mult(this.thrustForce * multiplier);
-        this.vel.add(this.thrustVector);
-
-        this.isThrusting = true;
-
-        // Create visual thrust particles (skip for alien ships - different propulsion)
-        if (createParticles && this.thrustManager && !this._isAlienShip()) {
-            this.thrustManager.createThrust(this.pos, this.angle, this.size);
+        if (typeof SharedPhysics !== 'undefined') {
+            SharedPhysics.thrustForward(this, multiplier, createParticles);
         }
     }
 
@@ -196,16 +181,8 @@ class EnemyUtils {
      * @param {number} [multiplier=STRAFE_THRUST_MULTIPLIER] - Thrust multiplier (strafe is weaker than forward)
      */
     thrustLeft(multiplier = STRAFE_THRUST_MULTIPLIER) {
-        this._ensureThrustVector();
-        const strafeAngle = this.angle - HALF_PI; // 90 degrees left
-        this.thrustVector.set(cos(strafeAngle), sin(strafeAngle));
-        this.thrustVector.mult(this.thrustForce * multiplier);
-        this.vel.add(this.thrustVector);
-
-        // Visual particles - match player's kiteLeft pattern exactly
-        // Particles show thrust going RIGHT (opposite of movement)
-        if (this.thrustManager && !this._isAlienShip()) {
-            this.thrustManager.createThrust(this.pos, strafeAngle, this.size * STRAFE_PARTICLE_SIZE_MULT);
+        if (typeof SharedPhysics !== 'undefined') {
+            SharedPhysics.thrustStrafe(this, -1, multiplier);
         }
     }
 
@@ -214,16 +191,8 @@ class EnemyUtils {
      * @param {number} [multiplier=STRAFE_THRUST_MULTIPLIER] - Thrust multiplier (strafe is weaker than forward)
      */
     thrustRight(multiplier = STRAFE_THRUST_MULTIPLIER) {
-        this._ensureThrustVector();
-        const strafeAngle = this.angle + HALF_PI; // 90 degrees right
-        this.thrustVector.set(cos(strafeAngle), sin(strafeAngle));
-        this.thrustVector.mult(this.thrustForce * multiplier);
-        this.vel.add(this.thrustVector);
-
-        // Visual particles - match player's kiteRight pattern exactly
-        // Particles show thrust going LEFT (opposite of movement)
-        if (this.thrustManager && !this._isAlienShip()) {
-            this.thrustManager.createThrust(this.pos, strafeAngle, this.size * STRAFE_PARTICLE_SIZE_MULT);
+        if (typeof SharedPhysics !== 'undefined') {
+            SharedPhysics.thrustStrafe(this, 1, multiplier);
         }
     }
 
@@ -232,21 +201,8 @@ class EnemyUtils {
      * @param {number} [multiplier=REVERSE_THRUST_MULTIPLIER] - Thrust multiplier (reverse is weaker than forward)
      */
     thrustReverse(multiplier = REVERSE_THRUST_MULTIPLIER) {
-        this._ensureThrustVector();
-        const reverseAngle = this.angle + PI; // 180 degrees (backward)
-        this.thrustVector.set(cos(reverseAngle), sin(reverseAngle));
-        this.thrustVector.mult(this.thrustForce * multiplier);
-        this.vel.add(this.thrustVector);
-
-        // Visual particles from front (retro-thrusters)
-        // createThrust places particles BEHIND the given angle direction
-        // So passing backward-facing angles (angle + PI ± offset) places particles at FRONT of ship
-        if (this.thrustManager && !this._isAlienShip()) {
-            const retroAngleOffset = PI * RETRO_THRUST_ANGLE_OFFSET;
-            // Left front thruster: backward-left angle makes particles appear at front-left
-            this.thrustManager.createThrust(this.pos, this.angle + PI - retroAngleOffset, this.size * REVERSE_PARTICLE_SIZE_MULT);
-            // Right front thruster: backward-right angle makes particles appear at front-right
-            this.thrustManager.createThrust(this.pos, this.angle + PI + retroAngleOffset, this.size * REVERSE_PARTICLE_SIZE_MULT);
+        if (typeof SharedPhysics !== 'undefined') {
+            SharedPhysics.thrustReverse(this, multiplier);
         }
     }
 

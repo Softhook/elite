@@ -141,14 +141,15 @@ class InventoryScreen {
     curY = this._drawSectionHeader("Ship Upgrades", leftColX, curY, leftColW);
     curY += 4;
 
-    const upgradeTypes = ['armor', 'engine', 'cargo', 'hardpoints', 'shield', 'cloak'];
+    const upgradeTypes = ['armor', 'engine', 'cargo', 'hardpoints', 'shield', 'cloak', 'booster'];
     const upgradeLabels = {
       armor: 'Armor',
       engine: 'Engine',
       cargo: 'Cargo Bay',
       hardpoints: 'Hardpoints',
       shield: 'Shield',
-      cloak: 'Cloak'
+      cloak: 'Cloak',
+      booster: 'Afterburners'
     };
 
     for (const type of upgradeTypes) {

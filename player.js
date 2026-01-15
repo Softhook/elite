@@ -1243,19 +1243,16 @@ class Player {
 
     /** Apply a left‐strafe (kite) thrust */
     kiteLeft() {
-        const angle = this.angle - (this._HALF_PI || HALF_PI);
-        const force = this.thrustForce;
-        this.vel.add(cos(angle) * force, sin(angle) * force);
-        // draw particles
-        this.thrustManager?.createThrust(this.pos, angle, this.size);
+        if (typeof SharedPhysics !== 'undefined') {
+            SharedPhysics.thrustStrafe(this, -1, 0.8);
+        }
     }
 
     /** Apply a right‐strafe (kite) thrust */
     kiteRight() {
-        const angle = this.angle + (this._HALF_PI || HALF_PI);
-        const force = this.thrustForce;
-        this.vel.add(cos(angle) * force, sin(angle) * force);
-        this.thrustManager?.createThrust(this.pos, angle, this.size);
+        if (typeof SharedPhysics !== 'undefined') {
+            SharedPhysics.thrustStrafe(this, 1, 0.8);
+        }
     }
 
 
@@ -1264,14 +1261,14 @@ class Player {
      * Uses opposite direction from current facing angle.
      */
     reverseThrust() {
-        if (isNaN(this.angle)) {
-            return;
+        if (typeof SharedPhysics !== 'undefined') {
+            SharedPhysics.thrustReverse(this, PLAYER_CONFIG.REVERSE_THRUST_MULTIPLIER, false);
+        } else {
+            // Fallback if SharedPhysics missing (though unlikely to happen if setup correct)
+            const reverseAngle = this.angle + PI;
+            const reducedForce = this.thrustForce * PLAYER_CONFIG.REVERSE_THRUST_MULTIPLIER;
+            this.vel.add(cos(reverseAngle) * reducedForce, sin(reverseAngle) * reducedForce);
         }
-
-        // Calculate force in opposite direction (angle + PI) - optimized without vector allocation
-        const reverseAngle = this.angle + (this._PI || PI);
-        const reducedForce = this.thrustForce * PLAYER_CONFIG.REVERSE_THRUST_MULTIPLIER;
-        this.vel.add(cos(reverseAngle) * reducedForce, sin(reverseAngle) * reducedForce);
 
         // Create thrust particles at ship's front sides for reverse thrusters
         if (this.thrustManager) {
@@ -1322,9 +1319,14 @@ class Player {
 
     /** Applies forward thrust force based on current facing angle (radians). */
     thrust() {
-        if (isNaN(this.angle)) { this.angle = 0; } // Safety check
-        const force = this.thrustForce;
-        this.vel.add(cos(this.angle) * force, sin(this.angle) * force);
+        if (typeof SharedPhysics !== 'undefined') {
+            // Enable particles here since we removed them from update() loop
+            SharedPhysics.thrustForward(this, 1.0, true);
+        } else {
+            if (isNaN(this.angle)) { this.angle = 0; }
+            const force = this.thrustForce;
+            this.vel.add(cos(this.angle) * force, sin(this.angle) * force);
+        }
     }
 
     /** Fires a projectile towards the mouse cursor (world coordinates). */
@@ -1464,16 +1466,21 @@ class Player {
             }
         }
 
-        // Update tangle effect timer
+        // Note: Drag effect timer is now handled by SharedPhysics.updatePhysics()
+        // We just need to show the UI message when the effect ends
         if (this.dragEffectTimer > 0) {
-            this.dragEffectTimer -= deltaSeconds;
-            if (this.dragEffectTimer <= 0) {
-                this.dragMultiplier = 1.0;
-                this.dragEffectTimer = 0;
-                if (typeof uiManager !== 'undefined') {
-                    uiManager.addMessage("Engines restored to normal operation.", "#30FFB4");
-                }
+            // SharedPhysics handles the countdown, we just check for the transition
+            // to show the restoration message
+        } else if (this._wasTangled) {
+            // Timer just expired - show message once
+            this._wasTangled = false;
+            if (typeof uiManager !== 'undefined') {
+                uiManager.addMessage("Engines restored to normal operation.", "#30FFB4");
             }
+        }
+        // Track tangle state for UI message
+        if (this.dragEffectTimer > 0) {
+            this._wasTangled = true;
         }
 
         // Update cloak timers
@@ -1525,70 +1532,10 @@ class Player {
         }
         // --- End Speed Burst Thrust & State Management ---
 
-        // 1) Drag
-        // Apply drag if not actively applying burst thrust (i.e., isSpeedBursting is false).
-        // Drag should be active during the coasting phase.
-        if (!this.isSpeedBursting) {
-            if (this.dragMultiplier > 1.0 && this.dragEffectTimer > 0) {
-                // First apply normal drag
-                this.vel.mult(this.drag);
-
-                // Then apply powerful velocity reduction with safety checks (cached calculation)
-                const tangledSpeedFactor = Math.min(1 / Math.max(this.dragMultiplier, 0.001), 1.0);
-                this.vel.mult(tangledSpeedFactor);
-
-                // Timer-based visual jitter (every ~80ms for rotation, ~100ms for position)
-                if (!this._tangledJitterTimer) this._tangledJitterTimer = 0;
-                this._tangledJitterTimer += deltaSeconds;
-
-                if (this._tangledJitterTimer >= 0.08) {
-                    this._tangledJitterTimer -= 0.08;
-                    this.vel.rotate(random(-0.1, 0.1));
-                    // Occasional position jitter (every other trigger)
-                    if (Math.random() < 0.5) {
-                        this.vel.add(random(-0.03, 0.03), random(-0.03, 0.03));
-                    }
-                }
-            } else {
-                // Normal drag (typically ~0.985)
-                this.vel.mult(this.drag);
-            }
+        // Physics update (Drag, Speed Cap, Movement) via SharedPhysics
+        if (typeof SharedPhysics !== 'undefined') {
+            SharedPhysics.updatePhysics(this, deltaSeconds);
         }
-
-        // 2) Speed cap
-        let currentCap;
-        if (this.isSpeedBursting || this.isCoastingFromBurst) {
-            // Cache burst cap calculation
-            if (!this._cachedBurstCap || this._cachedBurstCap !== this.baseMaxSpeed * this.speedBurstMultiplier) {
-                this._cachedBurstCap = this.baseMaxSpeed * this.speedBurstMultiplier;
-                this._cachedCoastThreshold = (this.baseMaxSpeed * 1.01) ** 2; // Pre-square for magSq comparison
-            }
-            currentCap = this._cachedBurstCap;
-
-            // End coasting if speed has decayed (only check when coasting)
-            if (this.isCoastingFromBurst && this.vel.magSq() < this._cachedCoastThreshold) {
-                this.isCoastingFromBurst = false;
-            }
-        } else {
-            // Normal flight, base cap
-            currentCap = this.baseMaxSpeed;
-        }
-        this.vel.limit(currentCap);
-
-        // The old section "3) Sustain extra thrust during burst window" is now integrated above.
-
-        // 4) Usual thrust‐particle & movement logic (from handleInput)
-        this.thrustManager.update();
-        if (this.isThrusting && !this.isReverseThrusting) { // isThrusting is set by handleInput for W key
-            this.thrustManager.createThrust(this.pos, this.angle, this.size);
-        }
-
-        // Position update (optimized NaN check) - frame-rate independent
-        if (isNaN(this.vel.x) || isNaN(this.vel.y)) {
-            this.vel.set(0, 0); // Safety net for NaN velocity
-        }
-        const moveTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
-        this.pos.add(p5.Vector.mult(this.vel, moveTimeScale));
 
         // Update cooldown timer using cached deltaSeconds
         if (this.fireCooldown > 0) {

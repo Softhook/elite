@@ -11,9 +11,8 @@ const SURFACE_CONFIG = {
     MAX_ALTITUDE: 500,
     DEFAULT_ALTITUDE: 100,
     TURN_SPEED: 2.5,           // Radians per second
-    THRUST_ACCEL: 400,         // Units per second squared
-    MAX_SPEED: 300,
-    STRAFE_SPEED: 200,
+    MAX_SPEED: 300,            // Legacy - now uses SHIP_DEFINITIONS
+    STRAFE_SPEED: 200,         // Legacy - now uses SharedPhysics
     CLIMB_SPEED: 150,
 
     // Terrain mesh

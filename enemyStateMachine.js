@@ -516,10 +516,12 @@ class EnemyStateMachine {
                 this.vel.add(this.tempVector);
 
                 if (velDiffMagSq < 0.1) {
-                    this.vel.mult(Math.pow(0.99, guardTimeScale));
+                    this.brakingMultiplier = 0.99;
+                } else {
+                    this.brakingMultiplier = 1.0;
                 }
             } else {
-                this.vel.mult(Math.pow(0.985, guardTimeScale));
+                this.brakingMultiplier = 1.0;
             }
 
             this.rotateTowards(principalAngle);
@@ -694,6 +696,9 @@ class EnemyStateMachine {
         if (typeof communicationSystem !== 'undefined' && communicationSystem?.handleStateChange) {
             communicationSystem.handleStateChange(this, oldState, newState);
         }
+
+        // Reset braking multiplier on state change unless explicitly set by the new state
+        this.brakingMultiplier = undefined;
     }
 
     /**

@@ -597,10 +597,18 @@ class Enemy {
         }
 
         // Process guard engagement lock timer
-
-        // Process guard engagement lock timer
         if (this.guardEngagementLock > 0) {
             this.guardEngagementLock -= deltaSeconds;
+        }
+
+        // Update speed burst timer (used for smooth fleeing/burst maneuvers)
+        if (this.isSpeedBursting && this.speedBurstTimer > 0) {
+            this.speedBurstTimer -= deltaSeconds;
+            if (this.speedBurstTimer <= 0) {
+                this.isSpeedBursting = false;
+                this.isCoastingFromBurst = true;
+                this.speedBurstTimer = 0;
+            }
         }
 
         // Regenerate shields
@@ -701,12 +709,6 @@ class Enemy {
                 // Skipping AI update - just maintain physics/thrust
                 if (this._persistedThrust > 0) {
                     this.thrustForward(this._persistedThrust, false);
-                }
-
-                // Cap velocity to prevent runaway acceleration
-                const speed = this.vel.mag();
-                if (speed > this.maxSpeed) {
-                    this.vel.mult(this.maxSpeed / speed);
                 }
 
                 // Persistent firing for off-screen enemies
@@ -901,9 +903,8 @@ class Enemy {
                         this.updateMissionaryAI(system);
                         break;
                     default:
-                        // Default behavior for unknown roles (frame-rate independent)
-                        const defaultTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
-                        this.vel.mult(Math.pow(this.drag * 0.95, defaultTimeScale));
+                        // Default behavior for unknown roles: Unified braking
+                        this.brakingMultiplier = 0.95;
                         break;
                 }
 

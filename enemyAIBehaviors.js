@@ -903,8 +903,12 @@ class EnemyAIBehaviors {
                     this.target = this.lastAttacker;
                     this.changeState(AI_STATE.FLEEING);
                     if (uiManager) uiManager.addMessage(`${this.shipTypeName} fleeing from attack`);
-                    // Apply immediate velocity boost away
-                    if (this.target?.pos) { let escapeDir = p5.Vector.sub(this.pos, this.target.pos).normalize(); this.vel.add(escapeDir.mult(this.maxSpeed * 0.8)); }
+
+                    // Smooth Speed Burst instead of jerky impulse
+                    this.isSpeedBursting = true;
+                    this.speedBurstMultiplier = 1.8;
+                    this.speedBurstTimer = 1.5; // Lasts 1.5 seconds
+
                     this.attackCooldown = 15.0; // Cooldown before being provoked again
                     return; // Skip normal logic
                 } else { // Retaliate if hull is okay
@@ -913,7 +917,11 @@ class EnemyAIBehaviors {
                         HAULER_LOG(`Unarmed ${this.shipTypeName} fleeing instead of retaliating.`);
                         this.target = this.lastAttacker;
                         this.changeState(AI_STATE.FLEEING);
-                        if (this.target?.pos) { let escapeDir = p5.Vector.sub(this.pos, this.target.pos).normalize(); this.vel.add(escapeDir.mult(this.maxSpeed * 0.8)); }
+
+                        this.isSpeedBursting = true;
+                        this.speedBurstMultiplier = 1.8;
+                        this.speedBurstTimer = 1.5;
+
                         this.attackCooldown = 15.0;
                         return;
                     }
@@ -977,7 +985,10 @@ class EnemyAIBehaviors {
                 HAULER_LOG(`Damaged hauler ${this.shipTypeName} attempting to escape!`);
                 this.target = this.lastAttacker || this.target; // Ensure we flee from *something*
                 this.changeState(AI_STATE.FLEEING);
-                if (this.target?.pos) { let escapeDir = p5.Vector.sub(this.pos, this.target.pos).normalize(); this.vel.add(escapeDir.mult(this.maxSpeed * 0.8)); }
+
+                this.isSpeedBursting = true;
+                this.speedBurstMultiplier = 1.5;
+                this.speedBurstTimer = 1.0;
             }
 
 
@@ -1066,10 +1077,7 @@ class EnemyAIBehaviors {
 
             case AI_STATE.NEAR_STATION:
                 this.target = null; // Ensure target is null when near station
-                {
-                    const nearStationTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
-                    this.vel.mult(Math.pow(0.8, nearStationTimeScale)); // Apply braking continuously (frame-rate independent)
-                }
+                this.brakingMultiplier = 0.8; // Unified braking via SharedPhysics
                 shouldMove = false; // Don't actively thrust, just brake and wait
 
                 if (this.nearStationTimer === undefined || this.nearStationTimer === null) {
@@ -1328,7 +1336,11 @@ class EnemyAIBehaviors {
                 this.target = this.lastAttacker; // Set attacker as target to flee from
                 this.changeState(AI_STATE.FLEEING);
                 if (uiManager) uiManager.addMessage(`${this.shipTypeName} fleeing from attack`);
-                if (this.target?.pos) { let escapeDir = p5.Vector.sub(this.pos, this.target.pos).normalize(); this.vel.add(escapeDir.mult(this.maxSpeed * 0.9)); }
+
+                this.isSpeedBursting = true;
+                this.speedBurstMultiplier = 1.8;
+                this.speedBurstTimer = 1.5;
+
                 this.attackCooldown = 15.0;
                 // Fleeing logic is handled below or in next frame's state check
             }

@@ -182,14 +182,11 @@ class EnemyMovement {
                     }
 
                     // Apply braking - lighter when actively maneuvering so strafe is visible
-                    const snipeTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
-                    const brakeFactor = isActivelyManeuvering ? 0.96 : SNIPING_BRAKE_FACTOR;
-                    this.vel.mult(Math.pow(constrain(brakeFactor, 0.6, 0.99), snipeTimeScale));
+                    this.brakingMultiplier = constrain(isActivelyManeuvering ? 0.96 : SNIPING_BRAKE_FACTOR, 0.6, 0.99);
                     canThrust = false; // Strafe/reverse already handled above
                 } else {
                     // No valid target - just brake
-                    const snipeTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
-                    this.vel.mult(Math.pow(constrain(SNIPING_BRAKE_FACTOR, 0.6, 0.99), snipeTimeScale));
+                    this.brakingMultiplier = constrain(SNIPING_BRAKE_FACTOR, 0.6, 0.99);
                     canThrust = false;
                 }
             } else if (this.currentState === AI_STATE.REPOSITIONING || this.currentState === AI_STATE.PATROLLING) {
@@ -230,6 +227,9 @@ class EnemyMovement {
      */
     getMovementTargetForState(distanceToTarget) {
         let desiredMovementTargetPos = null;
+
+        // Reset transient physics flags for this frame
+        this.brakingMultiplier = undefined;
 
         switch (this.currentState) {
             case AI_STATE.APPROACHING:
@@ -313,103 +313,13 @@ class EnemyMovement {
      * Centralizes all physics calculations in one place
      */
     updatePhysics() {
-        // Skip if destroyed
-        if (this.destroyed) return;
-
-        // Calculate timeScale once for all physics operations
-        const physicsTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
-
-        // DRAG: Skip drag during speed bursting (like player.js line ~1488)
-        // Drag is still applied during coasting phase for smooth deceleration
-        if (!this.isSpeedBursting) {
-            // --- TANGLE WEAPON EFFECT ---
-            if (this.dragMultiplier > 1.0 && this.dragEffectTimer > 0) {
-                // First apply normal drag (always safe) - frame-rate independent
-                this.vel.mult(Math.pow(this.drag, physicsTimeScale));
-
-                // Then apply the tangle effect with safety bounds
-                const safeDragMultiplier = Math.max(this.dragMultiplier, 0.001); // Prevent division by zero
-                const tangledSpeedFactor = Math.min(1 / safeDragMultiplier, 1.0); // Can't increase speed
-
-                // Apply tangle effect if values are valid - frame-rate independent
-                if (isFinite(tangledSpeedFactor) && tangledSpeedFactor > 0) {
-                    this.vel.mult(Math.pow(tangledSpeedFactor, physicsTimeScale));
-
-                    // Add slight directional randomness to simulate being caught in energy net
-                    // Timer-based (~80ms interval) for frame rate independence
-                    if (!this._tangleJiggleTimer) this._tangleJiggleTimer = 0;
-                    this._tangleJiggleTimer += deltaTime / 1000;
-                    if (this._tangleJiggleTimer >= 0.08) {
-                        this._tangleJiggleTimer = 0;
-                        this.vel.rotate(random(-0.1, 0.1) * physicsTimeScale);
-                    }
-                }
-
-                // Update drag timer
-                this.dragEffectTimer -= deltaTime / 1000;
-                if (this.dragEffectTimer <= 0) {
-                    this.dragMultiplier = 1.0;
-                    this.dragEffectTimer = 0;
-                }
-            }
-            // --- STATION PROXIMITY EFFECT ---
-            else if (this.currentState === AI_STATE.NEAR_STATION) {
-                // Station braking - stronger effect than normal drag - frame-rate independent
-                this.vel.mult(Math.pow(this.drag * 0.8, physicsTimeScale));
-            }
-            // --- DEFAULT DRAG ---
-            else {
-                // Normal drag - frame-rate independent
-                this.vel.mult(Math.pow(this.drag, physicsTimeScale));
-            }
-
-            // End coasting phase when speed has decayed
-            if (this.isCoastingFromBurst) {
-                const baseSpeed = this.baseMaxSpeed || this.maxSpeed || 5;
-                if (this.vel.magSq() < (baseSpeed * 1.01) ** 2) {
-                    this.isCoastingFromBurst = false;
-                }
-            }
+        if (typeof SharedPhysics !== 'undefined') {
+            const dt = (typeof getDeltaSeconds === 'function') ? getDeltaSeconds() : (deltaTime / 1000);
+            SharedPhysics.updatePhysics(this, dt);
         }
 
-        // Limit Max Speed Logic (Soft Cap to allow knockback)
-        const currentSpeed = this.vel.mag();
-
-        // Allow boosted enemies to exceed normal maxSpeed
-        // Also allow higher speed during coasting phase for smooth deceleration
-        let currentCap = this.maxSpeed;
-        if (this.boostMaxDuration > 0 && this.boostMultiplier > 1) {
-            if (this.isSpeedBursting || this.isCoastingFromBurst) {
-                const baseSpeed = this.baseMaxSpeed || this.maxSpeed || 5;
-                currentCap = baseSpeed * this.boostMultiplier;
-            }
-        }
-
-        if (currentSpeed > currentCap) {
-            // If exceeding max speed, decay only the excess amount
-            // This is more frame-rate independent than multiplying the whole velocity
-            const excess = currentSpeed - currentCap;
-            const decayedExcess = excess * Math.pow(0.9, physicsTimeScale);
-            this.vel.setMag(currentCap + decayedExcess);
-        } else if (currentSpeed > this.maxSpeed && !this.isSpeedBursting && !this.isCoastingFromBurst) {
-            // Normal operation - safeguard against thrust accumulation
-            this.vel.limit(this.maxSpeed);
-        }
-
-        // Update position only if velocity is valid (frame-rate independent)
-        if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) {
-            const timeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
-            this.pos.add(p5.Vector.mult(this.vel, timeScale));
-        } else {
-            console.warn(`Invalid velocity detected for ${this.shipTypeName}, resetting`);
-            this.vel.set(0, 0);
-        }
-
-        // Update thrust particles
-        if (this.thrustManager) {
-            this.thrustManager.update();
-        }
-
+        // Reset isThrusting flag at end of physics update
+        // (Original Enemy behavior - Player handles this in handleInput() instead)
         this.isThrusting = false;
     }
 }
