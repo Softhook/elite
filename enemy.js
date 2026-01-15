@@ -670,7 +670,7 @@ class Enemy {
                 // This matches player.js line ~1467: "Actively bursting: sustain with normal thrust application"
                 // NOTE: Use 1.0 multiplier like player does, not boostMultiplier (velocity already set high at activation)
                 if (this.boostDurationTimer > 0) {
-                    this.thrustForward(1.0, false); // Normal thrust, no particles during boost
+                    this.thrustForward(1.0, false, deltaSeconds); // Pass deltaSeconds for precise timing
                 } else {
                     // Boost ended - deactivate
                     if (typeof this.deactivateBoost === 'function') {
@@ -708,7 +708,7 @@ class Enemy {
             if (this.offScreenTimer < offScreenInterval) {
                 // Skipping AI update - just maintain physics/thrust
                 if (this._persistedThrust > 0) {
-                    this.thrustForward(this._persistedThrust, false);
+                    this.thrustForward(this._persistedThrust, false, deltaSeconds); // Pass deltaSeconds for precise timing
                 }
 
                 // Persistent firing for off-screen enemies
