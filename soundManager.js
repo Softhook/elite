@@ -1278,7 +1278,11 @@ class SoundManager {
      * @returns {object} Sanitized definition copy
      */
     _sanitizeDefinition(definition, name) {
-        const defCopy = JSON.parse(JSON.stringify(definition || {}));
+        if (!definition) {
+            console.warn('SoundManager: No sound definition provided');
+            return;
+        }
+        const defCopy = JSON.parse(JSON.stringify(definition));
 
         // Ensure wave_type is valid (0=SQUARE, 1=SAWTOOTH, 2=SINE, 3=NOISE)
         let wt = parseInt(defCopy.wave_type);
