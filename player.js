@@ -2497,7 +2497,7 @@ class Player {
             weapons: weaponsData
             ,
             // Persist hired bodyguards (only store serializable fields)
-            activeBodyguards: this.activeBodyguards.map(g => ({
+            activeBodyguards: (this.activeBodyguards || []).map(g => ({
                 shipType: g.shipType,
                 hull: (typeof g.hull === 'number') ? g.hull : null,
                 maxHull: (typeof g.hull === 'number') ? g.maxHull : null,
@@ -2505,18 +2505,18 @@ class Player {
             })),
             // Navigation preferences
             showSecretBaseNavigation: this.showSecretBaseNavigation || false,
-            // Personal record tracking - these should always be initialized
-            shipsDestroyed: this.shipsDestroyed,
-            systemsVisited: this.systemsVisited,
-            stationsTraded: this.stationsTraded,
-            factionsJoined: this.factionsJoined,
-            eliteStatusChanges: this.eliteStatusChanges,
-            missionsCompleted: this.missionsCompleted,
-            wantedStatusChanges: this.wantedStatusChanges,
-            shipsPurchased: this.shipsPurchased,
-            weaponsUpgraded: this.weaponsUpgraded,
+            // Personal record tracking
+            shipsDestroyed: this.shipsDestroyed || [],
+            systemsVisited: this.systemsVisited || [],
+            stationsTraded: this.stationsTraded || [],
+            factionsJoined: this.factionsJoined || [],
+            eliteStatusChanges: this.eliteStatusChanges || [],
+            missionsCompleted: this.missionsCompleted || [],
+            wantedStatusChanges: this.wantedStatusChanges || [],
+            shipsPurchased: this.shipsPurchased || [],
+            weaponsUpgraded: this.weaponsUpgraded || [],
             // Secret base storage
-            secretStorage: this.secretStorage
+            secretStorage: this.secretStorage || []
             // -----------------------------------------
         };
     }
@@ -2701,8 +2701,8 @@ class Player {
             });
             SAVE_LOG(`Restored ${this.activeBodyguards.length} hired bodyguard(s) from save data.`);
         } else {
-            // Initialize empty array if no save data
-            this.activeBodyguards = [];
+            // Ensure property exists for runtime code
+            this.activeBodyguards = this.activeBodyguards || [];
         }
 
         // Restore personal record tracking
@@ -3131,7 +3131,7 @@ class Player {
         }
         else if (this.autopilotTarget === 'secretbase') {
             // Target the closest discovered secret station
-            const secretStations = this.currentSystem.secretStations;
+            const secretStations = this.currentSystem.secretStations || [];
             const discoveredSecrets = secretStations.filter(s => s.discovered && s.pos);
 
             if (discoveredSecrets.length === 0) {
@@ -3165,7 +3165,7 @@ class Player {
         // Planet target: object with {type:'planet', index: n}
         else if (this.autopilotTarget && typeof this.autopilotTarget === 'object' && this.autopilotTarget.type === 'planet') {
             const idx = Number.isFinite(this.autopilotTarget.index) ? this.autopilotTarget.index : this.autopilotPlanetIndex;
-            const planets = this.currentSystem.planets;
+            const planets = this.currentSystem.planets || [];
             if (!planets || planets.length === 0 || idx < 0 || idx >= planets.length) {
                 console.error(`Autopilot planet target invalid. Planets: ${planets?.length || 0}, Index: ${idx}, staticElementsInitialized: ${this.currentSystem?.staticElementsInitialized}`);
 

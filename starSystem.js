@@ -6153,9 +6153,7 @@ class StarSystem {
         // We only spawn here (not run full initStaticElements) to avoid duplicating planets/station.
         try {
             if ((!sys.spaceObjects || sys.spaceObjects.length === 0) && Array.isArray(sys.planets) && sys.planets.length > 0 && typeof sys.spawnSpaceObjectsForPlanets === 'function') {
-                if (!sys.spaceObjects) {
-                    sys.spaceObjects = [];
-                }
+                sys.spaceObjects = sys.spaceObjects || [];
                 sys.spawnSpaceObjectsForPlanets();
                 // Mark static elements initialized so we don't attempt to re-run full init later
                 sys.staticElementsInitialized = true;

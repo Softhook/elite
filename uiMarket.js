@@ -280,8 +280,8 @@ class UIMarket {
 
         // Get tradable commodities
         const tradable = spaceObject.getTradableCommodities ? spaceObject.getTradableCommodities() : { produces: [], buys: [] };
-        const producesSet = new Set(tradable.produces);
-        const buysSet = new Set(tradable.buys);
+        const producesSet = new Set(tradable.produces || []);
+        const buysSet = new Set(tradable.buys || []);
 
         // Get station market for price reference
         const station = system?.station;

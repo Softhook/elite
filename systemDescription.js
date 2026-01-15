@@ -15,7 +15,7 @@ function generateSystemDescription(system, env = {}) {
     let missionSummary = '';
     try {
         if (typeof system.getAvailableMissions === 'function' && galaxy && player) {
-            const missions = system.getAvailableMissions(galaxy, player);
+            const missions = system.getAvailableMissions(galaxy, player) || [];
             if (missions.length === 0) {
                 missionSummary = 'No missions currently posted.';
             } else {
@@ -221,8 +221,8 @@ function generateSystemDescription(system, env = {}) {
                 else if (Array.isArray(market.items)) entries = market.items;
                 else if (Array.isArray(market.listings)) entries = market.listings;
                 else if (Array.isArray(market.tradeGoods)) entries = market.tradeGoods;
-                else if (typeof market.getPrices === 'function') entries = market.getPrices();
-                else if (typeof market.toArray === 'function') entries = market.toArray();
+                else if (typeof market.getPrices === 'function') entries = market.getPrices() || [];
+                else if (typeof market.toArray === 'function') entries = market.toArray() || [];
                 else if (market && typeof market === 'object') entries = Object.values(market);
             }
 
@@ -269,9 +269,9 @@ function generateSystemDescription(system, env = {}) {
                         if (Array.isArray(m.goods)) ents = m.goods;
                         else if (Array.isArray(m.prices)) ents = m.prices;
                         else if (Array.isArray(m.items)) ents = m.items;
-                        else if (typeof m.getPrices === 'function') ents = m.getPrices();
+                        else if (typeof m.getPrices === 'function') ents = m.getPrices() || [];
                         else if (m && typeof m === 'object') ents = Object.values(m);
-                        for (const it of ents) {
+                        for (const it of ents || []) {
                             if (!it) continue;
                             const nm = it.name || it.id || it.commodity || (it.commodity && it.commodity.name) || (typeof it === 'string' ? it : null);
                             const b = parseNum(it.buyPrice ?? it.purchasePrice ?? it.priceBuy ?? it.price ?? it.buy ?? it.b);

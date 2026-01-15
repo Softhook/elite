@@ -714,7 +714,7 @@ class EnemyAIBehaviors {
             // Use SpatialHash for O(1) nearby lookup if available
             const potentialTargets = (system.spatialHash) ?
                 system.spatialHash.getNearby(this.pos.x, this.pos.y, scanRadius) :
-                system.enemies;
+                (system.enemies || []);
 
             for (let i = 0, len = potentialTargets.length; i < len; i++) {
                 const e = potentialTargets[i];

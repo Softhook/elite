@@ -1278,28 +1278,7 @@ class SoundManager {
      * @returns {object} Sanitized definition copy
      */
     _sanitizeDefinition(definition, name) {
-        if (!definition) {
-            console.warn('SoundManager: No sound definition provided, using default');
-            // Return a basic square wave as default
-            return {
-                wave_type: 0,
-                p_base_freq: 0.3,
-                p_freq_limit: 0,
-                p_freq_ramp: 0,
-                p_freq_dramp: 0,
-                p_duty: 0.5,
-                p_duty_ramp: 0,
-                p_vib_strength: 0,
-                p_vib_speed: 0,
-                p_vib_delay: 0,
-                p_env_attack: 0,
-                p_env_sustain: 0.3,
-                p_env_decay: 0.4,
-                p_env_punch: 0,
-                sound_vol: 0.5
-            };
-        }
-        const defCopy = JSON.parse(JSON.stringify(definition));
+        const defCopy = JSON.parse(JSON.stringify(definition || {}));
 
         // Ensure wave_type is valid (0=SQUARE, 1=SAWTOOTH, 2=SINE, 3=NOISE)
         let wt = parseInt(defCopy.wave_type);

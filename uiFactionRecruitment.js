@@ -222,7 +222,7 @@ class UIFactionRecruitment {
         // Get faction-relevant news filtered by source
         let newsItems = [];
         if (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager) {
-            const allNews = GameGlobals.newsManager.getNewsItems();
+            const allNews = GameGlobals.newsManager.getNewsItems() || [];
             // Filter by allowed sources for this faction
             newsItems = allNews.filter(item => {
                 const source = item.source || '';

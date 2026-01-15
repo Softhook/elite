@@ -1444,7 +1444,7 @@ function loadGame(slotIndex) {
                         // Check if we were docked at a secret station
                         let dockedStation = null;
                         if (dockingState.isSecretStation && dockingState.secretStationIndex !== undefined) {
-                            const secretStations = player.currentSystem.secretStations;
+                            const secretStations = player.currentSystem.secretStations || [];
                             if (secretStations[dockingState.secretStationIndex]) {
                                 dockedStation = secretStations[dockingState.secretStationIndex];
                                 console.log("Restoring dock at SECRET station:", dockedStation.name);

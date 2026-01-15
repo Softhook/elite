@@ -992,7 +992,7 @@ class GameStateManager {
             return;
         }
 
-        const reachable = currentSystem.connectedSystemIndices;
+        const reachable = currentSystem.connectedSystemIndices || [];
 
         console.log(`[_checkAutoJump] Attempting jump from ${currentSystem.name} to index ${lockedIdx}. Reachable: ${reachable.join(',')}`);
 
