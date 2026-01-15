@@ -2647,7 +2647,8 @@ const SpaceObjectRenderers = {
     },
 
     solarFarm: function (obj, size, anim, bob, sunAngle) {
-        // anim is always obj._anim, which is always initialized to {}
+        // anim parameter is obj._anim, which is always initialized to {} in constructor
+        // However, individual animation properties may be undefined
         // Floating frame / base
         Draw3D.drawBox3D(0, bob + size * 0.02, size * 0.95, size * 0.26, size * 0.05, color(32, 38, 50), obj.angle, sunAngle);
 
