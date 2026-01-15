@@ -229,7 +229,8 @@
             AI_ROLE.GUARD,
             AI_ROLE.COMBAT,
             AI_ROLE.MINER,
-            AI_ROLE.REPAIR
+            AI_ROLE.REPAIR,
+            AI_ROLE.MISSIONARY
         ];
 
         const FACTIONS = [
@@ -254,7 +255,8 @@
             [AI_ROLE.GUARD]: 'Viper',
             [AI_ROLE.COMBAT]: 'Viper',
             [AI_ROLE.MINER]: 'Adder',
-            [AI_ROLE.REPAIR]: 'Adder'
+            [AI_ROLE.REPAIR]: 'Adder',
+            [AI_ROLE.MISSIONARY]: 'SystemShuttle'
         };
 
         // ============================================
@@ -319,8 +321,7 @@
         }
 
         function formatScore(score) {
-            if (score === -Infinity) return '—';
-            if (score === null || score === undefined) return '?';
+            if (score === -Infinity || score === null || score === undefined) return '—';
             return Math.round(score);
         }
 
@@ -353,8 +354,8 @@
             // Role-specific base scoring (simplified version)
             switch (source.role) {
                 case AI_ROLE.PIRATE:
-                    if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT || target.role === AI_ROLE.MINER) {
-                        rawScore = TARGET_SCORE_PIRATE_PREY_HAULER; // 40
+                    if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT || target.role === AI_ROLE.MINER || target.role === AI_ROLE.MISSIONARY) {
+                        rawScore = 40; // TARGET_SCORE_PIRATE_PREY_HAULER
                     } else if (isPlayer) {
                         // Base interest in player
                         rawScore = TARGET_SCORE_PIRATE_CARGO_BASE; // 30
@@ -405,6 +406,28 @@
                 case AI_ROLE.GUARD:
                     // Guards only retaliate - no proactive targeting
                     break;
+
+                // (PATCHED FOR VIEWER) HARLEQUIN LOGIC
+                // Even though core game logic was reverted, we simulate it here for the viewer
+                case 'Harlequin': // Assuming Role or Faction context
+                case 'HARLEQUIN':
+                    // Harlequins target authority
+                    if (tgtFaction === 'IMPERIAL' || tgtFaction === 'MILITARY' || tgtFaction === 'POLICE') {
+                        rawScore = 500;
+                    }
+                    break;
+            }
+
+            // Faction checks (including Harlequin if acting as faction)
+            if (srcFaction === 'HARLEQUIN') {
+                if (tgtFaction === 'IMPERIAL' || tgtFaction === 'SEPARATIST' || tgtFaction === 'MILITARY' || tgtFaction === 'POLICE') {
+                    rawScore = 500;
+                }
+            } else if (tgtFaction === 'HARLEQUIN') {
+                // Police/Military hate Harlequins
+                if (srcFaction === 'MILITARY' || srcFaction === 'POLICE') {
+                    rawScore = 500;
+                }
             }
 
             // Apply same-faction penalty only if there's base interest to penalize
