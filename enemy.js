@@ -503,6 +503,14 @@ class Enemy {
         // Always update system reference when update is called
         this.currentSystem = system;
 
+        // [STORM CRITICAL REVIEW FIX]
+        // Reset storm effects at start of update.
+        // Solves overlap flickering and "stuck" debuffs.
+        this.targetingDisruption = 0;
+        this.shieldsDisabled = false;
+        this.weaponsDisabled = false;
+        this.inNebula = false; // Also reset generic nebula flag
+
         // Cache time values to avoid redundant calculations
         const deltaSeconds = deltaTime / 1000;
         const currentTime = millis();

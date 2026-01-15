@@ -6055,6 +6055,8 @@ class StarSystem {
 
             // Save nebulae if present
             nebulae: this._serializeEntityArray(this.nebulae),
+            // Save cosmic storms
+            cosmicStorms: this._serializeEntityArray(this.cosmicStorms),
 
             // Save decorative space objects
             spaceObjects: this._serializeEntityArray(this.spaceObjects, (so) => ({
@@ -6214,6 +6216,8 @@ class StarSystem {
 
         // Restore Nebulae
         sys.nebulae = this._deserializeEntityArray(data.nebulae, Nebula);
+        // Restore Cosmic Storms
+        sys.cosmicStorms = this._deserializeEntityArray(data.cosmicStorms, CosmicStorm);
 
         // Restore Space Objects with fallback
         sys.spaceObjects = this._deserializeEntityArray(data.spaceObjects, SpaceObject, (soData) => {
@@ -6395,6 +6399,36 @@ class StarSystem {
                         }
                         m.system = this;
                     } catch (e) { console.warn('mine relink error', e); }
+                }
+            }
+
+            // Cosmic Storms: restore owner and attached references
+            if (Array.isArray(this.cosmicStorms)) {
+                for (const s of this.cosmicStorms) {
+                    if (!s) continue;
+                    try {
+                        // Restore vectors if not already done by fromJSON/makeVector utils
+                        if (s.pos && s.pos.x !== undefined) s.pos = makeVector(s.pos);
+                        if (s.velocity && s.velocity.x !== undefined) s.velocity = makeVector(s.velocity);
+
+                        // Relink owner
+                        const oid = s.ownerId || s._ownerId || null;
+                        if (oid) {
+                            const owner = resolveOwnerRef(oid);
+                            if (owner) {
+                                s.owner = owner;
+                            }
+                        }
+
+                        // Relink attachedTo
+                        const attId = s.attachedToId || s._attachedToId || null;
+                        if (attId) {
+                            const target = resolveOwnerRef(attId);
+                            if (target) {
+                                s.attachedTo = target;
+                            }
+                        }
+                    } catch (e) { console.warn('storm relink error', e); }
                 }
             }
 
@@ -6993,3 +7027,7 @@ class StarSystem {
     }
 
 } // End of StarSystem class
+
+if (typeof module !== 'undefined') {
+    module.exports = { StarSystem };
+}

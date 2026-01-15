@@ -334,11 +334,12 @@ class CosmicStorm {
         const dist = p5.Vector.dist(entity.pos, this.pos);
         const entityId = entity.id || (entity instanceof Player ? 'player' : Date.now());
         if (dist > this.effectRadius) {
+            // [CRITICAL REVIEW]
+            // We NO LONGER need explicit cleanup here because Player/Enemy reset their 
+            // storm flags (targetingDisruption, shieldsDisabled) every frame in their update().
+            // This robustly handles teleporting out, overlapping storms, and edge cases.
             if (this.affectedEntities.has(entityId)) {
                 this.affectedEntities.delete(entityId);
-                if (this.type === 'electromagnetic') entity.targetingDisruption = 0;
-                if (this.type === 'ion') entity.shieldsDisabled = false;  // Re-enable shields when leaving ion storm
-                if (this.debug) console.log(`Entity ${entityId} left ${this.type} storm`);
             }
             return;
         }
@@ -381,7 +382,9 @@ class CosmicStorm {
 
         switch (this.type) {
             case 'electromagnetic':
-                entity.targetingDisruption = effectStrength;
+                // Use Math.max to prevent weaker storms from overriding stronger ones
+                entity.targetingDisruption = Math.max(entity.targetingDisruption || 0, effectStrength);
+                entity.weaponsDisabled = true; // EMP disables weapons
                 if (this.debug && entity instanceof Player) {
                     console.log(`Targeting disruption: ${effectStrength.toFixed(2)}`);
                 }
@@ -441,4 +444,76 @@ class CosmicStorm {
         console.log(`Storm ${this.type} debug mode: ${this.debug ? 'ON' : 'OFF'}`);
         return this.debug;
     }
+
+    /**
+     * Serializes the storm to a JSON-safe object.
+     */
+    toJSON() {
+        return {
+            pos: { x: this.pos.x, y: this.pos.y },
+            radius: this.radius,
+            type: this.type,
+            velocity: { x: this.velocity.x, y: this.velocity.y },
+            intensity: this.intensity,
+            maxLifetime: this.maxLifetime,
+            lifetime: this.lifetime,
+            dissipating: this.dissipating,
+            dissipateStart: this.dissipateStart,
+            dissipateTime: this.dissipateTime,
+            effectRadius: this.effectRadius,
+            visualRadius: this.visualRadius,
+            lastEffectTime: this.lastEffectTime,
+            effectCount: this.effectCount,
+            // Weapon properties
+            isWeaponSpawned: this.isWeaponSpawned,
+            ownerId: this.owner ? (this.owner.id || this.owner.shipTypeName || null) : null,
+            attachedToId: this.attachedTo ? (this.attachedTo.id || this.attachedTo.shipTypeName || null) : null
+        };
+    }
+
+    /**
+     * Reconstructs a CosmicStorm from serialized data.
+     */
+    static fromJSON(data) {
+        if (!data) return null;
+        // Use default constructor
+        const storm = new CosmicStorm(
+            data.pos?.x || 0,
+            data.pos?.y || 0,
+            data.radius || 100,
+            data.type || 'electromagnetic'
+        );
+
+        // Restore properties
+        if (data.velocity) storm.velocity = (typeof createVector === 'function') ? createVector(data.velocity.x, data.velocity.y) : { x: data.velocity.x, y: data.velocity.y, mult: () => { }, rotate: () => { } };
+        if (data.intensity !== undefined) storm.intensity = data.intensity;
+        if (data.maxLifetime !== undefined) storm.maxLifetime = data.maxLifetime;
+        if (data.lifetime !== undefined) storm.lifetime = data.lifetime;
+
+        storm.dissipating = !!data.dissipating;
+        if (data.dissipateStart !== undefined) storm.dissipateStart = data.dissipateStart;
+        if (data.dissipateTime !== undefined) storm.dissipateTime = data.dissipateTime;
+
+        if (data.effectRadius !== undefined) storm.effectRadius = data.effectRadius;
+        if (data.visualRadius !== undefined) storm.visualRadius = data.visualRadius;
+        if (data.lastEffectTime !== undefined) storm.lastEffectTime = data.lastEffectTime;
+        if (data.effectCount !== undefined) storm.effectCount = data.effectCount;
+
+        // Restore weapon flags (references will be relinked by StarSystem)
+        storm.isWeaponSpawned = !!data.isWeaponSpawned;
+        storm.ownerId = data.ownerId || null;
+        storm._ownerId = data.ownerId || null; // Backup
+        storm.attachedToId = data.attachedToId || null;
+        storm._attachedToId = data.attachedToId || null; // Backup
+
+        // Re-init particles based on restored intensity/radius
+        storm.particles = [];
+        storm.initParticles();
+
+        return storm;
+    }
+}
+
+if (typeof module !== 'undefined') {
+    module.exports = { CosmicStorm };
 }
