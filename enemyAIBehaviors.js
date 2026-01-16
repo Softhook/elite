@@ -587,6 +587,13 @@ class EnemyAIBehaviors {
                     // It handles null/missing system gracefully with fallback edge target
                     this.setLeavingSystemTarget(system);
                 }
+
+                // [FIX] Off-screen pirate patrolling - pirates should continue repositioning even off-screen
+                // This prevents pirates from appearing "frozen" when the player moves away
+                // Uses isOffScreen=true for simplified movement (no obstacle avoidance, no booster)
+                if (this.role === AI_ROLE.PIRATE && this.currentState !== AI_STATE.COLLECTING_CARGO) {
+                    this._updatePirateIdleBehavior(system, undefined, true);
+                }
             }
             return; // EXIT EARLY - Skip complex state machine, cover, and predictive aiming
         }
@@ -650,11 +657,13 @@ class EnemyAIBehaviors {
         // - No target exists, OR
         // - Target exists but is VERY far away (beyond detection range), OR
         // - Already in PATROLLING state (mid-reposition)
-        const shouldPirateReposition = this.role === AI_ROLE.PIRATE && (
-            !targetExists ||
-            this.currentState === AI_STATE.PATROLLING ||
-            (targetExists && distanceToTarget > this.detectionRange * 1.5) // Target too far to pursue
-        );
+        // [FIX] Exclude COLLECTING_CARGO state to prevent interrupting cargo collection
+        const shouldPirateReposition = this.role === AI_ROLE.PIRATE &&
+            this.currentState !== AI_STATE.COLLECTING_CARGO && (
+                !targetExists ||
+                this.currentState === AI_STATE.PATROLLING ||
+                (targetExists && distanceToTarget > this.detectionRange * 1.5) // Target too far to pursue
+            );
 
         if (shouldPirateReposition) {
             this._updatePirateIdleBehavior(system, stateBeforeCombatUpdate);
@@ -671,20 +680,23 @@ class EnemyAIBehaviors {
      * Called when pirate has no target and is idle/patrolling.
      * Features:
      * - Uses named constants for all magic numbers
-     * - Avoids obstacles when selecting reposition targets
+     * - Avoids obstacles when selecting reposition targets (on-screen only)
      * - Strategic target selection (considers traffic lanes, player last position)
      * - Timer reset when entering from combat
      * @param {Object} system - The current star system
      * @param {number} [previousState] - The state the pirate was in before updateCombatState ran
+     * @param {boolean} [isOffScreen=false] - If true, uses simplified logic for performance
      */
-    _updatePirateIdleBehavior(system, previousState) {
+    _updatePirateIdleBehavior(system, previousState, isOffScreen = false) {
         const dt = (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
 
-        // Detect if we just exited a combat state
+        // Detect if we just exited a combat or flee state
+        // [FIX] Include FLEEING so pirates who finished fleeing get timer reset too
         const wasCombatState = previousState === AI_STATE.APPROACHING ||
             previousState === AI_STATE.ATTACK_PASS ||
             previousState === AI_STATE.SNIPING ||
-            previousState === AI_STATE.REPOSITIONING;
+            previousState === AI_STATE.REPOSITIONING ||
+            previousState === AI_STATE.FLEEING;
 
         // Initialize timer if missing or reset on combat exit
         if (this._idleRepositionTimer === undefined || wasCombatState) {
@@ -720,11 +732,24 @@ class EnemyAIBehaviors {
                 );
                 AI_LOG(`${this.shipTypeName} (Pirate) finished repositioning. Idling for ${this._idleRepositionTimer.toFixed(1)}s`);
             } else {
-                // Keep moving with optional speed burst for long distances
-                if (d > 800 && this.boosterReady && random() < 0.01) {
-                    this.activateBooster();
+                // Keep moving - method depends on on-screen status
+                if (isOffScreen) {
+                    // Simplified movement for off-screen (no obstacle avoidance, no booster)
+                    const targetAngle = atan2(
+                        this.patrolTargetPos.y - this.pos.y,
+                        this.patrolTargetPos.x - this.pos.x
+                    );
+                    const angleDiff = this.rotateTowards(targetAngle);
+                    if (Math.abs(angleDiff) < (this.angleTolerance || 0.1) * 2) {
+                        this.thrustForward(1.0);
+                    }
+                } else {
+                    // Full movement with optional speed burst for long distances
+                    if (d > 800 && this.boosterReady && random() < 0.01) {
+                        this.activateBooster();
+                    }
+                    this.performSafeRotationAndThrust(system, this.patrolTargetPos);
                 }
-                this.performSafeRotationAndThrust(system, this.patrolTargetPos);
             }
 
         } else {
@@ -739,14 +764,16 @@ class EnemyAIBehaviors {
             this._idleRepositionTimer -= dt;
 
             // Apply gentle drift physics so we aren't statues
+            // Note: We apply damping here but don't call updatePhysics() - that's handled
+            // by enemy.js update() after updateCombatAI() returns, preventing double physics
             const driftTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
             this.vel.mult(Math.pow(PIRATE_IDLE_DRIFT_DAMPING, driftTimeScale));
-            this.updatePhysics();
 
             // Check timer
             if (this._idleRepositionTimer <= 0) {
                 // Time to move! Pick a strategic reposition target
-                const targetPos = this._selectPirateRepositionTarget(system);
+                // Off-screen: skip obstacle checking for performance
+                const targetPos = this._selectPirateRepositionTarget(system, isOffScreen);
 
                 if (targetPos) {
                     this.patrolTargetPos = targetPos;
@@ -765,21 +792,15 @@ class EnemyAIBehaviors {
      * Select a strategic reposition target for pirates
      * Avoids obstacles and considers traffic patterns
      * @param {Object} system - The current star system
+     * @param {boolean} [skipObstacleCheck=false] - If true, skip obstacle checking for performance
      * @returns {p5.Vector|null} Target position or null if none found
      */
-    _selectPirateRepositionTarget(system) {
-        const maxAttempts = 8;
-
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-            // Pick random distance and angle
-            const distToMove = random(PIRATE_REPOSITION_DIST_MIN, PIRATE_REPOSITION_DIST_MAX);
-            let angle;
-
-            // Strategic bias: Move toward current target or player
-            // 70% chance to move toward a valid target (current target or player)
+    _selectPirateRepositionTarget(system, skipObstacleCheck = false) {
+        // Helper to calculate strategic angle toward player/target with bias
+        const calculateBiasedAngle = () => {
             const biasTarget = this.target && this.isTargetValid(this.target) ? this.target : system.player;
 
-            if (biasTarget && random() < 0.7) {
+            if (biasTarget && biasTarget.pos && random() < 0.7) {
                 const targetDist = dist(this.pos.x, this.pos.y, biasTarget.pos.x, biasTarget.pos.y);
                 if (targetDist > 500) {
                     // Move toward target but with random offset for unpredictability
@@ -787,13 +808,28 @@ class EnemyAIBehaviors {
                         biasTarget.pos.y - this.pos.y,
                         biasTarget.pos.x - this.pos.x
                     );
-                    angle = toTarget + random(-PI / 4, PI / 4); // +/- 45 degrees from target direction
-                } else {
-                    angle = random(TWO_PI);
+                    return toTarget + random(-PI / 4, PI / 4); // +/- 45 degrees from target direction
                 }
-            } else {
-                angle = random(TWO_PI);
             }
+            return random(TWO_PI);
+        };
+
+        // Off-screen: skip obstacle checking entirely for performance
+        if (skipObstacleCheck) {
+            const angle = calculateBiasedAngle();
+            const distToMove = random(PIRATE_REPOSITION_DIST_MIN, PIRATE_REPOSITION_DIST_MAX);
+            return createVector(
+                this.pos.x + cos(angle) * distToMove,
+                this.pos.y + sin(angle) * distToMove
+            );
+        }
+
+        // On-screen: try multiple positions to avoid obstacles
+        const maxAttempts = 8;
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            const distToMove = random(PIRATE_REPOSITION_DIST_MIN, PIRATE_REPOSITION_DIST_MAX);
+            const angle = calculateBiasedAngle();
 
             const candidateX = this.pos.x + cos(angle) * distToMove;
             const candidateY = this.pos.y + sin(angle) * distToMove;

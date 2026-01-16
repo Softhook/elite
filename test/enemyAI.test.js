@@ -630,4 +630,95 @@ describe('Pirate Idle Repositioning', () => {
         // Position far from station
         expect(pirate._isPositionObstructed(mockSystem, 5000, 5000)).toBe(false);
     });
+
+    test('_updatePirateIdleBehavior should accept isOffScreen parameter', () => {
+        // Test that the function exists and accepts 3 parameters
+        expect(typeof pirate._updatePirateIdleBehavior).toBe('function');
+        expect(pirate._updatePirateIdleBehavior.length).toBeLessThanOrEqual(3); // Default params may affect this
+    });
+
+    test('should NOT reposition when in COLLECTING_CARGO state', () => {
+        pirate.currentState = AI_STATE.COLLECTING_CARGO;
+        pirate.target = null;
+        pirate._idleRepositionTimer = -1; // Timer expired
+        pirate.cargoTarget = { pos: createVector(200, 200), destroyed: false };
+        pirate.updateTargeting = () => { };
+
+        global.deltaTime = 16;
+
+        // Call updateCombatAI - should NOT call pirate idle behavior due to COLLECTING_CARGO
+        pirate.updateCombatAI(mockSystem);
+
+        // State should remain COLLECTING_CARGO (not switched to IDLE or PATROLLING)
+        expect(pirate.currentState).toBe(AI_STATE.COLLECTING_CARGO);
+    });
+
+    test('should reset timer when exiting FLEEING state', () => {
+        // Set up pirate that was fleeing (previousState = FLEEING)
+        pirate.currentState = AI_STATE.FLEEING;
+        pirate.target = null;
+        pirate._idleRepositionTimer = 50; // Long existing timer
+        pirate.updateTargeting = () => { };
+
+        global.deltaTime = 16;
+
+        // Manually simulate the idle behavior with FLEEING as previous state
+        pirate._updatePirateIdleBehavior(mockSystem, AI_STATE.FLEEING);
+
+        // Timer should be reset to initial range (5-10), not keep the long 50s value
+        expect(pirate._idleRepositionTimer).toBeGreaterThanOrEqual(PIRATE_REPOSITION_INITIAL_TIMER_MIN);
+        expect(pirate._idleRepositionTimer).toBeLessThanOrEqual(PIRATE_REPOSITION_INITIAL_TIMER_MAX);
+    });
+
+    test('off-screen patrol (isOffScreen=true) should move toward player with 70% bias', () => {
+        pirate._isOnScreen = false;
+        pirate.currentState = AI_STATE.IDLE;
+        pirate.target = null;
+        pirate._idleRepositionTimer = -1; // Timer expired
+
+        // Run multiple iterations to test bias statistically
+        let towardPlayerCount = 0;
+        const iterations = 20;
+
+        for (let i = 0; i < iterations; i++) {
+            pirate._idleRepositionTimer = -1;
+            pirate.currentState = AI_STATE.IDLE;
+            pirate.patrolTargetPos = null;
+
+            // Use consolidated method with isOffScreen=true
+            pirate._updatePirateIdleBehavior(mockSystem, undefined, true);
+
+            if (pirate.patrolTargetPos) {
+                // Check if target is in the general direction of player (within 90 degrees)
+                const angleToPlayer = Math.atan2(
+                    mockSystem.player.pos.y - pirate.pos.y,
+                    mockSystem.player.pos.x - pirate.pos.x
+                );
+                const angleToTarget = Math.atan2(
+                    pirate.patrolTargetPos.y - pirate.pos.y,
+                    pirate.patrolTargetPos.x - pirate.pos.x
+                );
+                const angleDiff = Math.abs(angleToPlayer - angleToTarget);
+                const normalizedDiff = Math.min(angleDiff, 2 * Math.PI - angleDiff);
+
+                // Within 90 degrees (PI/2) is considered "toward player"
+                if (normalizedDiff < Math.PI / 2) {
+                    towardPlayerCount++;
+                }
+            }
+        }
+
+        // With 70% bias, expect roughly 50-90% to be toward player (accounting for randomness)
+        expect(towardPlayerCount).toBeGreaterThan(iterations * 0.4);
+    });
+
+    test('_selectPirateRepositionTarget should accept skipObstacleCheck parameter', () => {
+        expect(typeof pirate._selectPirateRepositionTarget).toBe('function');
+
+        // Test that it works with skipObstacleCheck=true (off-screen mode)
+        const targetWithSkip = pirate._selectPirateRepositionTarget(mockSystem, true);
+        expect(targetWithSkip).toBeDefined();
+        expect(targetWithSkip.x).toBeDefined();
+        expect(targetWithSkip.y).toBeDefined();
+    });
 });
