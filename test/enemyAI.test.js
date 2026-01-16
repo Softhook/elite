@@ -481,3 +481,153 @@ describe('Missionary AI Behavior', () => {
         expect(missionary.target).toBe(mockPlayer);
     });
 });
+
+// ============================================
+// Pirate Idle Behavior Tests
+// ============================================
+
+describe('Pirate Idle Repositioning', () => {
+    let pirate;
+    let mockPlayer;
+    let mockSystem;
+
+    beforeEach(() => {
+        mockPlayer = createMockPlayer({ x: 50000, y: 50000 });
+        pirate = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+        mockSystem = createMockSystem({ player: mockPlayer });
+        pirate.currentSystem = mockSystem;
+    });
+
+    test('should eventually transition from IDLE to PATROLLING when idle', () => {
+        // Setup pirate as idle with no target
+        pirate.currentState = AI_STATE.IDLE;
+        pirate.target = null;
+        pirate.updateTargeting = () => { };
+
+        // Manually set the timer to a small value to speed up test
+        pirate._idleRepositionTimer = 0.1;
+
+        // Mock deltaTime globally
+        global.deltaTime = 1000; // 1 second per frame
+
+        // Update 1: Timer should decrement and likely expire
+        pirate.updateCombatAI(mockSystem);
+
+        // Check if state changed or if we need one more frame
+        if (pirate.currentState === AI_STATE.IDLE) {
+            pirate.updateCombatAI(mockSystem);
+        }
+
+        expect(pirate.currentState).toBe(AI_STATE.PATROLLING);
+        expect(pirate.patrolTargetPos).toBeDefined();
+
+        // Verify target position is "far" (1000-2000 units)
+        const d = dist(pirate.pos.x, pirate.pos.y, pirate.patrolTargetPos.x, pirate.patrolTargetPos.y);
+        expect(d).toBeGreaterThanOrEqual(PIRATE_REPOSITION_DIST_MIN);
+        expect(d).toBeLessThanOrEqual(PIRATE_REPOSITION_DIST_MAX);
+    });
+
+    test('should return to IDLE after reaching patrol target', () => {
+        // Setup pirate in PATROLLING state as if repositioning
+        pirate.currentState = AI_STATE.PATROLLING;
+        pirate.target = null;
+        pirate.patrolTargetPos = createVector(100, 0); // Target nearby
+        pirate.pos = createVector(0, 0); // At 0,0
+
+        // Move pirate close to target
+        pirate.pos = createVector(90, 0); // Distance = 10, threshold is 200
+
+        global.deltaTime = 16;
+
+        // Update
+        pirate.updateCombatAI(mockSystem);
+
+        expect(pirate.currentState).toBe(AI_STATE.IDLE);
+        expect(pirate._idleRepositionTimer).toBeDefined();
+        expect(pirate._idleRepositionTimer).toBeGreaterThanOrEqual(PIRATE_REPOSITION_TIMER_MIN);
+        expect(pirate._idleRepositionTimer).toBeLessThanOrEqual(PIRATE_REPOSITION_TIMER_MAX);
+    });
+
+    test('should reset timer when exiting combat state', () => {
+        // Setup pirate coming from combat
+        pirate.currentState = AI_STATE.APPROACHING;
+        pirate.target = null;
+        pirate._idleRepositionTimer = 25; // Pre-existing long timer
+        pirate.updateTargeting = () => { };
+
+        global.deltaTime = 16;
+
+        // Update - this should detect we came from combat
+        pirate.updateCombatAI(mockSystem);
+
+        // Pirate should now be in IDLE with _wasInCombat flag set
+        expect(pirate.currentState).toBe(AI_STATE.IDLE);
+
+        // After another update, the timer should be reset to initial range
+        pirate.updateCombatAI(mockSystem);
+
+        // Timer should now be reset to initial range (5-10), not the long existing value
+        expect(pirate._idleRepositionTimer).toBeGreaterThanOrEqual(PIRATE_REPOSITION_INITIAL_TIMER_MIN);
+        expect(pirate._idleRepositionTimer).toBeLessThanOrEqual(PIRATE_REPOSITION_INITIAL_TIMER_MAX);
+    });
+
+    test('should avoid planets when selecting reposition targets', () => {
+        // Setup system with a planet at potential target location
+        mockSystem.planets = [
+            { pos: createVector(1500, 0), size: 200, destroyed: false }
+        ];
+
+        pirate.currentState = AI_STATE.IDLE;
+        pirate.target = null;
+        pirate.updateTargeting = () => { };
+        pirate._idleRepositionTimer = -1; // Force immediate reposition
+
+        global.deltaTime = 16;
+
+        // Run multiple times to statistically check obstacle avoidance
+        for (let i = 0; i < 10; i++) {
+            pirate._idleRepositionTimer = -1;
+            pirate.currentState = AI_STATE.IDLE;
+            pirate.updateCombatAI(mockSystem);
+
+            if (pirate.patrolTargetPos) {
+                // Check target is far enough from planet
+                const distToPlanet = dist(
+                    pirate.patrolTargetPos.x, pirate.patrolTargetPos.y,
+                    mockSystem.planets[0].pos.x, mockSystem.planets[0].pos.y
+                );
+                // Should be at least planet size + obstacle check radius
+                expect(distToPlanet).toBeGreaterThanOrEqual(
+                    mockSystem.planets[0].size + PIRATE_REPOSITION_OBSTACLE_CHECK_RADIUS - 50 // tolerance
+                );
+            }
+        }
+    });
+
+    test('should have _selectPirateRepositionTarget and _isPositionObstructed methods', () => {
+        expect(typeof pirate._selectPirateRepositionTarget).toBe('function');
+        expect(typeof pirate._isPositionObstructed).toBe('function');
+    });
+
+    test('_isPositionObstructed should detect planet collisions', () => {
+        mockSystem.planets = [
+            { pos: createVector(500, 500), size: 100, destroyed: false }
+        ];
+
+        // Position inside planet radius
+        expect(pirate._isPositionObstructed(mockSystem, 500, 500)).toBe(true);
+
+        // Position far from planet
+        expect(pirate._isPositionObstructed(mockSystem, 5000, 5000)).toBe(false);
+    });
+
+    test('_isPositionObstructed should detect station proximity', () => {
+        mockSystem.station = { pos: createVector(1000, 1000), size: 80, destroyed: false };
+
+        // Position near station
+        expect(pirate._isPositionObstructed(mockSystem, 1050, 1050)).toBe(true);
+
+        // Position far from station
+        expect(pirate._isPositionObstructed(mockSystem, 5000, 5000)).toBe(false);
+    });
+});

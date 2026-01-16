@@ -314,6 +314,17 @@ global.AI_STATE = {
     SNIPING: 'SNIPING'
 };
 
+// Pirate Repositioning Constants
+global.PIRATE_REPOSITION_ARRIVAL_THRESHOLD = 200;
+global.PIRATE_REPOSITION_DIST_MIN = 1000;
+global.PIRATE_REPOSITION_DIST_MAX = 2000;
+global.PIRATE_REPOSITION_INITIAL_TIMER_MIN = 5;
+global.PIRATE_REPOSITION_INITIAL_TIMER_MAX = 10;
+global.PIRATE_REPOSITION_TIMER_MIN = 10;
+global.PIRATE_REPOSITION_TIMER_MAX = 30;
+global.PIRATE_IDLE_DRIFT_DAMPING = 0.98;
+global.PIRATE_REPOSITION_OBSTACLE_CHECK_RADIUS = 300;
+
 // Ship types for testing
 global.COMBAT_SHIPS = ['Krait', 'Python', 'Anaconda', 'Viper', 'Cobra', 'Asp'];
 global.PIRATE_SHIP_TYPES = ['Krait', 'Asp', 'Cobra', 'Python'];

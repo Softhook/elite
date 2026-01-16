@@ -324,6 +324,20 @@ const REPOSITION_SNIPE_CHANCE = 0.5;           // 50% chance to snipe after repo
 const REPOSITION_DISTANCE_THRESHOLD = 50;     // Distance threshold for reaching reposition target
 
 // -------------------------
+// --- Pirate Repositioning Constants ---
+// -------------------------
+
+const PIRATE_REPOSITION_ARRIVAL_THRESHOLD = 200;    // Distance to consider "arrived" at reposition target
+const PIRATE_REPOSITION_DIST_MIN = 1000;            // Minimum reposition distance
+const PIRATE_REPOSITION_DIST_MAX = 2000;            // Maximum reposition distance
+const PIRATE_REPOSITION_INITIAL_TIMER_MIN = 5;      // Initial wait before first reposition (seconds)
+const PIRATE_REPOSITION_INITIAL_TIMER_MAX = 10;     // Initial wait max
+const PIRATE_REPOSITION_TIMER_MIN = 10;             // Subsequent wait min between repositions
+const PIRATE_REPOSITION_TIMER_MAX = 30;             // Subsequent wait max between repositions
+const PIRATE_IDLE_DRIFT_DAMPING = 0.98;             // Velocity damping when idle
+const PIRATE_REPOSITION_OBSTACLE_CHECK_RADIUS = 300; // Radius to check for obstacles at target
+
+// -------------------------
 // --- Grudge Behavior Thresholds ---
 // -------------------------
 

@@ -620,6 +620,9 @@ class EnemyAIBehaviors {
         }
 
         // 4. Run state‐transition logic.
+        //    Capture previous state for combat exit detection (pirate repositioning)
+        const stateBeforeCombatUpdate = this.currentState;
+
         //    REMOVED: if (!isInForcedCombat)
         //    Allow updateCombatState to run even if in forced combat,
         //    so Haulers can transition from APPROACHING to ATTACK_PASS.
@@ -641,10 +644,218 @@ class EnemyAIBehaviors {
         }
 
         // 6. Otherwise, do normal combat movement & firing
+
+        // PIRATE SPECIAL BEHAVIOR: Idle Repositioning
+        // Pirates should reposition when:
+        // - No target exists, OR
+        // - Target exists but is VERY far away (beyond detection range), OR
+        // - Already in PATROLLING state (mid-reposition)
+        const shouldPirateReposition = this.role === AI_ROLE.PIRATE && (
+            !targetExists ||
+            this.currentState === AI_STATE.PATROLLING ||
+            (targetExists && distanceToTarget > this.detectionRange * 1.5) // Target too far to pursue
+        );
+
+        if (shouldPirateReposition) {
+            this._updatePirateIdleBehavior(system, stateBeforeCombatUpdate);
+            return;
+        }
+
         const desiredMovementTargetPos = this.getMovementTargetForState(distanceToTarget);
         this.performSafeRotationAndThrust(system, desiredMovementTargetPos);
         this.performFiring(system, targetExists, distanceToTarget, shootingAngle);
     }
+
+    /**
+     * Pirate Idle Behavior - Occasionally reposition to look "sneaky" or patrol
+     * Called when pirate has no target and is idle/patrolling.
+     * Features:
+     * - Uses named constants for all magic numbers
+     * - Avoids obstacles when selecting reposition targets
+     * - Strategic target selection (considers traffic lanes, player last position)
+     * - Timer reset when entering from combat
+     * @param {Object} system - The current star system
+     * @param {number} [previousState] - The state the pirate was in before updateCombatState ran
+     */
+    _updatePirateIdleBehavior(system, previousState) {
+        const dt = (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
+
+        // Detect if we just exited a combat state
+        const wasCombatState = previousState === AI_STATE.APPROACHING ||
+            previousState === AI_STATE.ATTACK_PASS ||
+            previousState === AI_STATE.SNIPING ||
+            previousState === AI_STATE.REPOSITIONING;
+
+        // Initialize timer if missing or reset on combat exit
+        if (this._idleRepositionTimer === undefined || wasCombatState) {
+            this._idleRepositionTimer = random(
+                PIRATE_REPOSITION_INITIAL_TIMER_MIN,
+                PIRATE_REPOSITION_INITIAL_TIMER_MAX
+            );
+            // Early return to prevent timer decrement on same frame as reset
+            if (wasCombatState) {
+                this.changeState(AI_STATE.IDLE);
+                return;
+            }
+        }
+
+        // State Handling
+        if (this.currentState === AI_STATE.PATROLLING) {
+            // WE ARE MOVING (REPOSITIONING)
+
+            // Ensure we have a target
+            if (!this.patrolTargetPos) {
+                this.changeState(AI_STATE.IDLE);
+                return;
+            }
+
+            // Check if reached destination
+            const d = dist(this.pos.x, this.pos.y, this.patrolTargetPos.x, this.patrolTargetPos.y);
+            if (d < PIRATE_REPOSITION_ARRIVAL_THRESHOLD) {
+                // Arrived! Switch back to IDLE
+                this.changeState(AI_STATE.IDLE);
+                this._idleRepositionTimer = random(
+                    PIRATE_REPOSITION_TIMER_MIN,
+                    PIRATE_REPOSITION_TIMER_MAX
+                );
+                AI_LOG(`${this.shipTypeName} (Pirate) finished repositioning. Idling for ${this._idleRepositionTimer.toFixed(1)}s`);
+            } else {
+                // Keep moving with optional speed burst for long distances
+                if (d > 800 && this.boosterReady && random() < 0.01) {
+                    this.activateBooster();
+                }
+                this.performSafeRotationAndThrust(system, this.patrolTargetPos);
+            }
+
+        } else {
+            // WE ARE IDLE (WAITING)
+
+            // Ensure state is IDLE
+            if (this.currentState !== AI_STATE.IDLE) {
+                this.changeState(AI_STATE.IDLE);
+            }
+
+            // Countdown
+            this._idleRepositionTimer -= dt;
+
+            // Apply gentle drift physics so we aren't statues
+            const driftTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
+            this.vel.mult(Math.pow(PIRATE_IDLE_DRIFT_DAMPING, driftTimeScale));
+            this.updatePhysics();
+
+            // Check timer
+            if (this._idleRepositionTimer <= 0) {
+                // Time to move! Pick a strategic reposition target
+                const targetPos = this._selectPirateRepositionTarget(system);
+
+                if (targetPos) {
+                    this.patrolTargetPos = targetPos;
+                    this.changeState(AI_STATE.PATROLLING);
+                    const distToMove = dist(this.pos.x, this.pos.y, targetPos.x, targetPos.y);
+                    AI_LOG(`${this.shipTypeName} (Pirate) decided to reposition. Moving ${distToMove.toFixed(0)} units.`);
+                } else {
+                    // Couldn't find valid target, try again soon
+                    this._idleRepositionTimer = random(2, 5);
+                }
+            }
+        }
+    }
+
+    /**
+     * Select a strategic reposition target for pirates
+     * Avoids obstacles and considers traffic patterns
+     * @param {Object} system - The current star system
+     * @returns {p5.Vector|null} Target position or null if none found
+     */
+    _selectPirateRepositionTarget(system) {
+        const maxAttempts = 8;
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            // Pick random distance and angle
+            const distToMove = random(PIRATE_REPOSITION_DIST_MIN, PIRATE_REPOSITION_DIST_MAX);
+            let angle;
+
+            // Strategic bias: Move toward current target or player
+            // 70% chance to move toward a valid target (current target or player)
+            const biasTarget = this.target && this.isTargetValid(this.target) ? this.target : system.player;
+
+            if (biasTarget && random() < 0.7) {
+                const targetDist = dist(this.pos.x, this.pos.y, biasTarget.pos.x, biasTarget.pos.y);
+                if (targetDist > 500) {
+                    // Move toward target but with random offset for unpredictability
+                    const toTarget = atan2(
+                        biasTarget.pos.y - this.pos.y,
+                        biasTarget.pos.x - this.pos.x
+                    );
+                    angle = toTarget + random(-PI / 4, PI / 4); // +/- 45 degrees from target direction
+                } else {
+                    angle = random(TWO_PI);
+                }
+            } else {
+                angle = random(TWO_PI);
+            }
+
+            const candidateX = this.pos.x + cos(angle) * distToMove;
+            const candidateY = this.pos.y + sin(angle) * distToMove;
+
+            // Check for obstacles at this position
+            if (!this._isPositionObstructed(system, candidateX, candidateY)) {
+                return createVector(candidateX, candidateY);
+            }
+        }
+
+        // Fallback: just pick a random direction without obstacle check
+        const angle = random(TWO_PI);
+        const distToMove = random(PIRATE_REPOSITION_DIST_MIN, PIRATE_REPOSITION_DIST_MAX);
+        return createVector(
+            this.pos.x + cos(angle) * distToMove,
+            this.pos.y + sin(angle) * distToMove
+        );
+    }
+
+    /**
+     * Check if a position is obstructed by planets, stations, or dense asteroid fields
+     * @param {Object} system - The current star system
+     * @param {number} x - X coordinate to check
+     * @param {number} y - Y coordinate to check
+     * @returns {boolean} True if position is obstructed
+     */
+    _isPositionObstructed(system, x, y) {
+        const checkRadius = PIRATE_REPOSITION_OBSTACLE_CHECK_RADIUS;
+
+        // Check planets
+        if (system.planets) {
+            for (const planet of system.planets) {
+                if (!planet || planet.destroyed) continue;
+                const planetDist = dist(x, y, planet.pos.x, planet.pos.y);
+                const minDist = (planet.size || 100) + checkRadius;
+                if (planetDist < minDist) return true;
+            }
+        }
+
+        // Check station
+        if (system.station && !system.station.destroyed) {
+            const stationDist = dist(x, y, system.station.pos.x, system.station.pos.y);
+            const minStationDist = (system.station.size || 50) + checkRadius;
+            if (stationDist < minStationDist) return true;
+        }
+
+        // Check for dense asteroid clusters (more than 3 nearby)
+        if (system.asteroids) {
+            let nearbyAsteroids = 0;
+            for (const asteroid of system.asteroids) {
+                if (!asteroid || asteroid.destroyed) continue;
+                const asteroidDist = dist(x, y, asteroid.pos.x, asteroid.pos.y);
+                if (asteroidDist < checkRadius * 2) {
+                    nearbyAsteroids++;
+                    if (nearbyAsteroids >= 3) return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
 
     /**
      * Police AI Logic - Patrols, switches to Combat AI if player is wanted
@@ -1929,7 +2140,7 @@ class EnemyAIBehaviors {
         // Run state-transition logic
         this.updateCombatState(targetExists, distanceToTarget);
 
-        // If in patrol mode (no target), occasionally pause to scan or dock
+        // If in patrol mode (no target), use patrol behavior
         if (!targetExists || this.currentState === AI_STATE.PATROLLING) {
             this._updateCombatPatrolBehavior(system);
             return;

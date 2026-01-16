@@ -1485,6 +1485,14 @@ class UIHUD {
         }
 
         if (state === AI_STATE.PATROLLING) {
+            // Pirate-specific: Show "Prowling" or "Lurking" instead of "Patrolling"
+            if (role === AI_ROLE.PIRATE) {
+                if (target.target && target.isTargetValid && target.isTargetValid(target.target)) {
+                    const tgtName = this._getShortTargetName(target.target);
+                    return `Stalking ${tgtName}`;
+                }
+                return 'Prowling';
+            }
             return 'Patrolling';
         }
 
@@ -1498,6 +1506,10 @@ class UIHUD {
         }
 
         if (state === AI_STATE.IDLE) {
+            // Pirate-specific: Show "Lurking" instead of "Idle"
+            if (role === AI_ROLE.PIRATE) {
+                return 'Lurking';
+            }
             // Check if stationary or drifting
             if (target.vel && target.vel.mag && target.vel.mag() > 10) {
                 return 'Drifting';
