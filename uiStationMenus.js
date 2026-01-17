@@ -88,8 +88,9 @@ class UIStationMenus {
         this.newsButtonAreas = [];
 
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
-        const contentY = pY + headerHeight + 10;
-        const contentH = pH - headerHeight - 60;
+        const L = STATION_LAYOUT; // Shorthand
+        const contentY = pY + headerHeight + L.CONTENT_START;
+        const contentH = pH - headerHeight - L.BACK_BUTTON_MARGIN - 10;
 
         // Get news items
         let newsItems = (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager)
@@ -102,7 +103,7 @@ class UIStationMenus {
         }
 
         // Draw Filter Buttons at the top
-        const filterY = pY + headerHeight;
+        const filterY = contentY;
         const filterSources = [
             { id: 'ALL', label: 'All Sources' },
             { id: 'The Core Echo', label: 'The Core Echo' },
@@ -110,25 +111,27 @@ class UIStationMenus {
             { id: 'The Freight Log', label: 'The Freight Log' }
         ];
 
-        const filterBtnW = (pW - 60) / 4;
-        const filterBtnH = 30;
+        const filterBtnW = (pW - L.CONTENT_PADDING * 2 - L.BTN_SPACING * 3) / 4;
+        const filterBtnH = L.BTN_HEIGHT_SMALL + 5;
 
         for (let i = 0; i < filterSources.length; i++) {
             const src = filterSources[i];
-            const btnX = pX + 30 + i * (filterBtnW + 5);
+            const btnX = pX + L.CONTENT_PADDING + i * (filterBtnW + L.BTN_SPACING);
             const isActive = this.newsSourceFilter === src.id;
 
             // Highlight active button
             const fillCol = isActive ? [100, 150, 255] : [40, 40, 60];
-            const textCol = isActive ? [255] : [180];
 
-            const btnArea = UIComponents.drawButton(btnX, filterY, filterBtnW, filterBtnH, src.label, fillCol, [120, 180, 255], 3, { action: 'FILTER', source: src.id });
+            const btnArea = UIComponents.drawButton(
+                btnX, filterY, filterBtnW, filterBtnH,
+                src.label, fillCol, [120, 180, 255],
+                3, { action: 'FILTER', source: src.id, textSize: STATION_TEXT_SIZE.SMALL }
+            );
             this.newsButtonAreas.push(btnArea);
         }
 
-        const listStartY = filterY + filterBtnH + 10;
-        const listContentH = contentH - (filterBtnH + 10);
-        let currentY = listStartY;
+        const listStartY = filterY + filterBtnH + L.BTN_SPACING;
+        const listContentH = contentH - (filterBtnH + L.BTN_SPACING);
         const availableHeight = listContentH;
 
         if (newsItems.length === 0) {
@@ -283,36 +286,56 @@ class UIStationMenus {
      */
     _drawRepairsContent(player, panelRect, headerHeight) {
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+        const L = STATION_LAYOUT; // Shorthand
 
-        // Player ship repair section
-        UIComponents.setTextStyle({ fill: 220, size: STATION_TEXT_SIZE.HEADER, alignH: CENTER, alignV: TOP });
-        text(`Hull: ${floor(player.hull)} / ${player.maxHull}`, pX + pW / 2, pY + headerHeight + 10);
+        // Screen description
+        const contentY = UIComponents.drawScreenDescription(
+            `Hull Integrity: ${floor(player.hull)} / ${player.maxHull}`,
+            pX, pY, pW, headerHeight,
+            { color: [180, 220, 255], size: STATION_TEXT_SIZE.HEADER }
+        );
 
+        // Calculate repair costs
         let missing = player.maxHull - player.hull;
         let fullCost = Math.floor(missing * 10);
         let halfRepair = Math.min(missing, Math.ceil(player.maxHull / 2));
         let halfCost = Math.floor(halfRepair * 7);
-        let btnW = pW * 0.5, btnH = 45, btnX = pX + pW / 2 - btnW / 2;
-        let btnY1 = pY + headerHeight + 60, btnY2 = btnY1 + btnH + 20;
 
-        const fullButtonArea = UIComponents.drawButton(btnX, btnY1, btnW, btnH, `Full Repair (${fullCost} cr)`, [0, 180, 0], [100, 255, 100]);
-        const halfButtonArea = UIComponents.drawButton(btnX, btnY2, btnW, btnH, `50% Repair (${halfCost} cr)`, [180, 180, 0], [220, 220, 100]);
+        // Button layout - centered, using standardized sizing
+        const btnW = pW * 0.5;
+        const btnH = L.BTN_HEIGHT + 10; // Slightly taller for these main action buttons
+        const btnX = pX + (pW - btnW) / 2;
+        let btnY = contentY;
+
+        const fullButtonArea = UIComponents.drawButton(
+            btnX, btnY, btnW, btnH,
+            `Full Repair (${fullCost} cr)`,
+            [0, 180, 0], [100, 255, 100]
+        );
+        btnY += btnH + L.BTN_SPACING;
+
+        const halfButtonArea = UIComponents.drawButton(
+            btnX, btnY, btnW, btnH,
+            `50% Repair (${halfCost} cr)`,
+            [180, 180, 0], [220, 220, 100]
+        );
+        btnY += btnH + L.SECTION_GAP;
 
         // Bodyguard repair section
         const bodyguardInfo = player.getDamagedBodyguardsInfo ? player.getDamagedBodyguardsInfo() : { count: 0, totalCost: 0 };
-        let btnY3 = btnY2 + btnH + 40;
         let bodyguardsButtonArea = {};
 
         if (bodyguardInfo.count > 0) {
-            // Draw separator
+            // Draw separator line
             strokeWeight(1);
             stroke(255, 180, 100);
-            line(pX + 50, btnY2 + btnH + 20, pX + pW - 50, btnY2 + btnH + 20);
+            line(pX + L.CONTENT_PADDING + 20, btnY, pX + pW - L.CONTENT_PADDING - 20, btnY);
+            noStroke();
 
-            UIComponents.setTextStyle({ fill: 220, size: STATION_TEXT_SIZE.HEADER, alignH: CENTER, alignV: TOP, noStroke: true });
+            btnY += L.BTN_SPACING;
 
             bodyguardsButtonArea = UIComponents.drawButton(
-                btnX, btnY3, btnW, btnH,
+                btnX, btnY, btnW, btnH,
                 `Repair All Guards (${bodyguardInfo.totalCost} cr)`,
                 [0, 120, 180], [100, 200, 255]
             );
@@ -408,36 +431,41 @@ class UIStationMenus {
         const panelRect = uiManager.getPanelRect();
 
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+        const L = STATION_LAYOUT; // Shorthand
         const isAnarchySystem = typeof system?.securityLevel === 'string' && system.securityLevel.toLowerCase() === 'anarchy';
 
         if (isAnarchySystem) {
-            UIComponents.setTextStyle({ fill: 220, size: STATION_TEXT_SIZE.HEADER, alignH: CENTER, alignV: TOP });
-            const messageY = pY + headerHeight + 20;
-            text("This anarchy system has no formal police presence.", pX + pW / 2, messageY);
-            UIComponents.setTextStyle({ fill: [180, 200, 255], size: STATION_TEXT_SIZE.BODY });
-            text("Local disputes are settled without official intervention.", pX + pW / 2, messageY + 35);
+            const contentY = UIComponents.drawScreenDescription(
+                "This anarchy system has no formal police presence.",
+                pX, pY, pW, headerHeight
+            );
+            UIComponents.setTextStyle({ fill: [180, 200, 255], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
+            text("Local disputes are settled without official intervention.", pX + pW / 2, contentY);
 
             this.policeButtonAreas.push(UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: 'back' }));
-
-            // Sync to UIManager for backward compatibility
             uiManager.policeButtonAreas = this.policeButtonAreas;
             pop();
             return;
         }
 
-        UIComponents.setTextStyle({ fill: 255, size: STATION_TEXT_SIZE.HEADER, align: [CENTER, TOP] });
+        // Legal status display
         const isWanted = system?.isPlayerWanted();
         const statusText = isWanted ? "WANTED" : "CLEAN";
         const statusColor = isWanted ? [255, 50, 50] : [50, 255, 50];
-        const contentY = pY + headerHeight + 10;
-        text(`Legal Status in ${system?.name || 'Unknown'} System: `, pX + pW / 2, contentY);
-        UIComponents.setTextStyle({ fill: statusColor, size: STATION_TEXT_SIZE.HEADER });
-        text(statusText, pX + pW / 2, contentY + 30);
+
+        const statusDesc = `Legal Status in ${system?.name || 'Unknown'} System:`;
+        const contentY = UIComponents.drawScreenDescription(statusDesc, pX, pY, pW, headerHeight);
+
+        UIComponents.setTextStyle({ fill: statusColor, size: STATION_TEXT_SIZE.HEADER, align: [CENTER, TOP] });
+        text(statusText, pX + pW / 2, contentY);
+
+        let infoY = contentY + STATION_TEXT_SIZE.HEADER + L.BTN_SPACING;
 
         // Display police bounty information
         if (player.isPolice) {
-            UIComponents.setTextStyle({ fill: [100, 255, 100], size: STATION_TEXT_SIZE.BODY });
-            text("Active Bounty: 1,000 cr per Pirate killed, 1,000 cr per Alien killed", pX + pW / 2, contentY + 65);
+            UIComponents.setTextStyle({ fill: [100, 255, 100], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
+            text("Active Bounty: 1,000 cr per Pirate killed, 1,000 cr per Alien killed", pX + pW / 2, infoY);
+            infoY += STATION_TEXT_SIZE.BODY + L.BTN_SPACING;
         }
 
         // Show police faction kill progress
@@ -446,10 +474,11 @@ class UIStationMenus {
             if (pk) {
                 UIComponents.setTextStyle({ fill: [200], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
                 if (pk.nextThreshold) {
-                    text(`Police Kills: ${pk.kills} — ${pk.killsToNext} to ${pk.nextRank}`, pX + pW / 2, contentY + 95);
+                    text(`Police Kills: ${pk.kills} — ${pk.killsToNext} to ${pk.nextRank}`, pX + pW / 2, infoY);
                 } else {
-                    text(`Police Kills: ${pk.kills} — Max Rank`, pX + pW / 2, contentY + 95);
+                    text(`Police Kills: ${pk.kills} — Max Rank`, pX + pW / 2, infoY);
                 }
+                infoY += STATION_TEXT_SIZE.BODY + L.BTN_SPACING;
             }
         } catch (e) { /* fail silently */ }
 
@@ -458,28 +487,31 @@ class UIStationMenus {
         else if (system?.securityLevel === 'Medium') fineAmount = 500;
         if (player.hasBeenPolice) {
             fineAmount *= 3;
-            UIComponents.setTextStyle({ fill: [255, 200, 100], size: STATION_TEXT_SIZE.BODY });
-            text("Fines tripled for former police officer", pX + pW / 2, contentY + 95);
+            UIComponents.setTextStyle({ fill: [255, 200, 100], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
+            text("Fines tripled for former police officer", pX + pW / 2, infoY);
+            infoY += STATION_TEXT_SIZE.BODY + L.BTN_SPACING;
         }
 
-        let btnW = pW * 0.5, btnH = 45;
-        let btnX = pX + pW / 2 - btnW / 2;
-        let btnY1 = contentY + (player.isPolice ? 100 : (player.hasBeenPolice ? 125 : 90));
+        // Buttons - using standardized sizing
+        const btnW = pW * 0.5;
+        const btnH = L.BTN_HEIGHT + 10;
+        const btnX = pX + (pW - btnW) / 2;
+        let btnY = infoY + L.SECTION_GAP;
 
         if (isWanted) {
             this.policeButtonAreas.push(
-                UIComponents.drawButton(btnX, btnY1, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0, 180, 0], [100, 255, 100], 5, { action: 'pay_fine', amount: fineAmount })
+                UIComponents.drawButton(btnX, btnY, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0, 180, 0], [100, 255, 100], 5, { action: 'pay_fine', amount: fineAmount })
             );
+            btnY += btnH + L.BTN_SPACING;
         }
 
-        const btnY2 = btnY1 + btnH + 20;
         if (!player.isPolice) {
             this.policeButtonAreas.push(
-                UIComponents.drawButton(btnX, btnY2, btnW, btnH, "Join Police Force", [50, 50, 180], [100, 100, 255], 5, { action: 'join_police' })
+                UIComponents.drawButton(btnX, btnY, btnW, btnH, "Join Police Force", [50, 50, 180], [100, 100, 255], 5, { action: 'join_police' })
             );
         } else {
-            UIComponents.setTextStyle({ fill: 255, size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
-            text("You are a member of the Police Force", pX + pW / 2, btnY2 + btnH / 2);
+            UIComponents.setTextStyle({ fill: [100, 255, 100], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
+            text("You are a member of the Police Force", pX + pW / 2, btnY + btnH / 2);
         }
 
         this.policeButtonAreas.push(UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: 'back' }));
@@ -636,19 +668,21 @@ class UIStationMenus {
 
         // Store full filtered list for navigation (not just visible items)
         this._fullFilteredShips = availableShips;
+        const L = STATION_LAYOUT; // Shorthand
 
-        // Draw welcome text (single line)
+        // Draw welcome text using standardized description
         const systemName = system?.name || "Unknown";
         const welcomeText = this._getShipyardWelcomeText(systemTechLevel, economyType, systemName);
-        UIComponents.setTextStyle({ fill: [255, 230, 150], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
-        text(welcomeText, pX + 20, pY + headerHeight);
+        const contentY = UIComponents.drawScreenDescription(welcomeText, pX, pY, pW, headerHeight, { color: [255, 230, 150] });
 
         // Show trade-in info
         UIComponents.setTextStyle({ fill: [180, 220, 255], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
-        text(`Your ship: ${currentShipType} (Trade-in: ${currentShipValue} cr)`, pX + 20, pY + headerHeight + 22);
+        text(`Your ship: ${currentShipType} (Trade-in: ${currentShipValue} cr)`, pX + L.CONTENT_PADDING, contentY);
 
-        // List ships - adjusted startY for welcome text
-        let rowH = 40, startY = pY + headerHeight + 50, visibleRows = floor((pH - headerHeight - 100) / rowH);
+        // List ships - using standardized row height
+        const rowH = L.ROW_HEIGHT;
+        const startY = contentY + STATION_TEXT_SIZE.BODY + L.BTN_SPACING;
+        const visibleRows = floor((pH - (startY - pY) - L.BACK_BUTTON_MARGIN) / rowH);
         let totalRows = availableShips.length;
         let scrollAreaH = visibleRows * rowH;
         this.shipyardScrollMax = max(0, totalRows - visibleRows);
@@ -781,17 +815,18 @@ class UIStationMenus {
 
         // Store full filtered list for navigation (not just visible items)
         this._fullFilteredWeapons = allItems;
+        const L = STATION_LAYOUT; // Shorthand
 
-        // Draw welcome text (single line)
+        // Draw welcome text using standardized description
         const systemName = system?.name || "Unknown";
         const welcomeText = this._getUpgradesWelcomeText(systemTechLevel, economyType, systemName);
-        UIComponents.setTextStyle({ fill: [255, 200, 150], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
-        text(welcomeText, pX + 20, pY + headerHeight);
+        const contentY = UIComponents.drawScreenDescription(welcomeText, pX, pY, pW, headerHeight, { color: [255, 200, 150] });
 
-        // Continue with upgrade menu drawing
-        let rowH = 40, startY = pY + headerHeight + 28;
+        // Continue with upgrade menu drawing - using standardized row height
+        const rowH = L.ROW_HEIGHT;
+        const startY = contentY;
 
-        let visibleRows = floor((pH - headerHeight - 80) / rowH);
+        const visibleRows = floor((pH - (startY - pY) - L.BACK_BUTTON_MARGIN) / rowH);
         let totalRows = allItems.length;
         let scrollAreaH = visibleRows * rowH;
         this.upgradeScrollMax = max(0, totalRows - visibleRows);
@@ -819,6 +854,7 @@ class UIStationMenus {
                 const currentLevel = player.installedUpgrades[upg.type] || 0;
                 if (currentLevel >= upg.level) isInstalled = true;
             }
+            const isAlreadyOwned = isInstalled; // Track for passing to detail screen
 
             // Different colors for ship upgrades (green) vs weapons (purple/blue)
             if (isShipUpgrade) {
@@ -870,7 +906,8 @@ class UIStationMenus {
                 w: pW - 40,
                 h: rowH - 6,
                 upgrade: upg,
-                canAfford: canAfford
+                canAfford: canAfford,
+                isInstalled: isAlreadyOwned
             });
         }
 
@@ -897,23 +934,28 @@ class UIStationMenus {
         this.protectionServicesButtons = [];
 
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+        const L = STATION_LAYOUT; // Shorthand
 
-        // Draw description
-        UIComponents.setTextStyle({ fill: 220, size: STATION_TEXT_SIZE.HEADER, align: [CENTER, TOP] });
-        let descY = pY + headerHeight + 20;
-        text("Hire professional security guards to protect you during your travels.", pX + pW / 2, descY);
+        // Screen description
+        const contentY = UIComponents.drawScreenDescription(
+            "Hire professional security guards to protect you during your travels.",
+            pX, pY, pW, headerHeight
+        );
 
         // Show current bodyguard status
-        UIComponents.setTextStyle({ fill: [180, 220, 255], size: STATION_TEXT_SIZE.BODY });
-        let statusY = descY + 40;
-
         const activeGuardsCount = player.getActiveGuardsCount ? player.getActiveGuardsCount() : 0;
         const bodyguardLimit = player.bodyguardLimit || 0;
-        text(`Active bodyguards: ${activeGuardsCount}/${bodyguardLimit}`, pX + pW / 2, statusY);
+
+        UIComponents.setTextStyle({ fill: [180, 220, 255], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
+        text(`Active bodyguards: ${activeGuardsCount}/${bodyguardLimit}`, pX + pW / 2, contentY);
+
+        let listY = contentY + STATION_TEXT_SIZE.BODY + L.SECTION_GAP;
 
         if (activeGuardsCount < bodyguardLimit) {
-            UIComponents.setTextStyle({ fill: 230, size: STATION_TEXT_SIZE.HEADER, align: [LEFT, TOP] });
-            text("Available Guards for Hire:", pX + 40, statusY + 40);
+            // Section header
+            UIComponents.setTextStyle({ fill: 230, size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
+            text("Available Guards for Hire:", pX + L.CONTENT_PADDING, listY);
+            listY += STATION_TEXT_SIZE.BODY + L.BTN_SPACING;
 
             const guardOptions = [
                 { ship: "GladiusFighterGuard", name: "Gladius Security", cost: 8000, description: "Standard security escort" },
@@ -925,57 +967,52 @@ class UIStationMenus {
             const affordableGuards = guardOptions.filter(guard => player.credits >= guard.cost);
 
             if (affordableGuards.length === 0) {
-                UIComponents.setTextStyle({ fill: [255, 150, 150], size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
-                text("You don't have enough credits to hire any guards.", pX + pW / 2, statusY + 80);
+                UIComponents.setTextStyle({ fill: [255, 150, 150], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
+                text("You don't have enough credits to hire any guards.", pX + pW / 2, listY);
             } else {
-                let guardY = statusY + 80;
-                textAlign(LEFT, TOP);
+                const rowH = 60; // Guard card height
 
                 affordableGuards.forEach((guard, i) => {
-                    const btnX = pX + 40;
-                    const btnY = guardY + i * 80;
-                    const btnW = pW - 80;
-                    const btnH = 70;
+                    const rowX = pX + L.CONTENT_PADDING;
+                    const rowY = listY + i * (rowH + L.BTN_SPACING);
+                    const rowW = pW - L.CONTENT_PADDING * 2;
 
+                    // Card background
                     fill(40, 60, 100);
                     stroke(100, 140, 200);
                     strokeWeight(1);
-                    rect(btnX, btnY, btnW, btnH, 5);
-
+                    rect(rowX, rowY, rowW, rowH, 5);
                     noStroke();
-                    textSize(STATION_TEXT_SIZE.BODY);
-                    fill(230);
-                    textAlign(LEFT, CENTER);
-                    text(`Slot ${i + 1}: ${guard.name} (${guard.ship})`, btnX + 15, btnY + 15);
 
-                    textSize(STATION_TEXT_SIZE.BODY);
-                    text(guard.description, btnX + 15, btnY + 40);
+                    // Guard name and description
+                    UIComponents.setTextStyle({ fill: 230, size: STATION_TEXT_SIZE.BODY, align: [LEFT, CENTER] });
+                    text(guard.name, rowX + L.ROW_PADDING, rowY + 18);
 
-                    textAlign(RIGHT, TOP);
-                    fill(150, 230, 150);
-                    text(`${guard.cost.toLocaleString()} Cr`, btnX + btnW - 100, btnY + 15);
+                    UIComponents.setTextStyle({ fill: [180, 180, 200], size: STATION_TEXT_SIZE.SMALL, align: [LEFT, CENTER] });
+                    text(guard.description, rowX + L.ROW_PADDING, rowY + 42);
 
+                    // Price
+                    UIComponents.setTextStyle({ fill: [150, 230, 150], size: STATION_TEXT_SIZE.BODY, align: [RIGHT, CENTER] });
+                    text(`${guard.cost.toLocaleString()} Cr`, rowX + rowW - 100, rowY + rowH / 2);
+
+                    // Hire button
                     const hireBtn = UIComponents.drawButton(
-                        btnX + btnW - 90,
-                        btnY + 10,
-                        80,
-                        30,
+                        rowX + rowW - 90, rowY + (rowH - L.BTN_HEIGHT_SMALL) / 2,
+                        80, L.BTN_HEIGHT_SMALL,
                         "HIRE",
-                        [50, 100, 50],
-                        [100, 200, 100]
+                        [50, 100, 50], [100, 200, 100],
+                        3, { textSize: STATION_TEXT_SIZE.SMALL }
                     );
 
                     hireBtn.action = "HIRE_BODYGUARD";
                     hireBtn.shipType = guard.ship;
                     hireBtn.cost = guard.cost;
-
                     this.protectionServicesButtons.push(hireBtn);
-                    textAlign(LEFT, TOP);
                 });
             }
         } else {
-            UIComponents.setTextStyle({ fill: [255, 200, 100], size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
-            text("Maximum number of bodyguards hired.", pX + pW / 2, statusY + 80);
+            UIComponents.setTextStyle({ fill: [255, 200, 100], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
+            text("Maximum number of bodyguards hired.", pX + pW / 2, listY);
         }
 
         const backY = pY + pH - 30 - 15;
@@ -1058,167 +1095,175 @@ class UIStationMenus {
             storage = activeStation.storage;
         }
 
-        UIComponents.setTextStyle({ fill: 220, size: STATION_TEXT_SIZE.BIGHEADER, align: [CENTER, TOP] });
-        const infoY = pY + headerHeight + 10;
-        const infoText = isSecretBase
-            ? "Access your clandestine storage network. Items stored here can be retrieved from any secret base."
-            : "Store cargo safely at this station. Stored goods stay here until retrieved.";
-        text(infoText, pX + pW / 2, infoY);
+        const playerCargo = _sanitizeCargoList(player.cargo);
+        const L = STATION_LAYOUT; // Shorthand
 
-        // Storage contents header
-        UIComponents.setTextStyle({ fill: [180, 200, 255], size: STATION_TEXT_SIZE.HEADER, align: [LEFT, TOP] });
-        const storageLabel = isSecretBase ? "Secret Storage:" : "Station Storage:";
-        text(storageLabel, pX + 40, infoY + 40);
-        let storageY = infoY + 70;
+        // Screen description
+        const infoText = isSecretBase
+            ? "Access your clandestine storage network from any secret base."
+            : "Store cargo safely at this station.";
+        const contentY = UIComponents.drawScreenDescription(infoText, pX, pY, pW, headerHeight);
+
+        // Layout Calculations
+        const listsEndY = pY + pH - L.BACK_BUTTON_MARGIN - 10;
+        const totalListHeight = listsEndY - contentY;
+        const sectionHeight = (totalListHeight / 2) - L.BTN_SPACING;
+
+        const BUTTON_HEIGHT = L.BTN_HEIGHT_SMALL - 5;
+        const ROW_HEIGHT = L.ROW_HEIGHT_COMPACT;
+
+        // --- STATION STORAGE SECTION ---
+        const storageLabelY = contentY;
+        UIComponents.setTextStyle({ fill: [180, 200, 255], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
+        const storageLabel = isSecretBase ? `Secret Storage (${storage.length} items):` : `Station Storage (${storage.length} items):`;
+        text(storageLabel, pX + L.CONTENT_PADDING, storageLabelY);
+
+        const storageListY = storageLabelY + 25;
+        const storageVisibleRows = Math.floor(sectionHeight / ROW_HEIGHT);
+
+        // Init scroll if needed
+        if (typeof this.storageScrollOffset !== 'number') this.storageScrollOffset = 0;
+        this.storageScrollMax = Math.max(0, storage.length - storageVisibleRows);
+        this.storageScrollOffset = constrain(this.storageScrollOffset, 0, this.storageScrollMax);
 
         if (storage.length === 0) {
-            UIComponents.setTextStyle({ fill: 180, size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
-            text("Storage is empty", pX + pW / 2, storageY);
+            UIComponents.setTextStyle({ fill: 180, size: STATION_TEXT_SIZE.SMALL, align: [CENTER, CENTER] });
+            text("Storage is empty", pX + pW / 2, storageListY + sectionHeight / 2);
         } else {
-            UIComponents.setTextStyle({ align: [LEFT, TOP], size: STATION_TEXT_SIZE.BODY });
-            for (let i = 0; i < storage.length; i++) {
+            UIComponents.setTextStyle({ align: [LEFT, TOP], size: STATION_TEXT_SIZE.SMALL });
+
+            const firstRow = this.storageScrollOffset;
+            const lastRow = Math.min(firstRow + storageVisibleRows, storage.length);
+
+            for (let i = firstRow; i < lastRow; i++) {
                 const item = storage[i];
-                const itemY = storageY + i * 40;
+                const displayIndex = i - firstRow;
+                const itemY = storageListY + displayIndex * ROW_HEIGHT;
 
-                fill(40, 50, 80);
-                stroke(100, 120, 160);
+                // Alternating row background
+                if (displayIndex % 2 === 0) fill(40, 50, 80);
+                else fill(30, 40, 70);
+
+                stroke(60, 80, 100);
                 strokeWeight(1);
-                rect(pX + 40, itemY, pW - 80, 35, 3);
-
+                rect(pX + 40, itemY, pW - 80, ROW_HEIGHT - 2, 3);
                 noStroke();
 
                 // Check for mission match
                 const isMissionItem = player.activeMission && player.activeMission.cargoType === item.name;
 
-                if (isMissionItem) {
-                    fill(255, 200, 100);
-                } else {
-                    fill(220);
-                }
+                if (isMissionItem) fill(255, 200, 100);
+                else fill(220);
 
                 textAlign(LEFT, CENTER);
-
                 let labelText = `${item.name}: ${item.quantity}t`;
                 if (isMissionItem) {
                     const req = player.activeMission.cargoQuantity || 0;
-                    const missionAmount = Math.min(item.quantity, req);
-                    const extraAmount = Math.max(0, item.quantity - req);
-
-                    if (extraAmount > 0) {
-                        labelText = `${item.name}: ${missionAmount} (Mission) + ${extraAmount} (Free)`;
-                    } else {
-                        labelText = `${item.name}: ${missionAmount} / ${req} (Mission)`;
-                    }
+                    labelText += ` (Mission: ${req})`;
                 }
+                text(labelText, pX + 50, itemY + ROW_HEIGHT / 2);
 
-                text(labelText, pX + 50, itemY + 17.5);
-
-                if (isMissionItem) {
-                    push();
-                    fill(200, 150, 0);
-                    rect(pX + 370, itemY + 6, 80, 24, 4); // Moved right
-                    fill(20);
-                    textSize(STATION_TEXT_SIZE.BODY);
-                    textAlign(CENTER, CENTER);
-                    text("MISSION", pX + 410, itemY + 18);
-                    pop();
-                }
-
-                const btnW = 95;
-                const btnH = 25;
-                const btnX = pX + pW - 135;
-                const btnY = itemY + 5;
+                const btnW = 80;
+                const btnX = pX + pW - 130;
 
                 const retrieveBtn = UIComponents.drawButton(
-                    btnX, btnY, btnW, btnH,
+                    btnX, itemY + 4, btnW, BUTTON_HEIGHT,
                     "Retrieve",
-                    [0, 100, 0], [100, 200, 100],
-                    3
+                    [0, 80, 0], [80, 160, 80],
+                    3,
+                    { textSize: STATION_TEXT_SIZE.SMALL }
                 );
+                // Override button text size manually since drawButton defaults to BODY now, but we want small here
+                // Actually user requested BODY generally, but SMALL for "most text". 
+                // Let's keep button text clean. Ideally drawButton would support size param.
+
                 retrieveBtn.action = "RETRIEVE_STORAGE";
                 retrieveBtn.commodity = item.name;
                 this.storageButtonAreas.push(retrieveBtn);
             }
+
+            // Scrollbar for Storage
+            this.storageScrollbarArea = UIComponents.drawScrollbar(
+                pX + pW - 10, storageListY, sectionHeight,
+                this.storageScrollOffset, this.storageScrollMax,
+                storageVisibleRows, storage.length,
+                [40, 40, 60], [100, 100, 140]
+            );
         }
 
-        // Player cargo section for depositing
-        const cargoSectionY = storageY + Math.max(storage.length * 40, 60) + 30;
-        UIComponents.setTextStyle({ fill: [180, 200, 255], size: STATION_TEXT_SIZE.HEADER, align: [LEFT, TOP] });
-        text("Your Cargo (Tap to deposit):", pX + 40, cargoSectionY);
+        // --- PLAYER CARGO SECTION ---
+        const cargoLabelY = storageListY + sectionHeight + 10;
+        UIComponents.setTextStyle({ fill: [180, 200, 255], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
+        text(`Your Cargo (${player.getCargoAmount()}/${player.cargoCapacity}t):`, pX + 40, cargoLabelY);
 
-        const playerCargo = _sanitizeCargoList(player.cargo);
-        let cargoY = cargoSectionY + 35;
+        const cargoListY = cargoLabelY + 25;
+        const cargoVisibleRows = Math.floor(sectionHeight / ROW_HEIGHT);
+
+        // Init scroll if needed
+        if (typeof this.cargoScrollOffset !== 'number') this.cargoScrollOffset = 0;
+        this.cargoScrollMax = Math.max(0, playerCargo.length - cargoVisibleRows);
+        this.cargoScrollOffset = constrain(this.cargoScrollOffset, 0, this.cargoScrollMax);
 
         if (playerCargo.length === 0) {
-            UIComponents.setTextStyle({ fill: 180, size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
-            text("No cargo in hold", pX + pW / 2, cargoY);
+            UIComponents.setTextStyle({ fill: 180, size: STATION_TEXT_SIZE.SMALL, align: [CENTER, CENTER] });
+            text("No cargo in hold", pX + pW / 2, cargoListY + sectionHeight / 2);
         } else {
-            UIComponents.setTextStyle({ align: [LEFT, TOP], size: STATION_TEXT_SIZE.BODY });
-            for (let i = 0; i < playerCargo.length; i++) {
+            UIComponents.setTextStyle({ align: [LEFT, TOP], size: STATION_TEXT_SIZE.SMALL });
+
+            const firstRow = this.cargoScrollOffset;
+            const lastRow = Math.min(firstRow + cargoVisibleRows, playerCargo.length);
+
+            for (let i = firstRow; i < lastRow; i++) {
                 const item = playerCargo[i];
-                const itemY = cargoY + i * 40;
+                const displayIndex = i - firstRow;
+                const itemY = cargoListY + displayIndex * ROW_HEIGHT;
 
-                fill(40, 50, 80);
-                stroke(100, 120, 160);
+                if (displayIndex % 2 === 0) fill(40, 50, 80);
+                else fill(30, 40, 70);
+
+                stroke(60, 80, 100);
                 strokeWeight(1);
-                rect(pX + 40, itemY, pW - 80, 35, 3);
-
+                rect(pX + 40, itemY, pW - 80, ROW_HEIGHT - 2, 3);
                 noStroke();
 
                 // Check for mission match
                 const isMissionItem = player.activeMission && player.activeMission.cargoType === item.name;
-
-                if (isMissionItem) {
-                    fill(255, 200, 100);
-                } else {
-                    fill(220);
-                }
+                if (isMissionItem) fill(255, 200, 100);
+                else fill(220);
 
                 textAlign(LEFT, CENTER);
+                text(`${item.name}: ${item.quantity}t`, pX + 50, itemY + ROW_HEIGHT / 2);
 
-                let labelText = `${item.name}: ${item.quantity}t`;
-                if (isMissionItem) {
-                    const req = player.activeMission.cargoQuantity || 0;
-                    const missionAmount = Math.min(item.quantity, req);
-                    const extraAmount = Math.max(0, item.quantity - req);
-
-                    if (extraAmount > 0) {
-                        labelText = `${item.name}: ${missionAmount} (Mission) + ${extraAmount} (Free)`;
-                    } else {
-                        labelText = `${item.name}: ${missionAmount} / ${req} (Mission)`;
-                    }
-                }
-
-                text(labelText, pX + 50, itemY + 17.5);
-
-                if (isMissionItem) {
-                    push();
-                    fill(200, 150, 0);
-                    rect(pX + 370, itemY + 6, 80, 24, 4); // Moved right
-                    fill(20);
-                    textSize(STATION_TEXT_SIZE.BODY);
-                    textAlign(CENTER, CENTER);
-                    text("MISSION", pX + 410, itemY + 18);
-                    pop();
-                }
-
-                const btnW = 95;
-                const btnH = 25;
-                const btnX = pX + pW - 135;
-                const btnY = itemY + 5;
+                const btnW = 80;
+                const btnX = pX + pW - 130;
 
                 const depositBtn = UIComponents.drawButton(
-                    btnX, btnY, btnW, btnH,
+                    btnX, itemY + 4, btnW, BUTTON_HEIGHT,
                     "Deposit",
-                    [80, 80, 0], [180, 180, 100],
-                    3
+                    [80, 80, 0], [160, 160, 80],
+                    3,
+                    { textSize: STATION_TEXT_SIZE.SMALL }
                 );
                 depositBtn.action = "DEPOSIT_STORAGE";
                 depositBtn.commodity = item.name;
                 depositBtn.quantity = item.quantity;
                 this.storageButtonAreas.push(depositBtn);
             }
+
+            // Scrollbar for Cargo
+            this.cargoScrollbarArea = UIComponents.drawScrollbar(
+                pX + pW - 10, cargoListY, sectionHeight,
+                this.cargoScrollOffset, this.cargoScrollMax,
+                cargoVisibleRows, playerCargo.length,
+                [40, 40, 60], [100, 100, 140]
+            );
         }
+
+        // Store scroll zones for mouse wheel handling (include label in hit area)
+        this.storageScrollZones = {
+            storage: { y: storageLabelY, h: sectionHeight + 35 }, // 35 for label+margin
+            cargo: { y: cargoLabelY, h: sectionHeight + 35 }
+        };
 
         // Back button
         const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: "BACK" });
@@ -1237,9 +1282,10 @@ class UIStationMenus {
         this.recordButtonAreas = [];
 
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
-        const contentY = pY + headerHeight + 10;
-        const contentH = pH - headerHeight - 60;
-        const lineHeight = 22;
+        const L = STATION_LAYOUT; // Shorthand
+        const contentY = pY + headerHeight + L.CONTENT_START;
+        const contentH = pH - headerHeight - L.BACK_BUTTON_MARGIN - 10;
+        const lineHeight = STATION_TEXT_SIZE.BODY + 2;
 
         const toArray = (candidate) => Array.isArray(candidate) ? candidate : [];
         const systemsVisited = toArray(player.systemsVisited);
@@ -1467,6 +1513,30 @@ class UIStationMenus {
     }
 
     /**
+     * Handles clicks on a scrollbar to jump to position.
+     * @param {number} mx - Mouse X
+     * @param {number} my - Mouse Y
+     * @param {Object} area - Scrollbar area object from UIComponents.drawScrollbar
+     * @param {string} offsetKey - Property name for scroll offset
+     * @param {string} maxKey - Property name for scroll max
+     * @returns {boolean}
+     */
+    _handleScrollbarClick(mx, my, area, offsetKey, maxKey) {
+        if (!area || !UIComponents.isClickInArea(mx, my, area)) return false;
+
+        // Map click Y to scroll offset
+        // We want the handle center to align with the mouse click if possible
+        const trackRange = area.h - area.handleH;
+        if (trackRange <= 0) return false;
+
+        let relativeY = my - area.y - area.handleH / 2;
+        let ratio = constrain(relativeY / trackRange, 0, 1);
+
+        this[offsetKey] = Math.round(ratio * this[maxKey]);
+        return true;
+    }
+
+    /**
      * Handles mouse wheel events for scrolling.
      * @param {Object} event
      * @param {string} currentState
@@ -1479,6 +1549,20 @@ class UIStationMenus {
             "VIEWING_RECORD": ["recordScrollOffset", "recordScrollMax"],
             "VIEWING_NEWS": ["newsScrollOffset", "newsScrollMax"]
         };
+
+        if (currentState === "VIEWING_STORAGE") {
+            if (this.storageScrollZones) {
+                const { storage, cargo } = this.storageScrollZones;
+                // Use global mouseY
+                if (storage && mouseY >= storage.y && mouseY <= storage.y + storage.h) {
+                    return this.handleScroll("storageScrollOffset", "storageScrollMax", event.deltaY);
+                }
+                if (cargo && mouseY >= cargo.y && mouseY <= cargo.y + cargo.h) {
+                    return this.handleScroll("cargoScrollOffset", "cargoScrollMax", event.deltaY);
+                }
+            }
+            return false;
+        }
 
         const config = scrollConfigs[currentState];
         if (config) {
@@ -2137,7 +2221,7 @@ class UIStationMenus {
         // Render action buttons (right column, at standard back button height)
         const BTN_HEIGHT = 30;
         const btnY = pY + pH - BTN_HEIGHT - 15;
-        this.weaponDetailButtons = this._drawWeaponActionButtons(weaponData.canAfford, rightX, rightW, btnY);
+        this.weaponDetailButtons = this._drawWeaponActionButtons(weaponData.canAfford, rightX, rightW, btnY, weaponData.isInstalled);
 
         // Draw slot picker popup overlay if active
         this._drawSlotPickerPopup(player);
@@ -2366,7 +2450,7 @@ class UIStationMenus {
      * Draws weapon action buttons (Prev/Next/Buy/Back).
      * @private
      */
-    _drawWeaponActionButtons(canAfford, columnX, columnW, y) {
+    _drawWeaponActionButtons(canAfford, columnX, columnW, y, isInstalled = false) {
         const BTN_WIDTH = 70;
         const BTN_HEIGHT = 30;
         const BTN_SPACING = 8;
@@ -2413,7 +2497,18 @@ class UIStationMenus {
 
         // Buy button
         let buyBtn = null;
-        if (canAfford) {
+        if (isInstalled) {
+            // Draw "OWNED" button for already-installed ship upgrades
+            fill(40, 60, 40);
+            stroke(100, 200, 100);
+            strokeWeight(1);
+            rect(currentX, y, BTN_WIDTH, BTN_HEIGHT, 5);
+            fill(150, 255, 150);
+            noStroke();
+            textAlign(CENTER, CENTER);
+            textSize(STATION_TEXT_SIZE.BODY);
+            text("OWNED", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
+        } else if (canAfford) {
             buyBtn = UIComponents.drawButton(currentX, y, BTN_WIDTH, BTN_HEIGHT, "BUY", [0, 150, 0], [100, 255, 100]);
         } else {
             // Draw disabled button
@@ -2552,11 +2647,20 @@ class UIStationMenus {
 
             // Build full navigation list from ALL filtered weapons (not just visible)
             // This ensures arrow key navigation goes through the complete list
-            this.availableWeaponsList = this._fullFilteredWeapons.map(weapon => ({
-                weaponDef: weapon,
-                price: weapon.price,
-                canAfford: player.credits >= weapon.price
-            }));
+            this.availableWeaponsList = this._fullFilteredWeapons.map(weapon => {
+                const isShipUpgrade = ['armor', 'engine', 'cargo', 'hardpoints', 'shield', 'cloak', 'booster'].includes(weapon.type);
+                let isInstalled = false;
+                if (isShipUpgrade && player.installedUpgrades) {
+                    const currentLevel = player.installedUpgrades[weapon.type] || 0;
+                    if (currentLevel >= weapon.level) isInstalled = true;
+                }
+                return {
+                    weaponDef: weapon,
+                    price: weapon.price,
+                    canAfford: player.credits >= weapon.price,
+                    isInstalled: isInstalled
+                };
+            });
 
             // Find the correct index in the FULL list based on the clicked item
             const clickedWeapon = area.upgrade;
@@ -2600,6 +2704,15 @@ class UIStationMenus {
 
             // Buy/Install
             if (this.weaponDetailButtons.buy && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.buy)) {
+                // Check if ship upgrade is already installed
+                if (isShipUpgrade && player.installedUpgrades) {
+                    const currentLevel = player.installedUpgrades[def.type] || 0;
+                    if (currentLevel >= def.level) {
+                        addMessageFn(`${def.name} is already installed!`, [255, 200, 100]);
+                        if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                        return true;
+                    }
+                }
                 if (player.credits >= def.price) {
                     if (isShipUpgrade) {
                         // INSTALL UPGRADE DIRECTLY
@@ -2784,6 +2897,12 @@ class UIStationMenus {
             storageArray = [];
         }
         player.cargo = sanitizeCargoList(player.cargo);
+
+        player.cargo = sanitizeCargoList(player.cargo);
+
+        // Handle Scrollbar Clicks
+        if (this._handleScrollbarClick(mx, my, this.storageScrollbarArea, "storageScrollOffset", "storageScrollMax")) return true;
+        if (this._handleScrollbarClick(mx, my, this.cargoScrollbarArea, "cargoScrollOffset", "cargoScrollMax")) return true;
 
         for (const btn of this.storageButtonAreas) {
             if (!UIComponents.isClickInArea(mx, my, btn)) continue;

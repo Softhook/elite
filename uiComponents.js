@@ -17,6 +17,30 @@ const STATION_TEXT_SIZE = {
     GAME_OVER: 200   // Game over screen
 };
 
+// Standardized layout constants for consistent station UI appearance
+const STATION_LAYOUT = {
+    // Padding and margins
+    CONTENT_PADDING: 30,      // Side padding for content area
+    CONTENT_START: 15,        // Gap below header before content starts
+    SECTION_GAP: 20,          // Gap between major sections
+
+    // List/row sizing
+    ROW_HEIGHT: 40,           // Standard row height for lists
+    ROW_HEIGHT_COMPACT: 30,   // Compact row height (storage, dense lists)
+    ROW_PADDING: 15,          // Horizontal padding inside rows
+
+    // Button sizing
+    BTN_HEIGHT: 35,           // Standard button height
+    BTN_HEIGHT_SMALL: 25,     // Small inline button height
+    BTN_SPACING: 10,          // Gap between adjacent buttons
+
+    // Back button offset from bottom
+    BACK_BUTTON_MARGIN: 50,   // Space reserved at bottom for back button
+
+    // Description text
+    DESC_MAX_WIDTH: 0.9,      // Max width as ratio of panel width for descriptions
+};
+
 /**
  * UIComponents - Static utility class providing common UI drawing operations.
  * All methods are static to allow easy use throughout the UI system without
@@ -119,7 +143,7 @@ class UIComponents {
         fill(255);
         noStroke();
         textAlign(CENTER, CENTER);
-        textSize(STATION_TEXT_SIZE.HEADER);
+        textSize(extra.textSize || STATION_TEXT_SIZE.HEADER);
         text(label, x + w / 2, y + h / 2);
         return Object.assign({ x, y, w, h }, extra);
     }
@@ -162,6 +186,35 @@ class UIComponents {
             fill(80, 80, 80, 100);
         }
         rect(x, y, w, h);
+    }
+
+    /**
+     * Draws a standardized screen description text.
+     * Used at the top of station menu screens to explain the screen's purpose.
+     * @param {string} text - Description text
+     * @param {number} pX - Panel X position
+     * @param {number} pY - Panel Y position  
+     * @param {number} pW - Panel width
+     * @param {number} headerHeight - Height of header above content
+     * @param {Object} [options={}] - Optional styling
+     * @param {Array} [options.color=[200,200,200]] - Text color
+     * @param {number} [options.size=STATION_TEXT_SIZE.BODY] - Text size
+     * @returns {number} Y position after the description (for next content)
+     */
+    static drawScreenDescription(descText, pX, pY, pW, headerHeight, options = {}) {
+        const color = options.color || [200, 200, 200];
+        const size = options.size || STATION_TEXT_SIZE.BODY;
+        const startY = pY + headerHeight + STATION_LAYOUT.CONTENT_START;
+
+        UIComponents.setTextStyle({
+            fill: color,
+            size: size,
+            align: [CENTER, TOP]
+        });
+        text(descText, pX + pW / 2, startY);
+
+        // Return Y position for next content (description height + gap)
+        return startY + size + STATION_LAYOUT.SECTION_GAP;
     }
 
     /**

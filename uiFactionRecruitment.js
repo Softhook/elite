@@ -56,14 +56,14 @@ const FACTION_LORE = {
     }
 };
 
-// Layout and sizing constants
+// Layout and sizing constants - aligned with STATION_LAYOUT from uiComponents.js
 const FACTION_UI_CONSTANTS = {
     NEWS_ITEM_HEIGHT: 58,
     MAX_DESC_LINES: 4,
     MAX_NEWS_LINES: 3,
-    BTN_WIDTH: 180,
-    BTN_HEIGHT: 35,
-    PADDING: 15
+    get BTN_WIDTH() { return 180; },
+    get BTN_HEIGHT() { return typeof STATION_LAYOUT !== 'undefined' ? STATION_LAYOUT.BTN_HEIGHT : 35; },
+    get PADDING() { return typeof STATION_LAYOUT !== 'undefined' ? STATION_LAYOUT.ROW_PADDING : 15; }
 };
 
 /**
@@ -503,14 +503,15 @@ class UIFactionRecruitment {
 
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
 
-        // Layout constants (similar to ship detail screen)
+        // Layout constants - using STATION_LAYOUT where available for consistency
+        const L = typeof STATION_LAYOUT !== 'undefined' ? STATION_LAYOUT : { CONTENT_START: 15, SECTION_GAP: 20, BACK_BUTTON_MARGIN: 50 };
         const LAYOUT = {
             leftWidthRatio: 0.45,
             rightWidthRatio: 0.55,
-            leftPadding: 20,
-            columnGap: 20,
-            topPadding: 15,
-            bottomPadding: 20
+            leftPadding: L.CONTENT_PADDING || 30,
+            columnGap: L.SECTION_GAP || 20,
+            topPadding: L.CONTENT_START || 15,
+            bottomPadding: L.SECTION_GAP || 20
         };
 
         // Calculate layout dimensions
@@ -519,7 +520,7 @@ class UIFactionRecruitment {
         const leftX = pX + LAYOUT.leftPadding;
         const rightX = pX + leftW + LAYOUT.columnGap;
         const contentY = pY + headerHeight + LAYOUT.topPadding;
-        const contentH = pH - headerHeight - LAYOUT.bottomPadding - 50; // Reserve space for back button
+        const contentH = pH - headerHeight - L.BACK_BUTTON_MARGIN - LAYOUT.bottomPadding;
 
         // Draw left panel (ship preview or news)
         this._drawLeftPanel(player, factionKey, themeColors, leftX, leftW, contentY, contentH);
