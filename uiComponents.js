@@ -251,6 +251,154 @@ class UIComponents {
     }
 
     /**
+     * Standard color palette for station UIs - ensures consistency.
+     */
+    static STATION_COLORS = {
+        // Row backgrounds (alternating)
+        ROW_EVEN: [40, 50, 80],
+        ROW_ODD: [30, 40, 70],
+        ROW_HIGHLIGHT: [60, 70, 100],
+        ROW_DISABLED: [30, 30, 40],
+        ROW_CURRENT: [40, 40, 80],
+
+        // Row borders
+        BORDER_NORMAL: [60, 80, 120],
+        BORDER_HIGHLIGHT: [120, 180, 255],
+        BORDER_DISABLED: [50, 50, 70],
+        BORDER_AFFORDABLE: [80, 120, 180],
+        BORDER_UNAFFORDABLE: [80, 60, 60],
+
+        // Text colors
+        TEXT_PRIMARY: [255, 255, 255],
+        TEXT_SECONDARY: [180, 200, 255],
+        TEXT_DISABLED: [120, 120, 140],
+        TEXT_PRICE: [255, 220, 100],
+        TEXT_AFFORDABLE: [100, 255, 100],
+        TEXT_UNAFFORDABLE: [255, 100, 100],
+        TEXT_INSTALLED: [150, 255, 150],
+
+        // Section headers
+        SECTION_HEADER: [180, 200, 255],
+
+        // Scrollbar
+        SCROLLBAR_BG: [40, 40, 60],
+        SCROLLBAR_BORDER: [100, 100, 140]
+    };
+
+    /**
+     * Draws a standardized list row with consistent styling.
+     * @param {Object} opts - Row options
+     * @param {number} opts.x - Row X position
+     * @param {number} opts.y - Row Y position
+     * @param {number} opts.w - Row width
+     * @param {number} opts.h - Row height
+     * @param {number} opts.index - Row index (for alternating colors)
+     * @param {boolean} [opts.isDisabled=false] - If true, shows disabled styling
+     * @param {boolean} [opts.isHighlighted=false] - If true, shows highlighted styling
+     * @param {boolean} [opts.isCurrent=false] - If true, shows "current" styling (e.g., current ship)
+     * @param {boolean} [opts.canAfford=true] - If false, shows unaffordable border
+     * @returns {Object} Area object {x, y, w, h} for click detection
+     */
+    static drawListRow(opts) {
+        const { x, y, w, h, index, isDisabled = false, isHighlighted = false, isCurrent = false, canAfford = true } = opts;
+        const C = UIComponents.STATION_COLORS;
+
+        // Determine background color
+        let bgColor;
+        if (isCurrent) {
+            bgColor = C.ROW_CURRENT;
+        } else if (isDisabled) {
+            bgColor = C.ROW_DISABLED;
+        } else if (isHighlighted) {
+            bgColor = C.ROW_HIGHLIGHT;
+        } else {
+            bgColor = index % 2 === 0 ? C.ROW_EVEN : C.ROW_ODD;
+        }
+
+        // Determine border color
+        let borderColor;
+        if (isDisabled) {
+            borderColor = C.BORDER_DISABLED;
+        } else if (!canAfford) {
+            borderColor = C.BORDER_UNAFFORDABLE;
+        } else if (isHighlighted || isCurrent) {
+            borderColor = C.BORDER_HIGHLIGHT;
+        } else {
+            borderColor = C.BORDER_NORMAL;
+        }
+
+        // Draw the row
+        fill(...bgColor);
+        stroke(...borderColor);
+        strokeWeight(1);
+        rect(x, y, w, h - 4, 5);
+        noStroke();
+
+        return { x, y, w, h: h - 4 };
+    }
+
+    /**
+     * Draws a standardized section header.
+     * @param {string} title - Section title
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {Object} [options={}] - Optional styling
+     * @param {Array} [options.color] - Override color
+     * @returns {number} Y position after header (for next content)
+     */
+    static drawSectionHeader(title, x, y, options = {}) {
+        const color = options.color || UIComponents.STATION_COLORS.SECTION_HEADER;
+
+        UIComponents.setTextStyle({
+            fill: color,
+            size: STATION_TEXT_SIZE.BODY,
+            align: [LEFT, TOP]
+        });
+        text(title, x, y);
+
+        return y + STATION_TEXT_SIZE.BODY + STATION_LAYOUT.BTN_SPACING;
+    }
+
+    /**
+     * Draws text on a list row with consistent positioning.
+     * @param {Object} opts - Text options
+     * @param {string} opts.leftText - Text for left side
+     * @param {string} [opts.rightText] - Text for right side (e.g., price)
+     * @param {number} opts.rowX - Row X position
+     * @param {number} opts.rowY - Row Y position
+     * @param {number} opts.rowW - Row width
+     * @param {number} opts.rowH - Row height
+     * @param {Array} [opts.leftColor] - Left text color
+     * @param {Array} [opts.rightColor] - Right text color
+     * @param {boolean} [opts.isDisabled=false] - Use disabled text color
+     */
+    static drawListRowText(opts) {
+        const { leftText, rightText, rowX, rowY, rowW, rowH, leftColor, rightColor, isDisabled = false } = opts;
+        const C = UIComponents.STATION_COLORS;
+        const L = STATION_LAYOUT;
+
+        // Left text
+        const finalLeftColor = leftColor || (isDisabled ? C.TEXT_DISABLED : C.TEXT_PRIMARY);
+        UIComponents.setTextStyle({
+            fill: finalLeftColor,
+            size: STATION_TEXT_SIZE.BODY,
+            align: [LEFT, CENTER]
+        });
+        text(leftText, rowX + L.ROW_PADDING, rowY + rowH / 2);
+
+        // Right text (if provided)
+        if (rightText) {
+            const finalRightColor = rightColor || (isDisabled ? C.TEXT_DISABLED : C.TEXT_PRICE);
+            UIComponents.setTextStyle({
+                fill: finalRightColor,
+                size: STATION_TEXT_SIZE.BODY,
+                align: [RIGHT, CENTER]
+            });
+            text(rightText, rowX + rowW - L.ROW_PADDING, rowY + rowH / 2);
+        }
+    }
+
+    /**
      * Returns the appropriate fill color for a price deviation.
      * @param {number} deviation - The price deviation ratio
      * @param {boolean} isSellPrice - If true, inverts logic (positive = good for selling)

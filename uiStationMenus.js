@@ -697,45 +697,60 @@ class UIStationMenus {
             const finalPrice = originalPrice - currentShipValue;
             const canAfford = finalPrice <= 0 || player.credits >= finalPrice;
 
-            // Background
+            // Draw row background
+            // const canAfford = finalPrice <= 0 || player.credits >= finalPrice; // Already declared above
+            const rowArea = UIComponents.drawListRow({
+                x: pX + L.CONTENT_PADDING,
+                y: y,
+                w: pW - L.CONTENT_PADDING * 2,
+                h: rowH,
+                index: i,
+                isCurrent: isCurrentShip,
+                canAfford: canAfford
+            });
+
+            // Prepare text
+            let rightText = "";
+            let rightColor = null;
+
             if (isCurrentShip) {
-                fill(40, 40, 80);
-            } else if (!canAfford) {
-                fill(40, 40, 40);
+                rightText = "CURRENT SHIP";
+                rightColor = UIComponents.STATION_COLORS.TEXT_SECONDARY;
             } else {
-                fill(60, 60, 100);
-            }
-
-            stroke(canAfford ? 120 : 80, canAfford ? 180 : 100, canAfford ? 255 : 120);
-            rect(pX + L.CONTENT_PADDING, y, pW - L.CONTENT_PADDING * 2, rowH - 6, 5);
-            noStroke();
-
-            if (isCurrentShip) {
-                UIComponents.setTextStyle({ fill: [100, 150, 255], size: STATION_TEXT_SIZE.BODY, align: [LEFT, CENTER] });
-                text(`${ship.name}`, pX + L.CONTENT_PADDING + L.ROW_PADDING, y + rowH / 2);
-                UIComponents.setTextStyle({ fill: [150, 180, 255], size: STATION_TEXT_SIZE.BODY, align: [RIGHT, CENTER] });
-                text(`CURRENT SHIP`, pX + pW - L.CONTENT_PADDING - L.ROW_PADDING, y + rowH / 2);
-            } else {
-                UIComponents.setTextStyle({ fill: canAfford ? 255 : 120, size: STATION_TEXT_SIZE.BODY, align: [LEFT, CENTER] });
-                const leftText = `${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}`;
-                text(leftText, pX + L.CONTENT_PADDING + L.ROW_PADDING, y + rowH / 2);
-
-                textAlign(RIGHT, CENTER);
                 if (finalPrice > 0) {
-                    fill(canAfford ? 255 : 120, canAfford ? 220 : 100, canAfford ? 100 : 50);
-                    text(`${finalPrice} cr`, pX + pW - L.CONTENT_PADDING - L.ROW_PADDING, y + rowH / 2);
+                    rightText = `${finalPrice} cr`;
+                    // Default price color
                 } else if (finalPrice < 0) {
-                    fill(100, 255, 150);
-                    text(`+${-finalPrice} cr`, pX + pW - L.CONTENT_PADDING - L.ROW_PADDING, y + rowH / 2);
+                    rightText = `+${-finalPrice} cr`;
+                    rightColor = [100, 255, 150];
                 } else {
-                    fill(150, 255, 150);
-                    text(`EVEN SWAP`, pX + pW - L.CONTENT_PADDING - L.ROW_PADDING, y + rowH / 2);
+                    rightText = "EVEN SWAP";
+                    rightColor = [150, 255, 150];
                 }
             }
 
+            const leftText = isCurrentShip
+                ? ship.name
+                : `${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}`;
+
+            const leftColor = isCurrentShip ? [100, 150, 255] : null;
+
+            // Draw text
+            UIComponents.drawListRowText({
+                leftText,
+                rightText,
+                rowX: rowArea.x,
+                rowY: rowArea.y,
+                rowW: rowArea.w,
+                rowH: rowArea.h,
+                leftColor,
+                rightColor,
+                isDisabled: !canAfford && !isCurrentShip
+            });
+
             // Always add to clickable areas (including current ship)
             this.shipyardListAreas.push({
-                x: pX + 20, y: y, w: pW - 40, h: rowH - 6,
+                x: rowArea.x, y: rowArea.y, w: rowArea.w, h: rowArea.h,
                 shipTypeKey: shipKey,
                 shipName: ship.name,
                 price: finalPrice,
@@ -842,28 +857,16 @@ class UIStationMenus {
             const isAlreadyOwned = isInstalled; // Track for passing to detail screen
 
             // Different colors for ship upgrades (green) vs weapons (purple/blue)
-            if (isShipUpgrade) {
-                // Green color scheme for ship upgrades
-                fill(canAfford ? 40 : 30, canAfford ? 80 : 40, canAfford ? 60 : 40);
-                if (isInstalled) fill(40, 60, 40); // Darker green for installed
-                stroke(canAfford ? 100 : 60, canAfford ? 200 : 100, canAfford ? 120 : 80);
-                if (isInstalled) stroke(100, 200, 100);
-            } else {
-                // Purple/blue color scheme for weapons
-                fill(canAfford ? 80 : 40, canAfford ? 60 : 40, canAfford ? 120 : 60);
-                stroke(canAfford ? 180 : 100, canAfford ? 100 : 60, canAfford ? 255 : 140);
-            }
-
-            rect(pX + L.CONTENT_PADDING, y, pW - L.CONTENT_PADDING * 2, rowH - 6, 5);
-            noStroke();
-
-            // Left side text
-            UIComponents.setTextStyle({
-                fill: isShipUpgrade
-                    ? (canAfford || isInstalled ? [150, 255, 150] : [80, 120, 80])
-                    : (canAfford ? 255 : 120),
-                size: STATION_TEXT_SIZE.BODY,
-                align: [LEFT, CENTER]
+            // Draw row using standardized components
+            const rowArea = UIComponents.drawListRow({
+                x: pX + L.CONTENT_PADDING,
+                y: y,
+                w: pW - L.CONTENT_PADDING * 2,
+                h: rowH,
+                index: i,
+                isCurrent: isInstalled,
+                canAfford: canAfford && !isInstalled,
+                isHighlighted: isShipUpgrade // Optional subtle distinction
             });
 
             let infoText = "";
@@ -874,19 +877,29 @@ class UIStationMenus {
             }
 
             const upgLeft = `${upg.name}  |  ${infoText}`;
-            text(upgLeft, pX + L.CONTENT_PADDING + L.ROW_PADDING, y + rowH / 2);
 
-            // Right side text
-            UIComponents.setTextStyle({
-                fill: [canAfford ? 200 : 100, canAfford ? 150 : 80, canAfford ? 255 : 120],
-                size: STATION_TEXT_SIZE.BODY,
-                align: [RIGHT, CENTER]
-            });
-            if (isInstalled) {
-                text("INSTALLED", pX + pW - L.CONTENT_PADDING - L.ROW_PADDING, y + rowH / 2);
+            // Customize colors slightly for upgrades context
+            let leftColor = null;
+            if (isShipUpgrade) {
+                leftColor = (canAfford || isInstalled) ? UIComponents.STATION_COLORS.TEXT_INSTALLED : [80, 120, 80];
             } else {
-                text(`${upg.price} cr`, pX + pW - L.CONTENT_PADDING - L.ROW_PADDING, y + rowH / 2);
+                leftColor = canAfford ? UIComponents.STATION_COLORS.TEXT_PRIMARY : UIComponents.STATION_COLORS.TEXT_DISABLED;
             }
+
+            const rightText = isInstalled ? "INSTALLED" : `${upg.price} cr`;
+            const rightColor = isInstalled ? UIComponents.STATION_COLORS.TEXT_INSTALLED : null;
+
+            UIComponents.drawListRowText({
+                leftText: upgLeft,
+                rightText: rightText,
+                rowX: rowArea.x,
+                rowY: rowArea.y,
+                rowW: rowArea.w,
+                rowH: rowArea.h,
+                leftColor,
+                rightColor,
+                isDisabled: !canAfford && !isInstalled
+            });
 
             this.upgradeListAreas.push({
                 x: pX + L.CONTENT_PADDING,
@@ -1126,30 +1139,34 @@ class UIStationMenus {
                 const displayIndex = i - firstRow;
                 const itemY = storageListY + displayIndex * ROW_HEIGHT;
 
-                // Alternating row background
-                if (displayIndex % 2 === 0) fill(40, 50, 80);
-                else fill(30, 40, 70);
-
-                stroke(60, 80, 100);
-                strokeWeight(1);
-                rect(pX + L.CONTENT_PADDING + 10, itemY, pW - L.CONTENT_PADDING * 2 - 20, ROW_HEIGHT - 2, 3);
-                noStroke();
-
                 // Check for mission match
                 const isMissionItem = player.activeMission && player.activeMission.cargoType === item.name;
 
-                UIComponents.setTextStyle({
-                    fill: isMissionItem ? [255, 200, 100] : 220,
-                    size: STATION_TEXT_SIZE.SMALL,
-                    align: [LEFT, CENTER]
+                // Draw standardized row
+                const rowArea = UIComponents.drawListRow({
+                    x: pX + L.CONTENT_PADDING + 10,
+                    y: itemY,
+                    w: pW - L.CONTENT_PADDING * 2 - 20,
+                    h: ROW_HEIGHT,
+                    index: displayIndex,
+                    isHighlighted: isMissionItem
                 });
 
+                // Prepare text
                 let labelText = `${item.name}: ${item.quantity}t`;
                 if (isMissionItem) {
                     const req = player.activeMission.cargoQuantity || 0;
                     labelText += ` (Mission: ${req})`;
                 }
-                text(labelText, pX + L.CONTENT_PADDING + L.ROW_PADDING + 10, itemY + ROW_HEIGHT / 2);
+
+                UIComponents.drawListRowText({
+                    leftText: labelText,
+                    rowX: rowArea.x,
+                    rowY: rowArea.y,
+                    rowW: rowArea.w,
+                    rowH: rowArea.h,
+                    leftColor: isMissionItem ? [255, 200, 100] : UIComponents.STATION_COLORS.TEXT_PRIMARY
+                });
 
                 const btnW = 80;
                 const btnX = pX + pW - L.CONTENT_PADDING - btnW - 30;
@@ -1201,22 +1218,27 @@ class UIStationMenus {
                 const displayIndex = i - firstRow;
                 const itemY = cargoListY + displayIndex * ROW_HEIGHT;
 
-                if (displayIndex % 2 === 0) fill(40, 50, 80);
-                else fill(30, 40, 70);
-
-                stroke(60, 80, 100);
-                strokeWeight(1);
-                rect(pX + L.CONTENT_PADDING + 10, itemY, pW - L.CONTENT_PADDING * 2 - 20, ROW_HEIGHT - 2, 3);
-                noStroke();
-
                 // Check for mission match
                 const isMissionItem = player.activeMission && player.activeMission.cargoType === item.name;
-                UIComponents.setTextStyle({
-                    fill: isMissionItem ? [255, 200, 100] : 220,
-                    size: STATION_TEXT_SIZE.SMALL,
-                    align: [LEFT, CENTER]
+
+                // Draw standardized row
+                const rowArea = UIComponents.drawListRow({
+                    x: pX + L.CONTENT_PADDING + 10,
+                    y: itemY,
+                    w: pW - L.CONTENT_PADDING * 2 - 20,
+                    h: ROW_HEIGHT,
+                    index: displayIndex,
+                    isHighlighted: isMissionItem
                 });
-                text(`${item.name}: ${item.quantity}t`, pX + L.CONTENT_PADDING + L.ROW_PADDING + 10, itemY + ROW_HEIGHT / 2);
+
+                UIComponents.drawListRowText({
+                    leftText: `${item.name}: ${item.quantity}t`,
+                    rowX: rowArea.x,
+                    rowY: rowArea.y,
+                    rowW: rowArea.w,
+                    rowH: rowArea.h,
+                    leftColor: isMissionItem ? [255, 200, 100] : UIComponents.STATION_COLORS.TEXT_PRIMARY
+                });
 
                 const btnW = 80;
                 const btnX = pX + pW - L.CONTENT_PADDING - btnW - 30;
