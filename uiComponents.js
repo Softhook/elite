@@ -362,29 +362,44 @@ class UIComponents {
     /**
      * Draws text on a list row with consistent positioning.
      * @param {Object} opts - Text options
-     * @param {string} opts.leftText - Text for left side
+     * @param {string} opts.leftText - Text for left side (primary)
+     * @param {string} [opts.subText] - Secondary text below primary (optional)
      * @param {string} [opts.rightText] - Text for right side (e.g., price)
      * @param {number} opts.rowX - Row X position
      * @param {number} opts.rowY - Row Y position
      * @param {number} opts.rowW - Row width
      * @param {number} opts.rowH - Row height
      * @param {Array} [opts.leftColor] - Left text color
+     * @param {Array} [opts.subColor] - Subtext color
      * @param {Array} [opts.rightColor] - Right text color
      * @param {boolean} [opts.isDisabled=false] - Use disabled text color
      */
     static drawListRowText(opts) {
-        const { leftText, rightText, rowX, rowY, rowW, rowH, leftColor, rightColor, isDisabled = false } = opts;
+        const { leftText, subText, rightText, rowX, rowY, rowW, rowH, leftColor, subColor, rightColor, isDisabled = false } = opts;
         const C = UIComponents.STATION_COLORS;
         const L = STATION_LAYOUT;
 
-        // Left text
+        // Left text (Primary)
         const finalLeftColor = leftColor || (isDisabled ? C.TEXT_DISABLED : C.TEXT_PRIMARY);
         UIComponents.setTextStyle({
             fill: finalLeftColor,
             size: STATION_TEXT_SIZE.BODY,
-            align: [LEFT, CENTER]
+            align: [LEFT, subText ? BOTTOM : CENTER]
         });
-        text(leftText, rowX + L.ROW_PADDING, rowY + rowH / 2);
+
+        const textY = subText ? rowY + rowH / 2 - 2 : rowY + rowH / 2;
+        text(leftText, rowX + L.ROW_PADDING, textY);
+
+        // Subtext (Secondary)
+        if (subText) {
+            const finalSubColor = subColor || (isDisabled ? C.TEXT_DISABLED : C.TEXT_SECONDARY);
+            UIComponents.setTextStyle({
+                fill: finalSubColor,
+                size: STATION_TEXT_SIZE.SMALL,
+                align: [LEFT, TOP]
+            });
+            text(subText, rowX + L.ROW_PADDING, rowY + rowH / 2 + 2);
+        }
 
         // Right text (if provided)
         if (rightText) {

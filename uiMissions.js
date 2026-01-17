@@ -44,34 +44,20 @@ class UIMissions {
 
         push();
 
-        // Determine background color based on state
-        let bgColor, strokeColor, textColor;
+        // Draw standardized row background
+        // Map mission states to UI component states
+        const rowArea = UIComponents.drawListRow({
+            x: x,
+            y: y,
+            w: w,
+            h: h,
+            index: 0, // No alternating colors needed for this dynamic list
+            isDisabled: isInactive,
+            isCurrent: isActive,
+            isHighlighted: isSelected
+        });
 
-        if (isInactive) {
-            bgColor = [40, 40, 40];
-            strokeColor = [80, 80, 80];
-            textColor = [100, 100, 100];
-        } else if (isActive) {
-            bgColor = [60, 100, 60];
-            strokeColor = [100, 200, 100];
-            textColor = [255, 255, 200];
-        } else if (isSelected) {
-            bgColor = [60, 80, 120];
-            strokeColor = [100, 150, 255];
-            textColor = [255, 255, 255];
-        } else {
-            bgColor = [50, 60, 80];
-            strokeColor = [100, 120, 160];
-            textColor = [220, 220, 220];
-        }
-
-        // Draw button background
-        fill(...bgColor);
-        stroke(...strokeColor);
-        strokeWeight(1);
-        rect(x, y, w, h, 4);
-
-        // Draw mission type indicator
+        // Draw mission type indicator (custom feature not in standard row)
         let typeColor;
         if (typeof MISSION_TYPE !== 'undefined') {
             switch (missionType) {
@@ -113,6 +99,13 @@ class UIMissions {
         noStroke();
         fill(...typeColor);
         rect(x + 3, y + 5, 4, h - 10, 2);
+
+        // Determine text color based on state
+        let textColor;
+        if (isInactive) textColor = UIComponents.STATION_COLORS.TEXT_DISABLED;
+        else if (isActive) textColor = [255, 255, 200];
+        else if (isSelected) textColor = UIComponents.STATION_COLORS.TEXT_PRIMARY;
+        else textColor = UIComponents.STATION_COLORS.TEXT_SECONDARY;
 
         // Draw mission text
         UIComponents.setTextStyle({ fill: textColor, size: STATION_TEXT_SIZE.SMALL, align: [LEFT, CENTER] });

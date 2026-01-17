@@ -394,10 +394,19 @@ class UIFactionRecruitment {
      * @private
      */
     _drawActionButtons(player, factionKey, factionName, themeColors, rightX, rightW, contentY, contentH, isWanted, canJoin, isMember, system) {
-        const btnW = FACTION_UI_CONSTANTS.BTN_WIDTH;
+        const defaultBtnW = FACTION_UI_CONSTANTS.BTN_WIDTH;
         const btnH = FACTION_UI_CONSTANTS.BTN_HEIGHT;
-        const btnX = rightX + (rightW - btnW) / 2;
+        // Base button Y
         const btnY = contentY + contentH - 55;
+
+        // Helper to draw auto-width centered button
+        const drawAutoBtn = (label, buttonY, fillCol, strokeCol, extra) => {
+            const size = extra.textSize || STATION_TEXT_SIZE.HEADER;
+            textSize(size);
+            const w = Math.max(defaultBtnW, textWidth(label) + 30);
+            const x = rightX + (rightW - w) / 2;
+            return UIComponents.drawButton(x, buttonY, w, btnH, label, fillCol, strokeCol, 4, extra);
+        };
 
         // Fine payment button if wanted
         if (isWanted) {
@@ -405,25 +414,25 @@ class UIFactionRecruitment {
             // Show warning for former police
             if (player.hasBeenPolice && factionKey === 'POLICE') {
                 UIComponents.setTextStyle({ fill: [255, 200, 100], size: STATION_TEXT_SIZE.SMALL, align: [CENTER, TOP] });
-                text("Fines tripled for former police officer", btnX + btnW / 2, btnY - 65);
+                text("Fines tripled for former police officer", rightX + rightW / 2, btnY - 65);
             }
             this.factionRecruitmentButtonAreas.push(
-                UIComponents.drawButton(btnX, btnY - 45, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0, 120, 0], [100, 255, 100], 4, { action: 'pay_fine', amount: fineAmount, faction: factionKey })
+                drawAutoBtn(`Pay Fine (${fineAmount} cr)`, btnY - 45, [0, 120, 0], [100, 255, 100], { action: 'pay_fine', amount: fineAmount, faction: factionKey })
             );
         }
 
         // Join faction button or status message
         if (canJoin && !isWanted) {
             this.factionRecruitmentButtonAreas.push(
-                UIComponents.drawButton(btnX, btnY, btnW, btnH, `Enlist Now`, themeColors[0], themeColors[1], 4, { action: 'join_faction', faction: factionKey })
+                drawAutoBtn(`Enlist Now`, btnY, themeColors[0], themeColors[1], { action: 'join_faction', faction: factionKey })
             );
         } else if (factionKey === 'POLICE' && player.hasBeenPolice && !isMember) {
             // Former police officers cannot rejoin - show official rejection
             UIComponents.setTextStyle({ fill: [255, 120, 120], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
-            text("OFFICIAL NOTICE:", btnX + btnW / 2, btnY + 10);
+            text("OFFICIAL NOTICE:", rightX + rightW / 2, btnY + 10);
             UIComponents.setTextStyle({ fill: [200, 180, 180], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
-            text("As a former officer dismissed for criminal conduct,", btnX + btnW / 2, btnY + 32);
-            text("you are permanently barred from police service.", btnX + btnW / 2, btnY + 52);
+            text("As a former officer dismissed for criminal conduct,", rightX + rightW / 2, btnY + 32);
+            text("you are permanently barred from police service.", rightX + rightW / 2, btnY + 52);
         } else if ((player.playerFaction && player.playerFaction !== factionKey) ||
             (player.isPolice && factionKey !== 'POLICE')) {
             // Button to leave current faction (including police)
@@ -436,11 +445,11 @@ class UIFactionRecruitment {
             const currentFaction = player.isPolice ? 'POLICE' : player.playerFaction;
             const rejectLabel = `Reject ${rejectNames[currentFaction] || 'Faction'}`;
             this.factionRecruitmentButtonAreas.push(
-                UIComponents.drawButton(btnX, btnY, btnW, btnH, rejectLabel, [120, 40, 40], [255, 150, 150], 4, { action: 'leave_faction', faction: currentFaction })
+                drawAutoBtn(rejectLabel, btnY, [120, 40, 40], [255, 150, 150], { action: 'leave_faction', faction: currentFaction })
             );
         } else if (isWanted) {
             UIComponents.setTextStyle({ fill: [255, 150, 150], size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
-            text("Clear legal status", btnX + btnW / 2, btnY + btnH / 2);
+            text("Clear legal status", rightX + rightW / 2, btnY + btnH / 2);
         }
     }
 

@@ -295,44 +295,114 @@ class UIStationMenus {
         let halfRepair = Math.min(missing, Math.ceil(player.maxHull / 2));
         let halfCost = Math.floor(halfRepair * 7);
 
-        // Button layout - centered, using standardized sizing
-        const btnW = pW * 0.5;
-        const btnH = L.BTN_HEIGHT + 10; // Slightly taller for these main action buttons
-        const btnX = pX + (pW - btnW) / 2;
-        let btnY = contentY;
+        // Standardized list layout
+        const rowH = 50;
+        let currentY = contentY;
 
-        const fullButtonArea = UIComponents.drawButton(
-            btnX, btnY, btnW, btnH,
-            `Full Repair (${fullCost} cr)`,
-            [0, 180, 0], [100, 255, 100]
-        );
-        btnY += btnH + L.BTN_SPACING;
+        // 1. Full Repair Option
+        const fullRow = UIComponents.drawListRow({
+            x: pX + L.CONTENT_PADDING,
+            y: currentY,
+            w: pW - L.CONTENT_PADDING * 2,
+            h: rowH,
+            index: 0,
+            isHighlighted: true,
+            canAfford: player.credits >= fullCost
+        });
 
-        const halfButtonArea = UIComponents.drawButton(
-            btnX, btnY, btnW, btnH,
-            `50% Repair (${halfCost} cr)`,
-            [180, 180, 0], [220, 220, 100]
+        UIComponents.drawListRowText({
+            leftText: "Full Repair",
+            subText: "Restore hull to 100% integrity",
+            rightText: `${fullCost} cr`,
+            rowX: fullRow.x,
+            rowY: fullRow.y,
+            rowW: fullRow.w - 100, // Leave space for button
+            rowH: fullRow.h,
+            leftColor: [200, 255, 200]
+        });
+
+        const fullBtn = UIComponents.drawButton(
+            fullRow.x + fullRow.w - 90, fullRow.y + (fullRow.h - L.BTN_HEIGHT_SMALL) / 2,
+            80, L.BTN_HEIGHT_SMALL,
+            "REPAIR",
+            [0, 100, 0], [0, 180, 0], // Green for repair
+            3, { textSize: STATION_TEXT_SIZE.SMALL }
         );
-        btnY += btnH + L.SECTION_GAP;
+
+        // Map to what handleRepairClick expects
+        const fullButtonArea = { ...fullBtn, action: "REPAIR_FULL", cost: fullCost };
+        currentY += rowH + L.BTN_SPACING;
+
+        // 2. Partial Repair Option
+        const halfRow = UIComponents.drawListRow({
+            x: pX + L.CONTENT_PADDING,
+            y: currentY,
+            w: pW - L.CONTENT_PADDING * 2,
+            h: rowH,
+            index: 1,
+            isHighlighted: false,
+            canAfford: player.credits >= halfCost
+        });
+
+        UIComponents.drawListRowText({
+            leftText: "50% Repair",
+            subText: "Emergency patch for critical systems",
+            rightText: `${halfCost} cr`,
+            rowX: halfRow.x,
+            rowY: halfRow.y,
+            rowW: halfRow.w - 100,
+            rowH: halfRow.h,
+            leftColor: [200, 200, 100]
+        });
+
+        const halfBtn = UIComponents.drawButton(
+            halfRow.x + halfRow.w - 90, halfRow.y + (halfRow.h - L.BTN_HEIGHT_SMALL) / 2,
+            80, L.BTN_HEIGHT_SMALL,
+            "REPAIR",
+            [120, 120, 0], [180, 180, 0], // Yellowish for partial
+            3, { textSize: STATION_TEXT_SIZE.SMALL }
+        );
+
+        const halfButtonArea = { ...halfBtn, action: "REPAIR_HALF", cost: halfCost };
+        currentY += rowH + L.SECTION_GAP;
 
         // Bodyguard repair section
         const bodyguardInfo = player.getDamagedBodyguardsInfo ? player.getDamagedBodyguardsInfo() : { count: 0, totalCost: 0 };
         let bodyguardsButtonArea = {};
 
         if (bodyguardInfo.count > 0) {
-            // Draw separator line
-            strokeWeight(1);
-            stroke(255, 180, 100);
-            line(pX + L.CONTENT_PADDING + 20, btnY, pX + pW - L.CONTENT_PADDING - 20, btnY);
-            noStroke();
+            currentY = UIComponents.drawSectionHeader("Fleet Repairs", pX + L.CONTENT_PADDING, currentY);
 
-            btnY += L.BTN_SPACING;
+            const bgRow = UIComponents.drawListRow({
+                x: pX + L.CONTENT_PADDING,
+                y: currentY,
+                w: pW - L.CONTENT_PADDING * 2,
+                h: rowH,
+                index: 2,
+                isHighlighted: true,
+                canAfford: player.credits >= bodyguardInfo.totalCost
+            });
 
-            bodyguardsButtonArea = UIComponents.drawButton(
-                btnX, btnY, btnW, btnH,
-                `Repair All Guards (${bodyguardInfo.totalCost} cr)`,
-                [0, 120, 180], [100, 200, 255]
+            UIComponents.drawListRowText({
+                leftText: `Repair ${bodyguardInfo.count} Escort${bodyguardInfo.count > 1 ? 's' : ''}`,
+                subText: "Full repairs for all active wingmen",
+                rightText: `${bodyguardInfo.totalCost} cr`,
+                rowX: bgRow.x,
+                rowY: bgRow.y,
+                rowW: bgRow.w - 100,
+                rowH: bgRow.h,
+                leftColor: [100, 200, 255]
+            });
+
+            const bgBtn = UIComponents.drawButton(
+                bgRow.x + bgRow.w - 90, bgRow.y + (bgRow.h - L.BTN_HEIGHT_SMALL) / 2,
+                80, L.BTN_HEIGHT_SMALL,
+                "REPAIR",
+                [0, 80, 120], [0, 120, 180], // Blue for fleet
+                3, { textSize: STATION_TEXT_SIZE.SMALL }
             );
+
+            bodyguardsButtonArea = { ...bgBtn, action: "REPAIR_BODYGUARDS", cost: bodyguardInfo.totalCost };
         }
 
         const backButtonArea = UIComponents.drawCenteredBackButton(pX, pY, pW, pH);
@@ -486,26 +556,84 @@ class UIStationMenus {
             infoY += STATION_TEXT_SIZE.BODY + L.BTN_SPACING;
         }
 
-        // Buttons - using standardized sizing
-        const btnW = pW * 0.5;
-        const btnH = L.BTN_HEIGHT + 10;
-        const btnX = pX + (pW - btnW) / 2;
+        // Buttons - using standardized sizing and rows
+        const rowH = 50;
         let btnY = infoY + L.SECTION_GAP;
 
         if (isWanted) {
-            this.policeButtonAreas.push(
-                UIComponents.drawButton(btnX, btnY, btnW, btnH, `Pay Fine (${fineAmount} cr)`, [0, 180, 0], [100, 255, 100], 5, { action: 'pay_fine', amount: fineAmount })
-            );
-            btnY += btnH + L.BTN_SPACING;
+            const canAfford = player.credits >= fineAmount;
+            const fineRow = UIComponents.drawListRow({
+                x: pX + L.CONTENT_PADDING,
+                y: btnY,
+                w: pW - L.CONTENT_PADDING * 2,
+                h: rowH,
+                index: 0,
+                isHighlighted: true,
+                canAfford: canAfford
+            });
+
+            UIComponents.drawListRowText({
+                leftText: `Pay Fine (${fineAmount} cr)`,
+                subText: "Clear WANTED status and restore legal standing",
+                rowX: fineRow.x,
+                rowY: fineRow.y,
+                rowW: fineRow.w - 100, // Leave room for button
+                rowH: fineRow.h,
+                leftColor: canAfford ? [100, 255, 100] : [255, 100, 100]
+            });
+
+            if (canAfford) {
+                const fineBtnRender = UIComponents.drawButton(
+                    fineRow.x + fineRow.w - 90, fineRow.y + (fineRow.h - L.BTN_HEIGHT_SMALL) / 2,
+                    80, L.BTN_HEIGHT_SMALL,
+                    "PAY",
+                    [0, 100, 0], [0, 180, 0],
+                    3, { textSize: STATION_TEXT_SIZE.SMALL }
+                );
+                // Map to button action expected by handler
+                const fineBtn = { ...fineBtnRender, action: 'pay_fine', amount: fineAmount };
+                this.policeButtonAreas.push(fineBtn);
+            } else {
+                UIComponents.setTextStyle({ fill: [255, 100, 100], size: STATION_TEXT_SIZE.SMALL, align: [RIGHT, CENTER] });
+                text("INSUFFICIENT FUNDS", fineRow.x + fineRow.w - L.ROW_PADDING, fineRow.y + fineRow.h / 2);
+            }
+
+            btnY += rowH + L.BTN_SPACING;
         }
 
         if (!player.isPolice) {
-            this.policeButtonAreas.push(
-                UIComponents.drawButton(btnX, btnY, btnW, btnH, "Join Police Force", [50, 50, 180], [100, 100, 255], 5, { action: 'join_police' })
+            const joinRow = UIComponents.drawListRow({
+                x: pX + L.CONTENT_PADDING,
+                y: btnY,
+                w: pW - L.CONTENT_PADDING * 2,
+                h: rowH,
+                index: 1,
+                isHighlighted: true
+            });
+
+            UIComponents.drawListRowText({
+                leftText: "Join Police Force",
+                subText: "Enforce the law and earn bounties",
+                rowX: joinRow.x,
+                rowY: joinRow.y,
+                rowW: joinRow.w - 100,
+                rowH: joinRow.h,
+                leftColor: [100, 150, 255]
+            });
+
+            const joinBtnRender = UIComponents.drawButton(
+                joinRow.x + joinRow.w - 90, joinRow.y + (joinRow.h - L.BTN_HEIGHT_SMALL) / 2,
+                80, L.BTN_HEIGHT_SMALL,
+                "JOIN",
+                [0, 50, 150], [0, 80, 200],
+                3, { textSize: STATION_TEXT_SIZE.SMALL }
             );
+
+            const joinBtn = { ...joinBtnRender, action: 'join_police' };
+            this.policeButtonAreas.push(joinBtn);
         } else {
             UIComponents.setTextStyle({ fill: [100, 255, 100], size: STATION_TEXT_SIZE.BODY, align: [CENTER, TOP] });
-            text("You are a member of the Police Force", pX + pW / 2, btnY + btnH / 2);
+            text("You are a member of the Police Force", pX + pW / 2, btnY + rowH / 2);
         }
 
         this.policeButtonAreas.push(UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: 'back' }));
@@ -978,23 +1106,28 @@ class UIStationMenus {
                     const rowY = listY + i * (rowH + L.BTN_SPACING);
                     const rowW = pW - L.CONTENT_PADDING * 2;
 
-                    // Card background
-                    fill(40, 60, 100);
-                    stroke(100, 140, 200);
-                    strokeWeight(1);
-                    rect(rowX, rowY, rowW, rowH, 5);
-                    noStroke();
+                    // Draw stylized row
+                    const rowArea = UIComponents.drawListRow({
+                        x: rowX,
+                        y: rowY,
+                        w: rowW,
+                        h: rowH,
+                        index: i,
+                        isHighlighted: true // Always slightly highlighted as they are special cards
+                    });
 
-                    // Guard name and description
-                    UIComponents.setTextStyle({ fill: 230, size: STATION_TEXT_SIZE.BODY, align: [LEFT, CENTER] });
-                    text(guard.name, rowX + L.ROW_PADDING, rowY + 18);
-
-                    UIComponents.setTextStyle({ fill: [180, 180, 200], size: STATION_TEXT_SIZE.SMALL, align: [LEFT, CENTER] });
-                    text(guard.description, rowX + L.ROW_PADDING, rowY + 42);
-
-                    // Price
-                    UIComponents.setTextStyle({ fill: [150, 230, 150], size: STATION_TEXT_SIZE.BODY, align: [RIGHT, CENTER] });
-                    text(`${guard.cost.toLocaleString()} Cr`, rowX + rowW - 100, rowY + rowH / 2);
+                    // Draw name, description and price using updated helper
+                    UIComponents.drawListRowText({
+                        leftText: guard.name,
+                        subText: guard.description,
+                        rightText: `${guard.cost.toLocaleString()} Cr`,
+                        rowX: rowArea.x,
+                        rowY: rowArea.y,
+                        rowW: rowArea.w - 100, // Leave extra space for button
+                        rowH: rowArea.h,
+                        leftColor: [230, 230, 255],
+                        rightColor: [150, 255, 150]
+                    });
 
                     // Hire button
                     const hireBtn = UIComponents.drawButton(
