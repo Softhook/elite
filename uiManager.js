@@ -888,6 +888,11 @@ class UIManager {
 
         // --- VIEWING_RECORD State ---
         else if (currentState === "VIEWING_RECORD") {
+            // Handle scrollbar clicks first
+            if (this.stationMenus._handleScrollbarClick(mx, my, this.stationMenus.recordScrollbarArea, "recordScrollOffset", "recordScrollMax")) {
+                return true;
+            }
+
             for (const btn of this.recordButtonAreas) {
                 if (this.isClickInArea(mx, my, btn)) {
                     if (btn.action === "BACK") {
@@ -1124,17 +1129,14 @@ class UIManager {
             }
         }
 
-        const scrollConfigs = {
-            "VIEWING_SHIPYARD": ["shipyardScrollOffset", "shipyardScrollMax"],
-            "VIEWING_UPGRADES": ["upgradeScrollOffset", "upgradeScrollMax"],
-            "VIEWING_RECORD": ["recordScrollOffset", "recordScrollMax"],
-            "VIEWING_NEWS": ["newsScrollOffset", "newsScrollMax"]
-        };
-
-        const config = scrollConfigs[currentState];
-        if (config) {
-            return this._handleScroll(config[0], config[1], event.deltaY);
+        // Delegate to stationMenus for all scrollable station states
+        // This includes storage which has two independent scroll zones
+        if (this.stationMenus && typeof this.stationMenus.handleMouseWheel === 'function') {
+            if (this.stationMenus.handleMouseWheel(event, currentState)) {
+                return true;
+            }
         }
+
         return false;
     }
 

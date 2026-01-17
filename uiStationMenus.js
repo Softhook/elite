@@ -170,23 +170,21 @@ class UIStationMenus {
                 fill(18, 18, 28);
                 stroke(borderColor);
                 strokeWeight(1);
-                rect(pX + 20, itemY, pW - 40, itemHeight - 6, 4);
+                rect(pX + L.CONTENT_PADDING, itemY, pW - L.CONTENT_PADDING * 2, itemHeight - 6, 4);
                 noStroke();
 
                 // "BREAKING" badge for high priority player actions
-                let headlineStartX = pX + 28;
+                let headlineStartX = pX + L.CONTENT_PADDING + 8;
                 if (priority >= 4) {
                     // Draw breaking badge
                     fill(180, 40, 40);
                     noStroke();
-                    rect(pX + 25, itemY + 4, 90, 22, 3);
-                    fill(255);
-                    textSize(STATION_TEXT_SIZE.BODY);
-                    textAlign(CENTER, CENTER);
+                    rect(pX + L.CONTENT_PADDING + 5, itemY + 4, 90, 22, 3);
+                    UIComponents.setTextStyle({ fill: 255, size: STATION_TEXT_SIZE.BODY, align: [CENTER, CENTER] });
                     textStyle(BOLD);
-                    text("BREAKING", pX + 70, itemY + 15);
+                    text("BREAKING", pX + L.CONTENT_PADDING + 50, itemY + 15);
                     textStyle(NORMAL);
-                    headlineStartX = pX + 130;
+                    headlineStartX = pX + L.CONTENT_PADDING + 110;
                 }
 
                 // Headline (line 1) - bold, larger
@@ -226,18 +224,14 @@ class UIStationMenus {
                 textStyle(NORMAL);
 
                 // Source on right side (line 1)
-                fill(sourceColor);
-                textSize(STATION_TEXT_SIZE.BODY);
-                textAlign(RIGHT, TOP);
-                text(item.source || "Echo", pX + pW - 28, itemY + 10);
+                UIComponents.setTextStyle({ fill: sourceColor, size: STATION_TEXT_SIZE.BODY, align: [RIGHT, TOP] });
+                text(item.source || "Echo", pX + pW - L.CONTENT_PADDING - 8, itemY + 10);
 
                 // Body text (line 2) - smaller, dimmer, truncated
-                fill(170);
-                textSize(STATION_TEXT_SIZE.BODY);
-                textAlign(LEFT, TOP);
+                UIComponents.setTextStyle({ fill: 170, size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
 
                 const bodyText = item.body || "";
-                const maxBodyWidth = pW - 70;
+                const maxBodyWidth = pW - L.CONTENT_PADDING * 2 - 10;
                 let displayBody = bodyText;
                 if (textWidth(bodyText) > maxBodyWidth) {
                     while (textWidth(displayBody + "...") > maxBodyWidth && displayBody.length > 10) {
@@ -245,7 +239,7 @@ class UIStationMenus {
                     }
                     displayBody += "...";
                 }
-                text(displayBody, pX + 28, itemY + 30);
+                text(displayBody, pX + L.CONTENT_PADDING + 8, itemY + 30);
 
                 // Time ago indicator (bottom right, very subtle)
                 fill(100);
@@ -691,7 +685,6 @@ class UIStationMenus {
         // Draw visible ships
         let firstRow = this.shipyardScrollOffset;
         let lastRow = min(firstRow + visibleRows, totalRows);
-        textSize(STATION_TEXT_SIZE.BODY);
 
         for (let i = firstRow; i < lastRow; i++) {
             let [shipKey, ship] = availableShips[i];
@@ -714,37 +707,29 @@ class UIStationMenus {
             }
 
             stroke(canAfford ? 120 : 80, canAfford ? 180 : 100, canAfford ? 255 : 120);
-            rect(pX + 20, y, pW - 40, rowH - 6, 5);
-
+            rect(pX + L.CONTENT_PADDING, y, pW - L.CONTENT_PADDING * 2, rowH - 6, 5);
             noStroke();
 
             if (isCurrentShip) {
-                fill(100, 150, 255);
-                textAlign(LEFT, CENTER);
-                textSize(STATION_TEXT_SIZE.BODY);
-                text(`${ship.name}`, pX + 30, y + rowH / 2);
-                textAlign(RIGHT, CENTER);
-                textSize(STATION_TEXT_SIZE.BODY);
-                fill(150, 180, 255);
-                text(`CURRENT SHIP`, pX + pW - 30, y + rowH / 2);
+                UIComponents.setTextStyle({ fill: [100, 150, 255], size: STATION_TEXT_SIZE.BODY, align: [LEFT, CENTER] });
+                text(`${ship.name}`, pX + L.CONTENT_PADDING + L.ROW_PADDING, y + rowH / 2);
+                UIComponents.setTextStyle({ fill: [150, 180, 255], size: STATION_TEXT_SIZE.BODY, align: [RIGHT, CENTER] });
+                text(`CURRENT SHIP`, pX + pW - L.CONTENT_PADDING - L.ROW_PADDING, y + rowH / 2);
             } else {
-                textAlign(LEFT, CENTER);
-                textSize(STATION_TEXT_SIZE.BODY);
-                fill(canAfford ? 255 : 120);
+                UIComponents.setTextStyle({ fill: canAfford ? 255 : 120, size: STATION_TEXT_SIZE.BODY, align: [LEFT, CENTER] });
                 const leftText = `${ship.name}  |  Hull: ${ship.baseHull}  |  Cargo: ${ship.cargoCapacity}`;
-                text(leftText, pX + 30, y + rowH / 2);
+                text(leftText, pX + L.CONTENT_PADDING + L.ROW_PADDING, y + rowH / 2);
 
                 textAlign(RIGHT, CENTER);
-                textSize(STATION_TEXT_SIZE.BODY);
                 if (finalPrice > 0) {
                     fill(canAfford ? 255 : 120, canAfford ? 220 : 100, canAfford ? 100 : 50);
-                    text(`${finalPrice} cr`, pX + pW - 30, y + rowH / 2);
+                    text(`${finalPrice} cr`, pX + pW - L.CONTENT_PADDING - L.ROW_PADDING, y + rowH / 2);
                 } else if (finalPrice < 0) {
                     fill(100, 255, 150);
-                    text(`+${-finalPrice} cr`, pX + pW - 30, y + rowH / 2);
+                    text(`+${-finalPrice} cr`, pX + pW - L.CONTENT_PADDING - L.ROW_PADDING, y + rowH / 2);
                 } else {
                     fill(150, 255, 150);
-                    text(`EVEN SWAP`, pX + pW - 30, y + rowH / 2);
+                    text(`EVEN SWAP`, pX + pW - L.CONTENT_PADDING - L.ROW_PADDING, y + rowH / 2);
                 }
             }
 
@@ -869,17 +854,17 @@ class UIStationMenus {
                 stroke(canAfford ? 180 : 100, canAfford ? 100 : 60, canAfford ? 255 : 140);
             }
 
-            rect(pX + 20, y, pW - 40, rowH - 6, 5);
-
+            rect(pX + L.CONTENT_PADDING, y, pW - L.CONTENT_PADDING * 2, rowH - 6, 5);
             noStroke();
-            textAlign(LEFT, CENTER);
-            textSize(STATION_TEXT_SIZE.BODY);
-            if (isShipUpgrade) {
-                fill(canAfford ? [150, 255, 150] : [80, 120, 80]);
-                if (isInstalled) fill(150, 255, 150);
-            } else {
-                fill(canAfford ? 255 : 120);
-            }
+
+            // Left side text
+            UIComponents.setTextStyle({
+                fill: isShipUpgrade
+                    ? (canAfford || isInstalled ? [150, 255, 150] : [80, 120, 80])
+                    : (canAfford ? 255 : 120),
+                size: STATION_TEXT_SIZE.BODY,
+                align: [LEFT, CENTER]
+            });
 
             let infoText = "";
             if (isShipUpgrade) {
@@ -889,21 +874,24 @@ class UIStationMenus {
             }
 
             const upgLeft = `${upg.name}  |  ${infoText}`;
-            text(upgLeft, pX + 30, y + rowH / 2);
+            text(upgLeft, pX + L.CONTENT_PADDING + L.ROW_PADDING, y + rowH / 2);
 
-            textAlign(RIGHT, CENTER);
-            textSize(STATION_TEXT_SIZE.BODY);
-            fill(canAfford ? 200 : 100, canAfford ? 150 : 80, canAfford ? 255 : 120);
+            // Right side text
+            UIComponents.setTextStyle({
+                fill: [canAfford ? 200 : 100, canAfford ? 150 : 80, canAfford ? 255 : 120],
+                size: STATION_TEXT_SIZE.BODY,
+                align: [RIGHT, CENTER]
+            });
             if (isInstalled) {
-                text("INSTALLED", pX + pW - 30, y + rowH / 2);
+                text("INSTALLED", pX + pW - L.CONTENT_PADDING - L.ROW_PADDING, y + rowH / 2);
             } else {
-                text(`${upg.price} cr`, pX + pW - 30, y + rowH / 2);
+                text(`${upg.price} cr`, pX + pW - L.CONTENT_PADDING - L.ROW_PADDING, y + rowH / 2);
             }
 
             this.upgradeListAreas.push({
-                x: pX + 20,
+                x: pX + L.CONTENT_PADDING,
                 y: y,
-                w: pW - 40,
+                w: pW - L.CONTENT_PADDING * 2,
                 h: rowH - 6,
                 upgrade: upg,
                 canAfford: canAfford,
@@ -1130,8 +1118,6 @@ class UIStationMenus {
             UIComponents.setTextStyle({ fill: 180, size: STATION_TEXT_SIZE.SMALL, align: [CENTER, CENTER] });
             text("Storage is empty", pX + pW / 2, storageListY + sectionHeight / 2);
         } else {
-            UIComponents.setTextStyle({ align: [LEFT, TOP], size: STATION_TEXT_SIZE.SMALL });
-
             const firstRow = this.storageScrollOffset;
             const lastRow = Math.min(firstRow + storageVisibleRows, storage.length);
 
@@ -1146,25 +1132,27 @@ class UIStationMenus {
 
                 stroke(60, 80, 100);
                 strokeWeight(1);
-                rect(pX + 40, itemY, pW - 80, ROW_HEIGHT - 2, 3);
+                rect(pX + L.CONTENT_PADDING + 10, itemY, pW - L.CONTENT_PADDING * 2 - 20, ROW_HEIGHT - 2, 3);
                 noStroke();
 
                 // Check for mission match
                 const isMissionItem = player.activeMission && player.activeMission.cargoType === item.name;
 
-                if (isMissionItem) fill(255, 200, 100);
-                else fill(220);
+                UIComponents.setTextStyle({
+                    fill: isMissionItem ? [255, 200, 100] : 220,
+                    size: STATION_TEXT_SIZE.SMALL,
+                    align: [LEFT, CENTER]
+                });
 
-                textAlign(LEFT, CENTER);
                 let labelText = `${item.name}: ${item.quantity}t`;
                 if (isMissionItem) {
                     const req = player.activeMission.cargoQuantity || 0;
                     labelText += ` (Mission: ${req})`;
                 }
-                text(labelText, pX + 50, itemY + ROW_HEIGHT / 2);
+                text(labelText, pX + L.CONTENT_PADDING + L.ROW_PADDING + 10, itemY + ROW_HEIGHT / 2);
 
                 const btnW = 80;
-                const btnX = pX + pW - 130;
+                const btnX = pX + pW - L.CONTENT_PADDING - btnW - 30;
 
                 const retrieveBtn = UIComponents.drawButton(
                     btnX, itemY + 4, btnW, BUTTON_HEIGHT,
@@ -1173,9 +1161,6 @@ class UIStationMenus {
                     3,
                     { textSize: STATION_TEXT_SIZE.SMALL }
                 );
-                // Override button text size manually since drawButton defaults to BODY now, but we want small here
-                // Actually user requested BODY generally, but SMALL for "most text". 
-                // Let's keep button text clean. Ideally drawButton would support size param.
 
                 retrieveBtn.action = "RETRIEVE_STORAGE";
                 retrieveBtn.commodity = item.name;
@@ -1184,7 +1169,7 @@ class UIStationMenus {
 
             // Scrollbar for Storage
             this.storageScrollbarArea = UIComponents.drawScrollbar(
-                pX + pW - 10, storageListY, sectionHeight,
+                pX + pW - L.BTN_SPACING, storageListY, sectionHeight,
                 this.storageScrollOffset, this.storageScrollMax,
                 storageVisibleRows, storage.length,
                 [40, 40, 60], [100, 100, 140]
@@ -1192,9 +1177,9 @@ class UIStationMenus {
         }
 
         // --- PLAYER CARGO SECTION ---
-        const cargoLabelY = storageListY + sectionHeight + 10;
+        const cargoLabelY = storageListY + sectionHeight + L.BTN_SPACING;
         UIComponents.setTextStyle({ fill: [180, 200, 255], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
-        text(`Your Cargo (${player.getCargoAmount()}/${player.cargoCapacity}t):`, pX + 40, cargoLabelY);
+        text(`Your Cargo (${player.getCargoAmount()}/${player.cargoCapacity}t):`, pX + L.CONTENT_PADDING, cargoLabelY);
 
         const cargoListY = cargoLabelY + 25;
         const cargoVisibleRows = Math.floor(sectionHeight / ROW_HEIGHT);
@@ -1208,8 +1193,6 @@ class UIStationMenus {
             UIComponents.setTextStyle({ fill: 180, size: STATION_TEXT_SIZE.SMALL, align: [CENTER, CENTER] });
             text("No cargo in hold", pX + pW / 2, cargoListY + sectionHeight / 2);
         } else {
-            UIComponents.setTextStyle({ align: [LEFT, TOP], size: STATION_TEXT_SIZE.SMALL });
-
             const firstRow = this.cargoScrollOffset;
             const lastRow = Math.min(firstRow + cargoVisibleRows, playerCargo.length);
 
@@ -1223,19 +1206,20 @@ class UIStationMenus {
 
                 stroke(60, 80, 100);
                 strokeWeight(1);
-                rect(pX + 40, itemY, pW - 80, ROW_HEIGHT - 2, 3);
+                rect(pX + L.CONTENT_PADDING + 10, itemY, pW - L.CONTENT_PADDING * 2 - 20, ROW_HEIGHT - 2, 3);
                 noStroke();
 
                 // Check for mission match
                 const isMissionItem = player.activeMission && player.activeMission.cargoType === item.name;
-                if (isMissionItem) fill(255, 200, 100);
-                else fill(220);
-
-                textAlign(LEFT, CENTER);
-                text(`${item.name}: ${item.quantity}t`, pX + 50, itemY + ROW_HEIGHT / 2);
+                UIComponents.setTextStyle({
+                    fill: isMissionItem ? [255, 200, 100] : 220,
+                    size: STATION_TEXT_SIZE.SMALL,
+                    align: [LEFT, CENTER]
+                });
+                text(`${item.name}: ${item.quantity}t`, pX + L.CONTENT_PADDING + L.ROW_PADDING + 10, itemY + ROW_HEIGHT / 2);
 
                 const btnW = 80;
-                const btnX = pX + pW - 130;
+                const btnX = pX + pW - L.CONTENT_PADDING - btnW - 30;
 
                 const depositBtn = UIComponents.drawButton(
                     btnX, itemY + 4, btnW, BUTTON_HEIGHT,
@@ -1252,7 +1236,7 @@ class UIStationMenus {
 
             // Scrollbar for Cargo
             this.cargoScrollbarArea = UIComponents.drawScrollbar(
-                pX + pW - 10, cargoListY, sectionHeight,
+                pX + pW - L.BTN_SPACING, cargoListY, sectionHeight,
                 this.cargoScrollOffset, this.cargoScrollMax,
                 cargoVisibleRows, playerCargo.length,
                 [40, 40, 60], [100, 100, 140]
@@ -1490,6 +1474,15 @@ class UIStationMenus {
                 UIComponents.setTextStyle({ fill: 160, size: STATION_TEXT_SIZE.HELPER, align: [LEFT, TOP] });
                 text("↓ More entries", pX + 50, currentY);
             }
+
+            // Draw scrollbar if needed
+            const scrollAreaH = visibleLines * lineHeight;
+            this.recordScrollbarArea = UIComponents.drawScrollbar(
+                pX + pW - L.BTN_SPACING, contentY + 35, scrollAreaH,
+                this.recordScrollOffset, this.recordScrollMax,
+                visibleLines, totalEntries,
+                [40, 40, 60], [100, 140, 180]
+            );
         }
 
         // Back button
@@ -1654,6 +1647,11 @@ class UIStationMenus {
      * @returns {boolean} - True if handled
      */
     handleShipyardClick(mx, my, player, addMessageFn, returnState = "DOCKED") {
+        // Handle scrollbar clicks first
+        if (this._handleScrollbarClick(mx, my, this.shipyardScrollbarArea, "shipyardScrollOffset", "shipyardScrollMax")) {
+            return true;
+        }
+
         // Check shipyard list areas
         for (let i = 0; i < this.shipyardListAreas.length; i++) {
             const area = this.shipyardListAreas[i];
@@ -1719,6 +1717,7 @@ class UIStationMenus {
         if (!player || !this.selectedShipForDetail) return;
 
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+        const L = STATION_LAYOUT; // Shorthand
         const shipData = this.selectedShipForDetail;
         const shipDef = shipData.shipDef;
 
@@ -1728,14 +1727,14 @@ class UIStationMenus {
             return;
         }
 
-        // Layout constants
+        // Layout constants - using standardized values
         const LAYOUT = {
             leftWidthRatio: 0.5,
             rightWidthRatio: 0.5,
-            leftPadding: 20,
-            columnGap: 40,
-            topPadding: 10,
-            bottomPadding: 60,
+            leftPadding: L.CONTENT_PADDING,
+            columnGap: L.SECTION_GAP * 2,
+            topPadding: L.CONTENT_START,
+            bottomPadding: L.BACK_BUTTON_MARGIN + 10,
             previewSizeRatio: 0.6,
             priceBottomOffset: 110,
             buttonsBottomOffset: 80
@@ -1777,8 +1776,7 @@ class UIStationMenus {
         this._drawPriceInfo(shipData, player, rightX, rightW, priceY);
 
         // Render action buttons (right column, at standard back button height)
-        const BTN_HEIGHT = 30;
-        const btnY = pY + pH - BTN_HEIGHT - 15;
+        const btnY = pY + pH - L.BTN_HEIGHT - L.CONTENT_START;
         this.shipDetailButtons = this._drawActionButtons(shipData.canAfford, rightX, rightW, btnY, isCurrentShip);
     }
 
@@ -1798,11 +1796,8 @@ class UIStationMenus {
         const previewSize = Math.min(leftW, contentH) * sizeRatio;
 
         // Ship name at top of preview area
-        fill(180, 220, 255);
-        noStroke();
-        textSize(STATION_TEXT_SIZE.HEADER);
-        textAlign(CENTER, TOP);
-        text(shipData.shipName, previewCenterX, contentY + 10);
+        UIComponents.setTextStyle({ fill: [180, 220, 255], size: STATION_TEXT_SIZE.HEADER, align: [CENTER, TOP] });
+        text(shipData.shipName, previewCenterX, contentY + STATION_LAYOUT.BTN_SPACING);
 
         // Draw rotating ship
         UIComponents.drawRotatingShip(shipData.shipDef, previewCenterX, previewCenterY, previewSize, 0.0008);
@@ -2179,6 +2174,7 @@ class UIStationMenus {
         if (!player || !this.selectedWeaponForDetail) return;
 
         const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+        const L = STATION_LAYOUT; // Shorthand
         const weaponData = this.selectedWeaponForDetail;
         const weaponDef = weaponData.weaponDef;
 
@@ -2188,14 +2184,14 @@ class UIStationMenus {
             return;
         }
 
-        // Layout constants
+        // Layout constants - using standardized values
         const LAYOUT = {
             leftWidthRatio: 0.5,
             rightWidthRatio: 0.45,
-            leftPadding: 20,
-            columnGap: 40,
-            topPadding: 10,
-            bottomPadding: 60,
+            leftPadding: L.CONTENT_PADDING,
+            columnGap: L.SECTION_GAP * 2,
+            topPadding: L.CONTENT_START,
+            bottomPadding: L.BACK_BUTTON_MARGIN + 10,
             priceBottomOffset: 110,
             buttonsBottomOffset: 80
         };
@@ -2640,6 +2636,11 @@ class UIStationMenus {
      * @returns {boolean} - True if handled
      */
     handleUpgradesClick(mx, my, player, addMessageFn, returnState = "DOCKED") {
+        // Handle scrollbar clicks first
+        if (this._handleScrollbarClick(mx, my, this.upgradeScrollbarArea, "upgradeScrollOffset", "upgradeScrollMax")) {
+            return true;
+        }
+
         // Check upgrade list items
         for (let i = 0; i < this.upgradeListAreas.length; i++) {
             const area = this.upgradeListAreas[i];
@@ -2973,6 +2974,11 @@ class UIStationMenus {
      * Handles clicks on the news menu.
      */
     handleNewsClick(mx, my) {
+        // Handle scrollbar clicks first
+        if (this._handleScrollbarClick(mx, my, this.newsScrollbarArea, "newsScrollOffset", "newsScrollMax")) {
+            return true;
+        }
+
         if (!Array.isArray(this.newsButtonAreas)) return false;
         for (const btn of this.newsButtonAreas) {
             if (!UIComponents.isClickInArea(mx, my, btn)) continue;
