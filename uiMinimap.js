@@ -1098,7 +1098,10 @@ class UIMinimap {
                 }
 
                 // === PATROL MISSION SCAN PROGRESS ===
-                // If player has a patrol mission and locked onto a ship, count as a scan
+                // DISABLED: Scanning should only work from main screen, not minimap
+                // The scanning logic is now handled in player.js handleMousePressedForTargeting
+                // which includes proper visibility checks and minimap rejection
+                /*
                 if (player.activeMission &&
                     typeof FACTION_PATROL_TYPES !== 'undefined' &&
                     FACTION_PATROL_TYPES.has(player.activeMission.type) &&
@@ -1125,6 +1128,7 @@ class UIMinimap {
                         }
                     }
                 }
+                */
             }
             return true;
         }

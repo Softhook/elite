@@ -2731,6 +2731,23 @@ class Player {
     // Ensure you have a way to set this.target, e.g., via mouse click on an enemy:
     handleMousePressedForTargeting() { // Call this from your main sketch mousePressed
         if (mouseButton === LEFT) { // Or whatever button you use for targeting
+            // === PATROL MISSION: Reject minimap clicks BEFORE any targeting ===
+            // For patrol missions, we need to ensure clicks are on the main screen, not the minimap
+            if (this.activeMission &&
+                typeof FACTION_PATROL_TYPES !== 'undefined' &&
+                FACTION_PATROL_TYPES.has(this.activeMission.type)) {
+
+                // Check if click is on minimap
+                if (typeof uiManager !== 'undefined' && uiManager.minimap &&
+                    typeof uiManager.minimap.isClickInMinimap === 'function') {
+                    if (uiManager.minimap.isClickInMinimap(mouseX, mouseY)) {
+                        // Reject the click entirely for patrol missions
+                        uiManager.addMessage('Cannot scan from radar! Target must be visible on main screen.', [255, 150, 0]);
+                        return; // Exit early - don't process this click at all
+                    }
+                }
+            }
+
             // Surface mode targeting - check surface objects (turrets, pirates, buildings)
             if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
                 const surfaceObj = this._checkSurfaceObjectClick();
@@ -2825,29 +2842,29 @@ class Player {
                         }
 
                         // === PATROL MISSION SCAN PROGRESS ===
-                        // Scanning requires THREE conditions:
+                        // Scanning requires TWO conditions (minimap check happens earlier):
                         // 1. Player must CLICK on the enemy to lock target (handled above in handleClick)
-                        // 2. Enemy must be VISIBLE on screen (_isOnScreen = true)
-                        // 3. Click must NOT be on the minimap/radar (must be on main screen)
-                        // This prevents scanning via overlay/radar when ships are off-screen
+                        // 2. Enemy must be STRICTLY VISIBLE on screen (within actual viewport, not the generous _isOnScreen buffer)
+                        // Note: Minimap clicks are rejected at the start of handleMousePressedForTargeting
                         if (clickedEnemy && this.activeMission &&
                             typeof FACTION_PATROL_TYPES !== 'undefined' &&
                             FACTION_PATROL_TYPES.has(this.activeMission.type)) {
 
-                            // Check if click was on the minimap
-                            let clickOnMinimap = false;
-                            if (typeof uiManager !== 'undefined' && uiManager.minimap &&
-                                typeof uiManager.minimap.isClickInMinimap === 'function') {
-                                clickOnMinimap = uiManager.minimap.isClickInMinimap(mouseX, mouseY);
+                            // STRICT visibility check for scanning (no buffer like _isOnScreen has)
+                            // Calculate if enemy is actually within the viewport boundaries
+                            let isStrictlyVisible = false;
+                            if (clickedEnemy.pos && this.pos) {
+                                const dx = Math.abs(clickedEnemy.pos.x - this.pos.x);
+                                const dy = Math.abs(clickedEnemy.pos.y - this.pos.y);
+                                const viewportHalfWidth = (typeof width === 'number' ? width : 1000) / 2;
+                                const viewportHalfHeight = (typeof height === 'number' ? height : 800) / 2;
+
+                                // Enemy must be within the actual viewport (with small 50px tolerance for edge cases)
+                                isStrictlyVisible = (dx < viewportHalfWidth - 50) && (dy < viewportHalfHeight - 50);
                             }
 
-                            if (clickOnMinimap) {
-                                // Reject scan if clicked on minimap
-                                if (typeof uiManager !== 'undefined') {
-                                    uiManager.addMessage('Cannot scan from radar! Target must be visible on main screen.', [255, 150, 0]);
-                                }
-                            } else if (!clickedEnemy._isOnScreen) {
-                                // Check if enemy is actually visible on screen
+                            if (!isStrictlyVisible) {
+                                // Enemy is not actually visible on the main screen
                                 if (typeof uiManager !== 'undefined') {
                                     uiManager.addMessage('Target must be visible on screen to scan!', [255, 150, 0]);
                                 }

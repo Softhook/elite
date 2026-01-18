@@ -10,6 +10,7 @@ leading a war war group
 
 Give assassination targets. Ship upgrades. Mention the ship upgrades in the mission description to warn the player. And reward the player for very hard upgrade such a stealth upgrades 
 
+  - Mining missions that pay well for ore
 -----
 
 
@@ -65,6 +66,7 @@ A new AI role could be avoiding dangerous places such as nebula that cause damag
 - mulitple thurst ports on large ships
 - warning sound when health is low
 - weapon names clarify
+- ship upgrades are too good
 
 ## Economy and Progression
 
@@ -81,7 +83,7 @@ A new AI role could be avoiding dangerous places such as nebula that cause damag
 - Add more varied mission types:
   - Rescue missions
   - Exploration missions - find specific named planet or hidden base ona planet
-  - Mining contracts
+
   guard contracts
   bounty contracts
   - Salvage operations
