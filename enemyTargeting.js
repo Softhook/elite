@@ -290,9 +290,8 @@ class EnemyTargeting {
             }
         }
 
-        // --- BOUNTY HUNTER: Target assigned bountyTarget, or fall back to player ---
+        // --- BOUNTY HUNTER: Target assigned bountyTarget, or wanted player ---
         if (this.role === AI_ROLE.BOUNTY_HUNTER) {
-            // If contract is already completed, head to jump zone
             // If contract is already completed, head to jump zone
             // [FIX] Allow self-defense: Only force leaving if NOT currently in combat
             if (this.hasCompletedContract && !this.inCombat) {
@@ -327,17 +326,22 @@ class EnemyTargeting {
                 }
             }
 
-            // No assigned target - fall back to player (backward compatibility)
+            // No assigned target - only target player if they are wanted
             const playerRef = system.player || this.target;
             if (playerRef instanceof Player && this.isTargetValid(playerRef)) {
-                if (this.target !== playerRef) {
-                    this.target = playerRef;
+                // CRITICAL FIX: Only target player if they are wanted
+                const playerIsWanted = playerRef.isWanted || (system && system.isPlayerWanted && system.isPlayerWanted());
+                if (playerIsWanted) {
+                    if (this.target !== playerRef) {
+                        this.target = playerRef;
+                    }
+                    return true;
                 }
-                return true;
-            } else {
-                this.target = null;
-                return false;
             }
+
+            // No valid target - bounty hunters don't attack non-wanted ships
+            this.target = null;
+            return false;
         }
         // --- END BOUNTY HUNTER ---
 

@@ -1014,7 +1014,7 @@ class MissionGenerator {
                 MISSION_TYPE.MILITARY_DEFENSE,
                 'System Defense',
                 originSystem, originStation, galaxy, rankMultiplier,
-                { baseReward: 1000, prestigeReward: 3, targetMin: 3, targetMax: 7 }
+                { baseReward: 1000, prestigeReward: 1, targetMin: 3, targetMax: 7 }
             ),
             'strike': () => this._createMilitaryStrikeMission(
                 originSystem, originStation, galaxy, rankMultiplier
