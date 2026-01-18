@@ -889,8 +889,10 @@ class UIManager {
         // --- VIEWING_RECORD State ---
         else if (currentState === "VIEWING_RECORD") {
             // Handle scrollbar clicks first
-            if (this.stationMenus._handleScrollbarClick(mx, my, this.stationMenus.recordScrollbarArea, "recordScrollOffset", "recordScrollMax")) {
-                return true;
+            if (this.stationMenus.recordScrollbarArea) {
+                if (this.stationMenus._handleScrollbarClick(mx, my, this.stationMenus.recordScrollbarArea, "recordScrollOffset", "recordScrollMax")) {
+                    return true;
+                }
             }
 
             for (const btn of this.recordButtonAreas) {
@@ -1019,9 +1021,6 @@ class UIManager {
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Shipyard", station, player, system);
 
-        // Sync scroll state to module
-        this.stationMenus.shipyardScrollOffset = this.shipyardScrollOffset;
-
         // Delegate rendering
         this.stationMenus.drawShipyardMenu(player, panelRect, headerHeight, system);
 
@@ -1067,7 +1066,6 @@ class UIManager {
         const headerHeight = this.drawStationHeader("Upgrades", station, player, system);
 
         // Sync scroll state to module
-        this.stationMenus.upgradeScrollOffset = this.upgradeScrollOffset;
         this.stationMenus.selectedWeaponSlot = this.selectedWeaponSlot;
 
         // Delegate rendering
@@ -1308,9 +1306,6 @@ class UIManager {
             headerHeight = this.drawStationHeader("Personal Record", station, player, system);
         }
 
-        // Sync scroll state to module
-        this.stationMenus.recordScrollOffset = this.recordScrollOffset;
-
         // Delegate rendering
         this.stationMenus.drawPersonalRecordMenu(player, panelRect, headerHeight);
 
@@ -1332,9 +1327,6 @@ class UIManager {
         const system = galaxy?.getCurrentSystem();
         const station = system?.station;
         const headerHeight = this.drawStationHeader("Galactic Echo", station, player, system);
-
-        // Sync scroll state to module
-        this.stationMenus.newsScrollOffset = this.newsScrollOffset;
 
         // Delegate rendering
         this.stationMenus.drawNewsMenu(player, panelRect, headerHeight);

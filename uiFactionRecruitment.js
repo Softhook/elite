@@ -238,12 +238,27 @@ class UIFactionRecruitment {
             UIComponents.setTextStyle({ fill: [150, 150, 150], size: STATION_TEXT_SIZE.SMALL, align: [CENTER, CENTER] });
             text("No recent intelligence reports.", centerX, contentY + contentH / 2);
         } else {
-            for (const item of newsItems.slice(0, 5)) {
-                // News item background
-                fill(30, 35, 50, 180);
+            for (let i = 0; i < Math.min(newsItems.length, 5); i++) {
+                const item = newsItems[i];
+
+                // Draw standardized row background
+                const rowArea = UIComponents.drawListRow({
+                    x: leftX + padding,
+                    y: newsY,
+                    w: newsWidth,
+                    h: newsItemHeight - 5, // Keep existing spacing
+                    index: i,
+                    isHighlighted: false
+                });
+
+                // Overwrite with faction-specific border/theme if desired, or accept standard look.
+                // The original code had: stroke(themeColors[0]...), fill(30, 35, 50, 180)
+                // drawListRow uses standard dark blue/grey.
+                // Let's add the faction theme border on top for flavor, as recruitment is highly themed.
+                noFill();
                 stroke(themeColors[0][0], themeColors[0][1], themeColors[0][2], 100);
                 strokeWeight(1);
-                rect(leftX + padding, newsY, newsWidth, newsItemHeight - 5, 3);
+                rect(rowArea.x, rowArea.y, rowArea.w, rowArea.h, 4);
                 noStroke();
 
                 // Body text with wrapping to show more content
