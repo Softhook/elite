@@ -1554,14 +1554,6 @@ class Player {
             this.updateAutopilot();
         }
 
-        // [STORM CRITICAL REVIEW FIX]
-        // Reset storm effects at the start of each frame.
-        // CosmicStorms will re-apply these if the player is still inside.
-        // This prevents "stuck" debuffs if teleporing out, and solves overlap flickering.
-        this.targetingDisruption = 0;
-        this.shieldsDisabled = false;
-        this.weaponsDisabled = false;
-
         // Regenerate shields only after recharge delay has passed (and not disabled by Ion nebula)
         if (this.shield < this.maxShield && !this.shieldsDisabled && (currentTime - this.lastShieldHitTime) > this.shieldRechargeDelay) {
             // Use deltaSeconds for frame-rate independent recharge (shieldRechargeRate is per-second)

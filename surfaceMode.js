@@ -438,6 +438,15 @@ class SurfaceMode {
         if (!this.player) return;
 
         // Use exact same physics as space
+        // [STORM CRITICAL FIX]
+        // Reset environment flags that were removed from Player.update().
+        // Since StarSystem.update() doesn't run on surface, we must reset them here
+        // to prevent sticky debuffs from space storms or surface effects.
+        this.player.targetingDisruption = 0;
+        this.player.shieldsDisabled = false;
+        this.player.weaponsDisabled = false;
+        this.player.inNebula = false;
+
         this.player.handleInput();
         this.player.update();
 

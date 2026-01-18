@@ -2173,7 +2173,14 @@ class StarSystem {
         this._updateScreenBounds();
 
         try {
-            // Update all entity categories
+            // 1. Reset Environment Flags (Player & Enemies)
+            this._resetEntityEnvironmentFlags();
+
+            // 2. Apply Environment Effects (Nebulae & Storms)
+            this._updateNebulae();
+            this._updateCosmicStorms();
+
+            // 3. Update all entity categories (AI & Physics)
             this._updateEnemies();
             this._updateAsteroids();
             this._updatePlanets();
@@ -2186,8 +2193,6 @@ class StarSystem {
             this._updateForceWaves();
             this._updateHarpoons();
             this._updateExplosions();
-            this._updateNebulae();
-            this._updateCosmicStorms();
 
             // Collision Checks
             this.checkCollisions();
@@ -2197,6 +2202,33 @@ class StarSystem {
             this._updateSpawnTimers();
         } catch (e) {
             console.error(`Major ERROR in StarSystem ${this.name}.update:`, e);
+        }
+    }
+
+    /**
+     * Resets environment-related flags (nebula, storm effects) for Player and Enemies.
+     * This must be called at the start of the frame before applying new effects.
+     * @private
+     */
+    _resetEntityEnvironmentFlags() {
+        // Reset Player
+        if (this.player) {
+            this.player.targetingDisruption = 0;
+            this.player.shieldsDisabled = false;
+            this.player.weaponsDisabled = false;
+            this.player.inNebula = false;
+        }
+
+        // Reset Enemies
+        const enemyCount = this.enemies.length;
+        for (let i = 0; i < enemyCount; i++) {
+            const enemy = this.enemies[i];
+            if (enemy) {
+                enemy.targetingDisruption = 0;
+                enemy.shieldsDisabled = false;
+                enemy.weaponsDisabled = false;
+                enemy.inNebula = false;
+            }
         }
     }
 
@@ -2217,8 +2249,24 @@ class StarSystem {
             // Update markets (prices fluctuate even while docked)
             this._updateMarketStock();
 
-            // Update enemies - they move, patrol, fight each other
-            // But we'll make them ignore the docked player
+            // 1. Reset Environment Flags (Enemies only, player is safe docked)
+            // Note: We use the shared helper which resets player too, but that's harmless/correct
+            this._resetEntityEnvironmentFlags();
+
+            // 2. Environment Effects (Nebulae & Storms)
+            // Need to manually call update on nebulae since we don't use _updateNebulae here (which applies to player)
+            for (let i = 0, nlen = this.nebulae.length; i < nlen; i++) {
+                this.nebulae[i].update();
+                // Apply effects to enemies only, not player
+                for (let j = 0, elen = this.enemies.length; j < elen; j++) {
+                    this.nebulae[i].applyEffects(this.enemies[j]);
+                }
+            }
+
+            // Cosmic storms (modified to NOT affect player)
+            this._updateCosmicStormsWhileDocked();
+
+            // 3. Update enemies - they move, patrol, fight each other
             this._updateEnemiesWhileDocked();
 
             // Asteroids drift around
@@ -2232,18 +2280,6 @@ class StarSystem {
 
             // Explosions fade out
             this._updateExplosions();
-
-            // Nebulae visual update (but no player effects)
-            for (let i = 0, nlen = this.nebulae.length; i < nlen; i++) {
-                this.nebulae[i].update();
-                // Apply effects to enemies only, not player
-                for (let j = 0, elen = this.enemies.length; j < elen; j++) {
-                    this.nebulae[i].applyEffects(this.enemies[j]);
-                }
-            }
-
-            // Cosmic storms (affect enemies only)
-            this._updateCosmicStormsWhileDocked();
 
             // NPC-only collisions (enemies vs asteroids, enemies vs enemies)
             this._checkNPCCollisions();
