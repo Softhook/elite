@@ -324,3 +324,7 @@ class Nebula {
         return new Nebula(data.pos.x, data.pos.y, data.radius, data.type);
     }
 }
+
+if (typeof module !== 'undefined') {
+    module.exports = { Nebula };
+}
