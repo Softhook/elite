@@ -941,7 +941,7 @@ class MissionGenerator {
                 MISSION_TYPE.IMPERIAL_PATROL,
                 'Imperial Patrol',
                 originSystem, originStation, galaxy, rankMultiplier,
-                { baseReward: 800, prestigeReward: 1, targetMin: 2, targetMax: 5 }
+                { baseReward: 800, prestigeReward: 1, targetMin: 4, targetMax: 8 }
             ),
             'strike': () => this._createFactionStrikeMission(
                 MISSION_TYPE.IMPERIAL_STRIKE,
@@ -1014,7 +1014,7 @@ class MissionGenerator {
                 MISSION_TYPE.MILITARY_DEFENSE,
                 'System Defense',
                 originSystem, originStation, galaxy, rankMultiplier,
-                { baseReward: 1000, prestigeReward: 1, targetMin: 3, targetMax: 7 }
+                { baseReward: 1000, prestigeReward: 1, targetMin: 5, targetMax: 10 }
             ),
             'strike': () => this._createMilitaryStrikeMission(
                 originSystem, originStation, galaxy, rankMultiplier

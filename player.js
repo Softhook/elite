@@ -2825,33 +2825,43 @@ class Player {
                         }
 
                         // === PATROL MISSION SCAN PROGRESS ===
-                        // If player has a patrol mission and locked onto an enemy, count as a scan
+                        // Scanning requires TWO conditions:
+                        // 1. Player must CLICK on the enemy to lock target (handled above in handleClick)
+                        // 2. Enemy must be VISIBLE on screen (_isOnScreen = true)
+                        // This prevents scanning via overlay/radar when ships are off-screen
                         if (clickedEnemy && this.activeMission &&
                             typeof FACTION_PATROL_TYPES !== 'undefined' &&
                             FACTION_PATROL_TYPES.has(this.activeMission.type)) {
 
-                            // Track scanned ships to avoid duplicate progress
-                            if (!this.activeMission._scannedShipIds) {
-                                this.activeMission._scannedShipIds = new Set();
-                            }
-
-                            const shipId = clickedEnemy.id || clickedEnemy;
-                            if (!this.activeMission._scannedShipIds.has(shipId)) {
-                                this.activeMission._scannedShipIds.add(shipId);
-                                this.activeMission.progressCount = (this.activeMission.progressCount || 0) + 1;
-
-                                const progress = this.activeMission.progressCount;
-                                const targetCount = this.activeMission.targetCount;
+                            // Check if enemy is actually visible on screen
+                            if (!clickedEnemy._isOnScreen) {
                                 if (typeof uiManager !== 'undefined') {
-                                    uiManager.addMessage(`Vessel scanned: ${progress}/${targetCount}`, [255, 215, 0]);
+                                    uiManager.addMessage('Target must be visible on screen to scan!', [255, 150, 0]);
+                                }
+                            } else {
+                                // Track scanned ships to avoid duplicate progress
+                                if (!this.activeMission._scannedShipIds) {
+                                    this.activeMission._scannedShipIds = new Set();
                                 }
 
-                                // Check if mission is complete
-                                if (progress >= targetCount) {
+                                const shipId = clickedEnemy.id || clickedEnemy;
+                                if (!this.activeMission._scannedShipIds.has(shipId)) {
+                                    this.activeMission._scannedShipIds.add(shipId);
+                                    this.activeMission.progressCount = (this.activeMission.progressCount || 0) + 1;
+
+                                    const progress = this.activeMission.progressCount;
+                                    const targetCount = this.activeMission.targetCount;
                                     if (typeof uiManager !== 'undefined') {
-                                        uiManager.addMessage('Patrol objective complete! Return for payment.', [100, 255, 100]);
+                                        uiManager.addMessage(`Vessel scanned: ${progress}/${targetCount}`, [255, 215, 0]);
                                     }
-                                    this.completeMission();
+
+                                    // Check if mission is complete
+                                    if (progress >= targetCount) {
+                                        if (typeof uiManager !== 'undefined') {
+                                            uiManager.addMessage('Patrol objective complete! Return for payment.', [100, 255, 100]);
+                                        }
+                                        this.completeMission();
+                                    }
                                 }
                             }
                         }
