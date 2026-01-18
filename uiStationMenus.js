@@ -74,6 +74,7 @@ class UIStationMenus {
         this.newsScrollOffset = 0;
         this.newsScrollMax = 0;
         this.newsSourceFilter = 'ALL';
+        this.selectedNewsItem = null; // For detail view
     }
 
     /**
@@ -98,6 +99,12 @@ class UIStationMenus {
         const L = STATION_LAYOUT; // Shorthand
         const contentY = pY + headerHeight + L.CONTENT_START;
         const contentH = pH - headerHeight - L.BACK_BUTTON_MARGIN - 10;
+
+        // If viewing a specific news item, show detail view
+        if (this.selectedNewsItem) {
+            this._drawNewsDetailView(player, panelRect, headerHeight);
+            return;
+        }
 
         // Get news items
         let newsItems = (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager)
@@ -173,7 +180,7 @@ class UIStationMenus {
                     borderColor = [150, 150, 80]; // Yellow-ish for local
                 }
 
-                // Draw standardized row
+                // Draw standardized row (make it clickable)
                 const rowArea = UIComponents.drawListRow({
                     x: pX + L.CONTENT_PADDING,
                     y: itemY,
@@ -182,6 +189,11 @@ class UIStationMenus {
                     index: i - startIndex, // Alternating colors based on view index
                     isHighlighted: false
                 });
+
+                // Make the entire row clickable
+                rowArea.action = 'VIEW_NEWS';
+                rowArea.newsItem = item;
+                this.newsButtonAreas.push(rowArea);
 
                 // Custom border overlay for categories
                 if (borderColor) {
@@ -226,16 +238,6 @@ class UIStationMenus {
                     }
                 }
 
-                // Truncate headline
-                const maxHeadlineWidth = pW - (headlineStartX - pX) - 130 - iconOffset;
-                if (textWidth(displayHeadline) > maxHeadlineWidth) {
-                    // simple truncation estimation
-                    // ... implementation handled by p5 usually but doing manual for safety
-                }
-
-                // Use drawListRowText structure or manual for complex layout?
-                // Manual is better here due to badges and icons, but using standard styles.
-
                 // Headline
                 UIComponents.setTextStyle({ fill: [255, 230, 120], size: STATION_TEXT_SIZE.HEADER, align: [LEFT, TOP], noStroke: true });
                 textStyle(BOLD);
@@ -246,10 +248,20 @@ class UIStationMenus {
                 UIComponents.setTextStyle({ fill: sourceColor, size: STATION_TEXT_SIZE.BODY, align: [RIGHT, TOP] });
                 text(item.source || "Echo", pX + pW - L.CONTENT_PADDING - 10, itemY + 8);
 
-                // Body text (line 2)
+                // Body text (line 2) - TRUNCATE if too long
                 const bodyText = item.body || "";
+                const maxBodyWidth = pW - L.CONTENT_PADDING * 2 - 120; // Leave space for time
                 UIComponents.setTextStyle({ fill: UIComponents.STATION_COLORS.TEXT_SECONDARY, size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
-                text(bodyText, pX + L.CONTENT_PADDING + 10, itemY + 32);
+
+                // Truncate body text to fit
+                let displayBody = bodyText;
+                if (textWidth(bodyText) > maxBodyWidth) {
+                    // Estimate characters that fit
+                    const avgCharWidth = textWidth(bodyText) / bodyText.length;
+                    const maxChars = Math.floor(maxBodyWidth / avgCharWidth) - 3; // -3 for "..."
+                    displayBody = bodyText.substring(0, maxChars) + "...";
+                }
+                text(displayBody, pX + L.CONTENT_PADDING + 10, itemY + 32);
 
                 // Time ago
                 const ageMs = Date.now() - (item.timestamp || Date.now());
@@ -279,6 +291,160 @@ class UIStationMenus {
         const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: "BACK" });
         this.newsButtonAreas.push(backBtn);
     }
+
+    /**
+     * Draws the detail view for a single news item.
+     * @param {Player} player
+     * @param {Object} panelRect - {x, y, w, h}
+     * @param {number} headerHeight
+     */
+    _drawNewsDetailView(player, panelRect, headerHeight) {
+        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+        const L = STATION_LAYOUT;
+        const contentY = pY + headerHeight + L.CONTENT_START;
+        const item = this.selectedNewsItem;
+
+        if (!item) return;
+
+        // Determine border color based on category/priority
+        let borderColor = [60, 60, 80];
+        const category = item.category || 'LOCAL_EVENT';
+        const priority = item.priority || 2;
+
+        if (category === 'PLAYER_ACTION' || priority >= 4) {
+            borderColor = [200, 100, 100]; // Red for breaking/player action
+        } else if (category === 'GALAXY_NEWS') {
+            borderColor = [100, 150, 200]; // Blue for galaxy news
+        } else if (category === 'LOCAL_EVENT') {
+            borderColor = [150, 150, 80]; // Yellow-ish for local
+        }
+
+        let currentY = contentY;
+
+        // Draw category badge/header
+        const badgeHeight = 30;
+        fill(borderColor[0], borderColor[1], borderColor[2], 100);
+        noStroke();
+        rect(pX + L.CONTENT_PADDING, currentY, pW - L.CONTENT_PADDING * 2, badgeHeight, 5);
+
+        // Category text
+        const categoryText = category.replace(/_/g, ' ');
+        UIComponents.setTextStyle({ fill: 255, size: STATION_TEXT_SIZE.BODY, align: [LEFT, CENTER], noStroke: true });
+        textStyle(BOLD);
+        text(categoryText, pX + L.CONTENT_PADDING + 10, currentY + badgeHeight / 2);
+        textStyle(NORMAL);
+
+        // Source and time on the right
+        const ageMs = Date.now() - (item.timestamp || Date.now());
+        const ageMins = Math.floor(ageMs / 60000);
+        let ageStr;
+        if (ageMins < 1) ageStr = "just now";
+        else if (ageMins < 60) ageStr = `${ageMins}m ago`;
+        else if (ageMins < 1440) ageStr = `${Math.floor(ageMins / 60)}h ago`;
+        else ageStr = `${Math.floor(ageMins / 1440)}d ago`;
+
+        const sourceColor = item.sourceColor || [200, 200, 200];
+        UIComponents.setTextStyle({ fill: sourceColor, size: STATION_TEXT_SIZE.BODY, align: [RIGHT, CENTER], noStroke: true });
+        text(`${item.source || "Echo"} • ${ageStr}`, pX + pW - L.CONTENT_PADDING - 10, currentY + badgeHeight / 2);
+
+        currentY += badgeHeight + L.BTN_SPACING * 2;
+
+        // "BREAKING" badge for high priority
+        if (priority >= 4) {
+            fill(180, 40, 40);
+            noStroke();
+            rect(pX + L.CONTENT_PADDING, currentY, 100, 25, 3);
+            UIComponents.setTextStyle({ fill: 255, size: STATION_TEXT_SIZE.SMALL, align: [CENTER, CENTER], noStroke: true });
+            textStyle(BOLD);
+            text("BREAKING NEWS", pX + L.CONTENT_PADDING + 50, currentY + 12.5);
+            textStyle(NORMAL);
+            currentY += 35;
+        }
+
+        // Headline
+        const headline = item.headline || item.title || "News Update";
+        let displayHeadline = headline;
+        let iconOffset = 0;
+
+        // Detect and draw icon if present
+        if (typeof NewsIcons !== 'undefined') {
+            const iconType = NewsIcons.getIconToken(headline);
+            if (iconType) {
+                const iconSize = 24;
+                NewsIcons.draw(iconType, pX + L.CONTENT_PADDING + iconSize / 2, currentY + iconSize / 2, iconSize);
+                iconOffset = iconSize + 10;
+                displayHeadline = NewsIcons.stripIconToken(headline);
+            }
+        }
+
+        UIComponents.setTextStyle({ fill: [255, 230, 120], size: STATION_TEXT_SIZE.HEADER + 2, align: [LEFT, TOP], noStroke: true });
+        textStyle(BOLD);
+
+        // Word wrap headline if needed (reduce width if icon present)
+        const maxHeadlineWidth = pW - L.CONTENT_PADDING * 2 - iconOffset;
+        const headlineLines = this._wrapText(displayHeadline, maxHeadlineWidth);
+        for (let i = 0; i < headlineLines.length; i++) {
+            text(headlineLines[i], pX + L.CONTENT_PADDING + iconOffset, currentY + i * (STATION_TEXT_SIZE.HEADER + 4));
+        }
+        textStyle(NORMAL);
+        currentY += headlineLines.length * (STATION_TEXT_SIZE.HEADER + 4) + L.BTN_SPACING * 2;
+
+        // Divider line
+        stroke(borderColor);
+        strokeWeight(2);
+        line(pX + L.CONTENT_PADDING, currentY, pX + pW - L.CONTENT_PADDING, currentY);
+        noStroke(); // Reset stroke after drawing line
+        currentY += L.BTN_SPACING * 2;
+
+        // Body text - word wrapped
+        const bodyText = item.body || "";
+        const maxBodyWidth = pW - L.CONTENT_PADDING * 2;
+        UIComponents.setTextStyle({ fill: UIComponents.STATION_COLORS.TEXT_SECONDARY, size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP], noStroke: true });
+
+        // Ensure text style is set before wrapping for accurate width calculation
+        const bodyLines = this._wrapText(bodyText, maxBodyWidth);
+        const lineHeight = STATION_TEXT_SIZE.BODY + 4;
+        for (let i = 0; i < bodyLines.length; i++) {
+            text(bodyLines[i], pX + L.CONTENT_PADDING, currentY + i * lineHeight);
+        }
+
+        // Back button
+        const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: "BACK_TO_LIST" });
+        this.newsButtonAreas.push(backBtn);
+    }
+
+    /**
+     * Helper function to wrap text to fit within a given width.
+     * @param {string} text - The text to wrap
+     * @param {number} maxWidth - Maximum width in pixels
+     * @returns {Array<string>} Array of text lines
+     */
+    _wrapText(txt, maxWidth) {
+        if (!txt) return [];
+
+        const words = txt.split(' ');
+        const lines = [];
+        let currentLine = '';
+
+        for (let i = 0; i < words.length; i++) {
+            const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
+            const testWidth = textWidth(testLine);
+
+            if (testWidth > maxWidth && currentLine) {
+                lines.push(currentLine);
+                currentLine = words[i];
+            } else {
+                currentLine = testLine;
+            }
+        }
+
+        if (currentLine) {
+            lines.push(currentLine);
+        }
+
+        return lines;
+    }
+
 
     /**
      * Draws the shared repair content used by both station and space object repairs.
@@ -3151,6 +3317,18 @@ class UIStationMenus {
 
             if (btn.action === "BACK") {
                 if (typeof gameStateManager !== 'undefined') gameStateManager.setState("DOCKED");
+                return true;
+            }
+
+            if (btn.action === "BACK_TO_LIST") {
+                this.selectedNewsItem = null;
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                return true;
+            }
+
+            if (btn.action === "VIEW_NEWS") {
+                this.selectedNewsItem = btn.newsItem;
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
                 return true;
             }
 
