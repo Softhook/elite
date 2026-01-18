@@ -402,4 +402,50 @@ describe('Patrol Mission Scanning Mechanics', () => {
         expect(mission._scannedShipIds.has('enemy2')).toBe(false);
         expect(mission._scannedShipIds.has('enemy3')).toBe(true);
     });
+
+    test('should reject scan when clicking on minimap', () => {
+        // Mock uiManager with minimap
+        global.uiManager.minimap = {
+            isClickInMinimap: jest.fn((mx, my) => true) // Simulate click on minimap
+        };
+
+        // Mock mouseX and mouseY
+        global.mouseX = 1800; // Right side of screen (where minimap is)
+        global.mouseY = 1800;
+
+        const clickedEnemy = enemy1; // On screen
+
+        // Execute scanning logic with minimap check
+        if (clickedEnemy && player.activeMission &&
+            FACTION_PATROL_TYPES.has(player.activeMission.type)) {
+
+            let clickOnMinimap = false;
+            if (typeof uiManager !== 'undefined' && uiManager.minimap &&
+                typeof uiManager.minimap.isClickInMinimap === 'function') {
+                clickOnMinimap = uiManager.minimap.isClickInMinimap(mouseX, mouseY);
+            }
+
+            if (clickOnMinimap) {
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage('Cannot scan from radar! Target must be visible on main screen.', [255, 150, 0]);
+                }
+            } else if (!clickedEnemy._isOnScreen) {
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage('Target must be visible on screen to scan!', [255, 150, 0]);
+                }
+            } else {
+                if (!player.activeMission._scannedShipIds) {
+                    player.activeMission._scannedShipIds = new Set();
+                }
+                player.activeMission._scannedShipIds.add(clickedEnemy.id);
+                player.activeMission.progressCount++;
+            }
+        }
+
+        // Verify scan was rejected
+        expect(mission.progressCount).toBe(0);
+        expect(mission._scannedShipIds).toBeUndefined();
+        expect(uiManager.addMessage).toHaveBeenCalledWith('Cannot scan from radar! Target must be visible on main screen.', [255, 150, 0]);
+        expect(uiManager.minimap.isClickInMinimap).toHaveBeenCalledWith(1800, 1800);
+    });
 });

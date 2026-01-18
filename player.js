@@ -2825,16 +2825,29 @@ class Player {
                         }
 
                         // === PATROL MISSION SCAN PROGRESS ===
-                        // Scanning requires TWO conditions:
+                        // Scanning requires THREE conditions:
                         // 1. Player must CLICK on the enemy to lock target (handled above in handleClick)
                         // 2. Enemy must be VISIBLE on screen (_isOnScreen = true)
+                        // 3. Click must NOT be on the minimap/radar (must be on main screen)
                         // This prevents scanning via overlay/radar when ships are off-screen
                         if (clickedEnemy && this.activeMission &&
                             typeof FACTION_PATROL_TYPES !== 'undefined' &&
                             FACTION_PATROL_TYPES.has(this.activeMission.type)) {
 
-                            // Check if enemy is actually visible on screen
-                            if (!clickedEnemy._isOnScreen) {
+                            // Check if click was on the minimap
+                            let clickOnMinimap = false;
+                            if (typeof uiManager !== 'undefined' && uiManager.minimap &&
+                                typeof uiManager.minimap.isClickInMinimap === 'function') {
+                                clickOnMinimap = uiManager.minimap.isClickInMinimap(mouseX, mouseY);
+                            }
+
+                            if (clickOnMinimap) {
+                                // Reject scan if clicked on minimap
+                                if (typeof uiManager !== 'undefined') {
+                                    uiManager.addMessage('Cannot scan from radar! Target must be visible on main screen.', [255, 150, 0]);
+                                }
+                            } else if (!clickedEnemy._isOnScreen) {
+                                // Check if enemy is actually visible on screen
                                 if (typeof uiManager !== 'undefined') {
                                     uiManager.addMessage('Target must be visible on screen to scan!', [255, 150, 0]);
                                 }
