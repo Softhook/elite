@@ -70,11 +70,19 @@ class CosmicStorm {
         if (!this.dissipating && this.lifetime <= 0) {
             this.dissipating = true;
             this.dissipateStart = millis();
+            // Store initial intensity to avoid recursive degradation issues
+            this.dissipateStartIntensity = this.intensity;
             ENV_LOG(`${this.type} storm beginning to dissipate`);
         }
         if (this.dissipating) {
-            const dissipateProgress = (millis() - this.dissipateStart) / this.dissipateTime;
-            this.intensity = map(dissipateProgress, 0, 1, this.intensity, 0);
+            // Safeguard against division by zero
+            const dTime = (this.dissipateTime > 0) ? this.dissipateTime : 1000;
+            const dissipateProgress = (millis() - this.dissipateStart) / dTime;
+
+            // Use stored start intensity instead of self-referential this.intensity
+            const startInt = (this.dissipateStartIntensity !== undefined) ? this.dissipateStartIntensity : 1.0;
+            this.intensity = map(dissipateProgress, 0, 1, startInt, 0);
+
             if (dissipateProgress >= 1) {
                 ENV_LOG(`${this.type} storm has completely dissipated`);
                 return false;
@@ -220,12 +228,20 @@ class CosmicStorm {
         const baseAlpha = 100 * this.intensity / 255; // Convert to 0-1 range for RGBA
 
         // Create smooth gradient that fades to transparent for natural look
-        gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${baseAlpha})`);
-        gradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.8})`);
-        gradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.55})`);
-        gradient.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.3})`);
-        gradient.addColorStop(0.85, `rgba(${r}, ${g}, ${b}, ${baseAlpha * 0.12})`);
-        gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+        // FIX: Ensure alpha is finite and clamped between 0 and 1 to prevent canvas crashes
+        let safeAlpha = Number.isFinite(baseAlpha) ? baseAlpha : 0;
+        safeAlpha = Math.max(0, Math.min(1, safeAlpha));
+
+        try {
+            gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${safeAlpha})`);
+            gradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${safeAlpha * 0.8})`);
+            gradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${safeAlpha * 0.55})`);
+            gradient.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, ${safeAlpha * 0.3})`);
+            gradient.addColorStop(0.85, `rgba(${r}, ${g}, ${b}, ${safeAlpha * 0.12})`);
+            gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+        } catch (e) {
+            console.error("Error adding color stop to gradient:", e, safeAlpha);
+        }
 
         // Apply gradient to context
         ctx.fillStyle = gradient;
