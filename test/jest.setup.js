@@ -334,21 +334,34 @@ global.TRADER_SHIPS = ['TypeSix', 'TypeNine', 'Hauler'];
 
 // Ship upgrades
 global.SHIP_UPGRADES = [
+    // Armor
     { type: 'armor', level: 1, name: 'Faulcon DeLacy Composite', price: 2500, hullBonus: 40 },
-    { type: 'armor', level: 2, name: 'Core Dynamics Reactive Plates', price: 8500, hullBonus: 100 },
-    { type: 'armor', level: 3, name: 'Vodel Military Grade', price: 22000, hullBonus: 200 },
-    { type: 'engine', level: 1, name: 'Sirius Efficiency Drive', price: 3200, speedMultiplier: 1.15, thrustMultiplier: 1.10 },
-    { type: 'engine', level: 2, name: 'Gutamaya Performance Thrusters', price: 12000, speedMultiplier: 1.30, thrustMultiplier: 1.25 },
-    { type: 'engine', level: 3, name: 'Achilles Overdrive Injectors', price: 35000, speedMultiplier: 1.50, thrustMultiplier: 1.40 },
-    { type: 'shield', level: 1, name: 'Supratech Shield Booster', price: 5000, shieldBonus: 50 },
-    { type: 'shield', level: 2, name: 'Aegis Systems Deflector', price: 15000, shieldBonus: 100 },
-    { type: 'shield', level: 3, name: 'Prismatic Shield Generator', price: 40000, shieldBonus: 200 },
-    { type: 'cloak', level: 1, name: 'Stealth Field Mark I', price: 8000, cloakDuration: 8, cloakCooldown: 45 },
+    { type: 'armor', level: 2, name: 'Core Dynamics Plates', price: 8500, hullBonus: 100 },
+    { type: 'armor', level: 3, name: 'Military Grade Reactive Plates', price: 22000, hullBonus: 200 },
+    // Engines
+    { type: 'engine', level: 1, name: 'Sirius Drive', price: 3200, speedMultiplier: 1.15, thrustMultiplier: 1.10 },
+    { type: 'engine', level: 2, name: 'Gutamaya Engines', price: 12000, speedMultiplier: 1.30, thrustMultiplier: 1.25 },
+    { type: 'engine', level: 3, name: 'Achilles Engines', price: 35000, speedMultiplier: 1.50, thrustMultiplier: 1.40 },
+    // Cargo
+    { type: 'cargo', level: 1, name: 'Lakon High-Capacity Rack', price: 1500, cargoBonus: 10 },
+    { type: 'cargo', level: 2, name: 'Kruger Compression Hold', price: 6000, cargoBonus: 25 },
+    { type: 'cargo', level: 3, name: 'Zorgon Zspace Compressor', price: 18000, cargoBonus: 50 },
+    // Hardpoints
+    { type: 'hardpoints', level: 1, name: 'Auxiliary Mount', price: 15000, bonusSlots: 1 },
+    { type: 'hardpoints', level: 2, name: 'Sponson Extender', price: 45000, bonusSlots: 2 },
+    { type: 'hardpoints', level: 3, name: 'Weapon Array', price: 120000, bonusSlots: 3 },
+    // Shields
+    { type: 'shield', level: 1, name: 'Shield Booster', price: 5000, shieldBonus: 50 },
+    { type: 'shield', level: 2, name: 'Deflector', price: 15000, shieldBonus: 100 },
+    { type: 'shield', level: 3, name: 'Prismatic Shield', price: 40000, shieldBonus: 200 },
+    // Cloak
+    { type: 'cloak', level: 1, name: 'Dark Field', price: 8000, cloakDuration: 8, cloakCooldown: 45 },
     { type: 'cloak', level: 2, name: 'Shadow Matrix', price: 22000, cloakDuration: 15, cloakCooldown: 35 },
-    { type: 'cloak', level: 3, name: 'Phantom Drive', price: 55000, cloakDuration: 25, cloakCooldown: 25 },
-    { type: 'booster', level: 1, name: 'Pulse Drive Igniter', price: 4000, boostMultiplier: 2.0, boostDuration: 1.0, boostCooldown: 10.0 },
-    { type: 'booster', level: 2, name: 'Turbocharged Injector', price: 12000, boostMultiplier: 2.5, boostDuration: 1.5, boostCooldown: 8.0 },
-    { type: 'booster', level: 3, name: 'Nova Drive System', price: 30000, boostMultiplier: 3.0, boostDuration: 2.0, boostCooldown: 6.0 }
+    { type: 'cloak', level: 3, name: 'Phantom Shift', price: 55000, cloakDuration: 25, cloakCooldown: 25 },
+    // Boosters
+    { type: 'booster', level: 1, name: 'Igniter', price: 4000, boostMultiplier: 2.0, boostDuration: 1.0, boostCooldown: 10.0 },
+    { type: 'booster', level: 2, name: 'Turbo Injector', price: 12000, boostMultiplier: 2.5, boostDuration: 1.5, boostCooldown: 8.0 },
+    { type: 'booster', level: 3, name: 'Nova Burst', price: 30000, boostMultiplier: 3.0, boostDuration: 2.0, boostCooldown: 6.0 }
 ];
 
 // Cargo types

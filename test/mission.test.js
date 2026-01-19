@@ -407,10 +407,10 @@ describe('Assassination Missions', () => {
             id: 1,
             title: 'Eliminate Target',
             type: MISSION_TYPE.ASSASSINATION,
-            targetUpgrades: ['Stealth Field Mark I', 'Core Dynamics Reactive Plates'],
+            targetUpgrades: ['Dark Field', 'Core Dynamics Plates'],
             targetUpgradeDetails: [
-                { type: 'cloak', level: 1, name: 'Stealth Field Mark I' },
-                { type: 'armor', level: 2, name: 'Core Dynamics Reactive Plates' }
+                { type: 'cloak', level: 1, name: 'Dark Field' },
+                { type: 'armor', level: 2, name: 'Core Dynamics Plates' }
             ],
             reward: 10000
         });

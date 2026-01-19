@@ -1171,7 +1171,7 @@ const SHIP_DEFINITIONS = {
         canDualEngage: true
     },
     "ShardInterceptor": {
-        name: "Shard Interceptor", role: "Fighter", upgrades: ["Stealth Field Mark I"], sizeCategory: "Small", size: 30,
+        name: "Shard Interceptor", role: "Fighter", upgrades: ["Dark Field"], sizeCategory: "Small", size: 30,
         baseMaxSpeed: 8.5, baseThrust: 0.18, baseTurnRate: 0.08727,
         baseHull: 50, baseShield: 100, shieldRecharge: 1.8, cargoCapacity: 4, // Crystalline structure?
         armament: ["Disruptor", "Scatter Beam"], // Alien tech
@@ -1504,7 +1504,7 @@ const SHIP_DEFINITIONS = {
         techLevel: 3
     },
     "SeparatistShadow": {
-        name: "Separatist Shadow", role: "Stealth Infiltrator", upgrades: ["Stealth Field Mark I"], sizeCategory: "Small", size: 28,
+        name: "Separatist Shadow", role: "Stealth Infiltrator", upgrades: ["Dark Field"], sizeCategory: "Small", size: 28,
         baseMaxSpeed: 6.0, baseThrust: 0.11, baseTurnRate: 0.06,
         baseHull: 50, baseShield: 70, shieldRecharge: 1.2, cargoCapacity: 10,
         armament: ["Pulse Laser", "Disruptor"],

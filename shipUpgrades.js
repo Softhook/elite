@@ -17,7 +17,7 @@ const SHIP_UPGRADES = [
     {
         type: "armor",
         level: 2,
-        name: "Core Dynamics Reactive Plates",
+        name: "Core Dynamics Plates",
         price: 8500,
         hullBonus: 100,
         desc: "Advanced reactive armor that partially dissipates kinetic impact. Standard issue for Core Dynamics gunships."
@@ -25,7 +25,7 @@ const SHIP_UPGRADES = [
     {
         type: "armor",
         level: 3,
-        name: "Vodel Military Grade",
+        name: "Military Grade Reactive Plates",
         price: 22000,
         hullBonus: 200,
         desc: "Heavily classified military plating utilizing dense bonded alloys. Turns your ship into a flying tank."
@@ -37,7 +37,7 @@ const SHIP_UPGRADES = [
     {
         type: "engine",
         level: 1,
-        name: "Sirius Efficiency Drive",
+        name: "Sirius Drive",
         price: 3200,
         speedMultiplier: 1.15, // +15%
         thrustMultiplier: 1.10, // +10%
@@ -46,16 +46,16 @@ const SHIP_UPGRADES = [
     {
         type: "engine",
         level: 2,
-        name: "Gutamaya Performance Thrusters",
+        name: "Gutamaya Engines",
         price: 12000,
         speedMultiplier: 1.30, // +30%
         thrustMultiplier: 1.25, // +25%
-        desc: "High-performance thrusters designed for Imperial couriers. Exceptional straight-line speed."
+        desc: "High-performance Engines designed for Imperial couriers. Exceptional straight-line speed."
     },
     {
         type: "engine",
         level: 3,
-        name: "Achilles Overdrive Injectors",
+        name: "Achilles Engines",
         price: 35000,
         speedMultiplier: 1.50, // +50%
         thrustMultiplier: 1.40, // +40%
@@ -84,7 +84,7 @@ const SHIP_UPGRADES = [
     {
         type: "cargo",
         level: 3,
-        name: "Zorgon Peterson Cargo Optimization",
+        name: "Zorgon Zspace Compressor",
         price: 18000,
         cargoBonus: 50,
         desc: "Complete internal refit stripping non-essential bulkheads to maximize payload volume. Maximum profit per trip."
@@ -96,15 +96,15 @@ const SHIP_UPGRADES = [
     {
         type: "hardpoints",
         level: 1,
-        name: "Manticore Auxiliary Mount",
+        name: "Auxiliary Mount",
         price: 15000,
         bonusSlots: 1,
-        desc: "External weapon mounting point grafted onto the hull. Allows for one additional light weapon system."
+        desc: "External weapon mounting point by Manticore grafted onto the hull. Allows for one additional light weapon system."
     },
     {
         type: "hardpoints",
         level: 2,
-        name: "Remlock Sponson Extender",
+        name: "Sponson Extender",
         price: 45000,
         bonusSlots: 2,
         desc: "Extended weapon sponsons providing mounting points for two additional weapon arrays."
@@ -112,10 +112,10 @@ const SHIP_UPGRADES = [
     {
         type: "hardpoints",
         level: 3,
-        name: "Mastopolos Weapon Array",
+        name: "Weapon Array",
         price: 120000,
         bonusSlots: 3,
-        desc: "Total offensive overhaul integrating three additional hardpoints. Turns any ship into a heavy gunboat."
+        desc: "Total offensive overhaul by Mastopolos, integrating three additional hardpoints. Turns any ship into a heavy gunboat."
     },
     // -----------------------------
     // Shield Upgrades (Max Shield)
@@ -123,26 +123,26 @@ const SHIP_UPGRADES = [
     {
         type: "shield",
         level: 1,
-        name: "Supratech Shield Booster",
+        name: "Shield Booster",
         price: 5000,
         shieldBonus: 50,
-        desc: "Entry-level shield generator booster. Increases maximum shield capacity by 50 units."
+        desc: "Entry-level shield generator booster by Supratech. Increases maximum shield capacity by 50 units."
     },
     {
         type: "shield",
         level: 2,
-        name: "Aegis Systems Deflector",
+        name: "Deflector",
         price: 15000,
         shieldBonus: 100,
-        desc: "Advanced deflector screen technology. Increases maximum shield capacity by 100 units."
+        desc: "Advanced deflector screen technology by Aegis Systems. Increases maximum shield capacity by 100 units."
     },
     {
         type: "shield",
         level: 3,
-        name: "Prismatic Shield Generator",
+        name: "Prismatic Shield",
         price: 40000,
         shieldBonus: 200,
-        desc: "Top-tier prismatic shield technology. Increases maximum shield capacity by 200 units."
+        desc: "Top-tier prismatic shield technology by Aegis Systems. Increases maximum shield capacity by 200 units."
     },
 
     // -----------------------------
@@ -151,7 +151,7 @@ const SHIP_UPGRADES = [
     {
         type: "cloak",
         level: 1,
-        name: "Stealth Field Mark I",
+        name: "Dark Field",
         price: 8000,
         cloakDuration: 8,      // seconds
         cloakCooldown: 45,     // seconds
@@ -169,7 +169,7 @@ const SHIP_UPGRADES = [
     {
         type: "cloak",
         level: 3,
-        name: "Phantom Drive",
+        name: "Phantom Shift",
         price: 55000,
         cloakDuration: 25,     // seconds
         cloakCooldown: 25,     // seconds
@@ -182,7 +182,7 @@ const SHIP_UPGRADES = [
     {
         type: "booster",
         level: 1,
-        name: "Pulse Drive Igniter",
+        name: "Igniter",
         price: 4000,
         boostMultiplier: 2.0,      // 2x speed
         boostDuration: 1.0,        // 1 second
@@ -192,7 +192,7 @@ const SHIP_UPGRADES = [
     {
         type: "booster",
         level: 2,
-        name: "Turbocharged Injector",
+        name: "Turbo Injector",
         price: 12000,
         boostMultiplier: 2.5,      // 2.5x speed
         boostDuration: 1.5,        // 1.5 seconds
@@ -202,7 +202,7 @@ const SHIP_UPGRADES = [
     {
         type: "booster",
         level: 3,
-        name: "Nova Drive System",
+        name: "Nova Burst",
         price: 30000,
         boostMultiplier: 3.0,      // 3x speed
         boostDuration: 2.0,        // 2 seconds
