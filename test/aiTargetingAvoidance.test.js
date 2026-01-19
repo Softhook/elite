@@ -100,9 +100,9 @@ describe('AI Targeting & Avoidance Tests', () => {
 
     describe('Space Object Avoidance', () => {
         test('should detect obstacle in path and adjust target', () => {
-            // Create system with obstacle directly in path
+            // Create system with obstacle directly in path (diameter = 80 = maxRadius 40 * 2)
             mockSystem.asteroids = [
-                { pos: createVector(200, 0), size: 80, maxRadius: 40, destroyed: false, isAsteroid: true }
+                { pos: createVector(200, 0), maxRadius: 40, destroyed: false, isAsteroid: true }
             ];
 
             // Target directly past the asteroid
@@ -127,9 +127,9 @@ describe('AI Targeting & Avoidance Tests', () => {
         });
 
         test('should slow down when obstacle is very close', () => {
-            // Position enemy very close to asteroid at (200,0)
+            // Position enemy very close to asteroid at (200,0) (diameter = 80 = maxRadius 40 * 2)
             mockSystem.asteroids = [
-                { pos: createVector(200, 0), size: 80, maxRadius: 40, destroyed: false, isAsteroid: true }
+                { pos: createVector(200, 0), maxRadius: 40, destroyed: false, isAsteroid: true }
             ];
             enemy.pos.set(160, 0);
             const targetPos = createVector(400, 0);
@@ -144,10 +144,10 @@ describe('AI Targeting & Avoidance Tests', () => {
             // Set enemy size to 25 for this test (larger than smaller asteroid, smaller than larger one)
             enemy.size = 25;
 
-            // Create asteroids: one smaller (diameter 20), one larger (diameter 100)
+            // Create asteroids: one smaller (diameter 20 = maxRadius 10 * 2), one larger (diameter 100 = maxRadius 50 * 2)
             mockSystem.asteroids = [
-                { pos: createVector(150, 0), size: 20, maxRadius: 10, destroyed: false }, // Smaller
-                { pos: createVector(250, 0), size: 100, maxRadius: 50, destroyed: false } // Larger
+                { pos: createVector(150, 0), maxRadius: 10, destroyed: false }, // Smaller (diameter 20)
+                { pos: createVector(250, 0), maxRadius: 50, destroyed: false } // Larger (diameter 100)
             ];
 
             const targetPos = createVector(400, 0);
@@ -163,9 +163,9 @@ describe('AI Targeting & Avoidance Tests', () => {
             // Enemy has size 25
             enemy.size = 25;
 
-            // Create asteroid with same size (diameter = 25)
+            // Create asteroid with same size (diameter = 25 = maxRadius 12.5 * 2)
             mockSystem.asteroids = [
-                { pos: createVector(200, 0), size: 25, maxRadius: 12.5, destroyed: false }
+                { pos: createVector(200, 0), maxRadius: 12.5, destroyed: false }
             ];
 
             const targetPos = createVector(400, 0);
