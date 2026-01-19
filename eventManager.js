@@ -89,7 +89,7 @@ class EventManager {
         this.events = [
             {
                 type: "ASTEROID_CLUSTER",
-                probabilityPerFrame: 0.00005,
+                probabilityPerFrame: 0.000025,
                 minCooldownMs: 5 * 60 * 1000, // 5 minutes
                 warningDurationMs: 5000,      // 5 seconds
                 lastTriggeredTime: -Infinity,
@@ -114,7 +114,7 @@ class EventManager {
             },
             {
                 type: "ALIEN_RAID",
-                probabilityPerFrame: 0.00003,
+                probabilityPerFrame: 0.000015,
                 minCooldownMs: 10 * 60 * 1000, // 10 minutes
                 warningDurationMs: 5000,
                 lastTriggeredTime: -Infinity,
@@ -144,7 +144,7 @@ class EventManager {
             },
             {
                 type: "PIRATE_SWARM",
-                probabilityPerFrame: 0.00005,
+                probabilityPerFrame: 0.000025,
                 minCooldownMs: 8 * 60 * 1000, // 8 minutes
                 warningDurationMs: 5000,
                 lastTriggeredTime: -Infinity,
@@ -178,7 +178,7 @@ class EventManager {
             },
             {
                 type: "BOUNTY_HUNTER_AMBUSH",
-                probabilityPerFrame: 0.00002,
+                probabilityPerFrame: 0.00001,
                 minCooldownMs: 12 * 60 * 1000, // 12 minutes
                 warningDurationMs: 8300,
                 lastTriggeredTime: -Infinity,
@@ -257,7 +257,7 @@ class EventManager {
             },
             {
                 type: "COMET",
-                probabilityPerFrame: 0.00001,
+                probabilityPerFrame: 0.000005,
                 minCooldownMs: 20 * 60 * 1000,
                 warningDurationMs: 10000,
                 lastTriggeredTime: -Infinity,
@@ -284,7 +284,7 @@ class EventManager {
             },
             {
                 type: "METEOR_SHOWER",
-                probabilityPerFrame: 0.00004,
+                probabilityPerFrame: 0.00002,
                 minCooldownMs: 12 * 60 * 1000,
                 warningDurationMs: 5000,
                 lastTriggeredTime: -Infinity,
@@ -309,7 +309,7 @@ class EventManager {
             },
             {
                 type: "COSMIC_STORM",
-                probabilityPerFrame: 0.00002,
+                probabilityPerFrame: 0.00001,
                 minCooldownMs: 25 * 60 * 1000,
                 warningDurationMs: 10000,
                 lastTriggeredTime: -Infinity,
@@ -333,7 +333,7 @@ class EventManager {
             },
             {
                 type: "DISTRESS_SIGNAL",
-                probabilityPerFrame: 0.00003,
+                probabilityPerFrame: 0.000015,
                 minCooldownMs: 15 * 60 * 1000,
                 warningDurationMs: 5000,
                 lastTriggeredTime: -Infinity,
@@ -370,7 +370,7 @@ class EventManager {
             },
             {
                 type: "TRADER_CONVOY",
-                probabilityPerFrame: 0.000025,
+                probabilityPerFrame: 0.0000125,
                 minCooldownMs: 18 * 60 * 1000,
                 warningDurationMs: 5000,
                 lastTriggeredTime: -Infinity,
@@ -403,7 +403,7 @@ class EventManager {
             },
             {
                 type: "NAVAL_PATROL",
-                probabilityPerFrame: 0.00002,
+                probabilityPerFrame: 0.00001,
                 minCooldownMs: 20 * 60 * 1000,
                 warningDurationMs: 6600,
                 lastTriggeredTime: -Infinity,
@@ -436,7 +436,7 @@ class EventManager {
             },
             {
                 type: "ALIEN_ARTIFACT",
-                probabilityPerFrame: 0.000005,
+                probabilityPerFrame: 0.0000025,
                 minCooldownMs: 30 * 60 * 1000,
                 warningDurationMs: 5000,
                 lastTriggeredTime: -Infinity,
@@ -466,34 +466,34 @@ class EventManager {
 
     _addDynamicEvents() {
         this.events.push(
-            { type: "MARKET_SHORTAGE", probabilityPerFrame: 0.00004, minCooldownMs: 12 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "MARKET ALERT: Local shortage detected!", color: "orange", consoleLog: "EventManager: Market shortage warning issued." } },
-            { type: "MARKET_SURPLUS", probabilityPerFrame: 0.00003, minCooldownMs: 12 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "MARKET NOTICE: Oversupply affecting prices.", color: "green", consoleLog: "EventManager: Market surplus warning issued." } },
-            { type: "BLACK_MARKET_AUCTION", probabilityPerFrame: 0.00001, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "UNDERTONE: Black market auction incoming.", color: "purple", consoleLog: "EventManager: Black market auction warning issued." } },
-            { type: "SMUGGLING_BUST", probabilityPerFrame: 0.00002, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ENFORCEMENT: Smuggling interdiction underway.", color: "red", consoleLog: "EventManager: Smuggling bust warning issued." } },
-            { type: "BLOCKADE", probabilityPerFrame: 0.00001, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "BLOCKADE: Trade lanes restricted by military.", color: "blue", consoleLog: "EventManager: Blockade warning issued." } },
-            { type: "DIPLOMATIC_VISIT", probabilityPerFrame: 0.00001, minCooldownMs: 45 * 60 * 1000, warningDurationMs: 6600, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CIVIC: Diplomatic envoy arriving.", color: "teal", consoleLog: "EventManager: Diplomatic visit warning issued." } },
-            { type: "TECH_BREAKTHROUGH", probabilityPerFrame: 0.000008, minCooldownMs: 60 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "RESEARCH: New tech prototype surfaced.", color: "magenta", consoleLog: "EventManager: Tech breakthrough warning issued." } },
-            { type: "STATION_STRIKE", probabilityPerFrame: 0.000012, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "LABOR: Station strike in progress.", color: "orange", consoleLog: "EventManager: Station strike warning issued." } },
-            { type: "POWER_OUTAGE", probabilityPerFrame: 0.000015, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ALERT: Station power outage reported.", color: "yellow", consoleLog: "EventManager: Power outage warning issued." } },
-            { type: "SABOTAGE", probabilityPerFrame: 0.00001, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SABOTAGE: Infrastructure damage detected.", color: "crimson", consoleLog: "EventManager: Sabotage warning issued." } },
-            { type: "MINING_BOOM", probabilityPerFrame: 0.00002, minCooldownMs: 35 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "MINING: High-yield discovery announced.", color: "olive", consoleLog: "EventManager: Mining boom warning issued." } },
-            { type: "MINE_ACCIDENT", probabilityPerFrame: 0.00001, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "HAZARD: Mining accident - emergency response.", color: "orange", consoleLog: "EventManager: Mine accident warning issued." } },
-            { type: "SOLAR_FLARE", probabilityPerFrame: 0.000008, minCooldownMs: 50 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SPACE WEATHER: Solar flare activity detected.", color: "yellow", consoleLog: "EventManager: Solar flare warning issued." } },
-            { type: "QUARANTINE", probabilityPerFrame: 0.000006, minCooldownMs: 80 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "QUARANTINE: Contagion measures in effect.", color: "purple", consoleLog: "EventManager: Quarantine warning issued." } },
-            { type: "REFUGEE_INFLUX", probabilityPerFrame: 0.00001, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CIVIC: Refugee influx stresses local services.", color: "brown", consoleLog: "EventManager: Refugee influx warning issued." } },
-            { type: "RARE_COMMODITY", probabilityPerFrame: 0.00001, minCooldownMs: 50 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "DISCOVERY: Rare commodity located nearby.", color: "gold", consoleLog: "EventManager: Rare commodity warning issued." }, spawnConfig: { entityType: 'cargo', minEntities: 1, maxEntities: 2, spawnRadiusMin: 1500, spawnRadiusMax: 3000, cargoType: 'Rare Ore', quantity: 1 } },
-            { type: "HACKER_ATTACK", probabilityPerFrame: 0.000009, minCooldownMs: 36 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CYBER: Systems under hacker attack.", color: "purple", consoleLog: "EventManager: Hacker attack warning issued." } },
-            { type: "SALVAGE_OPPORTUNITY", probabilityPerFrame: 0.00002, minCooldownMs: 12 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SALVAGE: Wreckage detected — high-value salvage possible.", color: "silver", consoleLog: "EventManager: Salvage opportunity warning issued." }, spawnConfig: { entityType: 'cargo', minEntities: 1, maxEntities: 3, spawnRadiusMin: 1600, spawnRadiusMax: 3000, cargoType: 'Metals', quantity: 2 } },
-            { type: "BOUNTY_INCREASE", probabilityPerFrame: 0.000015, minCooldownMs: 28 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "NOTICE: Bounties increased on wanted criminals.", color: "red", consoleLog: "EventManager: Bounty increase warning issued." } },
-            { type: "REPUTATION_SCANDAL", probabilityPerFrame: 0.000007, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SCANDAL: Reputation-shifting news is spreading.", color: "pink", consoleLog: "EventManager: Reputation scandal warning issued." } },
+            { type: "MARKET_SHORTAGE", probabilityPerFrame: 0.00002, minCooldownMs: 12 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "MARKET ALERT: Local shortage detected!", color: "orange", consoleLog: "EventManager: Market shortage warning issued." } },
+            { type: "MARKET_SURPLUS", probabilityPerFrame: 0.000015, minCooldownMs: 12 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "MARKET NOTICE: Oversupply affecting prices.", color: "green", consoleLog: "EventManager: Market surplus warning issued." } },
+            { type: "BLACK_MARKET_AUCTION", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "UNDERTONE: Black market auction incoming.", color: "purple", consoleLog: "EventManager: Black market auction warning issued." } },
+            { type: "SMUGGLING_BUST", probabilityPerFrame: 0.00001, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ENFORCEMENT: Smuggling interdiction underway.", color: "red", consoleLog: "EventManager: Smuggling bust warning issued." } },
+            { type: "BLOCKADE", probabilityPerFrame: 0.000005, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "BLOCKADE: Trade lanes restricted by military.", color: "blue", consoleLog: "EventManager: Blockade warning issued." } },
+            { type: "DIPLOMATIC_VISIT", probabilityPerFrame: 0.000005, minCooldownMs: 45 * 60 * 1000, warningDurationMs: 6600, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CIVIC: Diplomatic envoy arriving.", color: "teal", consoleLog: "EventManager: Diplomatic visit warning issued." } },
+            { type: "TECH_BREAKTHROUGH", probabilityPerFrame: 0.000004, minCooldownMs: 60 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "RESEARCH: New tech prototype surfaced.", color: "magenta", consoleLog: "EventManager: Tech breakthrough warning issued." } },
+            { type: "STATION_STRIKE", probabilityPerFrame: 0.000006, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "LABOR: Station strike in progress.", color: "orange", consoleLog: "EventManager: Station strike warning issued." } },
+            { type: "POWER_OUTAGE", probabilityPerFrame: 0.0000075, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ALERT: Station power outage reported.", color: "yellow", consoleLog: "EventManager: Power outage warning issued." } },
+            { type: "SABOTAGE", probabilityPerFrame: 0.000005, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SABOTAGE: Infrastructure damage detected.", color: "crimson", consoleLog: "EventManager: Sabotage warning issued." } },
+            { type: "MINING_BOOM", probabilityPerFrame: 0.00001, minCooldownMs: 35 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "MINING: High-yield discovery announced.", color: "olive", consoleLog: "EventManager: Mining boom warning issued." } },
+            { type: "MINE_ACCIDENT", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "HAZARD: Mining accident - emergency response.", color: "orange", consoleLog: "EventManager: Mine accident warning issued." } },
+            { type: "SOLAR_FLARE", probabilityPerFrame: 0.000004, minCooldownMs: 50 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SPACE WEATHER: Solar flare activity detected.", color: "yellow", consoleLog: "EventManager: Solar flare warning issued." } },
+            { type: "QUARANTINE", probabilityPerFrame: 0.000003, minCooldownMs: 80 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "QUARANTINE: Contagion measures in effect.", color: "purple", consoleLog: "EventManager: Quarantine warning issued." } },
+            { type: "REFUGEE_INFLUX", probabilityPerFrame: 0.000005, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CIVIC: Refugee influx stresses local services.", color: "brown", consoleLog: "EventManager: Refugee influx warning issued." } },
+            { type: "RARE_COMMODITY", probabilityPerFrame: 0.000005, minCooldownMs: 50 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "DISCOVERY: Rare commodity located nearby.", color: "gold", consoleLog: "EventManager: Rare commodity warning issued." }, spawnConfig: { entityType: 'cargo', minEntities: 1, maxEntities: 2, spawnRadiusMin: 1500, spawnRadiusMax: 3000, cargoType: 'Rare Ore', quantity: 1 } },
+            { type: "HACKER_ATTACK", probabilityPerFrame: 0.0000045, minCooldownMs: 36 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CYBER: Systems under hacker attack.", color: "purple", consoleLog: "EventManager: Hacker attack warning issued." } },
+            { type: "SALVAGE_OPPORTUNITY", probabilityPerFrame: 0.00001, minCooldownMs: 12 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SALVAGE: Wreckage detected — high-value salvage possible.", color: "silver", consoleLog: "EventManager: Salvage opportunity warning issued." }, spawnConfig: { entityType: 'cargo', minEntities: 1, maxEntities: 3, spawnRadiusMin: 1600, spawnRadiusMax: 3000, cargoType: 'Metals', quantity: 2 } },
+            { type: "BOUNTY_INCREASE", probabilityPerFrame: 0.0000075, minCooldownMs: 28 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "NOTICE: Bounties increased on wanted criminals.", color: "red", consoleLog: "EventManager: Bounty increase warning issued." } },
+            { type: "REPUTATION_SCANDAL", probabilityPerFrame: 0.0000035, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SCANDAL: Reputation-shifting news is spreading.", color: "pink", consoleLog: "EventManager: Reputation scandal warning issued." } },
             // === War Events ===
-            { type: "SKIRMISH_SEPARATIST_IMPERIAL", probabilityPerFrame: 0.000015, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "⚔️ CONFLICT: Separatist and Imperial forces clashing!", color: "orange", consoleLog: "EventManager: Separatist vs Imperial skirmish warning issued." } },
-            { type: "SKIRMISH_ALIEN_MILITARY", probabilityPerFrame: 0.00001, minCooldownMs: 35 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "⚔️ INVASION: Alien forces engaging military!", color: "magenta", consoleLog: "EventManager: Alien vs Military skirmish warning issued." } },
-            { type: "WAR_SEPARATIST_IMPERIAL", probabilityPerFrame: 0.000008, minCooldownMs: 60 * 60 * 1000, warningDurationMs: 15000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "🔥 FULL SCALE WAR: Separatist vs Imperial forces!", color: "red", consoleLog: "EventManager: Separatist vs Imperial full war warning issued." } },
-            { type: "WAR_ALIEN_MILITARY", probabilityPerFrame: 0.000006, minCooldownMs: 70 * 60 * 1000, warningDurationMs: 15000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "🔥 FULL SCALE WAR: Alien invasion vs Military!", color: "crimson", consoleLog: "EventManager: Alien vs Military full war warning issued." } },
+            { type: "SKIRMISH_SEPARATIST_IMPERIAL", probabilityPerFrame: 0.0000075, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "⚔️ CONFLICT: Separatist and Imperial forces clashing!", color: "orange", consoleLog: "EventManager: Separatist vs Imperial skirmish warning issued." } },
+            { type: "SKIRMISH_ALIEN_MILITARY", probabilityPerFrame: 0.000005, minCooldownMs: 35 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "⚔️ INVASION: Alien forces engaging military!", color: "magenta", consoleLog: "EventManager: Alien vs Military skirmish warning issued." } },
+            { type: "WAR_SEPARATIST_IMPERIAL", probabilityPerFrame: 0.000004, minCooldownMs: 60 * 60 * 1000, warningDurationMs: 15000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "🔥 FULL SCALE WAR: Separatist vs Imperial forces!", color: "red", consoleLog: "EventManager: Separatist vs Imperial full war warning issued." } },
+            { type: "WAR_ALIEN_MILITARY", probabilityPerFrame: 0.000003, minCooldownMs: 70 * 60 * 1000, warningDurationMs: 15000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "🔥 FULL SCALE WAR: Alien invasion vs Military!", color: "crimson", consoleLog: "EventManager: Alien vs Military full war warning issued." } },
             // === Crisis Events (affect connected systems) ===
-            { type: "PLAGUE", probabilityPerFrame: 0.000005, minCooldownMs: 80 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "☠️ PLAGUE: Deadly outbreak spreading across systems!", color: "magenta", consoleLog: "EventManager: Plague warning issued." } },
-            { type: "FAMINE", probabilityPerFrame: 0.000005, minCooldownMs: 80 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "🍂 FAMINE: Crop failures cause widespread hunger!", color: "orange", consoleLog: "EventManager: Famine warning issued." } }
+            { type: "PLAGUE", probabilityPerFrame: 0.0000025, minCooldownMs: 80 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "☠️ PLAGUE: Deadly outbreak spreading across systems!", color: "magenta", consoleLog: "EventManager: Plague warning issued." } },
+            { type: "FAMINE", probabilityPerFrame: 0.0000025, minCooldownMs: 80 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "🍂 FAMINE: Crop failures cause widespread hunger!", color: "orange", consoleLog: "EventManager: Famine warning issued." } }
         );
     }
 
@@ -1485,6 +1485,14 @@ class EventManager {
         const baseSpawnAngle = random(TWO_PI);
 
         if (typeof EVENT_LOG === 'function') EVENT_LOG(`EventManager: Spawning ${event.type}: ${numToSpawn} ${shipTypeToSpawn}(s)`);
+
+        // Add event marker for the group location (excluding DISTRESS_SIGNAL which handles its own)
+        if (event.type !== 'DISTRESS_SIGNAL') {
+            const label = event.type.split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+            this._addEventMarkerSafely(`${event.type}_${frameCount}`, baseSpawnRadius * cos(baseSpawnAngle) + this.player.pos.x, baseSpawnRadius * sin(baseSpawnAngle) + this.player.pos.y, label, 'red', this._extendDurationMs(180000));
+        }
 
         for (let i = 0; i < numToSpawn; i++) {
             let currentSpawnAngle = baseSpawnAngle;

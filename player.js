@@ -2071,8 +2071,28 @@ class Player {
     canDock(station) {
         if (!station?.pos) return false;
         const d = dist(this.pos.x, this.pos.y, station.pos.x, station.pos.y);
-        const speed = this.vel.mag();
         const radius = station.dockingRadius ?? 0;
+        const speed = this.vel.mag();
+
+        // Check range first
+        if (d < radius) {
+            // Check for specific docking blockers
+            if (station.quarantineExpires && millis() < station.quarantineExpires) {
+                // Debounce message every 2.5 seconds to avoid spamming while hovering
+                // Only show if speed is relatively low (indicating intent to dock) to avoid spam during flybys
+                if (speed < 2.0) {
+                    if (!this._lastQuarantineMsg || millis() - this._lastQuarantineMsg > 2500) {
+                        if (typeof uiManager !== 'undefined') {
+                            uiManager.addMessage(`Docking Protocol Override: Station under Quarantine!`, [255, 80, 80]);
+                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                        }
+                        this._lastQuarantineMsg = millis();
+                    }
+                }
+                return false;
+            }
+        }
+
         return (d < radius && speed < 0.5);
     }
 
