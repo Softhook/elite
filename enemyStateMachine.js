@@ -105,6 +105,8 @@ class EnemyStateMachine {
      * @private
      */
     _updateState_IDLE(targetExists) {
+        if (this.immobilized) return;
+
         if (targetExists) {
             this.changeState(AI_STATE.APPROACHING);
             return;

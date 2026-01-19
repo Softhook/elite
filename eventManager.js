@@ -362,6 +362,9 @@ class EventManager {
                     additionalEnemySetup: (enemy, player) => {
                         enemy.currentState = AI_STATE.IDLE;
                         enemy.hull = enemy.maxHull * 0.3; // Damaged
+                        enemy.immobilized = true;
+                        if (enemy.vel) enemy.vel.set(0, 0);
+                        this._addEventMarkerSafely(`DISTRESS_${enemy.id}`, enemy.pos.x, enemy.pos.y, "Distress Signal", "red", this._extendDurationMs(15 * 60 * 1000));
                     }
                 }
             },
