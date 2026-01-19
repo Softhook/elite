@@ -1,5 +1,13 @@
 # Elite Game Development TODO
 
+if you destory a faction ship the other faction is hostile towards you and you have to pay a fine
+
+factions rewars loyality with ship upgrades as you rise up the ranks
+
+make sure events dont use uppercase on the minimap
+
+Create mysterious messages and missions that arrive and stay on the left hand side of the screen. 
+
 Use NLP to help diversify the news, mission, and dialogue. 
 
 more events 

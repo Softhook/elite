@@ -696,7 +696,7 @@ class EventManager {
                     this._addPersistentEvent(`SHORTAGE_${station.name}`, `${station.name}: ${commodity.name} Shortage (High Prices)`, 'orange', this._extendDurationMs(180000));
 
                     if (station?.pos) {
-                        this._addEventMarkerSafely(`SHORTAGE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Market Shortage`, 'orange', this._extendDurationMs(180000));
+                        this._addEventMarkerSafely(`SHORTAGE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `${commodity.name} Shortage`, 'orange', this._extendDurationMs(180000));
                     }
                 }
                 break;
@@ -719,7 +719,7 @@ class EventManager {
                     this._addPersistentEvent(`SURPLUS_${station.name}`, `${station.name}: ${commodity.name} Surplus (Low Prices)`, 'green', this._extendDurationMs(180000));
 
                     if (station?.pos) {
-                        this._addEventMarkerSafely(`SURPLUS_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Market Surplus`, 'green', this._extendDurationMs(180000));
+                        this._addEventMarkerSafely(`SURPLUS_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `${commodity.name} Surplus`, 'green', this._extendDurationMs(180000));
                     }
                 }
                 break;
@@ -1420,7 +1420,10 @@ class EventManager {
         // Add a single HUD marker for the cluster so player can find it quickly
         try {
             const anchorLabel = this._deriveAnchorLabelForPos(baseSpawnX, baseSpawnY);
-            const clusterLabel = `${event.type.replace(/_/g, ' ')}`;
+            // Convert ASTEROID_CLUSTER -> Asteroid Cluster
+            const clusterLabel = event.type.split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
             if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                 this.uiManager.addEventMarker(`${event.type}_CLUSTER_${frameCount}`, baseSpawnX, baseSpawnY, clusterLabel, 'orange', this._extendDurationMs(180000));
             }

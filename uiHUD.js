@@ -148,7 +148,6 @@ class UIHUD {
 
         const screenCenterX = width / 2;
         const screenCenterY = height / 2;
-        const edgeBuffer = 10;
 
         for (let i = 0; i < this.eventMarkers.length; i++) {
             const m = this.eventMarkers[i];
@@ -179,57 +178,6 @@ class UIHUD {
                 // Label above blip
                 fill(255, 255, 255, opacity);
                 text(m.label, screenX, screenY - 16);
-            } else {
-                // Off-screen edge indicator
-                const dx = relX;
-                const dy = relY;
-                const angle = atan2(dy, dx);
-
-                // Find intersection with screen edge (reuse logic similar to battle indicators)
-                let edgeX, edgeY;
-                const h = height - 2 * edgeBuffer;
-                const w = width - 2 * edgeBuffer;
-
-                let tVert = Infinity;
-                if (abs(cos(angle)) > 1e-6) tVert = (cos(angle) > 0 ? w / 2 : -w / 2) / cos(angle);
-                const yAtScreenVertEdge = screenCenterY + sin(angle) * tVert;
-
-                let tHoriz = Infinity;
-                if (abs(sin(angle)) > 1e-6) tHoriz = (sin(angle) > 0 ? h / 2 : -h / 2) / sin(angle);
-                const xAtScreenHorizEdge = screenCenterX + cos(angle) * tHoriz;
-
-                if (abs(yAtScreenVertEdge - screenCenterY) <= h / 2 && tVert < tHoriz) {
-                    edgeX = cos(angle) > 0 ? width - edgeBuffer : edgeBuffer;
-                    edgeY = constrain(yAtScreenVertEdge, edgeBuffer, height - edgeBuffer);
-                } else if (abs(xAtScreenHorizEdge - screenCenterX) <= w / 2) {
-                    edgeY = sin(angle) > 0 ? height - edgeBuffer : edgeBuffer;
-                    edgeX = constrain(xAtScreenHorizEdge, edgeBuffer, width - edgeBuffer);
-                } else {
-                    if (abs(cos(angle)) > abs(sin(angle))) {
-                        edgeX = cos(angle) > 0 ? width - edgeBuffer : edgeBuffer;
-                        edgeY = constrain(screenCenterY + tan(angle) * (edgeX - screenCenterX), edgeBuffer, height - edgeBuffer);
-                    } else {
-                        edgeY = sin(angle) > 0 ? height - edgeBuffer : edgeBuffer;
-                        edgeX = constrain(screenCenterX + (edgeY - screenCenterY) / tan(angle), edgeBuffer, width - edgeBuffer);
-                    }
-                }
-
-                // Draw small arrow/triangle
-                push();
-                translate(edgeX, edgeY);
-                rotate(angle);
-                noStroke();
-                if (Array.isArray(m.color)) {
-                    fill(...m.color, opacity);
-                } else {
-                    try { const c = color(m.color); fill(red(c), green(c), blue(c), Math.min(opacity, alpha(c))); } catch (e) { fill(255, 255, 255, opacity); }
-                }
-                triangle(-8, -6, -8, 6, 8, 0);
-                pop();
-
-                // Label near edge
-                fill(255, 255, 255, opacity);
-                text(m.label, edgeX + (cos(angle) * 20), edgeY + (sin(angle) * 20));
             }
         }
         pop();
