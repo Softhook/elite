@@ -100,9 +100,9 @@ describe('AI Targeting & Avoidance Tests', () => {
 
     describe('Space Object Avoidance', () => {
         test('should detect obstacle in path and adjust target', () => {
-            // Create system with obstacle directly in path
+            // Create system with obstacle directly in path (diameter = 80 = maxRadius 40 * 2)
             mockSystem.asteroids = [
-                { pos: createVector(200, 0), size: 80, maxRadius: 40, destroyed: false, isAsteroid: true }
+                { pos: createVector(200, 0), maxRadius: 40, destroyed: false, isAsteroid: true }
             ];
 
             // Target directly past the asteroid
@@ -127,9 +127,9 @@ describe('AI Targeting & Avoidance Tests', () => {
         });
 
         test('should slow down when obstacle is very close', () => {
-            // Position enemy very close to asteroid at (200,0)
+            // Position enemy very close to asteroid at (200,0) (diameter = 80 = maxRadius 40 * 2)
             mockSystem.asteroids = [
-                { pos: createVector(200, 0), size: 80, maxRadius: 40, destroyed: false, isAsteroid: true }
+                { pos: createVector(200, 0), maxRadius: 40, destroyed: false, isAsteroid: true }
             ];
             enemy.pos.set(160, 0);
             const targetPos = createVector(400, 0);
@@ -138,6 +138,115 @@ describe('AI Targeting & Avoidance Tests', () => {
 
             // Should set avoidance timer for velocity damping
             expect(enemy._asteroidAvoidTimer).toBeGreaterThan(0);
+        });
+
+        test('should only avoid obstacles larger than itself', () => {
+            // Set enemy size to 25 for this test (larger than smaller asteroid, smaller than larger one)
+            enemy.size = 25;
+
+            // Create asteroids: one smaller (diameter 20 = maxRadius 10 * 2), one larger (diameter 100 = maxRadius 50 * 2)
+            mockSystem.asteroids = [
+                { pos: createVector(150, 0), maxRadius: 10, destroyed: false }, // Smaller (diameter 20)
+                { pos: createVector(250, 0), maxRadius: 50, destroyed: false } // Larger (diameter 100)
+            ];
+
+            const targetPos = createVector(400, 0);
+            const safeTarget = enemy._avoidObstaclesAndAdjustTarget(mockSystem, targetPos);
+
+            // Should avoid the larger asteroid at 250 but not the smaller at 150
+            // Since the larger asteroid is in the path, target should be adjusted or timer set
+            const wasAdjusted = (safeTarget.y !== targetPos.y) || enemy._asteroidAvoidTimer > 0;
+            expect(wasAdjusted).toBe(true);
+        });
+
+        test('should not avoid obstacle of equal size', () => {
+            // Enemy has size 25
+            enemy.size = 25;
+
+            // Create asteroid with same size (diameter = 25 = maxRadius 12.5 * 2)
+            mockSystem.asteroids = [
+                { pos: createVector(200, 0), maxRadius: 12.5, destroyed: false }
+            ];
+
+            const targetPos = createVector(400, 0);
+            const safeTarget = enemy._avoidObstaclesAndAdjustTarget(mockSystem, targetPos);
+
+            // Should not be adjusted since obstacle is equal size
+            expect(safeTarget.x).toBe(targetPos.x);
+            expect(safeTarget.y).toBe(targetPos.y);
+            expect(enemy._asteroidAvoidTimer || 0).toBe(0);
+        });
+
+        test('should not avoid smaller ships', () => {
+            // Large enemy ship
+            enemy.size = 80;
+
+            // Small enemy ship in path (Sidewinder, size 20)
+            const smallEnemy = new Enemy(200, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+            smallEnemy.size = 20; // Match Sidewinder's defined size
+            mockSystem.enemies = [smallEnemy];
+
+            const targetPos = createVector(400, 0);
+            const safeTarget = enemy._avoidObstaclesAndAdjustTarget(mockSystem, targetPos);
+
+            // Should not avoid smaller ship
+            expect(safeTarget.x).toBe(targetPos.x);
+            expect(safeTarget.y).toBe(targetPos.y);
+            expect(enemy._asteroidAvoidTimer || 0).toBe(0);
+        });
+
+        test('should avoid larger ships', () => {
+            // Small enemy ship (Sidewinder, size 20)
+            enemy.size = 20;
+            enemy.pos.set(0, 0);
+
+            // Large enemy ship in path (Anaconda, size 120)
+            const largeEnemy = new Enemy(200, 0, mockPlayer, 'Anaconda', AI_ROLE.COMBAT);
+            largeEnemy.size = 120; // Match Anaconda's defined size in ships.js
+            mockSystem.enemies = [largeEnemy];
+
+            const targetPos = createVector(400, 0);
+            const safeTarget = enemy._avoidObstaclesAndAdjustTarget(mockSystem, targetPos);
+
+            // Should avoid larger ship
+            const wasAdjusted = (safeTarget.y !== targetPos.y) || enemy._asteroidAvoidTimer > 0;
+            expect(wasAdjusted).toBe(true);
+        });
+
+        test('should avoid larger space objects', () => {
+            // Small ship
+            enemy.size = 25;
+            enemy.pos.set(0, 0);
+
+            // Large space object in path
+            mockSystem.spaceObjects = [
+                { pos: createVector(200, 0), size: 100, destroyed: false }
+            ];
+
+            const targetPos = createVector(400, 0);
+            const safeTarget = enemy._avoidObstaclesAndAdjustTarget(mockSystem, targetPos);
+
+            // Should avoid space object (immovable structure)
+            const wasAdjusted = (safeTarget.y !== targetPos.y) || enemy._asteroidAvoidTimer > 0;
+            expect(wasAdjusted).toBe(true);
+        });
+
+        test('should avoid smaller space objects (immovable structures)', () => {
+            // Large ship
+            enemy.size = 80;
+            enemy.pos.set(0, 0);
+
+            // Small space object in path
+            mockSystem.spaceObjects = [
+                { pos: createVector(200, 0), size: 30, destroyed: false }
+            ];
+
+            const targetPos = createVector(400, 0);
+            const safeTarget = enemy._avoidObstaclesAndAdjustTarget(mockSystem, targetPos);
+
+            // Should STILL avoid space object even though it's smaller (immovable)
+            const wasAdjusted = (safeTarget.y !== targetPos.y) || enemy._asteroidAvoidTimer > 0;
+            expect(wasAdjusted).toBe(true);
         });
     });
 
