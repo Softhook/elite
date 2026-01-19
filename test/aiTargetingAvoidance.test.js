@@ -141,7 +141,7 @@ describe('AI Targeting & Avoidance Tests', () => {
         });
 
         test('should only avoid obstacles larger than itself', () => {
-            // Enemy has size ~25 (Sidewinder default)
+            // Set enemy size to 25 for this test (larger than smaller asteroid, smaller than larger one)
             enemy.size = 25;
 
             // Create asteroids: one smaller (diameter 20), one larger (diameter 100)
