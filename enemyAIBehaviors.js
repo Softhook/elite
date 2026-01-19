@@ -2677,19 +2677,25 @@ class EnemyAIBehaviors {
             // perpendicular squared distance from path
             const perpSq = dx * dx + dy * dy - proj * proj;
 
-            // Determine radius based on object type
+            // Determine radius and size based on object type
+            // For asteroids: maxRadius property (diameter = maxRadius * 2)
+            // For ships/objects: size property (already represents diameter)
             let r = 0;
+            let obstacleSize = 0;
+            
             if (obj.maxRadius) {
-                r = obj.maxRadius; // Asteroid
+                r = obj.maxRadius; // Asteroid radius
+                obstacleSize = obj.maxRadius * 2; // Asteroid diameter
             } else if (obj.size) {
-                r = obj.size * 0.5; // Ship (size is usually diameter)
+                r = obj.size * 0.5; // Ship/object radius (size is diameter)
+                obstacleSize = obj.size; // Ship/object diameter
             } else {
-                r = 20; // Fallback
+                // Fallback for objects without proper size properties
+                r = 20;
+                obstacleSize = 40; // Default fallback diameter
             }
 
             // Only avoid obstacles that are larger than this ship
-            // Compare the effective diameter (r * 2 for radius-based, or obj.size for size-based)
-            const obstacleSize = obj.maxRadius ? (obj.maxRadius * 2) : (obj.size || 40);
             if (obstacleSize <= this.size) {
                 return; // Skip smaller or equal-sized obstacles
             }
