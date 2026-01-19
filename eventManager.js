@@ -493,7 +493,17 @@ class EventManager {
             { type: "WAR_ALIEN_MILITARY", probabilityPerFrame: 0.000003, minCooldownMs: 70 * 60 * 1000, warningDurationMs: 15000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "🔥 FULL SCALE WAR: Alien invasion vs Military!", color: "crimson", consoleLog: "EventManager: Alien vs Military full war warning issued." } },
             // === Crisis Events (affect connected systems) ===
             { type: "PLAGUE", probabilityPerFrame: 0.0000025, minCooldownMs: 80 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "☠️ PLAGUE: Deadly outbreak spreading across systems!", color: "magenta", consoleLog: "EventManager: Plague warning issued." } },
-            { type: "FAMINE", probabilityPerFrame: 0.0000025, minCooldownMs: 80 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "🍂 FAMINE: Crop failures cause widespread hunger!", color: "orange", consoleLog: "EventManager: Famine warning issued." } }
+            { type: "FAMINE", probabilityPerFrame: 0.0000025, minCooldownMs: 80 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "🍂 FAMINE: Crop failures cause widespread hunger!", color: "orange", consoleLog: "EventManager: Famine warning issued." } },
+
+            // === New Random Events ===
+            { type: "LOST_SHIPMENT", probabilityPerFrame: 0.00001, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SIGNAL: Lost cargo shipment beacon detected.", color: "gold", consoleLog: "EventManager: Lost Shipment warning issued." } },
+            { type: "FACTION_SKIRMISH", probabilityPerFrame: 0.00001, minCooldownMs: 15 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ALERT: Faction skirmish in progress.", color: "red", consoleLog: "EventManager: Faction skirmish warning issued." } },
+            { type: "VIP_CONVOY", probabilityPerFrame: 0.000008, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 8000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "TRAFFIC: Priority VIP convoy passing through.", color: "cyan", consoleLog: "EventManager: VIP Convoy warning issued." } },
+            { type: "MINING_OPERATION", probabilityPerFrame: 0.00001, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "OPS: Temporary mining operation detected.", color: "yellow", consoleLog: "EventManager: Mining Op warning issued." } },
+            { type: "ROGUE_SECURITY", probabilityPerFrame: 0.000005, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "WARNING: Rogue security forces identified.", color: "red", consoleLog: "EventManager: Rogue Security warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.POLICE, fallbackShip: "ViperPol" }, aiRole: AI_ROLE.PIRATE, spawnRadiusMin: 1800, spawnRadiusMax: 2200, additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Rogue Security"; } } },
+            { type: "INTERSTELLAR_RALLY", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "RACE: Interstellar Rally racers entering sector!", color: "cyan", consoleLog: "EventManager: Rally warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 3, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.TRADER, fallbackShip: "Type6Transporter" }, aiRole: AI_ROLE.HAULER, spawnRadiusMin: 3000, spawnRadiusMax: 3500, additionalEnemySetup: (e) => { e.baseMaxSpeed *= 2.5; e.maxSpeed *= 2.5; e.currentState = AI_STATE.FLEEING; e.displayName = "Rally Racer"; } } },
+            { type: "ALIEN_SCOUT", probabilityPerFrame: 0.000005, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CONTACT: Unidentified scout vessel.", color: "magenta", consoleLog: "EventManager: Alien Scout warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.ALIEN, fallbackShip: "Thargoid" }, aiRole: AI_ROLE.ALIEN, spawnRadiusMin: 2000, spawnRadiusMax: 2500, additionalEnemySetup: (e) => { e.currentState = AI_STATE.IDLE; } } },
+            { type: "PROTOTYPE_TESTING", probabilityPerFrame: 0.000004, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "DETECTED: High-signature prototype vessel.", color: "blue", consoleLog: "EventManager: Prototype warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.MILITARY, fallbackShip: "Viper" }, aiRole: AI_ROLE.COMBAT, spawnRadiusMin: 2500, spawnRadiusMax: 3000, additionalEnemySetup: (e) => { e.baseMaxSpeed *= 2.0; e.maxSpeed *= 2.0; e.shield *= 1.5; e.displayName = "Prototype Unit"; e.currentState = AI_STATE.PATROLLING; } } }
         );
     }
 
@@ -660,6 +670,7 @@ class EventManager {
         const crisisEvents = ['POWER_OUTAGE', 'SABOTAGE', 'MINING_BOOM', 'MINE_ACCIDENT', 'SOLAR_FLARE', 'QUARANTINE', 'REFUGEE_INFLUX', 'HACKER_ATTACK', 'PLAGUE', 'FAMINE'];
         const warEvents = ['SKIRMISH_SEPARATIST_IMPERIAL', 'SKIRMISH_ALIEN_MILITARY', 'WAR_SEPARATIST_IMPERIAL', 'WAR_ALIEN_MILITARY'];
         const miscEvents = ['BOUNTY_INCREASE', 'REPUTATION_SCANDAL'];
+        const newEvents = ['LOST_SHIPMENT', 'FACTION_SKIRMISH', 'VIP_CONVOY', 'MINING_OPERATION'];
 
         if (marketEvents.includes(eventType)) {
             return this._executeMarketEvent(eventType);
@@ -671,6 +682,8 @@ class EventManager {
             return this._executeWarEventTrigger(eventType);
         } else if (miscEvents.includes(eventType)) {
             return this._executeMiscEvent(eventType);
+        } else if (newEvents.includes(eventType)) {
+            return this._executeNewRandomEvent(eventType);
         } else {
             console.warn(`EventManager: Unknown custom event type ${eventType}.`);
         }
@@ -1186,8 +1199,147 @@ class EventManager {
     }
 
     // ============================================
-    // War Event Trigger Router
+    // New Random Event Handlers
     // ============================================
+
+    _executeNewRandomEvent(eventType) {
+        switch (eventType) {
+            case 'LOST_SHIPMENT': {
+                const centerAngle = random(TWO_PI);
+                const centerDist = random(1500, 2500);
+                const cx = this.player.pos.x + cos(centerAngle) * centerDist;
+                const cy = this.player.pos.y + sin(centerAngle) * centerDist;
+
+                // Spawn Cargo Cluster
+                const cargoCount = floor(random(3, 6));
+                const lootTypes = ['Gold', 'Platinum', 'Luxury Goods', 'Weapons'];
+                for (let i = 0; i < cargoCount; i++) {
+                    const ang = random(TWO_PI);
+                    const dist = random(50, 300); // Tight cluster
+                    const type = random(lootTypes);
+                    const qty = floor(random(1, 3)) * this.cargoQuantityMultiplier;
+                    const markerId = `LOST_LOOT_${frameCount}_${i}`;
+                    this._spawnCargoWithMarker(cx + cos(ang) * dist, cy + sin(ang) * dist, type, qty, markerId, 'Lost Cargo', 'gold', this._extendDurationMs(180000));
+                }
+
+                // Spawn Pirates (Ambush)
+                const pirateCount = floor(random(2, 4));
+                for (let i = 0; i < pirateCount; i++) {
+                    const ang = random(TWO_PI);
+                    const dist = random(400, 800); // Surrounding the loot
+                    this._spawnAdHocEnemy(cx + cos(ang) * dist, cy + sin(ang) * dist, AI_ROLE.PIRATE, (e) => {
+                        e.currentState = AI_STATE.PATROLLING; // Start patrolling the loot
+                        e.target = null;
+                        e.displayName = "Ambush Pirate";
+                    });
+                }
+
+                const systemLabel = this.starSystem?.name || 'Local sector';
+                this._notifyEvent(`${systemLabel}: Lost shipment signal detected (High value)`, 'gold');
+                break;
+            }
+
+            case 'FACTION_SKIRMISH': {
+                const angle = random(TWO_PI);
+                const dist = random(1200, 2000);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                // Spawn Police Group
+                const policeCount = floor(random(2, 4));
+                const policeShips = [];
+                for (let i = 0; i < policeCount; i++) {
+                    const px = cx + random(-200, 200);
+                    const py = cy + random(-200, 200);
+                    this._spawnAdHocEnemy(px, py, AI_ROLE.POLICE, (e) => {
+                        e.currentState = AI_STATE.COMBAT;
+                        policeShips.push(e);
+                    });
+                }
+
+                // Spawn Pirate Group
+                const pirateCount = floor(random(2, 4));
+                const pirateShips = [];
+                for (let i = 0; i < pirateCount; i++) {
+                    const px = cx + random(300, 600); // Gap between groups
+                    const py = cy + random(-200, 200);
+                    this._spawnAdHocEnemy(px, py, AI_ROLE.PIRATE, (e) => {
+                        e.currentState = AI_STATE.COMBAT;
+                        pirateShips.push(e);
+                    });
+                }
+
+                // Set mutual targets
+                policeShips.forEach(p => { if (pirateShips.length > 0) p.target = random(pirateShips); });
+                pirateShips.forEach(p => { if (policeShips.length > 0) p.target = random(policeShips); });
+
+                this._notifyEvent(`ALERT: Faction skirmish detected nearby!`, 'red');
+                this._addEventMarkerSafely(`SKIRMISH_${frameCount}`, cx, cy, "Faction Skirmish", "red", this._extendDurationMs(120000));
+                break;
+            }
+
+            case 'VIP_CONVOY': {
+                const station = this.starSystem.station;
+                const spawnAnchor = station || this.player;
+                const angle = random(TWO_PI);
+                const dist = station ? (station.dockingRadius + 1000) : 2000;
+
+                const cx = spawnAnchor.pos.x + cos(angle) * dist;
+                const cy = spawnAnchor.pos.y + sin(angle) * dist;
+
+                // Spawn VIP Trader
+                const vip = this._spawnAdHocEnemy(cx, cy, AI_ROLE.HAULER, (e) => {
+                    e.displayName = "VIP Transport";
+                    e.currentState = AI_STATE.FLEEING; // Moving towards jump/station
+                    e.cargo = "Platinum";
+                    e.cargoAmount = 50;
+                }, 'Type9Heavy'); // Prefer Type9, fallback handled in spawn logic if missing
+
+                if (vip) {
+                    // Spawn Escort
+                    this._spawnGuardFormation(3, { x: cx, y: cy }, vip, 300);
+                    this._notifyEvent(`TRAFFIC: VIP Convoy identified.`, 'cyan');
+                    this._addEventMarkerSafely(`VIP_${frameCount}`, cx, cy, "VIP Convoy", "cyan", this._extendDurationMs(120000));
+                }
+                break;
+            }
+
+            case 'MINING_OPERATION': {
+                // Reuse Asteroid Spawn logic partially but custom
+                const angle = random(TWO_PI);
+                const dist = random(2000, 3000);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                // Spawn Asteroids
+                for (let i = 0; i < 8; i++) {
+                    const ax = cx + random(-400, 400);
+                    const ay = cy + random(-400, 400);
+                    const r = random(30, 60);
+                    if (this.starSystem.addAsteroid) this.starSystem.addAsteroid(new Asteroid(ax, ay, r));
+                }
+
+                // Spawn Miners
+                const minerCount = floor(random(2, 4));
+                for (let i = 0; i < minerCount; i++) {
+                    const mx = cx + random(-200, 200);
+                    const my = cy + random(-200, 200);
+                    this._spawnAdHocEnemy(mx, my, AI_ROLE.MINER, (e) => {
+                        e.currentState = AI_STATE.MINING;
+                    });
+                }
+
+                // Spawn Guard
+                this._spawnAdHocEnemy(cx, cy, AI_ROLE.GUARD, (e) => {
+                    e.currentState = AI_STATE.PATROLLING;
+                    e.displayName = "Mining Security";
+                });
+
+                this._notifyEvent(`OPS: Temporary mining operation detected.`, 'yellow');
+                this._addEventMarkerSafely(`MINING_${frameCount}`, cx, cy, "Mining Op", "yellow", this._extendDurationMs(180000));
+            }
+        }
+    }
 
     _executeWarEventTrigger(eventType) {
         switch (eventType) {
