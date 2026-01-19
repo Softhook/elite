@@ -191,6 +191,14 @@ class UIGalaxyMap {
             const drawX = sysData.x * scale + offsetX;
             const drawY = sysData.y * scale + offsetY;
 
+            // Draw Faction Logo
+            const faction = this._getFactionFromType(sysData.type);
+            const isSameFaction = (player && player.playerFaction === faction);
+            if (faction && (sysData.visited || isCurrent || isSameFaction)) {
+                // Draw slightly offset (top-right corner of node)
+                this._drawFactionLogo(drawX + nodeR * 0.7, drawY - nodeR * 0.7, 8, faction);
+            }
+
             // Draw the ellipse
             strokeWeight(nodeStrokeWeight);
             stroke(nodeStrokeColor);
@@ -199,6 +207,7 @@ class UIGalaxyMap {
 
             // Store clickable area
             this.galaxyMapNodeAreas.push({ x: drawX, y: drawY, radius: nodeR, index: i });
+
 
             // Draw Text Labels
             if (typeof font !== 'undefined') textFont(font);
@@ -619,6 +628,74 @@ class UIGalaxyMap {
         }
 
         return false;
+    }
+
+    _getFactionFromType(type) {
+        if (!type) return null;
+        type = type.toLowerCase();
+        if (type === 'imperial') return 'IMPERIAL';
+        if (type === 'separatist') return 'SEPARATIST';
+        if (type === 'military') return 'MILITARY';
+        if (type === 'alien') return 'ALIEN';
+        return null;
+    }
+
+    _drawFactionLogo(x, y, size, faction) {
+        push();
+        translate(x, y);
+
+        switch (faction) {
+            case 'SEPARATIST':
+                // Red hexagon
+                fill(200, 50, 50, 200);
+                stroke(255, 100, 100);
+                strokeWeight(1);
+                beginShape();
+                for (let i = 0; i < 6; i++) {
+                    const angle = (TWO_PI / 6) * i - PI / 2;
+                    vertex(cos(angle) * size, sin(angle) * size);
+                }
+                endShape(CLOSE);
+                break;
+
+            case 'IMPERIAL':
+                // Purple star
+                fill(150, 100, 200, 200);
+                stroke(200, 150, 255);
+                strokeWeight(1);
+                beginShape();
+                for (let i = 0; i < 10; i++) {
+                    const angle = (TWO_PI / 10) * i - PI / 2;
+                    const r = (i % 2 === 0) ? size : size * 0.4;
+                    vertex(cos(angle) * r, sin(angle) * r);
+                }
+                endShape(CLOSE);
+                break;
+
+            case 'MILITARY':
+                // Yellow chevron
+                fill(220, 200, 50, 200);
+                stroke(255, 235, 100);
+                strokeWeight(1);
+                beginShape();
+                vertex(0, -size);
+                vertex(size * 0.7, size * 0.3);
+                vertex(size * 0.3, size * 0.3);
+                vertex(0, -size * 0.3);
+                vertex(-size * 0.3, size * 0.3);
+                vertex(-size * 0.7, size * 0.3);
+                endShape(CLOSE);
+                break;
+
+            case 'ALIEN':
+                // Green circle
+                fill(50, 200, 100, 200);
+                stroke(100, 255, 150);
+                strokeWeight(1);
+                ellipse(0, 0, size * 2, size * 2);
+                break;
+        }
+        pop();
     }
 }
 
