@@ -2641,6 +2641,7 @@ class EnemyAIBehaviors {
      * Lightweight obstacle avoidance: nudge movement target away from the nearest
      * asteroid, ship, or space object intersecting the current path, or slightly slow the ship for a short time.
      * Low CPU: only checks obstacles within the forward cone and a capped distance.
+     * Ships only avoid obstacles that are larger than themselves (by comparing size/diameter).
      * Note: Local transports (AI_ROLE.TRANSPORT) do not avoid space objects, only asteroids and ships.
      */
     _avoidObstaclesAndAdjustTarget(system, desiredMovementTargetPos) {
@@ -2684,6 +2685,13 @@ class EnemyAIBehaviors {
                 r = obj.size * 0.5; // Ship (size is usually diameter)
             } else {
                 r = 20; // Fallback
+            }
+
+            // Only avoid obstacles that are larger than this ship
+            // Compare the effective diameter (r * 2 for radius-based, or obj.size for size-based)
+            const obstacleSize = obj.maxRadius ? (obj.maxRadius * 2) : (obj.size || 40);
+            if (obstacleSize <= this.size) {
+                return; // Skip smaller or equal-sized obstacles
             }
 
             const safety = Math.max(this.size, 16) + r + 12; // padding
