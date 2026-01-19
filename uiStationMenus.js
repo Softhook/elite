@@ -1168,8 +1168,7 @@ class UIStationMenus {
                 h: rowH,
                 index: i,
                 isCurrent: isInstalled,
-                canAfford: canAfford && !isInstalled,
-                isHighlighted: isShipUpgrade // Optional subtle distinction
+                canAfford: canAfford && !isInstalled
             });
 
             let infoText = "";
