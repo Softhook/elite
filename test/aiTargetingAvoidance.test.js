@@ -181,9 +181,9 @@ describe('AI Targeting & Avoidance Tests', () => {
             // Large enemy ship
             enemy.size = 80;
 
-            // Small enemy ship in path
+            // Small enemy ship in path (Sidewinder, size 20)
             const smallEnemy = new Enemy(200, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
-            smallEnemy.size = 25;
+            smallEnemy.size = 20; // Match Sidewinder's defined size
             mockSystem.enemies = [smallEnemy];
 
             const targetPos = createVector(400, 0);
@@ -196,13 +196,13 @@ describe('AI Targeting & Avoidance Tests', () => {
         });
 
         test('should avoid larger ships', () => {
-            // Small enemy ship
-            enemy.size = 25;
+            // Small enemy ship (Sidewinder, size 20)
+            enemy.size = 20;
             enemy.pos.set(0, 0);
 
-            // Large enemy ship in path
+            // Large enemy ship in path (Anaconda, size 120)
             const largeEnemy = new Enemy(200, 0, mockPlayer, 'Anaconda', AI_ROLE.COMBAT);
-            largeEnemy.size = 80;
+            largeEnemy.size = 120; // Match Anaconda's defined size in ships.js
             mockSystem.enemies = [largeEnemy];
 
             const targetPos = createVector(400, 0);
