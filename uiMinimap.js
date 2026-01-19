@@ -92,14 +92,39 @@ class UIMinimap {
     draw(player, system, uiManager = null) {
         if (!player?.pos || !system) return;
 
-        // Update size and scale
-        this.size = this.expandedSize;
-        this.worldViewRange = this.worldViewRanges[this.zoomIndex];
+        // Check if we need to recalculate layout (size/position/scale)
+        // Optimization: Only update when screen size or zoom changes to avoid potential overhead
+        const dimsChanged = (this._lastWidth !== width || this._lastHeight !== height);
+        const zoomChanged = (this._lastZoomIndex !== this.zoomIndex);
 
-        // Calculate position and scale
-        this.x = width - this.size - this.margin;
-        this.y = height - this.size - this.margin;
-        this.scale = this.size / this.worldViewRange;
+        if (dimsChanged || zoomChanged) {
+            // Update size and scale based on resolution relative to 1920x1080
+            const baseWidth = 1920;
+            const baseHeight = 1080;
+            // Calculate scale, but clamp to max 1 (don't scale up, only down)
+            // This addresses "High resolution screens that are actually smaller and need to have a smaller minimap"
+            const scaleFactor = Math.min(1, Math.min(width / baseWidth, height / baseHeight));
+
+            // Scale the expanded size, but ensure it doesn't get ridiculously small (e.g. min 50% scale)
+            // User requesting smaller for lower res, so we allow it to scale down.
+            // We'll treat expandedSize (360) as the target for 1080p.
+            this.size = Math.round(this.expandedSize * scaleFactor);
+
+            // Ensure a reasonable minimum size (e.g. 150px) to prevent it becoming unusable
+            this.size = Math.max(150, this.size);
+
+            this.worldViewRange = this.worldViewRanges[this.zoomIndex];
+
+            // Calculate position and scale
+            this.x = width - this.size - this.margin;
+            this.y = height - this.size - this.margin;
+            this.scale = this.size / this.worldViewRange;
+
+            // Cache current state
+            this._lastWidth = width;
+            this._lastHeight = height;
+            this._lastZoomIndex = this.zoomIndex;
+        }
 
         // Sync state back to UIManager for backward compatibility
         if (uiManager) {
