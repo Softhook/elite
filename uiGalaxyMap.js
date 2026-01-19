@@ -196,7 +196,7 @@ class UIGalaxyMap {
             const isSameFaction = (player && player.playerFaction === faction);
             if (faction && (sysData.visited || isCurrent || isSameFaction)) {
                 // Draw slightly offset (top-right corner of node)
-                this._drawFactionLogo(drawX + nodeR * 0.7, drawY - nodeR * 0.7, 8, faction);
+                this._drawFactionLogo(drawX + nodeR * 0.8, drawY - nodeR * 0.8, 8, faction);
             }
 
             // Draw the ellipse
