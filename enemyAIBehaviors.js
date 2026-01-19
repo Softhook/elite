@@ -2641,7 +2641,8 @@ class EnemyAIBehaviors {
      * Lightweight obstacle avoidance: nudge movement target away from the nearest
      * asteroid, ship, or space object intersecting the current path, or slightly slow the ship for a short time.
      * Low CPU: only checks obstacles within the forward cone and a capped distance.
-     * Ships only avoid obstacles that are larger than themselves (by comparing size/diameter).
+     * Ships avoid obstacles based on size: only avoid asteroids/ships larger than themselves.
+     * Space objects are ALWAYS avoided regardless of size (immovable structures like stations, satellites).
      * Note: Local transports (AI_ROLE.TRANSPORT) do not avoid space objects, only asteroids and ships.
      */
     _avoidObstaclesAndAdjustTarget(system, desiredMovementTargetPos) {
@@ -2665,7 +2666,8 @@ class EnemyAIBehaviors {
         let threatRadius = 0;
 
         // Helper to check a single obstacle
-        const checkObstacle = (obj) => {
+        // isSpaceObject: if true, always avoid regardless of size (immovable objects)
+        const checkObstacle = (obj, isSpaceObject = false) => {
             if (!obj || obj === this || obj.destroyed || !obj.pos) return;
 
             const dx = obj.pos.x - this.pos.x;
@@ -2695,8 +2697,9 @@ class EnemyAIBehaviors {
                 obstacleSize = 40; // Default fallback diameter
             }
 
-            // Only avoid obstacles that are larger than this ship
-            if (obstacleSize <= this.size) {
+            // Size-based avoidance: only avoid obstacles larger than this ship
+            // EXCEPTION: Space objects are always avoided (immovable structures)
+            if (!isSpaceObject && obstacleSize <= this.size) {
                 return; // Skip smaller or equal-sized obstacles
             }
 
@@ -2732,9 +2735,10 @@ class EnemyAIBehaviors {
 
         // Check space objects (satellites, platforms, debris, etc.)
         // Local transports and police do not avoid space objects (they operate around stations)
+        // Space objects are ALWAYS avoided regardless of size (immovable structures)
         if (this.role !== AI_ROLE.TRANSPORT && this.role !== AI_ROLE.POLICE && Array.isArray(system.spaceObjects)) {
             for (const spaceObj of system.spaceObjects) {
-                checkObstacle(spaceObj);
+                checkObstacle(spaceObj, true); // true = always avoid (immovable)
             }
         }
 

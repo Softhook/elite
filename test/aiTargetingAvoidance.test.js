@@ -226,12 +226,12 @@ describe('AI Targeting & Avoidance Tests', () => {
             const targetPos = createVector(400, 0);
             const safeTarget = enemy._avoidObstaclesAndAdjustTarget(mockSystem, targetPos);
 
-            // Should avoid larger space object
+            // Should avoid space object (immovable structure)
             const wasAdjusted = (safeTarget.y !== targetPos.y) || enemy._asteroidAvoidTimer > 0;
             expect(wasAdjusted).toBe(true);
         });
 
-        test('should not avoid smaller space objects', () => {
+        test('should avoid smaller space objects (immovable structures)', () => {
             // Large ship
             enemy.size = 80;
             enemy.pos.set(0, 0);
@@ -244,10 +244,9 @@ describe('AI Targeting & Avoidance Tests', () => {
             const targetPos = createVector(400, 0);
             const safeTarget = enemy._avoidObstaclesAndAdjustTarget(mockSystem, targetPos);
 
-            // Should not avoid smaller space object
-            expect(safeTarget.x).toBe(targetPos.x);
-            expect(safeTarget.y).toBe(targetPos.y);
-            expect(enemy._asteroidAvoidTimer || 0).toBe(0);
+            // Should STILL avoid space object even though it's smaller (immovable)
+            const wasAdjusted = (safeTarget.y !== targetPos.y) || enemy._asteroidAvoidTimer > 0;
+            expect(wasAdjusted).toBe(true);
         });
     });
 
