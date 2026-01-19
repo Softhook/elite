@@ -103,6 +103,10 @@ global.height = 2000;
 global.AI_STATE = { IDLE: 'IDLE', ATTACKING: 'ATTACKING' };
 global.AI_ROLE = { PIRATE: 'PIRATE' };
 global.WEAPON_TYPE = { PROJECTILE: 'projectile' };
+global.TARGET_SCORE_INVALID = -9999;
+global.SHIELD_RECHARGE_RATE_MULTIPLIER = 1;
+global.TARGET_SCORE_DISTANCE_PENALTY_MULT = 1;
+global.TARGET_SCORE_DISTANCE_PENALTY_CAP = 100;
 
 // Mock uiManager
 global.uiManager = { addMessage: jest.fn() };
@@ -143,6 +147,18 @@ const { CosmicStorm } = require('../cosmicStorm');
 const { Nebula } = require('../nebula');
 const { StarSystem } = require('../starSystem');
 const Player = require('../player');
+
+// Require Enemy mixins BEFORE the main Enemy class
+require('../enemyUtils');
+require('../enemyTargeting');
+require('../enemyMovement');
+require('../enemyCombat');
+require('../enemyAIBehaviors');
+require('../enemyCargo');
+require('../enemyDamageSystem');
+require('../enemyRendering');
+require('../enemyStateMachine');
+
 const { Enemy } = require('../enemy');
 
 // IMPORTANT: Set globals for instanceof checks inside game logic
