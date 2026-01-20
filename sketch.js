@@ -14,6 +14,7 @@ const GameGlobals = {
     soundManager: null,
     ambientSoundManager: null,
     stationMusicManager: null,
+    spaceMusicManager: null,
     titleScreen: null,
     saveSelectionScreen: null,
     inventoryScreen: null,
@@ -28,7 +29,7 @@ const GameGlobals = {
 // Maintain backward compatibility with existing code
 let player, galaxy, uiManager, gameStateManager, soundManager, ambientSoundManager,
     titleScreen, font, inventoryScreen, missionOverlay, eventManager, communicationSystem, saveSelectionScreen,
-    stationMusicManager;
+    stationMusicManager, spaceMusicManager;
 let loadGameWasSuccessful = false;
 let globalSessionSeed;
 
@@ -84,12 +85,14 @@ function initializeManagers() {
     soundManager = new SoundManager();
     ambientSoundManager = new AmbientSoundManager();
     stationMusicManager = new StationMusicManager();
+    spaceMusicManager = new SpaceMusicManager();
     eventManager = new EventManager();
 
     Object.assign(GameGlobals, {
         soundManager,
         ambientSoundManager,
         stationMusicManager,
+        spaceMusicManager,
         eventManager
     });
 }
