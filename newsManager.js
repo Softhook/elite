@@ -545,6 +545,153 @@ const HEADLINE_TEMPLATES = {
         "[STAR] Military legend: {NAME} claims {COUNT} kills in {SYSTEM}",
         "[STAR] Top gun {NAME} dominates with {COUNT} confirmed kills",
         "[STAR] {NAME} becomes most feared pilot in {SYSTEM}"
+    ],
+
+    // --- Dynamic Event Headlines ---
+    EVENT_MISSIONARY_CONVOY: [
+        "Missionary convoy departs on spiritual transit",
+        "Gospel mission moves through {SYSTEM}",
+        "Vessels of faith reported in transit near {STATION}"
+    ],
+    EVENT_FORCED_CONVERSION: [
+        "Violence erupts as zealots target traders",
+        "Forced conversion attempt reported in deep space",
+        "Religious persecution claims victims in {SYSTEM}"
+    ],
+    EVENT_HERETIC_HUNT: [
+        "Inquisition forces pursue 'heretic' vessel",
+        "Purging the faith: Hunt for dissidents escalates",
+        "Religious schism turns deadly in {SYSTEM}"
+    ],
+    EVENT_DOOMSDAY_PROPHET: [
+        "Prophet of doom warns of impending void",
+        "Stellar omen: Prophet manifests amid cosmic storm",
+        "End-time preaching causes panic in {SYSTEM}"
+    ],
+    EVENT_ASCENSION_RITUAL: [
+        "Mysterious ritual observed near local star",
+        "Ascension ceremony centers on solar transit",
+        "Stellar worship: Pilgrims gather at the sun"
+    ],
+    EVENT_ARTIFACT_WORSHIP: [
+        "Alien artifact becomes focal point of ritual",
+        "Unauthorized relic worship reported by patrols",
+        "Pilgrims congregate around mysterious artifact"
+    ],
+    EVENT_CLEANSING_FIRE: [
+        "Zealots target 'unclean' merchant in purge",
+        "Fire and brimstone: Purifiers attack hauler",
+        "Religious militant strike leaves vessel crippled"
+    ],
+    EVENT_SIN_EATER: [
+        "Vigilante 'Sin Eater' targets pirate cell",
+        "Missionary vessel executes justice on outlaw",
+        "Theocratic retribution strikes pirate marauder"
+    ],
+    EVENT_TECH_CRUSADE: [
+        "Crusade launched against alien presence",
+        "Holy war declared on otherworldly hostiles",
+        "Posthuman missionaries engage xeno force"
+    ],
+    EVENT_IMPERIAL_INTERDICTION: [
+        "Imperial forces detain hauler for inspection",
+        "Customs crackdown: Vessel interdicted in orbital space",
+        "Imperial authority enforces checkpoint near {STATION}"
+    ],
+    EVENT_SEPARATIST_AMBUSH: [
+        "Rebel ambush strikes Imperial logistics",
+        "Supply lines disrupted by Separatist strike",
+        "Guerilla attack decimates Imperial envoy"
+    ],
+    EVENT_DEFECTOR_ESCORT: [
+        "Imperial defector pursued by Navy chasers",
+        "High-stakes escape: Courier flees Imperial justice",
+        "Defector hunt disrupts local shipping lanes"
+    ],
+    EVENT_DIPLOMATIC_STANDOFF: [
+        "Tensions flare in Imperial-Separatist standoff",
+        "Diplomatic talks collapse into armed confrontation",
+        "Political crisis: Rivals face off in neutral space"
+    ],
+    EVENT_PROTOTYPE_HEIST: [
+        "Rebels flee with stolen Imperial tech",
+        "High-stakes heist: Prototype vessel missing",
+        "Security breach: Imperial experimental ship stolen"
+    ],
+    EVENT_HARLEQUIN_PARADE: [
+        "Theatrical convoy 'Harlequin Parade' manifest",
+        "Masquerade in motion: Carnival ships detected",
+        "Neon lights and chaos: Harlequins on parade"
+    ],
+    EVENT_JESTERS_TRAP: [
+        "Suspicious vessel baiting pilots into ambush",
+        "The Jester's Lure: Trap reported in frontier space",
+        "Beware the clown: Hidden threat near drifting ship"
+    ],
+    EVENT_COLOR_WAR: [
+        "Harlequins launch assault on 'drab' vessel",
+        "Chaos reigns as Motley attackers strike",
+        "The Great Coloring: Police vessel painted in space"
+    ],
+    EVENT_MAD_BOMBER: [
+        "Harlequin maniac threatens station bombardment",
+        "Tick-Tock: Station on alert for bomber attack",
+        "Terror in transit: The Mad Bomber approaches"
+    ],
+    EVENT_CARNIVAL_DROP: [
+        "Free gifts or lethal trap? Carnival drops reported",
+        "The Jester's Bounty: Cargo pods adrift in space",
+        "Harlequin freighter spills 'prizes' for scavengers"
+    ],
+    EVENT_LOST_SHIPMENT: [
+        "Salvage beacon detected: Lost shipment located",
+        "Fortune for the taking: Abandoned cargo found",
+        "Traders beware: Pirate trap masked as salvage"
+    ],
+    EVENT_FACTION_SKIRMISH: [
+        "Police clash with pirate marauders in {SYSTEM}",
+        "Battle for the lanes: Security forces engage outlaws",
+        "Gunfire in orbit: Faction war spills into shipping"
+    ],
+    EVENT_VIP_CONVOY: [
+        "VIP convoy transits through {SYSTEM}",
+        "Executive transport under heavy guard",
+        "High-value target attracts pirate attention"
+    ],
+    EVENT_MINING_OPERATION: [
+        "New mining operation established in debris field",
+        "Prospectors find rich ore deposits in {SYSTEM}",
+        "Resource rush: Mining barges deploy to asteroid belt"
+    ],
+    EVENT_ROGUE_SECURITY: [
+        "Police unit goes rogue: Authority turns predator",
+        "Internal crisis: Security vessel attacking civilian",
+        "Betrayal in orbit: Patrol ship turns pirate"
+    ],
+    EVENT_INTERSTELLAR_RALLY: [
+        "High-speed chase: Racing vessel tears through lanes",
+        "Interstellar Rally: Adrenaline junkies on the move",
+        "The Speed Demon: Modified hauler breaks records"
+    ],
+    EVENT_ALIEN_ARTIFACT: [
+        "Unidentified artifact detected on long-range sensors",
+        "Archaeological anomaly: Alien relic discovered in {SYSTEM}",
+        "Vessel reports mysterious signature near {SYSTEM}"
+    ],
+    EVENT_PROTOTYPE_TESTING: [
+        "Experimental tech testing center of local alarm",
+        "Classified maneuvers: Prototype ship in operation",
+        "The Shield Project: Advanced defense trials underway"
+    ],
+    EVENT_ALIEN_SCOUT: [
+        "Unidentified scout vessel detected in deep space",
+        "Xeno observer: Alien craft monitors local shipping",
+        "Passive contact: Alien scout reported near gravity well"
+    ],
+    EVENT_FALSE_IDOLS: [
+        "Warning: Missionary vessel broadcasting pirate codes",
+        "Betrayal of faith: Pirate raider disguised as gospel ship",
+        "False Prophet: Authorities identify masked outlaw vessel"
     ]
 };
 
@@ -582,6 +729,26 @@ const BODY_TEMPLATES = {
         IMPERIAL: "Xeno threat requires unified military response from all human factions. All reserve personnel mobilized. Civilian ships advised to shelter in secured stations.",
         SEPARATIST: "The aliens strike the heart of Imperial military power. While we oppose the Empire, this threat concerns all humanity. Interesting times ahead.",
         INDEPENDENT: "Alien technology salvage could be highly profitable for those brave or foolish enough to enter the combat zone. Proceed with extreme caution and heavy armament."
+    },
+    EVENT_MISSIONARY: {
+        IMPERIAL: "Unauthorized proselytizing by Posthuman sects reported in the sector. Citizens are reminded that all spiritual gatherings must be registered with the Ministry of Order.",
+        SEPARATIST: "While we seek freedom from the Empire, these zealots bring a different kind of chain. Their 'Ascension' sounds like just another corporate rebranding of the soul.",
+        INDEPENDENT: "Missionary convoys are usually safe enough to trade with, but stay clear of their 'Purification' zones. Religion and railguns make for a messy mix."
+    },
+    EVENT_CONFLICT: {
+        IMPERIAL: "The Empire maintains order despite the futile efforts of insurgent cells. Any disruption to logistics will be met with overwhelming force.",
+        SEPARATIST: "Every strike against the Imperial machine is a victory for the frontier. Our brave pilots continue to disrupt the chains of tyranny wherever they find them.",
+        INDEPENDENT: "Where the big factions fight, there's always profit in the wreckage. Just make sure your insurance covers 'political instability' before you fly in."
+    },
+    EVENT_HARLEQUIN: {
+        IMPERIAL: "These 'Harlequin' pirates are a menace to civilized space. Their erratic behavior and theatrical violence have no place in a regulated system.",
+        SEPARATIST: "The Harlequins might be mad, but at least they're not boring. Their chaos is a mirror to the Empire's rigid decay, even if they occasionally shoot us too.",
+        INDEPENDENT: "Avoid the Masquerades unless you like riddles and randomized weapon fire. The Harlequins don't care about credits, which makes them the most dangerous pilots in the void."
+    },
+    EVENT_GENERIC: {
+        IMPERIAL: "Empire officials are monitoring local space for any anomalies. Civilians are urged to report suspicious activity to the nearest terminal.",
+        SEPARATIST: "The frontier is full of surprises. Keep your eyes open and your thrusters hot. Freedom isn't just about politics; it's about survival in the wild void.",
+        INDEPENDENT: "Always something happening in this sector. Whether it's a rally or a rogue cop, it's just another day in deep space. Keep your cargo locked and your sensors active."
     }
 };
 
@@ -1322,6 +1489,52 @@ class NewsManager {
             sourceColor: faction.color,
             category: NEWS_CATEGORY.BACKGROUND,
             priority: NEWS_PRIORITY.LOW
+        });
+    }
+
+    /**
+     * Report a dynamic event triggered by EventManager
+     */
+    addDynamicEventNews(eventType, data) {
+        const templateKey = `EVENT_${eventType}`;
+        const templates = HEADLINE_TEMPLATES[templateKey];
+        if (!templates) return;
+
+        const systemName = data.systemName || (typeof starSystem !== 'undefined' ? starSystem.name : 'Local Sector');
+        const stationName = data.stationName || 'the station';
+
+        const headline = this._fillTemplate(templates, {
+            SYSTEM: systemName,
+            STATION: stationName
+        });
+
+        // Determine category for body template
+        let category = 'EVENT_GENERIC';
+        if (eventType.includes('MISSIONARY') || eventType.includes('CONVERSION') || eventType.includes('HERETIC') ||
+            eventType.includes('PROPHET') || eventType.includes('RITUAL') || eventType.includes('WORSHIP') ||
+            eventType.includes('CLEANSING') || eventType.includes('SIN_EATER') || eventType.includes('CRUSADE') ||
+            eventType.includes('FALSE_IDOLS')) {
+            category = 'EVENT_MISSIONARY';
+        } else if (eventType.includes('IMPERIAL') || eventType.includes('SEPARATIST') || eventType.includes('DEFECTOR') ||
+            eventType.includes('STANDOFF') || eventType.includes('HEIST') || eventType.includes('SKIRMISH') ||
+            eventType.includes('TESTING')) {
+            category = 'EVENT_CONFLICT';
+        } else if (eventType.includes('HARLEQUIN') || eventType.includes('PARADE') || eventType.includes('TRAP') ||
+            eventType.includes('COLOR_WAR') || eventType.includes('BOMBER') || eventType.includes('CARNIVAL')) {
+            category = 'EVENT_HARLEQUIN';
+        }
+
+        const faction = this._selectFaction();
+        const body = (BODY_TEMPLATES[category] && BODY_TEMPLATES[category][faction.key]) ||
+            `Activity reported near ${systemName}. Pilots are advised to monitor their sensors.`;
+
+        this._addNews({
+            headline,
+            body,
+            source: faction.name,
+            sourceColor: faction.color,
+            category: NEWS_CATEGORY.LOCAL_EVENT,
+            priority: NEWS_PRIORITY.MEDIUM
         });
     }
 

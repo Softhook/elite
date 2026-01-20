@@ -144,7 +144,8 @@ function restoreRandom() {
 global.GameGlobals = {
     newsManager: {
         addNewsItem: jest.fn(),
-        addWarNews: jest.fn()
+        addWarNews: jest.fn(),
+        addDynamicEventNews: jest.fn()
     }
 };
 
@@ -548,5 +549,29 @@ describe('New Events Tests', () => {
         expect(system.cargo.length).toBeGreaterThanOrEqual(3);
         const prize = system.cargo.find(c => c.type === 'Narcotics' || c.type === 'Luxury Goods' || c.type === 'Biowaste');
         expect(prize).toBeDefined();
+    });
+
+    describe('News Integration', () => {
+        test('should route dynamic events to newsManager.addDynamicEventNews', () => {
+            const dynamicEvents = ['LOST_SHIPMENT', 'FACTION_SKIRMISH', 'VIP_CONVOY', 'MAD_BOMBER', 'ROGUE_SECURITY', 'ALIEN_SCOUT', 'FALSE_IDOLS', 'MISSIONARY_CONVOY'];
+
+            dynamicEvents.forEach(eventType => {
+                jest.clearAllMocks();
+                em.executeConfiguredEvent(eventType);
+                expect(global.GameGlobals.newsManager.addDynamicEventNews).toHaveBeenCalledWith(
+                    eventType,
+                    expect.objectContaining({
+                        systemName: system.name
+                    })
+                );
+            });
+        });
+
+        test('should fallback to addNewsItem for unknown event types', () => {
+            jest.clearAllMocks();
+            em._notifyEvent('Something generic happened', 'white', 4000, 'UNKNOWN_TYPE');
+            expect(global.GameGlobals.newsManager.addNewsItem).toHaveBeenCalled();
+            expect(global.GameGlobals.newsManager.addDynamicEventNews).not.toHaveBeenCalled();
+        });
     });
 });

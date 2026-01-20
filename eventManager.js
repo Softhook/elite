@@ -277,9 +277,8 @@ class EventManager {
                     spawnRadiusMin: 8000,
                     spawnRadiusMax: 9000,
                     clusterSpreadRadius: 0,
-                    asteroidSizeMin: 150,
                     asteroidSizeMax: 200,
-                    speed: 8
+                    speed: 12
                 }
             },
             {
@@ -397,7 +396,7 @@ class EventManager {
                     spawnAngleSpreadFactor: 0.3,
                     positionRandomnessFactor: 100,
                     additionalEnemySetup: (enemy, player) => {
-                        enemy.currentState = AI_STATE.IDLE;
+                        enemy.currentState = AI_STATE.PATROLLING;
                     }
                 }
             },
@@ -456,7 +455,8 @@ class EventManager {
                     spawnRadiusMax: 2000,
                     cargoType: 'Alien Artifact',
                     quantity: 1
-                }
+                },
+                newsType: 'ALIEN_ARTIFACT'
             }
         ];
 
@@ -678,6 +678,11 @@ class EventManager {
                 this._executeCosmicStormSpawn(event);
             } else if (event.spawnConfig.entityType === 'cargo') {
                 this._executeCargoSpawn(event);
+
+                // Route ALIEN_ARTIFACT to news system if it has newsType
+                if (event.newsType) {
+                    this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: Artifact signature detected`, 'magenta', 4000, event.newsType);
+                }
             } else {
                 console.warn(`EventManager: Unknown entityType '${event.spawnConfig.entityType}' for event ${eventType}.`);
             }
@@ -783,6 +788,19 @@ class EventManager {
                     const label = `${t} cache`;
 
                     const cargo = this._spawnCargoWithMarker(x, y, t, qty, markerId, label, 'purple', this._extendDurationMs(180000));
+                }
+
+                // Add 2-3 Lurking Pirates near the auction center to provide risk
+                const pirateCount = floor(random(2, 4));
+                for (let i = 0; i < pirateCount; i++) {
+                    const ang = random(TWO_PI);
+                    const dist = random(1200, 1800);
+                    const px = this.player.pos.x + cos(ang) * dist;
+                    const py = this.player.pos.y + sin(ang) * dist;
+                    this._spawnAdHocEnemy(px, py, AI_ROLE.PIRATE, (e) => {
+                        e.currentState = AI_STATE.PATROLLING;
+                        e.displayName = "Auction Lurker";
+                    });
                 }
 
                 const systemLabel = this.starSystem?.name || 'Local sector';
@@ -935,10 +953,13 @@ class EventManager {
 
                 const baseQty = Math.max(1, floor(random(2, 8)));
                 const qty = Math.max(1, Math.floor(baseQty * this.cargoQuantityMultiplier));
+                const lootTypes = ['Metals', 'Machinery', 'Adv Components', 'Computers'];
 
                 try {
-                    const c = new Cargo(x, y, 'Metals', qty);
+                    const t = random(lootTypes);
+                    const c = new Cargo(x, y, t, qty);
                     this.starSystem.addCargo(c);
+                    this._addEventMarkerSafely(`SABOTAGE_${frameCount}`, x, y, `Sabotage: ${t}`, 'crimson', this._extendDurationMs(180000));
                 } catch (e) {
                     this.starSystem.addCargo(new Cargo(x, y, 'Metals', Math.max(1, floor(random(2, 8)))));
                 }
@@ -982,9 +1003,12 @@ class EventManager {
             }
 
             case 'SOLAR_FLARE': {
-                const shieldDamage = Math.round(Math.max(25, (this.player.maxShield || 0) * random(0.5, 0.8)));
+                const shieldDamage = Math.round(Math.max(15, (this.player.maxShield || 0) * random(0.25, 0.45)));
                 if (typeof this.player.shield === 'number') {
-                    this.player.shield = Math.max(0, this.player.shield - shieldDamage);
+                    // Safety check: Don't kill player if they are already low
+                    if (this.player.shield > 20) {
+                        this.player.shield = Math.max(10, this.player.shield - shieldDamage);
+                    }
                     this.player.lastShieldHitTime = millis();
                     this.player.shieldHitTime = millis();
                 }
@@ -1262,7 +1286,7 @@ class EventManager {
                 }
 
                 const systemLabel = this.starSystem?.name || 'Local sector';
-                this._notifyEvent(`${systemLabel}: Lost shipment signal detected (High value)`, 'gold');
+                this._notifyEvent(`${systemLabel}: Lost shipment signal detected (High value)`, 'gold', 4000, 'LOST_SHIPMENT');
                 break;
             }
 
@@ -1300,7 +1324,7 @@ class EventManager {
                 policeShips.forEach(p => { if (pirateShips.length > 0) p.target = random(pirateShips); });
                 pirateShips.forEach(p => { if (policeShips.length > 0) p.target = random(policeShips); });
 
-                this._notifyEvent(`ALERT: Faction skirmish detected nearby!`, 'red');
+                this._notifyEvent(`ALERT: Faction skirmish detected nearby!`, 'red', 4000, 'FACTION_SKIRMISH');
                 this._addEventMarkerSafely(`SKIRMISH_${frameCount}`, cx, cy, "Faction Skirmish", "red", this._extendDurationMs(60000));
                 break;
             }
@@ -1325,7 +1349,7 @@ class EventManager {
                 if (vip) {
                     // Spawn Escort
                     this._spawnGuardFormation(3, { x: cx, y: cy }, vip, 300);
-                    this._notifyEvent(`TRAFFIC: VIP Convoy identified.`, 'cyan');
+                    this._notifyEvent(`TRAFFIC: VIP Convoy identified.`, 'cyan', 4000, 'VIP_CONVOY');
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                         this._addEventMarkerSafely(`VIP_${frameCount}`, cx, cy, "VIP Convoy", "cyan", this._extendDurationMs(60000));
                     }
@@ -1364,7 +1388,7 @@ class EventManager {
                     e.displayName = "Mining Security";
                 });
 
-                this._notifyEvent(`OPS: Temporary mining operation detected.`, 'yellow');
+                this._notifyEvent(`OPS: Temporary mining operation detected.`, 'yellow', 4000, 'MINING_OPERATION');
                 this._addEventMarkerSafely(`MINING_${frameCount}`, cx, cy, "Mining Op", "yellow", this._extendDurationMs(180000));
                 break;
             }
@@ -1392,7 +1416,7 @@ class EventManager {
                             e.displayName = "Zealous Missionary";
                         }, 'PosthumanMissionary');
                     }
-                    this._notifyEvent(`DISTRESS: Trader under religious siege!`, 'orange');
+                    this._notifyEvent(`DISTRESS: Trader under religious siege!`, 'orange', 4000, 'FORCED_CONVERSION');
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                         this._addEventMarkerSafely(`CONVERT_${frameCount}`, cx, cy, "Forced Conversion", "orange", this._extendDurationMs(60000));
                     }
@@ -1423,7 +1447,7 @@ class EventManager {
                             e.displayName = "Inquisitor";
                         }, 'Viper');
                     }
-                    this._notifyEvent(`ALERT: Military purging heretic vessel.`, 'red');
+                    this._notifyEvent(`ALERT: Military purging heretic vessel.`, 'red', 4000, 'HERETIC_HUNT');
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                         this._addEventMarkerSafely(`HERETIC_${frameCount}`, cx, cy, "Heretic Hunt", "red", this._extendDurationMs(60000));
                     }
@@ -1450,7 +1474,7 @@ class EventManager {
                     this.starSystem.cosmicStorms.push(new CosmicStorm(cx, cy, 800, 'ION'));
                 }
 
-                this._notifyEvent(`COMMS: 'The end is nigh! Embrace the void!'`, 'purple');
+                this._notifyEvent(`COMMS: 'The end is nigh! Embrace the void!'`, 'purple', 4000, 'DOOMSDAY_PROPHET');
                 this._addEventMarkerSafely(`PROPHET_${frameCount}`, cx, cy, "Doomsday Prophet", "purple", this._extendDurationMs(60000));
                 break;
             }
@@ -1467,7 +1491,8 @@ class EventManager {
                         e.displayName = "Ascendant";
                     }, 'PosthumanMissionary');
                 }
-                this._notifyEvent(`RITUAL: Ascension flight detected.`, 'cyan');
+                this._notifyEvent(`RITUAL: Ascension flight detected.`, 'cyan', 4000, 'ASCENSION_RITUAL');
+                this._addEventMarkerSafely(`ASCENSION_${frameCount}`, 0, 0, "Ascension Center", "cyan", this._extendDurationMs(180000));
                 break;
             }
 
@@ -1488,7 +1513,7 @@ class EventManager {
                         e.angle = atan2(cy - e.pos.y, cx - e.pos.x);
                     }, 'PosthumanMissionary');
                 }
-                this._notifyEvent(`SCAN: Religious activity near unknown artifact.`, 'magenta');
+                this._notifyEvent(`SCAN: Religious activity near unknown artifact.`, 'magenta', 4000, 'ARTIFACT_WORSHIP');
                 break;
             }
 
@@ -1516,7 +1541,7 @@ class EventManager {
                             e.displayName = "Purifier";
                         }, 'PosthumanMissionary');
                     }
-                    this._notifyEvent(`PURGE: Missionaries attacking unclean vessel.`, 'orange');
+                    this._notifyEvent(`PURGE: Missionaries attacking unclean vessel.`, 'orange', 4000, 'CLEANSING_FIRE');
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                         this._addEventMarkerSafely(`PURGE_${frameCount}`, cx, cy, "Cleansing Fire", "orange", this._extendDurationMs(60000));
                     }
@@ -1549,7 +1574,7 @@ class EventManager {
                         e.displayName = "Crusader";
                     }, 'PosthumanMissionary');
                 }
-                this._notifyEvent(`WAR: Posthumans engaging alien presence.`, 'cyan');
+                this._notifyEvent(`WAR: Posthumans engaging alien presence.`, 'cyan', 4000, 'TECH_CRUSADE');
                 this._addEventMarkerSafely(`CRUSADE_${frameCount}`, cx, cy, "Tech Crusade", "cyan", this._extendDurationMs(60000));
                 break;
             }
@@ -1576,7 +1601,7 @@ class EventManager {
                         e.currentState = AI_STATE.PATROLLING; // Circling
                         e.displayName = "Imperial Inspector";
                     }, 'ImperialEagleMkII');
-                    this._notifyEvent(`AUTHORITY: Imperial forces inspecting vessel.`, 'cyan');
+                    this._notifyEvent(`AUTHORITY: Imperial forces inspecting vessel.`, 'cyan', 4000, 'IMPERIAL_INTERDICTION');
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                         this._addEventMarkerSafely(`INTERDICT_${frameCount}`, cx, cy, "Imperial Interdiction", "cyan", this._extendDurationMs(60000));
                     }
@@ -1609,7 +1634,7 @@ class EventManager {
                             e.displayName = "Rebel Ambusher";
                         }, 'SeparatistPartisan'); // Fallback
                     }
-                    this._notifyEvent(`AMBUSH: Rebel forces engaging logistics.`, 'orange');
+                    this._notifyEvent(`AMBUSH: Rebel forces engaging logistics.`, 'orange', 4000, 'SEPARATIST_AMBUSH');
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                         this._addEventMarkerSafely(`AMBUSH_${frameCount}`, cx, cy, "Separatist Ambush", "orange", this._extendDurationMs(60000));
                     }
@@ -1642,7 +1667,7 @@ class EventManager {
                             e.displayName = "Imperial Pursuer";
                         }, 'Viper');
                     }
-                    this._notifyEvent(`ALERT: High-value defector detected.`, 'gold');
+                    this._notifyEvent(`ALERT: High-value defector detected.`, 'gold', 4000, 'DEFECTOR_ESCORT');
                     this._addEventMarkerSafely(`DEFECTOR_${frameCount}`, cx, cy, "Defector Chase", "gold", this._extendDurationMs(60000));
                 }
                 break;
@@ -1679,7 +1704,7 @@ class EventManager {
                         e.angle = angle + PI; // Facing back towards the standoff center
                     }, 'SeparatistPartisan');
                 }
-                this._notifyEvent(`POLITICAL: Tense diplomatic standoff in progress.`, 'cyan');
+                this._notifyEvent(`POLITICAL: Tense diplomatic standoff in progress.`, 'cyan', 4000, 'DIPLOMATIC_STANDOFF');
                 this._addEventMarkerSafely(`STANDOFF_${frameCount}`, cx, cy, "Diplomatic Standoff", "cyan", this._extendDurationMs(60000));
                 break;
             }
@@ -1690,9 +1715,6 @@ class EventManager {
                 const cx = this.player.pos.x + cos(angle) * dist;
                 const cy = this.player.pos.y + sin(angle) * dist;
 
-                let stolenShip = null;
-                // Separatist flying an Imperial prototype (or just a Separatist ship labeled as such)
-                // Let's use ImperialCutterLite but label it
                 this._spawnAdHocEnemy(cx, cy, AI_ROLE.FLEEING, (e) => {
                     e.currentState = AI_STATE.FLEEING;
                     e.displayName = "Stolen Prototype";
@@ -1702,15 +1724,17 @@ class EventManager {
 
                 if (stolenShip) {
                     for (let i = 0; i < 3; i++) {
-                        const sx = cx - 500 + random(-50, 50);
-                        const sy = cy + random(-100, 100);
+                        // Guards start BEHIND the stolen ship relative to spawn direction
+                        const distanceBehind = 400 + random(100);
+                        const sx = cx - cos(angle) * distanceBehind + random(-50, 50);
+                        const sy = cy - sin(angle) * distanceBehind + random(-50, 50);
                         this._spawnAdHocEnemy(sx, sy, AI_ROLE.GUARD, (e) => {
                             e.target = stolenShip;
                             e.currentState = AI_STATE.COMBAT;
                             e.displayName = "Prototype Guard";
                         }, 'ImperialEagleMkII');
                     }
-                    this._notifyEvent(`THEFT: Rebels fleeing with stolen tech!`, 'red');
+                    this._notifyEvent(`THEFT: Rebels fleeing with stolen tech!`, 'red', 4000, 'PROTOTYPE_HEIST');
                     this._addEventMarkerSafely(`HEIST_${frameCount}`, cx, cy, "Prototype Heist", "red", this._extendDurationMs(60000));
                 }
                 break;
@@ -1722,10 +1746,12 @@ class EventManager {
                 const cx = this.player.pos.x + cos(angle) * dist;
                 const cy = this.player.pos.y + sin(angle) * dist;
 
-                // Parade line
+                // Parade line following the angle
                 const ships = ['HarlequinPulcinella', 'HarlequinPierrot', 'HarlequinColumbine'];
                 ships.forEach((shipType, i) => {
-                    this._spawnAdHocEnemy(cx + i * 200, cy, AI_ROLE.PIRATE, (e) => {
+                    const sx = cx + cos(angle) * (i * 250);
+                    const sy = cy + sin(angle) * (i * 250);
+                    this._spawnAdHocEnemy(sx, sy, AI_ROLE.PIRATE, (e) => {
                         e.currentState = AI_STATE.PATROLLING;
                         e.displayName = "Masquerade";
                         e.faction = 'HARLEQUIN';
@@ -1735,7 +1761,7 @@ class EventManager {
                         }
                     }, shipType);
                 });
-                this._notifyEvent(`CIRCUS: Harlequin convoy detected.`, 'white');
+                this._notifyEvent(`CIRCUS: Harlequin convoy detected.`, 'white', 4000, 'HARLEQUIN_PARADE');
                 this._addEventMarkerSafely(`PARADE_${frameCount}`, cx, cy, "Harlequin Parade", "white", this._extendDurationMs(60000));
                 break;
             }
@@ -1755,13 +1781,15 @@ class EventManager {
 
                 if (bait) {
                     // The Trap: A powerful Striker hidden nearby
-                    this._spawnAdHocEnemy(cx + 300, cy + 300, AI_ROLE.PIRATE, (e) => {
+                    const tx = cx + cos(angle + HALF_PI) * 400;
+                    const ty = cy + sin(angle + HALF_PI) * 400;
+                    this._spawnAdHocEnemy(tx, ty, AI_ROLE.PIRATE, (e) => {
                         e.target = bait; // Guarding the bait? Or waiting for player?
                         // Let's set it to PATROL around the bait
                         e.currentState = AI_STATE.PATROLLING;
                         e.displayName = "Hidden Scaramouche";
                     }, 'HarlequinScaramouche');
-                    this._notifyEvent(`CONTACT: Lone fighter drifting nearby.`, 'cyan');
+                    this._notifyEvent(`CONTACT: Lone fighter drifting nearby.`, 'cyan', 4000, 'JESTERS_TRAP');
                     this._addEventMarkerSafely(`TRAP_${frameCount}`, cx, cy, "Suspicious Jester", "cyan", this._extendDurationMs(60000));
                 }
                 break;
@@ -1790,7 +1818,7 @@ class EventManager {
                             e.displayName = "Motley Attacker";
                         }, 'HarlequinMotley');
                     }
-                    this._notifyEvent(`ASSAULT: Harlequins attacking 'drab' vessel.`, 'red');
+                    this._notifyEvent(`ASSAULT: Harlequins attacking 'drab' vessel.`, 'red', 4000, 'COLOR_WAR');
                     this._addEventMarkerSafely(`COLORWAR_${frameCount}`, cx, cy, "Color War", "red", this._extendDurationMs(60000));
                 }
                 break;
@@ -1815,7 +1843,7 @@ class EventManager {
                             communicationSystem.broadcastMessage(e, ["{enemyName}: Tick-tock! The station's on the clock! Boom goes the dynamite! Hehehee!"], [255, 0, 0]);
                         }
                     }, 'HarlequinZanni');
-                    this._notifyEvent(`THREAT: Maniac threatening station bombardment!`, 'red');
+                    this._notifyEvent(`THREAT: Maniac threatening station bombardment!`, 'red', 4000, 'MAD_BOMBER');
                     this._addEventMarkerSafely(`BOMBER_${frameCount}`, cx, cy, "Mad Bomber", "red", this._extendDurationMs(180000));
                 }
                 break;
@@ -1840,7 +1868,7 @@ class EventManager {
                     this._spawnCargoWithMarker(lx, ly, type, floor(random(5, 15)), `PRIZE_${frameCount}_${i}`, `Prize: ${type}`, 'lime', this._extendDurationMs(180000));
                 });
 
-                this._notifyEvent(`SCAN: Unsanctioned cargo drop detected.`, 'lime');
+                this._notifyEvent(`SCAN: Unsanctioned cargo drop detected.`, 'lime', 4000, 'CARNIVAL_DROP');
                 break;
             }
         }
@@ -2149,6 +2177,12 @@ class EventManager {
                 .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
                 .join(' ');
             this._addEventMarkerSafely(`${event.type}_${frameCount}`, baseSpawnRadius * cos(baseSpawnAngle) + this.player.pos.x, baseSpawnRadius * sin(baseSpawnAngle) + this.player.pos.y, label, 'red', this._extendDurationMs(60000));
+
+            // Trigger news for high-level dynamic events that use spawnConfig
+            const dynamicSpawnEvents = ['ROGUE_SECURITY', 'INTERSTELLAR_RALLY', 'ALIEN_SCOUT', 'PROTOTYPE_TESTING', 'FALSE_IDOLS', 'SIN_EATER', 'MISSIONARY_CONVOY'];
+            if (dynamicSpawnEvents.includes(event.type)) {
+                this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: ${label} detected`, 'orange', 4000, event.type);
+            }
         }
 
         for (let i = 0; i < numToSpawn; i++) {
@@ -2287,13 +2321,25 @@ class EventManager {
         this.uiManager.addMessage(message, color, durationMs);
 
         if (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager) {
-            GameGlobals.newsManager.addNewsItem({
-                type: type,
-                text: message,
-                systemName: this.starSystem?.name || 'Unknown System',
-                stationName: details.stationName || 'Unknown Station',
-                commodity: details.commodity || null
-            });
+            // Check if this is one of the new dynamic events
+            // Check if this is one of the new dynamic events
+            const newEvents = ['LOST_SHIPMENT', 'FACTION_SKIRMISH', 'VIP_CONVOY', 'MINING_OPERATION', 'FORCED_CONVERSION', 'HERETIC_HUNT', 'DOOMSDAY_PROPHET', 'ASCENSION_RITUAL', 'ARTIFACT_WORSHIP', 'CLEANSING_FIRE', 'TECH_CRUSADE', 'IMPERIAL_INTERDICTION', 'SEPARATIST_AMBUSH', 'DEFECTOR_ESCORT', 'DIPLOMATIC_STANDOFF', 'PROTOTYPE_HEIST', 'HARLEQUIN_PARADE', 'JESTERS_TRAP', 'COLOR_WAR', 'MAD_BOMBER', 'CARNIVAL_DROP', 'PROTOTYPE_TESTING', 'INTERSTELLAR_RALLY', 'ROGUE_SECURITY', 'ALIEN_SCOUT', 'FALSE_IDOLS', 'SIN_EATER', 'MISSIONARY_CONVOY', 'ALIEN_ARTIFACT'];
+
+            if (newEvents.includes(type)) {
+                GameGlobals.newsManager.addDynamicEventNews(type, {
+                    systemName: this.starSystem?.name,
+                    stationName: details.stationName
+                });
+            } else {
+                // Fallback to legacy reporting
+                GameGlobals.newsManager.addNewsItem({
+                    type: type,
+                    text: message,
+                    systemName: this.starSystem?.name || 'Unknown System',
+                    stationName: details.stationName || 'Unknown Station',
+                    commodity: details.commodity || null
+                });
+            }
         }
     }
 
