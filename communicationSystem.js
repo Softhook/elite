@@ -86,6 +86,11 @@ class CommunicationSystem {
             'POSTHUMAN': {
                 male: { pitchMin: 0.7, pitchMax: 0.9, rateMin: 0.8, rateMax: 0.95 },
                 female: { pitchMin: 0.9, pitchMax: 1.1, rateMin: 0.8, rateMax: 0.95 }
+            },
+            // Harlequin: chaotic, unpredictable pitch modulation
+            'HARLEQUIN': {
+                male: { pitchMin: 1.2, pitchMax: 1.8, rateMin: 1.2, rateMax: 1.5 },
+                female: { pitchMin: 1.5, pitchMax: 2.0, rateMin: 1.2, rateMax: 1.5 }
             }
         };
 
@@ -1755,6 +1760,72 @@ class CommunicationSystem {
                 "{enemyName}: We offer you the bandwidth of gods.",
                 "{enemyName}: Don't you want to know what it feels like to never forget?",
                 "{enemyName}: The Collective is waiting. Don't leave us hanging."
+            ],
+            // Missionary: Fanatical/Religious
+            missionaryEngage: [
+                "{enemyName}: Repent, {playerTitle}! Thy soul belongs to the stars.",
+                "{enemyName}: The Void calls! Wilt thou answer?",
+                "{enemyName}: Purification begins with the first shot.",
+                "{enemyName}: Thy hull is weak, but the Spirit is eternal.",
+                "{enemyName}: We bring the light of the Great Ignition!",
+                "{enemyName}: Sinner! Thy technology is a blasphemy.",
+                "{enemyName}: Embrace the entropy. It is the only truth.",
+                "{enemyName}: Thy journey ends in the fires of the ritual.",
+                "{enemyName}: We are the choir of the coming silence!",
+                "{enemyName}: Seek not to flee the inevitable destiny.",
+                "{enemyName}: The Artifact hums thy name, heretic!"
+            ],
+            missionaryRetort: [
+                "{enemyName}: Pain is but a prayer!",
+                "{enemyName}: Strike me, and I shall return in the nebula!",
+                "{enemyName}: Thy defiance is thy catalyst.",
+                "{enemyName}: Fire upon the righteous, and be consumed!",
+                "{enemyName}: I am but a vessel for the Void's will.",
+                "{enemyName}: Darkness take thee for that!",
+                "{enemyName}: The Great Ignition feeds on thy hate!"
+            ],
+            missionaryDeath: [
+                "{enemyName}: I return... to the Void...",
+                "{enemyName}: Blessed... is the... ignition...",
+                "{enemyName}: My atoms... for the... Artifact...",
+                "{enemyName}: The stars... they... sing...",
+                "{enemyName}: Finally... at one... with... static..."
+            ],
+            // Harlequin: Chaotic/Theatrical
+            harlequinEngage: [
+                "{enemyName}: Welcome to the greatest show in the sector!",
+                "{enemyName}: Don't look so drab, {playerTitle}! Let's add some color.",
+                "{enemyName}: A joke for the dead! Ha-ha!",
+                "{enemyName}: The Carnival is here, and you're the main attraction!",
+                "{enemyName}: Why fly in straight lines when the universe is a squiggle?",
+                "{enemyName}: Smile! It might be your last.",
+                "{enemyName}: The Jester's debt is paid in plasma!",
+                "{enemyName}: Boom! Did you get the punchline?",
+                "{enemyName}: Life is a tragedy. Let me make it a comedy.",
+                "{enemyName}: Surprise! (It's a missile)."
+            ],
+            harlequinRetort: [
+                "{enemyName}: Ouch! I love a rough audience!",
+                "{enemyName}: Is that all? I've seen better fireworks at a funeral!",
+                "{enemyName}: You're killing the vibe, man!",
+                "{enemyName}: Adding that to the blooper reel!",
+                "{enemyName}: Hehe... tickles!",
+                "{enemyName}: You're definitely not invited back for the encore."
+            ],
+            harlequinDeath: [
+                "{enemyName}: Curtains... closing...",
+                "{enemyName}: Tough... crowd...",
+                "{enemyName}: Exit... stage... left...",
+                "{enemyName}: That's... the way... the cookie... crumbles...",
+                "{enemyName}: Honk... honk..."
+            ],
+            // Harlequin Maniac (MAD_BOMBER)
+            harlequinManiac: [
+                "{enemyName}: Tick-tock! The station's on the clock!",
+                "{enemyName}: I'm gonna paint this sector with your atoms!",
+                "{enemyName}: Boom goes the dynamite! Hehehee!",
+                "{enemyName}: Fire! Fire! Everything must BURN!",
+                "{enemyName}: Can you hear the countdown? It's singing!"
             ]
         };
     }
@@ -2186,6 +2257,28 @@ class CommunicationSystem {
                     cooldown: 18000,
                     color: [200, 160, 255]
                 });
+            } else if (engages && enemy.role === AI_ROLE.MISSIONARY) {
+                this._maybeSend(enemy, "missionary_engage", this.templates.missionaryEngage, {
+                    chance: 0.8,
+                    cooldown: 20000,
+                    color: [200, 100, 255]
+                });
+            } else if (engages && this._getShipFaction(enemy) === 'HARLEQUIN') {
+                const faction = 'HARLEQUIN';
+                let templateList = this.templates.harlequinEngage;
+                let color = [255, 100, 255]; // Pink/Magenta
+
+                // Special case for MAD_BOMBER
+                if (enemy.displayName === "Harlequin Maniac") {
+                    templateList = this.templates.harlequinManiac;
+                    color = [255, 0, 0]; // Red
+                }
+
+                this._maybeSend(enemy, "harlequin_engage", templateList, {
+                    chance: 0.8,
+                    cooldown: 15000,
+                    color
+                });
             } else if (engages && enemy.role === AI_ROLE.COMBAT && enemy.isArmed?.()) {
                 // Determine faction for combat ships
                 const faction = this._getShipFaction(enemy);
@@ -2248,9 +2341,39 @@ class CommunicationSystem {
             });
             return;
         }
+
+        // Missionary/Religious
+        if (enemy.role === AI_ROLE.MISSIONARY) {
+            this._maybeSend(enemy, "missionary_engage", this.templates.missionaryEngage, {
+                chance: 0.8,
+                cooldown: 20000,
+                color: [200, 100, 255]
+            });
+            return;
+        }
+
+        // Harlequin logic
+        const faction = this._getShipFaction(enemy);
+        if (faction === 'HARLEQUIN') {
+            let templateList = this.templates.harlequinEngage;
+            let color = [255, 100, 255]; // Pink/Magenta
+
+            // Special case for MAD_BOMBER
+            if (enemy.displayName === "Harlequin Maniac") {
+                templateList = this.templates.harlequinManiac;
+                color = [255, 0, 0]; // Red
+            }
+
+            this._maybeSend(enemy, "harlequin_engage", templateList, {
+                chance: 0.9, // Harlequins love to talk
+                cooldown: 12000,
+                color
+            });
+            return;
+        }
+
         if (enemy.role === AI_ROLE.COMBAT && enemy.isArmed?.()) {
             // Determine faction for combat ships
-            const faction = this._getShipFaction(enemy);
             let templateList, color;
 
             if (faction === 'IMPERIAL') {
@@ -2391,6 +2514,7 @@ class CommunicationSystem {
             case AI_ROLE.GUARD: templateList = this.templates.guardDeath; color = [200, 160, 255]; break;
             case AI_ROLE.REPAIR: templateList = this.templates.repairDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.REPAIR : [180, 220, 140]; break;
             case AI_ROLE.MINER: templateList = this.templates.minerDeath; color = (typeof ROLE_COLORS !== 'undefined') ? ROLE_COLORS.MINER : [160, 120, 80]; break;
+            case AI_ROLE.MISSIONARY: templateList = this.templates.missionaryDeath; color = [200, 100, 255]; break;
             case AI_ROLE.COMBAT:
                 // Determine faction for combat ships
                 const faction = this._getShipFaction(enemy);
@@ -2400,12 +2524,22 @@ class CommunicationSystem {
                 } else if (faction === 'SEPARATIST') {
                     templateList = this.templates.separatistDeath;
                     color = [180, 220, 255];
+                } else if (faction === 'HARLEQUIN') {
+                    templateList = this.templates.harlequinDeath;
+                    color = [255, 100, 255];
                 } else {
                     templateList = this.templates.militaryDeath;
                     color = [255, 100, 100];
                 }
                 break;
-            default: return; // silent for other roles
+            default:
+                // Global faction check for roles not explicitly switched (Harlequins might be PIRATEs etc.)
+                if (this._getShipFaction(enemy) === 'HARLEQUIN') {
+                    templateList = this.templates.harlequinDeath;
+                    color = [255, 100, 255];
+                    break;
+                }
+                return; // silent for other roles
         }
         if (!templateList || templateList.length === 0) return;
         this._maybeSend(enemy, 'death_line', templateList, {
@@ -2478,6 +2612,23 @@ class CommunicationSystem {
         this._maybeSend(enemy, 'player_dying_gloat', templateList, {
             chance: 0.7,
             cooldown: 8000,  // Can gloat again after 8 seconds
+            color
+        });
+    }
+
+    /**
+     * Force a message to be sent from an enemy, useful for event-start broadcasts.
+     * Bypasses individual enemy cooldowns and random chance, but still respects global cooldown.
+     * 
+     * @param {Object} enemy - The enemy ship sending the message
+     * @param {Array} templateList - List of message templates to pick from
+     * @param {Array} color - RGB color for the message
+     */
+    broadcastMessage(enemy, templateList, color = [255, 190, 140]) {
+        if (!enemy || !templateList) return;
+        this._maybeSend(enemy, "broadcast", templateList, {
+            chance: 1.0,
+            cooldown: 0,
             color
         });
     }

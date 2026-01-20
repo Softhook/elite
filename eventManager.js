@@ -501,9 +501,32 @@ class EventManager {
             { type: "VIP_CONVOY", probabilityPerFrame: 0.000008, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 8000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "TRAFFIC: Priority VIP convoy passing through.", color: "cyan", consoleLog: "EventManager: VIP Convoy warning issued." } },
             { type: "MINING_OPERATION", probabilityPerFrame: 0.00001, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "OPS: Temporary mining operation detected.", color: "yellow", consoleLog: "EventManager: Mining Op warning issued." } },
             { type: "ROGUE_SECURITY", probabilityPerFrame: 0.000005, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "WARNING: Rogue security forces identified.", color: "red", consoleLog: "EventManager: Rogue Security warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.POLICE, fallbackShip: "ViperPol" }, aiRole: AI_ROLE.PIRATE, spawnRadiusMin: 1800, spawnRadiusMax: 2200, additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Rogue Security"; } } },
-            { type: "INTERSTELLAR_RALLY", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "RACE: Interstellar Rally racers entering sector!", color: "cyan", consoleLog: "EventManager: Rally warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 3, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.TRADER, fallbackShip: "Type6Transporter" }, aiRole: AI_ROLE.HAULER, spawnRadiusMin: 3000, spawnRadiusMax: 3500, additionalEnemySetup: (e) => { e.baseMaxSpeed *= 2.5; e.maxSpeed *= 2.5; e.currentState = AI_STATE.FLEEING; e.displayName = "Rally Racer"; } } },
+            { type: "INTERSTELLAR_RALLY", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "RACE: Interstellar Rally racers entering sector!", color: "cyan", consoleLog: "EventManager: Rally warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 3, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.TRADER, fallbackShip: "Type6Transporter" }, aiRole: AI_ROLE.HAULER, spawnRadiusMin: 3000, spawnRadiusMax: 3500, additionalEnemySetup: (e) => { e.baseMaxSpeed *= 2.5; e.maxSpeed *= 2.5; e.currentState = AI_STATE.FLEEING; e.displayName = "Rally Racer"; e.isRacing = true; } } },
             { type: "ALIEN_SCOUT", probabilityPerFrame: 0.000005, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CONTACT: Unidentified scout vessel.", color: "magenta", consoleLog: "EventManager: Alien Scout warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.ALIEN, fallbackShip: "Thargoid" }, aiRole: AI_ROLE.ALIEN, spawnRadiusMin: 2000, spawnRadiusMax: 2500, additionalEnemySetup: (e) => { e.currentState = AI_STATE.IDLE; } } },
-            { type: "PROTOTYPE_TESTING", probabilityPerFrame: 0.000004, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "DETECTED: High-signature prototype vessel.", color: "blue", consoleLog: "EventManager: Prototype warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.MILITARY, fallbackShip: "Viper" }, aiRole: AI_ROLE.COMBAT, spawnRadiusMin: 2500, spawnRadiusMax: 3000, additionalEnemySetup: (e) => { e.baseMaxSpeed *= 2.0; e.maxSpeed *= 2.0; e.shield *= 1.5; e.displayName = "Prototype Unit"; e.currentState = AI_STATE.PATROLLING; } } }
+            { type: "PROTOTYPE_TESTING", probabilityPerFrame: 0.000004, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "DETECTED: High-signature prototype vessel.", color: "blue", consoleLog: "EventManager: Prototype warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.MILITARY, fallbackShip: "Viper" }, aiRole: AI_ROLE.COMBAT, spawnRadiusMin: 2500, spawnRadiusMax: 3000, additionalEnemySetup: (e) => { e.baseMaxSpeed *= 2.0; e.maxSpeed *= 2.0; e.shield *= 1.5; e.displayName = "Prototype Unit"; e.currentState = AI_STATE.PATROLLING; } } },
+            // === Missionary & Creative Events ===
+            { type: "MISSIONARY_CONVOY", probabilityPerFrame: 0.00001, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CONVOY: Procession of faithful passing through.", color: "cyan" }, spawnConfig: { entityType: 'enemy', minEntities: 3, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"] }, aiRole: AI_ROLE.MISSIONARY, spawnRadiusMin: 1800, spawnRadiusMax: 2200 } },
+            { type: "FORCED_CONVERSION", probabilityPerFrame: 0.00001, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "DISTRESS: Trader under religious siege!", color: "orange" } },
+            { type: "HERETIC_HUNT", probabilityPerFrame: 0.00001, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ALERT: Military purging heretic vessel.", color: "red" } },
+            { type: "DOOMSDAY_PROPHET", probabilityPerFrame: 0.000005, minCooldownMs: 60 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "COMMS: 'The end is nigh! Embrace the void!'", color: "purple" } },
+            { type: "ASCENSION_RITUAL", probabilityPerFrame: 0.000005, minCooldownMs: 45 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "RITUAL: Ascension flight detected on sensors.", color: "cyan" } },
+            { type: "ARTIFACT_WORSHIP", probabilityPerFrame: 0.000005, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SCAN: Religious activity near unknown artifact.", color: "magenta" } },
+            { type: "FALSE_IDOLS", probabilityPerFrame: 0.00001, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "WARNING: Missionary vessel broadcasting pirate codes.", color: "red" }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"] }, aiRole: AI_ROLE.PIRATE, spawnRadiusMin: 1500, spawnRadiusMax: 2000, additionalEnemySetup: (enemy) => { enemy.armament.push("Pulse Laser"); enemy.displayName = "False Prophet"; } } },
+            { type: "CLEANSING_FIRE", probabilityPerFrame: 0.00001, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "PURGE: Missionaries attacking unclean vessel.", color: "orange" } },
+            { type: "SIN_EATER", probabilityPerFrame: 0.00001, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "NOTICE: 'Sin Eater' vessel hunting criminals.", color: "red" }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"] }, aiRole: AI_ROLE.BOUNTY_HUNTER, spawnRadiusMin: 1500, spawnRadiusMax: 2000, additionalEnemySetup: (enemy) => { enemy.armament.push("Harpoon Launcher"); enemy.displayName = "Sin Eater"; } } },
+            { type: "TECH_CRUSADE", probabilityPerFrame: 0.000005, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "WAR: Posthumans engaging alien presence.", color: "cyan" } },
+            // === Separatist & Imperial Events ===
+            { type: "IMPERIAL_INTERDICTION", probabilityPerFrame: 0.00001, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "AUTHORITY: Imperial forces inspecting vessel.", color: "cyan" } },
+            { type: "SEPARATIST_AMBUSH", probabilityPerFrame: 0.00001, minCooldownMs: 35 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "AMBUSH: Rebel forces engaging logistics.", color: "orange" } },
+            { type: "DEFECTOR_ESCORT", probabilityPerFrame: 0.000005, minCooldownMs: 45 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ALERT: High-value defector detected.", color: "gold" } },
+            { type: "DIPLOMATIC_STANDOFF", probabilityPerFrame: 0.000005, minCooldownMs: 60 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "POLITICAL: Tense diplomatic standoff in progress.", color: "cyan" } },
+            { type: "PROTOTYPE_HEIST", probabilityPerFrame: 0.000004, minCooldownMs: 50 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "THEFT: Rebels fleeing with stolen tech!", color: "red" } },
+            // === Harlequin Events ===
+            { type: "HARLEQUIN_PARADE", probabilityPerFrame: 0.00001, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CIRCUS: Harlequin convoy detected.", color: "white" } },
+            { type: "JESTERS_TRAP", probabilityPerFrame: 0.00001, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CONTACT: Lone fighter drifting nearby.", color: "cyan" } },
+            { type: "COLOR_WAR", probabilityPerFrame: 0.00001, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ASSAULT: Harlequins attacking 'drab' vessel.", color: "red" } },
+            { type: "MAD_BOMBER", probabilityPerFrame: 0.000005, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "THREAT: Maniac threatening station bombardment!", color: "red" } },
+            { type: "CARNIVAL_DROP", probabilityPerFrame: 0.00001, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SCAN: Unsanctioned cargo drop detected.", color: "lime" } }
         );
     }
 
@@ -670,7 +693,7 @@ class EventManager {
         const crisisEvents = ['POWER_OUTAGE', 'SABOTAGE', 'MINING_BOOM', 'MINE_ACCIDENT', 'SOLAR_FLARE', 'QUARANTINE', 'REFUGEE_INFLUX', 'HACKER_ATTACK', 'PLAGUE', 'FAMINE'];
         const warEvents = ['SKIRMISH_SEPARATIST_IMPERIAL', 'SKIRMISH_ALIEN_MILITARY', 'WAR_SEPARATIST_IMPERIAL', 'WAR_ALIEN_MILITARY'];
         const miscEvents = ['BOUNTY_INCREASE', 'REPUTATION_SCANDAL'];
-        const newEvents = ['LOST_SHIPMENT', 'FACTION_SKIRMISH', 'VIP_CONVOY', 'MINING_OPERATION'];
+        const newEvents = ['LOST_SHIPMENT', 'FACTION_SKIRMISH', 'VIP_CONVOY', 'MINING_OPERATION', 'FORCED_CONVERSION', 'HERETIC_HUNT', 'DOOMSDAY_PROPHET', 'ASCENSION_RITUAL', 'ARTIFACT_WORSHIP', 'CLEANSING_FIRE', 'TECH_CRUSADE', 'IMPERIAL_INTERDICTION', 'SEPARATIST_AMBUSH', 'DEFECTOR_ESCORT', 'DIPLOMATIC_STANDOFF', 'PROTOTYPE_HEIST', 'HARLEQUIN_PARADE', 'JESTERS_TRAP', 'COLOR_WAR', 'MAD_BOMBER', 'CARNIVAL_DROP'];
 
         if (marketEvents.includes(eventType)) {
             return this._executeMarketEvent(eventType);
@@ -797,7 +820,7 @@ class EventManager {
                 const seizedText = seizedAmount > 0 && seizedName ? `${seizedAmount} ${seizedName} seized` : 'Contraband routes disrupted';
                 this._notifyEvent(`${station.name}: Smuggling bust (${seizedText}; ${spawnCount} patrol ships dispatched)`, 'red', 4000, 'SMUGGLING_BUST', { stationName: station.name });
 
-                this._addEventMarkerSafely(`SMUGGLE_BUST_${frameCount}`, anchor.x, anchor.y, `Smuggling Bust`, 'red', this._extendDurationMs(120000));
+                this._addEventMarkerSafely(`SMUGGLE_BUST_${frameCount}`, anchor.x, anchor.y, `Smuggling Bust`, 'red', this._extendDurationMs(60000));
                 break;
             }
 
@@ -830,7 +853,7 @@ class EventManager {
                 this._notifyEvent(`${station.name}: Diplomatic envoy delivers gifts (+${added} Luxury Goods)`, 'teal');
 
                 if (station?.pos) {
-                    this._addEventMarkerSafely(`DIPLOMATIC_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Diplomatic Visit`, 'teal', this._extendDurationMs(120000));
+                    this._addEventMarkerSafely(`DIPLOMATIC_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Diplomatic Visit`, 'teal', this._extendDurationMs(60000));
                 }
                 break;
             }
@@ -843,7 +866,8 @@ class EventManager {
                 this._notifyEvent(`${station.name}: Tech breakthrough (+${added} Adv Components)`, 'magenta');
 
                 if (station?.pos) {
-                    this._addEventMarkerSafely(`TECH_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Tech Breakthrough`, 'magenta', this._extendDurationMs(120000));
+                    station.techBreakthroughExpires = millis() + this._extendDurationMs(180000);
+                    this._addEventMarkerSafely(`TECH_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Tech Breakthrough`, 'magenta', this._extendDurationMs(180000));
                 }
                 break;
             }
@@ -856,10 +880,13 @@ class EventManager {
                 const consumed = station.market.consumeStockForNPC('Food', Math.max(3, Math.round((availableFood || 20) * random(0.6, 1))), { allowPartial: true });
 
                 this._notifyEvent(`${station.name}: Strike limits services (-${consumed} Food)`, 'orange');
-                this._addPersistentEvent(`STRIKE_${station.name}`, `${station.name}: Station Strike (Services Limited)`, 'orange', this._extendDurationMs(120000));
+                if (station) {
+                    station.strikeExpires = millis() + this._extendDurationMs(180000);
+                    this._addPersistentEvent(`STRIKE_${station.name}`, `${station.name}: Station Strike (Services Limited)`, 'orange', this._extendDurationMs(180000));
 
-                if (station?.pos) {
-                    this._addEventMarkerSafely(`STRIKE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Station Strike`, 'orange', this._extendDurationMs(120000));
+                    if (station?.pos) {
+                        this._addEventMarkerSafely(`STRIKE_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Station Strike`, 'orange', this._extendDurationMs(180000));
+                    }
                 }
                 break;
             }
@@ -998,7 +1025,7 @@ class EventManager {
                 const station = this._pickStationWithMarket();
                 if (!station) return;
 
-                const durationMs = this._extendDurationMs(120000);
+                const durationMs = this._extendDurationMs(60000);
                 const consumed = station.market.consumeStockForNPC('Food', Math.max(8, Math.round(random(15, 45))), { allowPartial: true });
 
                 // Triple Food prices at this station
@@ -1038,7 +1065,7 @@ class EventManager {
                 this._notifyEvent(`${station.name}: Hacker attack (${summary}; ${spawnCount} hijacked cutters)`, 'purple');
 
                 if (station?.pos) {
-                    this._addEventMarkerSafely(`HACKER_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Hacker Attack`, 'purple', this._extendDurationMs(120000));
+                    this._addEventMarkerSafely(`HACKER_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Hacker Attack`, 'purple', this._extendDurationMs(60000));
                 }
                 break;
             }
@@ -1274,7 +1301,7 @@ class EventManager {
                 pirateShips.forEach(p => { if (policeShips.length > 0) p.target = random(policeShips); });
 
                 this._notifyEvent(`ALERT: Faction skirmish detected nearby!`, 'red');
-                this._addEventMarkerSafely(`SKIRMISH_${frameCount}`, cx, cy, "Faction Skirmish", "red", this._extendDurationMs(120000));
+                this._addEventMarkerSafely(`SKIRMISH_${frameCount}`, cx, cy, "Faction Skirmish", "red", this._extendDurationMs(60000));
                 break;
             }
 
@@ -1299,7 +1326,9 @@ class EventManager {
                     // Spawn Escort
                     this._spawnGuardFormation(3, { x: cx, y: cy }, vip, 300);
                     this._notifyEvent(`TRAFFIC: VIP Convoy identified.`, 'cyan');
-                    this._addEventMarkerSafely(`VIP_${frameCount}`, cx, cy, "VIP Convoy", "cyan", this._extendDurationMs(120000));
+                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
+                        this._addEventMarkerSafely(`VIP_${frameCount}`, cx, cy, "VIP Convoy", "cyan", this._extendDurationMs(60000));
+                    }
                 }
                 break;
             }
@@ -1337,6 +1366,482 @@ class EventManager {
 
                 this._notifyEvent(`OPS: Temporary mining operation detected.`, 'yellow');
                 this._addEventMarkerSafely(`MINING_${frameCount}`, cx, cy, "Mining Op", "yellow", this._extendDurationMs(180000));
+                break;
+            }
+
+            case 'FORCED_CONVERSION': {
+                const angle = random(TWO_PI);
+                const dist = random(1500, 2500);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                let trader = null;
+                this._spawnAdHocEnemy(cx, cy, AI_ROLE.HAULER, (e) => {
+                    e.currentState = AI_STATE.FLEEING;
+                    e.displayName = "Harassed Trader";
+                    trader = e;
+                });
+
+                if (trader) {
+                    for (let i = 0; i < 2; i++) {
+                        const mx = cx + random(-200, 200);
+                        const my = cy + random(-200, 200);
+                        this._spawnAdHocEnemy(mx, my, AI_ROLE.MISSIONARY, (e) => {
+                            e.target = trader;
+                            e.currentState = AI_STATE.COMBAT;
+                            e.displayName = "Zealous Missionary";
+                        }, 'PosthumanMissionary');
+                    }
+                    this._notifyEvent(`DISTRESS: Trader under religious siege!`, 'orange');
+                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
+                        this._addEventMarkerSafely(`CONVERT_${frameCount}`, cx, cy, "Forced Conversion", "orange", this._extendDurationMs(60000));
+                    }
+                }
+                break;
+            }
+
+            case 'HERETIC_HUNT': {
+                const angle = random(TWO_PI);
+                const dist = random(1500, 2500);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                let heretic = null;
+                this._spawnAdHocEnemy(cx, cy, AI_ROLE.MISSIONARY, (e) => {
+                    e.currentState = AI_STATE.FLEEING;
+                    e.displayName = "Heretic Vessel";
+                    heretic = e;
+                }, 'PosthumanMissionary');
+
+                if (heretic) {
+                    for (let i = 0; i < 2; i++) {
+                        const mx = cx + random(-300, 300);
+                        const my = cy + random(-300, 300);
+                        this._spawnAdHocEnemy(mx, my, AI_ROLE.COMBAT, (e) => {
+                            e.target = heretic;
+                            e.currentState = AI_STATE.COMBAT;
+                            e.displayName = "Inquisitor";
+                        }, 'Viper');
+                    }
+                    this._notifyEvent(`ALERT: Military purging heretic vessel.`, 'red');
+                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
+                        this._addEventMarkerSafely(`HERETIC_${frameCount}`, cx, cy, "Heretic Hunt", "red", this._extendDurationMs(60000));
+                    }
+                }
+                break;
+            }
+
+            case 'DOOMSDAY_PROPHET': {
+                const angle = random(TWO_PI);
+                const dist = random(1200, 1800);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                const prophet = this._spawnAdHocEnemy(cx, cy, AI_ROLE.MISSIONARY, (e) => {
+                    e.currentState = AI_STATE.IDLE;
+                    e.displayName = "Doomsday Prophet";
+                    // Initial broadcast
+                    if (typeof communicationSystem !== 'undefined') {
+                        communicationSystem.broadcastMessage(e, ["{enemyName}: The end is nigh! Embrace the void!"], [180, 100, 255]);
+                    }
+                }, 'PosthumanMissionary');
+
+                if (this.starSystem.cosmicStorms) {
+                    this.starSystem.cosmicStorms.push(new CosmicStorm(cx, cy, 800, 'ION'));
+                }
+
+                this._notifyEvent(`COMMS: 'The end is nigh! Embrace the void!'`, 'purple');
+                this._addEventMarkerSafely(`PROPHET_${frameCount}`, cx, cy, "Doomsday Prophet", "purple", this._extendDurationMs(60000));
+                break;
+            }
+
+            case 'ASCENSION_RITUAL': {
+                const angle = random(TWO_PI);
+                const dist = 3000;
+                for (let i = 0; i < 3; i++) {
+                    const offsetX = random(-100, 100);
+                    const offsetY = random(-100, 100);
+                    this._spawnAdHocEnemy(cos(angle) * dist + offsetX, sin(angle) * dist + offsetY, AI_ROLE.MISSIONARY, (e) => {
+                        e.currentState = AI_STATE.PATROLLING;
+                        e.patrolPoint = createVector(0, 0); // Sun
+                        e.displayName = "Ascendant";
+                    }, 'PosthumanMissionary');
+                }
+                this._notifyEvent(`RITUAL: Ascension flight detected.`, 'cyan');
+                break;
+            }
+
+            case 'ARTIFACT_WORSHIP': {
+                const angle = random(TWO_PI);
+                const dist = random(2000, 3000);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                this._spawnCargoWithMarker(cx, cy, 'Alien Artifact', 1, `ARTIFACT_${frameCount}`, 'Relic Worship', 'magenta', this._extendDurationMs(300000));
+
+                for (let i = 0; i < 2; i++) {
+                    const a = random(TWO_PI);
+                    const d = 200;
+                    this._spawnAdHocEnemy(cx + cos(a) * d, cy + sin(a) * d, AI_ROLE.MISSIONARY, (e) => {
+                        e.currentState = AI_STATE.IDLE;
+                        e.displayName = "Worshipper";
+                        e.angle = atan2(cy - e.pos.y, cx - e.pos.x);
+                    }, 'PosthumanMissionary');
+                }
+                this._notifyEvent(`SCAN: Religious activity near unknown artifact.`, 'magenta');
+                break;
+            }
+
+            case 'CLEANSING_FIRE': {
+                const angle = random(TWO_PI);
+                const dist = random(1500, 2500);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                let plagueShip = null;
+                this._spawnAdHocEnemy(cx, cy, AI_ROLE.HAULER, (e) => {
+                    e.currentState = AI_STATE.FLEEING;
+                    e.displayName = "Unclean Vessel";
+                    e.hull = e.maxHull * 0.5;
+                    plagueShip = e;
+                }, 'Type6Transporter');
+
+                if (plagueShip) {
+                    for (let i = 0; i < 2; i++) {
+                        const mx = cx + random(-200, 200);
+                        const my = cy + random(-200, 200);
+                        this._spawnAdHocEnemy(mx, my, AI_ROLE.MISSIONARY, (e) => {
+                            e.target = plagueShip;
+                            e.currentState = AI_STATE.COMBAT;
+                            e.displayName = "Purifier";
+                        }, 'PosthumanMissionary');
+                    }
+                    this._notifyEvent(`PURGE: Missionaries attacking unclean vessel.`, 'orange');
+                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
+                        this._addEventMarkerSafely(`PURGE_${frameCount}`, cx, cy, "Cleansing Fire", "orange", this._extendDurationMs(60000));
+                    }
+                }
+                break;
+            }
+
+            case 'TECH_CRUSADE': {
+                const angle = random(TWO_PI);
+                const dist = random(1500, 2500);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                const aliens = [];
+                for (let i = 0; i < 2; i++) {
+                    const ax = cx + random(-200, 200);
+                    const ay = cy + random(-200, 200);
+                    this._spawnAdHocEnemy(ax, ay, AI_ROLE.ALIEN, (e) => {
+                        e.currentState = AI_STATE.COMBAT;
+                        aliens.push(e);
+                    });
+                }
+
+                for (let i = 0; i < 2; i++) {
+                    const mx = cx + random(-200, 200);
+                    const my = cy + random(-200, 200);
+                    this._spawnAdHocEnemy(mx, my, AI_ROLE.MISSIONARY, (e) => {
+                        if (aliens.length > 0) e.target = random(aliens);
+                        e.currentState = AI_STATE.COMBAT;
+                        e.displayName = "Crusader";
+                    }, 'PosthumanMissionary');
+                }
+                this._notifyEvent(`WAR: Posthumans engaging alien presence.`, 'cyan');
+                this._addEventMarkerSafely(`CRUSADE_${frameCount}`, cx, cy, "Tech Crusade", "cyan", this._extendDurationMs(60000));
+                break;
+            }
+
+            case 'IMPERIAL_INTERDICTION': {
+                const angle = random(TWO_PI);
+                const dist = random(1500, 2500);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                let suspect = null;
+                this._spawnAdHocEnemy(cx, cy, AI_ROLE.HAULER, (e) => {
+                    e.currentState = AI_STATE.IDLE; // Ordered to stop
+                    e.displayName = "Detained Hauler";
+                    suspect = e;
+                }, 'Type6Transporter');
+
+                if (suspect) {
+                    // Spawn Inspector circling/near the hauler using angle-aware offset
+                    const ix = cx + cos(angle) * 300;
+                    const iy = cy + sin(angle) * 300;
+                    this._spawnAdHocEnemy(ix, iy, AI_ROLE.POLICE, (e) => {
+                        e.target = suspect;
+                        e.currentState = AI_STATE.PATROLLING; // Circling
+                        e.displayName = "Imperial Inspector";
+                    }, 'ImperialEagleMkII');
+                    this._notifyEvent(`AUTHORITY: Imperial forces inspecting vessel.`, 'cyan');
+                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
+                        this._addEventMarkerSafely(`INTERDICT_${frameCount}`, cx, cy, "Imperial Interdiction", "cyan", this._extendDurationMs(60000));
+                    }
+                }
+                break;
+            }
+
+            case 'SEPARATIST_AMBUSH': {
+                const angle = random(TWO_PI);
+                const dist = random(1500, 2500);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                let transport = null;
+                this._spawnAdHocEnemy(cx, cy, AI_ROLE.HAULER, (e) => {
+                    e.currentState = AI_STATE.FLEEING;
+                    e.displayName = "Imperial Logistics";
+                    transport = e;
+                }, 'ImperialEnvoy'); // Fallback if not exists
+
+                if (transport) {
+                    for (let i = 0; i < 3; i++) {
+                        // Offset along the direction of travel (angle) for ambushers
+                        const spread = random(-200, 200);
+                        const sx = cx + cos(angle) * 400 + random(-100, 100);
+                        const sy = cy + sin(angle) * 400 + random(-100, 100);
+                        this._spawnAdHocEnemy(sx, sy, AI_ROLE.COMBAT, (e) => {
+                            e.target = transport;
+                            e.currentState = AI_STATE.COMBAT;
+                            e.displayName = "Rebel Ambusher";
+                        }, 'SeparatistPartisan'); // Fallback
+                    }
+                    this._notifyEvent(`AMBUSH: Rebel forces engaging logistics.`, 'orange');
+                    if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
+                        this._addEventMarkerSafely(`AMBUSH_${frameCount}`, cx, cy, "Separatist Ambush", "orange", this._extendDurationMs(60000));
+                    }
+                }
+                break;
+            }
+
+            case 'DEFECTOR_ESCORT': {
+                const angle = random(TWO_PI);
+                const dist = random(2000, 3000);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                let defector = null;
+                this._spawnAdHocEnemy(cx, cy, AI_ROLE.FLEEING, (e) => {
+                    e.currentState = AI_STATE.FLEEING;
+                    e.displayName = "Imperial Defector";
+                    defector = e;
+                }, 'ImperialCourier');
+
+                if (defector) {
+                    for (let i = 0; i < 2; i++) {
+                        // Pursuers start BEHIND the defector relative to spawn angle
+                        const distanceBehind = 500;
+                        const sx = cx - cos(angle) * distanceBehind + random(-100, 100);
+                        const sy = cy - sin(angle) * distanceBehind + random(-100, 100);
+                        this._spawnAdHocEnemy(sx, sy, AI_ROLE.COMBAT, (e) => {
+                            e.target = defector;
+                            e.currentState = AI_STATE.COMBAT;
+                            e.displayName = "Imperial Pursuer";
+                        }, 'Viper');
+                    }
+                    this._notifyEvent(`ALERT: High-value defector detected.`, 'gold');
+                    this._addEventMarkerSafely(`DEFECTOR_${frameCount}`, cx, cy, "Defector Chase", "gold", this._extendDurationMs(60000));
+                }
+                break;
+            }
+
+            case 'DIPLOMATIC_STANDOFF': {
+                const angle = random(TWO_PI);
+                const dist = random(1500, 2500);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                // Form a line perpendicular to the standoff vector
+                const perpAngle = angle + HALF_PI;
+                // Imperials on "one side" (offset by -300 along the standoff vector)
+                for (let i = 0; i < 2; i++) {
+                    const offset = (i - 0.5) * 200;
+                    const sx = cx - cos(angle) * 300 + cos(perpAngle) * offset;
+                    const sy = cy - sin(angle) * 300 + sin(perpAngle) * offset;
+                    this._spawnAdHocEnemy(sx, sy, AI_ROLE.COMBAT, (e) => {
+                        e.currentState = AI_STATE.IDLE;
+                        e.displayName = "Imperial Diplomat";
+                        e.angle = angle; // Facing towards the standoff center
+                    }, 'ImperialCourier');
+                }
+
+                // Separatists on the "other side" (offset by +300)
+                for (let i = 0; i < 2; i++) {
+                    const offset = (i - 0.5) * 200;
+                    const sx = cx + cos(angle) * 300 + cos(perpAngle) * offset;
+                    const sy = cy + sin(angle) * 300 + sin(perpAngle) * offset;
+                    this._spawnAdHocEnemy(sx, sy, AI_ROLE.COMBAT, (e) => {
+                        e.currentState = AI_STATE.IDLE;
+                        e.displayName = "Rebel Delegate";
+                        e.angle = angle + PI; // Facing back towards the standoff center
+                    }, 'SeparatistPartisan');
+                }
+                this._notifyEvent(`POLITICAL: Tense diplomatic standoff in progress.`, 'cyan');
+                this._addEventMarkerSafely(`STANDOFF_${frameCount}`, cx, cy, "Diplomatic Standoff", "cyan", this._extendDurationMs(60000));
+                break;
+            }
+
+            case 'PROTOTYPE_HEIST': {
+                const angle = random(TWO_PI);
+                const dist = random(2000, 3000);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                let stolenShip = null;
+                // Separatist flying an Imperial prototype (or just a Separatist ship labeled as such)
+                // Let's use ImperialCutterLite but label it
+                this._spawnAdHocEnemy(cx, cy, AI_ROLE.FLEEING, (e) => {
+                    e.currentState = AI_STATE.FLEEING;
+                    e.displayName = "Stolen Prototype";
+                    e.faction = 'SEPARATIST'; // Override faction to ensure guards attack
+                    stolenShip = e;
+                }, 'ImperialCutterLite');
+
+                if (stolenShip) {
+                    for (let i = 0; i < 3; i++) {
+                        const sx = cx - 500 + random(-50, 50);
+                        const sy = cy + random(-100, 100);
+                        this._spawnAdHocEnemy(sx, sy, AI_ROLE.GUARD, (e) => {
+                            e.target = stolenShip;
+                            e.currentState = AI_STATE.COMBAT;
+                            e.displayName = "Prototype Guard";
+                        }, 'ImperialEagleMkII');
+                    }
+                    this._notifyEvent(`THEFT: Rebels fleeing with stolen tech!`, 'red');
+                    this._addEventMarkerSafely(`HEIST_${frameCount}`, cx, cy, "Prototype Heist", "red", this._extendDurationMs(60000));
+                }
+                break;
+            }
+
+            case 'HARLEQUIN_PARADE': {
+                const angle = random(TWO_PI);
+                const dist = random(1500, 2500);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                // Parade line
+                const ships = ['HarlequinPulcinella', 'HarlequinPierrot', 'HarlequinColumbine'];
+                ships.forEach((shipType, i) => {
+                    this._spawnAdHocEnemy(cx + i * 200, cy, AI_ROLE.PIRATE, (e) => {
+                        e.currentState = AI_STATE.PATROLLING;
+                        e.displayName = "Masquerade";
+                        e.faction = 'HARLEQUIN';
+                        // Initial broadcast from the first ship
+                        if (i === 0 && typeof communicationSystem !== 'undefined') {
+                            communicationSystem.broadcastMessage(e, ["{enemyName}: Welcome to the greatest show in the sector! Let's add some color!"], [255, 100, 255]);
+                        }
+                    }, shipType);
+                });
+                this._notifyEvent(`CIRCUS: Harlequin convoy detected.`, 'white');
+                this._addEventMarkerSafely(`PARADE_${frameCount}`, cx, cy, "Harlequin Parade", "white", this._extendDurationMs(60000));
+                break;
+            }
+
+            case 'JESTERS_TRAP': {
+                const angle = random(TWO_PI);
+                const dist = random(1200, 2000);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                let bait = null;
+                this._spawnAdHocEnemy(cx, cy, AI_ROLE.PIRATE, (e) => {
+                    e.currentState = AI_STATE.IDLE;
+                    e.displayName = "Harmless Jester";
+                    bait = e;
+                }, 'HarlequinJester');
+
+                if (bait) {
+                    // The Trap: A powerful Striker hidden nearby
+                    this._spawnAdHocEnemy(cx + 300, cy + 300, AI_ROLE.PIRATE, (e) => {
+                        e.target = bait; // Guarding the bait? Or waiting for player?
+                        // Let's set it to PATROL around the bait
+                        e.currentState = AI_STATE.PATROLLING;
+                        e.displayName = "Hidden Scaramouche";
+                    }, 'HarlequinScaramouche');
+                    this._notifyEvent(`CONTACT: Lone fighter drifting nearby.`, 'cyan');
+                    this._addEventMarkerSafely(`TRAP_${frameCount}`, cx, cy, "Suspicious Jester", "cyan", this._extendDurationMs(60000));
+                }
+                break;
+            }
+
+            case 'COLOR_WAR': {
+                const angle = random(TWO_PI);
+                const dist = random(1500, 2500);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                let target = null;
+                this._spawnAdHocEnemy(cx, cy, AI_ROLE.POLICE, (e) => {
+                    e.currentState = AI_STATE.FLEEING;
+                    e.displayName = "Drab Target";
+                    target = e;
+                }, 'ViperPol');
+
+                if (target) {
+                    for (let i = 0; i < 3; i++) {
+                        const sx = cx + random(200, 400);
+                        const sy = cy + random(-200, 200);
+                        this._spawnAdHocEnemy(sx, sy, AI_ROLE.PIRATE, (e) => {
+                            e.target = target;
+                            e.currentState = AI_STATE.COMBAT;
+                            e.displayName = "Motley Attacker";
+                        }, 'HarlequinMotley');
+                    }
+                    this._notifyEvent(`ASSAULT: Harlequins attacking 'drab' vessel.`, 'red');
+                    this._addEventMarkerSafely(`COLORWAR_${frameCount}`, cx, cy, "Color War", "red", this._extendDurationMs(60000));
+                }
+                break;
+            }
+
+            case 'MAD_BOMBER': {
+                // Find a station to target
+                const station = this.starSystem.station; // Main station usually
+                if (station) {
+                    const angle = random(TWO_PI);
+                    const dist = 3000; // Far out, incoming
+                    const cx = station.pos.x + cos(angle) * dist;
+                    const cy = station.pos.y + sin(angle) * dist;
+
+                    this._spawnAdHocEnemy(cx, cy, AI_ROLE.PIRATE, (e) => {
+                        e.target = station;
+                        e.currentState = AI_STATE.COMBAT;
+                        e.displayName = "Harlequin Maniac"; // Rename to Maniac as per HUD logic
+                        e.faction = 'HARLEQUIN';
+                        // Initial broadcast
+                        if (typeof communicationSystem !== 'undefined') {
+                            communicationSystem.broadcastMessage(e, ["{enemyName}: Tick-tock! The station's on the clock! Boom goes the dynamite! Hehehee!"], [255, 0, 0]);
+                        }
+                    }, 'HarlequinZanni');
+                    this._notifyEvent(`THREAT: Maniac threatening station bombardment!`, 'red');
+                    this._addEventMarkerSafely(`BOMBER_${frameCount}`, cx, cy, "Mad Bomber", "red", this._extendDurationMs(180000));
+                }
+                break;
+            }
+
+            case 'CARNIVAL_DROP': {
+                const angle = random(TWO_PI);
+                const dist = random(1000, 1800);
+                const cx = this.player.pos.x + cos(angle) * dist;
+                const cy = this.player.pos.y + sin(angle) * dist;
+
+                this._spawnAdHocEnemy(cx, cy, AI_ROLE.PIRATE, (e) => {
+                    e.currentState = AI_STATE.PATROLLING;
+                    e.displayName = "Carnival Master";
+                }, 'HarlequinPantaloon');
+
+                // Spawn cargo
+                const loot = ['Narcotics', 'Luxury Goods', 'Biowaste'];
+                loot.forEach((type, i) => {
+                    const lx = cx + random(-200, 200);
+                    const ly = cy + random(-200, 200);
+                    this._spawnCargoWithMarker(lx, ly, type, floor(random(5, 15)), `PRIZE_${frameCount}_${i}`, `Prize: ${type}`, 'lime', this._extendDurationMs(180000));
+                });
+
+                this._notifyEvent(`SCAN: Unsanctioned cargo drop detected.`, 'lime');
+                break;
             }
         }
     }
@@ -1643,7 +2148,7 @@ class EventManager {
             const label = event.type.split('_')
                 .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
                 .join(' ');
-            this._addEventMarkerSafely(`${event.type}_${frameCount}`, baseSpawnRadius * cos(baseSpawnAngle) + this.player.pos.x, baseSpawnRadius * sin(baseSpawnAngle) + this.player.pos.y, label, 'red', this._extendDurationMs(180000));
+            this._addEventMarkerSafely(`${event.type}_${frameCount}`, baseSpawnRadius * cos(baseSpawnAngle) + this.player.pos.x, baseSpawnRadius * sin(baseSpawnAngle) + this.player.pos.y, label, 'red', this._extendDurationMs(60000));
         }
 
         for (let i = 0; i < numToSpawn; i++) {

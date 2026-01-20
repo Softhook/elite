@@ -1311,7 +1311,52 @@ class UIHUD {
         const state = target.currentState;
         const role = target.role;
 
-        // Role-specific activity descriptions
+        // --- Event-specific thematic overrides ---
+
+        // Interstellar Rally
+        if (target.isRacing) {
+            return 'Racing';
+        }
+
+        // Mad Bomber / Harlequin unique behaviors
+        if (target.displayName === "Harlequin Maniac") {
+            if (state === AI_STATE.ATTACK_PASS || state === AI_STATE.APPROACHING) return 'Priming Charges';
+            return 'Cackling Maniacally';
+        }
+
+        // Global faction flavoring (Harlequins)
+        const shipTypeName = target.shipTypeName || "";
+        if (shipTypeName.startsWith("Harlequin") || target.faction === 'HARLEQUIN') {
+            if (state === AI_STATE.ATTACK_PASS || state === AI_STATE.APPROACHING) return 'Vandalizing Vessel';
+            if (state === AI_STATE.PATROLLING) return 'Searching for Audience';
+            if (state === AI_STATE.NEAR_STATION) return 'Performing for Base';
+        }
+
+        // Missionary Logic
+        if (role === AI_ROLE.MISSIONARY) {
+            if (target.target && !target.target.destroyed) return 'Preaching to Heathen';
+            if (state === AI_STATE.PATROLLING) return 'Spreading the Word';
+            return 'Missionary Work';
+        }
+
+        // Imperial/Separatist logic (for COMBAT role in events)
+        if (role === AI_ROLE.COMBAT || role === AI_ROLE.PIRATE || role === AI_ROLE.GUARD) {
+            const faction = target.faction || "";
+            if (faction === 'IMPERIAL') {
+                if (target.target && state === AI_STATE.APPROACHING) return 'Inbound for Inspection';
+                if (state === AI_STATE.PATROLLING) return 'Monitoring Sector';
+            } else if (faction === 'SEPARATIST') {
+                if (state === AI_STATE.PATROLLING && this.starSystem && this.starSystem.asteroids && this.starSystem.asteroids.length > 0) {
+                    // Refined Ambush check: check if somewhat near an asteroid (within 1000 units)
+                    const nearAsteroid = this.starSystem.asteroids.some(a => target.pos.dist(a.pos) < 1000);
+                    if (nearAsteroid) return 'Laying Ambush';
+                }
+                if (state === AI_STATE.PATROLLING) return 'Patrolling Borders';
+                if (state === AI_STATE.FLEEING) return 'Returning to Hidden Base';
+            }
+        }
+
+        // --- Standard logic ---
         if (role === AI_ROLE.MINER) {
             if (target.asteroidTarget && !target.asteroidTarget.destroyed) {
                 return 'Mining Asteroid';
