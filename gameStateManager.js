@@ -205,51 +205,6 @@ class GameStateManager {
     }
 
     /**
-     * Updates space music state based on current game state
-     * @param {string} newState - The new game state
-     * @param {string} prevState - The previous game state
-     * @private
-     */
-    _updateSpaceMusic(newState, prevState) {
-        try {
-            if (typeof spaceMusicManager === 'undefined' || !spaceMusicManager) {
-                return;
-            }
-
-            const isSpaceState = ["IN_FLIGHT", "SURFACE_MODE", "JUMPING", "GALAXY_MAP"].includes(newState);
-            const wasSpaceState = ["IN_FLIGHT", "SURFACE_MODE", "JUMPING", "GALAXY_MAP"].includes(prevState);
-
-            if (isSpaceState) {
-                // Determine theme based on state/system
-                let themeName = 'deep_space';
-
-                if (newState === 'GALAXY_MAP') {
-                    themeName = 'nebula';
-                } else {
-                    const system = galaxy?.getCurrentSystem?.();
-                    if (system) {
-                        const faction = (system.faction || '').toLowerCase();
-                        if (faction.includes('imperial') || faction.includes('military')) {
-                            themeName = 'imperial_reach';
-                        } else if (system.hasNebula) {
-                            themeName = 'nebula';
-                        }
-                    }
-                }
-
-                // start() now handles theme switching internally
-                spaceMusicManager.start({ themeName });
-            }
-            else if (wasSpaceState) {
-                // Stop music when leaving space states (e.g. docking)
-                spaceMusicManager.stop(4000);
-            }
-        } catch (e) {
-            console.warn('Error updating space music state:', e);
-        }
-    }
-
-    /**
      * Plays transition-specific sound effects when changing states
      * @param {string} newState - The new game state
      * @param {string} prevState - The previous game state
@@ -512,7 +467,6 @@ class GameStateManager {
         // Execute transition handlers
         this._updateAmbientSoundState(newState);
         this._updateStationMusic(newState, this.previousState);
-        this._updateSpaceMusic(newState, this.previousState);
         this._playTransitionSound(newState, this.previousState);
         this._handleSaveSelectionTransition(newState);
         this._resetStateSpecificData(newState);
@@ -636,14 +590,6 @@ class GameStateManager {
         this._processPlanetBufferQueue();
         this._handlePendingPostLoadState();
         this._updatePostLoadFade();
-
-        // Update music managers (they handle their own state/fades)
-        if (typeof stationMusicManager !== 'undefined' && stationMusicManager) {
-            stationMusicManager.update();
-        }
-        if (typeof spaceMusicManager !== 'undefined' && spaceMusicManager) {
-            spaceMusicManager.update();
-        }
 
         this._updateStateLogic(player, currentSystem);
     }
@@ -818,6 +764,11 @@ class GameStateManager {
                 try {
                     // Keep player completely stationary while docked
                     player.vel.set(0, 0);
+
+                    // Update station music
+                    if (typeof stationMusicManager !== 'undefined' && stationMusicManager) {
+                        stationMusicManager.update();
+                    }
 
                     // Run safe background simulation: NPCs move, spawn timers advance,
                     // but player takes NO damage and is not targeted.

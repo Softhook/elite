@@ -38,6 +38,8 @@ class StationMusicManager {
         this.harmony = [];       // Secondary harmony notes
         this.noteIndex = 0;
         this.phraseIndex = 0;    // Track which phrase variation we're on
+        this.noteIndex = 0;
+        this.phraseIndex = 0;    // Track which phrase variation we're on
         this.lastNoteTime = 0;   // Timestamp of last played note
         this.noteInterval = 500; // ms between notes (default)
         this.restProbability = 0.15; // Chance of silence for breathing room
@@ -54,10 +56,6 @@ class StationMusicManager {
         // Current station theme
         this.stationType = 'standard';
         this.theme = null;
-
-        // Cleanup tracking
-        this.stopTimeout = null;
-        this.lastAppliedVolume = 0;
     }
 
     /**
@@ -681,11 +679,7 @@ class StationMusicManager {
             return;
         }
 
-        // Clear any pending stop timeout
-        if (this.stopTimeout) {
-            clearTimeout(this.stopTimeout);
-            this.stopTimeout = null;
-        }
+        if (this.isPlaying) return;
 
         // Generate new melody based on station type
         // Note: This also sets up oscillators for the theme BEFORE we set isPlaying
@@ -733,15 +727,11 @@ class StationMusicManager {
             }
         }
 
+        // Mark not playing so update-based playback stops immediately
         this.isPlaying = false;
 
-        // Clear existing timeout if any
-        if (this.stopTimeout) {
-            clearTimeout(this.stopTimeout);
-        }
-
         // Stop oscillators after the fade has completed (plus small buffer)
-        this.stopTimeout = setTimeout(() => {
+        setTimeout(() => {
             try {
                 if (this.osc) {
                     this.osc.stop();
@@ -749,7 +739,6 @@ class StationMusicManager {
                 if (this.osc2) {
                     this.osc2.stop();
                 }
-                this.stopTimeout = null;
             } catch (e) {
                 // Oscillator may already be stopped
             }
@@ -773,20 +762,10 @@ class StationMusicManager {
 
         // Update master gain
         if (this.masterGain) {
-            const needsUpdate = Math.abs(this.currentVolume - this.lastAppliedVolume) > 0.001 ||
-                (this.currentVolume === 0 && this.lastAppliedVolume !== 0) ||
-                (this.currentVolume === this.targetVolume && this.lastAppliedVolume !== this.targetVolume);
-
-            if (needsUpdate) {
-                try {
-                    this.masterGain.amp(this.currentVolume, 0.05);
-                    this.lastAppliedVolume = this.currentVolume;
-                } catch (e) {
-                    try {
-                        this.masterGain.amp(this.currentVolume);
-                        this.lastAppliedVolume = this.currentVolume;
-                    } catch (_) { }
-                }
+            try {
+                this.masterGain.amp(this.currentVolume, 0.05);
+            } catch (e) {
+                try { this.masterGain.amp(this.currentVolume); } catch (_) { }
             }
         }
 
@@ -939,11 +918,6 @@ class StationMusicManager {
             }
             this.envelope = null;
             this.envelope2 = null;
-
-            if (this.stopTimeout) {
-                clearTimeout(this.stopTimeout);
-                this.stopTimeout = null;
-            }
         } catch (e) {
             // Ignore cleanup errors
         }
