@@ -38,9 +38,9 @@ class StationMusicManager {
         this.harmony = [];       // Secondary harmony notes
         this.noteIndex = 0;
         this.phraseIndex = 0;    // Track which phrase variation we're on
-        this.noteIndex = 0;
-        this.phraseIndex = 0;    // Track which phrase variation we're on
         this.lastNoteTime = 0;   // Timestamp of last played note
+
+        this.stopTimeout = null; // Track pending stop timeout
         this.noteInterval = 500; // ms between notes (default)
         this.restProbability = 0.15; // Chance of silence for breathing room
 
@@ -460,6 +460,9 @@ class StationMusicManager {
             this.reverb = new p5.Reverb();
             this.reverb.process(this.masterGain, 6, 12);
 
+            // CRITICAL FIX: Connect masterGain to audio destination so sound actually plays
+            this.masterGain.connect();
+
             // State for glide/portamento
             this.lastMelodyFreq = 0;
             this.lastHarmonyFreq = 0;
@@ -487,10 +490,10 @@ class StationMusicManager {
         const oscType = this.theme.oscType || 'triangle';
         const osc2Type = this.theme.osc2Type || 'sine';
 
-        // CRITICAL: Only switch oscillator types if NOT currently playing
-        // Melody regeneration calls generateMelody() while isPlaying=true,
-        // so we must skip oscillator switching in that case to avoid glitches
-        if (oscType !== this.currentOscType && !this.isPlaying) {
+        // CRITICAL: Always recreate oscillators when NOT playing (after stop)
+        // Web Audio oscillators cannot be restarted after stop()
+        // Only skip recreation during melody regeneration (while isPlaying=true)
+        if (!this.isPlaying) {
             try {
                 if (this.osc) {
                     try { this.osc.stop(); } catch (e) { /* may already be stopped */ }
@@ -505,7 +508,7 @@ class StationMusicManager {
             }
         }
 
-        if (osc2Type !== this.currentOsc2Type && !this.isPlaying) {
+        if (!this.isPlaying) {
             try {
                 if (this.osc2) {
                     try { this.osc2.stop(); } catch (e) { /* may already be stopped */ }
@@ -679,6 +682,12 @@ class StationMusicManager {
             return;
         }
 
+        // Clear any pending stop timeout to prevent race conditions
+        if (this.stopTimeout) {
+            clearTimeout(this.stopTimeout);
+            this.stopTimeout = null;
+        }
+
         if (this.isPlaying) return;
 
         // Generate new melody based on station type
@@ -730,8 +739,13 @@ class StationMusicManager {
         // Mark not playing so update-based playback stops immediately
         this.isPlaying = false;
 
+        // Clear existing timeout if any
+        if (this.stopTimeout) {
+            clearTimeout(this.stopTimeout);
+        }
+
         // Stop oscillators after the fade has completed (plus small buffer)
-        setTimeout(() => {
+        this.stopTimeout = setTimeout(() => {
             try {
                 if (this.osc) {
                     this.osc.stop();
@@ -739,6 +753,7 @@ class StationMusicManager {
                 if (this.osc2) {
                     this.osc2.stop();
                 }
+                this.stopTimeout = null;
             } catch (e) {
                 // Oscillator may already be stopped
             }
@@ -893,6 +908,12 @@ class StationMusicManager {
         this.stop();
 
         // Create local references to stop oscillators even if this.osc is nulled
+
+        if (this.stopTimeout) {
+            clearTimeout(this.stopTimeout);
+            this.stopTimeout = null;
+        }
+
         try {
             if (this.osc) {
                 try { this.osc.stop(); } catch (_) { }

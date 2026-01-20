@@ -158,6 +158,48 @@ class GameStateManager {
     }
 
     /**
+     * Gets station information for music theming
+     * Handles both regular stations and dockable space objects
+     * @returns {object} Station info with stationType, economyType, techLevel
+     * @private
+     */
+    _getStationInfo() {
+        const system = galaxy?.getCurrentSystem?.();
+
+        // Check if docked at a space object first
+        if (this.currentDockedSpaceObject) {
+            const spaceObj = this.currentDockedSpaceObject;
+            const objType = spaceObj.type?.toLowerCase() || '';
+
+            // Map space object types to music themes
+            let stationType = 'standard';
+            if (objType.includes('prison')) stationType = 'separatist';
+            else if (objType.includes('shipyard')) stationType = 'industrial';
+            else if (objType.includes('mining')) stationType = 'mining';
+            else if (objType.includes('research') || objType.includes('array')) stationType = 'post human';
+            else if (objType.includes('monolith') || objType.includes('artifact')) stationType = 'alien';
+            else if (objType.includes('market')) stationType = 'separatist';
+            else if (objType.includes('fuel') || objType.includes('power')) stationType = 'industrial';
+
+            return {
+                stationType: stationType,
+                economyType: system?.economyType || 'standard',
+                techLevel: system?.techLevel || 5,
+                securityLevel: system?.securityLevel || 'medium'
+            };
+        }
+
+        // Otherwise use regular station
+        const station = this.currentDockedStation || system?.station;
+        return {
+            stationType: station?.stationType || 'standard',
+            economyType: system?.economyType || 'standard',
+            techLevel: system?.techLevel || 5,
+            securityLevel: system?.securityLevel || 'medium'
+        };
+    }
+
+    /**
      * Updates station music state based on current game state
      * @param {string} newState - The new game state
      * @param {string} prevState - The previous game state
@@ -174,15 +216,8 @@ class GameStateManager {
 
             // Start music when entering a station state from non-station state
             if (isStationState && !wasStationState) {
-                // Get station info for theming
-                const system = galaxy?.getCurrentSystem?.();
-                const station = system?.station;
-                const stationInfo = {
-                    stationType: station?.stationType || 'standard',
-                    economyType: system?.economyType || 'standard',
-                    techLevel: system?.techLevel || 5,
-                    securityLevel: system?.securityLevel || 'medium'
-                };
+                // Get station info for theming (handles both stations and space objects)
+                const stationInfo = this._getStationInfo();
                 stationMusicManager.start(stationInfo);
             }
             // Stop music when leaving station states
