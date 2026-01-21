@@ -140,6 +140,55 @@ function generatePilotRank(role, securityLevel, techLevel) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// PERFORMANCE CACHING
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Cache for pre-rendered rank icons to avoid procedural drawing overhead every frame.
+ * Keyed by "rank_size" (e.g., "3_20")
+ */
+const RankIconCache = {};
+
+/**
+ * Renders a rank icon into an offscreen buffer.
+ * @private
+ */
+function _renderIconToBuffer(rank, size) {
+    if (typeof createGraphics !== 'function') return null;
+
+    const width = getPilotRankIconWidth(rank, size);
+    const height = size * 1.5; // Extra height for Elite wings/stars
+
+    const pg = createGraphics(Math.ceil(width), Math.ceil(height));
+    pg.clear();
+
+    // Inject procedural drawing into the buffer
+    // We override global p5 functions with those of the graphics object
+    const originalPush = push, originalPop = pop, originalFill = fill, originalNoStroke = noStroke;
+    const originalBeginShape = beginShape, originalEndShape = endShape, originalVertex = vertex;
+    const originalCos = cos, originalSin = sin, originalHalfPi = HALF_PI, originalTwoPi = TWO_PI;
+    const originalStroke = stroke, originalStrokeWeight = strokeWeight, originalNoFill = noFill;
+
+    // Use a simpler approach: explicitly pass the 'pg' context if possible, 
+    // but our existing drawing functions use global p5 state.
+    // The safest way in p5 without rewriting every helper is to use pg.push() etc.
+    // However, I'll rewrite the core drawing calls to be context-aware or just use pg's context locally.
+
+    pg.push();
+
+    // Call the graphic helper with pg as context
+    // We need to slightly adjust our helpers to take a p5 context if we want to avoid global namespace issues,
+    // but in p5.js sketches, the global functions usually work on the current context or we can call them on pg.
+    // To make this robust, I'll update the private helpers to accept an optional 'ctx' argument.
+
+    _drawRankIconGraphic(rank, width / 2, height / 2, size, pg);
+
+    pg.pop();
+
+    return pg;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // UTILITY FUNCTIONS
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -176,148 +225,111 @@ function getPilotRankColor(rank) {
 }
 
 /**
- * Internal helper to draw a star shape
- */
-function _drawStar(x, y, r) {
-    const angleStep = TWO_PI / 5;
-    // Rotate -PI/2 to point up
-    beginShape();
-    for (let i = 0; i < 5; i++) {
-        const a = i * angleStep - HALF_PI;
-        const sx = x + cos(a) * r;
-        const sy = y + sin(a) * r;
-        vertex(sx, sy);
-        const a2 = (i + 0.5) * angleStep - HALF_PI;
-        const sx2 = x + cos(a2) * r * 0.45; // Slightly deeper points for "richer" stars
-        const sy2 = y + sin(a2) * r * 0.45;
-        vertex(sx2, sy2);
-    }
-    endShape(CLOSE);
-}
-
-/**
- * Internal helper to draw Elite rank icon (Diamond + Eagle Wings style)
- */
-function _drawEliteIcon(x, y, r, iconColor) {
-    // Glow effect
-    if (iconColor) {
-        fill(iconColor[0], iconColor[1], iconColor[2], 60);
-        _drawStar(x, y, r * 1.8);
-        fill(iconColor[0], iconColor[1], iconColor[2]);
-    }
-
-    // Main Diamond center
-    beginShape();
-    vertex(x, y - r);
-    vertex(x + r * 0.8, y);
-    vertex(x, y + r);
-    vertex(x - r * 0.8, y);
-    endShape(CLOSE);
-
-    // Sharp eagle wings
-    noFill();
-    strokeWeight(1.5);
-    if (iconColor) stroke(iconColor[0], iconColor[1], iconColor[2], 255);
-
-    // Left Wing
-    beginShape();
-    vertex(x - r * 0.8, y - r * 0.1);
-    vertex(x - r * 2.0, y - r * 0.6);
-    vertex(x - r * 2.5, y + r * 0.2);
-    vertex(x - r * 0.8, y + r * 0.4);
-    endShape();
-
-    // Right Wing
-    beginShape();
-    vertex(x + r * 0.8, y - r * 0.1);
-    vertex(x + r * 2.0, y - r * 0.6);
-    vertex(x + r * 2.5, y + r * 0.2);
-    vertex(x + r * 0.8, y + r * 0.4);
-    endShape();
-
-    noStroke();
-}
-
-/**
  * Draws the rank icon (stars/wings) centered at x,y
+ * @param {Object} [ctx] - Optional p5 graphics context
  */
-function _drawRankIconGraphic(rank, x, y, size) {
+function _drawRankIconGraphic(rank, x, y, size, ctx) {
     const def = PILOT_RANK_DEFS[rank];
     if (!def) return;
 
-    fill(def.iconColor[0], def.iconColor[1], def.iconColor[2]);
-    noStroke();
+    const f = (ctx && ctx.fill) ? ctx.fill.bind(ctx) : fill;
+    const ns = (ctx && ctx.noStroke) ? ctx.noStroke.bind(ctx) : noStroke;
+
+    f(def.iconColor[0], def.iconColor[1], def.iconColor[2]);
+    ns();
 
     const starR = size * 0.4;
 
     if (rank === PILOT_RANK.TRAINED) {
         // One star
-        _drawStar(x, y, starR);
+        _drawStar(x, y, starR, ctx);
     } else if (rank === PILOT_RANK.VETERAN) {
         // Two stars
-        _drawStar(x - starR * 0.8, y, starR);
-        _drawStar(x + starR * 0.8, y, starR);
+        _drawStar(x - starR * 0.8, y, starR, ctx);
+        _drawStar(x + starR * 0.8, y, starR, ctx);
     } else if (rank === PILOT_RANK.ACE) {
         // Three stars
-        _drawStar(x - starR * 1.5, y + starR * 0.2, starR * 0.9);
-        _drawStar(x, y - starR * 0.2, starR * 1.25); // Center slightly larger/up
-        _drawStar(x + starR * 1.5, y + starR * 0.2, starR * 0.9);
+        _drawStar(x - starR * 1.5, y + starR * 0.2, starR * 0.9, ctx);
+        _drawStar(x, y - starR * 0.2, starR * 1.25, ctx); // Center slightly larger/up
+        _drawStar(x + starR * 1.5, y + starR * 0.2, starR * 0.9, ctx);
     } else if (rank === PILOT_RANK.ELITE) {
         // Elite Icon + Flanker Stars
-        _drawEliteIcon(x, y, starR * 1.3, def.iconColor);
-        _drawStar(x - starR * 2.2, y + starR * 0.3, starR * 0.6);
-        _drawStar(x + starR * 2.2, y + starR * 0.3, starR * 0.6);
+        _drawEliteIcon(x, y, starR * 1.3, def.iconColor, ctx);
+        _drawStar(x - starR * 2.2, y + starR * 0.3, starR * 0.6, ctx);
+        _drawStar(x + starR * 2.2, y + starR * 0.3, starR * 0.6, ctx);
     }
 }
 
 /**
- * Draws a pilot rank badge/medal at the specified position.
- * Does not draw anything for Rookie (rank 1).
- * 
- * @param {number} x - X position (left edge of badge)
- * @param {number} y - Y position (center Y of badge)
- * @param {number} rank - Pilot rank value
- * @param {number} size - Badge size in pixels (default 16)
- * @returns {number} Width of drawn badge (0 if nothing drawn)
+ * Internal helper to draw a star shape
  */
-function drawPilotBadge(x, y, rank, size = 16) {
-    // No badge for rookies or invalid ranks
-    if (!rank || rank < PILOT_RANK.TRAINED) return 0;
+function _drawStar(x, y, r, ctx) {
+    const bs = (ctx && ctx.beginShape) ? ctx.beginShape.bind(ctx) : beginShape;
+    const es = (ctx && ctx.endShape) ? ctx.endShape.bind(ctx) : endShape;
+    const v = (ctx && ctx.vertex) ? ctx.vertex.bind(ctx) : vertex;
 
-    const def = PILOT_RANK_DEFS[rank];
-    if (!def || !def.badgeColor) return 0;
-
-    // Check if p5.js drawing functions are available
-    if (typeof push !== 'function') return 0;
-
-    push();
-
-    const badgeWidth = size * 2.0; // Slightly wider to fit stars
-    const badgeHeight = size * 1.2;
-    const centerX = x + badgeWidth / 2;
-    const centerY = y;
-
-    // Draw badge background (shield/medal shape)
-    noStroke();
-    fill(def.badgeColor[0], def.badgeColor[1], def.badgeColor[2], 220);
-
-    // Draw rounded rectangle as badge base
-    rectMode(CENTER);
-    rect(centerX, centerY, badgeWidth, badgeHeight, 3);
-
-    // Draw border/outline
-    stroke(def.iconColor[0], def.iconColor[1], def.iconColor[2]);
-    strokeWeight(1);
-    noFill();
-    rect(centerX, centerY, badgeWidth, badgeHeight, 3);
-
-    // Draw procedural rank icon inside badge
-    _drawRankIconGraphic(rank, centerX, centerY, size);
-
-    pop();
-
-    return badgeWidth + 4; // Return width including small padding
+    const angleStep = TWO_PI / 5;
+    bs();
+    for (let i = 0; i < 5; i++) {
+        const a = i * angleStep - HALF_PI;
+        const sx = x + cos(a) * r;
+        const sy = y + sin(a) * r;
+        v(sx, sy);
+        const a2 = (i + 0.5) * angleStep - HALF_PI;
+        const sx2 = x + cos(a2) * r * 0.45;
+        const sy2 = y + sin(a2) * r * 0.45;
+        v(sx2, sy2);
+    }
+    es(CLOSE);
 }
+
+/**
+ * Internal helper to draw Elite rank icon
+ */
+function _drawEliteIcon(x, y, r, iconColor, ctx) {
+    const f = (ctx && ctx.fill) ? ctx.fill.bind(ctx) : fill;
+    const bs = (ctx && ctx.beginShape) ? ctx.beginShape.bind(ctx) : beginShape;
+    const es = (ctx && ctx.endShape) ? ctx.endShape.bind(ctx) : endShape;
+    const v = (ctx && ctx.vertex) ? ctx.vertex.bind(ctx) : vertex;
+    const s = (ctx && ctx.stroke) ? ctx.stroke.bind(ctx) : stroke;
+    const sw = (ctx && ctx.strokeWeight) ? ctx.strokeWeight.bind(ctx) : strokeWeight;
+    const nf = (ctx && ctx.noFill) ? ctx.noFill.bind(ctx) : noFill;
+    const ns = (ctx && ctx.noStroke) ? ctx.noStroke.bind(ctx) : noStroke;
+
+    if (iconColor) {
+        f(iconColor[0], iconColor[1], iconColor[2], 60);
+        _drawStar(x, y, r * 1.8, ctx);
+        f(iconColor[0], iconColor[1], iconColor[2]);
+    }
+
+    bs();
+    v(x, y - r);
+    v(x + r * 0.8, y);
+    v(x, y + r);
+    v(x - r * 0.8, y);
+    es(CLOSE);
+
+    nf();
+    sw(1.5);
+    if (iconColor) s(iconColor[0], iconColor[1], iconColor[2], 255);
+
+    bs();
+    v(x - r * 0.8, y - r * 0.1);
+    v(x - r * 2.0, y - r * 0.6);
+    v(x - r * 2.5, y + r * 0.2);
+    v(x - r * 0.8, y + r * 0.4);
+    es();
+
+    bs();
+    v(x + r * 0.8, y - r * 0.1);
+    v(x + r * 2.0, y - r * 0.6);
+    v(x + r * 2.5, y + r * 0.2);
+    v(x + r * 0.8, y + r * 0.4);
+    es();
+
+    ns();
+}
+
 
 /**
  * Calculates the width needed for a pilot rank icon/indicator.
@@ -358,13 +370,25 @@ function drawPilotRankIndicator(x, y, rank, size = 12) {
 
     if (typeof push !== 'function') return 0;
 
-    // Calculate generic width needs
     const widthNeeded = getPilotRankIconWidth(rank, size);
 
-    push();
-    // Center logic: _drawRankIconGraphic handles centering at (centerX, y)
-    _drawRankIconGraphic(rank, x + widthNeeded / 2, y, size);
-    pop();
+    // Check Cache
+    const cacheKey = `${rank}_${size}`;
+    if (!RankIconCache[cacheKey]) {
+        RankIconCache[cacheKey] = _renderIconToBuffer(rank, size);
+    }
+
+    const cachedImg = RankIconCache[cacheKey];
+    if (cachedImg) {
+        imageMode(CORNER);
+        // We center the image around the requested Y
+        image(cachedImg, x, y - cachedImg.height / 2);
+    } else {
+        // Fallback to procedural if buffer creation failed
+        push();
+        _drawRankIconGraphic(rank, x + widthNeeded / 2, y, size);
+        pop();
+    }
 
     return widthNeeded;
 }
@@ -381,7 +405,6 @@ if (typeof module !== 'undefined' && module.exports) {
         getPilotRankName,
         getPilotRankSymbol,
         getPilotRankColor,
-        drawPilotBadge,
         drawPilotRankIndicator
     };
 }

@@ -1087,10 +1087,10 @@ class UIHUD {
 
         let nameWidth = textWidth(pilotName);
 
-        // Draw Pilot Rank Badge
-        if (target.pilotRank && typeof drawPilotBadge === 'function') {
-            const badgeW = drawPilotBadge(cursorX + nameWidth + 4, cursorY + 9, target.pilotRank, 14); // Reduced padding from 8 to 4
-            if (badgeW > 0) nameWidth += badgeW + 4;
+        // Draw Pilot Rank Indicator (standardized with world view)
+        if (target.pilotRank && typeof drawPilotRankIndicator === 'function') {
+            const rankW = drawPilotRankIndicator(cursorX + nameWidth + 4, cursorY + 9, target.pilotRank, 14);
+            if (rankW > 0) nameWidth += rankW + 4;
         }
 
         if (wantedLabel) {
