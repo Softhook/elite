@@ -1,10 +1,16 @@
 # Elite Game Development TODO
 
+add a visual badging system with five levels of seniority and experience that indicates the skill and behaviour of enemy pilots
+These should be shown on the target overlay and in the mission description as well as in the targeting text next to the ships in the world view at the end of their name
+visualliy these should look little medals or badges
+implement this in phases
+start with the visual badges and leave the changes to enemy AI till last
+
+aeolian harp space music
+
 personal record should not be linked on the station screen but a link from inventory
 
 on the station screen add a link to the galaxy map.
-
-In Missions that ask you to travel to another system, the mission descitive text should tell you what the system economy is of the traget system (with a 50% chance of it being unknown). Either way, add a significant bonus for missions in alien systems because they are more dangerous.
 
 Exploration missions ask you to visit a certain number of systems. For example visit all the systems so that they are known. give a big credit bonus for that. Othere missions invovle visiting the planet surface of all the planets in specific system to take samples. These are common in Offworld systems 
 
@@ -24,7 +30,8 @@ leading a war war group
 
 Give assassination targets. Ship upgrades. Mention the ship upgrades in the mission description to warn the player. And reward the player for very hard upgrade such a stealth upgrades 
 
-  - Mining missions that pay well for ore
+  - Add Mining missions that pay well for asteroid ore.
+
 -----
 
 
