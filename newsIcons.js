@@ -13,7 +13,9 @@ const NEWS_ICON_TOKENS = {
     '[FAMINE]': 'famine',
     '[MEDAL]': 'medal',
     '[FIST]': 'fist',
-    '[SHIELD]': 'shield'
+    '[SHIELD]': 'shield',
+    '[ALIEN]': 'alien',
+    '[STORM]': 'storm'
 };
 
 /**
@@ -102,6 +104,12 @@ const NewsIcons = {
                 break;
             case 'shield':
                 this._drawShield(s);
+                break;
+            case 'alien':
+                this._drawAlien(s);
+                break;
+            case 'storm':
+                this._drawStorm(s);
                 break;
         }
 
@@ -259,6 +267,51 @@ const NewsIcons = {
         vertex(0, s * 0.6);
         vertex(-s * 0.5, s * 0.1);
         vertex(-s * 0.5, -s * 0.35);
+        endShape(CLOSE);
+    },
+
+    /**
+     * UFO/Alien Head - Alien threat
+     */
+    _drawAlien(s) {
+        fill(50, 200, 50); // Alien Green
+
+        // Classic UFO Saucer shape
+        // Dome
+        arc(0, -s * 0.2, s * 1.0, s * 1.0, PI, TWO_PI);
+
+        // Saucer body
+        fill(100, 100, 100);
+        ellipse(0, 0, s * 2.0, s * 0.6);
+
+        // Lights on saucer
+        fill(255, 50, 50); // Red lights
+        ellipse(-s * 0.5, 0, s * 0.3, s * 0.3);
+        ellipse(0, s * 0.1, s * 0.3, s * 0.3);
+        ellipse(s * 0.5, 0, s * 0.3, s * 0.3);
+    },
+
+    /**
+     * Storm Cloud/Lightning - Environmental hazard
+     */
+    _drawStorm(s) {
+        // Cloud
+        fill(100, 100, 110);
+        noStroke();
+        ellipse(-s * 0.3, -s * 0.3, s * 0.9, s * 0.7);
+        ellipse(s * 0.3, -s * 0.4, s * 1.1, s * 0.8);
+        ellipse(0, -s * 0.5, s * 0.8, s * 0.6);
+
+        // Lightning bolt
+        fill(255, 255, 0);
+        beginShape();
+        vertex(-s * 0.1, -s * 0.1);
+        vertex(s * 0.3, -s * 0.1);
+        vertex(0, s * 0.3);
+        vertex(s * 0.2, s * 0.3);
+        vertex(-s * 0.2, s * 0.9);
+        vertex(-s * 0.1, s * 0.4);
+        vertex(-s * 0.4, s * 0.4);
         endShape(CLOSE);
     }
 };

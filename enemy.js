@@ -80,6 +80,12 @@ class Enemy {
             this.gender = nameData.gender; // 'male' or 'female'
         }
 
+        // Generate pilot rank (skill/experience level)
+        // Uses weighted distribution based on role and system properties
+        this.pilotRank = (typeof generatePilotRank === 'function')
+            ? generatePilotRank(role, null, null)
+            : (typeof PILOT_RANK !== 'undefined' ? PILOT_RANK.TRAINED : 2);
+
         // Assign faction - prefer explicit shipDef.faction, then infer from role
         this.faction = null;
 

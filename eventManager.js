@@ -121,7 +121,7 @@ class EventManager {
                 isWarningActive: false,
                 eventTriggerTime: 0,
                 warningConfig: {
-                    message: "DANGER: Unidentified alien vessels detected!",
+                    message: "[ALIEN] DANGER: Unidentified alien vessels detected!",
                     color: "magenta",
                     consoleLog: "EventManager: Alien raid warning issued."
                 },
@@ -315,7 +315,7 @@ class EventManager {
                 isWarningActive: false,
                 eventTriggerTime: 0,
                 warningConfig: {
-                    message: "ALERT: Cosmic storm forming!",
+                    message: "[STORM] ALERT: Cosmic storm forming!",
                     color: "cyan",
                     consoleLog: "EventManager: Cosmic storm warning issued."
                 },
@@ -442,7 +442,7 @@ class EventManager {
                 isWarningActive: false,
                 eventTriggerTime: 0,
                 warningConfig: {
-                    message: "ANOMALY: Unknown artifact detected!",
+                    message: "[ALIEN] ANOMALY: Unknown artifact detected!",
                     color: "magenta",
                     consoleLog: "EventManager: Alien artifact warning issued."
                 },
@@ -478,7 +478,7 @@ class EventManager {
             { type: "SABOTAGE", probabilityPerFrame: 0.000005, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SABOTAGE: Infrastructure damage detected.", color: "crimson", consoleLog: "EventManager: Sabotage warning issued." } },
             { type: "MINING_BOOM", probabilityPerFrame: 0.00001, minCooldownMs: 35 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "MINING: High-yield discovery announced.", color: "olive", consoleLog: "EventManager: Mining boom warning issued." } },
             { type: "MINE_ACCIDENT", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "HAZARD: Mining accident - emergency response.", color: "orange", consoleLog: "EventManager: Mine accident warning issued." } },
-            { type: "SOLAR_FLARE", probabilityPerFrame: 0.000004, minCooldownMs: 50 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SPACE WEATHER: Solar flare activity detected.", color: "yellow", consoleLog: "EventManager: Solar flare warning issued." } },
+            { type: "SOLAR_FLARE", probabilityPerFrame: 0.000004, minCooldownMs: 50 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "[STORM] SPACE WEATHER: Solar flare activity detected.", color: "yellow", consoleLog: "EventManager: Solar flare warning issued." } },
             { type: "QUARANTINE", probabilityPerFrame: 0.000003, minCooldownMs: 80 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "QUARANTINE: Contagion measures in effect.", color: "purple", consoleLog: "EventManager: Quarantine warning issued." } },
             { type: "REFUGEE_INFLUX", probabilityPerFrame: 0.000005, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CIVIC: Refugee influx stresses local services.", color: "brown", consoleLog: "EventManager: Refugee influx warning issued." } },
             { type: "RARE_COMMODITY", probabilityPerFrame: 0.000005, minCooldownMs: 50 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "DISCOVERY: Rare commodity located nearby.", color: "gold", consoleLog: "EventManager: Rare commodity warning issued." }, spawnConfig: { entityType: 'cargo', minEntities: 1, maxEntities: 2, spawnRadiusMin: 1500, spawnRadiusMax: 3000, cargoType: 'Rare Ore', quantity: 1 } },
@@ -502,7 +502,7 @@ class EventManager {
             { type: "MINING_OPERATION", probabilityPerFrame: 0.00001, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "OPS: Temporary mining operation detected.", color: "yellow", consoleLog: "EventManager: Mining Op warning issued." } },
             { type: "ROGUE_SECURITY", probabilityPerFrame: 0.000005, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "WARNING: Rogue security forces identified.", color: "red", consoleLog: "EventManager: Rogue Security warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.POLICE, fallbackShip: "ViperPol" }, aiRole: AI_ROLE.PIRATE, spawnRadiusMin: 1800, spawnRadiusMax: 2200, additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Rogue Security"; } } },
             { type: "INTERSTELLAR_RALLY", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "RACE: Interstellar Rally racers entering sector!", color: "cyan", consoleLog: "EventManager: Rally warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 3, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.TRADER, fallbackShip: "Type6Transporter" }, aiRole: AI_ROLE.HAULER, spawnRadiusMin: 3000, spawnRadiusMax: 3500, additionalEnemySetup: (e) => { e.baseMaxSpeed *= 2.5; e.maxSpeed *= 2.5; e.currentState = AI_STATE.FLEEING; e.displayName = "Rally Racer"; e.isRacing = true; } } },
-            { type: "ALIEN_SCOUT", probabilityPerFrame: 0.000005, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CONTACT: Unidentified scout vessel.", color: "magenta", consoleLog: "EventManager: Alien Scout warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.ALIEN, fallbackShip: "Thargoid" }, aiRole: AI_ROLE.ALIEN, spawnRadiusMin: 2000, spawnRadiusMax: 2500, additionalEnemySetup: (e) => { e.currentState = AI_STATE.IDLE; } } },
+            { type: "ALIEN_SCOUT", probabilityPerFrame: 0.000005, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "[ALIEN] CONTACT: Unidentified scout vessel.", color: "magenta", consoleLog: "EventManager: Alien Scout warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.ALIEN, fallbackShip: "Thargoid" }, aiRole: AI_ROLE.ALIEN, spawnRadiusMin: 2000, spawnRadiusMax: 2500, additionalEnemySetup: (e) => { e.currentState = AI_STATE.IDLE; } } },
             { type: "PROTOTYPE_TESTING", probabilityPerFrame: 0.000004, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "DETECTED: High-signature prototype vessel.", color: "blue", consoleLog: "EventManager: Prototype warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.MILITARY, fallbackShip: "Viper" }, aiRole: AI_ROLE.COMBAT, spawnRadiusMin: 2500, spawnRadiusMax: 3000, additionalEnemySetup: (e) => { e.baseMaxSpeed *= 2.0; e.maxSpeed *= 2.0; e.shield *= 1.5; e.displayName = "Prototype Unit"; e.currentState = AI_STATE.PATROLLING; } } },
             // === Missionary & Creative Events ===
             { type: "MISSIONARY_CONVOY", probabilityPerFrame: 0.00001, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CONVOY: Procession of faithful passing through.", color: "cyan" }, spawnConfig: { entityType: 'enemy', minEntities: 3, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"] }, aiRole: AI_ROLE.MISSIONARY, spawnRadiusMin: 1800, spawnRadiusMax: 2200 } },
@@ -642,7 +642,9 @@ class EventManager {
 
         if (this.uiManager) {
             // warningDurationMs is already in milliseconds
-            this.uiManager.addMessage(message, event.warningConfig.color, event.warningDurationMs);
+            // Strip icon tokens for HUD display as it doesn't support them
+            const hudMessage = message.replace(/\[.*?\]\s*/g, '');
+            this.uiManager.addMessage(hudMessage, event.warningConfig.color, event.warningDurationMs);
         }
 
         let consoleMsg = event.warningConfig.consoleLog;
@@ -681,7 +683,7 @@ class EventManager {
 
                 // Route ALIEN_ARTIFACT to news system if it has newsType
                 if (event.newsType) {
-                    this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: Artifact signature detected`, 'magenta', 4000, event.newsType);
+                    this._notifyEvent(`[ALIEN] ${this.starSystem?.name || 'Local sector'}: Artifact signature detected`, 'magenta', 4000, event.newsType);
                 }
             } else {
                 console.warn(`EventManager: Unknown entityType '${event.spawnConfig.entityType}' for event ${eventType}.`);
@@ -868,7 +870,7 @@ class EventManager {
                 const currentLux = station.market.getAvailableStock ? station.market.getAvailableStock('Luxury Goods') : 0;
                 const added = station.market.addStockFromNPC('Luxury Goods', Math.max(8, Math.round((currentLux || 25) * random(0.8, 1.4))));
 
-                this._notifyEvent(`${station.name}: Diplomatic envoy delivers gifts (+${added} Luxury Goods)`, 'teal');
+                this._notifyEvent(`[STAR] ${station.name}: Diplomatic envoy delivers gifts (+${added} Luxury Goods)`, 'teal');
 
                 if (station?.pos) {
                     this._addEventMarkerSafely(`DIPLOMATIC_${station.name}_${frameCount}`, station.pos.x, station.pos.y, `Diplomatic Visit`, 'teal', this._extendDurationMs(60000));
@@ -881,7 +883,7 @@ class EventManager {
                 if (!station) return;
 
                 const added = station.market.addStockFromNPC('Adv Components', Math.max(8, Math.round(random(8, 16))));
-                this._notifyEvent(`${station.name}: Tech breakthrough (+${added} Adv Components)`, 'magenta');
+                this._notifyEvent(`[STAR] ${station.name}: Tech breakthrough (+${added} Adv Components)`, 'magenta');
 
                 if (station?.pos) {
                     station.techBreakthroughExpires = millis() + this._extendDurationMs(180000);
@@ -1021,7 +1023,7 @@ class EventManager {
                 this.starSystem.cosmicStorms.push(storm);
 
                 const systemLabel = this.starSystem?.name || 'Local sector';
-                this._notifyEvent(`${systemLabel}: Solar flare scorches shields (-${shieldDamage} shield strength)`, 'yellow');
+                this._notifyEvent(`[STORM] ${systemLabel}: Solar flare scorches shields (-${shieldDamage} shield strength)`, 'yellow');
                 this._addPersistentEvent('SOLAR_FLARE', 'WARNING: Solar Flare Activity', 'yellow', this._extendDurationMs(30000));
                 break;
             }
@@ -1116,7 +1118,7 @@ class EventManager {
                 this._spawnCrisisHaulers(3, 'Medicine');
 
                 const systemLabel = this.starSystem?.name || 'Local sector';
-                this._notifyEvent(`${systemLabel}: PLAGUE outbreak! Medicine prices soaring (×${priceMultiplier.toFixed(1)})`, 'magenta');
+                this._notifyEvent(`[FAMINE] ${systemLabel}: PLAGUE outbreak! Medicine prices soaring (×${priceMultiplier.toFixed(1)})`, 'magenta');
                 this._addPersistentEvent('PLAGUE_ACTIVE', `☠️ PLAGUE: Medicine ×${priceMultiplier.toFixed(1)} (affects connected systems)`, 'magenta', durationMs);
 
                 // Add news about plague (local + connected systems)
@@ -1161,7 +1163,7 @@ class EventManager {
                 this._spawnCrisisHaulers(3, 'Food');
 
                 const systemLabel = this.starSystem?.name || 'Local sector';
-                this._notifyEvent(`${systemLabel}: FAMINE! Food prices soaring (×${priceMultiplier.toFixed(1)})`, 'orange');
+                this._notifyEvent(`[FAMINE] ${systemLabel}: FAMINE! Food prices soaring (×${priceMultiplier.toFixed(1)})`, 'orange');
                 this._addPersistentEvent('FAMINE_ACTIVE', `🍂 FAMINE: Food ×${priceMultiplier.toFixed(1)} (affects connected systems)`, 'orange', durationMs);
 
                 // Add news about famine (local + connected systems)
@@ -2179,9 +2181,12 @@ class EventManager {
             this._addEventMarkerSafely(`${event.type}_${frameCount}`, baseSpawnRadius * cos(baseSpawnAngle) + this.player.pos.x, baseSpawnRadius * sin(baseSpawnAngle) + this.player.pos.y, label, 'red', this._extendDurationMs(60000));
 
             // Trigger news for high-level dynamic events that use spawnConfig
-            const dynamicSpawnEvents = ['ROGUE_SECURITY', 'INTERSTELLAR_RALLY', 'ALIEN_SCOUT', 'PROTOTYPE_TESTING', 'FALSE_IDOLS', 'SIN_EATER', 'MISSIONARY_CONVOY'];
+            const dynamicSpawnEvents = ['ROGUE_SECURITY', 'INTERSTELLAR_RALLY', 'ALIEN_SCOUT', 'PROTOTYPE_TESTING', 'FALSE_IDOLS', 'SIN_EATER', 'MISSIONARY_CONVOY', 'ALIEN_RAID', 'PIRATE_SWARM', 'BOUNTY_HUNTER_AMBUSH'];
             if (dynamicSpawnEvents.includes(event.type)) {
-                this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: ${label} detected`, 'orange', 4000, event.type);
+                let prefix = '';
+                if (event.type === 'ALIEN_RAID' || event.type === 'ALIEN_SCOUT') prefix = '[ALIEN] ';
+                if (event.type === 'PIRATE_SWARM' || event.type === 'BOUNTY_HUNTER_AMBUSH') prefix = '[SKULL] ';
+                this._notifyEvent(`${prefix}${this.starSystem?.name || 'Local sector'}: ${label} detected`, 'orange', 4000, event.type);
             }
         }
 
@@ -2252,7 +2257,7 @@ class EventManager {
                 if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                     this.uiManager.addEventMarker(`COSMIC_STORM_${frameCount}_${i}`, spawnX, spawnY, label, 'cyan', this._extendDurationMs(180000));
                 }
-                this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: Cosmic storm detected near ${this._formatStationLabel(this._pickRandomStation())}`, 'cyan');
+                this._notifyEvent(`[STORM] ${this.starSystem?.name || 'Local sector'}: Cosmic storm detected near ${this._formatStationLabel(this._pickRandomStation())}`, 'cyan');
             } catch (e) { }
         }
     }
@@ -2286,7 +2291,9 @@ class EventManager {
                 if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                     this.uiManager.addEventMarker(markerId, spawnX, spawnY, label, 'gold', this._extendDurationMs(180000));
                 }
-                this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: ${config.cargoType || 'Cargo'} cache appears near ${anchorLabel}`, 'gold');
+                let prefix = '';
+                if (config.cargoType === 'Alien Artifact') prefix = '[ALIEN] ';
+                this._notifyEvent(`${prefix}${this.starSystem?.name || 'Local sector'}: ${config.cargoType || 'Cargo'} cache appears near ${anchorLabel}`, 'gold');
             } catch (e) {
                 // Fallback: if anything goes wrong, still add cargo without marker link
                 try { this.starSystem.addCargo(cargo); } catch (err) { }
@@ -2318,7 +2325,11 @@ class EventManager {
 
     _notifyEvent(message, color = 'white', durationMs = 4000, type = 'GENERAL', details = {}) {
         if (!this.uiManager || !message) return;
-        this.uiManager.addMessage(message, color, durationMs);
+
+        // Strip icon tokens for HUD display as it doesn't support them
+        const hudMessage = message.replace(/\[.*?\]\s*/g, '');
+        this.uiManager.addMessage(hudMessage, color, durationMs);
+
 
         if (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager) {
             // Check if this is one of the new dynamic events

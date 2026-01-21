@@ -315,6 +315,11 @@ class Mission {
         if (this.targetName) newEnemy.displayName = this.targetName;
         newEnemy.isAssassinationTarget = true;
 
+        // Apply mission-specific pilot rank
+        if (this.targetPilotRank) {
+            newEnemy.pilotRank = this.targetPilotRank;
+        }
+
         // Apply mission-specific upgrades
         if (this.targetUpgrades && Array.isArray(this.targetUpgrades)) {
             newEnemy.applyUpgrades?.(this.targetUpgrades);

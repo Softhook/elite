@@ -929,6 +929,8 @@ class UIHUD {
                 identifier = ` (${factionLabel})`;
             }
             infoLines.push(`${shipName}${identifier}`);
+
+            // Pilot Rank text removed (badge used instead)
         }
         // Add mission target indicator prominently
         if (isMissionTarget) {
@@ -1082,9 +1084,18 @@ class UIHUD {
 
         UIComponents.setTextStyle({ fill: 255, size: 18 });
         text(pilotName, cursorX, cursorY);
+
+        let nameWidth = textWidth(pilotName);
+
+        // Draw Pilot Rank Badge
+        if (target.pilotRank && typeof drawPilotBadge === 'function') {
+            const badgeW = drawPilotBadge(cursorX + nameWidth + 4, cursorY + 9, target.pilotRank, 14); // Reduced padding from 8 to 4
+            if (badgeW > 0) nameWidth += badgeW + 4;
+        }
+
         if (wantedLabel) {
             fill(255, 0, 0);
-            text(` (${wantedLabel})`, cursorX + textWidth(pilotName), cursorY);
+            text(` (${wantedLabel})`, cursorX + nameWidth, cursorY);
             fill(255);
         }
         cursorY += lineHeight;

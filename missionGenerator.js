@@ -660,6 +660,7 @@ class MissionGenerator {
             isIllegal: illegalFlag,
             progressCount: 0,
             targetName: targetData.name,
+            targetPilotRank: targetData.pilotRank,
             targetShipType: shipType,
             targetUpgrades: upgrades.names,
             targetUpgradeDetails: upgrades.details,
@@ -697,7 +698,10 @@ class MissionGenerator {
         return {
             name: `${random(titles)} ${baseName}`,
             source: random(sources),
-            background: random(backgrounds)
+            background: random(backgrounds),
+            pilotRank: (typeof generatePilotRank === 'function')
+                ? generatePilotRank((typeof AI_ROLE !== 'undefined' ? AI_ROLE.PIRATE : 'Pirate'), 'Anarchy', 5) // Use default pirate params for mission targets
+                : 3
         };
     }
 
@@ -731,10 +735,17 @@ class MissionGenerator {
             upgradeText = ` Intel suggests the vessel is equipped with ${upgradeNames.join(', ')}.`;
         }
 
+        // Get rank name
+        let rankText = "";
+        if (targetData.pilotRank && typeof getPilotRankName === 'function') {
+            const rName = getPilotRankName(targetData.pilotRank);
+            rankText = ` (${rName})`;
+        }
+
         const templates = [
-            `A contract has been issued by ${targetData.source} to eliminate ${targetData.name}, the ${targetData.background}. The target is known to pilot a ${shipType} and may be accompanied by security personnel.${upgradeText}`,
-            `${targetData.source} requires the permanent removal of ${targetData.name}, a ${targetData.background} whose activities threaten their interests. Intelligence indicates the target travels in a ${shipType}.${upgradeText}`,
-            `Eliminate ${targetData.name}, the ${targetData.background}, at the behest of ${targetData.source}. The target operates a ${shipType} and maintains a security detail.${upgradeText}`
+            `A contract has been issued by ${targetData.source} to eliminate ${targetData.name}${rankText}, the ${targetData.background}. The target is known to pilot a ${shipType} and may be accompanied by security personnel.${upgradeText}`,
+            `${targetData.source} requires the permanent removal of ${targetData.name}${rankText}, a ${targetData.background} whose activities threaten their interests. Intelligence indicates the target travels in a ${shipType}.${upgradeText}`,
+            `Eliminate ${targetData.name}${rankText}, the ${targetData.background}, at the behest of ${targetData.source}. The target operates a ${shipType} and maintains a security detail.${upgradeText}`
         ];
         return random(templates);
     }

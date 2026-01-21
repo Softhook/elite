@@ -358,17 +358,65 @@ class EnemyRendering {
 
             // UPDATED: Add system name to label (unused system reference removed for perf)
 
-            const baseShipName = shipDef?.name || this.shipTypeName;
-            const namePrefix = this.displayName ? `${this.displayName} • ${baseShipName}` : baseShipName;
-
-            // Build label with primary target (and secondary if applicable)
-            let label;
-            if (secondaryTargetLabel) {
-                label = `${namePrefix}  Targets: ${targetLabel} + ${secondaryTargetLabel}`;
-            } else {
-                label = `${namePrefix}  Target: ${targetLabel}`;
+            // Ensure pilot rank exists (for existing entities or fallback)
+            if (this.pilotRank === undefined) {
+                this.pilotRank = (typeof generatePilotRank === 'function')
+                    ? generatePilotRank(this.role, this.currentSystem?.securityLevel, this.currentSystem?.techLevel || 5)
+                    : 2; // Default to Trained
             }
-            text(label, 0, -this.size / 2 - 15);
+
+            const baseShipName = shipDef?.name || this.shipTypeName;
+            const namePart = this.displayName ? `${this.displayName} • ${baseShipName}` : baseShipName;
+
+            // Use procedural rank rendering (replacing old text/emoji system)
+
+            // 1. Measure Name width (using standard font and size)
+            textFont(font);
+            textSize(STATION_TEXT_SIZE.BODY);
+            const nameW = textWidth(namePart);
+
+            // 2. Calculate Rank Icon width (if applicable)
+            let rankW = 0;
+            if (this.pilotRank && this.pilotRank >= 2) {
+                const baseSize = STATION_TEXT_SIZE.BODY;
+                if (typeof getPilotRankIconWidth === 'function') {
+                    rankW = getPilotRankIconWidth(this.pilotRank, baseSize);
+                } else {
+                    // Fallback if helper missing
+                    if (this.pilotRank === 3) rankW = baseSize * 1.8;
+                    else if (this.pilotRank === 4) rankW = baseSize * 2.5;
+                    else if (this.pilotRank === 5) rankW = baseSize * 3.2;
+                    else rankW = baseSize;
+                }
+                rankW += 3; // Reduced padding between name and flag
+            }
+
+            // 3. Measure Target Text width
+            let targetText = secondaryTargetLabel
+                ? `  Targets: ${targetLabel} + ${secondaryTargetLabel}`
+                : `  Target: ${targetLabel}`;
+            const targetW = textWidth(targetText);
+
+            // Total width for centering
+            const totalW = nameW + rankW + targetW;
+            let currentX = -totalW / 2;
+            const drawY = -this.size / 2 - 15;
+
+            // Draw Name
+            textAlign(LEFT, BOTTOM);
+            fill(255); noStroke();
+            text(namePart, currentX, drawY);
+            currentX += nameW + 3;
+
+            // Draw Rank Icon using procedural helper
+            if (rankW > 0 && typeof drawPilotRankIndicator === 'function') {
+                // Center vertically with text (since we use BOTTOM alignment, we offset up by half the text size)
+                drawPilotRankIndicator(currentX, drawY - (STATION_TEXT_SIZE.BODY / 2), this.pilotRank, STATION_TEXT_SIZE.BODY);
+                currentX += (rankW - 3);
+            }
+
+            // Draw Target Info
+            text(targetText, currentX, drawY);
 
             pop();
         }
