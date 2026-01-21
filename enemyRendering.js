@@ -366,29 +366,28 @@ class EnemyRendering {
             }
 
             const baseShipName = shipDef?.name || this.shipTypeName;
-            const namePart = this.displayName ? `${this.displayName} • ${baseShipName}` : baseShipName;
+            const namePart = this.displayName || "";
+            const shipPart = baseShipName;
 
-            // Use procedural rank rendering (replacing old text/emoji system)
-
-            // 1. Measure Name width (using standard font and size)
+            // 1. Measure widths (using standard font and size)
             textFont(font);
             textSize(STATION_TEXT_SIZE.BODY);
-            const nameW = textWidth(namePart);
+            const nameW = namePart ? textWidth(namePart) : 0;
+            const shipW = textWidth(shipPart);
 
             // 2. Calculate Rank Icon width (if applicable)
             let rankW = 0;
             if (this.pilotRank && this.pilotRank >= 2) {
-                const baseSize = STATION_TEXT_SIZE.BODY;
                 if (typeof getPilotRankIconWidth === 'function') {
-                    rankW = getPilotRankIconWidth(this.pilotRank, baseSize);
+                    rankW = getPilotRankIconWidth(this.pilotRank, STATION_TEXT_SIZE.BODY);
                 } else {
-                    // Fallback if helper missing
+                    // Fallback
+                    const baseSize = STATION_TEXT_SIZE.BODY;
                     if (this.pilotRank === 3) rankW = baseSize * 1.8;
                     else if (this.pilotRank === 4) rankW = baseSize * 2.5;
                     else if (this.pilotRank === 5) rankW = baseSize * 3.2;
                     else rankW = baseSize;
                 }
-                rankW += 3; // Reduced padding between name and flag
             }
 
             // 3. Measure Target Text width
@@ -397,23 +396,35 @@ class EnemyRendering {
                 : `  Target: ${targetLabel}`;
             const targetW = textWidth(targetText);
 
-            // Total width for centering
-            const totalW = nameW + rankW + targetW;
+            // Total width for centering (Spacing: 6px between parts)
+            const spacing = 6;
+            let totalW = shipW + targetW;
+            if (nameW > 0) totalW += nameW + spacing;
+            if (rankW > 0) totalW += rankW + spacing;
+
             let currentX = -totalW / 2;
             const drawY = -this.size / 2 - 15;
 
-            // Draw Name
+            // Render components
             textAlign(LEFT, BOTTOM);
             fill(255); noStroke();
-            text(namePart, currentX, drawY);
-            currentX += nameW + 3;
 
-            // Draw Rank Icon using procedural helper
-            if (rankW > 0 && typeof drawPilotRankIndicator === 'function') {
-                // Center vertically with text (since we use BOTTOM alignment, we offset up by half the text size)
-                drawPilotRankIndicator(currentX, drawY - (STATION_TEXT_SIZE.BODY / 2), this.pilotRank, STATION_TEXT_SIZE.BODY);
-                currentX += (rankW - 3);
+            // Draw Name (if exists)
+            if (nameW > 0) {
+                text(namePart, currentX, drawY);
+                currentX += nameW + spacing;
             }
+
+            // Draw Rank Icon
+            if (rankW > 0 && typeof drawPilotRankIndicator === 'function') {
+                // Center vertically relative to text baseline (approx half body size)
+                drawPilotRankIndicator(currentX, drawY - (STATION_TEXT_SIZE.BODY / 2), this.pilotRank, STATION_TEXT_SIZE.BODY);
+                currentX += rankW + spacing;
+            }
+
+            // Draw Ship Type
+            text(shipPart, currentX, drawY);
+            currentX += shipW;
 
             // Draw Target Info
             text(targetText, currentX, drawY);
