@@ -135,6 +135,20 @@ class UIGalaxyMap {
             famineAffected = eventManager.getAffectedSystemsForCrisis('famine');
         }
 
+        // Cache mission target system index ONCE (performance optimization)
+        let missionTargetIndex = -1;
+        if (player.activeMission) {
+            const mission = player.activeMission;
+            if (typeof mission.destinationSystemIndex === 'number') {
+                missionTargetIndex = mission.destinationSystemIndex;
+            } else if (typeof mission.spawnSystemIndex === 'number') {
+                missionTargetIndex = mission.spawnSystemIndex;
+            } else if (mission.destinationSystem) {
+                // Find index by name for delivery missions
+                missionTargetIndex = systems.findIndex(s => s.name === mission.destinationSystem);
+            }
+        }
+
         for (let i = 0, len = systems.length; i < len; i++) {
             const sysData = systems[i];
             if (!sysData) continue;
@@ -231,6 +245,14 @@ class UIGalaxyMap {
                 fill(255, 150, 0); // Orange for famine
                 textSize(STATION_TEXT_SIZE.BODY);
                 text("🍂 FAMINE", drawX, crisisLabelY);
+                crisisLabelY += 18;
+            }
+
+            // Show mission target marker if this system is the player's mission destination
+            if (missionTargetIndex === i) {
+                fill(255, 50, 50); // Red for mission target
+                textSize(STATION_TEXT_SIZE.BODY);
+                text("⚔ MISSION", drawX, crisisLabelY);
                 crisisLabelY += 18;
             }
 
