@@ -35,7 +35,7 @@ const PILOT_RANK_DEFS = {
         color: [255],                   // Pure white text
         badgeColor: [255],              // White badge
         iconColor: [255],               // White icon
-        symbol: '/',                    // Single sash
+        symbol: '○',                    // White ring
         description: 'Competent pilot with basic training'
     },
     [PILOT_RANK.VETERAN]: {
@@ -241,8 +241,8 @@ function _drawRankIconGraphic(rank, x, y, size, ctx) {
     const starR = size * 0.4;
 
     if (rank === PILOT_RANK.TRAINED) {
-        // One Sash
-        _drawSash(x, y, starR * 1.2, ctx);
+        // One Ring
+        _drawRing(x, y, starR * 1, ctx);
     } else if (rank === PILOT_RANK.VETERAN) {
         // One Star
         _drawStar(x, y, starR * 1.2, ctx);
@@ -283,23 +283,23 @@ function _drawStar(x, y, r, ctx) {
 
 
 /**
- * Internal helper to draw a diagonal sash stripe
+ * Internal helper to draw a simple ring/circle outline
  */
-function _drawSash(x, y, r, ctx) {
-    const bs = (ctx && ctx.beginShape) ? ctx.beginShape.bind(ctx) : beginShape;
-    const es = (ctx && ctx.endShape) ? ctx.endShape.bind(ctx) : endShape;
-    const v = (ctx && ctx.vertex) ? ctx.vertex.bind(ctx) : vertex;
+function _drawRing(x, y, r, ctx) {
+    const s = (ctx && ctx.stroke) ? ctx.stroke.bind(ctx) : stroke;
+    const sw = (ctx && ctx.strokeWeight) ? ctx.strokeWeight.bind(ctx) : strokeWeight;
+    const nf = (ctx && ctx.noFill) ? ctx.noFill.bind(ctx) : noFill;
+    const ns = (ctx && ctx.noStroke) ? ctx.noStroke.bind(ctx) : noStroke;
+    const f = (ctx && ctx.fill) ? ctx.fill.bind(ctx) : fill;
+    const el = (ctx && ctx.ellipse) ? ctx.ellipse.bind(ctx) : ellipse;
 
-    const w = r * 0.2;  // Width of sash
-    const h = r * 0.8;  // Height of sash
-    const tilt = r * 0.2; // Horizontal slant
-
-    bs();
-    v(x - w + tilt, y - h);
-    v(x + w + tilt, y - h);
-    v(x + w - tilt, y + h);
-    v(x - w - tilt, y + h);
-    es(CLOSE);
+    // We use a stroke for the ring. iconColor is usually [255]
+    s(255);
+    sw(2.5);
+    nf();
+    el(x, y, r * 2, r * 2);
+    ns();
+    f(255); // Reset fill for next elements
 }
 
 
@@ -315,7 +315,7 @@ function getPilotRankIconWidth(rank, size = 12) {
     if (!rank || rank < PILOT_RANK.TRAINED) return 0;
 
     // Width modifiers based on icon types
-    if (rank === PILOT_RANK.TRAINED) return size * 0.8;
+    if (rank === PILOT_RANK.TRAINED) return size * 1.0;
     if (rank === PILOT_RANK.VETERAN) return size * 1.0;
     if (rank === PILOT_RANK.ACE) return size * 1.8;
     if (rank === PILOT_RANK.ELITE) return size * 2.5;
