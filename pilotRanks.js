@@ -24,42 +24,42 @@ const PILOT_RANK = {
 const PILOT_RANK_DEFS = {
     [PILOT_RANK.ROOKIE]: {
         name: 'Rookie',
-        color: [150, 150, 150],         // Gray text
-        badgeColor: null,                // No badge for rookies
+        color: [255],
+        badgeColor: null,
         iconColor: null,
-        symbol: '',                      // No symbol for rookies
+        symbol: '',
         description: 'Inexperienced pilot'
     },
     [PILOT_RANK.TRAINED]: {
         name: 'Trained',
-        color: [192, 192, 192],         // Silver text
-        badgeColor: [180, 180, 190],    // Silver badge
-        iconColor: [200, 200, 210],     // Silver icon
-        symbol: '★',                    // Single star
+        color: [255],                   // Pure white text
+        badgeColor: [255],              // White badge
+        iconColor: [255],               // White icon
+        symbol: '/',                    // Single sash
         description: 'Competent pilot with basic training'
     },
     [PILOT_RANK.VETERAN]: {
         name: 'Veteran',
-        color: [255, 215, 0],           // Gold text
-        badgeColor: [220, 180, 50],     // Gold badge
-        iconColor: [255, 200, 50],      // Gold icon
-        symbol: '★★',                   // Double star
+        color: [255],                   // Pure white text
+        badgeColor: [255],              // White badge
+        iconColor: [255],               // White icon
+        symbol: '★',                    // Single star
         description: 'Experienced combat pilot'
     },
     [PILOT_RANK.ACE]: {
         name: 'Ace',
-        color: [255, 100, 100],         // Red-gold text
-        badgeColor: [200, 60, 60],      // Red badge
-        iconColor: [255, 180, 50],      // Gold icon accent
-        symbol: '★★★',                  // Triple star
+        color: [255],                   // Pure white text
+        badgeColor: [255],              // White badge
+        iconColor: [255],               // White icon
+        symbol: '★★',                   // Double star
         description: 'Elite combat ace with many kills'
     },
     [PILOT_RANK.ELITE]: {
         name: 'Elite',
-        color: [180, 100, 255],         // Purple text
-        badgeColor: [140, 60, 180],     // Purple badge
-        iconColor: [255, 215, 0],       // Gold icon accent
-        symbol: '◆★★★',                // Diamond + triple star
+        color: [255],
+        badgeColor: [255],
+        iconColor: [255],
+        symbol: '★★★',
         description: 'Legendary pilot of exceptional skill'
     }
 };
@@ -241,22 +241,20 @@ function _drawRankIconGraphic(rank, x, y, size, ctx) {
     const starR = size * 0.4;
 
     if (rank === PILOT_RANK.TRAINED) {
-        // One star
-        _drawStar(x, y, starR, ctx);
+        // One Sash
+        _drawSash(x, y, starR * 1.2, ctx);
     } else if (rank === PILOT_RANK.VETERAN) {
-        // Two stars
-        _drawStar(x - starR * 0.8, y, starR, ctx);
-        _drawStar(x + starR * 0.8, y, starR, ctx);
+        // One Star
+        _drawStar(x, y, starR * 1.2, ctx);
     } else if (rank === PILOT_RANK.ACE) {
-        // Three stars
-        _drawStar(x - starR * 1.5, y + starR * 0.2, starR * 0.9, ctx);
-        _drawStar(x, y - starR * 0.2, starR * 1.25, ctx); // Center slightly larger/up
-        _drawStar(x + starR * 1.5, y + starR * 0.2, starR * 0.9, ctx);
+        // Two Stars
+        _drawStar(x - starR * 0.8, y, starR * 1.1, ctx);
+        _drawStar(x + starR * 0.8, y, starR * 1.1, ctx);
     } else if (rank === PILOT_RANK.ELITE) {
-        // Elite Icon + Flanker Stars
-        _drawEliteIcon(x, y, starR * 1.3, def.iconColor, ctx);
-        _drawStar(x - starR * 2.2, y + starR * 0.3, starR * 0.6, ctx);
-        _drawStar(x + starR * 2.2, y + starR * 0.3, starR * 0.6, ctx);
+        // Three Stars
+        _drawStar(x - starR * 1.5, y + starR * 0.2, starR * 0.9, ctx);
+        _drawStar(x, y - starR * 0.2, starR * 1.25, ctx);
+        _drawStar(x + starR * 1.5, y + starR * 0.2, starR * 0.9, ctx);
     }
 }
 
@@ -283,51 +281,25 @@ function _drawStar(x, y, r, ctx) {
     es(CLOSE);
 }
 
+
 /**
- * Internal helper to draw Elite rank icon
+ * Internal helper to draw a diagonal sash stripe
  */
-function _drawEliteIcon(x, y, r, iconColor, ctx) {
-    const f = (ctx && ctx.fill) ? ctx.fill.bind(ctx) : fill;
+function _drawSash(x, y, r, ctx) {
     const bs = (ctx && ctx.beginShape) ? ctx.beginShape.bind(ctx) : beginShape;
     const es = (ctx && ctx.endShape) ? ctx.endShape.bind(ctx) : endShape;
     const v = (ctx && ctx.vertex) ? ctx.vertex.bind(ctx) : vertex;
-    const s = (ctx && ctx.stroke) ? ctx.stroke.bind(ctx) : stroke;
-    const sw = (ctx && ctx.strokeWeight) ? ctx.strokeWeight.bind(ctx) : strokeWeight;
-    const nf = (ctx && ctx.noFill) ? ctx.noFill.bind(ctx) : noFill;
-    const ns = (ctx && ctx.noStroke) ? ctx.noStroke.bind(ctx) : noStroke;
 
-    if (iconColor) {
-        f(iconColor[0], iconColor[1], iconColor[2], 60);
-        _drawStar(x, y, r * 1.8, ctx);
-        f(iconColor[0], iconColor[1], iconColor[2]);
-    }
+    const w = r * 0.2;  // Width of sash
+    const h = r * 0.8;  // Height of sash
+    const tilt = r * 0.2; // Horizontal slant
 
     bs();
-    v(x, y - r);
-    v(x + r * 0.8, y);
-    v(x, y + r);
-    v(x - r * 0.8, y);
+    v(x - w + tilt, y - h);
+    v(x + w + tilt, y - h);
+    v(x + w - tilt, y + h);
+    v(x - w - tilt, y + h);
     es(CLOSE);
-
-    nf();
-    sw(1.5);
-    if (iconColor) s(iconColor[0], iconColor[1], iconColor[2], 255);
-
-    bs();
-    v(x - r * 0.8, y - r * 0.1);
-    v(x - r * 2.0, y - r * 0.6);
-    v(x - r * 2.5, y + r * 0.2);
-    v(x - r * 0.8, y + r * 0.4);
-    es();
-
-    bs();
-    v(x + r * 0.8, y - r * 0.1);
-    v(x + r * 2.0, y - r * 0.6);
-    v(x + r * 2.5, y + r * 0.2);
-    v(x + r * 0.8, y + r * 0.4);
-    es();
-
-    ns();
 }
 
 
@@ -342,12 +314,13 @@ function _drawEliteIcon(x, y, r, iconColor, ctx) {
 function getPilotRankIconWidth(rank, size = 12) {
     if (!rank || rank < PILOT_RANK.TRAINED) return 0;
 
-    // Width modifiers based on star count/layout
-    if (rank === PILOT_RANK.VETERAN) return size * 1.8;
-    if (rank === PILOT_RANK.ACE) return size * 2.5;
-    if (rank === PILOT_RANK.ELITE) return size * 3.2;
+    // Width modifiers based on icon types
+    if (rank === PILOT_RANK.TRAINED) return size * 0.8;
+    if (rank === PILOT_RANK.VETERAN) return size * 1.0;
+    if (rank === PILOT_RANK.ACE) return size * 1.8;
+    if (rank === PILOT_RANK.ELITE) return size * 2.5;
 
-    return size; // Trained (1 star)
+    return size;
 }
 
 /**
