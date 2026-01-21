@@ -4,7 +4,7 @@ personal record should not be linked on the station screen but a link from inven
 
 on the station screen add a link to the galaxy map.
 
-Missions that ask you to travels to another system should tell you what the system economy is of the traget system (with a 50% chance of it being unknown). Either way, add a significant bonus for missions in alien systems because they are more dangerous.
+In Missions that ask you to travel to another system, the mission descitive text should tell you what the system economy is of the traget system (with a 50% chance of it being unknown). Either way, add a significant bonus for missions in alien systems because they are more dangerous.
 
 Exploration missions ask you to visit a certain number of systems. For example visit all the systems so that they are known. give a big credit bonus for that. Othere missions invovle visiting the planet surface of all the planets in specific system to take samples. These are common in Offworld systems 
 

@@ -142,6 +142,26 @@ class MissionGenerator {
         return Math.floor((baseReward + techBonus + random(randomMin, randomMax)) * rankMultiplier);
     }
 
+    /** Generate economy information text for mission descriptions (50% chance of being unknown) */
+    static getEconomyInfoText(destSystem) {
+        // Determine if economy is known (50% chance)
+        // This should be called once during mission creation to avoid changing info on refresh
+        if (random() < 0.5) {
+            return null; // Return null to indicate unknown (caller should handle)
+        }
+        const economy = destSystem?.economyType || 'Unknown';
+        return economy;
+    }
+
+    /** Calculate reward bonus for Alien systems (dangerous missions) */
+    static getAlienSystemBonus(destSystem, baseReward) {
+        if (!destSystem || !destSystem.economyType) return 0;
+        if (destSystem.economyType === 'Alien') {
+            return Math.floor(baseReward * 0.5); // 50% bonus for Alien systems
+        }
+        return 0;
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // MAIN MISSION GENERATION
     // ═══════════════════════════════════════════════════════════════════════
@@ -465,13 +485,20 @@ class MissionGenerator {
         if (!this.isValidJumpDistance(jumpDistance)) return null;
 
         const baseCargoValue = this.getCargoValue(originStation, cargo, 50);
-        const reward = Math.floor(100 + jumpDistance * 250 + quantity * baseCargoValue * 0.15 + floor(random(50, 250)));
+        let reward = Math.floor(100 + jumpDistance * 250 + quantity * baseCargoValue * 0.15 + floor(random(50, 250)));
+
+        // Apply Alien system bonus
+        const alienBonus = this.getAlienSystemBonus(destinationInfo.system, reward);
+        reward += alienBonus;
+
         const jumpText = this.formatJumpText(jumpDistance);
+        const economyKnown = this.getEconomyInfoText(destinationInfo.system);
+        const economyText = economyKnown ? `Destination economy: ${economyKnown}.` : 'Intelligence on the destination economy is unavailable.';
 
         return new Mission({
             type: MISSION_TYPE.DELIVERY_LEGAL,
             title: `Deliver ${quantity}t ${cargo} to ${destinationInfo.station.name} (${jumpText})`,
-            description: `Transport ${quantity}t of ${cargo} to ${destinationInfo.station.name} station in ${destinationInfo.system.name} (${jumpText} away). Standard contract. Payment upon delivery.`,
+            description: `Transport ${quantity}t of ${cargo} to ${destinationInfo.station.name} station in ${destinationInfo.system.name} (${jumpText} away). ${economyText} Standard contract. Payment upon delivery.`,
             ...this.getOriginData(originSystem, originStation),
             destinationSystem: destinationInfo.system.name,
             destinationStation: destinationInfo.station.name,
@@ -517,13 +544,20 @@ class MissionGenerator {
         if (!this.isValidJumpDistance(jumpDistance)) return null;
 
         const baseCargoValue = this.getCargoValue(originStation, cargo, 100);
-        const reward = Math.floor(300 + jumpDistance * 400 + quantity * baseCargoValue * 0.25 + floor(random(100, 500)));
+        let reward = Math.floor(300 + jumpDistance * 400 + quantity * baseCargoValue * 0.25 + floor(random(100, 500)));
+
+        // Apply Alien system bonus
+        const alienBonus = this.getAlienSystemBonus(destinationInfo.system, reward);
+        reward += alienBonus;
+
         const jumpText = this.formatJumpText(jumpDistance);
+        const economyKnown = this.getEconomyInfoText(destinationInfo.system);
+        const economyText = economyKnown ? `Destination economy: ${economyKnown}.` : 'Intelligence on the destination economy is unavailable.';
 
         return new Mission({
             type: MISSION_TYPE.DELIVERY_ILLEGAL,
             title: `Smuggle ${quantity}t ${cargo} to ${destinationInfo.station.name} (${jumpText})`,
-            description: `Discreet transport of ${quantity}t of restricted goods (${cargo}) to ${destinationInfo.station.name} in ${destinationInfo.system.name} (${jumpText} away). Avoid scans. High payment on delivery.`,
+            description: `Discreet transport of ${quantity}t of restricted goods (${cargo}) to ${destinationInfo.station.name} in ${destinationInfo.system.name} (${jumpText} away). ${economyText} Avoid scans. High payment on delivery.`,
             ...this.getOriginData(originSystem, originStation),
             destinationSystem: destinationInfo.system.name,
             destinationStation: destinationInfo.station.name,
@@ -760,7 +794,12 @@ class MissionGenerator {
         } catch (e) { /* use default */ }
         if (!isFinite(jumpDistance) || jumpDistance <= 0) jumpDistance = 3;
 
-        const reward = Math.floor(5000 + jumpDistance * 2000 + floor(random(1000, 5000)));
+        let reward = Math.floor(5000 + jumpDistance * 2000 + floor(random(1000, 5000)));
+
+        // Apply Alien system bonus
+        const alienBonus = this.getAlienSystemBonus(destSystem, reward);
+        reward += alienBonus;
+
         const jumpText = this.formatJumpText(jumpDistance);
 
         return new Mission({
@@ -1147,15 +1186,21 @@ class MissionGenerator {
 
         const destSystem = destinationInfo.system;
         const targetType = random(targetTypes);
-        const reward = this.calculateFactionReward(config.baseReward, originSystem.techLevel, rankMultiplier, 1500, 4000);
+        let reward = this.calculateFactionReward(config.baseReward, originSystem.techLevel, rankMultiplier, 1500, 4000);
+
+        // Apply Alien system bonus
+        const alienBonus = this.getAlienSystemBonus(destSystem, reward);
+        reward += alienBonus;
 
         const jumpDistance = galaxy.getJumpDistance?.(originSystem.systemIndex, destSystem.systemIndex) || 3;
         const jumpText = this.formatJumpText(jumpDistance);
+        const economyKnown = this.getEconomyInfoText(destSystem);
+        const economyText = economyKnown ? `Destination economy: ${economyKnown}.` : 'Intelligence on the destination economy is unavailable.';
 
         return new Mission({
             type,
             title: `${factionPrefix} Sabotage: Destroy ${targetType} (${jumpText})`,
-            description: `A critical ${targetType} has been identified in ${destSystem.name}. Infiltrate and destroy it to complete the operation.`,
+            description: `A critical ${targetType} has been identified in ${destSystem.name}. ${economyText} Infiltrate and destroy it to complete the operation.`,
             ...this.getOriginData(originSystem, originStation),
             destinationSystem: destSystem.name,
             destinationStation: null,
@@ -1186,15 +1231,21 @@ class MissionGenerator {
         const cargoTypes = ['Weapons', 'Medicine', 'Machinery'];
         const cargo = random(cargoTypes);
         const quantity = floor(random(5, 15));
-        const reward = Math.floor((config.baseReward + quantity * 50 + random(200, 500)) * rankMultiplier);
+        let reward = Math.floor((config.baseReward + quantity * 50 + random(200, 500)) * rankMultiplier);
+
+        // Apply Alien system bonus
+        const alienBonus = this.getAlienSystemBonus(destinationInfo.system, reward);
+        reward += alienBonus;
 
         const jumpDistance = galaxy.getJumpDistance?.(originSystem.systemIndex, destinationInfo.system.systemIndex) || 2;
         const jumpText = this.formatJumpText(jumpDistance);
+        const economyKnown = this.getEconomyInfoText(destinationInfo.system);
+        const economyText = economyKnown ? `Destination economy: ${economyKnown}.` : 'Intelligence on the destination economy is unavailable.';
 
         return new Mission({
             type,
             title: `Supply Run: ${quantity}t ${cargo} to Rebel Cell (${jumpText})`,
-            description: `Deliver ${quantity}t of ${cargo} to resistance contacts at ${destinationInfo.station.name}. Discretion advised.`,
+            description: `Deliver ${quantity}t of ${cargo} to resistance contacts at ${destinationInfo.station.name}. ${economyText} Discretion advised.`,
             ...this.getOriginData(originSystem, originStation),
             destinationSystem: destinationInfo.system.name,
             destinationStation: destinationInfo.station.name,
