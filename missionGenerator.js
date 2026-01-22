@@ -701,7 +701,7 @@ class MissionGenerator {
             background: random(backgrounds),
             pilotRank: (typeof generatePilotRank === 'function')
                 ? generatePilotRank((typeof AI_ROLE !== 'undefined' ? AI_ROLE.PIRATE : 'Pirate'), 'Anarchy', 5) // Use default pirate params for mission targets
-                : 3
+                : 2
         };
     }
 
@@ -735,11 +735,12 @@ class MissionGenerator {
             upgradeText = ` Intel suggests the vessel is equipped with ${upgradeNames.join(', ')}.`;
         }
 
-        // Get rank name
+        // Get rank name and symbol for badges in text
         let rankText = "";
         if (targetData.pilotRank && typeof getPilotRankName === 'function') {
             const rName = getPilotRankName(targetData.pilotRank);
-            rankText = ` (${rName})`;
+            const rSymbol = (typeof getPilotRankSymbol === 'function') ? getPilotRankSymbol(targetData.pilotRank) : '';
+            rankText = rSymbol ? ` (${rSymbol} ${rName})` : ` (${rName})`;
         }
 
         const templates = [

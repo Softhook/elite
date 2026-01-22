@@ -11,10 +11,8 @@
  */
 const PILOT_RANK = {
     ROOKIE: 1,
-    TRAINED: 2,
-    VETERAN: 3,
-    ACE: 4,
-    ELITE: 5
+    VETERAN: 2,
+    ELITE: 3
 };
 
 /**
@@ -30,14 +28,6 @@ const PILOT_RANK_DEFS = {
         symbol: '',
         description: 'Inexperienced pilot'
     },
-    [PILOT_RANK.TRAINED]: {
-        name: 'Trained',
-        color: [255],                   // Pure white text
-        badgeColor: [255],              // White badge
-        iconColor: [255],               // White icon
-        symbol: '○',                    // White ring
-        description: 'Competent pilot with basic training'
-    },
     [PILOT_RANK.VETERAN]: {
         name: 'Veteran',
         color: [255],                   // Pure white text
@@ -46,20 +36,12 @@ const PILOT_RANK_DEFS = {
         symbol: '★',                    // Single star
         description: 'Experienced combat pilot'
     },
-    [PILOT_RANK.ACE]: {
-        name: 'Ace',
-        color: [255],                   // Pure white text
-        badgeColor: [255],              // White badge
-        iconColor: [255],               // White icon
-        symbol: '★★',                   // Double star
-        description: 'Elite combat ace with many kills'
-    },
     [PILOT_RANK.ELITE]: {
         name: 'Elite',
         color: [255],
         badgeColor: [255],
         iconColor: [255],
-        symbol: '★★★',
+        symbol: '★★★',                    // Note: Elite rendering handled procedurally with 3 stars
         description: 'Legendary pilot of exceptional skill'
     }
 };
@@ -79,52 +61,32 @@ const PILOT_RANK_DEFS = {
  */
 function generatePilotRank(role, securityLevel, techLevel) {
     // Base probability weights for each rank
-    // Default distribution: 30% Rookie, 35% Trained, 22% Veteran, 10% Ace, 3% Elite
-    let weights = [30, 35, 22, 10, 3];
+    // Default distribution: 85% Rookie, 14% Veteran, 1% Elite
+    let weights = [85, 14, 1];
 
     // Adjust weights based on role
     if (typeof AI_ROLE !== 'undefined') {
         if (role === AI_ROLE.POLICE || role === AI_ROLE.GUARD) {
-            // Police/Guards are better trained: fewer rookies, more trained/veteran
-            weights = [15, 40, 30, 12, 3];
+            weights = [70, 30, 0];
         } else if (role === AI_ROLE.BOUNTY_HUNTER) {
-            // Bounty hunters must be competent: no rookies, mostly veteran+
-            weights = [0, 20, 45, 25, 10];
+            weights = [25, 70, 5];
         } else if (role === AI_ROLE.ALIEN) {
-            // Aliens are unpredictable: flat distribution
-            weights = [20, 20, 25, 20, 15];
+            weights = [100, 0, 0];
         } else if (role === AI_ROLE.MILITARY) {
             // Military are well-trained
-            weights = [10, 35, 35, 15, 5];
+            weights = [25, 70, 5];
+        } else if (role === AI_ROLE.PIRATE || role === AI_ROLE.HAULER) {
+            // Pirates and Haulers are slightly less skilled than military
+            weights = [60, 35, 5];
+        } else if (role === AI_ROLE.TRANSPORT) {
+            // Transporters are always rookies
+            weights = [100, 0, 0];
         }
-    }
-
-    // Adjust weights based on tech level (higher tech = better training)
-    if (typeof techLevel === 'number' && techLevel > 0) {
-        // Shift distribution toward higher ranks at higher tech levels
-        const techBonus = Math.min(techLevel, 10) / 10; // 0 to 1
-        // Reduce rookie chance, increase veteran+ chance
-        weights[0] = Math.max(0, weights[0] * (1 - techBonus * 0.5));
-        weights[2] += techBonus * 5;
-        weights[3] += techBonus * 3;
-        weights[4] += techBonus * 2;
-    }
-
-    // Adjust weights based on security level
-    if (securityLevel === 'Anarchy') {
-        // Anarchy: more rookies (desperate pilots) and more elites (outlaws)
-        weights[0] += 10;
-        weights[4] += 2;
-    } else if (securityLevel === 'High') {
-        // High security: better trained pilots
-        weights[0] = Math.max(0, weights[0] - 10);
-        weights[1] += 5;
-        weights[2] += 5;
     }
 
     // Normalize weights
     const total = weights.reduce((sum, w) => sum + w, 0);
-    if (total <= 0) return PILOT_RANK.TRAINED; // Fallback
+    if (total <= 0) return PILOT_RANK.VETERAN; // Fallback
 
     // Generate random value and pick rank
     const roll = Math.random() * total;
@@ -136,7 +98,7 @@ function generatePilotRank(role, securityLevel, techLevel) {
         }
     }
 
-    return PILOT_RANK.TRAINED; // Fallback
+    return PILOT_RANK.VETERAN; // Fallback
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -209,7 +171,7 @@ function getPilotRankName(rank) {
  * @returns {string} Symbol string
  */
 function getPilotRankSymbol(rank) {
-    if (!rank || rank < PILOT_RANK.TRAINED) return ''; // No symbol for rookies
+    if (!rank || rank < PILOT_RANK.VETERAN) return ''; // No symbol for rookies
     const def = PILOT_RANK_DEFS[rank];
     return def ? def.symbol : '';
 }
@@ -240,16 +202,9 @@ function _drawRankIconGraphic(rank, x, y, size, ctx) {
 
     const starR = size * 0.4;
 
-    if (rank === PILOT_RANK.TRAINED) {
-        // One Ring
-        _drawRing(x, y, starR * 1, ctx);
-    } else if (rank === PILOT_RANK.VETERAN) {
+    if (rank === PILOT_RANK.VETERAN) {
         // One Star
         _drawStar(x, y, starR * 1.2, ctx);
-    } else if (rank === PILOT_RANK.ACE) {
-        // Two Stars
-        _drawStar(x - starR * 0.8, y, starR * 1.1, ctx);
-        _drawStar(x + starR * 0.8, y, starR * 1.1, ctx);
     } else if (rank === PILOT_RANK.ELITE) {
         // Three Stars
         _drawStar(x - starR * 1.5, y + starR * 0.2, starR * 0.9, ctx);
@@ -312,12 +267,10 @@ function _drawRing(x, y, r, ctx) {
  * @returns {number} Width in pixels
  */
 function getPilotRankIconWidth(rank, size = 12) {
-    if (!rank || rank < PILOT_RANK.TRAINED) return 0;
+    if (!rank || rank < PILOT_RANK.VETERAN) return 0;
 
     // Width modifiers based on icon types
-    if (rank === PILOT_RANK.TRAINED) return size * 1.0;
     if (rank === PILOT_RANK.VETERAN) return size * 1.0;
-    if (rank === PILOT_RANK.ACE) return size * 1.8;
     if (rank === PILOT_RANK.ELITE) return size * 2.5;
 
     return size;
@@ -336,7 +289,7 @@ function getPilotRankIconWidth(rank, size = 12) {
  */
 function drawPilotRankIndicator(x, y, rank, size = 12) {
     // No indicator for rookies
-    if (!rank || rank < PILOT_RANK.TRAINED) return 0;
+    if (!rank || rank < PILOT_RANK.VETERAN) return 0;
 
     const def = PILOT_RANK_DEFS[rank];
     if (!def) return 0;

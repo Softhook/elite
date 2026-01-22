@@ -381,9 +381,8 @@ class EnemyRendering {
                 } else {
                     // Fallback
                     const baseSize = STATION_TEXT_SIZE.BODY;
-                    if (this.pilotRank === 3) rankW = baseSize * 1.8;
-                    else if (this.pilotRank === 4) rankW = baseSize * 2.5;
-                    else if (this.pilotRank === 5) rankW = baseSize * 3.2;
+                    if (this.pilotRank === 2) rankW = baseSize * 1.0; // Veteran
+                    else if (this.pilotRank === 3) rankW = baseSize * 2.5; // Elite
                     else rankW = baseSize;
                 }
             }
