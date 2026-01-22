@@ -1507,6 +1507,24 @@ class Turret extends SurfaceObject {
 
         drawBarrel(barrelGap);
         drawBarrel(-barrelGap);
+
+        // --- Health Bar ---
+        if (this.health < this.maxHealth && this.maxHealth > 0) {
+            push();
+            rectMode(CORNER);
+            let healthPercent = this.health / this.maxHealth;
+            let barW = sz * 0.9;
+            let barH = 5;
+            let barX = x - barW / 2;
+            let barY = y + 15;
+
+            noStroke();
+            fill(HEALTH_BAR_COLORS.BG);
+            rect(barX, barY, barW, barH);
+            fill(HEALTH_BAR_COLORS.FILL);
+            rect(barX, barY, barW * healthPercent, barH);
+            pop();
+        }
     }
 }
 
@@ -1683,6 +1701,24 @@ class ShieldGenerator extends SurfaceObject {
         strokeWeight(2);
         ellipse(x, y, ringSize, ringSize * 0.4);
         pop();
+
+        // --- Health Bar ---
+        if (this.health < this.maxHealth && this.maxHealth > 0) {
+            push();
+            rectMode(CORNER);
+            let healthPercent = this.health / this.maxHealth;
+            let barW = sz * 0.9;
+            let barH = 6;
+            let barX = x - barW / 2;
+            let barY = y + 15;
+
+            noStroke();
+            fill(HEALTH_BAR_COLORS.BG);
+            rect(barX, barY, barW, barH);
+            fill(HEALTH_BAR_COLORS.FILL);
+            rect(barX, barY, barW * healthPercent, barH);
+            pop();
+        }
     }
 }
 
@@ -1947,6 +1983,24 @@ class DefenseDrone extends SurfaceObject {
         }
 
         pop();
+
+        // --- Health Bar ---
+        if (this.health < this.maxHealth && this.maxHealth > 0) {
+            push();
+            rectMode(CORNER);
+            let healthPercent = this.health / this.maxHealth;
+            let barW = sz * 0.9;
+            let barH = 4;
+            let barX = x - barW / 2;
+            let barY = y + sz * 0.3 + 5;
+
+            noStroke();
+            fill(HEALTH_BAR_COLORS.BG);
+            rect(barX, barY, barW, barH);
+            fill(HEALTH_BAR_COLORS.FILL);
+            rect(barX, barY, barW * healthPercent, barH);
+            pop();
+        }
     }
 }
 

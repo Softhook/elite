@@ -313,10 +313,11 @@ class Asteroid {
             const barY = this.pos.y - this.maxRadius - 14;
 
             push();
+            rectMode(CORNER);
             noStroke();
-            fill(255, 0, 0);
+            fill(HEALTH_BAR_COLORS.BG);
             rect(barX, barY, barW, barH);
-            fill(0, 255, 0);
+            fill(HEALTH_BAR_COLORS.FILL);
             rect(barX, barY, barW * healthPercent, barH);
             pop();
         }

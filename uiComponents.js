@@ -542,23 +542,16 @@ class UIComponents {
         text(`${label}:`, x, y);
 
         const barX = x + labelWidth;
-        fill(40, 40, 60, 200);
+        const colors = label === 'Shield' ? SHIELD_BAR_COLORS : HEALTH_BAR_COLORS;
+
+        // Background (Lost health/Empty bar)
+        fill(colors.BG);
         noStroke();
         rect(barX, y, barWidth, barHeight, 2);
 
+        // Foreground (Current health/shield)
         const fillWidth = (percent / 100) * barWidth;
-        let barColor;
-        if (label === 'Shield') {
-            if (percent > 66) barColor = [0, 200, 255];
-            else if (percent > 33) barColor = [80, 150, 220];
-            else barColor = [60, 100, 180];
-        } else {
-            if (percent > 66) barColor = [80, 255, 80];
-            else if (percent > 33) barColor = [255, 220, 0];
-            else barColor = [255, 80, 80];
-        }
-
-        fill(barColor[0], barColor[1], barColor[2]);
+        fill(colors.FILL);
         rect(barX, y, fillWidth, barHeight, 2);
         pop();
     }

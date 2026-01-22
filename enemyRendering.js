@@ -515,6 +515,7 @@ class EnemyRendering {
         if (!this.destroyed && this.hull < this.maxHull && this.maxHull > 0) {
             // Rotate canvas back temporarily to draw horizontal bar
             push();
+            rectMode(CORNER);
             rotate(-this.angle); // Counter-rotate
 
             let healthPercent = this.hull / this.maxHull;
@@ -525,9 +526,9 @@ class EnemyRendering {
             let barY = this.size / 2 + 5;
 
             noStroke();
-            fill(255, 0, 0); // Red background
+            fill(HEALTH_BAR_COLORS.BG);
             rect(barX, barY, barW, barH);
-            fill(0, 255, 0); // Green health remaining
+            fill(HEALTH_BAR_COLORS.FILL);
             rect(barX, barY, barW * healthPercent, barH);
             //stroke(0); strokeWeight(1); noFill(); // Black outline
             //rect(barX, barY, barW, barH);

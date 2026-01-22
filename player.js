@@ -1721,6 +1721,27 @@ class Player {
         // Draw thrust particles ON TOP of the ship
         this.thrustManager.draw();
 
+        // --- Health Bar ---
+        // Show health bar below ship if damaged
+        if (this.hull < this.maxHull && this.maxHull > 0) {
+            push();
+            rectMode(CORNER);
+            translate(this.pos.x, this.pos.y);
+            let healthPercent = this.hull / this.maxHull;
+            let barW = this.size * 0.9;
+            let barH = 6;
+            let barX = -barW / 2;
+            let barY = this.size / 2 + 5;
+
+            noStroke();
+            fill(HEALTH_BAR_COLORS.BG);
+            rect(barX, barY, barW, barH);
+            fill(HEALTH_BAR_COLORS.FILL);
+            rect(barX, barY, barW * healthPercent, barH);
+            pop();
+        }
+        // --- End Health Bar ---
+
         // Draw shield effect with improved visuals
         if (this.shield > 0 && !this.shieldsDisabled) {
             push();

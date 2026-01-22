@@ -78,6 +78,20 @@ const ECONOMY_COLORS = {
 };
 
 /**
+ * Health and Shield Bar Colors
+ * Standardized for use in HUD and in-world indicators
+ */
+const HEALTH_BAR_COLORS = {
+    FILL: [0, 255, 0],    // Green
+    BG: [255, 0, 0]        // Red
+};
+
+const SHIELD_BAR_COLORS = {
+    FILL: [0, 200, 255],  // Bright Blue
+    BG: [0, 50, 100]       // Dark Blue
+};
+
+/**
  * Helper function to get faction color
  * @param {string} factionName - Name of the faction (e.g., 'IMPERIAL', 'SEPARATIST')
  * @returns {Array} RGB color array [r, g, b]

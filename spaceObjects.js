@@ -4003,11 +4003,12 @@ class SpaceObject {
             const barY = this.pos.y - Math.max(20, this.size * 0.6) - 8;
 
             push();
+            rectMode(CORNER);
             noStroke();
             // match asteroid health bar colors: red background, green foreground
-            fill(255, 0, 0);
+            fill(HEALTH_BAR_COLORS.BG);
             rect(barX, barY, barW, barH);
-            fill(0, 255, 0);
+            fill(HEALTH_BAR_COLORS.FILL);
             rect(barX, barY, barW * healthPercent, barH);
             pop();
         }

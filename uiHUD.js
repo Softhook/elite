@@ -447,11 +447,12 @@ class UIHUD {
         const barMiddleY = 20;
 
         if (player.maxShield > 0) {
-            fill(20, 20, 60);
+            // Shield bar
+            fill(SHIELD_BAR_COLORS.BG);
             rect(barX, barMiddleY - barHeight - 2, barWidth, barHeight);
 
             const shieldPercent = player.shield / player.maxShield;
-            fill(50, 100, 255);
+            fill(SHIELD_BAR_COLORS.FILL);
             rect(barX, barMiddleY - barHeight - 2, barWidth * shieldPercent, barHeight);
 
             stroke(100, 150, 255);
@@ -466,11 +467,12 @@ class UIHUD {
             text(`Shield: ${Math.floor(player.shield)}/${player.maxShield}`, barX - 10, barMiddleY - barHeight / 2 - 2);
         }
 
-        fill(60, 20, 20);
+        // Hull bar
+        fill(HEALTH_BAR_COLORS.BG);
         rect(barX, barMiddleY + 2, barWidth, barHeight);
 
         const hullPercent = player.hull / player.maxHull;
-        fill(255, 50, 50);
+        fill(HEALTH_BAR_COLORS.FILL);
         rect(barX, barMiddleY + 2, barWidth * hullPercent, barHeight);
 
         stroke(255, 100, 100);
