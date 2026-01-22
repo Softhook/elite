@@ -366,14 +366,12 @@ class EnemyRendering {
             }
 
             const baseShipName = shipDef?.name || this.shipTypeName;
-            const namePart = this.displayName || "";
-            const shipPart = baseShipName;
+            const namePart = this.displayName || baseShipName;
 
             // 1. Measure widths (using standard font and size)
             textFont(font);
             textSize(STATION_TEXT_SIZE.BODY);
-            const nameW = namePart ? textWidth(namePart) : 0;
-            const shipW = textWidth(shipPart);
+            const nameW = textWidth(namePart);
 
             // 2. Calculate Rank Icon width (if applicable)
             let rankW = 0;
@@ -392,15 +390,18 @@ class EnemyRendering {
 
             // 3. Measure Target Text width
             let targetText = secondaryTargetLabel
-                ? `  Targets: ${targetLabel} + ${secondaryTargetLabel}`
-                : `  Target: ${targetLabel}`;
+                ? `Targets: ${targetLabel} + ${secondaryTargetLabel}`
+                : `Target: ${targetLabel}`;
             const targetW = textWidth(targetText);
 
-            // Total width for centering (Spacing: 6px between parts)
+            // Total width for centering (Spacing: 10px between parts)
             const spacing = 6;
-            let totalW = shipW + targetW;
-            if (nameW > 0) totalW += nameW + spacing;
-            if (rankW > 0) totalW += rankW + spacing;
+            let totalW = nameW + targetW;
+            if (rankW > 0) {
+                totalW += rankW + (spacing * 2);
+            } else {
+                totalW += spacing;
+            }
 
             let currentX = -totalW / 2;
             const drawY = -this.size / 2 - 15;
@@ -409,11 +410,9 @@ class EnemyRendering {
             textAlign(LEFT, BOTTOM);
             fill(255); noStroke();
 
-            // Draw Name (if exists)
-            if (nameW > 0) {
-                text(namePart, currentX, drawY);
-                currentX += nameW + spacing;
-            }
+            // Draw Primary Identifier
+            text(namePart, currentX, drawY);
+            currentX += nameW + spacing;
 
             // Draw Rank Icon
             if (rankW > 0 && typeof drawPilotRankIndicator === 'function') {
@@ -421,10 +420,6 @@ class EnemyRendering {
                 drawPilotRankIndicator(currentX, drawY - (STATION_TEXT_SIZE.BODY / 2), this.pilotRank, STATION_TEXT_SIZE.BODY);
                 currentX += rankW + spacing;
             }
-
-            // Draw Ship Type
-            text(shipPart, currentX, drawY);
-            currentX += shipW;
 
             // Draw Target Info
             text(targetText, currentX, drawY);
