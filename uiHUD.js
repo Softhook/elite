@@ -455,9 +455,6 @@ class UIHUD {
             fill(SHIELD_BAR_COLORS.FILL);
             rect(barX, barMiddleY - barHeight - 2, barWidth * shieldPercent, barHeight);
 
-            stroke(100, 150, 255);
-            noFill();
-            rect(barX, barMiddleY - barHeight - 2, barWidth, barHeight);
 
             fill(255);
             noStroke();
@@ -475,9 +472,6 @@ class UIHUD {
         fill(HEALTH_BAR_COLORS.FILL);
         rect(barX, barMiddleY + 2, barWidth * hullPercent, barHeight);
 
-        stroke(255, 100, 100);
-        noFill();
-        rect(barX, barMiddleY + 2, barWidth, barHeight);
 
         fill(255);
         noStroke();
