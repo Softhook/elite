@@ -107,88 +107,103 @@ class EnemyMovement {
                     canThrust = true;
                 }
             } else if (this.currentState === AI_STATE.SNIPING) {
-                // SNIPING: Use strafe thrusters for tactical positioning while maintaining aim
-                // This creates more unpredictable, human-like movement patterns
+                // RANK CHECK: Rookies don't use side thrusters (no kiting)
+                const rankMods = this._getRankModifiers();
+                const canStrafe = rankMods?.canStrafe ?? true;
 
-                if (this.isTargetValid(this.target)) {
-                    const distToTarget = this.distanceTo(this.target);
-                    const targetSize = this.target.size || this.size;
-                    const minSafeDistance = (this.size + targetSize) * 1.5;
-                    const firingRange = this.visualFiringRange || this.firingRange || 400;
-
-                    // Initialize strafe state if needed
-                    if (this._sniperStrafeTimer == null) {
-                        this._sniperStrafeTimer = random(1.0, 2.5);
-                        this._sniperStrafeDir = 0; // 0 = none, -1 = left, 1 = right
-                        this._sniperThrustVariance = random(0.8, 1.2); // Per-ship variance
-                        this._sniperReactionDelay = 0; // Reaction delay before executing new direction
-                    }
-
-                    const strafeTimeScale = (typeof deltaTime === 'number') ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS;
-                    this._sniperStrafeTimer -= strafeTimeScale;
-
-                    // Count down reaction delay if set
-                    if (this._sniperReactionDelay > 0) {
-                        this._sniperReactionDelay -= strafeTimeScale;
-                    }
-
-                    let isActivelyManeuvering = false;
-
-                    // If too close, use reverse thrust to back away while keeping aim
-                    if (distToTarget < minSafeDistance) {
-                        // Human-like: slight hesitation 15% of frames
-                        if (random() > 0.15) {
-                            const reverseStrength = random(0.4, 0.7) * this._sniperThrustVariance;
-                            this.thrustReverse(reverseStrength);
-                            isActivelyManeuvering = true;
-                        }
-                    }
-                    // If at good range, randomly strafe to be unpredictable
-                    else if (this._sniperStrafeTimer <= 0) {
-                        // Make a new strafe decision with reaction delay
-                        this._sniperStrafeTimer = random(0.6, 3.0); // More variable timing
-                        this._sniperReactionDelay = random(0.05, 0.25); // Human reaction time
-                        this._sniperThrustVariance = random(0.7, 1.3); // Re-roll variance
-
-                        // 35% chance left, 35% chance right, 30% chance to pause
-                        const roll = random();
-                        if (roll < 0.35) {
-                            this._sniperStrafeDir = -1;
-                        } else if (roll < 0.70) {
-                            this._sniperStrafeDir = 1;
-                        } else {
-                            this._sniperStrafeDir = 0;
-                        }
-                    }
-
-                    // Apply the strafe (only if reaction delay has passed)
-                    if (this._sniperStrafeDir !== 0 &&
-                        this._sniperReactionDelay <= 0 &&
-                        distToTarget >= minSafeDistance &&
-                        distToTarget < firingRange * 1.1) {
-
-                        // Human-like: occasional hesitation (skip ~10% of frames)
-                        if (random() > 0.10) {
-                            // Variable thrust strength for organic feel
-                            const strafeStrength = random(0.35, 0.65) * this._sniperThrustVariance;
-
-                            if (this._sniperStrafeDir < 0) {
-                                this.thrustLeft(strafeStrength);
-                            } else {
-                                this.thrustRight(strafeStrength);
-                            }
-                            isActivelyManeuvering = true;
-                        }
-                    }
-
-                    // Apply braking - lighter when actively maneuvering so strafe is visible
-                    this.brakingMultiplier = constrain(isActivelyManeuvering ? 0.96 : SNIPING_BRAKE_FACTOR, 0.6, 0.99);
-                    canThrust = false; // Strafe/reverse already handled above
+                // Rookies skip all strafe logic - early return for performance
+                if (!canStrafe) {
+                    // Rookies don't strafe, skip to next state logic
+                    // They will still rotate and fire, just no lateral movement
                 } else {
-                    // No valid target - just brake
-                    this.brakingMultiplier = constrain(SNIPING_BRAKE_FACTOR, 0.6, 0.99);
-                    canThrust = false;
-                }
+                    // SNIPING: Use strafe thrusters for tactical positioning while maintaining aim
+                    // This creates more unpredictable, human-like movement patterns
+
+                    if (this.isTargetValid(this.target)) {
+                        const distToTarget = this.distanceTo(this.target);
+                        const targetSize = this.target.size || this.size;
+                        const minSafeDistance = (this.size + targetSize) * 1.5;
+                        const firingRange = this.visualFiringRange || this.firingRange || 400;
+
+                        // Initialize strafe state if needed
+                        if (this._sniperStrafeTimer == null) {
+                            this._sniperStrafeTimer = random(1.0, 2.5);
+                            this._sniperStrafeDir = 0; // 0 = none, -1 = left, 1 = right
+                            this._sniperThrustVariance = random(0.8, 1.2); // Per-ship variance
+                            this._sniperReactionDelay = 0; // Reaction delay before executing new direction
+                        }
+
+                        const strafeTimeScale = (typeof deltaTime === 'number') ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS;
+                        this._sniperStrafeTimer -= strafeTimeScale;
+
+                        // Count down reaction delay if set
+                        if (this._sniperReactionDelay > 0) {
+                            this._sniperReactionDelay -= strafeTimeScale;
+                        }
+
+                        let isActivelyManeuvering = false;
+
+                        // If too close, use reverse thrust to back away while keeping aim
+                        if (distToTarget < minSafeDistance) {
+                            // Human-like: slight hesitation 15% of frames
+                            if (random() > 0.15) {
+                                const reverseStrength = random(0.4, 0.7) * this._sniperThrustVariance;
+                                this.thrustReverse(reverseStrength);
+                                isActivelyManeuvering = true;
+                            }
+                        }
+                        // If at good range, randomly strafe to be unpredictable
+                        else if (this._sniperStrafeTimer <= 0) {
+                            // Make a new strafe decision with reaction delay
+                            this._sniperStrafeTimer = random(0.6, 3.0); // More variable timing
+
+                            // RANK-BASED REACTION DELAY: Rookies hesitate, Elites react instantly
+                            const baseReactionDelay = random(0.05, 0.25);
+                            const rankBonus = rankMods?.reactionDelayBonus || 0;
+                            this._sniperReactionDelay = Math.max(0, baseReactionDelay + rankBonus);
+
+                            this._sniperThrustVariance = random(0.7, 1.3); // Re-roll variance
+
+                            // 35% chance left, 35% chance right, 30% chance to pause
+                            const roll = random();
+                            if (roll < 0.35) {
+                                this._sniperStrafeDir = -1;
+                            } else if (roll < 0.70) {
+                                this._sniperStrafeDir = 1;
+                            } else {
+                                this._sniperStrafeDir = 0;
+                            }
+                        }
+
+                        // Apply the strafe (only if reaction delay has passed)
+                        if (this._sniperStrafeDir !== 0 &&
+                            this._sniperReactionDelay <= 0 &&
+                            distToTarget >= minSafeDistance &&
+                            distToTarget < firingRange * 1.1) {
+
+                            // Human-like: occasional hesitation (skip ~10% of frames)
+                            if (random() > 0.10) {
+                                // Variable thrust strength for organic feel
+                                const strafeStrength = random(0.35, 0.65) * this._sniperThrustVariance;
+
+                                if (this._sniperStrafeDir < 0) {
+                                    this.thrustLeft(strafeStrength);
+                                } else {
+                                    this.thrustRight(strafeStrength);
+                                }
+                                isActivelyManeuvering = true;
+                            }
+                        }
+
+                        // Apply braking - lighter when actively maneuvering so strafe is visible
+                        this.brakingMultiplier = constrain(isActivelyManeuvering ? 0.96 : SNIPING_BRAKE_FACTOR, 0.6, 0.99);
+                        canThrust = false; // Strafe/reverse already handled above
+                    } else {
+                        // No valid target - just brake
+                        this.brakingMultiplier = constrain(SNIPING_BRAKE_FACTOR, 0.6, 0.99);
+                        canThrust = false;
+                    }
+                } // End veteran/elite strafe logic
             } else if (this.currentState === AI_STATE.REPOSITIONING || this.currentState === AI_STATE.PATROLLING) {
                 // effectiveThrustMultiplier is 1.0 by default
 

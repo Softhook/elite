@@ -46,6 +46,65 @@ const PILOT_RANK_DEFS = {
     }
 };
 
+/**
+ * Pilot rank behavior modifiers for AI differentiation
+ * These modifiers create distinct combat feels for each rank:
+ * - Rookies: Predictable, slow reactions, poor aim, stubborn (no retreat)
+ * - Veterans: Balanced baseline behavior
+ * - Elites: Sharp reflexes, accurate, tactical retreats, controls engagement range
+ */
+const PILOT_RANK_MODIFIERS = {
+    [PILOT_RANK.ROOKIE]: {
+        canStrafe: false,                   // No side thrusters / kiting
+        reactionDelayBonus: 0.35,           // +350ms slower reactions
+        aimToleranceMultiplier: 1.5,        // Wider aim tolerance (worse accuracy)
+        fleeHullThreshold: 0.15,            // Only flee at 15% hull (stubborn)
+        tacticChangeMultiplier: 0.4,        // Less likely to adapt tactics
+        predictionMultiplier: 0.5,          // Poor target lead (misses moving targets)
+        pursuitAbandonMultiplier: 2.0,      // Won't give up chase easily (suicidal)
+        engageDistanceMultiplier: 0.7,      // Gets too close (reckless)
+    },
+    [PILOT_RANK.VETERAN]: {
+        canStrafe: true,
+        reactionDelayBonus: 0,
+        aimToleranceMultiplier: 1.0,
+        fleeHullThreshold: 0.30,
+        tacticChangeMultiplier: 1.0,
+        predictionMultiplier: 1.0,
+        pursuitAbandonMultiplier: 1.0,
+        engageDistanceMultiplier: 1.0,
+    },
+    [PILOT_RANK.ELITE]: {
+        canStrafe: true,
+        reactionDelayBonus: -0.15,          // 150ms faster reactions
+        aimToleranceMultiplier: 0.7,        // Tighter aim (better accuracy)
+        fleeHullThreshold: 0.50,            // Flee earlier (smart survival)
+        tacticChangeMultiplier: 1.5,        // More adaptable in combat
+        predictionMultiplier: 1.3,          // Better target lead (hits moving targets)
+        pursuitAbandonMultiplier: 0.6,      // Gives up bad chases faster (tactical)
+        engageDistanceMultiplier: 1.3,      // Maintains safer distance (controls range)
+    }
+};
+
+/**
+ * Gets behavior modifiers for a given pilot rank
+ * @param {number} rank - Pilot rank value (1=Rookie, 2=Veteran, 3=Elite)
+ * @returns {Object|null} Modifier object with behavior multipliers, or null if unavailable
+ */
+function getPilotRankModifiers(rank) {
+    if (typeof PILOT_RANK_MODIFIERS === 'undefined') return null;
+
+    // Validate rank exists
+    if (!rank || !PILOT_RANK_MODIFIERS[rank]) {
+        if (typeof DEBUG_AI !== 'undefined' && DEBUG_AI) {
+            console.warn(`[AI] Invalid pilot rank: ${rank}, defaulting to VETERAN`);
+        }
+        return PILOT_RANK_MODIFIERS[PILOT_RANK.VETERAN];
+    }
+
+    return PILOT_RANK_MODIFIERS[rank];
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // RANK GENERATION
 // ═══════════════════════════════════════════════════════════════════════════
@@ -327,10 +386,12 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         PILOT_RANK,
         PILOT_RANK_DEFS,
+        PILOT_RANK_MODIFIERS,
         generatePilotRank,
         getPilotRankName,
         getPilotRankSymbol,
         getPilotRankColor,
+        getPilotRankModifiers,
         drawPilotRankIndicator
     };
 }

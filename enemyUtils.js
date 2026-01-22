@@ -55,6 +55,21 @@ class EnemyUtils {
         }
     }
 
+    /**
+     * Gets cached pilot rank modifiers for this enemy
+     * Eliminates code duplication and adds performance optimization via caching
+     * @returns {Object|null} Rank modifiers object or null if unavailable
+     */
+    _getRankModifiers() {
+        // Cache the result to avoid repeated function calls
+        if (this._cachedRankMods === undefined) {
+            this._cachedRankMods = (typeof getPilotRankModifiers === 'function')
+                ? getPilotRankModifiers(this.pilotRank)
+                : null;
+        }
+        return this._cachedRankMods;
+    }
+
     // -------------------------
     // --- Position & Angle Utilities ---
     // -------------------------
@@ -69,8 +84,13 @@ class EnemyUtils {
         // Reuse the temp vector for calculation, but return a copy
         // to prevent corruption if caller stores the result
         this.tempVector.set(this.target.vel.x, this.target.vel.y);
+
+        // RANK-BASED PREDICTION: Rookies poor at leading, Elites excellent
+        const rankMods = this._getRankModifiers();
+        const predMult = rankMods?.predictionMultiplier ?? 1.0;
+
         // Use getTimeScale for frame-rate independent prediction
-        const pf = this.predictionTime * getTimeScale() * PREDICTION_FPS_BASELINE;
+        const pf = this.predictionTime * predMult * getTimeScale() * PREDICTION_FPS_BASELINE;
         this.tempVector.mult(pf);
         this.tempVector.add(this.target.pos);
         return this.tempVector.copy();

@@ -191,7 +191,8 @@ global.GameGlobals = {
         addAssassinationNews: jest.fn(),
         addSabotageNews: jest.fn(),
         addBountyNews: jest.fn(),
-        addWarNews: jest.fn()
+        addWarNews: jest.fn(),
+        addDynamicEventNews: jest.fn()
     },
     // Add other globals if needed by EventManager
     player: null, // Will be updated in tests

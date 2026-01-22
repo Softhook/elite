@@ -124,8 +124,12 @@ class EnemyStateMachine {
 
             // If attacker is close, we need to do something
             if (distToAttacker < this.detectionRange) {
+                // RANK-BASED FLEE THRESHOLD: Rookies stubborn, Elites flee early
+                const rankMods = this._getRankModifiers();
+                const fleeThreshold = rankMods?.fleeHullThreshold ?? IDLE_FLEE_HULL_THRESHOLD;
+
                 // Low hull? Flee again
-                if (this.hull < this.maxHull * IDLE_FLEE_HULL_THRESHOLD) {
+                if (this.hull < this.maxHull * fleeThreshold) {
                     this.target = this.lastAttacker;
                     this.changeState(AI_STATE.FLEEING);
                     return;
@@ -209,8 +213,12 @@ class EnemyStateMachine {
         }
         // --- END NEW ---
 
+        // RANK-BASED FLEE THRESHOLD: Rookies stubborn, Elites flee early
+        const rankMods = this._getRankModifiers();
+        const fleeThreshold = rankMods?.fleeHullThreshold ?? SNIPING_FLEE_HULL_THRESHOLD;
+
         // Flee if damaged
-        if (this.hull < this.maxHull * SNIPING_FLEE_HULL_THRESHOLD) {
+        if (this.hull < this.maxHull * fleeThreshold) {
             this.changeState(AI_STATE.FLEEING);
             return;
         }
@@ -232,7 +240,11 @@ class EnemyStateMachine {
             const tacticChangeChance = this._getGrudgeBasedTacticChance(this.target);
             const repositionChance = this._getGrudgeBasedRepositionChance(this.target);
 
-            if (random() < tacticChangeChance) {
+            // RANK-BASED TACTIC ADAPTATION: Rookies static, Elites dynamic
+            const tacticMult = rankMods?.tacticChangeMultiplier ?? 1.0;
+            const adjustedTacticChance = tacticChangeChance * tacticMult;
+
+            if (random() < adjustedTacticChance) {
                 if (random() < repositionChance) {
                     // Reposition to a new angle
                     let stateData = {};
@@ -266,13 +278,19 @@ class EnemyStateMachine {
             return;
         }
 
+        // Get rank modifiers once for this function (avoid duplication and shadowing)
+        const rankMods = this._getRankModifiers();
+
         // --- Kiting detection: abandon pursuit if taking heavy damage while chasing ---
         if (this.shieldPlusHullAtStateEntry !== null) {
             const totalMaxHealth = this.maxShield + this.maxHull;
             if (totalMaxHealth > 0) {
-                const abandonThreshold = totalMaxHealth * APPROACH_PURSUIT_ABANDON_THRESHOLD;
+                // RANK-BASED PURSUIT: Rookies chase suicidally, Elites disengage tactically
+                const pursuitMult = rankMods?.pursuitAbandonMultiplier ?? 1.0;
+                const effectiveThreshold = totalMaxHealth * APPROACH_PURSUIT_ABANDON_THRESHOLD * pursuitMult;
+
                 const currentHealth = this.shield + this.hull;
-                if (currentHealth < this.shieldPlusHullAtStateEntry - abandonThreshold) {
+                if (currentHealth < this.shieldPlusHullAtStateEntry - effectiveThreshold) {
                     AI_LOG(`${this.shipTypeName} (APPROACHING): Lost ${APPROACH_PURSUIT_ABANDON_THRESHOLD * 100}% health while pursuing. Abandoning pursuit.`);
                     this.changeState(AI_STATE.FLEEING);
                     return;
@@ -285,7 +303,11 @@ class EnemyStateMachine {
         const shouldSnipe = this.hasGoodSnipingWeapon() &&
             random() < SNIPE_VS_ATTACK_CHANCE;
 
-        if (distanceToTarget < this.engageDistance) {
+        // RANK-BASED ENGAGE DISTANCE: Rookies get too close, Elites maintain range
+        const distMult = rankMods?.engageDistanceMultiplier ?? 1.0;
+        const effectiveEngageDistance = this.engageDistance * distMult;
+
+        if (distanceToTarget < effectiveEngageDistance) {
             if (shouldSnipe) {
                 this.changeState(AI_STATE.SNIPING);
             } else {

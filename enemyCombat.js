@@ -379,6 +379,10 @@ class EnemyCombat {
 
         if (this.currentState === AI_STATE.IDLE) return false;
 
+        // RANK-BASED AIM TOLERANCE: Rookies spray wildly, Elites snipe precisely
+        const rankMods = this._getRankModifiers();
+        const aimMult = rankMods?.aimToleranceMultiplier ?? 1.0;
+
         // Allow more permissive firing while REPOSITIONING so enemies can shoot while moving
         if (this.currentState === AI_STATE.REPOSITIONING) {
             if (baseType === WEAPON_TYPE.MISSILE) {
@@ -391,11 +395,11 @@ class EnemyCombat {
             const isBeam = baseType === WEAPON_TYPE.BEAM;
             const isSpread = baseType === WEAPON_TYPE.SPREAD;
             const widened = (isBeam || isSpread) ? WIDE_ANGLE_RAD * 2.0 : WIDE_ANGLE_RAD * 1.35;
-            return Math.abs(angleDiff) < Math.min(widened, PI);
+            return Math.abs(angleDiff) < Math.min(widened * aimMult, PI);
         }
 
-        // Default rule
-        return isTurretWeapon || Math.abs(angleDiff) < WIDE_ANGLE_RAD; // Use constant
+        // Default rule with rank-based tolerance
+        return isTurretWeapon || Math.abs(angleDiff) < (WIDE_ANGLE_RAD * aimMult); // Use constant
     }
 
     _hasClearShotToTarget(system, targetPos, distanceToTarget) {
