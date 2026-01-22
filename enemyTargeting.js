@@ -67,12 +67,14 @@ class EnemyTargeting {
      * @return {boolean} Whether a valid target was found
      */
     updateTargeting(system) {
+        // --- OPTIMIZATION: Hoist rank modifiers to avoid redundant calls ---
+        const rankMods = this._getRankModifiers ? this._getRankModifiers() : null;
+
         // --- OFF-SCREEN OPTIMIZATION ---
         if (this._isOnScreen === false) {
             // Periodic Scan Override: Ensure we don't stay "blind" to new nearby enemies forever.
             // RANK-BASED VIGILANCE: Elites scan more often than Rookies
-            const rankMods = this._getRankModifiers ? this._getRankModifiers() : null;
-            const scanIntervalSeconds = rankMods?.scanInterval ?? 1.0;
+            const scanIntervalSeconds = rankMods?.scanInterval ?? DEFAULT_SCAN_INTERVAL;
 
             // Initialize timer if needed
             if (this.offScreenTargetTimer === undefined) {
@@ -108,6 +110,9 @@ class EnemyTargeting {
             const isHostileToPlayer = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.BOUNTY_HUNTER);
             const isPoliceVsWanted = (this.role === AI_ROLE.POLICE || this.role === AI_ROLE.GUARD) && system.player && system.player.isWanted;
 
+            // Track if we already checked player to avoid redundant evaluation in main loop
+            this._playerAlreadyChecked = false;
+
             if ((isHostileToPlayer || isPoliceVsWanted) && system.player && this.isTargetValid(system.player)) {
                 // RANK-BASED SENSOR CUTOFF
                 const sensorMult = rankMods?.longRangeSensorMultiplier ?? 2.5;
@@ -116,6 +121,8 @@ class EnemyTargeting {
                 const dx = this.pos.x - system.player.pos.x;
                 const dy = this.pos.y - system.player.pos.y;
                 const d2 = dx * dx + dy * dy;
+
+                this._playerAlreadyChecked = true; // Mark checked regardless of range
 
                 if (d2 < sensorMaxDistSq) {
                     this.target = system.player;
@@ -346,15 +353,19 @@ class EnemyTargeting {
             }
         }
 
-        // Evaluate Player (with debug)
-        const playerRef = system.player || this.target;
-        if (playerRef instanceof Player && playerRef !== bestTarget && this.isTargetValid(playerRef)) {
-            const playerScore = this.evaluateTargetScore(playerRef, system);
-            if (playerScore > bestScore) {
-                bestScore = playerScore;
-                bestTarget = playerRef;
+        // Evaluate Player (with debug) - Skip if already checked in off-screen branch
+        if (!this._playerAlreadyChecked) {
+            const playerRef = system.player || this.target;
+            if (playerRef instanceof Player && playerRef !== bestTarget && this.isTargetValid(playerRef)) {
+                const playerScore = this.evaluateTargetScore(playerRef, system);
+                if (playerScore > bestScore) {
+                    bestScore = playerScore;
+                    bestTarget = playerRef;
+                }
             }
         }
+        // Reset flag for next targeting cycle
+        this._playerAlreadyChecked = false;
 
         // Evaluate other enemies (optimized with spatial hash)
         const canTargetOtherEnemies = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.COMBAT);
@@ -363,9 +374,10 @@ class EnemyTargeting {
 
             // Use spatial hash if available for O(1) nearby lookup
             // MISSION-CRITICAL FIX: Use rank-based detectionRange instead of hardcoded radius
-            const rankMods = this._getRankModifiers ? this._getRankModifiers() : null;
+            // NOTE: rankMods already calculated at top of function
             const sensorMult = rankMods?.longRangeSensorMultiplier ?? 2.0;
-            const targetingRadius = (this.detectionRange * sensorMult) || (this.weaponRange || 400) + 200;
+            const rawTargetingRadius = (this.detectionRange * sensorMult) || (this.weaponRange || 400) + 200;
+            const targetingRadius = Math.min(rawTargetingRadius, MAX_TARGETING_RADIUS); // Cap to prevent overflow
             const candidates = (system.spatialHash) ?
                 system.spatialHash.getNearby(this.pos.x, this.pos.y, targetingRadius) :
                 system.enemies;
@@ -495,7 +507,7 @@ class EnemyTargeting {
 
             // Guard Principal Attacker Exception
             let isPrincipalAttacker = false;
-            if (enemy.role === AI_ROLE.GUARD && enemy.principal && enemy.principal.lastAttacker === target) {
+            if (enemy.role === AI_ROLE.GUARD && enemy.principal && enemy.isTargetValid(enemy.principal) && enemy.principal.lastAttacker === target) {
                 // Guards "hear" the distress call from their principal, bypassing distance limits for acquisition
                 isPrincipalAttacker = true;
             }
@@ -835,7 +847,7 @@ class EnemyTargeting {
 
             // Distance penalties - Only if interesting
             if (_interesting) {
-                const distance = enemy.distanceTo(target);
+                const distance = Math.sqrt(distSq); // OPTIMIZATION: Reuse distSq from line ~490
 
                 // 1. Base distance penalty (stronger than before)
                 let distancePenaltyMult = TARGET_SCORE_DISTANCE_PENALTY_MULT;

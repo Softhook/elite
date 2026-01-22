@@ -46,6 +46,13 @@ const JUMP_FADE_OUT_DURATION = 0.35;       // Fade-to-white duration in seconds
 const JUMP_FADE_IN_DURATION = 1.2;         // Fade-back duration in seconds
 
 // -------------------------
+// --- AI Targeting Constants ---
+// -------------------------
+
+const DEFAULT_SCAN_INTERVAL = 1.0;         // Default off-screen scan interval (seconds)
+const MAX_TARGETING_RADIUS = 4000;         // Maximum spatial hash lookup radius to prevent overflow
+
+// -------------------------
 // --- Drag/Tangle Effect Constants ---
 // -------------------------
 
@@ -601,7 +608,9 @@ if (typeof module !== 'undefined' && module.exports) {
         BOUNTY_FACTION_RIVALRY,
         BOUNTY_MILITARY_ALIEN,
         BOUNTY_MILITARY_PIRATE,
-        TARGET_SCORE_CURRENT_TARGET_BONUS
+        TARGET_SCORE_CURRENT_TARGET_BONUS,
+        DEFAULT_SCAN_INTERVAL,
+        MAX_TARGETING_RADIUS
     };
 
     // Assign globals for test environment
@@ -665,4 +674,6 @@ if (typeof module !== 'undefined' && module.exports) {
     global.BOUNTY_MILITARY_ALIEN = BOUNTY_MILITARY_ALIEN;
     global.BOUNTY_MILITARY_PIRATE = BOUNTY_MILITARY_PIRATE;
     global.TARGET_SCORE_CURRENT_TARGET_BONUS = TARGET_SCORE_CURRENT_TARGET_BONUS;
+    global.DEFAULT_SCAN_INTERVAL = DEFAULT_SCAN_INTERVAL;
+    global.MAX_TARGETING_RADIUS = MAX_TARGETING_RADIUS;
 }
