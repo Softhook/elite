@@ -70,8 +70,9 @@ class EnemyTargeting {
         // --- OFF-SCREEN OPTIMIZATION ---
         if (this._isOnScreen === false) {
             // Periodic Scan Override: Ensure we don't stay "blind" to new nearby enemies forever.
-            // Run full targeting logic once every ~1 second.
-            const scanIntervalSeconds = 1.0;
+            // RANK-BASED VIGILANCE: Elites scan more often than Rookies
+            const rankMods = this._getRankModifiers ? this._getRankModifiers() : null;
+            const scanIntervalSeconds = rankMods?.scanInterval ?? 1.0;
 
             // Initialize timer if needed
             if (this.offScreenTargetTimer === undefined) {
@@ -89,7 +90,7 @@ class EnemyTargeting {
             }
 
             if (!isScanFrame) {
-                // Simplified targeting: Stick to lastAttacker or existing target
+                // Throttled: Only maintain existing engagement
                 if (this.lastAttacker && this.isTargetValid(this.lastAttacker)) {
                     this.target = this.lastAttacker;
                     return true;
@@ -97,80 +98,34 @@ class EnemyTargeting {
                 if (this.target && this.isTargetValid(this.target)) {
                     return true;
                 }
-                // Optimized Off-Screen Scanning:
-                // Instead of blindly targeting the player, scan for High Priority targets (Rivals/Prey).
-                // Falls back to player only if no better target matches.
-
-                let bestOffScreenTarget = null;
-                let bestOffScreenDistSq = Infinity;
-
-                // 1. Consider Player as baseline (if hostile/wanted)
-                const isHostileToPlayer = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.BOUNTY_HUNTER);
-                // Police only target wanted players
-                const isPoliceVsWanted = (this.role === AI_ROLE.POLICE || this.role === AI_ROLE.GUARD) && system.player && system.player.isWanted;
-
-                if ((isHostileToPlayer || isPoliceVsWanted) && system.player && this.isTargetValid(system.player)) {
-                    bestOffScreenTarget = system.player;
-                    const dx = this.pos.x - system.player.pos.x;
-                    const dy = this.pos.y - system.player.pos.y;
-                    bestOffScreenDistSq = dx * dx + dy * dy;
-                }
-
-                // 2. Scan other enemies (Sampling for performance)
-                if (system.enemies) {
-                    // Check every 2nd enemy for better coverage while still saving CPU
-                    const startIdx = (this._scanOffset || 0) % 2;
-                    for (let i = startIdx; i < system.enemies.length; i += 2) {
-                        const e = system.enemies[i];
-                        if (e === this || !e.pos || e.destroyed) continue;
-
-                        // Check Faction/Role Priorities using central constants
-                        let isPriority = false;
-
-                        // 1. Check Faction Rivalries
-                        if (typeof FACTION_ENEMY_MAP !== 'undefined' && this.faction && e.faction) {
-                            const hatedFactions = FACTION_ENEMY_MAP[this.faction];
-                            if (hatedFactions && hatedFactions.includes(e.faction)) {
-                                isPriority = true;
-                            }
-                        }
-
-                        // 1b. Check direct hatred (e.g. Police vs Pirate)
-                        // Handled via ROLE_ENEMY_MAP usually, but ensure basics:
-                        if (e.role === AI_ROLE.PIRATE && (this.role === AI_ROLE.POLICE || this.role === AI_ROLE.GUARD)) isPriority = true;
-
-                        // 2. Check Role Hostilities (if not already found)
-                        if (!isPriority && typeof ROLE_ENEMY_MAP !== 'undefined' && this.role) {
-                            const hatedRoles = ROLE_ENEMY_MAP[this.role];
-                            if (hatedRoles && (hatedRoles.includes(e.role) || hatedRoles.includes(e.faction))) {
-                                isPriority = true;
-                            }
-                        }
-
-                        // 3. Fallback for Alien vs faction specific case if not covered by maps
-                        if (!isPriority && this.faction === 'MILITARY' && e.role === AI_ROLE.ALIEN) isPriority = true;
-
-                        if (isPriority) {
-                            const dx = this.pos.x - e.pos.x;
-                            const dy = this.pos.y - e.pos.y;
-                            const d2 = dx * dx + dy * dy;
-                            // Switch if this rival is closer than current best (or if current best is the player)
-                            // We heavily bias towards Rivals over Player
-                            if (!bestOffScreenTarget || bestOffScreenTarget === system.player || d2 < bestOffScreenDistSq) {
-                                bestOffScreenTarget = e;
-                                bestOffScreenDistSq = d2;
-                            }
-                        }
-                    }
-                }
-
-                if (bestOffScreenTarget) {
-                    this.target = bestOffScreenTarget;
-                    return true;
-                }
-                this.target = null;
+                // No current engagement and not a scan frame - stay dormant
                 return false;
             }
+
+            // --- SCAN FRAME: Sensor sweep for new targets ---
+
+            // 1. Check Player (High Priority Acquisition)
+            const isHostileToPlayer = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.BOUNTY_HUNTER);
+            const isPoliceVsWanted = (this.role === AI_ROLE.POLICE || this.role === AI_ROLE.GUARD) && system.player && system.player.isWanted;
+
+            if ((isHostileToPlayer || isPoliceVsWanted) && system.player && this.isTargetValid(system.player)) {
+                // RANK-BASED SENSOR CUTOFF
+                const sensorMult = rankMods?.longRangeSensorMultiplier ?? 2.5;
+                const sensorMaxDistSq = Math.pow(this.detectionRange * sensorMult, 2);
+
+                const dx = this.pos.x - system.player.pos.x;
+                const dy = this.pos.y - system.player.pos.y;
+                const d2 = dx * dx + dy * dy;
+
+                if (d2 < sensorMaxDistSq) {
+                    this.target = system.player;
+                    return true;
+                }
+            }
+
+            // If no player found, we FALL THROUGH to the main targeting logic below
+            // which will use Spatial Hash to find NPC rivals. This is more efficient
+            // than the previous manual iteration of system.enemies.
             // If isScanFrame is true, FALL THROUGH to full targeting logic below!
         }
         // -------------------------------
@@ -407,8 +362,10 @@ class EnemyTargeting {
             const isAlien = this.role === AI_ROLE.ALIEN;
 
             // Use spatial hash if available for O(1) nearby lookup
-            // Search radius based on weapon range + some buffer for approach
-            const targetingRadius = (this.weaponRange || 400) + 200;
+            // MISSION-CRITICAL FIX: Use rank-based detectionRange instead of hardcoded radius
+            const rankMods = this._getRankModifiers ? this._getRankModifiers() : null;
+            const sensorMult = rankMods?.longRangeSensorMultiplier ?? 2.0;
+            const targetingRadius = (this.detectionRange * sensorMult) || (this.weaponRange || 400) + 200;
             const candidates = (system.spatialHash) ?
                 system.spatialHash.getNearby(this.pos.x, this.pos.y, targetingRadius) :
                 system.enemies;
@@ -519,6 +476,41 @@ class EnemyTargeting {
                 return TARGET_SCORE_INVALID;
             }
 
+            // --- RANGE CHECK: Do not acquire targets beyond detection range ---
+            // EXCEPTIONS: 
+            // 1. Current target (tracking is more persistent than acquisition)
+            // 2. Active attackers (retaliation logic)
+            // 3. Mission targets (special awareness)
+            // 4. Guard principal defense
+            const dx = enemy.pos.x - target.pos.x;
+            const dy = enemy.pos.y - target.pos.y;
+            const distSq = dx * dx + dy * dy;
+            const _isAttacker = (enemy.attackerHistory && enemy.attackerHistory.has(target)) || (target === enemy.lastAttacker);
+            const isCurrentTarget = target === enemy.target;
+
+            // Get mission status once
+            let isMissionTarget = false;
+            if (enemy.role === AI_ROLE.BOUNTY_HUNTER && enemy.bountyTarget === target) isMissionTarget = true;
+            if (system?.player === target && system?.isMissionTarget?.(enemy, target)) isMissionTarget = true;
+
+            // Guard Principal Attacker Exception
+            let isPrincipalAttacker = false;
+            if (enemy.role === AI_ROLE.GUARD && enemy.principal && enemy.principal.lastAttacker === target) {
+                // Guards "hear" the distress call from their principal, bypassing distance limits for acquisition
+                isPrincipalAttacker = true;
+            }
+
+            // Use Rank-based Sensor Cutoff (Long Range Sensors)
+            const rankMods = enemy._getRankModifiers ? enemy._getRankModifiers() : null;
+            const sensorMult = rankMods?.longRangeSensorMultiplier ?? 2.0;
+            const maxAcquisitionDistSq = Math.pow(enemy.detectionRange * sensorMult, 2);
+
+            const isAcquisitionExempt = isCurrentTarget || _isAttacker || isMissionTarget || isPrincipalAttacker;
+
+            if (!isAcquisitionExempt && distSq > maxAcquisitionDistSq) {
+                return TARGET_SCORE_INVALID;
+            }
+
             // Never target asteroids - collisions with asteroids should not trigger combat
             if (target && target.constructor && target.constructor.name === 'Asteroid') {
                 return TARGET_SCORE_INVALID;
@@ -599,6 +591,12 @@ class EnemyTargeting {
             // Create completely private scoring variables
             let _score = 0;
             let _interesting = false;
+
+            // --- PERSISTENCE: Maintain interest in current target or attackers ---
+            if (target === enemy.target || _isAttacker) {
+                _score += TARGET_SCORE_CURRENT_TARGET_BONUS;
+                _interesting = true;
+            }
             // Robust check: instanceof Player OR explicit flag (useful for tests/mixins)
             const isPlayer = (typeof Player !== 'undefined' && target instanceof Player) || (target && target.isPlayer === true);
 

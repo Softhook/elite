@@ -63,6 +63,9 @@ const PILOT_RANK_MODIFIERS = {
         predictionMultiplier: 0.2,          // Poor target lead (misses moving targets)
         pursuitAbandonMultiplier: 2.0,      // Won't give up chase easily (suicidal)
         engageDistanceMultiplier: 0.7,      // Gets too close (reckless)
+        detectionRangeMultiplier: 0.8,      // Reduced awareness
+        scanInterval: 2.0,                  // Lazy sensor sweep
+        longRangeSensorMultiplier: 1.5      // Hard cutoff for acquisition
     },
     [PILOT_RANK.VETERAN]: {
         canStrafe: true,
@@ -73,6 +76,9 @@ const PILOT_RANK_MODIFIERS = {
         predictionMultiplier: 1.0,
         pursuitAbandonMultiplier: 1.0,
         engageDistanceMultiplier: 1.0,
+        detectionRangeMultiplier: 1.0,      // Standard awareness
+        scanInterval: 1.0,                  // Standard sensor sweep
+        longRangeSensorMultiplier: 2.5      // Baseline cutoff
     },
     [PILOT_RANK.ELITE]: {
         canStrafe: true,
@@ -83,6 +89,9 @@ const PILOT_RANK_MODIFIERS = {
         predictionMultiplier: 1.3,          // Better target lead (hits moving targets)
         pursuitAbandonMultiplier: 0.6,      // Gives up bad chases faster (tactical)
         engageDistanceMultiplier: 1.3,      // Maintains safer distance (controls range)
+        detectionRangeMultiplier: 1.5,      // Significantly higher awareness
+        scanInterval: 0.4,                  // Agile sensor sweep
+        longRangeSensorMultiplier: 4.0      // Massive sensor reach
     }
 };
 

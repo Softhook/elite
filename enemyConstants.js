@@ -168,6 +168,7 @@ const TARGET_SCORE_COMBAT_LOW_PRIORITY = 0;     // Other ships (generic)
 // Faction-based targeting modifier
 const TARGET_SCORE_SAME_FACTION_PENALTY = 200;  // Large penalty for targeting same faction (prevents friendly fire)
 const TARGET_SCORE_BOUNTY_CONTRACT = 1000;      // Score for bounty hunter's assigned target
+const TARGET_SCORE_CURRENT_TARGET_BONUS = 200;  // Persistence bonus for current target (hysteresis)
 
 // -------------------------
 // --- Faction and Role Hostility Maps ---
@@ -599,7 +600,8 @@ if (typeof module !== 'undefined' && module.exports) {
         BOUNTY_POLICE_ALIEN_PIRATE,
         BOUNTY_FACTION_RIVALRY,
         BOUNTY_MILITARY_ALIEN,
-        BOUNTY_MILITARY_PIRATE
+        BOUNTY_MILITARY_PIRATE,
+        TARGET_SCORE_CURRENT_TARGET_BONUS
     };
 
     // Assign globals for test environment
@@ -662,4 +664,5 @@ if (typeof module !== 'undefined' && module.exports) {
     global.BOUNTY_FACTION_RIVALRY = BOUNTY_FACTION_RIVALRY;
     global.BOUNTY_MILITARY_ALIEN = BOUNTY_MILITARY_ALIEN;
     global.BOUNTY_MILITARY_PIRATE = BOUNTY_MILITARY_PIRATE;
+    global.TARGET_SCORE_CURRENT_TARGET_BONUS = TARGET_SCORE_CURRENT_TARGET_BONUS;
 }
