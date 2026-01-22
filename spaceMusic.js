@@ -20,13 +20,21 @@ class SpaceMusicManager {
         this.enabled = true;
 
         // Volume settings
-        this.baseVolume = 0.15; // Subtle background presence
+        this.baseVolume = 0.85; // Subtle background presence
         this.currentVolume = 0;
         this.targetVolume = 0;
 
         // LFO settings for breathing effect
-        this.breathingSpeed = 0.05; // Hz - very slow breathing
-        this.filterSweepSpeed = 0.03; // Hz - ultra-slow filter movement
+        this.breathingSpeed = 0.02; // Hz - reduced from 0.05 for slower breathing
+        this.filterSweepSpeed = 0.012; // Hz - reduced from 0.03 for slower sweep
+
+        // Long-term variety state
+        this.lastVarietyUpdate = 0;
+        this.varietyCycle = 0;
+        this.sparkleOscillators = [];
+        this.sparkleGains = [];
+        this.baseDetunes = [0.5, -0.8, 1.2, -0.5, 0.3];
+        this.currentDetunes = [...this.baseDetunes];
 
         // Timeout reference for cleaning up after fade-out
         this.stopTimeout = null;
@@ -127,7 +135,7 @@ class SpaceMusicManager {
         ];
 
         const volumes = [0.4, 0.35, 0.3, 0.25, 0.2];
-        const detuneAmounts = [0.5, -0.8, 1.2, -0.5, 0.3]; // Very subtle drift
+        const detuneAmounts = this.currentDetunes; // Use evolving detunes
 
         frequencies.forEach((freq, i) => {
             // Create oscillator
@@ -213,6 +221,45 @@ class SpaceMusicManager {
     }
 
     /**
+     * Add a high-frequency "sparkle" note that fades in and out
+     * @private
+     */
+    _addSparkle() {
+        if (!this.isPlaying || !this.audioContext || !this.filter) return;
+
+        const freq = 400 + (Math.random() * 800); // Higher frequencies
+        const osc = this.audioContext.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+
+        const gain = this.audioContext.createGain();
+        gain.gain.value = 0;
+
+        const now = this.audioContext.currentTime;
+        const duration = 10 + (Math.random() * 20); // 10-30 seconds
+
+        osc.connect(gain);
+        gain.connect(this.filter);
+
+        // Slow fade in and out
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.02, now + (duration / 2));
+        gain.gain.linearRampToValueAtTime(0, now + duration);
+
+        osc.start(now);
+        osc.stop(now + duration);
+
+        this.sparkleOscillators.push(osc);
+        this.sparkleGains.push(gain);
+
+        // Clean up arrays periodically
+        setTimeout(() => {
+            this.sparkleOscillators = this.sparkleOscillators.filter(o => o !== osc);
+            this.sparkleGains = this.sparkleGains.filter(g => g !== gain);
+        }, duration * 1000 + 100);
+    }
+
+    /**
      * Stop and disconnect all oscillators
      * @private
      */
@@ -246,6 +293,19 @@ class SpaceMusicManager {
                 // Already stopped
             }
         }
+
+        // Stop sparkles
+        this.sparkleOscillators.forEach(osc => {
+            try {
+                osc.stop();
+                osc.disconnect();
+            } catch (e) { }
+        });
+        this.sparkleGains.forEach(gain => {
+            try {
+                gain.disconnect();
+            } catch (e) { }
+        });
 
         // Disconnect gain nodes
         this.gainNodes.forEach(gain => {
@@ -289,6 +349,8 @@ class SpaceMusicManager {
         this.filterLFO = null;
         this.filterLFOGain = null;
         this.filter = null;
+        this.sparkleOscillators = [];
+        this.sparkleGains = [];
     }
 
     /**
@@ -315,6 +377,7 @@ class SpaceMusicManager {
         // Create oscillators if not already playing
         if (!this.isPlaying) {
             this._createOscillators();
+            this.lastVarietyUpdate = this.audioContext.currentTime;
         }
 
         this.isPlaying = true;
@@ -376,8 +439,65 @@ class SpaceMusicManager {
      * Currently handled by Web Audio API automation, but available for future enhancements
      */
     update() {
-        // LFO and filter sweeps are handled by Web Audio API automation
-        // This method is available for future contextual music changes
+        if (!this.isPlaying || !this.audioContext || !this.isInitialized) return;
+
+        const now = this.audioContext.currentTime;
+
+        // Long-term evolution every 20-30 seconds
+        if (now - this.lastVarietyUpdate > 25) {
+            this._evolveTexture();
+            this.lastVarietyUpdate = now;
+
+            // Occasional sparkles
+            if (Math.random() > 0.4) {
+                this._addSparkle();
+            }
+        }
+    }
+
+    /**
+     * Slowly shift harmonics for continuous variety
+     * @private
+     */
+    _evolveTexture() {
+        if (!this.isPlaying || !this.audioContext) return;
+
+        const now = this.audioContext.currentTime;
+        const driftAmount = 2.0; // cents
+
+        this.oscillators.forEach((osc, i) => {
+            if (i < this.currentDetunes.length) {
+                // Move current detune towards a new random target
+                const drift = (Math.random() - 0.5) * driftAmount;
+                this.currentDetunes[i] += drift;
+
+                // Clamp drift to stay within reasonable bounds of base
+                const maxDrift = 5.0;
+                this.currentDetunes[i] = Math.max(
+                    this.baseDetunes[i] - maxDrift,
+                    Math.min(this.baseDetunes[i] + maxDrift, this.currentDetunes[i])
+                );
+
+                // Smoothly ramp to new detune
+                try {
+                    osc.detune.linearRampToValueAtTime(this.currentDetunes[i], now + 20);
+                } catch (e) {
+                    osc.detune.value = this.currentDetunes[i];
+                }
+            }
+        });
+
+        // Subtly shift filter Q
+        if (this.filter) {
+            const newQ = 1.0 + Math.random() * 1.5;
+            try {
+                this.filter.Q.linearRampToValueAtTime(newQ, now + 15);
+            } catch (e) {
+                this.filter.Q.value = newQ;
+            }
+        }
+
+        console.log('SpaceMusicManager: Soundscape evolved');
     }
 
     /**
