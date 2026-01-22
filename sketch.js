@@ -28,7 +28,7 @@ const GameGlobals = {
 // Maintain backward compatibility with existing code
 let player, galaxy, uiManager, gameStateManager, soundManager, ambientSoundManager,
     titleScreen, font, inventoryScreen, missionOverlay, eventManager, communicationSystem, saveSelectionScreen,
-    stationMusicManager;
+    stationMusicManager, spaceMusicManager;
 let loadGameWasSuccessful = false;
 let globalSessionSeed;
 
@@ -84,12 +84,14 @@ function initializeManagers() {
     soundManager = new SoundManager();
     ambientSoundManager = new AmbientSoundManager();
     stationMusicManager = new StationMusicManager();
+    spaceMusicManager = new SpaceMusicManager();
     eventManager = new EventManager();
 
     Object.assign(GameGlobals, {
         soundManager,
         ambientSoundManager,
         stationMusicManager,
+        spaceMusicManager,
         eventManager
     });
 }
@@ -291,6 +293,9 @@ function updateTitleScreens(currentState) {
 function updateGameState() {
     try {
         gameStateManager.update(player);
+        if (typeof spaceMusicManager !== 'undefined' && spaceMusicManager) {
+            spaceMusicManager.update();
+        }
         updateEventManager();
         performPeriodicTasks();
     } catch (e) {
@@ -1566,6 +1571,11 @@ function resetGame() {
         stationMusicManager.cleanup();
     }
 
+    // Clean up space music
+    if (spaceMusicManager && typeof spaceMusicManager.cleanup === 'function') {
+        spaceMusicManager.cleanup();
+    }
+
     // Reset global state
     loadGameWasSuccessful = false;
     window.activeSaveSlotIndex = 0;
@@ -1586,6 +1596,7 @@ function resetGame() {
     }
     communicationSystem = new CommunicationSystem();
     stationMusicManager = new StationMusicManager();
+    spaceMusicManager = new SpaceMusicManager();
     communicationSystem.initialize({ uiManager, player });
     communicationSystem.initializeSpeech(); // Enable speech synthesis for ship communications
 

@@ -1,11 +1,5 @@
 # Elite Game Development TODO
 
-add a visual badging system with five levels of seniority and experience that indicates the skill and behaviour of enemy pilots
-These should be shown on the target overlay and in the mission description as well as in the targeting text next to the ships in the world view at the end of their name
-visualliy these should look little medals or badges
-implement this in phases
-start with the visual badges and leave the changes to enemy AI till last
-
 aeolian harp space music
 
 personal record should not be linked on the station screen but a link from inventory

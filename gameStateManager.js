@@ -240,6 +240,37 @@ class GameStateManager {
     }
 
     /**
+     * Updates space music state based on current game state
+     * @param {string} newState - The new game state
+     * @param {string} prevState - The previous game state
+     * @private
+     */
+    _updateSpaceMusic(newState, prevState) {
+        try {
+            if (typeof spaceMusicManager === 'undefined' || !spaceMusicManager) {
+                return;
+            }
+
+            const isInFlight = newState === "IN_FLIGHT";
+            const wasInFlight = prevState === "IN_FLIGHT";
+            const isStationState = STATION_STATES.includes(newState);
+            const isGameOver = newState === "GAME_OVER";
+
+            // Start space music when entering IN_FLIGHT from non-flight states
+            if (isInFlight && !wasInFlight) {
+                spaceMusicManager.start(3000); // 3s fade-in
+            }
+            // Stop space music when docking or game over
+            else if ((isStationState || isGameOver) && wasInFlight) {
+                spaceMusicManager.stop(2000); // 2s fade-out
+            }
+        } catch (e) {
+            console.warn('Error updating space music state:', e);
+        }
+    }
+
+
+    /**
      * Plays transition-specific sound effects when changing states
      * @param {string} newState - The new game state
      * @param {string} prevState - The previous game state
@@ -502,6 +533,7 @@ class GameStateManager {
         // Execute transition handlers
         this._updateAmbientSoundState(newState);
         this._updateStationMusic(newState, this.previousState);
+        this._updateSpaceMusic(newState, this.previousState);
         this._playTransitionSound(newState, this.previousState);
         this._handleSaveSelectionTransition(newState);
         this._resetStateSpecificData(newState);
