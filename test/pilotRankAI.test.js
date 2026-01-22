@@ -59,7 +59,7 @@ describe('Pilot Rank Modifiers', () => {
 
         test('should have poor target prediction', () => {
             expect(mods.predictionMultiplier).toBeLessThan(1.0);
-            expect(mods.predictionMultiplier).toBeCloseTo(0.5);
+            expect(mods.predictionMultiplier).toBeCloseTo(0.2);
         });
 
         test('should pursue targets suicidally', () => {
@@ -271,7 +271,7 @@ describe('Rank-Based AI Behavior', () => {
             const basePrediction = 0.4;
             const rookiePrediction = basePrediction * mods.predictionMultiplier;
             expect(rookiePrediction).toBeLessThan(basePrediction);
-            expect(rookiePrediction).toBeCloseTo(0.2); // 0.4 * 0.5
+            expect(rookiePrediction).toBeCloseTo(0.08); // 0.4 * 0.2
         });
 
         test('elite should have enhanced prediction multiplier', () => {

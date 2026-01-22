@@ -60,7 +60,7 @@ const PILOT_RANK_MODIFIERS = {
         aimToleranceMultiplier: 1.5,        // Wider aim tolerance (worse accuracy)
         fleeHullThreshold: 0.15,            // Only flee at 15% hull (stubborn)
         tacticChangeMultiplier: 0.4,        // Less likely to adapt tactics
-        predictionMultiplier: 0.5,          // Poor target lead (misses moving targets)
+        predictionMultiplier: 0.2,          // Poor target lead (misses moving targets)
         pursuitAbandonMultiplier: 2.0,      // Won't give up chase easily (suicidal)
         engageDistanceMultiplier: 0.7,      // Gets too close (reckless)
     },
