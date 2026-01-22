@@ -91,12 +91,18 @@ class SpaceMusicManager {
         // Clean up any existing oscillators first
         this._stopOscillators();
 
+        // Create WaveShaper for soft saturation (analog warmth)
+        const waveShaper = this.audioContext.createWaveShaper();
+        waveShaper.curve = this._makeDistortionCurve(40);
+        waveShaper.oversample = '4x';
+        waveShaper.connect(this.masterGain);
+
         // Create lowpass filter for evolving texture
         this.filter = this.audioContext.createBiquadFilter();
         this.filter.type = 'lowpass';
-        this.filter.frequency.value = 800; // Base frequency
-        this.filter.Q.value = 1.0;
-        this.filter.connect(this.masterGain);
+        this.filter.frequency.value = 600; // Lower base frequency for warmth
+        this.filter.Q.value = 1.5; // Slight resonance for character
+        this.filter.connect(waveShaper);
 
         // Create filter sweep LFO
         this.filterLFO = this.audioContext.createOscillator();
@@ -104,50 +110,62 @@ class SpaceMusicManager {
         this.filterLFO.frequency.value = this.filterSweepSpeed;
 
         this.filterLFOGain = this.audioContext.createGain();
-        this.filterLFOGain.gain.value = 300; // Sweep range ±300Hz
+        this.filterLFOGain.gain.value = 250; // Sweep range
 
         this.filterLFO.connect(this.filterLFOGain);
         this.filterLFOGain.connect(this.filter.frequency);
         this.filterLFO.start();
 
-        // Define chord voicing - open fifths and octaves for aeolian harp character
-        // C2, G2, C3 - very resonant and wind-like
+        // Lush chord voicing: Cmaj9(no 3rd) spread across octaves
+        // C2, G2, D3, G3, C4
         const frequencies = [
-            65.41,  // C2 - fundamental
-            98.00,  // G2 - perfect fifth
-            130.81, // C3 - octave
-            196.00  // G3 - upper fifth for shimmer
+            65.41,  // C2
+            98.00,  // G2
+            146.83, // D3 (9th)
+            196.00, // G3
+            261.63  // C4
         ];
 
-        const volumes = [0.35, 0.30, 0.25, 0.15]; // Decreasing volumes for upper partials
-        const detuneAmounts = [0, 3, -2, 5]; // Slight detuning for organic feel
+        const volumes = [0.4, 0.35, 0.3, 0.25, 0.2];
+        const detuneAmounts = [0.5, -0.8, 1.2, -0.5, 0.3]; // Very subtle drift
 
         frequencies.forEach((freq, i) => {
             // Create oscillator
             const osc = this.audioContext.createOscillator();
-            osc.type = 'sine'; // Pure sine for aeolian harp quality
+            // Triangle wave has more harmonic richness than sine but is still soft
+            osc.type = 'triangle';
             osc.frequency.value = freq;
             osc.detune.value = detuneAmounts[i];
 
             // Create gain node for this oscillator
             const oscGain = this.audioContext.createGain();
-            oscGain.gain.value = volumes[i];
+            oscGain.gain.value = 0; // Start at 0, will be modulated
 
-            // Create LFO for breathing effect
+            // Create LFO for breathing effect - each with slightly different rate
             const lfo = this.audioContext.createOscillator();
             lfo.type = 'sine';
-            // Slightly different LFO speeds for each layer to create evolving texture
-            lfo.frequency.value = this.breathingSpeed * (1 + (i * 0.1));
+            // Use prime-like variations for asynchronous feel
+            lfo.frequency.value = this.breathingSpeed * (0.8 + (i * 0.13));
 
             // Create LFO gain (modulation depth)
             const lfoGain = this.audioContext.createGain();
-            lfoGain.gain.value = volumes[i] * 0.12; // Subtle modulation
+            lfoGain.gain.value = volumes[i] * 0.15;
 
-            // Connect: LFO -> LFO Gain -> Oscillator Gain
+            // Connect: LFO -> LFO Gain -> Oscillator Gain (modulating volume)
             lfo.connect(lfoGain);
             lfoGain.connect(oscGain.gain);
 
-            // Connect: Oscillator -> Oscillator Gain -> Filter -> Master
+            // Create slow pitch drift LFO (wow/flutter)
+            const driftLfo = this.audioContext.createOscillator();
+            driftLfo.type = 'sine';
+            driftLfo.frequency.value = 0.07 + (i * 0.02);
+            const driftGain = this.audioContext.createGain();
+            driftGain.gain.value = 2; // ±2 cents drift
+            driftLfo.connect(driftGain);
+            driftGain.connect(osc.detune);
+            driftLfo.start();
+
+            // Connect: Oscillator -> Oscillator Gain -> Filter -> WaveShaper -> Master
             osc.connect(oscGain);
             oscGain.connect(this.filter);
 
@@ -159,21 +177,39 @@ class SpaceMusicManager {
             this.oscillators.push(osc);
             this.gainNodes.push(oscGain);
             this.lfoOscillators.push(lfo);
+            this.lfoOscillators.push(driftLfo); // Store drift LFO for cleanup
             this.lfoGains.push(lfoGain);
+            this.lfoGains.push(driftGain);
         });
 
-        // Connect to shared reverb bus if available (from ambientSoundManager)
+        // Connect to shared reverb bus if available
         if (typeof ambientSoundManager !== 'undefined' &&
             ambientSoundManager?.reverbConvolver) {
             try {
                 const reverbSend = this.audioContext.createGain();
-                reverbSend.gain.value = 0.25; // Heavy reverb for spacious feel
+                reverbSend.gain.value = 0.35; // Lush reverb
                 this.filter.connect(reverbSend);
                 reverbSend.connect(ambientSoundManager.reverbConvolver);
             } catch (e) {
                 console.warn('SpaceMusicManager: Could not connect to reverb bus', e);
             }
         }
+    }
+
+    /**
+     * Create a distortion curve for the WaveShaper
+     * @private
+     */
+    _makeDistortionCurve(amount) {
+        const k = typeof amount === 'number' ? amount : 50;
+        const n_samples = 44100;
+        const curve = new Float32Array(n_samples);
+        const deg = Math.PI / 180;
+        for (let i = 0; i < n_samples; ++i) {
+            const x = (i * 2) / n_samples - 1;
+            curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+        }
+        return curve;
     }
 
     /**
