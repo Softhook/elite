@@ -133,6 +133,7 @@ class Mission {
     _initializeTargetData(data) {
         this.targetCount = data.targetCount || 0;
         this.targetName = data.targetName || null;
+        this.targetPilotRank = data.targetPilotRank || null;
         this.targetShipType = data.targetShipType || null;
         this.targetDesc = data.targetDesc || null;
         this.guardCount = data.guardCount || 0;

@@ -228,6 +228,28 @@ describe('Environmental Effects Integration', () => {
         system.update();
         expect(player.inNebula).toBe(true);
         expect(player.weaponsDisabled).toBe(true);
+        expect(enemy.weaponsDisabled).toBe(true);
+
+        // Verify enemy weapons are actually blocked
+        enemy.currentWeapon = { name: "Pulse Laser", type: "laser", fireRate: 0.5 };
+        enemy.weapons = [enemy.currentWeapon];
+
+        // Mock WeaponSystem.fire
+        global.WeaponSystem = { fire: jest.fn() };
+
+        // Attempt firing
+        enemy.fireWeapon();
+        expect(global.WeaponSystem.fire).not.toHaveBeenCalled();
+
+        // Attempt secondary firing
+        enemy.performSecondaryFiring(system, player);
+        expect(global.WeaponSystem.fire).not.toHaveBeenCalled();
+
+        // Attempt proactive barrier
+        enemy.weapons = [{ type: 'barrier', fireRate: 5, duration: 5, damageReduction: 0.5 }];
+        const activated = enemy.activateBarrierIfNeeded();
+        expect(activated).toBe(false);
+        expect(enemy.isBarrierActive).toBe(false);
     });
 
     // --- COSMIC STORM TESTS ---

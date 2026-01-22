@@ -631,6 +631,7 @@ class EnemyCombat {
      * Returns true if barrier was activated this call.
      */
     activateBarrierIfNeeded() {
+        if (this.weaponsDisabled) return false;
         if (!this.weapons || !this.weapons.length) return false;
         if (this.barrierCooldown > 0) return false;
 
@@ -657,6 +658,9 @@ class EnemyCombat {
     }
 
     fireWeapon(preferredAngle = null, targetToPass = null) {
+        // Check if weapons are disabled by EMP nebula (Gatekeeper)
+        if (this.weaponsDisabled) return;
+
         if (!this.currentWeapon || !this.currentSystem) return;
 
         // Determine current weapon index for cooldown management
@@ -757,12 +761,6 @@ class EnemyCombat {
             }
         }
 
-        // Check if weapons are disabled by EMP nebula
-        if (this.weaponsDisabled) {
-            // Silently fail - no console spam for enemies
-            return;
-        }
-
         // Extra safety: prevent firing at cargo with any weapon type
         if (targetToPass && targetToPass.constructor && targetToPass.constructor.name === 'Cargo') {
             return;
@@ -802,8 +800,17 @@ class EnemyCombat {
                 }
 
                 if (t && isFinite(t) && t > 0) {
-                    const aimX = targetToPass.pos.x + tvx * t;
-                    const aimY = targetToPass.pos.y + tvy * t;
+                    let aimX = targetToPass.pos.x + tvx * t;
+                    let aimY = targetToPass.pos.y + tvy * t;
+
+                    // Apply accuracy degradation if disrupted
+                    if (this.targetingDisruption > 0) {
+                        // Jitter increases with distance and disruption level
+                        const jitterAmount = (this.weaponRange || 400) * 0.15 * this.targetingDisruption;
+                        aimX += (Math.random() * 2 - 1) * jitterAmount;
+                        aimY += (Math.random() * 2 - 1) * jitterAmount;
+                    }
+
                     fireAngle = atan2(aimY - this.pos.y, aimX - this.pos.x);
                 }
             } catch (e) {
@@ -1003,6 +1010,9 @@ class EnemyCombat {
      * @param {Object} secondaryTarget - The secondary target to fire at
      */
     performSecondaryFiring(system, secondaryTarget) {
+        // Check if weapons are disabled by EMP nebula
+        if (this.weaponsDisabled) return;
+
         // Debug: track entry
         const debugDualFire = false; // Set to true to enable verbose debug logging
 

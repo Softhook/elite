@@ -418,6 +418,18 @@ describe('Assassination Missions', () => {
         expect(mission.targetUpgradeDetails).toHaveLength(2);
         expect(mission.targetUpgradeDetails[0].type).toBe('cloak');
     });
+
+    test('assassination missions should always have at least Veteran rank targets', () => {
+        const galaxy = createMockGalaxy(4);
+        const originSystem = galaxy.systems[0];
+        const station = { name: 'Origin Station' };
+        const player = createMockPlayer();
+
+        for (let i = 0; i < 50; i++) {
+            const mission = MissionGenerator.createAssassinationMission(originSystem, station, galaxy, player);
+            expect(mission.targetPilotRank).toBeGreaterThanOrEqual(2); // PILOT_RANK.VETERAN = 2
+        }
+    });
 });
 
 // ============================================

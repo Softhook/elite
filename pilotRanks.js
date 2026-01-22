@@ -116,9 +116,10 @@ function getPilotRankModifiers(rank) {
  * @param {string} role - AI role (e.g., AI_ROLE.PIRATE)
  * @param {string} securityLevel - System security level
  * @param {number} techLevel - System tech level (1-10)
+ * @param {number} [minRank=1] - Minimum rank to allow (default: 1=Rookie)
  * @returns {number} Pilot rank value
  */
-function generatePilotRank(role, securityLevel, techLevel) {
+function generatePilotRank(role, securityLevel, techLevel, minRank = 1) {
     // Base probability weights for each rank
     // Default distribution: 85% Rookie, 14% Veteran, 1% Elite
     let weights = [85, 14, 1];
@@ -143,9 +144,16 @@ function generatePilotRank(role, securityLevel, techLevel) {
         }
     }
 
+    // Zero out weights below minRank
+    if (minRank > 1) {
+        for (let i = 0; i < minRank - 1; i++) {
+            if (i < weights.length) weights[i] = 0;
+        }
+    }
+
     // Normalize weights
     const total = weights.reduce((sum, w) => sum + w, 0);
-    if (total <= 0) return PILOT_RANK.VETERAN; // Fallback
+    if (total <= 0) return Math.max(minRank, PILOT_RANK.VETERAN); // Fallback
 
     // Generate random value and pick rank
     const roll = Math.random() * total;
@@ -157,7 +165,7 @@ function generatePilotRank(role, securityLevel, techLevel) {
         }
     }
 
-    return PILOT_RANK.VETERAN; // Fallback
+    return Math.max(minRank, PILOT_RANK.VETERAN); // Fallback
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

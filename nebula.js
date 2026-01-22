@@ -284,8 +284,9 @@ class Nebula {
                 break;
 
             case 'emp':
-                // Temporarily disable weapons
+                // Temporarily disable weapons and disrupt targeting
                 entity.weaponsDisabled = true;
+                entity.targetingDisruption = 1.0;
                 entity.inNebula = true;
                 break;
         }
