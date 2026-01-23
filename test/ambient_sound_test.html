@@ -441,7 +441,7 @@
     <div class="space-controls" id="spaceControls">
         <div class="slider-group" style="grid-column: 1 / -1;">
             <label>Harmonic Palette (Chord) <span class="value-display" id="val-palette">Cmaj9 Cluster</span></label>
-            <input type="range" id="param-palette" min="0" max="3" step="1" value="0">
+            <input type="range" id="param-palette" min="0" max="19" step="1" value="0">
         </div>
         <div class="slider-group">
             <label>Chord Glide Time <span class="value-display" id="val-glide">10s</span></label>
@@ -854,7 +854,13 @@
             bindSlider('param-sparkleMax', 'val-sparkleMax', SpaceMusicManager.prototype.setSparklePitchMax, 'Hz');
             bindSlider('param-driftVar', 'val-driftVar', SpaceMusicManager.prototype.setDriftVariance);
 
-            const paletteNames = ['Cmaj9 Cluster', 'C Phrygian (Dark)', 'Db Lydian (Dreamy)', 'Bb Open (Vast)'];
+            const paletteNames = [
+                'Cmaj9 Cluster', 'C Phrygian (Dark)', 'Db Lydian (Dreamy)', 'Bb Open (Vast)',
+                'Bm7 Cluster (Cold)', 'E Sus (Radiant)', 'B Mixolydian (Alien)', 'A Open (Fortress)',
+                'G# Maj7 (Warm)', 'F Minor 9 (Deep)', 'Bb Lydian Dom (Strange)', 'E Dorian (Vibrant)',
+                'C Deep Drone', 'Whole Tone (Stasis)', 'C Aug7 (Expanding)', 'E over A (Skies)',
+                'B Quartal (Tech)', 'F Lydian #11 (Awe)', 'Eb Min (Ancient)', 'Eb Sus #4 (Shimmer)'
+            ];
             const paletteSlider = document.getElementById('param-palette');
             const paletteDisplay = document.getElementById('val-palette');
             paletteSlider.addEventListener('input', (e) => {
