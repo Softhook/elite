@@ -1717,6 +1717,7 @@ class EventManager {
                 const cx = this.player.pos.x + cos(angle) * dist;
                 const cy = this.player.pos.y + sin(angle) * dist;
 
+                let stolenShip = null;
                 this._spawnAdHocEnemy(cx, cy, AI_ROLE.FLEEING, (e) => {
                     e.currentState = AI_STATE.FLEEING;
                     e.displayName = "Stolen Prototype";

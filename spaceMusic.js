@@ -20,7 +20,7 @@ class SpaceMusicManager {
         this.enabled = true;
 
         // Volume settings
-        this.baseVolume = 0.85; // Subtle background presence
+        this.baseVolume = 0.55; // Subtle background presence
         this.targetVolume = 0;
         this.baseFilterFreq = 600;
         this.filterResonance = 1.5;
@@ -96,7 +96,7 @@ class SpaceMusicManager {
             "saturationAmount": 2,
             "reverbLushness": 0.25,
             "sparkleChance": 0.55,
-            "baseVolume": 0.34,
+            "baseVolume": 0.25,
             "stereoSpread": 1,
             "detuneRange": 0.7,
             "evolutionRate": 51,
