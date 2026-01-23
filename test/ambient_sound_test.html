@@ -350,6 +350,61 @@
         .melody-indicator.visible {
             display: block;
         }
+
+        .space-controls {
+            background: rgba(30, 30, 60, 0.9);
+            border: 1px solid rgba(100, 150, 255, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: none;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            box-shadow: 0 0 30px rgba(0, 100, 255, 0.1);
+        }
+
+        .space-controls.visible {
+            display: grid;
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .slider-group label {
+            font-size: 0.85em;
+            color: #aaf;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .slider-group input {
+            width: 100%;
+            height: 6px;
+            appearance: none;
+            -webkit-appearance: none;
+            background: rgba(100, 100, 150, 0.3);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .slider-group input::-webkit-slider-thumb {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #6af;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(102, 170, 255, 0.5);
+        }
+
+        .slider-group .value-display {
+            font-family: monospace;
+            color: #6af;
+        }
     </style>
 </head>
 
@@ -381,6 +436,78 @@
         <div class="now-playing-label">Now Playing:</div>
         <div class="now-playing-name" id="nowPlaying">None</div>
         <div class="now-playing-mode" id="nowPlayingMode"></div>
+    </div>
+
+    <div class="space-controls" id="spaceControls">
+        <div class="slider-group">
+            <label>Breathing Speed <span class="value-display" id="val-breathing">0.02Hz</span></label>
+            <input type="range" id="param-breathing" min="0.001" max="0.2" step="0.001" value="0.02">
+        </div>
+        <div class="slider-group">
+            <label>Breathing Intensity <span class="value-display" id="val-breathAmount">0.15</span></label>
+            <input type="range" id="param-breathAmount" min="0" max="1" step="0.01" value="0.15">
+        </div>
+        <div class="slider-group">
+            <label>Filter Sweep Speed <span class="value-display" id="val-sweepSpeed">0.012Hz</span></label>
+            <input type="range" id="param-sweepSpeed" min="0.001" max="0.1" step="0.001" value="0.012">
+        </div>
+        <div class="slider-group">
+            <label>Filter Sweep Range <span class="value-display" id="val-sweepRange">250Hz</span></label>
+            <input type="range" id="param-sweepRange" min="10" max="1000" step="10" value="250">
+        </div>
+        <div class="slider-group">
+            <label>Base Filter Freq <span class="value-display" id="val-filterFreq">600Hz</span></label>
+            <input type="range" id="param-filterFreq" min="100" max="2000" step="10" value="600">
+        </div>
+        <div class="slider-group">
+            <label>Filter Resonance (Q) <span class="value-display" id="val-resonance">1.5</span></label>
+            <input type="range" id="param-resonance" min="0.1" max="10" step="0.1" value="1.5">
+        </div>
+        <div class="slider-group">
+            <label>Pitch Drift <span class="value-display" id="val-drift">2.0</span></label>
+            <input type="range" id="param-drift" min="0" max="15" step="0.5" value="2">
+        </div>
+        <div class="slider-group">
+            <label>Drift Speed <span class="value-display" id="val-driftSpeed">0.07Hz</span></label>
+            <input type="range" id="param-driftSpeed" min="0.001" max="0.5" step="0.001" value="0.07">
+        </div>
+        <div class="slider-group">
+            <label>Waveform (0:Sine, 1:Tri, 2:Saw) <span class="value-display" id="val-waveform">Triangle</span></label>
+            <input type="range" id="param-waveform" min="0" max="2" step="1" value="1">
+        </div>
+        <div class="slider-group">
+            <label>Saturation <span class="value-display" id="val-saturation">40</span></label>
+            <input type="range" id="param-saturation" min="0" max="200" step="1" value="40">
+        </div>
+        <div class="slider-group">
+            <label>Reverb Lushness <span class="value-display" id="val-reverb">0.35</span></label>
+            <input type="range" id="param-reverb" min="0" max="1" step="0.01" value="0.35">
+        </div>
+        <div class="slider-group">
+            <label>Sparkle Chance <span class="value-display" id="val-sparkle">0.4</span></label>
+            <input type="range" id="param-sparkle" min="0" max="1" step="0.05" value="0.4">
+        </div>
+        <div class="slider-group">
+            <label>Stereo Spread <span class="value-display" id="val-spread">0.8</span></label>
+            <input type="range" id="param-spread" min="0" max="1" step="0.05" value="0.8">
+        </div>
+        <div class="slider-group">
+            <label>Detune Range <span class="value-display" id="val-detuneRange">1.0</span></label>
+            <input type="range" id="param-detuneRange" min="0" max="5" step="0.1" value="1">
+        </div>
+        <div class="slider-group">
+            <label>Evolution Rate <span class="value-display" id="val-evoRate">25s</span></label>
+            <input type="range" id="param-evoRate" min="5" max="120" step="1" value="25">
+        </div>
+        <div class="slider-group"
+            style="grid-column: 1 / -1; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(100,150,255,0.2); display: flex; flex-direction: row; justify-content: space-between; align-items: center;">
+            <div id="liveStatus" style="font-family: monospace; font-size: 0.8em; color: #88aa88; flex-grow: 1;">
+                <span>Live Audio State:</span>
+                <span id="statusContent">Ready</span>
+            </div>
+            <button class="mode-btn" id="exportParams" style="padding: 6px 15px; font-size: 0.8em; margin-left:15px;">📋
+                Export Code</button>
+        </div>
     </div>
 
     <div class="container" id="stationsContainer"></div>
@@ -674,6 +801,120 @@
                     spaceMusicManager.setVolume(value);
                 }
             });
+
+            // Space music parameter sliders
+            const bindSlider = (id, valId, setter, suffix = '') => {
+                const slider = document.getElementById(id);
+                const display = document.getElementById(valId);
+                slider.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    display.textContent = val + suffix;
+                    if (spaceMusicManager) {
+                        setter.call(spaceMusicManager, val);
+                    }
+                });
+            };
+
+            bindSlider('param-breathing', 'val-breathing', SpaceMusicManager.prototype.setBreathingSpeed, 'Hz');
+            bindSlider('param-sweepSpeed', 'val-sweepSpeed', SpaceMusicManager.prototype.setFilterSweepSpeed, 'Hz');
+            bindSlider('param-sweepRange', 'val-sweepRange', SpaceMusicManager.prototype.setFilterSweepRange, 'Hz');
+            bindSlider('param-filterFreq', 'val-filterFreq', SpaceMusicManager.prototype.setBaseFilterFreq, 'Hz');
+            bindSlider('param-resonance', 'val-resonance', SpaceMusicManager.prototype.setResonance);
+            bindSlider('param-reverb', 'val-reverb', SpaceMusicManager.prototype.setReverbLushness);
+            bindSlider('param-sparkle', 'val-sparkle', SpaceMusicManager.prototype.setSparkleChance);
+            bindSlider('param-spread', 'val-spread', SpaceMusicManager.prototype.setStereoSpread);
+            bindSlider('param-detuneRange', 'val-detuneRange', SpaceMusicManager.prototype.setDetuneRange);
+            bindSlider('param-evoRate', 'val-evoRate', SpaceMusicManager.prototype.setEvolutionRate, 's');
+            bindSlider('param-driftSpeed', 'val-driftSpeed', SpaceMusicManager.prototype.setDriftSpeed, 'Hz');
+            bindSlider('param-breathAmount', 'val-breathAmount', SpaceMusicManager.prototype.setBreathingAmount);
+            bindSlider('param-drift', 'val-drift', SpaceMusicManager.prototype.setPitchDrift);
+            bindSlider('param-saturation', 'val-saturation', SpaceMusicManager.prototype.setSaturation);
+
+            const waveNames = ['Sine', 'Triangle', 'Sawtooth'];
+            const waveTypes = ['sine', 'triangle', 'sawtooth'];
+            const waveSlider = document.getElementById('param-waveform');
+            const waveDisplay = document.getElementById('val-waveform');
+            waveSlider.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                waveDisplay.textContent = waveNames[val];
+                if (spaceMusicManager) {
+                    spaceMusicManager.setWaveform(waveTypes[val]);
+                }
+            });
+
+            // Export button
+            document.getElementById('exportParams').addEventListener('click', () => {
+                if (spaceMusicManager) {
+                    const params = spaceMusicManager.getParams();
+                    const code = `// Current Space Music Configuration\nthis.updateParams(${JSON.stringify(params, null, 4)});`;
+                    console.log('%c --- SPACE MUSIC EXPORT ---', 'background: #222; color: #6af; font-size: 14px; font-weight: bold;');
+                    console.log(code);
+
+                    // Copy to clipboard
+                    navigator.clipboard.writeText(code).then(() => {
+                        const btn = document.getElementById('exportParams');
+                        const oldText = btn.textContent;
+                        btn.textContent = '✅ Copied!';
+                        setTimeout(() => btn.textContent = oldText, 2000);
+                    });
+                }
+            });
+
+            // Initialize slider values from manager
+            if (spaceMusicManager) {
+                document.getElementById('param-breathing').value = spaceMusicManager.breathingSpeed;
+                document.getElementById('val-breathing').textContent = spaceMusicManager.breathingSpeed + 'Hz';
+
+                document.getElementById('param-sweepSpeed').value = spaceMusicManager.filterSweepSpeed;
+                document.getElementById('val-sweepSpeed').textContent = spaceMusicManager.filterSweepSpeed + 'Hz';
+
+                document.getElementById('param-sweepRange').value = spaceMusicManager.filterSweepRange;
+                document.getElementById('val-sweepRange').textContent = spaceMusicManager.filterSweepRange + 'Hz';
+
+                document.getElementById('param-filterFreq').value = spaceMusicManager.baseFilterFreq;
+                document.getElementById('val-filterFreq').textContent = spaceMusicManager.baseFilterFreq + 'Hz';
+
+                document.getElementById('param-resonance').value = spaceMusicManager.filterResonance;
+                document.getElementById('val-resonance').textContent = spaceMusicManager.filterResonance;
+
+                document.getElementById('param-drift').value = spaceMusicManager.pitchDriftAmount;
+                document.getElementById('val-drift').textContent = spaceMusicManager.pitchDriftAmount;
+
+                document.getElementById('param-saturation').value = spaceMusicManager.saturationAmount;
+                document.getElementById('val-saturation').textContent = spaceMusicManager.saturationAmount;
+
+                document.getElementById('param-reverb').value = spaceMusicManager.reverbLushness;
+                document.getElementById('val-reverb').textContent = spaceMusicManager.reverbLushness;
+
+                document.getElementById('param-sparkle').value = spaceMusicManager.sparkleChance;
+                document.getElementById('val-sparkle').textContent = spaceMusicManager.sparkleChance;
+
+                document.getElementById('param-spread').value = spaceMusicManager.stereoSpread;
+                document.getElementById('val-spread').textContent = spaceMusicManager.stereoSpread;
+
+                document.getElementById('param-detuneRange').value = spaceMusicManager.detuneRange;
+                document.getElementById('val-detuneRange').textContent = spaceMusicManager.detuneRange;
+
+                document.getElementById('param-evoRate').value = spaceMusicManager.evolutionRate;
+                document.getElementById('val-evoRate').textContent = spaceMusicManager.evolutionRate + 's';
+
+                document.getElementById('param-driftSpeed').value = spaceMusicManager.driftSpeed;
+                document.getElementById('val-driftSpeed').textContent = spaceMusicManager.driftSpeed + 'Hz';
+
+                document.getElementById('param-breathAmount').value = spaceMusicManager.breathingAmount;
+                document.getElementById('val-breathAmount').textContent = spaceMusicManager.breathingAmount;
+
+                const waveNames = ['Sine', 'Triangle', 'Sawtooth'];
+                const waveTypes = ['sine', 'triangle', 'sawtooth'];
+                const currentWave = spaceMusicManager.oscType || 'triangle';
+                const waveIdx = waveTypes.indexOf(currentWave);
+                const waveSlider = document.getElementById('param-waveform');
+                const waveDisplay = document.getElementById('val-waveform');
+                if (waveSlider && waveDisplay) {
+                    waveSlider.value = waveIdx >= 0 ? waveIdx : 1;
+                    waveDisplay.textContent = waveNames[waveSlider.value];
+                }
+            }
         }
 
         function setMode(mode) {
@@ -705,6 +946,9 @@
                     <p>Subtle, evolving atmospheric drones for open space flight</p>
                 `;
             }
+
+            // Show/hide space controls
+            document.getElementById('spaceControls').classList.toggle('visible', mode === 'space');
 
             // Re-render station cards with appropriate descriptions
             renderStations();
@@ -813,8 +1057,19 @@
             musicUpdateInterval = setInterval(() => {
                 if (spaceMusicManager.isPlaying) {
                     spaceMusicManager.update();
+                    updateSpaceStatus();
                 }
             }, 1000 / 60);
+        }
+
+        function updateSpaceStatus() {
+            if (!spaceMusicManager || !spaceMusicManager.isPlaying) return;
+            const status = document.getElementById('statusContent');
+            if (status) {
+                const freq = spaceMusicManager.filter ? spaceMusicManager.filter.frequency.value.toFixed(1) : '---';
+                const q = spaceMusicManager.filter ? spaceMusicManager.filter.Q.value.toFixed(2) : '---';
+                status.textContent = `Filter: ${freq}Hz | Q: ${q} | Breathing: ${spaceMusicManager.breathingSpeed}Hz`;
+            }
         }
 
         function stopAll() {

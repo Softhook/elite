@@ -21,12 +21,25 @@ class SpaceMusicManager {
 
         // Volume settings
         this.baseVolume = 0.85; // Subtle background presence
-        this.currentVolume = 0;
         this.targetVolume = 0;
+        this.baseFilterFreq = 600;
+        this.filterResonance = 1.5;
+        this.filterSweepRange = 250;
+        this.pitchDriftAmount = 2;
 
         // LFO settings for breathing effect
         this.breathingSpeed = 0.02; // Hz - reduced from 0.05 for slower breathing
+        this.breathingAmount = 0.15; // Intensity of volume pulsing (0-1)
         this.filterSweepSpeed = 0.012; // Hz - reduced from 0.03 for slower sweep
+        this.saturationAmount = 40;
+        this.reverbLushness = 0.35;
+        this.sparkleChance = 0.4;
+        this.sparkleMinDuration = 10;
+        this.sparkleMaxDuration = 30;
+        this.stereoSpread = 0.8; // 0 to 1
+        this.detuneRange = 1.0; // Multiplier for base detunes
+        this.driftSpeed = 0.07; // Hz for pitch drift
+        this.evolutionRate = 25; // Seconds between texture shifts
 
         // Long-term variety state
         this.lastVarietyUpdate = 0;
@@ -35,9 +48,33 @@ class SpaceMusicManager {
         this.sparkleGains = [];
         this.baseDetunes = [0.5, -0.8, 1.2, -0.5, 0.3];
         this.currentDetunes = [...this.baseDetunes];
+        this.oscType = 'triangle';
 
         // Timeout reference for cleaning up after fade-out
         this.stopTimeout = null;
+
+        // --- PASTE EXPORTED PARAMETERS HERE ---
+        // Pure Sine Configuration - Smooth and steady
+        // Current Space Music Configuration
+        this.updateParams({
+            "breathingSpeed": 0.05,
+            "filterSweepSpeed": 0.001,
+            "filterSweepRange": 90,
+            "baseFilterFreq": 240,
+            "filterResonance": 0.6,
+            "pitchDriftAmount": 6.5,
+            "saturationAmount": 2,
+            "reverbLushness": 0.25,
+            "sparkleChance": 0.55,
+            "baseVolume": 0.34,
+            "stereoSpread": 1,
+            "detuneRange": 0.7,
+            "evolutionRate": 51,
+            "oscType": "sawtooth",
+            "breathingAmount": 0.15,
+            "driftSpeed": 0.371
+        });
+        // --------------------------------------
 
         this.initAudioContext();
     }
@@ -100,17 +137,17 @@ class SpaceMusicManager {
         this._stopOscillators();
 
         // Create WaveShaper for soft saturation (analog warmth)
-        const waveShaper = this.audioContext.createWaveShaper();
-        waveShaper.curve = this._makeDistortionCurve(40);
-        waveShaper.oversample = '4x';
-        waveShaper.connect(this.masterGain);
+        this.waveShaper = this.audioContext.createWaveShaper();
+        this.waveShaper.curve = this._makeDistortionCurve(this.saturationAmount);
+        this.waveShaper.oversample = '4x';
+        this.waveShaper.connect(this.masterGain);
 
         // Create lowpass filter for evolving texture
         this.filter = this.audioContext.createBiquadFilter();
         this.filter.type = 'lowpass';
-        this.filter.frequency.value = 600; // Lower base frequency for warmth
-        this.filter.Q.value = 1.5; // Slight resonance for character
-        this.filter.connect(waveShaper);
+        this.filter.frequency.value = this.baseFilterFreq; // Lower base frequency for warmth
+        this.filter.Q.value = this.filterResonance; // Slight resonance for character
+        this.filter.connect(this.waveShaper);
 
         // Create filter sweep LFO
         this.filterLFO = this.audioContext.createOscillator();
@@ -118,7 +155,7 @@ class SpaceMusicManager {
         this.filterLFO.frequency.value = this.filterSweepSpeed;
 
         this.filterLFOGain = this.audioContext.createGain();
-        this.filterLFOGain.gain.value = 250; // Sweep range
+        this.filterLFOGain.gain.value = this.filterSweepRange; // Sweep range
 
         this.filterLFO.connect(this.filterLFOGain);
         this.filterLFOGain.connect(this.filter.frequency);
@@ -140,14 +177,20 @@ class SpaceMusicManager {
         frequencies.forEach((freq, i) => {
             // Create oscillator
             const osc = this.audioContext.createOscillator();
-            // Triangle wave has more harmonic richness than sine but is still soft
-            osc.type = 'triangle';
+            // Default to triangle for richness, but configurable
+            osc.type = this.oscType;
             osc.frequency.value = freq;
-            osc.detune.value = detuneAmounts[i];
+            osc.detune.value = detuneAmounts[i] * this.detuneRange;
+
+            // Create Stereo Panner for spread
+            const panner = this.audioContext.createStereoPanner();
+            // Spread oscillators across the stereo field based on index and stereoSpread
+            const panValue = ((i / (frequencies.length - 1)) * 2 - 1) * this.stereoSpread;
+            panner.pan.value = panValue;
 
             // Create gain node for this oscillator
             const oscGain = this.audioContext.createGain();
-            oscGain.gain.value = 0; // Start at 0, will be modulated
+            oscGain.gain.value = volumes[i]; // Audible base volume
 
             // Create LFO for breathing effect - each with slightly different rate
             const lfo = this.audioContext.createOscillator();
@@ -157,7 +200,7 @@ class SpaceMusicManager {
 
             // Create LFO gain (modulation depth)
             const lfoGain = this.audioContext.createGain();
-            lfoGain.gain.value = volumes[i] * 0.15;
+            lfoGain.gain.value = volumes[i] * this.breathingAmount * 0.5;
 
             // Connect: LFO -> LFO Gain -> Oscillator Gain (modulating volume)
             lfo.connect(lfoGain);
@@ -166,15 +209,16 @@ class SpaceMusicManager {
             // Create slow pitch drift LFO (wow/flutter)
             const driftLfo = this.audioContext.createOscillator();
             driftLfo.type = 'sine';
-            driftLfo.frequency.value = 0.07 + (i * 0.02);
+            driftLfo.frequency.value = this.driftSpeed + (i * 0.02);
             const driftGain = this.audioContext.createGain();
-            driftGain.gain.value = 2; // ±2 cents drift
+            driftGain.gain.value = this.pitchDriftAmount; // ±2 cents drift
             driftLfo.connect(driftGain);
             driftGain.connect(osc.detune);
             driftLfo.start();
 
-            // Connect: Oscillator -> Oscillator Gain -> Filter -> WaveShaper -> Master
-            osc.connect(oscGain);
+            // Connect: Oscillator -> Panner -> Oscillator Gain -> Filter -> WaveShaper -> Master
+            osc.connect(panner);
+            panner.connect(oscGain);
             oscGain.connect(this.filter);
 
             // Start oscillators
@@ -194,10 +238,10 @@ class SpaceMusicManager {
         if (typeof ambientSoundManager !== 'undefined' &&
             ambientSoundManager?.reverbConvolver) {
             try {
-                const reverbSend = this.audioContext.createGain();
-                reverbSend.gain.value = 0.35; // Lush reverb
-                this.filter.connect(reverbSend);
-                reverbSend.connect(ambientSoundManager.reverbConvolver);
+                this.reverbSend = this.audioContext.createGain();
+                this.reverbSend.gain.value = this.reverbLushness; // Lush reverb
+                this.filter.connect(this.reverbSend);
+                this.reverbSend.connect(ambientSoundManager.reverbConvolver);
             } catch (e) {
                 console.warn('SpaceMusicManager: Could not connect to reverb bus', e);
             }
@@ -236,7 +280,7 @@ class SpaceMusicManager {
         gain.gain.value = 0;
 
         const now = this.audioContext.currentTime;
-        const duration = 10 + (Math.random() * 20); // 10-30 seconds
+        const duration = this.sparkleMinDuration + (Math.random() * (this.sparkleMaxDuration - this.sparkleMinDuration));
 
         osc.connect(gain);
         gain.connect(this.filter);
@@ -443,13 +487,13 @@ class SpaceMusicManager {
 
         const now = this.audioContext.currentTime;
 
-        // Long-term evolution every 20-30 seconds
-        if (now - this.lastVarietyUpdate > 25) {
+        // Long-term evolution every evolutionRate seconds
+        if (now - this.lastVarietyUpdate > this.evolutionRate) {
             this._evolveTexture();
             this.lastVarietyUpdate = now;
 
             // Occasional sparkles
-            if (Math.random() > 0.4) {
+            if (Math.random() > (1 - this.sparkleChance)) {
                 this._addSparkle();
             }
         }
@@ -545,6 +589,193 @@ class SpaceMusicManager {
 
         this.isPlaying = false;
         console.log('SpaceMusicManager: Cleaned up');
+    }
+
+    setBreathingSpeed(speed) {
+        this.breathingSpeed = speed;
+        console.log(`SpaceMusicManager: Breathing speed set to ${speed}Hz`);
+        if (this.isPlaying) {
+            this.lfoOscillators.forEach((lfo, i) => {
+                if (i % 2 === 0) {
+                    const oscIndex = Math.floor(i / 2);
+                    lfo.frequency.setTargetAtTime(this.breathingSpeed * (0.8 + (oscIndex * 0.13)), this.audioContext.currentTime, 0.05);
+                }
+            });
+        }
+    }
+
+    setFilterSweepSpeed(speed) {
+        this.filterSweepSpeed = speed;
+        console.log(`SpaceMusicManager: Filter sweep speed set to ${speed}Hz`);
+        if (this.isPlaying && this.filterLFO) {
+            this.filterLFO.frequency.setTargetAtTime(this.filterSweepSpeed, this.audioContext.currentTime, 0.05);
+        }
+    }
+
+    setFilterSweepRange(range) {
+        this.filterSweepRange = range;
+        console.log(`SpaceMusicManager: Filter sweep range set to ${range}Hz`);
+        if (this.isPlaying && this.filterLFOGain) {
+            this.filterLFOGain.gain.setTargetAtTime(this.filterSweepRange, this.audioContext.currentTime, 0.05);
+        }
+    }
+
+    setBaseFilterFreq(freq) {
+        this.baseFilterFreq = freq;
+        console.log(`SpaceMusicManager: Base filter frequency set to ${freq}Hz`);
+        if (this.isPlaying && this.filter) {
+            this.filter.frequency.setTargetAtTime(this.baseFilterFreq, this.audioContext.currentTime, 0.05);
+        }
+    }
+
+    setResonance(q) {
+        this.filterResonance = q;
+        console.log(`SpaceMusicManager: Filter resonance set to ${q}`);
+        if (this.isPlaying && this.filter) {
+            this.filter.Q.setTargetAtTime(this.filterResonance, this.audioContext.currentTime, 0.05);
+        }
+    }
+
+    setPitchDrift(amount) {
+        this.pitchDriftAmount = amount;
+        console.log(`SpaceMusicManager: Pitch drift set to ${amount}`);
+        if (this.isPlaying) {
+            this.lfoGains.forEach((gain, i) => {
+                if (i % 2 === 1) {
+                    gain.gain.setTargetAtTime(this.pitchDriftAmount, this.audioContext.currentTime, 0.05);
+                }
+            });
+        }
+    }
+
+    setWaveform(type) {
+        this.oscType = type;
+        console.log(`SpaceMusicManager: Waveform set to ${type}`);
+        if (this.isPlaying) {
+            this.oscillators.forEach(osc => {
+                osc.type = type;
+            });
+        }
+    }
+
+    setSaturation(amount) {
+        this.saturationAmount = amount;
+        console.log(`SpaceMusicManager: Saturation set to ${amount}`);
+        if (this.isPlaying && this.waveShaper) {
+            this.waveShaper.curve = this._makeDistortionCurve(this.saturationAmount);
+        }
+    }
+
+    setReverbLushness(lushness) {
+        this.reverbLushness = lushness;
+        console.log(`SpaceMusicManager: Reverb set to ${lushness}`);
+        if (this.isPlaying && this.reverbSend) {
+            this.reverbSend.gain.setTargetAtTime(this.reverbLushness, this.audioContext.currentTime, 0.05);
+        }
+    }
+
+    setSparkleChance(chance) {
+        this.sparkleChance = chance;
+        console.log(`SpaceMusicManager: Sparkle chance set to ${chance}`);
+    }
+
+    /**
+     * Update multiple parameters at once
+     * @param {Object} params - Object containing parameters to update
+     */
+    updateParams(params) {
+        if (params.breathingSpeed !== undefined) this.setBreathingSpeed(params.breathingSpeed);
+        if (params.filterSweepSpeed !== undefined) this.setFilterSweepSpeed(params.filterSweepSpeed);
+        if (params.filterSweepRange !== undefined) this.setFilterSweepRange(params.filterSweepRange);
+        if (params.baseFilterFreq !== undefined) this.setBaseFilterFreq(params.baseFilterFreq);
+        if (params.filterResonance !== undefined) this.setResonance(params.filterResonance);
+        if (params.pitchDriftAmount !== undefined) this.setPitchDrift(params.pitchDriftAmount);
+        if (params.saturationAmount !== undefined) this.setSaturation(params.saturationAmount);
+        if (params.reverbLushness !== undefined) this.setReverbLushness(params.reverbLushness);
+        if (params.sparkleChance !== undefined) this.setSparkleChance(params.sparkleChance);
+        if (params.baseVolume !== undefined) this.setVolume(params.baseVolume);
+        if (params.stereoSpread !== undefined) this.setStereoSpread(params.stereoSpread);
+        if (params.detuneRange !== undefined) this.setDetuneRange(params.detuneRange);
+        if (params.evolutionRate !== undefined) this.setEvolutionRate(params.evolutionRate);
+        if (params.oscType !== undefined) this.setWaveform(params.oscType);
+        if (params.breathingAmount !== undefined) this.setBreathingAmount(params.breathingAmount);
+        if (params.driftSpeed !== undefined) this.setDriftSpeed(params.driftSpeed);
+    }
+
+    setStereoSpread(spread) {
+        this.stereoSpread = Math.max(0, Math.min(1, spread));
+        console.log(`SpaceMusicManager: Stereo spread set to ${this.stereoSpread}`);
+        // Requires oscillator recreation to apply fully to existing nodes if panners aren't stored,
+        // but it's fine for the next start() or just as a setting.
+    }
+
+    setDetuneRange(range) {
+        this.detuneRange = range;
+        console.log(`SpaceMusicManager: Detune range set to ${range}`);
+        if (this.isPlaying) {
+            const detuneAmounts = this.currentDetunes;
+            this.oscillators.forEach((osc, i) => {
+                if (i < detuneAmounts.length) {
+                    osc.detune.setTargetAtTime(detuneAmounts[i] * this.detuneRange, this.audioContext.currentTime, 0.05);
+                }
+            });
+        }
+    }
+
+    setEvolutionRate(rate) {
+        this.evolutionRate = rate;
+        console.log(`SpaceMusicManager: Evolution rate set to ${rate}s`);
+    }
+
+    setBreathingAmount(amount) {
+        this.breathingAmount = amount;
+        console.log(`SpaceMusicManager: Breathing intensity set to ${amount}`);
+        if (this.isPlaying) {
+            this.lfoGains.forEach((gain, i) => {
+                if (i % 2 === 0) {
+                    const volumes = [0.4, 0.35, 0.3, 0.25, 0.2];
+                    const oscIndex = Math.floor(i / 2);
+                    gain.gain.setTargetAtTime(volumes[oscIndex] * this.breathingAmount * 0.5, this.audioContext.currentTime, 0.05);
+                }
+            });
+        }
+    }
+
+    setDriftSpeed(speed) {
+        this.driftSpeed = speed;
+        console.log(`SpaceMusicManager: Drift speed set to ${speed}Hz`);
+        if (this.isPlaying) {
+            this.lfoOscillators.forEach((osc, i) => {
+                if (i % 2 === 1) {
+                    const oscIndex = Math.floor(i / 2);
+                    osc.frequency.setTargetAtTime(this.driftSpeed + (oscIndex * 0.02), this.audioContext.currentTime, 0.05);
+                }
+            });
+        }
+    }
+
+    /**
+     * Get all current parameters for export
+     */
+    getParams() {
+        return {
+            breathingSpeed: this.breathingSpeed,
+            filterSweepSpeed: this.filterSweepSpeed,
+            filterSweepRange: this.filterSweepRange,
+            baseFilterFreq: this.baseFilterFreq,
+            filterResonance: this.filterResonance,
+            pitchDriftAmount: this.pitchDriftAmount,
+            saturationAmount: this.saturationAmount,
+            reverbLushness: this.reverbLushness,
+            sparkleChance: this.sparkleChance,
+            baseVolume: this.baseVolume,
+            stereoSpread: this.stereoSpread,
+            detuneRange: this.detuneRange,
+            evolutionRate: this.evolutionRate,
+            oscType: this.oscType,
+            breathingAmount: this.breathingAmount,
+            driftSpeed: this.driftSpeed
+        };
     }
 }
 
