@@ -778,6 +778,79 @@ class CommunicationSystem {
                 "{enemyName}: Imperial navy. Fear us.",
                 "{enemyName}: Empire's judgment. Final."
             ],
+            allyWarning: [
+                "{enemyName}: WATCH YOUR FIRE, {playerTitle}!",
+                "{enemyName}: Check your targets! We're on the same side!",
+                "{enemyName}: Friendly fire! Cease fire immediately!",
+                "{enemyName}: Watch it, pilot! We're allies!",
+                "{enemyName}: Careful! Don't make me report this to Command!",
+                "{enemyName}: We're on the same side, {playerTitle}! Watch your aim.",
+                "{enemyName}: Check your transponder! We're friendly!",
+                "{enemyName}: One more hit and I'll have to respond!",
+                "{enemyName}: Watch your vector! That was an ally you hit!",
+                "{enemyName}: Focus on the enemy, pilot! Not us!",
+                "{enemyName}: On the same side!",
+                "{enemyName}: Watch it!",
+                "{enemyName}: Friendly fire! Cease fire immediately!",
+                "{enemyName}: Friendly fire!",
+                "{enemyName}: Watch your fire, {playerTitle}!",
+                "{enemyName}: Same side! Cease fire!",
+                "{enemyName}: We're friendly! Check your IFF!",
+                "{enemyName}: Watch it! Allied ship here!",
+                "{enemyName}: Clear the target! You're hitting us!",
+                "{enemyName}: Stop! Friendly transponder active!",
+                "{enemyName}: Check your aim, {playerTitle}!",
+                "{enemyName}: We're on your side! Stop shooting!",
+                "{enemyName}: Caution! You're hitting a friendly!",
+                "{enemyName}: Cease fire on this vector!",
+                "{enemyName}: Hey! Work on your aim!",
+                "{enemyName}: Wrong side! Watch it!",
+                "{enemyName}: IFF says we're friends. Act like it!",
+                "{enemyName}: Sensors show friendly fire! Stop!",
+                "{enemyName}: Focus on the hostiles, {playerTitle}!",
+                "{enemyName}: You're painting a friendly!",
+                "{enemyName}: Check your fire! We're with you!",
+                "{enemyName}: Last warning: Friendly fire detected!",
+                "{enemyName}: Commander, you're hitting an ally!",
+                "{enemyName}: Hold your fire on this target!",
+                "{enemyName}: We're taking hits from you! Stop!",
+                "{enemyName}: Watch your lead! Friendly ship in line of fire!",
+                "{enemyName}: Check your sensors! We're on the same team!",
+                "{enemyName}: Don't make me return fire, {playerTitle}!",
+                "{enemyName}: You're hitting your own people!",
+                "{enemyName}: Cease fire! We're tracking hits from your ship!",
+                "{enemyName}: Look where you're aiming!",
+                "{enemyName}: Hey! Watch that trigger finger!",
+                "{enemyName}: Friendly fire! Disengage now!",
+                "{enemyName}: We're taking fire from an ally! Rectify!",
+                "{enemyName}: Check your target ID!",
+                "{enemyName}: You're hitting the wrong ships, {playerTitle}!",
+                "{enemyName}: Watch out! Friendly contact!",
+                "{enemyName}: Don't shoot! We're allies!",
+                "{enemyName}: Your fire is hitting us! Adjust!",
+                "{enemyName}: Hey! I'm on your side!",
+                "{enemyName}: Transponder mismatch? We're friendlies!",
+                "{enemyName}: Confirm your target before firing!",
+                "{enemyName}: We're hit by friendly fire! Cease!",
+                "{enemyName}: Watch that stray fire, {playerTitle}!",
+                "{enemyName}: Focus on the hostiles, not us!",
+                "{enemyName}: Allied hit confirmed! Watch it!",
+                "{enemyName}: You're tracking a friendly ship!",
+                "{enemyName}: Stop shooting! We're on your team!",
+                "{enemyName}: Check your vector, pilot!",
+                "{enemyName}: Wrong target! We're allies!",
+                "{enemyName}: Sensors indicate friendly fire. Cease!",
+                "{enemyName}: Hey! Watch where you're shooting!",
+                "{enemyName}: We're taking friendly hits! Stop!",
+                "{enemyName}: IFF check! We're friends!",
+                "{enemyName}: Adjust your aim, {playerTitle}!",
+                "{enemyName}: Friendly contact in your sights! Don't fire!",
+                "{enemyName}: Careful with the plasma! We're allies!",
+                "{enemyName}: We're hit! Check your fire!",
+                "{enemyName}: Same side, pilot! Don't forget that!",
+                "{enemyName}: Transponder is live! We're friendly!",
+                "{enemyName}: Watch your fire! Friendly unit!"
+            ],
             imperialRetort: [
                 "{enemyName}: Strike an Imperial?!",
                 "{enemyName}: Treason! Empire remembers!",
@@ -2402,6 +2475,19 @@ class CommunicationSystem {
             return;
         }
         if (typeof AI_ROLE === "undefined") {
+            return;
+        }
+
+        // Check for same-faction warnings
+        const myFaction = this._getShipFaction(enemy);
+        const playerFaction = playerSource.playerFaction || "UNKNOWN";
+        if (myFaction && myFaction !== "UNKNOWN" && playerFaction && playerFaction !== "UNKNOWN" && myFaction === playerFaction) {
+            this._maybeSend(enemy, "ally_warning", this.templates.allyWarning, {
+                chance: 0.9, // High chance for friendly fire warnings
+                cooldown: 10000,
+                color: [255, 255, 100], // Yellow for warning
+                tokens: { damageAmount: Math.round(damage) }
+            });
             return;
         }
         if (enemy.role === AI_ROLE.HAULER) {

@@ -105,12 +105,28 @@ class EnemyDamageSystem {
         }
         if (attacker?.role === AI_ROLE.GUARD && attacker.principal === this) return true;
 
-        // Same-faction check
-        if (typeof this._getShipFaction === 'function' && typeof Enemy !== 'undefined' && attacker instanceof Enemy) {
+        // Same-faction check - handles both Enemy and Player via _getShipFaction helper
+        if (typeof this._getShipFaction === 'function') {
             const myFaction = this._getShipFaction(this);
             const attackerFaction = this._getShipFaction(attacker);
+
+            // If we are in the same known faction, ignore this attacker for targeting purposes (collision safety)
+            // EXCEPTION: If the attacker is the PLAYER and they are already WANTED in this system, 
+            // do not ignore the hit. Criminals lose the benefit of faction protection.
             if (myFaction && myFaction !== 'UNKNOWN' && attackerFaction && attackerFaction !== 'UNKNOWN' && myFaction === attackerFaction) {
-                return true;
+                const isPlayerAttacker = (attacker?.isPlayer) || (attacker?.constructor?.name === 'Player');
+                if (isPlayerAttacker) {
+                    const resolvedSystem = this.getSystem();
+                    const isWanted = (typeof resolvedSystem?.isPlayerWanted === 'function') && resolvedSystem.isPlayerWanted();
+
+                    // If player is not wanted, ignore the hit (accidental collision protection)
+                    if (!isWanted) return true;
+
+                    // If they ARE wanted, they are a criminal; treat them as a valid attacker
+                } else {
+                    // NPC hitting another same-faction NPC: always ignore for targeting (prevents fleet infighting)
+                    return true;
+                }
             }
         }
 
