@@ -2684,7 +2684,7 @@ class EnemyAIBehaviors {
             // For ships/objects: size property (already represents diameter)
             let r = 0;
             let obstacleSize = 0;
-            
+
             if (obj.maxRadius) {
                 r = obj.maxRadius; // Asteroid radius
                 obstacleSize = obj.maxRadius * 2; // Asteroid diameter
@@ -3810,7 +3810,7 @@ class EnemyAIBehaviors {
 
                         if (sent) {
                             this._messagesSent++;
-                            this._preachTimer = 4.0 + random(2.0); // 4-6 seconds between messages
+                            this._preachTimer = 8.0 + random(7.0); // 8-15 seconds between messages (up from 4-6s)
                         } else {
                             // Failed to send (cooldown or chance)
                             // Retry sooner

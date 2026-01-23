@@ -3138,8 +3138,8 @@ class CommunicationSystem {
             return false;
         }
 
-        // Use higher chance since this is intentionally triggered during preaching
-        const chance = 0.85; // 85% chance when called
+        // Use lower chance to reduce missionary chatter
+        const chance = 0.45; // Reduced from 0.85
         if (this._random() > chance) {
             return false;
         }
@@ -3149,8 +3149,8 @@ class CommunicationSystem {
         if (cooldownKey) {
             const lastMessage = this._enemyCooldowns.get(cooldownKey) || {};
             const now = performance.now();
-            if (lastMessage.posthumanPropaganda && now - lastMessage.posthumanPropaganda < 3000) {
-                return false; // 3 second cooldown between messages
+            if (lastMessage.posthumanPropaganda && now - lastMessage.posthumanPropaganda < 12000) {
+                return false; // 12 second cooldown between messages (up from 3s)
             }
         }
 
