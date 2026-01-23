@@ -208,6 +208,11 @@ class SurfaceMode {
             gameStateManager.setState("SURFACE_MODE");
         }
 
+        // Change music chords on descent
+        if (typeof spaceMusicManager !== 'undefined') {
+            spaceMusicManager.advanceChordProgression();
+        }
+
         return true;
     }
 
@@ -225,6 +230,11 @@ class SurfaceMode {
         this.state = SURFACE_STATE.EXITING;
         this.transitionStartTime = millis();
         this.transitionProgress = 0;
+
+        // Change music chords on ascent (start of transition)
+        if (typeof spaceMusicManager !== 'undefined') {
+            spaceMusicManager.advanceChordProgression();
+        }
     }
 
     /**

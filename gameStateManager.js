@@ -1196,7 +1196,13 @@ class GameStateManager {
                     player.currentSystem = galaxy?.getCurrentSystem();
                     player.vel.mult(0.3);
                     this.jumpChargeTimer = 0;
+                    this.jumpChargeTimer = 0;
                     this.isJumpCharging = false;
+                }
+
+                // Change music chords during the white-out transition (mid-jump)
+                if (typeof spaceMusicManager !== 'undefined') {
+                    spaceMusicManager.advanceChordProgression();
                 }
 
                 this.jumpFadeState = "WHITE_HOLD";
@@ -1241,6 +1247,7 @@ class GameStateManager {
                 }
 
                 this.jumpJustCompleted = true;
+
                 GS_LOG("Jump transition complete: FADE_IN → IN_FLIGHT");
             }
         }

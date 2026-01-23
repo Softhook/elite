@@ -439,6 +439,14 @@
     </div>
 
     <div class="space-controls" id="spaceControls">
+        <div class="slider-group" style="grid-column: 1 / -1;">
+            <label>Harmonic Palette (Chord) <span class="value-display" id="val-palette">Cmaj9 Cluster</span></label>
+            <input type="range" id="param-palette" min="0" max="3" step="1" value="0">
+        </div>
+        <div class="slider-group">
+            <label>Chord Glide Time <span class="value-display" id="val-glide">10s</span></label>
+            <input type="range" id="param-glide" min="0.1" max="30" step="0.5" value="10">
+        </div>
         <div class="slider-group">
             <label>Breathing Speed <span class="value-display" id="val-breathing">0.02Hz</span></label>
             <input type="range" id="param-breathing" min="0.001" max="0.2" step="0.001" value="0.02">
@@ -468,6 +476,10 @@
             <input type="range" id="param-drift" min="0" max="15" step="0.5" value="2">
         </div>
         <div class="slider-group">
+            <label>Drift Variance <span class="value-display" id="val-driftVar">2.0</span></label>
+            <input type="range" id="param-driftVar" min="0" max="20" step="0.5" value="2">
+        </div>
+        <div class="slider-group">
             <label>Drift Speed <span class="value-display" id="val-driftSpeed">0.07Hz</span></label>
             <input type="range" id="param-driftSpeed" min="0.001" max="0.5" step="0.001" value="0.07">
         </div>
@@ -486,6 +498,14 @@
         <div class="slider-group">
             <label>Sparkle Chance <span class="value-display" id="val-sparkle">0.4</span></label>
             <input type="range" id="param-sparkle" min="0" max="1" step="0.05" value="0.4">
+        </div>
+        <div class="slider-group">
+            <label>Sparkle Range (Min) <span class="value-display" id="val-sparkleMin">400Hz</span></label>
+            <input type="range" id="param-sparkleMin" min="100" max="2000" step="10" value="400">
+        </div>
+        <div class="slider-group">
+            <label>Sparkle Range (Max) <span class="value-display" id="val-sparkleMax">1200Hz</span></label>
+            <input type="range" id="param-sparkleMax" min="1000" max="5000" step="10" value="1200">
         </div>
         <div class="slider-group">
             <label>Stereo Spread <span class="value-display" id="val-spread">0.8</span></label>
@@ -829,6 +849,21 @@
             bindSlider('param-breathAmount', 'val-breathAmount', SpaceMusicManager.prototype.setBreathingAmount);
             bindSlider('param-drift', 'val-drift', SpaceMusicManager.prototype.setPitchDrift);
             bindSlider('param-saturation', 'val-saturation', SpaceMusicManager.prototype.setSaturation);
+            bindSlider('param-glide', 'val-glide', SpaceMusicManager.prototype.setChordTransitionTime, 's');
+            bindSlider('param-sparkleMin', 'val-sparkleMin', SpaceMusicManager.prototype.setSparklePitchMin, 'Hz');
+            bindSlider('param-sparkleMax', 'val-sparkleMax', SpaceMusicManager.prototype.setSparklePitchMax, 'Hz');
+            bindSlider('param-driftVar', 'val-driftVar', SpaceMusicManager.prototype.setDriftVariance);
+
+            const paletteNames = ['Cmaj9 Cluster', 'C Phrygian (Dark)', 'Db Lydian (Dreamy)', 'Bb Open (Vast)'];
+            const paletteSlider = document.getElementById('param-palette');
+            const paletteDisplay = document.getElementById('val-palette');
+            paletteSlider.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                paletteDisplay.textContent = paletteNames[val];
+                if (spaceMusicManager) {
+                    spaceMusicManager.setPalette(val);
+                }
+            });
 
             const waveNames = ['Sine', 'Triangle', 'Sawtooth'];
             const waveTypes = ['sine', 'triangle', 'sawtooth'];
@@ -914,6 +949,21 @@
                     waveSlider.value = waveIdx >= 0 ? waveIdx : 1;
                     waveDisplay.textContent = waveNames[waveSlider.value];
                 }
+
+                document.getElementById('param-glide').value = spaceMusicManager.chordTransitionTime;
+                document.getElementById('val-glide').textContent = spaceMusicManager.chordTransitionTime + 's';
+
+                document.getElementById('param-sparkleMin').value = spaceMusicManager.sparklePitchMin;
+                document.getElementById('val-sparkleMin').textContent = spaceMusicManager.sparklePitchMin + 'Hz';
+
+                document.getElementById('param-sparkleMax').value = spaceMusicManager.sparklePitchMax;
+                document.getElementById('val-sparkleMax').textContent = spaceMusicManager.sparklePitchMax + 'Hz';
+
+                document.getElementById('param-driftVar').value = spaceMusicManager.driftVariance;
+                document.getElementById('val-driftVar').textContent = spaceMusicManager.driftVariance;
+
+                paletteSlider.value = spaceMusicManager.activePaletteIndex;
+                paletteDisplay.textContent = paletteNames[spaceMusicManager.activePaletteIndex];
             }
         }
 

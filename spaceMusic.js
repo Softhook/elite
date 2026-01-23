@@ -36,9 +36,12 @@ class SpaceMusicManager {
         this.sparkleChance = 0.4;
         this.sparkleMinDuration = 10;
         this.sparkleMaxDuration = 30;
+        this.sparklePitchMin = 400;
+        this.sparklePitchMax = 1200;
         this.stereoSpread = 0.8; // 0 to 1
         this.detuneRange = 1.0; // Multiplier for base detunes
         this.driftSpeed = 0.07; // Hz for pitch drift
+        this.driftVariance = 2.0; // cents
         this.evolutionRate = 25; // Seconds between texture shifts
 
         // Long-term variety state
@@ -49,6 +52,33 @@ class SpaceMusicManager {
         this.baseDetunes = [0.5, -0.8, 1.2, -0.5, 0.3];
         this.currentDetunes = [...this.baseDetunes];
         this.oscType = 'triangle';
+
+        // Harmonic Palettes (Chord Progression)
+        this.activePaletteIndex = 0;
+        this.palettes = [
+            [65.41, 98.00, 146.83, 196.00, 261.63], // Cmaj9 cluster (Pristine/Neutral)
+            [65.41, 92.50, 138.59, 185.00, 246.94], // C Phrygian (Dark/Ominous)
+            [69.30, 103.83, 155.56, 207.65, 277.18], // Db Lydian (Dreamy/Ethereal)
+            [58.27, 87.31, 116.54, 174.61, 233.08],  // Bb Open (Vast/Empty)
+            [49.00, 73.42, 110.00, 146.83, 220.00],  // Bm7 cluster (Cold/Isolation)
+            [82.41, 123.47, 164.81, 246.94, 329.63], // E Sus (High Energy/Radiant)
+            [61.74, 92.50, 123.47, 185.00, 233.08],  // B Mixolydian (Ancient/Alien)
+            [55.00, 82.41, 110.00, 164.81, 220.00],  // A Open Fifth (Stable/Fortress)
+            [51.91, 77.78, 103.83, 155.56, 207.65],  // G# Maj7 (Warm/Golden Hour)
+            [43.65, 65.41, 87.31, 130.81, 174.61],   // F Minor 9 (Melancholic Depth)
+            [58.27, 92.50, 116.54, 164.81, 233.08],  // Bb Lydian Dom (Strange/Curiosity)
+            [41.20, 61.74, 82.41, 123.47, 164.81],   // E Dorian (Vibrant/Active Space)
+            [32.70, 49.00, 65.41, 73.42, 98.00],     // C Deep Drone (Subterranean/Massive)
+            [65.41, 73.42, 82.41, 92.50, 103.83],    // Whole Tone Cluster (Stasis/Floating)
+            [65.41, 103.83, 130.81, 164.81, 207.65], // C Aug7 (Unstable/Expanding)
+            [55.00, 82.41, 123.47, 185.00, 277.18],  // E over A (Open Skies/Positive)
+            [61.74, 92.50, 138.59, 207.65, 311.13],  // B Quartal (Modern/Technical)
+            [43.65, 65.41, 110.00, 164.81, 196.00],  // F Lydian #11 (Majestic/Awe)
+            [38.89, 58.27, 77.78, 116.54, 155.56],   // Eb Min (Grave/Ancient)
+            [77.78, 116.54, 155.56, 233.08, 311.13]  // Eb Sus with #4 (Shimmering/Radiation)
+        ];
+        this.currentFrequencies = [...this.palettes[0]];
+        this.chordTransitionTime = 10; // Seconds to glide between chords
 
         // Timeout reference for cleaning up after fade-out
         this.stopTimeout = null;
@@ -161,15 +191,8 @@ class SpaceMusicManager {
         this.filterLFOGain.connect(this.filter.frequency);
         this.filterLFO.start();
 
-        // Lush chord voicing: Cmaj9(no 3rd) spread across octaves
-        // C2, G2, D3, G3, C4
-        const frequencies = [
-            65.41,  // C2
-            98.00,  // G2
-            146.83, // D3 (9th)
-            196.00, // G3
-            261.63  // C4
-        ];
+        // Lush chord voicing: Based on current palette
+        const frequencies = this.currentFrequencies;
 
         const volumes = [0.4, 0.35, 0.3, 0.25, 0.2];
         const detuneAmounts = this.currentDetunes; // Use evolving detunes
@@ -271,7 +294,7 @@ class SpaceMusicManager {
     _addSparkle() {
         if (!this.isPlaying || !this.audioContext || !this.filter) return;
 
-        const freq = 400 + (Math.random() * 800); // Higher frequencies
+        const freq = this.sparklePitchMin + (Math.random() * (this.sparklePitchMax - this.sparklePitchMin));
         const osc = this.audioContext.createOscillator();
         osc.type = 'sine';
         osc.frequency.value = freq;
@@ -507,7 +530,7 @@ class SpaceMusicManager {
         if (!this.isPlaying || !this.audioContext) return;
 
         const now = this.audioContext.currentTime;
-        const driftAmount = 2.0; // cents
+        const driftAmount = this.driftVariance; // cents
 
         this.oscillators.forEach((osc, i) => {
             if (i < this.currentDetunes.length) {
@@ -524,24 +547,65 @@ class SpaceMusicManager {
 
                 // Smoothly ramp to new detune
                 try {
-                    osc.detune.linearRampToValueAtTime(this.currentDetunes[i], now + 20);
+                    osc.detune.linearRampToValueAtTime(this.currentDetunes[i] * this.detuneRange, now + this.evolutionRate);
                 } catch (e) {
-                    osc.detune.value = this.currentDetunes[i];
+                    osc.detune.value = this.currentDetunes[i] * this.detuneRange;
                 }
             }
         });
 
         // Subtly shift filter Q
         if (this.filter) {
-            const newQ = 1.0 + Math.random() * 1.5;
+            const newQ = this.filterResonance + (Math.random() - 0.5) * 0.5;
             try {
-                this.filter.Q.linearRampToValueAtTime(newQ, now + 15);
+                this.filter.Q.linearRampToValueAtTime(Math.max(0.1, newQ), now + 15);
             } catch (e) {
-                this.filter.Q.value = newQ;
+                this.filter.Q.value = Math.max(0.1, newQ);
             }
         }
 
         console.log('SpaceMusicManager: Soundscape evolved');
+    }
+
+    /**
+     * Advance to a random chord progression palette
+     */
+    advanceChordProgression() {
+        if (!this.palettes || this.palettes.length <= 1) return;
+
+        let nextIdx;
+        const currentIdx = this.activePaletteIndex;
+
+        // Pick a random index that is different from the current one
+        do {
+            nextIdx = Math.floor(Math.random() * this.palettes.length);
+        } while (nextIdx === currentIdx);
+
+        this.setPalette(nextIdx);
+    }
+
+    /**
+     * Smoothly transition to a new set of frequencies
+     * @param {number} index - Index of the palette to switch to
+     */
+    setPalette(index) {
+        if (index < 0 || index >= this.palettes.length) return;
+        this.activePaletteIndex = index;
+        const targetFrequencies = this.palettes[index];
+        const now = this.audioContext.currentTime;
+
+        console.log(`SpaceMusicManager: Transitioning to Palette ${index}`);
+
+        this.oscillators.forEach((osc, i) => {
+            if (i < targetFrequencies.length) {
+                try {
+                    osc.frequency.setTargetAtTime(targetFrequencies[i], now, this.chordTransitionTime / 3);
+                    this.currentFrequencies[i] = targetFrequencies[i];
+                } catch (e) {
+                    osc.frequency.value = targetFrequencies[i];
+                }
+            }
+        });
     }
 
     /**
@@ -700,6 +764,10 @@ class SpaceMusicManager {
         if (params.oscType !== undefined) this.setWaveform(params.oscType);
         if (params.breathingAmount !== undefined) this.setBreathingAmount(params.breathingAmount);
         if (params.driftSpeed !== undefined) this.setDriftSpeed(params.driftSpeed);
+        if (params.chordTransitionTime !== undefined) this.setChordTransitionTime(params.chordTransitionTime);
+        if (params.sparklePitchMin !== undefined) this.setSparklePitchMin(params.sparklePitchMin);
+        if (params.sparklePitchMax !== undefined) this.setSparklePitchMax(params.sparklePitchMax);
+        if (params.driftVariance !== undefined) this.setDriftVariance(params.driftVariance);
     }
 
     setStereoSpread(spread) {
@@ -754,6 +822,23 @@ class SpaceMusicManager {
         }
     }
 
+    setChordTransitionTime(time) {
+        this.chordTransitionTime = time;
+        console.log(`SpaceMusicManager: Chord transition glide set to ${time}s`);
+    }
+
+    setSparklePitchMin(val) {
+        this.sparklePitchMin = val;
+    }
+
+    setSparklePitchMax(val) {
+        this.sparklePitchMax = val;
+    }
+
+    setDriftVariance(val) {
+        this.driftVariance = val;
+    }
+
     /**
      * Get all current parameters for export
      */
@@ -774,7 +859,11 @@ class SpaceMusicManager {
             evolutionRate: this.evolutionRate,
             oscType: this.oscType,
             breathingAmount: this.breathingAmount,
-            driftSpeed: this.driftSpeed
+            driftSpeed: this.driftSpeed,
+            chordTransitionTime: this.chordTransitionTime,
+            sparklePitchMin: this.sparklePitchMin,
+            sparklePitchMax: this.sparklePitchMax,
+            driftVariance: this.driftVariance
         };
     }
 }
