@@ -1,7 +1,7 @@
 # Elite Game Development TODO
 
-the jump gate glitches after quantum gat
-
+demand missions if a commodicty is mission create demand missions that pay well
+Add Mining missions that pay well for asteroid ore.
 
 personal record should not be linked on the station screen but a link from inventory
 
@@ -25,7 +25,6 @@ leading a war war group
 
 Give assassination targets. Ship upgrades. Mention the ship upgrades in the mission description to warn the player. And reward the player for very hard upgrade such a stealth upgrades 
 
-  - Add Mining missions that pay well for asteroid ore.
 
 -----
 
