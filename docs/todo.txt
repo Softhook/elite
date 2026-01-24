@@ -1,5 +1,7 @@
 # Elite Game Development TODO
 
+the jump gate glitches after quantum gat
+
 aeolian harp space music
 
 personal record should not be linked on the station screen but a link from inventory
