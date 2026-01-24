@@ -2,6 +2,33 @@
 // Deep space dark blue background color
 const STARFIELD_BG_COLOR = '#0a0f28';
 
+// Scientific spectral classification colors (O, B, A, F, G, K, M)
+// Approximate RGB values for star temperatures
+const SPECTRAL_COLORS = {
+    O: [155, 176, 255], // Blue
+    B: [170, 191, 255], // Blue-White
+    A: [202, 215, 255], // White-Blue
+    F: [248, 247, 255], // White
+    G: [255, 244, 234], // White-Yellow (Sol)
+    K: [255, 210, 161], // Orange
+    M: [255, 204, 111], // Red-Orange
+    // Rare types
+    L: [255, 50, 50],   // Deep Red (Dwarfs/Giants)
+    W: [100, 200, 255], // Wolf-Rayet (Intense Blue/Greenish)
+    N: [50, 255, 255]   // Neutron (Cyan/Pulsar)
+};
+
+// Distribution of star types (Cumulative probability)
+const STAR_DISTRIBUTION = [
+    { type: 'M', p: 0.70 }, // Most common (Red dwarfs)
+    { type: 'K', p: 0.85 },
+    { type: 'G', p: 0.93 },
+    { type: 'F', p: 0.97 },
+    { type: 'A', p: 0.99 },
+    { type: 'B', p: 0.998 },
+    { type: 'O', p: 1.0 }   // Rarest main sequence
+];
+
 self.onmessage = function (e) {
     const data = e.data;
     if (!data || !data.cmd) return;
@@ -22,16 +49,32 @@ self.onmessage = function (e) {
             // Draw nebula clouds
             drawNebulaToCtx(ctx, tx, ty, tileSize, systemIndex);
 
+            // Draw tiny/distant stars (High density, faint)
             drawLayerToCtx(ctx, tx, ty, tileSize, systemIndex, {
-                gridSize: 45, maxStarsPerCell: 3,
-                sizeRange: [0.5, 1.5], brightnessRange: [80, 160],
-                colorTypes: ['white', 'white', 'white', 'blue', 'yellow']
+                gridSize: 30, maxStarsPerCell: 5,
+                sizeRange: [0.3, 1.2], brightnessRange: [60, 140],
+                distribution: STAR_DISTRIBUTION,
+                clustering: true
             });
 
+            // Draw medium/main sequence stars
             drawLayerToCtx(ctx, tx, ty, tileSize, systemIndex, {
-                gridSize: 200, maxStarsPerCell: 1,
-                sizeRange: [2.0, 4.0], brightnessRange: [180, 255],
-                colorTypes: ['white', 'white', 'blue', 'yellow', 'red']
+                gridSize: 120, maxStarsPerCell: 2,
+                sizeRange: [1.5, 3.5], brightnessRange: [150, 230],
+                distribution: STAR_DISTRIBUTION,
+                clustering: false
+            });
+
+            // Draw "Rare Giants" and oddities (Very sparse, bright, unique colors)
+            drawLayerToCtx(ctx, tx, ty, tileSize, systemIndex, {
+                gridSize: 400, maxStarsPerCell: 1,
+                sizeRange: [4.0, 7.0], brightnessRange: [220, 255],
+                distribution: [
+                    { type: 'B', p: 0.3 }, { type: 'O', p: 0.5 },
+                    { type: 'L', p: 0.8 }, { type: 'W', p: 0.95 }, { type: 'N', p: 1.0 }
+                ],
+                clustering: false,
+                rareLayer: true
             });
 
             // create ImageBitmap and post back
@@ -72,45 +115,72 @@ function drawNebulaToCtx(ctx, tx, ty, tileSize, systemIndex) {
         return SimplexNoise.noise2D(x, y);
     };
 
+    // Seed nebula palette based on system index
+    // 0: default (purple/teal)
+    // 1: fire (orange/red)
+    // 2: ice (blue/cyan)
+    // 3: venom (green/yellow)
+    const nebulaType = systemIndex % 4;
+    let colorsA, colorsB;
+
+    switch (nebulaType) {
+        case 1: // Fire
+            colorsA = { r: 160, g: 40, b: 20 }; // Dark red
+            colorsB = { r: 200, g: 120, b: 40 }; // Orange
+            break;
+        case 2: // Ice
+            colorsA = { r: 20, g: 60, b: 140 }; // Deep blue
+            colorsB = { r: 80, g: 200, b: 220 }; // Cyan
+            break;
+        case 3: // Venom
+            colorsA = { r: 40, g: 100, b: 20 }; // Green
+            colorsB = { r: 120, g: 160, b: 60 }; // Yellow-green
+            break;
+        default: // Standard Purple/Teal
+            colorsA = { r: 80, g: 10, b: 120 }; // Purple
+            colorsB = { r: 10, g: 70, b: 40 };  // Teal
+            break;
+    }
+
     // We can iterate over the tile in blocks
     for (let y = 0; y < tileSize; y += blockSize) {
         for (let x = 0; x < tileSize; x += blockSize) {
             const worldX = worldLeft + x;
             const worldY = worldTop + y;
 
-            // 1. Density noise: determines where the nebulae are
-            // Use slow moving offset based on systemIndex to vary per system slightly
-            const n1 = noise2D(worldX * scale, worldY * scale);
-            const n2 = noise2D(worldX * scale * 2 + 100, worldY * scale * 2 + 100) * 0.5;
-            const density = (n1 + n2); // Range roughly -1.5 to 1.5
+            // 1. Density noise using systemIndex as offset
+            const n1 = noise2D(worldX * scale + (systemIndex * 100), worldY * scale + (systemIndex * 100));
+            const n2 = noise2D(worldX * scale * 2, worldY * scale * 2) * 0.5;
+            const density = (n1 + n2);
 
-            // Threshold for drawing: only draw if density is above a certain value
-            // "Subtle" interpretation: only appear in patches
             if (density > 0.2) {
-                // 2. Color noise: determines purple vs green
-                // Range -1 to 1. < 0 = purple, > 0 = green
+                // 2. Color noise
                 const colorNoise = noise2D(worldX * scale * 1.5 + 500, worldY * scale * 1.5 + 500);
 
-                // Alpha calculation: fade out at edges of the density blob
-                // Max alpha is low (e.g. 0.05 to 0.15) for subtlety
                 let alpha = (density - 0.2) * 0.15;
-                if (alpha > 0.15) alpha = 0.15;
+                if (alpha > 0.18) alpha = 0.18; // Slight boost to max alpha
                 if (alpha < 0) alpha = 0;
 
                 let r, g, b;
 
-                // Interpolate colors
                 if (colorNoise < -0.2) {
-                    // Purple haze (more purple)
-                    // r: 60-100, g: 0-20, b: 80-140
-                    r = 80; g = 10; b = 120;
+                    // Type A
+                    r = colorsA.r; g = colorsA.g; b = colorsA.b;
                 } else if (colorNoise > 0.2) {
-                    // Greenish mist
-                    // r: 0-20, g: 50-80, b: 20-50
-                    r = 10; g = 70; b = 40;
+                    // Type B
+                    r = colorsB.r; g = colorsB.g; b = colorsB.b;
                 } else {
-                    // Transition zone - mix
-                    r = 45; g = 40; b = 80;
+                    // Mix
+                    r = (colorsA.r + colorsB.r) * 0.5;
+                    g = (colorsA.g + colorsB.g) * 0.5;
+                    b = (colorsA.b + colorsB.b) * 0.5;
+                }
+
+                // Add varied star-light scatter within nebula
+                if (Math.random() < 0.05) {
+                    r = Math.min(255, r + 40);
+                    g = Math.min(255, g + 40);
+                    b = Math.min(255, b + 40);
                 }
 
                 ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
@@ -212,12 +282,6 @@ const SimplexNoise = (function () {
 function drawLayerToCtx(ctx, tx, ty, tileSize, systemIndex, config) {
     const gridSize = config.gridSize;
     const systemSeed = (systemIndex * 1337) >>> 0;
-    const colors = {
-        white: [255, 255, 255],
-        blue: [200, 220, 255],
-        yellow: [255, 250, 200],
-        red: [255, 200, 180]
-    };
 
     const worldLeft = tx * tileSize;
     const worldRight = worldLeft + tileSize;
@@ -229,7 +293,7 @@ function drawLayerToCtx(ctx, tx, ty, tileSize, systemIndex, config) {
     const startGY = Math.floor(worldTop / gridSize);
     const endGY = Math.ceil(worldBottom / gridSize);
 
-    const { maxStarsPerCell, sizeRange, brightnessRange, colorTypes } = config;
+    const { maxStarsPerCell, sizeRange, brightnessRange } = config;
     const minSize = sizeRange[0];
     const sizeDiff = sizeRange[1] - minSize;
     const minBright = brightnessRange[0];
@@ -271,19 +335,52 @@ function drawLayerToCtx(ctx, tx, ty, tileSize, systemIndex, config) {
             let rng = cellSeed;
             function nextFloat() { rng = (rng * 1664525 + 1013904223) >>> 0; return rng * INV32; }
 
-            if (nextFloat() > ((gridSize > 100) ? 0.85 : 0.7)) continue;
-            const starCount = Math.floor(nextFloat() * maxStarsPerCell) + 1;
+            // Clustering: Using noise to vary density
+            // If clustering is on, use low-freq noise to skip some cells or boost others
+            let localMultiplier = 1.0;
+            if (config.clustering) {
+                // Approximate noise using cell coords (cheaper than Simplex calls)
+                const clusterNoise = Math.sin(gx * 0.1) * Math.cos(gy * 0.1);
+                if (clusterNoise < -0.5) continue; // Empty voids
+                if (clusterNoise > 0.6) localMultiplier = 2.0; // Clusters
+            }
+
+            if (nextFloat() > 0.8 / localMultiplier) continue; // Skip most cells
+
+            const countRaw = Math.floor(nextFloat() * maxStarsPerCell * localMultiplier) + 1;
+            const starCount = Math.min(countRaw, 10); // Cap per cell
+
             for (let i = 0; i < starCount; i++) {
                 const worldX = gx * gridSize + (nextFloat() - 0.5) * gridSize * 2;
                 const worldY = gy * gridSize + (nextFloat() - 0.5) * gridSize * 2;
                 const bufferX = worldX - worldLeft;
                 const bufferY = worldY - worldTop;
-                if (bufferX < -5 || bufferX > tileSize + 5 || bufferY < -5 || bufferY > tileSize + 5) continue;
+
+                // Allow drawing slightly outside for large sprites
+                if (bufferX < -10 || bufferX > tileSize + 10 || bufferY < -10 || bufferY > tileSize + 10) continue;
+
+                // Pick spectral type based on cumulative distribution
+                const pType = nextFloat();
+                let type = 'M';
+                for (let d of config.distribution) {
+                    if (pType <= d.p) {
+                        type = d.type;
+                        break;
+                    }
+                }
+                const baseColor = SPECTRAL_COLORS[type] || [255, 255, 255];
+
                 const size = minSize + nextFloat() * sizeDiff;
+
+                // Brightness variation tied to size and randomness
                 let brightness = minBright + nextFloat() * brightDiff;
-                if (size < 2) brightness = Math.min(255, brightness * 1.4);
-                const colorType = colorTypes[Math.floor(nextFloat() * colorTypes.length)];
-                const baseColor = colors[colorType];
+
+                // Boost brightness for big/white/blue stars
+                if (type === 'O' || type === 'B' || type === 'N' || size > 3) {
+                    brightness = Math.min(255, brightness * 1.3);
+                }
+
+                // Apply color tint
                 const brightnessFactor = brightness / 255;
                 const r = Math.round(baseColor[0] * brightnessFactor);
                 const g = Math.round(baseColor[1] * brightnessFactor);
@@ -297,6 +394,20 @@ function drawLayerToCtx(ctx, tx, ty, tileSize, systemIndex, config) {
                     // draw pre-rendered soft sprite for medium/large stars
                     const sprite = makeSprite(size, r, g, b);
                     ctx.drawImage(sprite.canvas, Math.round(bufferX - sprite.half), Math.round(bufferY - sprite.half));
+
+                    // Add diffraction spike cross for very bright/large exotic stars
+                    if (config.rareLayer && size > 4.5 && brightness > 230) {
+                        ctx.strokeStyle = `rgba(${r},${g},${b},0.4)`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        // Horizontal
+                        ctx.moveTo(bufferX - size * 1.5, bufferY);
+                        ctx.lineTo(bufferX + size * 1.5, bufferY);
+                        // Vertical
+                        ctx.moveTo(bufferX, bufferY - size * 1.5);
+                        ctx.lineTo(bufferX, bufferY + size * 1.5);
+                        ctx.stroke();
+                    }
                 }
             }
         }
