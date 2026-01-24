@@ -190,6 +190,22 @@ class Asteroid {
 
         // Base color value (grayscale)
         let baseGray = this.color.levels ? this.color.levels[0] : 127;
+        let r = baseGray;
+        let g = baseGray;
+        let b = baseGray;
+
+        // Apply tint if rich
+        if (this.isRich && this.seamColor) {
+            // Mix base gray with seam color
+            const mixAmount = 0.4; // Strength of the tint
+            const sr = this.seamColor.levels[0];
+            const sg = this.seamColor.levels[1];
+            const sb = this.seamColor.levels[2];
+
+            r = lerp(r, sr, mixAmount);
+            g = lerp(g, sg, mixAmount);
+            b = lerp(b, sb, mixAmount);
+        }
 
         strokeWeight(1);
 
@@ -229,10 +245,12 @@ class Asteroid {
                 let noise = (Math.sin(v1.x * 12.9898 + v1.y * 78.233) * 43758.5453) % 1;
                 brightness += (noise - 0.5) * 0.15;
 
-                let colVal = baseGray * brightness;
-                colVal = Math.max(0, Math.min(255, colVal));
+                // Apply brightness to the calculated RGB
+                let fr = Math.max(0, Math.min(255, r * brightness));
+                let fg = Math.max(0, Math.min(255, g * brightness));
+                let fb = Math.max(0, Math.min(255, b * brightness));
 
-                fill(colVal);
+                fill(fr, fg, fb);
                 noStroke(); // Remove stroke as requested
 
                 triangle(v1.x, v1.y, v2.x, v2.y, v3.x, v3.y);
@@ -249,30 +267,16 @@ class Asteroid {
                 if (mMag > 0) { mx /= mMag; my /= mMag; }
                 let dot = mx * localSunX + my * localSunY;
                 let brightness = 0.4 + 0.8 * ((dot + 1) / 2);
-                let colVal = baseGray * brightness;
-                fill(colVal);
+                let fr = Math.max(0, Math.min(255, r * brightness));
+                let fg = Math.max(0, Math.min(255, g * brightness));
+                let fb = Math.max(0, Math.min(255, b * brightness));
+                fill(fr, fg, fb);
                 noStroke();
                 triangle(0, 0, v1.x, v1.y, v2.x, v2.y);
             }
         }
 
-        // Draw mineral seams if the asteroid is rich
-        if (this.isRich && this.seamColor) {
-            push();
-            stroke(this.seamColor);
-            strokeWeight(max(1.5, this.size / 30)); // Seam thickness, ensuring visibility
-            noFill(); // Seams are lines
 
-            // Draw seams along some edges (e.g., every 2nd or 3rd edge)
-            for (let i = 0; i < this.vertices.length; i++) {
-                if (i % 3 === 0) { // Adjust frequency as needed for visual subtlety
-                    const v1 = this.vertices[i];
-                    const v2 = this.vertices[(i + 1) % this.vertices.length];
-                    line(v1.x, v1.y, v2.x, v2.y);
-                }
-            }
-            pop();
-        }
         // --- Draw Player's Target Indicator for this asteroid ---
         if (typeof player !== 'undefined' && player.target === this) {
             // Draw ship-style reticle (matching enemyRendering.js)
