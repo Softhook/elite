@@ -1147,6 +1147,12 @@ class GameStateManager {
             return false;
         }
 
+        // Prevent quantum jump if hyperdrive is already charging
+        if (this.isJumpCharging) {
+            console.log("Quantum gate fade blocked: hyperdrive charging");
+            return false;
+        }
+
         console.log("Starting quantum gate teleportation fade");
         this.quantumGateTeleportPending = true;
         this.jumpFadeState = "FADE_OUT";
@@ -1184,6 +1190,7 @@ class GameStateManager {
                     player.currentSystem = galaxy?.getCurrentSystem();
                     player.vel.mult(0.3);
                     this.quantumGateTeleportPending = false;
+                    this.isJumpCharging = false; // Fix: Ensure jump charge is cleared
 
                     // CRITICAL FIX: Ensure state data is reset even though we don't switch states
                     // This prevents stale data from interfering with subsequent jumps
@@ -2036,7 +2043,7 @@ class GameStateManager {
      */
     startJump(targetIndex) {
         // Prevent interrupting an ongoing jump sequence
-        if (this.currentState === "JUMPING" || this.isJumpCharging) {
+        if (this.currentState === "JUMPING" || this.isJumpCharging || this.quantumGateTeleportPending) {
             GS_LOG("[startJump] Jump already in progress. Ignoring new jump request.");
             return;
         }
@@ -2096,6 +2103,7 @@ class GameStateManager {
         this.jumpFadeOpacity = 0; // Ensure opacity starts at 0
         this.isJumpCharging = true; // Set the flag
         this.jumpJustCompleted = false; // Reset completion flag
+        this.quantumGateTeleportPending = false; // Fix: Clear any pending quantum teleport
         this.setState("JUMPING");
         if (typeof soundManager !== 'undefined') soundManager.playSound('jump'); // Start charging sound (use existing 'jump' definition)
     }
@@ -2164,3 +2172,6 @@ class GameStateManager {
     }
 
 } // End of GameStateManager Class
+if (typeof module !== 'undefined') {
+    module.exports = { GameStateManager };
+}
