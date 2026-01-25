@@ -16,7 +16,12 @@
     "type": "git",
     "url": "git+https://github.com/Softhook/elite.git"
   },
-  "keywords": ["game", "space", "trading", "elite"],
+  "keywords": [
+    "game",
+    "space",
+    "trading",
+    "elite"
+  ],
   "author": "",
   "license": "ISC",
   "bugs": {
@@ -28,8 +33,12 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "testMatch": ["**/test/**/*.test.js"],
-    "setupFilesAfterEnv": ["<rootDir>/test/jest.setup.js"],
+    "testMatch": [
+      "**/test/**/*.test.js"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/test/jest.setup.js"
+    ],
     "verbose": true,
     "collectCoverageFrom": [
       "*.js",

@@ -2479,8 +2479,19 @@ class CommunicationSystem {
         }
 
         // Check for same-faction warnings
-        const myFaction = this._getShipFaction(enemy);
-        const playerFaction = playerSource.playerFaction || "UNKNOWN";
+        // Check for same-faction warnings
+        let myFaction = this._getShipFaction(enemy);
+        if ((!myFaction || myFaction === 'UNKNOWN') && enemy.role === AI_ROLE.POLICE) {
+            myFaction = 'POLICE';
+        }
+
+        let playerFaction = playerSource.playerFaction || "UNKNOWN";
+
+        // If player is police, treat them as POLICE faction for this check
+        if (playerSource.isPolice) {
+            playerFaction = 'POLICE';
+        }
+
         if (myFaction && myFaction !== "UNKNOWN" && playerFaction && playerFaction !== "UNKNOWN" && myFaction === playerFaction) {
             this._maybeSend(enemy, "ally_warning", this.templates.allyWarning, {
                 chance: 0.9, // High chance for friendly fire warnings
@@ -2725,18 +2736,24 @@ class CommunicationSystem {
             return false; // Contextual chatter from space ships is suppressed
         }
 
-        if (!enemy || !this.player || !this.uiManager) return false;
+        if (!enemy || !this.player || !this.uiManager) {
+            console.log('DEBUG: _maybeSend missing deps', { enemy: !!enemy, player: !!this.player, uiManager: !!this.uiManager });
+            return false;
+        }
 
         if (!this.uiManager || !Array.isArray(templates) || templates.length === 0) {
+            console.log('DEBUG: _maybeSend invalid args', { uiManager: !!this.uiManager, isArray: Array.isArray(templates), len: templates?.length });
             return false;
         }
         const now = this._now();
         if (now - this._lastGlobalMessageTime < this._globalCooldownMs) {
+            console.log('DEBUG: _maybeSend global cooldown', { now, last: this._lastGlobalMessageTime, ms: this._globalCooldownMs });
             return false;
         }
         const chance = options.chance ?? this.defaultChance;
         const rand = this._random();
         if (rand > chance) {
+            console.log('DEBUG: _maybeSend chance fail', { rand, chance });
             return false;
         }
         const enemyKey = this._getEnemyKey(enemy);
@@ -2747,6 +2764,7 @@ class CommunicationSystem {
         const enemyRecord = this._enemyCooldowns.get(enemyKey) || {};
         const lastTime = enemyRecord[category] ?? -Infinity;
         if (now - lastTime < cooldown) {
+            console.log('DEBUG: _maybeSend enemy cooldown', { now, lastTime, cooldown });
             return false;
         }
         const template = this._pickTemplate(templates);
@@ -2763,11 +2781,14 @@ class CommunicationSystem {
         const addFn = typeof this.uiManager.addCommunicationMessage === 'function'
             ? this.uiManager.addCommunicationMessage.bind(this.uiManager)
             : this.uiManager.addMessage.bind(this.uiManager);
+
+        console.log('DEBUG: _maybeSend Calling addFn', message);
         addFn(message, color, duration);
 
         // Queue speech for this message (after displaying text)
         this._queueSpeech(message, enemy);
 
+        // Ensure we update the record properly
         enemyRecord[category] = now;
         this._enemyCooldowns.set(enemyKey, enemyRecord);
         this._lastGlobalMessageTime = now;
@@ -3206,4 +3227,8 @@ class CommunicationSystem {
 
         return true;
     }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { CommunicationSystem };
 }
