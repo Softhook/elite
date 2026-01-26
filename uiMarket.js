@@ -466,6 +466,7 @@ class UIMarket {
     handleMousePress(mx, my, market, player) {
         // Check back button
         if (UIComponents.isClickInArea(mx, my, this.backButtonArea)) {
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
             if (gameStateManager) gameStateManager.setState("DOCKED");
             return true;
         }

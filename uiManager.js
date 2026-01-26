@@ -676,7 +676,7 @@ class UIManager {
         if (currentState === "VIEWING_SPACE_OBJECT_MARKET") {
             // Handle back button
             if (this.spaceObjectMarketBackButtonArea && this.isClickInArea(mx, my, this.spaceObjectMarketBackButtonArea)) {
-                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
                 if (gameStateManager) gameStateManager.setState("DOCKED_SPACE_OBJECT");
                 return true;
             }
@@ -710,7 +710,7 @@ class UIManager {
             }
             // Back button
             if (this.spaceObjectRepairsBackButtonArea && this.isClickInArea(mx, my, this.spaceObjectRepairsBackButtonArea)) {
-                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
                 if (gameStateManager) gameStateManager.setState("DOCKED_SPACE_OBJECT");
                 return true;
             }
@@ -751,6 +751,7 @@ class UIManager {
             // Handle Detail Buttons FIRST (Complete, Abandon, Accept, Back)
             // These depend on what was DRAWN by drawMissionBoard
             if (this.missionDetailButtonAreas['back'] && this.isClickInArea(mx, my, this.missionDetailButtonAreas['back'])) {
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
                 if (gameStateManager) gameStateManager.setState("DOCKED");
                 return true;
             }
@@ -859,6 +860,7 @@ class UIManager {
             }
             // Back button
             if (this.isClickInArea(mx, my, this.repairsBackButtonArea)) {
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
                 gameStateManager.setState("DOCKED");
                 return true;
             }
@@ -901,6 +903,7 @@ class UIManager {
                         // Check if we should return to space object dock instead of station
                         const returnState = gameStateManager._returnFromRecordState || "DOCKED";
                         gameStateManager._returnFromRecordState = null; // Clear it
+                        if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
                         gameStateManager.setState(returnState);
                         return true;
                     }

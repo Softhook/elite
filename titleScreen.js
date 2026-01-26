@@ -944,6 +944,7 @@ class TitleScreen {
 
     handleKeyPress(keyCode, key) {
         if (gameStateManager.currentState === "INSTRUCTIONS" && (keyCode === 32 || key === ' ')) {
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
             gameStateManager.setState("SAVE_SELECTION");
         }
 

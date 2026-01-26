@@ -2032,6 +2032,7 @@ class UIStationMenus {
 
         // Back button
         if (this.shipyardDetailButtons?.back && UIComponents.isClickInArea(mx, my, this.shipyardDetailButtons.back)) {
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
             if (typeof gameStateManager !== 'undefined') gameStateManager.setState(returnState);
             return true;
         }
@@ -3013,6 +3014,7 @@ class UIStationMenus {
 
         // Back button
         if (this.upgradeDetailButtons?.back && UIComponents.isClickInArea(mx, my, this.upgradeDetailButtons.back)) {
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
             if (typeof gameStateManager !== 'undefined') gameStateManager.setState(returnState);
             return true;
         }

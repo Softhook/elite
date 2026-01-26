@@ -1235,7 +1235,7 @@ class Player {
         this.vel.set(cos(this.angle) * maxBurstSpeed, sin(this.angle) * maxBurstSpeed);
 
         if (typeof soundManager !== 'undefined') {
-            // soundManager.playSound('boost'); // TODO: Add boost sound
+            soundManager.playSound('shieldUp');
         }
 
         return true;

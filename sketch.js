@@ -514,6 +514,7 @@ function handleWeaponSwitching() {
     if (Array.isArray(player.weapons) && weaponIndex < player.weapons.length) {
         if (player.switchToWeapon(weaponIndex)) {
             WEAPON_LOG(`Switched to weapon: ${player.currentWeapon.name}`);
+            soundManager?.playSound('click');
         }
     }
     return true;
@@ -662,11 +663,13 @@ function handleMapToggle() {
         // Store the previous state so we can return to it
         gameStateManager._previousState = state;
         gameStateManager.setState("GALAXY_MAP");
+        soundManager?.playSound('mapOpen');
     } else if (state === "GALAXY_MAP") {
         // Return to the previous state (surface mode or in-flight)
         const returnState = gameStateManager._previousState || "IN_FLIGHT";
         gameStateManager.setState(returnState);
         gameStateManager._previousState = null;
+        soundManager?.playSound('mapClose');
     }
     return true;
 }
@@ -704,9 +707,11 @@ function handleSecretBaseNavigation() {
 
     if (player.showSecretBaseNavigation) {
         showSecretBaseStatus();
+        soundManager?.playSound('uiTransition');
     } else {
         player._cachedNavigation = null;
         uiManager?.addMessage("Secret Base Navigation: DEACTIVATED", [150, 150, 150]);
+        soundManager?.playSound('uiTransition');
     }
     return true;
 }
@@ -756,9 +761,11 @@ function handleWantedToggle() {
     if (!isCurrentlyWanted) {
         uiManager?.addMessage(`WANTED in ${currentSystem.name} system!`, 'crimson');
         GS_LOG(`ALERT: Police alert issued in ${currentSystem.name}!`);
+        soundManager?.playSound('uiTransition');
     } else {
         uiManager?.addMessage(`Legal status cleared in ${currentSystem.name}`, 'lightgreen');
         GS_LOG(`NOTICE: Police alert cleared in ${currentSystem.name}.`);
+        soundManager?.playSound('uiTransition');
     }
     return true;
 }
@@ -799,6 +806,7 @@ function handleAutopilot(autopilotKey) {
             if (!player.autopilotEnabled) {
                 // Start autopilot with first target (station)
                 player.toggleAutopilot('station');
+                soundManager?.playSound('uiTransition');
             } else {
                 // Find current position in cycle and move to next
                 const currentIndex = cycleOrder.indexOf(player.autopilotTarget);
@@ -814,6 +822,7 @@ function handleAutopilot(autopilotKey) {
                     } else {
                         // Move to next target in cycle
                         player.toggleAutopilot(cycleOrder[nextIndex]);
+                        soundManager?.playSound('uiTransition');
                     }
                 }
             }
@@ -884,6 +893,7 @@ function handleSurfaceDescent() {
         if (surfaceMode.canEnter(player, planet)) {
             if (surfaceMode.enter(player, planet, currentSystem)) {
                 uiManager?.addMessage(`Descending to ${planet.name} surface...`, [100, 200, 255]);
+                soundManager?.playSound('uiTransition');
                 return true;
             }
         }
@@ -900,9 +910,12 @@ function handleSurfaceDescent() {
 function handleEscapeKey() {
     if (keyCode !== ESCAPE) return false;
 
-    if (gameStateManager.currentState === "GALAXY_MAP" ||
-        gameStateManager.currentState === "DOCKED") {
+    if (gameStateManager.currentState === "GALAXY_MAP") {
         gameStateManager.setState("IN_FLIGHT");
+        soundManager?.playSound('mapClose');
+    } else if (gameStateManager.currentState === "DOCKED") {
+        gameStateManager.setState("IN_FLIGHT");
+        soundManager?.playSound('click_off');
     }
     return true;
 }
