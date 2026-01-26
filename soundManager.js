@@ -1147,7 +1147,7 @@ class SoundManager {
                 "p_lpf_resonance": 0.4,
                 "p_hpf_freq": 0.08, // High-pass to remove some bass
                 "p_hpf_ramp": 0,
-                "sound_vol": 0.10,
+                "sound_vol": 0.08,
                 "sample_rate": 22050, // Lower sample rate for that downsampled feel
                 "sample_size": 8
             },
@@ -1177,7 +1177,7 @@ class SoundManager {
                 "p_lpf_resonance": 0.3,
                 "p_hpf_freq": 0.06,
                 "p_hpf_ramp": 0,
-                "sound_vol": 0.10,
+                "sound_vol": 0.06,
                 "sample_rate": 22050,
                 "sample_size": 8
             }
