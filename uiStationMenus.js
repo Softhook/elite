@@ -2485,6 +2485,7 @@ class UIStationMenus {
         // Back button
         if (this.shipDetailButtons?.back && UIComponents.isClickInArea(mx, my, this.shipDetailButtons.back)) {
             // Return to shipyard list
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
             if (typeof gameStateManager !== 'undefined') {
                 gameStateManager.setState('VIEWING_SHIPYARD');
             }
@@ -3001,6 +3002,8 @@ class UIStationMenus {
             // Store selected weapon data for the detail screen
             this.selectedWeaponForDetail = this.availableWeaponsList[this.currentWeaponIndex];
 
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+
             // Navigate to weapon detail screen
             if (typeof gameStateManager !== 'undefined') {
                 gameStateManager.setState('VIEWING_WEAPON_DETAIL');
@@ -3030,7 +3033,34 @@ class UIStationMenus {
         if (this.weaponDetailButtons) {
             // Back
             if (this.weaponDetailButtons.back && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.back)) {
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
                 if (typeof gameStateManager !== 'undefined') gameStateManager.setState('VIEWING_UPGRADES');
+                return true;
+            }
+
+            // Prev
+            if (this.weaponDetailButtons.prev && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.prev)) {
+                if (this.currentWeaponIndex > 0) {
+                    this.currentWeaponIndex--;
+                    this.selectedWeaponForDetail = this.availableWeaponsList[this.currentWeaponIndex];
+                    // Reset slot picker if active
+                    this.showingSlotPicker = false;
+                    this.pendingWeaponPurchase = null;
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                }
+                return true;
+            }
+
+            // Next
+            if (this.weaponDetailButtons.next && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.next)) {
+                if (this.currentWeaponIndex < this.availableWeaponsList.length - 1) {
+                    this.currentWeaponIndex++;
+                    this.selectedWeaponForDetail = this.availableWeaponsList[this.currentWeaponIndex];
+                    // Reset slot picker if active
+                    this.showingSlotPicker = false;
+                    this.pendingWeaponPurchase = null;
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                }
                 return true;
             }
 
@@ -3119,6 +3149,7 @@ class UIStationMenus {
             if (!UIComponents.isClickInArea(mx, my, area)) continue;
 
             if (area.action === 'back') {
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
                 if (typeof gameStateManager !== 'undefined') gameStateManager.setState("DOCKED");
                 return true;
             }
@@ -3180,6 +3211,7 @@ class UIStationMenus {
                 return true;
             }
             if (btn.state === "DOCKED") {
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
                 if (typeof gameStateManager !== 'undefined') gameStateManager.setState("DOCKED");
                 return true;
             }
@@ -3240,6 +3272,7 @@ class UIStationMenus {
             if (!UIComponents.isClickInArea(mx, my, btn)) continue;
 
             if (btn.action === "BACK") {
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
                 if (typeof gameStateManager !== 'undefined') gameStateManager.setState("DOCKED");
                 return true;
             }
@@ -3315,6 +3348,7 @@ class UIStationMenus {
             if (!UIComponents.isClickInArea(mx, my, btn)) continue;
 
             if (btn.action === "BACK") {
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
                 if (typeof gameStateManager !== 'undefined') gameStateManager.setState("DOCKED");
                 return true;
             }

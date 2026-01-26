@@ -1839,8 +1839,9 @@ class SoundManager {
      * @param {{resetTime?: boolean, forceSetVolume?: boolean}} opts - Controls behavior
      */
     _playAnyAudio(audioObj, baseVolume, opts = {}) {
-        const { resetTime = false, forceSetVolume = true } = opts;
-        const finalVolume = Math.max(0, Math.min(1, this._applyDockedAttenuation(baseVolume)));
+        const { resetTime = false, forceSetVolume = true, skipAttenuation = false } = opts;
+        const volumeToUse = skipAttenuation ? baseVolume : this._applyDockedAttenuation(baseVolume);
+        const finalVolume = Math.max(0, Math.min(1, volumeToUse));
         const shouldForceVolume = forceSetVolume || this.isDocked;
         audioObj._eliteBaseVolume = baseVolume;
 
@@ -1919,7 +1920,20 @@ class SoundManager {
         const desiredVol = Math.max(0, Math.min(1, baseVol * volMultiplier));
         const forceSetVolume = (volMultiplier !== 1.0) || this.isDocked;
 
-        this._playAnyAudio(soundEntry.audio, desiredVol, { resetTime: true, forceSetVolume });
+        // UI sounds should not be attenuated by docking status
+        const uiSounds = [
+            'click', 'click_off', 'upgrade', 'error',
+            'dockSuccess', 'undock', 'uiTransition',
+            'mapOpen', 'mapClose', 'buyConfirm', 'sellConfirm',
+            'missionAccept', 'missionComplete', 'pickupCoin'
+        ];
+        const isUISound = uiSounds.includes(name);
+
+        this._playAnyAudio(soundEntry.audio, desiredVol, {
+            resetTime: true,
+            forceSetVolume,
+            skipAttenuation: isUISound
+        });
     }
 
     /**

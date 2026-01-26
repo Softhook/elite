@@ -1410,6 +1410,7 @@ class UIManager {
         for (const area of this.factionRecruitmentButtonAreas) {
             if (!this.isClickInArea(mx, my, area)) continue;
             if (area.action === 'back') {
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
                 gameStateManager?.setState('DOCKED');
                 return true;
             }
