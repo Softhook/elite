@@ -416,6 +416,7 @@
         <button class="mode-btn active" id="modeInternal">🎹 Internal Music</button>
         <button class="mode-btn" id="modeExternal">🔊 External Ambient</button>
         <button class="mode-btn" id="modeSpace">🌌 Space Music</button>
+        <button class="mode-btn" id="modeSFX">📢 Sound Effects</button>
     </div>
 
     <div class="mode-description" id="modeDesc">
@@ -543,6 +544,10 @@
     <script src="../stationMusic.js"></script>
     <script src="../ambientSoundManager.js"></script>
     <script src="../spaceMusic.js"></script>
+    <script src="../debug.js"></script>
+    <script src="../libraries/riffwave.js"></script>
+    <script src="../libraries/sfxr.js"></script>
+    <script src="../soundManager.js"></script>
     <script>
         // Station configurations with descriptions for both internal and external sounds
         const stationConfigs = [
@@ -709,6 +714,7 @@
         let ambientManager = null;
         let musicManager = null;
         let spaceMusicManager = null;
+        let sfxManager = null;
         let currentlyPlaying = null;
         let analyser = null;
         let dataArray = null;
@@ -732,6 +738,9 @@
             // Initialize space music manager
             spaceMusicManager = new SpaceMusicManager();
             spaceMusicManager.baseVolume = 0.5;
+
+            // Initialize sound manager for SFX
+            sfxManager = new SoundManager();
 
             // Setup analyzer with ambient manager's context (for external sounds)
             if (ambientManager.audioContext) {
@@ -769,6 +778,22 @@
                         </div>
                     </div>
                 `;
+            } else if (currentMode === 'sfx') {
+                const defs = sfxManager ? sfxManager.soundDefinitions : {};
+                container.innerHTML = Object.keys(defs).map(name => {
+                    const def = defs[name];
+                    const waveName = def.wave_type === 0 ? 'Square' : def.wave_type === 1 ? 'Saw' : def.wave_type === 2 ? 'Sine' : 'Noise';
+                    return `
+                        <div class="station-card station-standard" data-type="${name}">
+                            <div class="station-name">${name}</div>
+                            <div class="station-mood">Vol: ${def.sound_vol} | Wave: ${waveName}</div>
+                            <div class="station-details">Sample Rate: ${def.sample_rate}Hz | Size: ${def.sample_size}bit</div>
+                            <div class="controls">
+                                <button class="play-btn" data-type="${name}">▶ Play SFX</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
             } else {
                 container.innerHTML = stationConfigs.map(station => {
                     const cssClass = `station-${station.type.replace(' ', '-')}`;
@@ -803,6 +828,7 @@
             document.getElementById('modeInternal').addEventListener('click', () => setMode('internal'));
             document.getElementById('modeExternal').addEventListener('click', () => setMode('external'));
             document.getElementById('modeSpace').addEventListener('click', () => setMode('space'));
+            document.getElementById('modeSFX').addEventListener('click', () => setMode('sfx'));
 
             // Stop all button
             document.getElementById('stopAll').addEventListener('click', stopAll);
@@ -983,6 +1009,7 @@
             document.getElementById('modeInternal').classList.toggle('active', mode === 'internal');
             document.getElementById('modeExternal').classList.toggle('active', mode === 'external');
             document.getElementById('modeSpace').classList.toggle('active', mode === 'space');
+            document.getElementById('modeSFX').classList.toggle('active', mode === 'sfx');
 
             // Update description
             const desc = document.getElementById('modeDesc');
@@ -996,10 +1023,15 @@
                     <h3>🔊 External Ambient Sounds</h3>
                     <p>Layered oscillator drones - heard when flying near a station in space</p>
                 `;
-            } else {
+            } else if (mode === 'space') {
                 desc.innerHTML = `
                     <h3>🌌 Aeolian Space Music</h3>
                     <p>Subtle, evolving atmospheric drones for open space flight</p>
+                `;
+            } else {
+                desc.innerHTML = `
+                    <h3>📢 Individual Sound Effects</h3>
+                    <p>Play each SFX from SoundManager at its current configured volume setting</p>
                 `;
             }
 
@@ -1020,10 +1052,37 @@
                     playExternalSound(type);
                 } else if (currentMode === 'internal') {
                     playInternalMusic(type);
-                } else {
+                } else if (currentMode === 'space') {
                     playSpaceMusic();
+                } else {
+                    playSFX(type);
                 }
             }
+        }
+
+        function playSFX(name) {
+            if (!sfxManager) return;
+
+            // Resume context if needed
+            if (sfxManager.audioContext && sfxManager.audioContext.state === 'suspended') {
+                sfxManager.audioContext.resume();
+            }
+
+            sfxManager.playSound(name, 1.0);
+
+            // Visual feedback for SFX (briefly highlight)
+            currentlyPlaying = name;
+            updateUI(name, true);
+            document.getElementById('nowPlaying').textContent = name;
+            document.getElementById('nowPlayingMode').textContent = '(Sound Effect)';
+
+            // For SFX, clear "playing" state quickly since they are short
+            setTimeout(() => {
+                if (currentlyPlaying === name) {
+                    currentlyPlaying = null;
+                    updateUI(null, false);
+                }
+            }, 1000);
         }
 
         function playExternalSound(type) {

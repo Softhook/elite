@@ -105,7 +105,7 @@ class SpaceMusicManager {
             "saturationAmount": 2,
             "reverbLushness": 0.25,
             "sparkleChance": 0.55,
-            "baseVolume": 0.25,
+            "baseVolume": 0.15,
             "stereoSpread": 1,
             "detuneRange": 0.7,
             "evolutionRate": 51,
