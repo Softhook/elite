@@ -1707,27 +1707,23 @@ class SurfaceMode {
 
 
 // Global surface mode instance
-let surfaceModeInstance = null;
+let surfaceMode = null;
 
 /**
  * Initialize surface mode
  */
 function initSurfaceMode() {
-    surfaceModeInstance = new SurfaceMode();
+    surfaceMode = new SurfaceMode();
     console.log("surfaceMode.js - Surface flight mode loaded (3D mesh terrain)");
 }
 
 // Auto-init on load
 if (typeof window !== 'undefined') {
     window.addEventListener('load', () => {
-        if (!surfaceModeInstance) {
+        if (!surfaceMode) {
             initSurfaceMode();
         }
     });
-}
-
-if (typeof module !== 'undefined') {
-    module.exports = { SurfaceMode, initSurfaceMode, getSurfaceMode: () => surfaceModeInstance };
 }
 
 console.log("surfaceMode.js loaded");
