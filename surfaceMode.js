@@ -1489,13 +1489,14 @@ class SurfaceMode {
             if (obj.destroyed) continue;
 
             // Only show relevant tactical targets
-            // Check for ShieldGenerator class name since we might not have imported the class in this scope
+            // Check for SurfaceStation, ShieldGenerator, Turret, DefenseDrone, and SecretCache
+            const isStation = (obj.constructor && obj.constructor.name === 'SurfaceStation');
             const isShieldGen = (obj.constructor && obj.constructor.name === 'ShieldGenerator') || obj.isTarget;
             const isTurret = (obj.constructor && obj.constructor.name === 'Turret');
             const isDrone = (obj.constructor && obj.constructor.name === 'DefenseDrone');
-            const isCache = obj.isCache === true; // Secret caches on uninhabited planets
+            const isCache = obj.isCache === true;
 
-            if (!isShieldGen && !isTurret && !isDrone && !isCache) continue;
+            if (!isStation && !isShieldGen && !isTurret && !isDrone && !isCache) continue;
 
             const dx = obj.pos.x - this.player.pos.x;
             const dy = obj.pos.y - this.player.pos.y;
@@ -1511,24 +1512,32 @@ class SurfaceMode {
             rotate(angle);
             noStroke();
 
-            if (isShieldGen) {
+            if (isStation) {
+                // Surface Stations - Blue, slightly larger
+                fill(50, 150, 255, 220);
+                ellipse(markerDist, 0, 7, 7);
+            } else if (isShieldGen) {
                 // Main Target (Shield Generator) - Red, larger, pulsing
                 const pulse = (Math.sin(millis() * 0.01) + 1) * 0.5;
                 fill(255, 0, 0, 200 + pulse * 55);
-                ellipse(markerDist, 0, 6 + pulse * 2, 6 + pulse * 2);
+                ellipse(markerDist, 0, 8 + pulse * 2, 8 + pulse * 2);
             } else if (isTurret) {
                 // Turrets - Orange, smaller
                 fill(255, 150, 0, 200);
-                ellipse(markerDist, 0, 4, 4);
+                ellipse(markerDist, 0, 5, 5);
             } else if (isDrone) {
                 // Defense Drones - Red, small
                 fill(255, 50, 50, 200);
                 ellipse(markerDist, 0, 4, 4);
             } else if (isCache) {
-                // Secret Caches - Green, clamped to edge for discovery
-                // Always show at edge of compass to guide exploration
+                // Secret Caches - Green
+                // Discovery mode: Clamp to edge if far, show actual position if close (within tracking range)
                 fill(50, 255, 100, 220);
-                ellipse(markerMaxRadius, 0, 5, 5); // Clamped to edge
+                if (dist > 3000) {
+                    ellipse(markerMaxRadius, 0, 6, 6); // Clamped to edge
+                } else {
+                    ellipse(markerDist, 0, 6, 6); // Moving towards center
+                }
             }
             pop();
         }

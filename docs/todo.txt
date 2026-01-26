@@ -1,5 +1,9 @@
 # Elite Game Development TODO
 
+Create a new faction mission type called infiltration.This involves traveling to an enemy system and going to the planet surface level to find a shield generator. And destroying it
+Make this shield generator appear on the  Compass locked to the direction. So a player can find it. 
+
+
 demand missions if a commodicty is mission create demand missions that pay well
 Add Mining missions that pay well for asteroid ore.
 
