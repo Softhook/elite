@@ -25,6 +25,11 @@ global.p5 = {
         },
         fromAngle: (angle, length = 1) => {
             return global.createVector(Math.cos(angle) * length, Math.sin(angle) * length);
+        },
+        dist: (v1, v2) => {
+            const dx = v1.x - v2.x;
+            const dy = v1.y - v2.y;
+            return Math.sqrt(dx * dx + dy * dy);
         }
     }
 };
@@ -440,7 +445,8 @@ global.generateGenderedNPCName = () => ({
 global.surfaceMode = false;
 global.EVENT_LOG = jest.fn();
 global.gameStateManager = {
-    currentState: 'IN_FLIGHT'
+    currentState: 'IN_FLIGHT',
+    setState: jest.fn()
 };
 global.ThrustManager = class ThrustManager {
     constructor() {
@@ -502,7 +508,13 @@ global.createMockPlayer = (options = {}) => {
         getCargoAmount: () => (options.cargo ? options.cargo.length : 0),
         // Mock common methods
         hasUpgrade: () => false,
-        getUpgradeLevel: () => 0
+        getUpgradeLevel: () => 0,
+        handleInput: jest.fn(),
+        update: jest.fn(),
+        takeDamage: jest.fn(),
+        repair: jest.fn(),
+        addCargo: jest.fn(),
+        removeCargo: jest.fn()
     };
 };
 
