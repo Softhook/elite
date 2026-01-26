@@ -875,8 +875,10 @@ class SurfaceMode {
                 // --- BOSS BASE DETECTION (DEBUG: Works on all planets) ---
                 let isNearTarget = false;
                 if (this.targetPos) {
-                    const distToTarget = dist(wx, wy, this.targetPos.x, this.targetPos.y);
-                    if (distToTarget < 2000) {
+                    const tdx = wx - this.targetPos.x;
+                    const tdy = wy - this.targetPos.y;
+                    const distToTargetSq = tdx * tdx + tdy * tdy;
+                    if (distToTargetSq < 4000000) { // 2000^2
                         isNearTarget = true;
                     }
                 }
@@ -907,9 +909,11 @@ class SurfaceMode {
 
                     // --- SHIELD GENERATOR BASE DEFENSE ---
                     if (isNearTarget && this.targetPos) {
-                        const distToTarget = dist(wx, wy, this.targetPos.x, this.targetPos.y);
+                        const tdx = wx - this.targetPos.x;
+                        const tdy = wy - this.targetPos.y;
+                        const distToTargetSq = tdx * tdx + tdy * tdy;
                         // MASSIVELY REDUCED: Ultra-sparse defenses around target (max ~1%)
-                        defenseDensity = Math.max(defenseDensity, 0.001 + (1 - distToTarget / 2000) * 0.005);
+                        defenseDensity = Math.max(defenseDensity, 0.001 + (1 - Math.sqrt(distToTargetSq) / 2000) * 0.005);
                     }
 
                     const buildingSize = 40 + (subHash * 40);
@@ -1595,7 +1599,13 @@ class SurfaceMode {
 
             const dx = obj.pos.x - this.player.pos.x;
             const dy = obj.pos.y - this.player.pos.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            const distSq = dx * dx + dy * dy;
+
+            // Skip expensive sqrt and atan2 if object is way beyond tracking range (e.g. 5000m)
+            // markerMaxRadius is usually based on 3000m, but we can cull earlier
+            if (distSq > 25000000) continue; // 5000^2
+
+            const dist = Math.sqrt(distSq);
 
             // Calculate angle on compass
             const angle = Math.atan2(dy, dx);

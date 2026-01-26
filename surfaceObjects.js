@@ -1231,6 +1231,7 @@ class Turret extends SurfaceObject {
         const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.TURRET : {};
 
         this.range = config.RANGE || 1000;
+        this.rangeSq = this.range * this.range;
         this.detectionHeightThreshold = config.DETECTION_HEIGHT_THRESHOLD || 30; // Height above turret's ground level for detection
         this.color = color(120, 120, 120);
         this.angle = 0;
@@ -1291,9 +1292,9 @@ class Turret extends SurfaceObject {
         // Calculate aiming angle in visual space
         const dx = playerVisualX - turretVisualX;
         const dy = playerVisualY - turretVisualY;
-        const d = Math.sqrt(dx * dx + dy * dy);
+        const distSq = dx * dx + dy * dy;
 
-        if (d < this.range) {
+        if (distSq < this.rangeSq) {
             // Aim towards player's visual position
             const targetAngle = Math.atan2(dy, dx);
             let diff = targetAngle - this.angle;
@@ -1751,6 +1752,7 @@ class DefenseDrone extends SurfaceObject {
 
         // Combat
         this.range = config.DETECTION_RANGE || 600;
+        this.rangeSq = this.range * this.range;
         this.cooldown = 0;
         this.fireRate = config.FIRE_RATE || 1.5; // seconds between shots
 
@@ -1772,7 +1774,6 @@ class DefenseDrone extends SurfaceObject {
         const dx = player.pos.x - this.pos.x;
         const dy = player.pos.y - this.pos.y;
         const distSq = dx * dx + dy * dy;
-        const dist = Math.sqrt(distSq);
 
         // Detection logic:
         // 1. Must be within range (reduced to 600 for fairer gameplay)
@@ -1783,7 +1784,7 @@ class DefenseDrone extends SurfaceObject {
         const detectionAltitude = config.DETECTION_ALTITUDE || 50;
 
         const playerHeightAboveGround = (player.altitude || 0) - (this.yOffset || 0);
-        const isDetected = dist < this.range && playerHeightAboveGround > detectionAltitude;
+        const isDetected = distSq < this.rangeSq && playerHeightAboveGround > detectionAltitude;
 
         if (isDetected) {
             this.chasePlayer = true;
@@ -1808,7 +1809,7 @@ class DefenseDrone extends SurfaceObject {
             this.speed = Math.min(this.maxSpeed, this.speed + this.acceleration * dt);
 
             // Fire at player if ready and close enough
-            if (this.cooldown <= 0 && dist < this.range) {
+            if (this.cooldown <= 0 && distSq < this.rangeSq) {
                 this.fire(starSystem, player);
                 this.cooldown = this.fireRate;
             }
@@ -1818,9 +1819,9 @@ class DefenseDrone extends SurfaceObject {
             // Patrol behavior - move to patrol target
             const pdx = this.patrolTarget.x - this.pos.x;
             const pdy = this.patrolTarget.y - this.pos.y;
-            const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
+            const pdistSq = pdx * pdx + pdy * pdy;
 
-            if (pdist < 50) {
+            if (pdistSq < 2500) { // 50^2
                 // Reached patrol point, pick new one
                 this.patrolTarget.set(
                     this.pos.x + Math.random() * 2000 - 1000,
