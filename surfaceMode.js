@@ -199,6 +199,64 @@ class SurfaceMode {
         this.projectiles = [];
         this.surfaceObjects = [];
 
+        // Calculate deterministic target position for Shield Generator (Planet Boss)
+        // [DEBUG FIX] Enable for ALL planets, not just inhabited ones
+        this.targetPos = null;
+        if (this.planet) {
+            const seed = this.planet.seed || 12345;
+
+            // CANYON-READY TARGET SELECTION:
+            // Probe multiple deterministic locations and find the one that is the best "Canyon/Valley"
+            // A good canyon has a low center height and high surrounding terrain.
+            let bestScore = -Infinity;
+            let bestX = this.surfaceX;
+            let bestY = this.surfaceY;
+
+            // Search in a grid pattern around the entry point (approx 4-10km range)
+            const searchCount = 12;
+            for (let i = 0; i < searchCount; i++) {
+                // BETTER HASHING: Use a more robust mixing function to avoid directional bias
+                // This ensures targets are truly randomized around the compass
+                const hash = (v) => {
+                    v = ((v >>> 16) ^ v) * 0x45d9f3b;
+                    v = ((v >>> 16) ^ v) * 0x45d9f3b;
+                    v = (v >>> 16) ^ v;
+                    return v;
+                };
+
+                const mixedSeed = hash(seed ^ hash(i));
+                const angle = ((mixedSeed >>> 0) / 0xFFFFFFFF) * Math.PI * 2;
+                const mixedRadius = hash(mixedSeed);
+                const radius = 6000 + (Math.abs(mixedRadius % 6000)); // 6km to 12km
+
+                const tx = this.surfaceX + Math.cos(angle) * radius;
+                const ty = this.surfaceY + Math.sin(angle) * radius;
+
+                // Sample center height
+                const hCenter = this.terrain.getHeightAt(tx, ty);
+
+                // Sample 4 surrounding points to check for "Canyon Walls"
+                const wallDist = 400;
+                const h1 = this.terrain.getHeightAt(tx + wallDist, ty);
+                const h2 = this.terrain.getHeightAt(tx - wallDist, ty);
+                const h3 = this.terrain.getHeightAt(tx, ty + wallDist);
+                const h4 = this.terrain.getHeightAt(tx, ty - wallDist);
+
+                // Canyon Score: Higher is better (Wall height minus Floor height)
+                const avgWallHeight = (h1 + h2 + h3 + h4) / 4;
+                const canyonScore = avgWallHeight - hCenter;
+
+                if (canyonScore > bestScore) {
+                    bestScore = canyonScore;
+                    bestX = tx;
+                    bestY = ty;
+                }
+            }
+
+            this.targetPos = createVector(bestX, bestY);
+            console.log(`[CanyonRun] Target found in valley! Score: ${Math.round(bestScore)}, Height: ${Math.round(this.terrain.getHeightAt(bestX, bestY))}`);
+        }
+
         // NOTE: Heavy terrain operations (generateMesh, updateBuffer, _spawnObjects)
         // are deferred to _updateTransition() to run during the fade animation,
         // preventing the game from freezing during entry.
@@ -789,6 +847,7 @@ class SurfaceMode {
                 }
 
                 // Compute cell values FIRST (needed for both inhabited and uninhabited logic)
+                let obj = null;
                 const x = activeGridX;
                 const y = activeGridY;
                 const cellHash = (Math.abs(Math.sin(x * 12.9898 + y * 78.233 + planetSeed) * 43758.5453) % 1);
@@ -798,95 +857,94 @@ class SurfaceMode {
                 const subHash = (cellHash * 123.45) % 1;
                 const objSeed = cellHash * 100000;
 
-                let obj;
+                // --- 1. SHIELD GENERATOR (Planet Boss) ---
+                // [CRITICAL FIX] Check for generator spawning FIRST, before zone or habitation checks.
+                // This ensures it ALWAYS spawns in its calculated valley, even on wilderness/uninhabited planets.
+                const isTargetCell = this.targetPos &&
+                    Math.abs(wx - this.targetPos.x) < cellSize / 2 &&
+                    Math.abs(wy - this.targetPos.y) < cellSize / 2;
+
+                if (isTargetCell && typeof ShieldGenerator !== 'undefined') {
+                    obj = new ShieldGenerator(wx, wy);
+                    obj.yOffset = h;
+                    this.surfaceObjects.push(obj);
+                    this.objectCache.set(cellKey, obj);
+                    continue; // Skip the rest for this cell
+                }
+
+                // --- BOSS BASE DETECTION (DEBUG: Works on all planets) ---
+                let isNearTarget = false;
+                if (this.targetPos) {
+                    const distToTarget = dist(wx, wy, this.targetPos.x, this.targetPos.y);
+                    if (distToTarget < 2000) {
+                        isNearTarget = true;
+                    }
+                }
 
                 // 0. Habitation Check - Uninhabited planets spawn secret caches instead
-                if (this.planet && !this.planet.isInhabited) {
+                // [DEBUG FIX] If near target, we ignore the habitability check to spawn the boss base
+                if (this.planet && !this.planet.isInhabited && !isNearTarget) {
                     // SECRET CACHE SPAWNING for uninhabited planets
-                    // EXTREMELY rare (~0.00005 per cell) - most planets have a few caches
                     if (cellHash < 0.00005 && typeof SecretCache !== 'undefined') {
                         obj = new SecretCache(wx, wy, objSeed);
-                        obj.yOffset = h;
-                        this.surfaceObjects.push(obj);
-                        this.objectCache.set(cellKey, obj);
-                    } else {
-                        this.objectCache.set(cellKey, null);
                     }
-                    continue;
-                }
+                } else {
+                    // Settlement Zones: Large areas where buildings cluster
+                    const settlementNoise = noise(activeGridX * 0.015 + 500, activeGridY * 0.015 + 500);
+                    const isSettlementZone = settlementNoise > 0.60;
+                    const isHighTerrain = h > 100;
 
-                // Settlement Zones: Large areas where buildings cluster
-                // SPARSER: Raised threshold from 0.45 to 0.60 for much larger wilderness zones
-                const settlementNoise = noise(activeGridX * 0.015 + 500, activeGridY * 0.015 + 500);
-                const isSettlementZone = settlementNoise > 0.60;
+                    // Get civilization color and economy type for buildings
+                    const civColor = (this.planet && this.planet.cityLightsColor) ? this.planet.cityLightsColor : null;
+                    const economyType = this.planet?.economyType || 'Service';
 
-                const isHighTerrain = h > 100; // Lowered threshold for more defenses (was 120)
+                    // TECH LEVEL affects defense density (0-5 scale)
+                    // [MASSIVE REDUCTION] Scaled down further for extreme sparse gameplay
+                    const techLevel = this.planet?.techLevel || 3;
+                    let techModifier = 0.0002 + (techLevel / 5) * 0.0003;
+                    const militaryBonus = (economyType === 'Military') ? 0.001 : 0;
+                    let defenseDensity = techModifier + militaryBonus;
 
-                // Get civilization color and economy type for buildings
-                const civColor = (this.planet && this.planet.cityLightsColor) ? this.planet.cityLightsColor : null;
-                const economyType = this.planet?.economyType || 'Service';
+                    // --- SHIELD GENERATOR BASE DEFENSE ---
+                    if (isNearTarget && this.targetPos) {
+                        const distToTarget = dist(wx, wy, this.targetPos.x, this.targetPos.y);
+                        // MASSIVELY REDUCED: Ultra-sparse defenses around target (max ~1%)
+                        defenseDensity = Math.max(defenseDensity, 0.001 + (1 - distToTarget / 2000) * 0.005);
+                    }
 
-                // TECH LEVEL affects defense density (0-5 scale)
-                // Higher tech = more turrets and drones
-                const techLevel = this.planet?.techLevel || 3;
-                const techModifier = 0.05 + (techLevel / 5) * 0.25; // Range: 0.05 to 0.30
-                // Military economies get extra defenses
-                const militaryBonus = (economyType === 'Military') ? 0.15 : 0;
-                const defenseDensity = Math.min(0.40, techModifier + militaryBonus);
+                    const buildingSize = 40 + (subHash * 40);
 
-                const buildingSize = 40 + (subHash * 40);
-
-                // --- 1. Strategic Defense (High Ground) ---
-                // Turrets and drones guard the peaks - density varies by tech level
-                if (isHighTerrain) {
-                    if (cellHash < defenseDensity) {
-                        // Higher tech = more turrets, lower tech = more drones
-                        const turretRatio = 0.3 + (techLevel / 5) * 0.4; // 0.3-0.7
-                        // Reduced drone spawn rate by half as requested
-                        if (subHash < (1 - turretRatio) * 0.5) {
-                            obj = new DefenseDrone(wx, wy);
-                        } else {
-                            obj = new Turret(wx, wy);
+                    // --- 1. Strategic Defense (High Ground) ---
+                    if (isHighTerrain || isNearTarget) {
+                        if (cellHash < defenseDensity) {
+                            let turretRatio = 0.3 + (techLevel / 5) * 0.4;
+                            if (subHash < (1 - turretRatio) * 0.5) obj = new DefenseDrone(wx, wy);
+                            else obj = new Turret(wx, wy);
+                        }
+                    }
+                    // --- 2. Settlements (Low/Mid Ground) ---
+                    else if (isSettlementZone) {
+                        if ((Math.abs(activeGridX) + Math.abs(activeGridY)) % 2 === 0) {
+                            if (cellHash < 0.10 || isNearTarget) {
+                                if (subHash < 0.03 && !isNearTarget) {
+                                    const stSize = 100 + (subHash * 1000);
+                                    obj = new SurfaceStation(wx, wy, stSize, civColor);
+                                } else {
+                                    obj = this._createEconomyBuilding(economyType, wx, wy, buildingSize, objSeed);
+                                }
+                            }
+                        }
+                    }
+                    // --- 3. Outskirts / Wilderness ---
+                    else {
+                        if (cellHash < 0.003) {
+                            if (subHash < 0.25) obj = new DefenseDrone(wx, wy);
+                            else obj = this._createEconomyBuilding(economyType, wx, wy, 30, objSeed);
                         }
                     }
                 }
-                // --- 2. Settlements (Low/Mid Ground) ---
-                else if (isSettlementZone) {
-                    // CHECKERBOARD SPACING: Strict Enforcement
-                    // Skip 'odd' cells to guarantee empty space between buildings
-                    if ((Math.abs(activeGridX) + Math.abs(activeGridY)) % 2 !== 0) {
-                        this.objectCache.set(cellKey, null);
-                        continue;
-                    }
 
-                    // SPARSER: Reduced density from 0.20 to 0.10
-                    if (cellHash < 0.10) {
-                        // Shield Generator: Exact spawn
-                        if (activeGridX === 2 && activeGridY === 2 && typeof ShieldGenerator !== 'undefined') {
-                            obj = new ShieldGenerator(wx, wy);
-                        }
-                        // Surface Station: The "Capital" or "Center" (Rare)
-                        else if (subHash < 0.03) { // 3% of buildings
-                            const stSize = 100 + (subHash * 1000);
-                            obj = new SurfaceStation(wx, wy, stSize, civColor);
-                        }
-                        // ECONOMY-SPECIFIC BUILDINGS
-                        else {
-                            obj = this._createEconomyBuilding(economyType, wx, wy, buildingSize, objSeed);
-                        }
-                    }
-                }
-                // --- 3. Outskirts / Wilderness ---
-                else {
-                    // Very rare rogue buildings or pirates (reduced from 0.5%)
-                    if (cellHash < 0.003) {
-                        // Reduced drone spawn rate by half (was 0.5)
-                        if (subHash < 0.25) obj = new DefenseDrone(wx, wy);
-                        else obj = this._createEconomyBuilding(economyType, wx, wy, 30, objSeed);
-                    }
-                }
-
-                // If no object created, skip adding to list
+                // If an object was created, finalize and cache it
                 if (obj) {
                     obj.yOffset = h;
                     this.surfaceObjects.push(obj);
@@ -894,7 +952,6 @@ class SurfaceMode {
                 } else {
                     this.objectCache.set(cellKey, null);
                 }
-
             }
         }
 
@@ -1484,7 +1541,44 @@ class SurfaceMode {
         line(0, 0, markerMaxRadius, 0);
         pop();
 
-        // Surface object markers (Compass)
+        // 1. Mission Waypoint (Shield Generator) - Locked to edge
+        if (this.targetPos) {
+            const dx = this.targetPos.x - this.player.pos.x;
+            const dy = this.targetPos.y - this.player.pos.y;
+            const distSq = dx * dx + dy * dy;
+
+            // Only show if generator not yet destroyed (or check if objective active)
+            // We'll check if it's found in surfaceObjects and destroyed
+            let targetDestroyed = false;
+            for (const obj of this.surfaceObjects) {
+                if (((obj.constructor && obj.constructor.name === 'ShieldGenerator') || obj.isTarget) && obj.destroyed) {
+                    targetDestroyed = true;
+                    break;
+                }
+            }
+
+            if (!targetDestroyed) {
+                const angle = Math.atan2(dy, dx);
+                const dist = Math.sqrt(distSq);
+                const pulse = (Math.sin(millis() * 0.01) + 1) * 0.5;
+
+                // HYBRID COMPASS: Lock to edge when far (>3000m), move to center when near
+                // This provides waypoint navigation that transitions into tactical targeting
+                const targetMarkerDist = (dist > 3000)
+                    ? markerMaxRadius
+                    : map(dist, 0, 3000, 0, markerMaxRadius, true);
+
+                push();
+                rotate(angle);
+                noStroke();
+                // Pulsing red waypoint marker
+                fill(255, 0, 0, 200 + pulse * 55);
+                ellipse(targetMarkerDist, 0, 10 + pulse * 2, 10 + pulse * 2);
+                pop();
+            }
+        }
+
+        // 2. Local Tactical Markers (Compass)
         for (const obj of this.surfaceObjects) {
             if (obj.destroyed) continue;
 
@@ -1497,6 +1591,7 @@ class SurfaceMode {
             const isCache = obj.isCache === true;
 
             if (!isStation && !isShieldGen && !isTurret && !isDrone && !isCache) continue;
+            if (isShieldGen) continue; // Handled by persistent waypoint above
 
             const dx = obj.pos.x - this.player.pos.x;
             const dy = obj.pos.y - this.player.pos.y;

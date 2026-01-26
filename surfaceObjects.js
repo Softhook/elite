@@ -1630,7 +1630,7 @@ class SurfaceStation extends SurfaceObject {
  */
 class ShieldGenerator extends SurfaceObject {
     constructor(x, y) {
-        super(x, y, 60);
+        super(x, y, 100); // Increased size for better air visibility
         this.health = 500;
         this.maxHealth = 500;
         this.lastHitTime = 0;
