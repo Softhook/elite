@@ -36,7 +36,7 @@ const SURFACE_CONFIG = {
     DRONE: {
         DETECTION_RANGE: 800,      // Units
         DETECTION_ALTITUDE: 50,    // Units above terrain
-        FLYING_HEIGHT: 80,         // Units above ground
+        FLYING_HEIGHT: 60,         // Units above ground (Minimum 50 as requested)
         MAX_SPEED: 150,
         ACCELERATION: 200,
         TURN_RATE: 2.5,
@@ -108,6 +108,7 @@ class SurfaceMode {
         this.altitude = SURFACE_CONFIG.DEFAULT_ALTITUDE;
         this.objectCache = new Map(); // Cache for persistent objects
         this.debugMode = false; // Set to true to spawn only one turret for testing
+        this.isLanded = false; // Track landed state
 
         // Player physics
         this.playerAngle = -Math.PI / 2; // Start facing UP
@@ -295,6 +296,7 @@ class SurfaceMode {
         this.transitionStartTime = millis();
         this.transitionProgress = 0;
         this._terrainReady = false; // Flag for deferred initialization
+        this.isLanded = false;
 
         // Mute space ambient sounds
         if (typeof ambientSoundManager !== 'undefined') {
@@ -347,6 +349,7 @@ class SurfaceMode {
         this.state = SURFACE_STATE.EXITING;
         this.transitionStartTime = millis();
         this.transitionProgress = 0;
+        this.isLanded = false; // Reset landed state on exit
 
         // Change music chords on ascent (start of transition)
         if (typeof spaceMusicManager !== 'undefined') {
@@ -368,6 +371,7 @@ class SurfaceMode {
 
             // Clear invulnerability - player is now back in space
             this.player.isDockedAndInvulnerable = false;
+            this.player.weaponsDisabled = false; // Ensure weapons are re-enabled
 
             // Clear surface mode combat references to prevent guard confusion
             // Guards check principal.lastAttacker - if this references a surface entity
@@ -576,8 +580,30 @@ class SurfaceMode {
         // to prevent sticky debuffs from space storms or surface effects.
         this.player.targetingDisruption = 0;
         this.player.shieldsDisabled = false;
+
+        // Handle weapon disabling based on landed status - reset first, then override if landed
         this.player.weaponsDisabled = false;
+
         this.player.inNebula = false;
+
+        // Reset landed state for this frame, will be checked below
+        // Actually, we maintain state and update it
+        const currentGroundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
+        const minAbsoluteAlt = currentGroundH + SURFACE_CONFIG.MIN_ALTITUDE;
+
+        // Detect landing
+        // If altitude is very close to minimum, we are landed
+        const LANDING_TOLERANCE = 1.0; // Tolerance for floating point comparison
+        const isNowLanded = (this.altitude <= minAbsoluteAlt + LANDING_TOLERANCE);
+
+        // Transition check: if triggering landing this frame
+        if (isNowLanded && !this.isLanded) {
+            if (typeof soundManager !== 'undefined') {
+                soundManager.playSound('land');
+            }
+        }
+
+        this.isLanded = isNowLanded;
 
         // Store previous position for collision rollback
         const prevX = this.player.pos.x;

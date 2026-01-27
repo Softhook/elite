@@ -1364,6 +1364,21 @@ class Player {
     /** Fires the current weapon based on its type using WeaponSystem. */
     fireWeapon(target = null) {
 
+        // Check if landed on planet surface (Safety Lock)
+        // Access global surfaceMode instance if available
+        if (typeof surfaceMode !== 'undefined' && surfaceMode &&
+            typeof surfaceMode.isActive === 'function' && surfaceMode.isActive() &&
+            surfaceMode.isLanded) {
+
+            if (typeof uiManager !== 'undefined') {
+                uiManager.addMessage("Weapons Safety: Landed", [200, 200, 200], 2000);
+            }
+            if (typeof soundManager !== 'undefined') {
+                soundManager.playSound('error');
+            }
+            return false;
+        }
+
         // Check if weapons are disabled by EMP nebula
         if (this.weaponsDisabled) {
             PLAYER_LOG("Weapons disabled by EMP nebula!");

@@ -1766,7 +1766,7 @@ class DefenseDrone extends SurfaceObject {
 
         // Simple stealth detection: player detected if at or above drone altitude
         // This makes stealth visually intuitive: stay below enemies to hide
-        const droneAltitude = this.yOffset || 0;
+        const droneAltitude = this.altitude || (this.yOffset || 0);
         const playerAltitude = player.altitude || 0;
 
 
@@ -1840,8 +1840,10 @@ class DefenseDrone extends SurfaceObject {
         // Update yOffset and altitude based on terrain
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.terrain) {
             const terrainHeight = surfaceMode.terrain.getHeightAt(this.pos.x, this.pos.y);
-            this.yOffset = terrainHeight;
             this.altitude = terrainHeight + this.flyingHeight;
+            // Visual offset must match altitude so projectiles fire from the correct logical height
+            // and the player can verify they are safely below the drone
+            this.yOffset = this.altitude;
         }
 
         // Apply drag
