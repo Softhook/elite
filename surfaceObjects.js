@@ -1254,6 +1254,7 @@ class Turret extends SurfaceObject {
         const turretAltitude = this.yOffset || 0;
         const playerAltitude = player.altitude || 0;
 
+
         const isDetected = playerAltitude >= turretAltitude;
 
         // Only rotate and fire if player is detected
@@ -1767,6 +1768,7 @@ class DefenseDrone extends SurfaceObject {
         // This makes stealth visually intuitive: stay below enemies to hide
         const droneAltitude = this.yOffset || 0;
         const playerAltitude = player.altitude || 0;
+
 
         const isDetected = distSq < this.rangeSq && playerAltitude >= droneAltitude;
 

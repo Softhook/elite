@@ -455,7 +455,12 @@ class SurfaceMode {
 
             // Altitude control - BEFORE physics update so player.altitude uses current value
             this.altitude += this.altitudeInput * SURFACE_CONFIG.CLIMB_SPEED * dt;
-            this.altitude = constrain(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE);
+
+            // Constrain altitude relative to terrain (not absolute)
+            // Player must maintain MIN_ALTITUDE clearance above ground
+            const currentGroundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
+            const minAbsoluteAlt = currentGroundH + SURFACE_CONFIG.MIN_ALTITUDE;
+            this.altitude = constrain(this.altitude, minAbsoluteAlt, SURFACE_CONFIG.MAX_ALTITUDE);
 
             this._updatePhysics(dt);
 
@@ -582,13 +587,12 @@ class SurfaceMode {
         this.player.update();
 
         // Terrain collision check - prevent flying into canyon walls
-        // Player maintains constant absolute altitude (this.altitude)
-        // If terrain at new position is higher than player's altitude, block movement
-
+        // Check if new terrain would require player to be above current altitude
         const newGroundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
+        const requiredMinAlt = newGroundH + SURFACE_CONFIG.MIN_ALTITUDE;
 
-        // If new terrain is higher than player's absolute altitude, block movement
-        if (newGroundH > this.altitude) {
+        // If player's current altitude is below required minimum at new position, block movement
+        if (this.altitude < requiredMinAlt) {
             // Rollback to previous position - can't fly through walls
             this.player.pos.x = prevX;
             this.player.pos.y = prevY;
@@ -1531,52 +1535,117 @@ class SurfaceMode {
         strokeWeight(1);
         rect(barX, barY, barWidth, barHeight, 3);
 
-        // Absolute Altitude (height above sea level / datum)
-        const absAlt = Math.max(0, this.player?.altitude || 0);
-        const maxDisplayAlt = 500; // Scale for display (0-500m range)
+        // Get terrain height at player position
+        const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
 
-        // Turret detection zone (red transparent bar)
-        // Calculate detection threshold based on nearby turrets
-        let maxTurretHorizon = 0;
-        let turretCount = 0;
+        // Player's absolute altitude (terrain is now 0-500, so no negative values)
+        const absAlt = Math.max(0, this.player?.altitude || 0);
+        const maxDisplayAlt = 500; // Display range (0-500m)
+
+        // Find highest nearby enemy altitude (detection threshold)
+        let maxEnemyAlt = 0;
+        let nearbyEnemies = 0;
+        const detectionRange = 800; // Check enemies within this range
 
         if (this.surfaceObjects && this.surfaceObjects.length > 0) {
             for (const obj of this.surfaceObjects) {
-                if (obj && obj.detectionHeightThreshold !== undefined && !obj.destroyed) {
-                    const turretHorizon = (obj.yOffset || 0) + (obj.detectionHeightThreshold || 30);
-                    maxTurretHorizon = Math.max(maxTurretHorizon, turretHorizon);
-                    turretCount++;
+                if (obj && (obj.constructor.name === 'Turret' || obj.constructor.name === 'DefenseDrone') && !obj.destroyed) {
+                    // Check if enemy is nearby
+                    const dx = obj.pos.x - this.player.pos.x;
+                    const dy = obj.pos.y - this.player.pos.y;
+                    const distSq = dx * dx + dy * dy;
+
+                    if (distSq < detectionRange * detectionRange) {
+                        const enemyAlt = obj.yOffset || 0;
+                        maxEnemyAlt = Math.max(maxEnemyAlt, enemyAlt);
+                        nearbyEnemies++;
+                    }
                 }
             }
         }
 
-        // Draw red transparent bar for detection zone (where turrets CAN detect)
-        if (turretCount > 0) {
-            // Detection threshold - turrets can detect ABOVE this line
-            const detectionThreshold = Math.min(maxTurretHorizon, maxDisplayAlt);
-            const thresholdY = barY + barHeight - (barHeight * detectionThreshold / maxDisplayAlt);
+        // Determine detection status
+        const isDetected = nearbyEnemies > 0 && absAlt >= maxEnemyAlt;
 
-            // Red zone extends from threshold UP to top of bar (detection danger zone)
-            const zoneHeight = thresholdY - barY;
+        // Draw ground level indicator
+        if (groundH >= 0 && groundH <= maxDisplayAlt) {
+            const groundY = barY + barHeight - (barHeight * groundH / maxDisplayAlt);
+            stroke(100, 200, 100);
+            strokeWeight(2);
+            line(barX, groundY, barX + barWidth, groundY);
 
-            // Semi-transparent red zone from threshold to top
-            fill(255, 80, 80, 80);
+            // Label
             noStroke();
-            rect(barX + 2, barY + 2, barWidth - 4, zoneHeight);
+            fill(100, 200, 100);
+            textSize(9);
+            textAlign(LEFT, CENTER);
+            text('GND', barX + barWidth + 5, groundY);
         }
 
-        // Player altitude indicator (red line)
+        // Draw detection threshold (highest enemy relative altitude) - yellow/orange dashed line
+        if (nearbyEnemies > 0 && maxEnemyAlt >= 0 && maxEnemyAlt <= maxDisplayAlt) {
+            const detectionY = barY + barHeight - (barHeight * maxEnemyAlt / maxDisplayAlt);
+
+            // Dashed line
+            stroke(255, 200, 0);
+            strokeWeight(2);
+            drawingContext.setLineDash([5, 5]);
+            line(barX, detectionY, barX + barWidth, detectionY);
+            drawingContext.setLineDash([]);
+
+            // Red zone above detection threshold (danger zone)
+            fill(255, 80, 80, 60);
+            noStroke();
+            const dangerZoneHeight = detectionY - barY;
+            if (dangerZoneHeight > 0) {
+                rect(barX + 2, barY + 2, barWidth - 4, dangerZoneHeight);
+            }
+
+            // Label
+            noStroke();
+            fill(255, 200, 0);
+            textSize(9);
+            textAlign(LEFT, CENTER);
+            text('DET', barX + barWidth + 5, detectionY);
+        }
+
+        // Player altitude indicator (color-coded by detection status)
         const playerAltY = barY + barHeight - (barHeight * Math.min(absAlt, maxDisplayAlt) / maxDisplayAlt);
-        stroke(255, 50, 50);
+
+        // Color: Green if hidden, Red if detected
+        if (isDetected) {
+            stroke(255, 50, 50);
+            fill(255, 50, 50);
+        } else {
+            stroke(50, 255, 50);
+            fill(50, 255, 50);
+        }
         strokeWeight(3);
         line(barX - 5, playerAltY, barX + barWidth + 5, playerAltY);
 
+        // Player altitude triangle marker
+        noStroke();
+        triangle(
+            barX + barWidth + 8, playerAltY,
+            barX + barWidth + 15, playerAltY - 4,
+            barX + barWidth + 15, playerAltY + 4
+        );
+
+        // Labels
         noStroke();
         fill(255);
         textSize(11);
         textAlign(CENTER, TOP);
         text('ALT', barX + barWidth / 2, barY - 18);
-        text(Math.floor(absAlt), barX + barWidth / 2, barY + barHeight + 5);
+
+        // Show absolute altitude value with detection status
+        if (isDetected) {
+            fill(255, 100, 100);
+            text(Math.floor(absAlt) + ' [!]', barX + barWidth / 2, barY + barHeight + 5);
+        } else {
+            fill(100, 255, 100);
+            text(Math.floor(absAlt), barX + barWidth / 2, barY + barHeight + 5);
+        }
 
         // Compass - positioned at bottom-right corner (same as minimap in space), sized to match minimap
         const compassSize = 250; // 

@@ -113,7 +113,7 @@ class SurfaceTerrain {
         const nz = featureRand * 0.6;
 
         const noiseVal = noise(nx, ny, nz);
-        const height = (noiseVal - 0.5) * 500;
+        const height = noiseVal * 500; // 0-500 range (no negative terrain)
 
         this.heightCache.set(key, height);
         return height;
@@ -182,8 +182,8 @@ class SurfaceTerrain {
 
                 const noiseVal = noise(nx, ny, nz);
 
-                // Height from noise
-                const height = (noiseVal - 0.5) * 500;
+                // Height from noise (0-500 range, no negative terrain)
+                const height = noiseVal * 500;
 
                 // Color from palette (using raw RGB, no p5.Color allocation)
                 // Power curve pushes noise towards extremes
