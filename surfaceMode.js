@@ -1373,70 +1373,91 @@ class SurfaceMode {
         // Get sun direction from planet position (sun at origin)
         const sunAngle = this._getSunAngle();
 
-        // 1. Draw shadow on terrain - offset based on sun direction and altitude
-        // Shadow should be smaller than ship and realistic to altitude
-        // At low altitude, shadow is close and similar size; at high altitude, shadow is far and much smaller
+        // 1. Draw shadow on terrain - realistic shadow projection
+        // Physics: Shadow cast by sun at an angle
+        // - At minimum altitude: Shadow directly beneath ship (offset = 0)
+        // - Higher altitude: Shadow offset from ship based on sun angle and height
 
-        // Shadow offset increases with altitude (higher = shadow further from ship position)
-        const shadowOffset = SURFACE_CONFIG.SHADOW_BASE_OFFSET +
-            (this.altitude * SURFACE_CONFIG.SHADOW_ALTITUDE_SCALE);
+        // Calculate radar altitude (clearance above ground)
+        const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
+        const radarAlt = this.altitude - groundH;
+
+        // Shadow offset: proportional to altitude
+        // At minimum altitude (10): offset = 0 (directly beneath ship)
+        // At altitude 100: offset ≈ 13.5 units
+        // At altitude 200: offset ≈ 28.5 units
+        const shadowOffset = Math.max(0, (radarAlt - SURFACE_CONFIG.MIN_ALTITUDE) * SURFACE_CONFIG.SHADOW_ALTITUDE_SCALE);
+
+        // DEBUG: Log when player is at low altitude
+        if (radarAlt < 20) {
+            console.log(`[SHADOW] absAlt=${this.altitude.toFixed(1)}, groundH=${groundH.toFixed(1)}, radarAlt=${radarAlt.toFixed(1)}, shadowOffset=${shadowOffset.toFixed(2)}`);
+        }
+
         const shadowOffsetX = Math.cos(sunAngle + Math.PI) * shadowOffset;
         const shadowOffsetY = Math.sin(sunAngle + Math.PI) * shadowOffset;
 
-        // Shadow size should be smaller than ship, and shrink more dramatically with altitude
-        // At minimum altitude: shadow is ~0.7x ship size
-        // At maximum altitude: shadow is ~0.3x ship size
-        const shadowScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 0.7, 0.3);
+        // Shadow size: Always smaller than ship, shrinks with altitude
+        // At minimum altitude (10): 0.6x ship size (significantly smaller than ship)
+        // At high altitude (200): 0.4x ship size (tiny due to perspective)
+        const shadowScale = map(radarAlt, SURFACE_CONFIG.MIN_ALTITUDE, 200, 0.6, 0.4);
 
         // Hide shadow when player is destroyed or dying/exploding
         if (!this.player.destroyed && !this.player.isDying) {
             push();
-            // Position shadow relative to ship position, offset by sun direction
+
+            // Position shadow at offset from ship based on sun angle and altitude
+            // The offset is calculated from radar altitude, representing the horizontal
+            // displacement of the shadow due to sun angle.
+            // We draw at this exact World X/Y.
             const shadowX = this.player.pos.x + shadowOffsetX;
             const shadowY = this.player.pos.y + shadowOffsetY;
+
             translate(shadowX, shadowY);
 
-            // Apply terrain height at shadow position so it follows the ground
-            const terrainH = this._getTerrainHeightAt(shadowX, shadowY);
-            translate(0, -terrainH);
-
+            // Rotate to match ship orientation
             rotate(this.player.angle);
-            scale(shadowScale);  // Shadow is smaller than ship
 
-            // Shadow alpha: softer at higher altitudes
-            const shadowAlpha = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 80, 15);
+            // Shadow darkness: darker when close to ground, lighter when high
+            const shadowAlpha = map(radarAlt, SURFACE_CONFIG.MIN_ALTITUDE, 200, 140, 40);
             fill(0, 0, 0, shadowAlpha);
             noStroke();
 
-            // Draw shadow using first vertex layer of ship definition
-            // Try to get ship def from player's cache first, then fall back to SHIP_DEFINITIONS lookup
+            // Draw shadow using ship vertices if available
+            // Apply counter-scale to shadow to keep it consistent with ship
+            // (Ship is drawn with counter-scale to maintain screen size)
+            if (typeof counterScale !== 'undefined') {
+                scale(counterScale);
+            }
+
             const shipTypeName = this.player.shipTypeName || 'Sidewinder';
             let shipDef = this.player._cachedShipDef ||
                 (typeof SHIP_DEFINITIONS !== 'undefined' ? SHIP_DEFINITIONS[shipTypeName] : null);
-            const shipScale = this.player.size / 25;
 
-            // Get vertex data - handle both new vertexLayers format and legacy vertexData format
+            // Get vertex data
             let vertices = null;
             if (shipDef) {
                 if (shipDef.vertexLayers && shipDef.vertexLayers.length > 0 && shipDef.vertexLayers[0].vertexData) {
-                    // New format: vertexLayers[0].vertexData
                     vertices = shipDef.vertexLayers[0].vertexData;
                 } else if (shipDef.vertexData && shipDef.vertexData.length > 0) {
-                    // Legacy format: direct vertexData array (e.g., Sidewinder)
                     vertices = shipDef.vertexData;
                 }
             }
 
             if (vertices && vertices.length > 0) {
+                // Draw shadow using ship vertices, scaled by shadowScale
+                const shipScale = this.player.size / 25;
+                const shadowVertexScale = shipScale * 25 * shadowScale;
                 beginShape();
                 for (const v of vertices) {
-                    vertex(v.x * shipScale * 25, v.y * shipScale * 25);
+                    vertex(v.x * shadowVertexScale, v.y * shadowVertexScale);
                 }
                 endShape(CLOSE);
             } else {
-                // Fallback to ellipse if no vertex data available
-                ellipse(0, 0, this.player.size, this.player.size * 0.8);
+                // Fallback to ellipse if no vertex data
+                const shadowSize = this.player.size * shadowScale;
+                ellipse(0, 0, shadowSize, shadowSize * 0.8);
             }
+
             pop();
         }
 
