@@ -514,7 +514,9 @@ class UIMarket {
 
         switch (btn.action) {
             case 'buy':
-                market.buy(btn.commodity, 1, player);
+                if (market.buy(btn.commodity, 1, player)) {
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                }
                 break;
             case 'buyAll':
                 const item = market.getPrices().find(c => c.name === btn.commodity);
@@ -526,16 +528,22 @@ class UIMarket {
                 const quantity = Math.min(availableSpace, maxAffordable, availableStock);
 
                 if (quantity > 0) {
-                    market.buy(btn.commodity, quantity, player);
+                    if (market.buy(btn.commodity, quantity, player)) {
+                        if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                    }
                 }
                 break;
             case 'sell':
-                market.sell(btn.commodity, 1, player);
+                if (market.sell(btn.commodity, 1, player)) {
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                }
                 break;
             case 'sellAll':
                 const cargo = player.cargo.find(c => c.name === btn.commodity);
                 if (cargo && cargo.quantity > 0) {
-                    market.sell(btn.commodity, cargo.quantity, player);
+                    if (market.sell(btn.commodity, cargo.quantity, player)) {
+                        if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+                    }
                 }
                 break;
         }
@@ -567,7 +575,7 @@ class UIMarket {
                 if (player.credits >= price && player.getCargoAmount() < player.cargoCapacity) {
                     player.spendCredits(price);
                     player.addCargo(btn.commodity, 1);
-                    if (soundManager) soundManager.playSound('buyConfirm');
+                    if (soundManager) soundManager.playSound('click');
                     if (hud) hud.addMessage(`Bought 1 ${btn.commodity} for ${price} credits`, [100, 200, 255]);
                     logTrade();
                 } else {
@@ -585,7 +593,7 @@ class UIMarket {
                     const totalCost = price * qty;
                     player.spendCredits(totalCost);
                     player.addCargo(btn.commodity, qty);
-                    if (soundManager) soundManager.playSound('buyConfirm');
+                    if (soundManager) soundManager.playSound('click');
                     if (hud) hud.addMessage(`Bought ${qty} ${btn.commodity} for ${totalCost} credits`, [100, 200, 255]);
                     logTrade();
                 } else {
@@ -600,7 +608,7 @@ class UIMarket {
                 if (cargo?.quantity > 0) {
                     player.addCredits(price);
                     player.removeCargo(btn.commodity, 1);
-                    if (soundManager) soundManager.playSound('sellConfirm');
+                    if (soundManager) soundManager.playSound('click');
                     if (hud) hud.addMessage(`Sold 1 ${btn.commodity} for ${price} credits`, [100, 255, 100]);
                     logTrade();
                 } else {
@@ -616,7 +624,7 @@ class UIMarket {
                     const total = price * qty;
                     player.addCredits(total);
                     player.removeCargo(btn.commodity, qty);
-                    if (soundManager) soundManager.playSound('sellConfirm');
+                    if (soundManager) soundManager.playSound('click');
                     if (hud) hud.addMessage(`Sold ${qty} ${btn.commodity} for ${total} credits`, [100, 255, 100]);
                     logTrade();
                 } else {

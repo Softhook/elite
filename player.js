@@ -424,7 +424,7 @@ class Player {
             if (typeof saveGame === 'function') saveGame();
             // Play mission accept sound
             if (soundManager?.playSound) {
-                soundManager.playSound('missionAccept');
+                soundManager.playSound('click');
             }
             return true; // Success
         } else {

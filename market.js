@@ -590,9 +590,7 @@ class Market {
         }
 
         // Play sell confirm sound
-        if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
-            soundManager.playSound('sellConfirm');
-        }
+
 
         return true;
     }
@@ -734,9 +732,7 @@ class Market {
             saveGame();
         }
 
-        if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
-            soundManager.playSound('buyConfirm');
-        }
+
 
         return true;
     }
