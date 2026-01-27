@@ -130,6 +130,42 @@ class SurfaceMode {
         return this.state !== SURFACE_STATE.INACTIVE;
     }
 
+    // ============================================
+    // DRY Helper Methods - Shared Calculations
+    // ============================================
+
+    /**
+     * Calculate perspective scale factor based on current altitude
+     * Higher altitude = zoomed out (smaller scale), lower = zoomed in (larger scale)
+     * @returns {number} Scale factor (1.2 at min altitude, 0.6 at max altitude)
+     * @private
+     */
+    _getPerspectiveScale() {
+        return map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
+    }
+
+    /**
+     * Calculate counter-scale factor to maintain constant screen size for UI elements
+     * This is the inverse of perspective scale - objects drawn with this stay same size
+     * @returns {number} Counter-scale factor (inverse of perspective scale)
+     * @private
+     */
+    _getCounterScale() {
+        return 1 / this._getPerspectiveScale();
+    }
+
+    /**
+     * Clear shadow effects from drawing context to prevent visual artifacts
+     * Many drawing functions need to start with clean shadows
+     * @private
+     */
+    _clearShadow() {
+        if (typeof drawingContext !== 'undefined') {
+            drawingContext.shadowBlur = 0;
+            drawingContext.shadowColor = 'transparent';
+        }
+    }
+
     /**
      * Check if player can enter surface mode
      */
@@ -566,7 +602,7 @@ class SurfaceMode {
             return { left: 0, right: width, top: 0, bottom: height };
         }
 
-        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
+        const perspectiveScale = this._getPerspectiveScale();
         const viewportWidth = (width / perspectiveScale) + padding * 2;
         const viewportHeight = (height / perspectiveScale) + padding * 2;
 
@@ -735,7 +771,7 @@ class SurfaceMode {
 
         // 2. Perspective scaling (everything world-side scales together)
         // We still use altitude for zoom, but it doesn't affect the coordinate scale ratio anymore
-        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
+        const perspectiveScale = this._getPerspectiveScale();
         scale(perspectiveScale);
 
         // 3. World translation (camera follows player)
@@ -1130,15 +1166,11 @@ class SurfaceMode {
         const viewport = this._getViewportBounds(100);
 
         // Calculate counter-scale so projectiles stay constant screen size
-        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
-        const counterScale = 1 / perspectiveScale;
+        const counterScale = this._getCounterScale();
 
         push();
         // Clear shadow settings to prevent visual artifacts
-        if (typeof drawingContext !== 'undefined') {
-            drawingContext.shadowBlur = 0;
-            drawingContext.shadowColor = 'transparent';
-        }
+        this._clearShadow();
 
         for (const proj of this.starSystem.projectiles) {
             if (proj && !proj.destroyed && proj.isSurface) {
@@ -1201,15 +1233,11 @@ class SurfaceMode {
         if (now - beam.time >= 150) return;
 
         // Calculate scale to maintain constant beam thickness
-        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
-        const counterScale = 1 / perspectiveScale;
+        const counterScale = this._getCounterScale();
 
         push();
         // Clear shadow settings to prevent visual artifacts
-        if (typeof drawingContext !== 'undefined') {
-            drawingContext.shadowBlur = 0;
-            drawingContext.shadowColor = 'transparent';
-        }
+        this._clearShadow();
 
         // Draw main beam line
         stroke(beam.color);
@@ -1235,10 +1263,7 @@ class SurfaceMode {
 
         push();
         // Clear shadow settings to prevent visual artifacts
-        if (typeof drawingContext !== 'undefined') {
-            drawingContext.shadowBlur = 0;
-            drawingContext.shadowColor = 'transparent';
-        }
+        this._clearShadow();
 
         for (const wave of this.starSystem.forceWaves) {
             if (!wave) continue;
@@ -1282,8 +1307,7 @@ class SurfaceMode {
         if (!this.player) return;
 
         // Calculate the inverse of perspective scale to keep ship at constant size
-        const perspectiveScale = map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
-        const counterScale = 1 / perspectiveScale;
+        const counterScale = this._getCounterScale();
 
         // Get sun direction from planet position (sun at origin)
         const sunAngle = this._getSunAngle();
@@ -1727,3 +1751,14 @@ if (typeof window !== 'undefined') {
 }
 
 console.log("surfaceMode.js loaded");
+
+// Export for Node.js/Jest testing while maintaining browser compatibility
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { SurfaceMode, SURFACE_CONFIG, SURFACE_STATE };
+}
+// Also expose to global for browser environment
+if (typeof window !== 'undefined') {
+    window.SurfaceMode = SurfaceMode;
+    window.SURFACE_CONFIG = SURFACE_CONFIG;
+    window.SURFACE_STATE = SURFACE_STATE;
+}
