@@ -49,13 +49,19 @@ const SURFACE_CONFIG = {
     // Turret Configuration
     TURRET: {
         RANGE: 1000,
-        DETECTION_HEIGHT_THRESHOLD: 30, // Units above turret base
+        DETECTION_HEIGHT_THRESHOLD: 30, // Units above turret base for detection
         HEALTH: 150,
         FIRE_RATE: 2.0,                 // Seconds between shots
         TURN_SPEED: 5,                  // Radians per second factor
         PROJECTILE_SPEED: 15,
         PROJECTILE_DAMAGE: 5,
         PROJECTILE_LIFESPAN: 120
+    },
+
+    // Stealth Configuration
+    STEALTH: {
+        RADAR_ALTITUDE_THRESHOLD: 50,   // Radar altitude above which player is always detected (flying high)
+        STEALTH_HEIGHT_THRESHOLD: 30    // Relative height below which player can hide (if also hugging terrain)
     }
 };
 
@@ -167,6 +173,66 @@ class SurfaceMode {
     }
 
     /**
+     * Utility hash function for deterministic random number generation
+     * Uses integer hashing to avoid directional bias
+     * @param {number} v - Input value to hash
+     * @returns {number} Hashed value
+     * @private
+     */
+    _hash(v) {
+        v = ((v >>> 16) ^ v) * 0x45d9f3b;
+        v = ((v >>> 16) ^ v) * 0x45d9f3b;
+        v = (v >>> 16) ^ v;
+        return v;
+    }
+
+    /**
+     * Find the best canyon/valley location for shield generator placement
+     * Searches multiple deterministic locations and scores them based on terrain features
+     * @param {number} searchCount - Number of locations to probe
+     * @returns {{x: number, y: number, score: number}} Best canyon location and its score
+     * @private
+     */
+    _findBestCanyonLocation(searchCount = 12) {
+        const seed = this.planet.seed || 12345;
+        let bestScore = -Infinity;
+        let bestX = this.surfaceX;
+        let bestY = this.surfaceY;
+
+        for (let i = 0; i < searchCount; i++) {
+            const mixedSeed = this._hash(seed ^ this._hash(i));
+            const angle = ((mixedSeed >>> 0) / 0xFFFFFFFF) * Math.PI * 2;
+            const mixedRadius = this._hash(mixedSeed);
+            const radius = 6000 + (Math.abs(mixedRadius % 6000)); // 6km to 12km
+
+            const tx = this.surfaceX + Math.cos(angle) * radius;
+            const ty = this.surfaceY + Math.sin(angle) * radius;
+
+            // Sample center height
+            const hCenter = this.terrain.getHeightAt(tx, ty);
+
+            // Sample 4 surrounding points to check for canyon walls
+            const wallDist = 400;
+            const h1 = this.terrain.getHeightAt(tx + wallDist, ty);
+            const h2 = this.terrain.getHeightAt(tx - wallDist, ty);
+            const h3 = this.terrain.getHeightAt(tx, ty + wallDist);
+            const h4 = this.terrain.getHeightAt(tx, ty - wallDist);
+
+            // Canyon score: higher is better (wall height minus floor height)
+            const avgWallHeight = (h1 + h2 + h3 + h4) / 4;
+            const canyonScore = avgWallHeight - hCenter;
+
+            if (canyonScore > bestScore) {
+                bestScore = canyonScore;
+                bestX = tx;
+                bestY = ty;
+            }
+        }
+
+        return { x: bestX, y: bestY, score: bestScore };
+    }
+
+    /**
      * Check if player can enter surface mode
      */
     canEnter(player, planet) {
@@ -236,61 +302,12 @@ class SurfaceMode {
         this.surfaceObjects = [];
 
         // Calculate deterministic target position for Shield Generator (Planet Boss)
-        // [DEBUG FIX] Enable for ALL planets, not just inhabited ones
+        // Enable for ALL planets, not just inhabited ones
         this.targetPos = null;
         if (this.planet) {
-            const seed = this.planet.seed || 12345;
-
-            // CANYON-READY TARGET SELECTION:
-            // Probe multiple deterministic locations and find the one that is the best "Canyon/Valley"
-            // A good canyon has a low center height and high surrounding terrain.
-            let bestScore = -Infinity;
-            let bestX = this.surfaceX;
-            let bestY = this.surfaceY;
-
-            // Search in a grid pattern around the entry point (approx 4-10km range)
-            const searchCount = 12;
-            for (let i = 0; i < searchCount; i++) {
-                // BETTER HASHING: Use a more robust mixing function to avoid directional bias
-                // This ensures targets are truly randomized around the compass
-                const hash = (v) => {
-                    v = ((v >>> 16) ^ v) * 0x45d9f3b;
-                    v = ((v >>> 16) ^ v) * 0x45d9f3b;
-                    v = (v >>> 16) ^ v;
-                    return v;
-                };
-
-                const mixedSeed = hash(seed ^ hash(i));
-                const angle = ((mixedSeed >>> 0) / 0xFFFFFFFF) * Math.PI * 2;
-                const mixedRadius = hash(mixedSeed);
-                const radius = 6000 + (Math.abs(mixedRadius % 6000)); // 6km to 12km
-
-                const tx = this.surfaceX + Math.cos(angle) * radius;
-                const ty = this.surfaceY + Math.sin(angle) * radius;
-
-                // Sample center height
-                const hCenter = this.terrain.getHeightAt(tx, ty);
-
-                // Sample 4 surrounding points to check for "Canyon Walls"
-                const wallDist = 400;
-                const h1 = this.terrain.getHeightAt(tx + wallDist, ty);
-                const h2 = this.terrain.getHeightAt(tx - wallDist, ty);
-                const h3 = this.terrain.getHeightAt(tx, ty + wallDist);
-                const h4 = this.terrain.getHeightAt(tx, ty - wallDist);
-
-                // Canyon Score: Higher is better (Wall height minus Floor height)
-                const avgWallHeight = (h1 + h2 + h3 + h4) / 4;
-                const canyonScore = avgWallHeight - hCenter;
-
-                if (canyonScore > bestScore) {
-                    bestScore = canyonScore;
-                    bestX = tx;
-                    bestY = ty;
-                }
-            }
-
-            this.targetPos = createVector(bestX, bestY);
-            console.log(`[CanyonRun] Target found in valley! Score: ${Math.round(bestScore)}, Height: ${Math.round(this.terrain.getHeightAt(bestX, bestY))}`);
+            const result = this._findBestCanyonLocation(12);
+            this.targetPos = createVector(result.x, result.y);
+            console.log(`[CanyonRun] Target found in valley! Score: ${Math.round(result.score)}, Height: ${Math.round(this.terrain.getHeightAt(result.x, result.y))}`);
         }
 
         // NOTE: Heavy terrain operations (generateMesh, updateBuffer, _spawnObjects)
@@ -616,26 +633,32 @@ class SurfaceMode {
 
     /**
      * Check collisions between projectiles and surface objects
-     * Uses simple 2D distance check since all objects are on the same plane visually
+     * Coordinates all collision checks for surface mode
      */
     _checkSurfaceCollisions() {
         if (!this.starSystem || !this.starSystem.projectiles) return;
 
-        // Check each projectile in the world
+        this._checkProjectileTerrainCollisions();
+        this._checkPlayerProjectileCollisions();
+        this._checkEnemyProjectileCollisions();
+    }
+
+    /**
+     * Check projectile-terrain collisions (ground hits)
+     * @private
+     */
+    _checkProjectileTerrainCollisions() {
         for (let proj of this.starSystem.projectiles) {
             if (!proj || proj.destroyed) continue;
-            if (!proj.isSurface) continue; // Only check surface projectiles
+            if (!proj.isSurface) continue;
 
             const projPos = proj.pos;
 
             // For enemy projectiles with trajectory data, interpolate altitude toward target
             if (proj.startAltitude !== undefined && proj.targetAltitude !== undefined && proj.owner !== this.player) {
-                // Calculate travel progress based on remaining lifespan
-                const maxLife = 120; // Original lifespan
+                const maxLife = 120;
                 const elapsed = maxLife - (proj.lifespan || maxLife);
                 const progress = Math.min(1, elapsed / maxLife);
-
-                // Interpolate altitude from start to target
                 proj.altitude = proj.startAltitude + (proj.targetAltitude - proj.startAltitude) * progress;
             }
 
@@ -643,78 +666,86 @@ class SurfaceMode {
             const terrainH = this._getTerrainHeightAt(projPos.x, projPos.y);
             const projAlt = proj.altitude || 0;
 
-            // If projectile hits the ground (all projectiles, including player's)
             if (projAlt <= terrainH + 2) {
-                // Create ground impact explosion
-                this._createSurfaceExplosion(projPos.x, projPos.y, 0, 8, [255, 100, 50]);
-
-                // Crater/Ground hit sound
-                if (typeof soundManager !== 'undefined' && this.player) {
-                    soundManager.playWorldSound('explosion', projPos.x, projPos.y, this.player.pos, proj);
-                }
-
+                this._createSurfaceExplosion(projPos.x, projPos.y, 0, 8, [255, 100, 50], true);
                 proj.destroyed = true;
-                continue;
-            }
-
-            // Player's projectiles hitting surface objects
-            if (this.surfaceObjects && this.surfaceObjects.length > 0 && proj.owner === this.player) {
-                for (let obj of this.surfaceObjects) {
-                    if (!obj || obj.destroyed) continue;
-
-                    const bounds = this._getVisualBounds(obj);
-
-                    // Check distance from projectile to object's base position (ground footprint only)
-                    const dx = projPos.x - bounds.base.x;
-                    const dy = projPos.y - bounds.base.y;
-                    const distSq = dx * dx + dy * dy;
-                    const hitRadiusSq = bounds.radius * bounds.radius;
-
-                    if (distSq < hitRadiusSq) {
-                        // Projectile hit the object's base
-                        const objName = obj.type || obj.id || obj.constructor.name;
-                        console.log(`Hit on surface object [${objName}]!`);
-                        obj.takeDamage(proj.damage || 10);
-                        proj.destroyed = true;
-
-                        // Create explosion at impact point
-                        this._createSurfaceExplosion(projPos.x, projPos.y, 0, 10, [255, 150, 50]);
-
-                        // Play hit sound with surface entity marker
-                        if (typeof soundManager !== 'undefined' && this.player) {
-                            soundManager.playWorldSound('hit', projPos.x, projPos.y, this.player.pos, obj);
-                        }
-                        break;
-                    }
-                }
             }
         }
+    }
 
-        // Also check turret/pirate projectiles hitting the player
+    /**
+     * Check player projectile hits on surface objects
+     * @private
+     */
+    _checkPlayerProjectileCollisions() {
+        if (!this.surfaceObjects || this.surfaceObjects.length === 0) return;
+
         for (let proj of this.starSystem.projectiles) {
             if (!proj || proj.destroyed) continue;
             if (!proj.isSurface) continue;
-            if (proj.owner === this.player) continue; // Skip player's own projectiles
-            if (!this.player || this.player.destroyed) continue;
+            if (proj.owner !== this.player) continue;
 
-            // Check if enemy projectile hits player
+            const projPos = proj.pos;
+
+            for (let obj of this.surfaceObjects) {
+                if (!obj || obj.destroyed) continue;
+
+                const bounds = this._getVisualBounds(obj);
+                const dx = projPos.x - bounds.base.x;
+                const dy = projPos.y - bounds.base.y;
+                const distSq = dx * dx + dy * dy;
+                const hitRadiusSq = bounds.radius * bounds.radius;
+
+                if (distSq < hitRadiusSq) {
+                    const objName = obj.type || obj.id || obj.constructor.name;
+                    console.log(`Hit on surface object [${objName}]!`);
+                    obj.takeDamage(proj.damage || 10);
+                    proj.destroyed = true;
+
+                    this._createSurfaceExplosion(projPos.x, projPos.y, 0, 10, [255, 150, 50]);
+
+                    if (typeof soundManager !== 'undefined' && this.player) {
+                        soundManager.playWorldSound('hit', projPos.x, projPos.y, this.player.pos, obj);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
+     * Check enemy projectile hits on player
+     * @private
+     */
+    _checkEnemyProjectileCollisions() {
+        if (!this.player || this.player.destroyed) return;
+
+        for (let proj of this.starSystem.projectiles) {
+            if (!proj || proj.destroyed) continue;
+            if (!proj.isSurface) continue;
+            if (proj.owner === this.player) continue;
+
+            // Interpolate altitude for enemy projectiles with trajectory data
+            if (proj.startAltitude !== undefined && proj.targetAltitude !== undefined) {
+                const maxLife = 120;
+                const elapsed = maxLife - (proj.lifespan || maxLife);
+                const progress = Math.min(1, elapsed / maxLife);
+                proj.altitude = proj.startAltitude + (proj.targetAltitude - proj.startAltitude) * progress;
+            }
+
             const dx = proj.pos.x - this.player.pos.x;
             const dy = proj.pos.y - this.player.pos.y;
             const distSq = dx * dx + dy * dy;
             const hitRadiusSq = this.player.size * this.player.size;
 
             if (distSq < hitRadiusSq) {
-                // Also verify altitude match - projectile must be near player's altitude
                 const playerAlt = this.player.altitude || 0;
                 const projAlt = proj.altitude || 0;
-                const altDiff = Math.abs(playerAlt - projAlt);
 
-                // Allow hit if altitude difference is within reasonable range (50 units)
-                if (altDiff < 50) {
+                // Projectile hits if player is at or above the projectile's altitude
+                if (playerAlt >= projAlt) {
                     console.log(`Player hit by surface projectile!`);
                     this.player.takeDamage(proj.damage || 5);
-
-                    // Create explosion at hit point
                     this._createSurfaceExplosion(proj.pos.x, proj.pos.y, 0, 15, [255, 50, 50]);
                     proj.destroyed = true;
                 }
@@ -730,11 +761,12 @@ class SurfaceMode {
      * @param {number} altitude - Altitude above terrain (0 for ground-level explosions)
      * @param {number} size - Explosion size
      * @param {Array} color - RGB color array
+     * @param {boolean} silent - If true, suppress explosion sound (default: false)
      * 
      * NOTE: The extrusion angle creates a pseudo-3D effect. For most explosions at ground
      * level (projectile hits), pass altitude=0 since projectile positions are already visual.
      */
-    _createSurfaceExplosion(x, y, altitude, size, color) {
+    _createSurfaceExplosion(x, y, altitude, size, color, silent = false) {
         if (!this.starSystem || !this.starSystem.addExplosion) return;
 
         // Calculate visual offset based on altitude (matches Draw3D extrusion)
@@ -742,7 +774,7 @@ class SurfaceMode {
         const visualX = x - (altitude * Math.sin(extrusionAngle));
         const visualY = y - (altitude * Math.cos(extrusionAngle));
 
-        this.starSystem.addExplosion(visualX, visualY, size, color, true);
+        this.starSystem.addExplosion(visualX, visualY, size, color, true, silent);
     }
 
 
@@ -1300,7 +1332,7 @@ class SurfaceMode {
     }
 
     /**
-     * Draw asteroids (if we want them on surface)
+     * Draw player ship and its shadow on the terrain
      * @private
      */
     _drawPlayerShip() {
@@ -1322,9 +1354,6 @@ class SurfaceMode {
         const shadowOffsetX = Math.cos(sunAngle + Math.PI) * shadowOffset;
         const shadowOffsetY = Math.sin(sunAngle + Math.PI) * shadowOffset;
 
-        // Shadow size should be smaller than ship, and shrink more dramatically with altitude
-        // At minimum altitude: shadow is ~0.7x ship size
-        // At maximum altitude: shadow is ~0.3x ship size
         // Shadow size should be smaller than ship, and shrink more dramatically with altitude
         // At minimum altitude: shadow is ~0.7x ship size
         // At maximum altitude: shadow is ~0.3x ship size
