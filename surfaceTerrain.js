@@ -254,7 +254,9 @@ class SurfaceTerrain {
 
         // Calculate viewport bounds for culling
         const perspectiveScale = map(altitude, this.config.MIN_ALTITUDE, this.config.MAX_ALTITUDE, 1.2, 0.6);
-        const cullPadding = 250 / perspectiveScale;
+        // Increased padding to 600 to account for max terrain height (500)
+        // This prevents terrain at the bottom edge from being culled when its height would extend into view
+        const cullPadding = 600 / perspectiveScale;
         const visibleHalfWidth = (screenWidth / 2) / perspectiveScale + cullPadding;
         const visibleHalfHeight = (screenHeight / 2) / perspectiveScale + cullPadding;
 

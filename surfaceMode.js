@@ -8,7 +8,7 @@
 const SURFACE_CONFIG = {
     // Flight mechanics
     MIN_ALTITUDE: 10,
-    MAX_ALTITUDE: 500,
+    MAX_ALTITUDE: 1000,
     DEFAULT_ALTITUDE: 100,
     TURN_SPEED: 2.5,           // Radians per second
     MAX_SPEED: 300,            // Legacy - now uses SHIP_DEFINITIONS
@@ -1134,7 +1134,9 @@ class SurfaceMode {
         const sunAngle = this._getSunAngle();
 
         // Calculate viewport bounds for culling
-        const viewport = this._getViewportBounds(200);
+        // Use increased padding (600) to account for normalized terrain height (0-500)
+        // so objects on high ground at the bottom edge aren't culled
+        const viewport = this._getViewportBounds(600);
 
         let objectsDrawn = 0;
         let objectsCulled = 0;
@@ -1224,7 +1226,8 @@ class SurfaceMode {
         if (!this.player) return;
 
         // Calculate viewport bounds for culling
-        const viewport = this._getViewportBounds(100);
+        // Calculate viewport bounds for culling
+        const viewport = this._getViewportBounds(600);
 
         // Calculate counter-scale so projectiles stay constant screen size
         const counterScale = this._getCounterScale();
@@ -1261,7 +1264,8 @@ class SurfaceMode {
         if (!explosions) return;
 
         // Calculate viewport bounds for culling
-        const viewport = this._getViewportBounds(100);
+        // Calculate viewport bounds for culling
+        const viewport = this._getViewportBounds(600);
 
         for (let i = 0; i < explosions.length; i++) {
             const exp = explosions[i];
@@ -1561,7 +1565,8 @@ class SurfaceMode {
 
         // Player's absolute altitude (terrain is now 0-500, so no negative values)
         const absAlt = Math.max(0, this.player?.altitude || 0);
-        const maxDisplayAlt = 500; // Display range (0-500m)
+        // Display range matches configured max altitude
+        const maxDisplayAlt = SURFACE_CONFIG.MAX_ALTITUDE;
 
         // Find highest nearby enemy altitude (detection threshold)
         let maxEnemyAlt = 0;
