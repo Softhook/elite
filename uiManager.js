@@ -779,6 +779,7 @@ class UIManager {
                     }
                     // Clear inactive IDs since missions will be regenerated
                     this.inactiveMissionIds.clear();
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('missionComplete');
                 }
                 return true;
             }

@@ -1857,6 +1857,7 @@ class UIStationMenus {
         let ratio = constrain(relativeY / trackRange, 0, 1);
 
         this[offsetKey] = Math.round(ratio * this[maxKey]);
+        if (typeof soundManager !== 'undefined') soundManager.playSound('click');
         return true;
     }
 
