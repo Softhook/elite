@@ -375,7 +375,8 @@ describe('SurfaceMode Enter', () => {
 
     test('enter sets default altitude', () => {
         sm.enter(player, planet, starSystem);
-        expect(sm.altitude).toBe(SURFACE_CONFIG.DEFAULT_ALTITUDE);
+        // Altitude is now absolute (terrain height + default clearance)
+        expect(sm.altitude).toBeGreaterThan(SURFACE_CONFIG.DEFAULT_ALTITUDE);
     });
 
     test('enter initializes transition', () => {

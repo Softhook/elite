@@ -59,9 +59,10 @@ const SURFACE_CONFIG = {
     },
 
     // Stealth Configuration
+    // Simple rule: Enemies detect player if playerAltitude >= enemyAltitude
+    // This makes stealth visually intuitive: stay below enemies to hide
     STEALTH: {
-        RADAR_ALTITUDE_THRESHOLD: 50,   // Radar altitude above which player is always detected (flying high)
-        STEALTH_HEIGHT_THRESHOLD: 30    // Relative height below which player can hide (if also hugging terrain)
+        // No configuration needed - pure altitude comparison
     }
 };
 
@@ -270,8 +271,13 @@ class SurfaceMode {
         // Initialize surface position to player's current position to prevent offsets
         this.surfaceX = player.pos.x;
         this.surfaceY = player.pos.y;
-        this.altitude = SURFACE_CONFIG.DEFAULT_ALTITUDE;
+
+        // Initialize absolute altitude (terrain height + default clearance)
+        // Player will maintain this absolute altitude and must climb to clear hills
+        const initialGroundH = this._getTerrainHeightAt(this.surfaceX, this.surfaceY);
+        this.altitude = initialGroundH + SURFACE_CONFIG.DEFAULT_ALTITUDE;
         this.player.altitude = this.altitude;
+
         this.surfaceObjects = [];
         this.stars = [];
         this.projectiles = [];
@@ -568,8 +574,27 @@ class SurfaceMode {
         this.player.weaponsDisabled = false;
         this.player.inNebula = false;
 
+        // Store previous position for collision rollback
+        const prevX = this.player.pos.x;
+        const prevY = this.player.pos.y;
+
         this.player.handleInput();
         this.player.update();
+
+        // Terrain collision check - prevent flying into canyon walls
+        // Player maintains constant absolute altitude (this.altitude)
+        // If terrain at new position is higher than player's altitude, block movement
+
+        const newGroundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
+
+        // If new terrain is higher than player's absolute altitude, block movement
+        if (newGroundH > this.altitude) {
+            // Rollback to previous position - can't fly through walls
+            this.player.pos.x = prevX;
+            this.player.pos.y = prevY;
+            // Zero out velocity to prevent sliding along walls
+            this.player.vel.mult(0);
+        }
 
         // Track surface position directly from player position
         // This ensures frame-rate independence as player.update handles time scaling
@@ -580,10 +605,10 @@ class SurfaceMode {
         this.playerAngle = this.player.angle;
         this.playerSpeed = this.player.vel.mag();
 
-        // Calculate and set player's absolute altitude BEFORE surface objects update
+        // Set player's absolute altitude (this.altitude is now absolute, not radar)
         // This ensures turrets can properly detect the player based on their altitude
         const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
-        this.player.altitude = this.altitude + groundH;
+        this.player.altitude = this.altitude; // Absolute altitude
         this.player.yOffset = groundH; // Persist ground height for weapon firing
     }
 

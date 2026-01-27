@@ -1249,36 +1249,14 @@ class Turret extends SurfaceObject {
         if (!player) return;
         this.cooldown -= dt;
 
-        // Get configuration
-        const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG : {};
-        const stealthConfig = config.STEALTH || {};
-        const radarAltThreshold = stealthConfig.RADAR_ALTITUDE_THRESHOLD || 50;
-        const stealthHeightThreshold = stealthConfig.STEALTH_HEIGHT_THRESHOLD || 30;
+        // Simple stealth detection: player detected if at or above turret altitude
+        // This makes stealth visually intuitive: stay below enemies to hide
+        const turretAltitude = this.yOffset || 0;
+        const playerAltitude = player.altitude || 0;
 
-        // Calculate relative height: how much higher is the player than the turret?
-        const turretGroundHeight = this.yOffset || 0;
-        const playerAbsoluteAltitude = player.altitude || 0;
-        const relativeHeight = playerAbsoluteAltitude - turretGroundHeight;
+        const isDetected = playerAltitude >= turretAltitude;
 
-        // Stealth Detection Logic (dual-condition system):
-        // Player is HIDDEN if BOTH conditions are true:
-        //   1. Relative height < threshold (player is low relative to turret)
-        //   2. Radar altitude <= threshold (player is hugging terrain)
-        // Otherwise, player is DETECTED
-
-        let isDetected = true;
-
-        if (relativeHeight < stealthHeightThreshold) {
-            // Player is low relative to turret - check if hugging terrain
-            const playerRadarAlt = typeof surfaceMode !== 'undefined' && surfaceMode ? surfaceMode.altitude : 100;
-            if (playerRadarAlt <= radarAltThreshold) {
-                // Player is hugging terrain AND below threshold - HIDDEN
-                isDetected = false;
-            }
-            // Player flying high (radar alt > threshold) - DETECTED even if in valley
-        }
-
-        // Only rotate and fire if player is detected AND in range
+        // Only rotate and fire if player is detected
         if (!isDetected) return;
 
         // Calculate turret aiming based on visual positions
@@ -1785,30 +1763,12 @@ class DefenseDrone extends SurfaceObject {
         const dy = player.pos.y - this.pos.y;
         const distSq = dx * dx + dy * dy;
 
-        // Stealth Detection Logic (dual-condition system - matches Turret):
-        // Player is HIDDEN if BOTH conditions are true:
-        //   1. Relative height < threshold (player is low relative to drone)
-        //   2. Radar altitude <= threshold (player is hugging terrain)
-        // Otherwise, player is DETECTED
+        // Simple stealth detection: player detected if at or above drone altitude
+        // This makes stealth visually intuitive: stay below enemies to hide
+        const droneAltitude = this.yOffset || 0;
+        const playerAltitude = player.altitude || 0;
 
-        const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG : {};
-        const stealthConfig = config.STEALTH || {};
-        const radarAltThreshold = stealthConfig.RADAR_ALTITUDE_THRESHOLD || 50;
-        const stealthHeightThreshold = stealthConfig.STEALTH_HEIGHT_THRESHOLD || 30;
-
-        const relativeHeight = (player.altitude || 0) - (this.yOffset || 0);
-
-        let isDetected = distSq < this.rangeSq; // Must be in range
-
-        if (isDetected && relativeHeight < stealthHeightThreshold) {
-            // Player is low relative to drone - check if hugging terrain
-            const playerRadarAlt = typeof surfaceMode !== 'undefined' && surfaceMode ? surfaceMode.altitude : 100;
-            if (playerRadarAlt <= radarAltThreshold) {
-                // Player is hugging terrain AND below threshold - HIDDEN
-                isDetected = false;
-            }
-            // Player flying high (radar alt > threshold) - DETECTED even if in valley
-        }
+        const isDetected = distSq < this.rangeSq && playerAltitude >= droneAltitude;
 
         if (isDetected) {
             this.chasePlayer = true;
