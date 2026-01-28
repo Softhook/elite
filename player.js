@@ -1131,6 +1131,15 @@ class Player {
 
     /** Handles continuous key presses for movement & new features */
     handleInput() {
+        // [GHOST CONTROL FIX] 
+        // If in surface mode and NOT controlling the ship (e.g. in ASTRONAUT mode), 
+        // ignore all ship inputs to prevent "ghost" movements.
+        if (typeof surfaceMode !== 'undefined' && surfaceMode &&
+            typeof surfaceMode.isActive === 'function' && surfaceMode.isActive() &&
+            surfaceMode.controlMode !== 'SHIP') {
+            return;
+        }
+
         // Reset per-frame thrust flags
         this.isThrusting = false;
         this.isReverseThrusting = false;
@@ -2054,7 +2063,9 @@ class Player {
                     this.pos.y,
                     this.size * 3, // Larger explosion
                     [100, 150, 255], // Blueish-white core
-                    inSurfaceMode // Mark as surface explosion if in surface mode
+                    inSurfaceMode, // Mark as surface explosion if in surface mode
+                    false, // silent
+                    inSurfaceMode ? (this.altitude || 0) : 0 // altitude
                 );
 
                 // Create cascading secondary explosions
@@ -2072,7 +2083,9 @@ class Player {
                                     random(150, 255),
                                     random(200, 255)
                                 ],
-                                inSurfaceMode // Mark as surface explosion if in surface mode
+                                inSurfaceMode, // Mark as surface explosion if in surface mode
+                                false, // silent
+                                inSurfaceMode ? (this.altitude || 0) : 0 // altitude
                             );
                         }
                     }, i * 120); // Staggered timing for cascade effect (total duration ~1.4 seconds)

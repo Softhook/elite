@@ -744,6 +744,22 @@ class SurfaceMode {
         // Physics update
         this.astronaut.update(dt);
 
+        // [STORM CRITICAL FIX]
+        // Reset environment flags that were removed from Player.update().
+        // Since StarSystem.update() doesn't run on surface, we must reset them here
+        // to prevent sticky debuffs from space storms or surface effects.
+        if (this.player) {
+            this.player.targetingDisruption = 0;
+            this.player.shieldsDisabled = false;
+            this.player.weaponsDisabled = false;
+            this.player.inNebula = false;
+
+            // Ensure player internal state (like particle systems, drag, etc.) 
+            // continues to update even when in ASTRONAUT mode.
+            // player.handleInput() is NOT called here, preventing "ghost" movements.
+            this.player.update();
+        }
+
         // Terrain Clamping
         const groundH = this._getTerrainHeightAt(this.astronaut.pos.x, this.astronaut.pos.y);
         this.astronaut.altitude = groundH; // Snap to ground
@@ -830,22 +846,19 @@ class SurfaceMode {
 
             const projPos = proj.pos;
 
-            // For enemy projectiles with trajectory data, interpolate altitude toward target
-            if (proj.startAltitude !== undefined && proj.targetAltitude !== undefined && proj.owner !== this.player) {
-                const maxLife = 120;
-                const elapsed = maxLife - (proj.lifespan || maxLife);
-                const progress = Math.min(1, elapsed / maxLife);
-                proj.altitude = proj.startAltitude + (proj.targetAltitude - proj.startAltitude) * progress;
-            }
+            // REMOVED: Altitude interpolation causes visual offset
+            // Projectiles should maintain constant altitude set at spawn
 
-            // Check terrain collision (ground hit)
-            const terrainH = this._getTerrainHeightAt(projPos.x, projPos.y);
-            const projAlt = proj.altitude || 0;
-
-            if (projAlt <= terrainH + 2) {
-                this._createSurfaceExplosion(projPos.x, projPos.y, 0, 8, [255, 100, 50], true);
-                proj.destroyed = true;
-            }
+            // DISABLED: Terrain collision for projectiles
+            // Projectiles are energy weapons traveling through air - they shouldn't hit terrain
+            // This was causing player projectiles at low altitude to hit terrain immediately
+            // const terrainH = this._getTerrainHeightAt(projPos.x, projPos.y);
+            // const projAlt = proj.altitude || 0;
+            // 
+            // if (projAlt <= terrainH + 2) {
+            //     this._createSurfaceExplosion(projPos.x, projPos.y, terrainH, 8, [255, 100, 50], true);
+            //     proj.destroyed = true;
+            // }
         }
     }
 
@@ -862,23 +875,61 @@ class SurfaceMode {
             if (proj.owner !== this.player) continue;
 
             const projPos = proj.pos;
+            const projAlt = proj.altitude || 0;
 
             for (let obj of this.surfaceObjects) {
                 if (!obj || obj.destroyed) continue;
 
-                const bounds = this._getVisualBounds(obj);
-                const dx = projPos.x - bounds.base.x;
-                const dy = projPos.y - bounds.base.y;
+                // Use VISUAL coordinates for collision (what the player sees on screen)
+                const extrusionAngle = 0.5;
+                const objAlt = obj.altitude || obj.yOffset || 0; // Needed for debug logging
+
+                // For turrets, use head/muzzle position (they're tall structures with X and Y offsets)
+                let objVisualX, objVisualY;
+                if (obj.type === "Turret") {
+                    const sz = obj.size || 40;
+                    const baseH = sz * 0.2;
+                    const headH = sz * 0.6;
+                    const totalHeadHeight = baseH + headH;
+
+                    // Match turret draw code: groundVisualY = y - yOffset * cos(angle)
+                    const terrainOffset = obj.yOffset || 0;
+                    const groundVisualY = obj.pos.y - (terrainOffset * Math.cos(extrusionAngle));
+
+                    // Head sits on top of base, so we go up by totalHeadHeight
+                    const extX = totalHeadHeight * Math.sin(extrusionAngle);
+                    const extY = totalHeadHeight * Math.cos(extrusionAngle);
+
+                    objVisualX = obj.pos.x - extX;
+                    objVisualY = groundVisualY - extY;
+                } else {
+                    // For drones and other objects, use altitude (no X offset)
+                    objVisualX = obj.pos.x;
+                    objVisualY = obj.pos.y - (objAlt * Math.cos(extrusionAngle));
+                }
+
+                // Calculate projectile visual position
+                const projVisualX = projPos.x;
+                const projVisualY = projPos.y - (projAlt * Math.cos(extrusionAngle));
+
+                // Distance check using visual coordinates
+                const dx = projVisualX - objVisualX;
+                const dy = projVisualY - objVisualY;
                 const distSq = dx * dx + dy * dy;
-                const hitRadiusSq = bounds.radius * bounds.radius;
+
+                // Use the object's logical footprint radius
+                const hitRadius = Math.max((obj.size || 40) / 2, 20);
+                const hitRadiusSq = hitRadius * hitRadius;
+
+
 
                 if (distSq < hitRadiusSq) {
-                    const objName = obj.type || obj.id || obj.constructor.name;
-                    console.log(`Hit on surface object [${objName}]!`);
+
                     obj.takeDamage(proj.damage || 10);
                     proj.destroyed = true;
 
-                    this._createSurfaceExplosion(projPos.x, projPos.y, 0, 10, [255, 150, 50]);
+                    // [OFFSET FIX] Create explosion at the object's altitude
+                    this._createSurfaceExplosion(projPos.x, projPos.y, objAlt, 10, [255, 150, 50]);
 
                     if (typeof soundManager !== 'undefined' && this.player) {
                         soundManager.playWorldSound('hit', projPos.x, projPos.y, this.player.pos, obj);
@@ -901,33 +952,39 @@ class SurfaceMode {
             if (!proj.isSurface) continue;
             if (proj.owner === this.player) continue;
 
-            // Interpolate altitude for enemy projectiles with trajectory data
-            if (proj.startAltitude !== undefined && proj.targetAltitude !== undefined) {
-                const maxLife = 120;
-                const elapsed = maxLife - (proj.lifespan || maxLife);
-                const progress = Math.min(1, elapsed / maxLife);
-                proj.altitude = proj.startAltitude + (proj.targetAltitude - proj.startAltitude) * progress;
-            }
+            // REMOVED: Altitude interpolation causes visual offset
+            // Projectiles should maintain constant altitude set at spawn
 
-            const dx = proj.pos.x - this.player.pos.x;
-            const dy = proj.pos.y - this.player.pos.y;
+            // Use VISUAL coordinates for collision (what the player sees on screen)
+            const extrusionAngle = 0.5;
+            const projAlt = proj.altitude || 0;
+            const playerAlt = this.player.altitude || 0;
+
+            // Calculate visual Y positions (accounting for altitude offset)
+            const projVisualY = proj.pos.y - (projAlt * Math.cos(extrusionAngle));
+            const playerVisualY = this.player.pos.y - (playerAlt * Math.cos(extrusionAngle));
+
+            // Distance check using visual coordinates
+            const dx = proj.pos.x - this.player.pos.x; // X is not affected by altitude
+            const dy = projVisualY - playerVisualY; // Use visual Y
             const distSq = dx * dx + dy * dy;
-            const hitRadiusSq = this.player.size * this.player.size;
+
+            // FIX: Use radius (size/2), not diameter (size)
+            const hitRadius = this.player.size / 2;
+            const hitRadiusSq = hitRadius * hitRadius;
+
+
 
             if (distSq < hitRadiusSq) {
-                const playerAlt = this.player.altitude || 0;
-                const projAlt = proj.altitude || 0;
-
-                // Projectile hits if player is at or above the projectile's altitude
-                if (playerAlt >= projAlt) {
-                    console.log(`Player hit by surface projectile!`);
-                    this.player.takeDamage(proj.damage || 5);
-                    this._createSurfaceExplosion(proj.pos.x, proj.pos.y, 0, 15, [255, 50, 50]);
-                    proj.destroyed = true;
-                }
+                // Visual collision - if it looks like a hit on screen, it is a hit
+                this.player.takeDamage(proj.damage || 5);
+                // Create explosion at projectile's altitude for visual consistency
+                this._createSurfaceExplosion(proj.pos.x, proj.pos.y, projAlt, 15, [255, 50, 50]);
+                proj.destroyed = true;
             }
         }
     }
+
 
     /**
      * Create explosion with appropriate positioning for surface mode
@@ -945,12 +1002,8 @@ class SurfaceMode {
     _createSurfaceExplosion(x, y, altitude, size, color, silent = false) {
         if (!this.starSystem || !this.starSystem.addExplosion) return;
 
-        // Calculate visual offset based on altitude (matches Draw3D extrusion)
-        const extrusionAngle = 0.5; // Must match surfaceObjects.js
-        const visualX = x - (altitude * Math.sin(extrusionAngle));
-        const visualY = y - (altitude * Math.cos(extrusionAngle));
-
-        this.starSystem.addExplosion(visualX, visualY, size, color, true, silent);
+        // Pass world coordinates and altitude directly (Explosion handles visual projection)
+        this.starSystem.addExplosion(x, y, size, color, true, silent, altitude);
     }
 
 
@@ -982,9 +1035,13 @@ class SurfaceMode {
         const perspectiveScale = this._getPerspectiveScale();
         scale(perspectiveScale);
 
-        // 3. World translation (camera follows active entity)
-        // Use surfaceX/Y which tracks either player or astronaut
-        translate(-this.surfaceX, -this.surfaceY);
+        // 3. World translation (camera follows active entity's visual position)
+        // This ensures the player ship/astronaut stays perfectly centered
+        const extrusionAngle = 0.5;
+        const activeEntity = (this.controlMode === 'SHIP') ? this.player : this.astronaut;
+        const activeAlt = (activeEntity && activeEntity.altitude !== undefined) ? activeEntity.altitude : this.altitude;
+        const visualYOffset = activeAlt * Math.cos(extrusionAngle);
+        translate(-this.surfaceX, -(this.surfaceY - visualYOffset));
 
         // Draw terrain
         this._drawTerrain();
@@ -1395,13 +1452,9 @@ class SurfaceMode {
                     continue;
                 }
 
-                // Apply counter-scale to projectile
-                push();
-                translate(proj.pos.x, proj.pos.y);
-                scale(counterScale);
-                translate(-proj.pos.x, -proj.pos.y);
-                proj.draw();
-                pop();
+                // Call the updated projectile.draw which handles altitude internally
+                const sunAngle = this._getSunAngle();
+                proj.draw(proj.pos.x, proj.pos.y, sunAngle, counterScale);
             }
         }
         pop();
@@ -1427,9 +1480,17 @@ class SurfaceMode {
                     continue;
                 }
 
-                // Draw at world position - no altitude offset needed
-                // The camera transform handles centering everything
-                exp.draw();
+                // [FIX] Pass visual altitude offset to explosion
+                // If the explosion doesn't have altitude, it defaults to terrain height at its position
+                const extrusionAngle = 0.5;
+                const sunAngle = this._getSunAngle();
+                const counterScale = this._getCounterScale();
+
+                if (exp.altitude === undefined) {
+                    exp.altitude = this._getTerrainHeightAt(exp.pos.x, exp.pos.y);
+                }
+
+                exp.draw(exp.pos.x, exp.pos.y, sunAngle, counterScale);
             }
         }
     }
@@ -1455,15 +1516,26 @@ class SurfaceMode {
         // Clear shadow settings to prevent visual artifacts
         this._clearShadow();
 
+        // Calculate visual offsets for beam ends
+        const extrusionAngle = 0.5;
+        // Start always matches the player's visual height
+        const activeAlt = (this.controlMode === 'SHIP') ? (this.player.altitude || this.altitude) : (this.astronaut.altitude || 0);
+        const startAltOffset = activeAlt * Math.cos(extrusionAngle);
+        // End matches target altitude (if known) or ground
+        const endAltOffset = (beam.targetAltitude || 0) * Math.cos(extrusionAngle);
+
+        const vStartY = beam.start.y - startAltOffset;
+        const vEndY = beam.end.y - endAltOffset;
+
         // Draw main beam line
         stroke(beam.color);
         strokeWeight(3 * counterScale);
-        line(beam.start.x, beam.start.y, beam.end.x, beam.end.y);
+        line(beam.start.x, vStartY, beam.end.x, vEndY);
 
         // Draw glow effect
         stroke(beam.color[0], beam.color[1], beam.color[2], 100);
         strokeWeight(6 * counterScale);
-        line(beam.start.x, beam.start.y, beam.end.x, beam.end.y);
+        line(beam.start.x, vStartY, beam.end.x, vEndY);
 
         pop();
     }
@@ -1481,10 +1553,16 @@ class SurfaceMode {
         // Clear shadow settings to prevent visual artifacts
         this._clearShadow();
 
+        const extrusionAngle = 0.5; // Consistent with other visual altitude calculations
+        const counterScale = this._getCounterScale(); // For consistent sizing
+
         for (const wave of this.starSystem.forceWaves) {
             if (!wave) continue;
             // Only draw surface mode force waves (filter out space combat)
             if (!wave.isSurface) continue;
+
+            // Calculate visual Y position based on altitude
+            const visualY = wave.pos.y - (wave.altitude * Math.cos(extrusionAngle));
 
             // Fade out as the wave expands
             const alpha = map(wave.radius, 0, wave.maxRadius, 220, 0);
@@ -1493,23 +1571,23 @@ class SurfaceMode {
             noFill();
             strokeWeight(6);
             stroke(wave.color[0], wave.color[1], wave.color[2], alpha);
-            circle(wave.pos.x, wave.pos.y, wave.radius * 2);
+            circle(wave.pos.x, visualY, wave.radius * 2);
 
             // Draw secondary ring
             strokeWeight(3);
             stroke(255, 255, 255, alpha * 0.7);
-            circle(wave.pos.x, wave.pos.y, wave.radius * 1.9);
+            circle(wave.pos.x, visualY, wave.radius * 1.9);
 
             // Draw inner glow
             strokeWeight(10);
             stroke(wave.color[0], wave.color[1], wave.color[2], alpha * 0.5);
-            circle(wave.pos.x, wave.pos.y, wave.radius * 1.7);
+            circle(wave.pos.x, visualY, wave.radius * 1.7);
 
             // Draw center pulse
             const pulseSize = (millis() - wave.startTime) % 300 / 300 * 50;
             fill(wave.color[0], wave.color[1], wave.color[2], alpha);
             noStroke();
-            circle(wave.pos.x, wave.pos.y, pulseSize);
+            circle(wave.pos.x, visualY, pulseSize);
         }
 
         pop();
@@ -1532,8 +1610,13 @@ class SurfaceMode {
         const shadowX = startX + Math.cos(sunAngle + Math.PI) * shadowOffset;
         const shadowY = startY + Math.sin(sunAngle + Math.PI) * shadowOffset;
 
+        // 1. Draw shadow on terrain
+        const terrainH = this._getTerrainHeightAt(this.astronaut.pos.x, this.astronaut.pos.y);
+        const extrusionAngle = 0.5;
+        const visualShadowY = shadowY - (terrainH * Math.cos(extrusionAngle));
+
         push();
-        translate(shadowX, shadowY);
+        translate(shadowX, visualShadowY);
         fill(0, 0, 0, shadowAlpha);
         noStroke();
         ellipse(0, 0, this.astronaut.size, this.astronaut.size * 0.5);
@@ -1550,6 +1633,8 @@ class SurfaceMode {
         scale(counterScale);
         translate(-startX, -startY);
 
+        // Draw astronaut model at its world position
+        // The astronaut.draw method now handles its own visual altitude offset internally
         this.astronaut.draw(startX, startY, sunAngle);
         pop();
     }
@@ -1561,70 +1646,47 @@ class SurfaceMode {
     _drawPlayerShip() {
         if (!this.player) return;
 
+        const extrusionAngle = 0.5;
+        // [EVA FIX] Use player's own altitude for drawing the ship.
+        // this.altitude centers the camera/world, which changes during EVA.
+        const shipAlt = (this.controlMode === 'SHIP') ? this.altitude : (this.player.altitude || 0);
+        const altitudeOffset = shipAlt * Math.cos(extrusionAngle);
+        const visualY = this.player.pos.y - altitudeOffset;
+
         // Calculate the inverse of perspective scale to keep ship at constant size
         const counterScale = this._getCounterScale();
 
-        // Get sun direction from planet position (sun at origin)
+        // Get sun direction
         const sunAngle = this._getSunAngle();
 
-        // 1. Draw shadow on terrain - realistic shadow projection
-        // Physics: Shadow cast by sun at an angle
-        // - At minimum altitude: Shadow directly beneath ship (offset = 0)
-        // - Higher altitude: Shadow offset from ship based on sun angle and height
-
-        // Calculate radar altitude (clearance above ground)
+        // 1. Draw shadow on terrain
         const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
-        const radarAlt = this.altitude - groundH;
-
-        // Shadow offset: proportional to altitude
-        // At minimum altitude (10): offset = 0 (directly beneath ship)
-        // At altitude 100: offset ≈ 13.5 units
-        // At altitude 200: offset ≈ 28.5 units
+        const radarAlt = shipAlt - groundH;
         const shadowOffset = Math.max(0, (radarAlt - SURFACE_CONFIG.MIN_ALTITUDE) * SURFACE_CONFIG.SHADOW_ALTITUDE_SCALE);
-
-
-
         const shadowOffsetX = Math.cos(sunAngle + Math.PI) * shadowOffset;
         const shadowOffsetY = Math.sin(sunAngle + Math.PI) * shadowOffset;
 
-        // Shadow size: Always smaller than ship, shrinks with altitude
-        // At minimum altitude (10): 0.6x ship size (significantly smaller than ship)
-        // At high altitude (200): 0.4x ship size (tiny due to perspective)
-        const shadowScale = map(radarAlt, SURFACE_CONFIG.MIN_ALTITUDE, 200, 0.6, 0.4);
-
-        // Hide shadow when player is destroyed or dying/exploding
+        // Shadow on ground
         if (!this.player.destroyed && !this.player.isDying) {
             push();
-
-            // Position shadow at offset from ship based on sun angle and altitude
-            // The offset is calculated from radar altitude, representing the horizontal
-            // displacement of the shadow due to sun angle.
-            // We draw at this exact World X/Y.
+            // Ground position for shadow - projected on terrain
             const shadowX = this.player.pos.x + shadowOffsetX;
             const shadowY = this.player.pos.y + shadowOffsetY;
-
-            translate(shadowX, shadowY);
-
-            // Rotate to match ship orientation
+            const visualShadowY = shadowY - (groundH * Math.cos(extrusionAngle));
+            translate(shadowX, visualShadowY);
             rotate(this.player.angle);
 
-            // Shadow darkness: darker when close to ground, lighter when high
             const shadowAlpha = map(radarAlt, SURFACE_CONFIG.MIN_ALTITUDE, 200, 140, 40);
+            const radarAltNorm = constrain(radarAlt, SURFACE_CONFIG.MIN_ALTITUDE, 200);
+            const shadowScale = map(radarAltNorm, SURFACE_CONFIG.MIN_ALTITUDE, 200, 0.6, 0.4);
+
             fill(0, 0, 0, shadowAlpha);
             noStroke();
 
-            // Draw shadow using ship vertices if available
-            // Apply counter-scale to shadow to keep it consistent with ship
-            // (Ship is drawn with counter-scale to maintain screen size)
-            if (typeof counterScale !== 'undefined') {
-                scale(counterScale);
-            }
+            scale(counterScale);
 
             const shipTypeName = this.player.shipTypeName || 'Sidewinder';
-            let shipDef = this.player._cachedShipDef ||
-                (typeof SHIP_DEFINITIONS !== 'undefined' ? SHIP_DEFINITIONS[shipTypeName] : null);
-
-            // Get vertex data
+            const shipDef = this.player._cachedShipDef || (typeof SHIP_DEFINITIONS !== 'undefined' ? SHIP_DEFINITIONS[shipTypeName] : null);
             let vertices = null;
             if (shipDef) {
                 if (shipDef.vertexLayers && shipDef.vertexLayers.length > 0 && shipDef.vertexLayers[0].vertexData) {
@@ -1635,7 +1697,6 @@ class SurfaceMode {
             }
 
             if (vertices && vertices.length > 0) {
-                // Draw shadow using ship vertices, scaled by shadowScale
                 const shipScale = this.player.size / 25;
                 const shadowVertexScale = shipScale * 25 * shadowScale;
                 beginShape();
@@ -1644,22 +1705,25 @@ class SurfaceMode {
                 }
                 endShape(CLOSE);
             } else {
-                // Fallback to ellipse if no vertex data
                 const shadowSize = this.player.size * shadowScale;
                 ellipse(0, 0, shadowSize, shadowSize * 0.8);
             }
-
             pop();
         }
 
-        // 2. Draw actual ship model at its world position with counter-scale
-        // This keeps the ship at constant screen size regardless of altitude
-        // Hide ship when destroyed or dying/exploding
+        // 2. Draw actual ship model - PINNED TO SCREEN CENTER
         if (!this.player.destroyed && !this.player.isDying) {
             push();
+            // We are already at screen center (visual center).
+            // Shift the world origin BY the altitude offset so that Player.draw (at world pos)
+            // maps effectively to the visual center.
+            translate(0, -altitudeOffset);
+
+            // To scale around the ship's center correctly:
             translate(this.player.pos.x, this.player.pos.y);
             scale(counterScale);
             translate(-this.player.pos.x, -this.player.pos.y);
+
             this.player.draw();
             pop();
         }

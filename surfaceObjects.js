@@ -1228,6 +1228,7 @@ class Turret extends SurfaceObject {
     constructor(x, y, size) {
         super(x, y, size || 40);
 
+        this.type = "Turret"; // Explicit type for collision detection
         const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.TURRET : {};
 
         this.range = config.RANGE || 1000;
@@ -1274,9 +1275,10 @@ class Turret extends SurfaceObject {
         const turretVisualX = this.pos.x - extX;
         const turretVisualY = (this.pos.y - terrainOffset) - extY;
 
-        // Player position (drawn at map position without terrain offset)
+        // Player position (visual coordinates - accounting for altitude)
+        const playerAlt = player.altitude || 0;
         const playerVisualX = player.pos.x;
-        const playerVisualY = player.pos.y;
+        const playerVisualY = player.pos.y - (playerAlt * Math.cos(extrusionAngle));
 
         // Calculate aiming angle in visual space
         const dx = playerVisualX - turretVisualX;
@@ -1320,21 +1322,19 @@ class Turret extends SurfaceObject {
         let muzzleX, muzzleY;
 
         if (visualX === undefined || visualY === undefined) {
-            const extrusionAngle = 0.5;
-            const sz = this.size;
-            const totalH = (sz * 0.8);
-            const extX = totalH * Math.sin(extrusionAngle);
-            const extY = totalH * Math.cos(extrusionAngle);
-            const terrainOffset = this.yOffset || 0;
-
-            muzzleX = (this.pos.x - extX);
-            muzzleY = ((this.pos.y - terrainOffset) - extY);
+            // Muzzle position in world coords (Logical center, no visual offset)
+            muzzleX = this.pos.x;
+            muzzleY = this.pos.y;
         } else {
-            muzzleX = visualX;
-            muzzleY = visualY;
+            // If visual coordinates were passed (legacy), try to reverse the visual mapping
+            // but ideally we should only pass world coords here.
+            // For Turret, muzzleX/Y are passed as the extruded muzzle position.
+            // We'll treat them as visual and extract the ground position for the projectile's logical base.
+            muzzleX = this.pos.x;
+            muzzleY = this.pos.y;
         }
 
-        // Apply rotation to extend from center of head to barrel tip
+        // Apply rotation to extend from center of head to barrel tip in world space
         const muzzleOffset = 40;
         const px = muzzleX + muzzleOffset * Math.cos(this.angle);
         const py = muzzleY + muzzleOffset * Math.sin(this.angle);
@@ -1360,16 +1360,27 @@ class Turret extends SurfaceObject {
             proj.ownerType = 'turret';
             proj.isSurface = true;
 
-            // Projectile altitude for collision purposes
-            // This is the logical altitude, which is Turret Base Z + Turret Height
-            proj.altitude = (this.yOffset || 0) + (this.size * 0.8);
+            // Projectile altitude for collision and rendering purposes
+            // This is the logical altitude: Turret Base Altitude + Turret Height
+            const turretH = this.size * 0.8;
+            const startAlt = (this.yOffset || 0) + turretH;
+            proj.altitude = startAlt;
+            proj.startAltitude = startAlt;
+            proj.targetAltitude = player.altitude || 0;
 
             if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
-                soundManager.playWorldSound('laser', px, py, player.pos, this);
+                // Play sound at visual position for consistent spatial audio
+                const extrusionAngle = 0.5;
+                const visualPX = px - (proj.altitude * Math.sin(extrusionAngle));
+                const visualPY = py - (proj.altitude * Math.cos(extrusionAngle));
+                soundManager.playWorldSound('laser', visualPX, visualPY, player.pos, this);
             }
-            // Visual muzzle flash - tag as isSurface
+            // Visual muzzle flash - calculate visual position
             if (starSystem.addExplosion) {
-                starSystem.addExplosion(px, py, 5, [255, 100, 50], true);
+                const extrusionAngle = 0.5;
+                const visualPX = px - (proj.altitude * Math.sin(extrusionAngle));
+                const visualPY = py - (proj.altitude * Math.cos(extrusionAngle));
+                starSystem.addExplosion(visualPX, visualPY, 5, [255, 100, 50], true);
             }
         }
     }
@@ -1393,9 +1404,13 @@ class Turret extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
+        if (this.destroyed) return;
+
         const sz = this.size;
-        // Use larger extrusion angle for more solid 3D appearance
         const extrusionAngle = 0.5;
+
+        // Calculate visual ground Y position (including terrain altitude)
+        const groundVisualY = y - (this.yOffset || 0) * Math.cos(extrusionAngle);
 
         const baseH = sz * 0.2;
         const headH = sz * 0.6;
@@ -1412,20 +1427,20 @@ class Turret extends SurfaceObject {
             lerpColor(color(255, 50, 50), color(60), healthRatio);
 
         // --- BASE ---
-        // Calculate Base Roof Pos
+        // Calculate Base Roof Pos relative to groundVisualY
         const baseDvX = baseH * Math.sin(extrusionAngle);
         const baseDvY = baseH * Math.cos(extrusionAngle);
         const baseRx = x - baseDvX;
-        const baseRy = y - baseDvY;
+        const baseRy = groundVisualY - baseDvY;
 
         Draw3D.drawCylinder(baseRx, baseRy, sz / 2, baseH, 12, damageFlash ? color(255) : color(60), extrusionAngle, sunAngle);
 
         // --- HEAD ---
         // Head sits on Base Roof
-        // Head Base = Base Roof = (baseRx, baseRy)
-        // Head Roof = Head Base - Head Vector
         const headDvX = headH * Math.sin(extrusionAngle);
         const headDvY = headH * Math.cos(extrusionAngle);
+        const headRx = baseRx - headDvX; // Stack on top of base roof
+        const headRy = baseRy - headDvY; // Stack on top of base roof
 
         // We need to pass EXTUDED SHAPE vertices for the "Front" (Roof) face.
         // But drawExtrudedShape takes vertices of the Front face.
@@ -1446,11 +1461,6 @@ class Turret extends SurfaceObject {
 
         const c = Math.cos(this.angle);
         const s = Math.sin(this.angle);
-
-        // Head Base Pos = (baseRx, baseRy)
-        // Head Roof Pos = (baseRx - headDvX, baseRy - headDvY)
-        const headRx = baseRx - headDvX;
-        const headRy = baseRy - headDvY;
 
         const corners = [];
         for (let p of local) {
@@ -1775,8 +1785,13 @@ class DefenseDrone extends SurfaceObject {
         if (isDetected) {
             this.chasePlayer = true;
 
-            // Aim at player
-            const targetAngle = Math.atan2(dy, dx);
+            // Aim at player's VISUAL position (to match visual collision detection)
+            const extrusionAngle = 0.5;
+            const droneVisualY = this.pos.y - (droneAltitude * Math.cos(extrusionAngle));
+            const playerVisualY = player.pos.y - (playerAltitude * Math.cos(extrusionAngle));
+            const visualDY = playerVisualY - droneVisualY;
+
+            const targetAngle = Math.atan2(visualDY, dx);
             let angleDiff = targetAngle - this.angle;
 
             // Normalize angle difference
@@ -1854,24 +1869,9 @@ class DefenseDrone extends SurfaceObject {
         if (typeof Projectile === 'undefined') return;
         if (!starSystem || !starSystem.projectiles) return;
 
-        // Calculate visual muzzle position matching the draw() method
-        // The ship is drawn at (pos.x, pos.y - yOffset) with extrusion applied
-        const extrusionAngle = 0.5;
-        const sz = this.size;
-        const bodyH = sz * 0.4;
-
-        // Visual base position (same as passed to draw)
-        const visualX = this.pos.x;
-        const visualY = this.pos.y - (this.yOffset || 0);
-
-        // Extrusion offset for the 3D visual effect
-        const extDvX = bodyH * Math.sin(extrusionAngle);
-        const extDvY = bodyH * Math.cos(extrusionAngle);
-
-        // Muzzle is at front of ship (angle direction) from the extruded center
-        const muzzleOffset = sz * 0.5; // Match the front vertex position
-        const muzzleX = visualX - extDvX + Math.cos(this.angle) * muzzleOffset;
-        const muzzleY = visualY - extDvY + Math.sin(this.angle) * muzzleOffset;
+        // World base position (logical center)
+        const muzzleX = this.pos.x + Math.cos(this.angle) * (this.size * 0.5);
+        const muzzleY = this.pos.y + Math.sin(this.angle) * (this.size * 0.5);
 
         const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.DRONE : {};
 
@@ -1893,16 +1893,19 @@ class DefenseDrone extends SurfaceObject {
         // Mark as surface projectile with proper altitude
         proj.isSurface = true;
         proj.ownerType = 'pirate';
-        proj.altitude = this.altitude; // Pirate's flying altitude
+        proj.altitude = this.altitude; // Pirate's flying altitude (Absolute)
 
         // Set target altitude for terrain-aware trajectory
         // Projectile will descend/ascend toward player's altitude
         proj.startAltitude = this.altitude;
         proj.targetAltitude = player.altitude || 0;
 
-        // Play laser sound with proper world positioning
+        // Play laser sound with proper visual world positioning
         if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
-            soundManager.playWorldSound('laser', muzzleX, muzzleY, player.pos, this);
+            const extrusionAngle = 0.5;
+            const visualPX = muzzleX - (proj.altitude * Math.sin(extrusionAngle));
+            const visualPY = muzzleY - (proj.altitude * Math.cos(extrusionAngle));
+            soundManager.playWorldSound('laser', visualPX, visualPY, player.pos, this);
         }
     }
 

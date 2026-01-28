@@ -48,7 +48,9 @@ class Projectile {
         this._isStorm = false;  // Storm weapon projectile
         this.stormConfig = null; // Storm configuration for spawning mini-storms
         this.destroyed = false;
-        this.altitude = 0; // Altitude for surface mode
+        this.altitude = 0; // Current altitude for surface mode
+        this.startAltitude = 0; // Starting altitude for interpolation
+        this.targetAltitude = 0; // Target altitude for interpolation
         this.isSurface = false; // Whether this is a surface mode projectile
         this.ownerType = 'ship'; // 'ship' or 'turret'
         this._timeCorrection = 1.0;
@@ -88,6 +90,8 @@ class Projectile {
         this.dragMultiplier = dragMultiplier;
         this.rotationBlockMultiplier = rotationBlockMultiplier;
         this.altitude = 0;
+        this.startAltitude = 0;
+        this.targetAltitude = 0;
         this._isPlayer = !!owner && (
             (typeof Player !== 'undefined' && owner instanceof Player) ||
             (typeof player !== 'undefined' && owner === player) ||
@@ -197,6 +201,15 @@ class Projectile {
         // Move projectile (frame-rate independent)
         this.pos.add(p5.Vector.mult(this.vel, timeScale));
         this.lifespan -= timeScale;
+
+        // Smoothly interpolate altitude for surface projectiles
+        // DISABLED: This causes visual offset as projectiles arc from start to target altitude
+        // Projectiles should maintain constant altitude for accurate visual representation
+        // if (this.isSurface && this.initialLifespan > 0) {
+        //     const lifeRatio = Math.max(0, this.lifespan / this.initialLifespan);
+        //     // Interpolate from startAltitude at lifeRatio=1 to targetAltitude at lifeRatio=0
+        //     this.altitude = this.targetAltitude + (this.startAltitude - this.targetAltitude) * lifeRatio;
+        // }
     }
 
     /** Apply damage to this projectile (used primarily for missiles/mines)
@@ -229,11 +242,29 @@ class Projectile {
         }
     }
 
-    draw() {
+    /**
+     * Draw the projectile
+     * @param {number} x - Optional override x (default: this.pos.x)
+     * @param {number} y - Optional override y (default: this.pos.y)
+     * @param {number} sunAngle - Optional sun angle (default: 0)
+     * @param {number} counterScale - Optional scale multiplier (default: 1.0)
+     */
+    draw(x, y, sunAngle, counterScale = 1.0) {
+        const drawX = (x !== undefined) ? x : this.pos.x;
+        const drawY = (y !== undefined) ? y : this.pos.y;
+
+        // Apply visual altitude offset for surface projectiles
+        let finalY = drawY;
+        if (this.isSurface) {
+            const extrusionAngle = 0.5;
+            finalY -= (this.altitude || 0) * Math.cos(extrusionAngle);
+        }
+
         // Use cached type checks to avoid repeated string comparisons
         if (this._isMissile) {
             push();
-            translate(this.pos.x, this.pos.y);
+            translate(drawX, finalY);
+            scale(counterScale);
             rotate(this.vel.heading());
             fill(this.color);
             noStroke();
@@ -251,10 +282,10 @@ class Projectile {
 
             // Draw hull bar for missiles only if damaged
             if (this.hull !== undefined && this.maxHull !== undefined && this.hull < this.maxHull) {
-                const barWidth = this.size * 2;
-                const barHeight = 2;
-                const barX = this.pos.x - barWidth / 2;
-                const barY = this.pos.y - this.size * 2.5 - barHeight - 1; // Above the missile
+                const barWidth = this.size * 2 * counterScale;
+                const barHeight = 2 * counterScale;
+                const barX = drawX - barWidth / 2;
+                const barY = finalY - (this.size * 2.5 * counterScale) - barHeight - 1; // Above the missile
                 // Background
                 fill(0, 0, 0, 150);
                 noStroke();
@@ -266,7 +297,8 @@ class Projectile {
             }
         } else if (this._isTangle) {
             push();
-            translate(this.pos.x, this.pos.y);
+            translate(drawX, finalY);
+            scale(counterScale);
 
             // Energy field background
             noStroke();
@@ -315,16 +347,23 @@ class Projectile {
             noFill();
             const ownerPos = this.owner && this.owner.pos ? this.owner.pos : null;
             if (ownerPos) {
-                line(ownerPos.x, ownerPos.y, this.pos.x, this.pos.y);
+                let ownerVisualY = ownerPos.y;
+                if (this.isSurface) {
+                    const extrusionAngle = 0.5;
+                    const ownerAlt = (this.owner.altitude !== undefined) ? this.owner.altitude : (this.owner.yOffset || 0);
+                    ownerVisualY -= ownerAlt * Math.cos(extrusionAngle);
+                }
+                line(ownerPos.x, ownerVisualY, drawX, finalY);
             } else {
                 // Fallback to a short line pointing to the projectile
-                line(this.pos.x - (this.size * 2), this.pos.y, this.pos.x, this.pos.y);
+                line(drawX - (this.size * 2), finalY, drawX, finalY);
             }
             pop();
         } else if (this._isStorm) {
             // Storm projectile: swirling energy orb
             push();
-            translate(this.pos.x, this.pos.y);
+            translate(drawX, finalY);
+            scale(counterScale);
             const timeNow = (typeof millis === 'function') ? millis() : Date.now();
             const pulse = 1 + Math.sin(timeNow * 0.01) * 0.2;
             const rot = timeNow * 0.003;
@@ -354,10 +393,14 @@ class Projectile {
             }
             pop();
         } else {
-            // Standard projectile drawing (no push/pop needed)
+            // Standard projectile drawing
+            push();
+            translate(drawX, finalY);
+            scale(counterScale);
             fill(this.color);
             noStroke();
-            ellipse(this.pos.x, this.pos.y, this.size * 2, this.size * 2);
+            ellipse(0, 0, this.size * 2, this.size * 2);
+            pop();
         }
     }
 

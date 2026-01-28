@@ -213,7 +213,7 @@ function createMockStarSystem(options = {}) {
         explosions: options.explosions || [],
         forceWaves: options.forceWaves || [],
         beams: [],
-        addExplosion: jest.fn((x, y, size, color, isSurface) => {
+        addExplosion: jest.fn((x, y, size, color, isSurface, silent, altitude) => {
             // Simple mock - just track the call
         }),
         addProjectile: jest.fn(),
@@ -1063,15 +1063,16 @@ describe('SurfaceMode Explosions', () => {
         expect(starSystem.addExplosion).toHaveBeenCalled();
     });
 
-    test('_createSurfaceExplosion applies altitude offset', () => {
+    test('_createSurfaceExplosion passes world coordinates and altitude', () => {
         sm._createSurfaceExplosion(100, 200, 50, 15, [255, 100, 50]);
 
         const call = starSystem.addExplosion.mock.calls[0];
-        const [x, y] = call;
+        const [x, y, size, col, isSurface, silent, alt] = call;
 
-        // With altitude 50, visual position should be offset
-        expect(x).not.toBe(100);
-        expect(y).not.toBe(200);
+        // Should use world coordinates (no visual offset in world space)
+        expect(x).toBe(100);
+        expect(y).toBe(200);
+        expect(alt).toBe(50);
     });
 
     test('_createSurfaceExplosion does nothing without starSystem', () => {

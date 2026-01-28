@@ -102,12 +102,9 @@ class Astronaut {
         const vy = Math.sin(this.facingAngle) * throwSpeed;
 
         if (surfaceMode && surfaceMode.starSystem) {
-            // Create grenade object
-            // Pass current altitude (this.altitude)
+            // Create grenade object (Using world coordinates - no visual offsets)
+            // Astronaut.pos is already in world space.
             const grenade = new Grenade(this.pos.x, this.pos.y, vx, vy, this.facingAngle, this.altitude);
-            // Add to system projectiles (or handling list)
-            // We can treat it as a special projectile or add to surface objects temporarily?
-            // Ideally projectiles list. Since it's a surface projectile, make sure it has isSurface=true
             surfaceMode.starSystem.projectiles.push(grenade);
 
             if (typeof soundManager !== 'undefined') {
@@ -134,25 +131,31 @@ class Astronaut {
         const extrusionAngle = 0.5;
         const sz = this.size;
 
+        // Visual position: World Y - compressed Altitude
+        const groundVisualY = y - (this.altitude || 0) * Math.cos(extrusionAngle);
+
         // Bobbing animation
         const bob = Math.sin(this.walkCycle) * 2;
 
         // Use Draw3D logic (simplified here as direct calls or Draw3D methods)
+        const currentY = groundVisualY + bob;
 
         // Body color
         const bodyColor = color(200, 200, 200); // White suit
         const helmetColor = color(255, 180, 50); // Gold visor
 
-        // Body
-        Draw3D.drawBox3D(x, y + bob, sz, sz, this.height, bodyColor, extrusionAngle, sunAngle);
+        // Body (Note: drawBox3D takes the TOP position, so subtract height)
+        const bodyTopY = currentY - this.height * Math.cos(extrusionAngle);
+        Draw3D.drawBox3D(x, bodyTopY, sz, sz, this.height, bodyColor, extrusionAngle, sunAngle);
 
-        // Helmet
-        Draw3D.drawDome(x, y + bob - this.height / 2 - 2, sz * 0.4, 6, helmetColor, extrusionAngle, sunAngle);
+        // Helmet (Mounted on top of body)
+        const helmetY = bodyTopY - 2;
+        Draw3D.drawDome(x, helmetY, sz * 0.4, 6, helmetColor, extrusionAngle, sunAngle);
 
-        // Backpack
+        // Backpack (Offset from center)
         const backX = x - Math.cos(this.facingAngle) * sz * 0.4;
-        const backY = y - Math.sin(this.facingAngle) * sz * 0.4;
-        Draw3D.drawBox3D(backX, y + bob - 5, sz * 0.6, sz * 0.4, 8, color(150), extrusionAngle, sunAngle);
+        const backY = currentY - 5; // Use groundVisualY base
+        Draw3D.drawBox3D(backX, backY - 8 * Math.cos(extrusionAngle), sz * 0.6, sz * 0.4, 8, color(150), extrusionAngle, sunAngle);
     }
 }
 
@@ -208,24 +211,34 @@ class Grenade {
      * @param {number} x - Optional override x (default: this.pos.x)
      * @param {number} y - Optional override y (default: this.pos.y)
      * @param {number} sunAngle - Optional sun angle (default: 0)
+     * @param {number} counterScale - Optional scale multiplier (default: 1.0)
      */
-    draw(x, y, sunAngle) {
+    draw(x, y, sunAngle, counterScale = 1.0) {
         // Handle no-arg call from surfaceMode which expects instance properties
         const drawX = (x !== undefined) ? x : this.pos.x;
         const drawY = (y !== undefined) ? y : this.pos.y;
 
         // Simple 3D projection for altitude
         const extrusionAngle = 0.5; // Match global
+
+        // [FIX] Project shadow on local terrain instead of flat world-plane
+        let terrainH = 0;
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && typeof surfaceMode._getTerrainHeightAt === 'function') {
+            terrainH = surfaceMode._getTerrainHeightAt(drawX, drawY);
+        }
+
+        const groundVisualY = drawY - (terrainH * Math.cos(extrusionAngle));
         const visualY = drawY - (this.altitude * Math.cos(extrusionAngle)); // Visual height offset
 
-        // Draw grenade body
+        // Shadow on ground (Projected onto terrain)
+        fill(0, 0, 0, 100);
+        noStroke();
+        ellipse(drawX, groundVisualY, this.size * counterScale, this.size * 0.5 * counterScale);
+
+        // Draw grenade body (At visual height)
         fill(this.color);
         noStroke();
-        ellipse(drawX, visualY, this.size, this.size);
-
-        // Shadow on ground
-        fill(0, 0, 0, 100);
-        ellipse(drawX, drawY, this.size, this.size * 0.5);
+        ellipse(drawX, visualY, this.size * counterScale, this.size * counterScale);
     }
 }
 

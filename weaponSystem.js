@@ -334,7 +334,8 @@ class WeaponSystem {
             processed: new Set(), // Initialize as Set directly
             // Add batch processing properties with pre-populated entities
             entitiesToProcess: entitiesToProcess,
-            isSurface: isSurfaceWave // Track whether this wave belongs to surface mode
+            isSurface: isSurfaceWave, // Track whether this wave belongs to surface mode
+            altitude: owner.altitude || 0 // Store owner altitude for visual offset
         });
 
         WEAPON_LOG(`Force wave added with damage=${damage}, maxRadius=${maxRadius}`);
@@ -521,7 +522,11 @@ class WeaponSystem {
         }
 
         // Apply altitude for surface mode
-        this._applySurfaceProperties(proj, owner);
+        let targetAlt = null;
+        if (owner && owner.target) {
+            targetAlt = (owner.target.altitude !== undefined) ? owner.target.altitude : (owner.target.yOffset || 0);
+        }
+        this._applySurfaceProperties(proj, owner, targetAlt);
 
         // Play weapon-specific sound using playWorldSound
         if (soundManager && player?.pos) {
@@ -581,7 +586,11 @@ class WeaponSystem {
         }
 
         // Apply surface mode properties
-        this._applySurfaceProperties(proj, owner);
+        let targetAlt = null;
+        if (target) {
+            targetAlt = (target.altitude !== undefined) ? target.altitude : (target.yOffset || 0);
+        }
+        this._applySurfaceProperties(proj, owner, targetAlt);
 
         if (soundManager && player?.pos) {
             // Consider adding a specific 'missileLaunch' sound
@@ -617,12 +626,23 @@ class WeaponSystem {
      * Apply surface mode properties to a projectile if applicable
      * @param {Projectile} proj - The projectile to update
      * @param {Object} owner - The entity firing the weapon
+     * @param {number} targetAlt - Optional target altitude for visual trajectory
      * @private
      */
-    static _applySurfaceProperties(proj, owner) {
+    static _applySurfaceProperties(proj, owner, targetAlt = null) {
         // Surface mode filter: apply surface-specific properties to projectiles
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
-            proj.altitude = (owner.altitude || 0) + (owner.yOffset || 0);
+            const currentAlt = (owner && owner.altitude !== undefined) ? owner.altitude : (owner.yOffset || 0);
+            proj.startAltitude = currentAlt;
+            proj.altitude = currentAlt;
+
+            // If no target alt provided, default to current alt (level firing)
+            if (targetAlt === null) {
+                proj.targetAltitude = currentAlt;
+            } else {
+                proj.targetAltitude = targetAlt;
+            }
+
             proj.ownerType = (owner.shipDef) ? 'ship' : 'turret';
             proj.isSurface = true;
         }
@@ -743,14 +763,16 @@ class WeaponSystem {
                 end: createVector(end.x, end.y),
                 color: weapon?.color || [255, 0, 0],
                 time: millis(),
-                hit: hit.target !== null
+                hit: hit.target !== null,
+                targetAltitude: (hit.target && hit.target.altitude !== undefined) ? hit.target.altitude : 0
             };
         } else {
             owner.lastBeam.start.set(start.x, start.y);
             owner.lastBeam.end.set(end.x, end.y);
-            owner.lastBeam.color = weapon?.color || [255, 0, 0];
-            owner.lastBeam.time = millis();
+            owner.lastBeam.color = weapon?.color || [255, 0, 0],
+                owner.lastBeam.time = millis();
             owner.lastBeam.hit = hit.target !== null;
+            owner.lastBeam.targetAltitude = (hit.target && hit.target.altitude !== undefined) ? hit.target.altitude : 0;
         }
 
         // Handle hit effects

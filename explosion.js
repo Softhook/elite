@@ -3,7 +3,7 @@
  * The animation has multiple phases - initial flash, debris ejection, and fading smoke.
  */
 class Explosion {
-    constructor(x, y, size, baseColor = [255, 160, 30], isSurface = false, silent = false) {
+    constructor(x, y, size, baseColor = [255, 160, 30], isSurface = false, silent = false, altitude = 0) {
         // Create position vector just once (reused by reset)
         this.pos = createVector(0, 0);
 
@@ -17,11 +17,12 @@ class Explosion {
         this.duration = 60;
         this.currentFrame = 0;
         this.isSurface = isSurface;
+        this.altitude = altitude;
         this.silent = silent;
 
         // Call reset if parameters provided
         if (x !== undefined) {
-            this.reset(x, y, size, baseColor, isSurface, silent);
+            this.reset(x, y, size, baseColor, isSurface, silent, altitude);
         }
     }
 
@@ -33,8 +34,9 @@ class Explosion {
      * @param {Array} baseColor - Base color of explosion
      * @param {boolean} isSurface - Whether this is a surface mode explosion
      * @param {boolean} silent - Whether to suppress sound
+     * @param {number} altitude - Potential altitude for surface mode
      */
-    reset(x, y, size, baseColor = [255, 160, 30], isSurface = false, silent = false) {
+    reset(x, y, size, baseColor = [255, 160, 30], isSurface = false, silent = false, altitude = 0) {
         // Update position vector
         this.pos.set(x, y);
 
@@ -44,6 +46,7 @@ class Explosion {
         this.duration = 60; // Frames until complete
         this.currentFrame = 0;
         this.isSurface = isSurface;
+        this.altitude = altitude;
         this.silent = silent;
 
         // Clear arrays for reuse
@@ -222,19 +225,29 @@ class Explosion {
         blendMode(ADD); // Makes overlapping particles brighter
         noStroke();
 
+        // Calculate visual Y offset for surface mode
+        let visualYOffset = 0;
+        if (this.isSurface) {
+            const extrusionAngle = 0.5;
+            // The position 'y' is the world ground Y.
+            // If altitude is provided, use it (e.g. for mid-air explosions).
+            // Default to 0 for ground-level explosions (which will still be offset by terrain height if y incorporates it).
+            visualYOffset = (this.altitude || 0) * Math.cos(extrusionAngle);
+        }
+
         // Draw initial flash
         if (this.currentFrame < 10) {
             const flashOpacity = map(this.currentFrame, 0, 10, 150, 0);
             const flashSize = this.size * map(this.currentFrame, 0, 10, 1.0, 2.0);
             fill(255, 255, 200, flashOpacity);
-            ellipse(this.pos.x, this.pos.y, flashSize, flashSize);
+            ellipse(this.pos.x, this.pos.y - visualYOffset, flashSize, flashSize);
         }
 
         // Draw particles
         for (let i = 0, len = this.particles.length; i < len; i++) {
             const p = this.particles[i];
             fill(p.color[0], p.color[1], p.color[2], p.opacity);
-            ellipse(p.pos.x, p.pos.y, p.size, p.size);
+            ellipse(p.pos.x, p.pos.y - visualYOffset, p.size, p.size);
         }
 
         // Reset blend mode for debris
@@ -244,7 +257,7 @@ class Explosion {
         for (let i = 0, len = this.debris.length; i < len; i++) {
             const d = this.debris[i];
             push();
-            translate(d.pos.x, d.pos.y);
+            translate(d.pos.x, d.pos.y - visualYOffset);
             rotate(d.rotation % TWO_PI); // Normalize rotation angle
             fill(d.color[0], d.color[1], d.color[2], d.opacity);
             stroke(0, min(d.opacity, 100));

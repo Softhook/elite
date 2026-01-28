@@ -363,9 +363,10 @@ function performPeriodicTasks() {
  * Handle continuous firing when space is held
  */
 function handleContinuousFiring() {
-    if ((gameStateManager.currentState === "IN_FLIGHT" || gameStateManager.currentState === "SURFACE_MODE") &&
-        !player.destroyed &&
-        keyIsDown(32)) {
+    const isShipControl = gameStateManager.currentState === "IN_FLIGHT" ||
+        (gameStateManager.currentState === "SURFACE_MODE" && typeof surfaceMode !== 'undefined' && surfaceMode.controlMode === 'SHIP');
+
+    if (isShipControl && !player.destroyed && keyIsDown(32)) {
         player.handleFireInput();
     }
 }
@@ -490,9 +491,10 @@ function handleSaveSelectionInput() {
  * @returns {boolean} True if handled
  */
 function handleSpacebarFiring() {
-    if ((key === ' ' || keyCode === 32) &&
-        (gameStateManager.currentState === "IN_FLIGHT" ||
-            gameStateManager.currentState === "SURFACE_MODE") && player) {
+    const isShipControl = gameStateManager.currentState === "IN_FLIGHT" ||
+        (gameStateManager.currentState === "SURFACE_MODE" && typeof surfaceMode !== 'undefined' && surfaceMode.controlMode === 'SHIP');
+
+    if ((key === ' ' || keyCode === 32) && isShipControl && player) {
         player.handleFireInput();
         return true;
     }
@@ -505,7 +507,10 @@ function handleSpacebarFiring() {
  */
 function handleWeaponSwitching() {
     const state = gameStateManager.currentState;
-    if ((state !== "IN_FLIGHT" && state !== "SURFACE_MODE") || !player) return false;
+    const isShipControl = state === "IN_FLIGHT" ||
+        (state === "SURFACE_MODE" && typeof surfaceMode !== 'undefined' && surfaceMode.controlMode === 'SHIP');
+
+    if (!isShipControl || !player) return false;
 
     const numKey = parseInt(key);
     if (isNaN(numKey) || numKey < 1 || numKey > 9) return false;
