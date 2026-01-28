@@ -110,6 +110,10 @@ class SurfaceMode {
         this.debugMode = false; // Set to true to spawn only one turret for testing
         this.isLanded = false; // Track landed state
 
+        // Astronaut Mode
+        this.controlMode = 'SHIP'; // 'SHIP' or 'ASTRONAUT'
+        this.astronaut = null;
+
         // Player physics
         this.playerAngle = -Math.PI / 2; // Start facing UP
         this.playerSpeed = 0;
@@ -129,6 +133,9 @@ class SurfaceMode {
 
         // Saved player position for return
         this.savedPlayerPos = null;
+
+        // Reboard cooldown to prevent loop
+        this.reboardCooldown = 0;
     }
 
     /**
@@ -439,6 +446,11 @@ class SurfaceMode {
 
         const dt = deltaTime / 1000; // Convert to seconds
 
+        // Update reboard cooldown
+        if (this.reboardCooldown > 0) {
+            this.reboardCooldown -= dt;
+        }
+
         // Update transition
         if (this.state === SURFACE_STATE.ENTERING ||
             this.state === SURFACE_STATE.EXITING) {
@@ -457,16 +469,20 @@ class SurfaceMode {
                 this.player.isDockedAndInvulnerable = false;
             }
 
-            // Altitude control - BEFORE physics update so player.altitude uses current value
-            this.altitude += this.altitudeInput * SURFACE_CONFIG.CLIMB_SPEED * dt;
+            if (this.controlMode === 'SHIP') {
+                // Altitude control - BEFORE physics update so player.altitude uses current value
+                this.altitude += this.altitudeInput * SURFACE_CONFIG.CLIMB_SPEED * dt;
 
-            // Constrain altitude relative to terrain (not absolute)
-            // Player must maintain MIN_ALTITUDE clearance above ground
-            const currentGroundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
-            const minAbsoluteAlt = currentGroundH + SURFACE_CONFIG.MIN_ALTITUDE;
-            this.altitude = constrain(this.altitude, minAbsoluteAlt, SURFACE_CONFIG.MAX_ALTITUDE);
+                // Constrain altitude relative to terrain (not absolute)
+                // Player must maintain MIN_ALTITUDE clearance above ground
+                const currentGroundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
+                const minAbsoluteAlt = currentGroundH + SURFACE_CONFIG.MIN_ALTITUDE;
+                this.altitude = constrain(this.altitude, minAbsoluteAlt, SURFACE_CONFIG.MAX_ALTITUDE);
 
-            this._updatePhysics(dt);
+                this._updatePhysics(dt);
+            } else if (this.controlMode === 'ASTRONAUT') {
+                this._updateAstronaut(dt);
+            }
 
             // Update terrain - regenerate if player moved to new grid cell
             if (this.terrain.generateMesh(this.surfaceX, this.surfaceY)) {
@@ -644,6 +660,107 @@ class SurfaceMode {
         const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
         this.player.altitude = this.altitude; // Absolute altitude
         this.player.yOffset = groundH; // Persist ground height for weapon firing
+
+        // Check for disembark trigger (WASD while landed)
+        this._checkDisembarkTrigger();
+    }
+
+    /**
+     * Check if player is trying to disembark
+     */
+    _checkDisembarkTrigger() {
+        if (!this.isLanded || this.controlMode !== 'SHIP') return;
+
+        // Check for any movement input
+        // Keys: W(87), A(65), S(83), D(68) or Arrows (UP/LEFT/DOWN/RIGHT)
+        const moving = keyIsDown(87) || keyIsDown(65) || keyIsDown(83) || keyIsDown(68) ||
+            keyIsDown(UP_ARROW) || keyIsDown(LEFT_ARROW) || keyIsDown(DOWN_ARROW) || keyIsDown(RIGHT_ARROW);
+
+        // Only allow disembark if moving AND stationary (speed < 10) AND not on cooldown
+        if (moving && this.playerSpeed < 10 && this.reboardCooldown <= 0) {
+            this.deployAstronaut();
+        }
+    }
+
+    /**
+     * Deploy the astronaut
+     */
+    deployAstronaut() {
+        if (this.controlMode === 'ASTRONAUT') return;
+
+        this.controlMode = 'ASTRONAUT';
+
+        // Create astronaut at player position
+        // Ensure astronaut.js is loaded
+        if (typeof Astronaut !== 'undefined') {
+            this.astronaut = new Astronaut(this.player.pos);
+            this.astronaut.heading = this.player.angle; // Face same way as ship
+
+            // Initial surface sync
+            const groundH = this._getTerrainHeightAt(this.astronaut.pos.x, this.astronaut.pos.y);
+            this.astronaut.altitude = groundH;
+
+            // Message
+            if (typeof uiManager !== 'undefined') {
+                uiManager.addMessage("EVA Initiated - Astronaut Deployed", [100, 255, 100]);
+            }
+        } else {
+            console.error("Astronaut class not found!");
+            this.controlMode = 'SHIP';
+        }
+    }
+
+    /**
+     * Return to ship
+     */
+    boardShip() {
+        if (this.controlMode !== 'ASTRONAUT') return;
+
+        this.controlMode = 'SHIP';
+        this.astronaut = null;
+
+        // Reset player inputs to prevent instant re-deploy or launch
+        this.player.thrustInput = 0;
+        this.player.turnInput = 0;
+
+        // Set cooldown to prevent immediate re-disembark logic
+        this.reboardCooldown = 2.0; // 2 Seconds buffer
+
+        // Message
+        if (typeof uiManager !== 'undefined') {
+            uiManager.addMessage("Boarding Ship", [100, 255, 100]);
+        }
+    }
+
+    /**
+     * Update astronaut physics and logic
+     */
+    _updateAstronaut(dt) {
+        if (!this.astronaut) return;
+
+        // Handle Input
+        const isMoving = this.astronaut.handleInput(this);
+
+        // Physics update
+        this.astronaut.update(dt);
+
+        // Terrain Clamping
+        const groundH = this._getTerrainHeightAt(this.astronaut.pos.x, this.astronaut.pos.y);
+        this.astronaut.altitude = groundH; // Snap to ground
+
+        // Sync camera focus to astronaut
+        this.surfaceX = this.astronaut.pos.x;
+        this.surfaceY = this.astronaut.pos.y;
+        this.altitude = groundH + 30; // Camera height above astronaut (closer than ship)
+
+        // Check for Boarding (proximity to ship)
+        // Only board if not moving (to avoid accidental trigger while walking past)
+        if (!isMoving) {
+            const dist = p5.Vector.dist(this.astronaut.pos, this.player.pos);
+            if (dist < 30) { // Boarding range (Reduced to prevent instant re-boarding)
+                this.boardShip();
+            }
+        }
     }
 
     /**
@@ -865,8 +982,9 @@ class SurfaceMode {
         const perspectiveScale = this._getPerspectiveScale();
         scale(perspectiveScale);
 
-        // 3. World translation (camera follows player)
-        translate(-this.player.pos.x, -this.player.pos.y);
+        // 3. World translation (camera follows active entity)
+        // Use surfaceX/Y which tracks either player or astronaut
+        translate(-this.surfaceX, -this.surfaceY);
 
         // Draw terrain
         this._drawTerrain();
@@ -879,6 +997,9 @@ class SurfaceMode {
         // Draw beam and force wave effects (no projectile, direct rendering)
         this._drawBeams();
         this._drawForceWaves();
+
+        // Draw Astronaut (if active)
+        this._drawAstronaut();
 
         // Draw player ship
         this._drawPlayerShip();
@@ -1391,6 +1512,45 @@ class SurfaceMode {
             circle(wave.pos.x, wave.pos.y, pulseSize);
         }
 
+        pop();
+    }
+
+    /**
+     * Draw astronaut if active
+     */
+    _drawAstronaut() {
+        if (!this.astronaut) return;
+
+        // Use dynamic sun angle
+        const sunAngle = this._getSunAngle();
+        const startX = this.astronaut.pos.x;
+        const startY = this.astronaut.pos.y;
+
+        // Draw astronaut shadow
+        const shadowOffset = 2; // Close to ground
+        const shadowAlpha = 100;
+        const shadowX = startX + Math.cos(sunAngle + Math.PI) * shadowOffset;
+        const shadowY = startY + Math.sin(sunAngle + Math.PI) * shadowOffset;
+
+        push();
+        translate(shadowX, shadowY);
+        fill(0, 0, 0, shadowAlpha);
+        noStroke();
+        ellipse(0, 0, this.astronaut.size, this.astronaut.size * 0.5);
+        pop();
+
+        // Draw astronaut model
+        push();
+        // Counter-scale to keep constant size on screen?
+        // Actually, astronaut should probably scale with perspective since it's small?
+        // But if we zoom out, it becomes invisible.
+        // Let's apply counter-scale like ship for now to ensure visibility.
+        const counterScale = this._getCounterScale();
+        translate(startX, startY);
+        scale(counterScale);
+        translate(-startX, -startY);
+
+        this.astronaut.draw(startX, startY, sunAngle);
         pop();
     }
 

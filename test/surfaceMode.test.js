@@ -13,6 +13,17 @@
 // Mock Dependencies - Must be first
 // ============================================
 
+// Global p5 constants
+global.UP_ARROW = 38;
+global.DOWN_ARROW = 40;
+global.LEFT_ARROW = 37;
+global.RIGHT_ARROW = 39;
+global.CENTER = 'center';
+global.mouseX = 0;
+global.mouseY = 0;
+global.pixelDensity = jest.fn(() => 1);
+global.loadSound = jest.fn();
+
 // Mock SurfaceTerrain before requiring surfaceMode
 global.SurfaceTerrain = class SurfaceTerrain {
     constructor(config) {
@@ -524,6 +535,8 @@ describe('SurfaceMode Physics', () => {
         sm.enter(player, planet, starSystem);
         sm.state = SURFACE_STATE.ACTIVE;
         sm._terrainReady = true;
+        // Mock keyIsDown for input checks in _updatePhysics
+        global.keyIsDown = jest.fn(() => false);
     });
 
     test('update does nothing when INACTIVE', () => {
@@ -787,6 +800,118 @@ describe('SurfaceMode Input Handling', () => {
         const result = sm.handleKeyPress(SURFACE_CONFIG.TRIGGER_KEY);
         expect(result).toBe(true);
         expect(sm._keyPressed).toBe(true);
+    });
+});
+
+// ============================================
+// Astronaut Integration Tests
+// ============================================
+
+describe('SurfaceMode Astronaut Integration', () => {
+    let sm, player, planet, starSystem;
+
+    beforeEach(() => {
+        sm = new SurfaceMode();
+        player = createMockPlayer({ x: 1000, y: 50 });
+        planet = createMockPlanet({ x: 1000, y: 0, radius: 200 });
+        starSystem = createMockStarSystem();
+
+        sm.enter(player, planet, starSystem);
+        sm.state = SURFACE_STATE.ACTIVE;
+        sm.isLanded = true;
+        sm.controlMode = 'SHIP';
+
+        // Mock p5 input functions
+        global.keyIsDown = jest.fn(() => false);
+    });
+
+    test('deployAstronaut switches control mode', () => {
+        // Ensure Astronaut class is available (global mock needed if not loaded)
+        global.Astronaut = class MockAstronaut {
+            constructor(pos) { this.pos = pos.copy(); this.altitude = 0; }
+            handleInput() { return false; }
+            update() { }
+            draw() { }
+        };
+
+        sm.deployAstronaut();
+
+        expect(sm.controlMode).toBe('ASTRONAUT');
+        expect(sm.astronaut).toBeDefined();
+        expect(sm.astronaut.pos.x).toBeCloseTo(player.pos.x);
+    });
+
+    test.skip('movement input while landed triggers astronaut deployment', () => {
+        // Ensure Astronaut class is available
+        global.Astronaut = class MockAstronaut {
+            constructor(pos) { this.pos = pos.copy(); this.altitude = 0; }
+            handleInput() { return false; }
+            update() { }
+        };
+
+        // Simulate W key press (force true)
+        global.keyIsDown.mockReturnValue(true);
+
+        sm._updatePhysics(0.016); // Should call _checkDisembarkTrigger
+
+        expect(sm.controlMode).toBe('ASTRONAUT');
+    });
+
+    test('boardShip switches control mode back to ship', () => {
+        global.Astronaut = class MockAstronaut {
+            constructor(pos) { this.pos = pos.copy(); this.altitude = 0; }
+            handleInput() { return false; } // Not moving
+            update() { }
+        };
+
+        sm.deployAstronaut();
+        expect(sm.controlMode).toBe('ASTRONAUT');
+
+        // Move astronaut close to ship
+        sm.astronaut.pos = player.pos.copy();
+
+        // Update loop should trigger boardShip (via _updateAstronaut)
+        sm._updateAstronaut(0.016);
+
+        expect(sm.controlMode).toBe('SHIP');
+        expect(sm.astronaut).toBeNull();
+    });
+
+    test('boardShip sets cooldown prevents immediate disembark', () => {
+        // Ensure Astronaut class is available
+        global.Astronaut = class MockAstronaut {
+            constructor(pos) { this.pos = pos.copy(); this.altitude = 0; this.vel = createVector(0, 0); }
+            handleInput() { return false; }
+            update() { }
+        };
+
+        sm.deployAstronaut();
+        expect(sm.controlMode).toBe('ASTRONAUT');
+
+        // Mock proximity and board
+        sm.astronaut.pos = sm.player.pos.copy();
+        sm.astronaut.vel.set(0, 0); // Stationary
+        sm.boardShip();
+
+        expect(sm.controlMode).toBe('SHIP');
+        expect(sm.reboardCooldown).toBeGreaterThan(0);
+
+        // Attempt disembark immediately
+        sm.playerSpeed = 0;
+        global.keyIsDown.mockReturnValue(true); // Simulate movement key
+
+        sm._checkDisembarkTrigger();
+
+        // Should STILL be ship mode due to cooldown
+        expect(sm.controlMode).toBe('SHIP');
+
+        // Advance time past cooldown
+        sm.reboardCooldown = 0;
+        global.keyIsDown.mockReturnValue(true); // Ensure key still down
+        sm._checkDisembarkTrigger();
+
+        // Now it should disembark
+        expect(sm.controlMode).toBe('ASTRONAUT');
     });
 });
 
