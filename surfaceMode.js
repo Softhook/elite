@@ -601,6 +601,10 @@ class SurfaceMode {
             if (typeof soundManager !== 'undefined') {
                 soundManager.playSound('land');
             }
+            // Kick up dust
+            if (this.player && this.player.thrustManager) {
+                this.player.thrustManager.createLandingDust(this.player.pos.x, this.player.pos.y, this.player.size, 40);
+            }
         }
 
         this.isLanded = isNowLanded;
@@ -1418,10 +1422,7 @@ class SurfaceMode {
         // At altitude 200: offset ≈ 28.5 units
         const shadowOffset = Math.max(0, (radarAlt - SURFACE_CONFIG.MIN_ALTITUDE) * SURFACE_CONFIG.SHADOW_ALTITUDE_SCALE);
 
-        // DEBUG: Log when player is at low altitude
-        if (radarAlt < 20) {
-            console.log(`[SHADOW] absAlt=${this.altitude.toFixed(1)}, groundH=${groundH.toFixed(1)}, radarAlt=${radarAlt.toFixed(1)}, shadowOffset=${shadowOffset.toFixed(2)}`);
-        }
+
 
         const shadowOffsetX = Math.cos(sunAngle + Math.PI) * shadowOffset;
         const shadowOffsetY = Math.sin(sunAngle + Math.PI) * shadowOffset;

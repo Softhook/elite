@@ -1620,6 +1620,11 @@ class Player {
                 }
             }
         }
+
+        // Update thrust particles
+        if (this.thrustManager) {
+            this.thrustManager.update();
+        }
     }
 
     /**

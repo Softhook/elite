@@ -168,6 +168,53 @@ class ThrustManager {
         }
     }
 
+    createLandingDust(x, y, size, count = 30) {
+        // Create a circular burst of dust particles around the ship
+        for (let i = 0; i < count; i++) {
+            // Random angle for the ring position
+            const angle = random(TWO_PI);
+
+            // Calculate spawn position at the edge of the ship (create a ring)
+            // Use 30-50% of size as radius to create a ring around the hull
+            const radius = size * random(0.3, 0.5);
+            const spawnX = x + cos(angle) * radius;
+            const spawnY = y + sin(angle) * radius;
+
+            // Velocity outward from center
+            const speed = random(0.5, 2.0); // Slower, lingering dust
+
+            // Dust color (grey/brown)
+            const baseColor = [180 + random(-20, 20), 160 + random(-20, 20), 140 + random(-20, 20)];
+
+            // Get particle from pool
+            const particle = this.particlePool.get(
+                spawnX,
+                spawnY,
+                angle,
+                size,
+                baseColor
+            );
+
+            if (particle) {
+                // Override velocity to move outward from the ring center
+                particle.vel.set(cos(angle), sin(angle)).mult(speed);
+
+                // Longer lifetime for dust to linger (50-100 frames)
+                particle.maxLife = random(50, 100);
+                particle.life = particle.maxLife;
+
+                // Slower shrink rate for lingering dust cloud effect
+                particle.shrinkRate = random(0.98, 0.995);
+
+                // Override size to be appropriate for dust puffs
+                particle.size = random(size * 0.15, size * 0.3);
+
+                // Add to active set
+                this.particles.add(particle);
+            }
+        }
+    }
+
     update() {
         // Use a temporary array since we'll be modifying while iterating
         const activeParticles = Array.from(this.particlePool.active);
