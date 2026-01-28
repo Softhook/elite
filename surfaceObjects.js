@@ -1242,6 +1242,7 @@ class Turret extends SurfaceObject {
         this.maxHealth = config.HEALTH || 100;
         this.lastHitTime = 0; // For damage flash effect
         this.isSurface = true; // Mark as surface entity for sound filtering
+        this.altitude = 0; // Updated each frame to head/muzzle height for collisions/aiming
     }
 
     update(dt, player, starSystem) {
@@ -1252,94 +1253,65 @@ class Turret extends SurfaceObject {
 
         // Simple stealth detection: player detected if at or above turret altitude
         // This makes stealth visually intuitive: stay below enemies to hide
-        const turretAltitude = this.yOffset || 0;
+        const turretBaseAltitude = this.yOffset || 0;
         const playerAltitude = player.altitude || 0;
+        const headHeight = (this.size * 0.2) + (this.size * 0.6); // Base + head height
+        this.altitude = turretBaseAltitude + headHeight;
 
+        // Use detection threshold (slightly above base) so low-flying players can stay hidden
+        const detectAltitude = turretBaseAltitude + (this.detectionHeightThreshold || 0);
+        const isDetected = playerAltitude >= detectAltitude;
 
-        const isDetected = playerAltitude >= turretAltitude;
+        // Quick range gate using world space (faster than visual math)
+        const worldDx = player.pos.x - this.pos.x;
+        const worldDy = player.pos.y - this.pos.y;
+        const worldDistSq = worldDx * worldDx + worldDy * worldDy;
 
-        // Only rotate and fire if player is detected
-        if (!isDetected) return;
+        // Only rotate and fire if player is detected AND within range
+        if (!isDetected || worldDistSq > this.rangeSq) return;
 
-        // Calculate turret aiming based on visual positions
-        // Surface mode uses an isometric projection with extrusion angle
+        // Calculate turret aiming based on visual positions (matches drone logic)
         const extrusionAngle = 0.5; // Must match Draw3D usage in draw()
-        const sz = this.size;
-        const totalHeadHeight = (sz * 0.2) + (sz * 0.6); // Base + Head Height
+        const turretVisualY = this.pos.y - (this.altitude * Math.cos(extrusionAngle));
+        const playerVisualY = player.pos.y - (playerAltitude * Math.cos(extrusionAngle));
 
-        // Calculate turret visual position (at muzzle/head level)
-        const extX = totalHeadHeight * Math.sin(extrusionAngle);
-        const extY = totalHeadHeight * Math.cos(extrusionAngle);
-        const terrainOffset = this.yOffset || 0;
-
-        const turretVisualX = this.pos.x - extX;
-        const turretVisualY = (this.pos.y - terrainOffset) - extY;
-
-        // Player position (visual coordinates - accounting for altitude)
-        const playerAlt = player.altitude || 0;
-        const playerVisualX = player.pos.x;
-        const playerVisualY = player.pos.y - (playerAlt * Math.cos(extrusionAngle));
-
-        // Calculate aiming angle in visual space
-        const dx = playerVisualX - turretVisualX;
+        const dx = player.pos.x - this.pos.x;
         const dy = playerVisualY - turretVisualY;
-        const distSq = dx * dx + dy * dy;
 
-        if (distSq < this.rangeSq) {
-            // Aim towards player's visual position
-            const targetAngle = Math.atan2(dy, dx);
-            let diff = targetAngle - this.angle;
+        const targetAngle = Math.atan2(dy, dx);
+        let diff = targetAngle - this.angle;
 
-            // Normalize
-            const TWO_PI = Math.PI * 2;
-            while (diff < -Math.PI) diff += TWO_PI;
-            while (diff > Math.PI) diff -= TWO_PI;
+        // Normalize
+        const TWO_PI = Math.PI * 2;
+        while (diff < -Math.PI) diff += TWO_PI;
+        while (diff > Math.PI) diff -= TWO_PI;
 
-            // Smoother, frame-rate independent rotation
-            const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.TURRET : {};
-            const turnSpeedVal = config.TURN_SPEED || 5;
-            this.angle += diff * turnSpeedVal * dt;
+        // Frame-rate independent turn, clamp like drone behavior to avoid overshoot
+        const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.TURRET : {};
+        const maxTurn = (config.TURN_SPEED || 5) * dt;
+        if (Math.abs(diff) <= maxTurn) {
+            this.angle = targetAngle;
+        } else {
+            this.angle += Math.sign(diff) * maxTurn;
+        }
 
-            // Normalize angle
-            while (this.angle < -Math.PI) this.angle += TWO_PI;
-            while (this.angle > Math.PI) this.angle -= TWO_PI;
-
-            // Fire if ready
-            if (this.cooldown <= 0 && starSystem) {
-                // Pass the calculated visual muzzle position
-                this.fire(starSystem, player, turretVisualX, turretVisualY);
-                const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.TURRET : {};
-                this.cooldown = config.FIRE_RATE || 2.0;
-            }
+        // Fire if ready
+        if (this.cooldown <= 0 && starSystem) {
+            this.fire(starSystem, player);
+            this.cooldown = config.FIRE_RATE || 2.0;
         }
     }
 
-    fire(starSystem, player, visualX, visualY) {
+    fire(starSystem, player) {
         if (typeof Projectile === 'undefined') return;
 
-        // Muzzle position in world coords (Visual)
-        // If not passed (called from elsewhere?), recalculate
-        let muzzleX, muzzleY;
-
-        if (visualX === undefined || visualY === undefined) {
-            // Muzzle position in world coords (Logical center, no visual offset)
-            muzzleX = this.pos.x;
-            muzzleY = this.pos.y;
-        } else {
-            // If visual coordinates were passed (legacy), try to reverse the visual mapping
-            // but ideally we should only pass world coords here.
-            // For Turret, muzzleX/Y are passed as the extruded muzzle position.
-            // We'll treat them as visual and extract the ground position for the projectile's logical base.
-            muzzleX = this.pos.x;
-            muzzleY = this.pos.y;
-        }
-
-        // Apply rotation to extend from center of head to barrel tip in world space
-        const muzzleOffset = 40;
-        const px = muzzleX + muzzleOffset * Math.cos(this.angle);
-        const py = muzzleY + muzzleOffset * Math.sin(this.angle);
+        // Muzzle position in world coords (ground plane) with a small forward offset
+        const muzzleOffset = this.size * 0.6;
+        const px = this.pos.x + muzzleOffset * Math.cos(this.angle);
+        const py = this.pos.y + muzzleOffset * Math.sin(this.angle);
 
         const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.TURRET : {};
+        const muzzleAltitude = this.altitude || (this.yOffset || 0);
 
         const proj = new Projectile(
             px,
@@ -1361,24 +1333,22 @@ class Turret extends SurfaceObject {
             proj.isSurface = true;
 
             // Projectile altitude for collision and rendering purposes
-            // This is the logical altitude: Turret Base Altitude + Turret Height
-            const turretH = this.size * 0.8;
-            const startAlt = (this.yOffset || 0) + turretH;
-            proj.altitude = startAlt;
-            proj.startAltitude = startAlt;
+            // This is the logical altitude: Turret Base Altitude + Turret Head Height
+            proj.altitude = muzzleAltitude;
+            proj.startAltitude = muzzleAltitude;
             proj.targetAltitude = player.altitude || 0;
 
             if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
                 // Play sound at visual position for consistent spatial audio
                 const extrusionAngle = 0.5;
-                const visualPX = px - (proj.altitude * Math.sin(extrusionAngle));
+                const visualPX = px - (muzzleAltitude * Math.sin(extrusionAngle));
                 const visualPY = py - (proj.altitude * Math.cos(extrusionAngle));
                 soundManager.playWorldSound('laser', visualPX, visualPY, player.pos, this);
             }
             // Visual muzzle flash - calculate visual position
             if (starSystem.addExplosion) {
                 const extrusionAngle = 0.5;
-                const visualPX = px - (proj.altitude * Math.sin(extrusionAngle));
+                const visualPX = px - (muzzleAltitude * Math.sin(extrusionAngle));
                 const visualPY = py - (proj.altitude * Math.cos(extrusionAngle));
                 starSystem.addExplosion(visualPX, visualPY, 5, [255, 100, 50], true);
             }
@@ -1516,7 +1486,8 @@ class Turret extends SurfaceObject {
             let barW = sz * 0.9;
             let barH = 5;
             let barX = x - barW / 2;
-            let barY = y + 15;
+            // Anchor the bar to the ground visual Y so it follows terrain height correctly
+            let barY = groundVisualY + 15;
 
             noStroke();
             fill(HEALTH_BAR_COLORS.BG);

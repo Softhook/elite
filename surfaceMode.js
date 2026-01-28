@@ -9,7 +9,7 @@ const SURFACE_CONFIG = {
     // Flight mechanics
     MIN_ALTITUDE: 10,
     MAX_ALTITUDE: 1000,
-    DEFAULT_ALTITUDE: 100,
+    DEFAULT_ALTITUDE: 500, // Default starting altitude above terrain
     TURN_SPEED: 2.5,           // Radians per second
     MAX_SPEED: 300,            // Legacy - now uses SHIP_DEFINITIONS
     STRAFE_SPEED: 200,         // Legacy - now uses SharedPhysics
@@ -167,6 +167,25 @@ class SurfaceMode {
      */
     _getCounterScale() {
         return 1 / this._getPerspectiveScale();
+    }
+
+    /**
+     * Centralized extrusion angle for pseudo-3D projection.
+     * Keep all projection math consistent by using this helper.
+     */
+    _getExtrusionAngle() {
+        return 0.5;
+    }
+
+    /**
+     * Convert a world Y plus altitude into projected visual Y.
+     * @param {number} worldY
+     * @param {number} altitude
+     * @returns {number}
+     * @private
+     */
+    _toVisualY(worldY, altitude = 0) {
+        return worldY - (altitude * Math.cos(this._getExtrusionAngle()));
     }
 
     /**
@@ -785,9 +804,8 @@ class SurfaceMode {
      * @private
      */
     _getVisualBounds(obj) {
-        const extrusionAngle = 0.5; // Must match Draw3D
         // Visual Base Position (accounting for terrain yOffset)
-        const visualBaseY = obj.pos.y - (obj.yOffset || 0);
+        const visualBaseY = this._toVisualY(obj.pos.y, obj.yOffset || 0);
 
         // For hit detection, we only care about the base plate on the ground
         // Use the object's footprint size for collision radius
@@ -881,36 +899,24 @@ class SurfaceMode {
                 if (!obj || obj.destroyed) continue;
 
                 // Use VISUAL coordinates for collision (what the player sees on screen)
-                const extrusionAngle = 0.5;
                 const objAlt = obj.altitude || obj.yOffset || 0; // Needed for debug logging
 
                 // For turrets, use head/muzzle position (they're tall structures with X and Y offsets)
                 let objVisualX, objVisualY;
                 if (obj.type === "Turret") {
-                    const sz = obj.size || 40;
-                    const baseH = sz * 0.2;
-                    const headH = sz * 0.6;
-                    const totalHeadHeight = baseH + headH;
-
-                    // Match turret draw code: groundVisualY = y - yOffset * cos(angle)
-                    const terrainOffset = obj.yOffset || 0;
-                    const groundVisualY = obj.pos.y - (terrainOffset * Math.cos(extrusionAngle));
-
-                    // Head sits on top of base, so we go up by totalHeadHeight
-                    const extX = totalHeadHeight * Math.sin(extrusionAngle);
-                    const extY = totalHeadHeight * Math.cos(extrusionAngle);
-
-                    objVisualX = obj.pos.x - extX;
-                    objVisualY = groundVisualY - extY;
+                    // Use turret's stored altitude (base + head) for consistent collisions
+                    const turretAlt = obj.altitude || obj.yOffset || 0;
+                    objVisualX = obj.pos.x;
+                    objVisualY = this._toVisualY(obj.pos.y, turretAlt);
                 } else {
                     // For drones and other objects, use altitude (no X offset)
                     objVisualX = obj.pos.x;
-                    objVisualY = obj.pos.y - (objAlt * Math.cos(extrusionAngle));
+                    objVisualY = this._toVisualY(obj.pos.y, objAlt);
                 }
 
                 // Calculate projectile visual position
                 const projVisualX = projPos.x;
-                const projVisualY = projPos.y - (projAlt * Math.cos(extrusionAngle));
+                const projVisualY = this._toVisualY(projPos.y, projAlt);
 
                 // Distance check using visual coordinates
                 const dx = projVisualX - objVisualX;
@@ -918,7 +924,7 @@ class SurfaceMode {
                 const distSq = dx * dx + dy * dy;
 
                 // Use the object's logical footprint radius
-                const hitRadius = Math.max((obj.size || 40) / 2, 20);
+                const hitRadius = Math.max((obj.size || 40) * 0.6, 20);
                 const hitRadiusSq = hitRadius * hitRadius;
 
 
@@ -956,13 +962,12 @@ class SurfaceMode {
             // Projectiles should maintain constant altitude set at spawn
 
             // Use VISUAL coordinates for collision (what the player sees on screen)
-            const extrusionAngle = 0.5;
             const projAlt = proj.altitude || 0;
             const playerAlt = this.player.altitude || 0;
 
             // Calculate visual Y positions (accounting for altitude offset)
-            const projVisualY = proj.pos.y - (projAlt * Math.cos(extrusionAngle));
-            const playerVisualY = this.player.pos.y - (playerAlt * Math.cos(extrusionAngle));
+            const projVisualY = this._toVisualY(proj.pos.y, projAlt);
+            const playerVisualY = this._toVisualY(this.player.pos.y, playerAlt);
 
             // Distance check using visual coordinates
             const dx = proj.pos.x - this.player.pos.x; // X is not affected by altitude
@@ -1037,7 +1042,7 @@ class SurfaceMode {
 
         // 3. World translation (camera follows active entity's visual position)
         // This ensures the player ship/astronaut stays perfectly centered
-        const extrusionAngle = 0.5;
+        const extrusionAngle = this._getExtrusionAngle();
         const activeEntity = (this.controlMode === 'SHIP') ? this.player : this.astronaut;
         const activeAlt = (activeEntity && activeEntity.altitude !== undefined) ? activeEntity.altitude : this.altitude;
         const visualYOffset = activeAlt * Math.cos(extrusionAngle);
@@ -1368,9 +1373,9 @@ class SurfaceMode {
 
             // Drawn directly at world position. Transformation is handled by the camera in draw()
             if (obj.draw) {
-                // Pass world coordinates. Object.draw translates to these.
-                // Camera will subtract player.pos automatically.
-                obj.draw(obj.pos.x, obj.pos.y - (obj.yOffset || 0), sunAngle);
+                // Turrets need full world Y so their internal yOffset handling stays correct
+                const drawY = (obj.type === 'Turret') ? obj.pos.y : obj.pos.y - (obj.yOffset || 0);
+                obj.draw(obj.pos.x, drawY, sunAngle);
             }
 
             // Draw Target Reticle if this object is the player's target
@@ -1482,7 +1487,6 @@ class SurfaceMode {
 
                 // [FIX] Pass visual altitude offset to explosion
                 // If the explosion doesn't have altitude, it defaults to terrain height at its position
-                const extrusionAngle = 0.5;
                 const sunAngle = this._getSunAngle();
                 const counterScale = this._getCounterScale();
 
@@ -1517,7 +1521,7 @@ class SurfaceMode {
         this._clearShadow();
 
         // Calculate visual offsets for beam ends
-        const extrusionAngle = 0.5;
+        const extrusionAngle = this._getExtrusionAngle();
         // Start always matches the player's visual height
         const activeAlt = (this.controlMode === 'SHIP') ? (this.player.altitude || this.altitude) : (this.astronaut.altitude || 0);
         const startAltOffset = activeAlt * Math.cos(extrusionAngle);
@@ -1553,7 +1557,7 @@ class SurfaceMode {
         // Clear shadow settings to prevent visual artifacts
         this._clearShadow();
 
-        const extrusionAngle = 0.5; // Consistent with other visual altitude calculations
+        const extrusionAngle = this._getExtrusionAngle(); // Consistent with other visual altitude calculations
         const counterScale = this._getCounterScale(); // For consistent sizing
 
         for (const wave of this.starSystem.forceWaves) {
@@ -1562,7 +1566,7 @@ class SurfaceMode {
             if (!wave.isSurface) continue;
 
             // Calculate visual Y position based on altitude
-            const visualY = wave.pos.y - (wave.altitude * Math.cos(extrusionAngle));
+            const visualY = this._toVisualY(wave.pos.y, wave.altitude);
 
             // Fade out as the wave expands
             const alpha = map(wave.radius, 0, wave.maxRadius, 220, 0);
@@ -1612,8 +1616,8 @@ class SurfaceMode {
 
         // 1. Draw shadow on terrain
         const terrainH = this._getTerrainHeightAt(this.astronaut.pos.x, this.astronaut.pos.y);
-        const extrusionAngle = 0.5;
-        const visualShadowY = shadowY - (terrainH * Math.cos(extrusionAngle));
+        const extrusionAngle = this._getExtrusionAngle();
+        const visualShadowY = this._toVisualY(shadowY, terrainH);
 
         push();
         translate(shadowX, visualShadowY);
@@ -1646,7 +1650,7 @@ class SurfaceMode {
     _drawPlayerShip() {
         if (!this.player) return;
 
-        const extrusionAngle = 0.5;
+        const extrusionAngle = this._getExtrusionAngle();
         // [EVA FIX] Use player's own altitude for drawing the ship.
         // this.altitude centers the camera/world, which changes during EVA.
         const shipAlt = (this.controlMode === 'SHIP') ? this.altitude : (this.player.altitude || 0);
@@ -1672,7 +1676,7 @@ class SurfaceMode {
             // Ground position for shadow - projected on terrain
             const shadowX = this.player.pos.x + shadowOffsetX;
             const shadowY = this.player.pos.y + shadowOffsetY;
-            const visualShadowY = shadowY - (groundH * Math.cos(extrusionAngle));
+            const visualShadowY = this._toVisualY(shadowY, groundH);
             translate(shadowX, visualShadowY);
             rotate(this.player.angle);
 
@@ -1827,14 +1831,21 @@ class SurfaceMode {
         if (this.surfaceObjects && this.surfaceObjects.length > 0) {
             for (const obj of this.surfaceObjects) {
                 if (obj && (obj.constructor.name === 'Turret' || obj.constructor.name === 'DefenseDrone') && !obj.destroyed) {
-                    // Check if enemy is nearby
+                    // Check if enemy is nearby (world space distance)
                     const dx = obj.pos.x - this.player.pos.x;
                     const dy = obj.pos.y - this.player.pos.y;
                     const distSq = dx * dx + dy * dy;
 
                     if (distSq < detectionRange * detectionRange) {
-                        const enemyAlt = obj.yOffset || 0;
-                        maxEnemyAlt = Math.max(maxEnemyAlt, enemyAlt);
+                        // Use the same altitude logic their detection uses
+                        if (obj.constructor.name === 'Turret') {
+                            const baseAlt = obj.yOffset || 0;
+                            const detectAlt = baseAlt + (obj.detectionHeightThreshold || 0);
+                            maxEnemyAlt = Math.max(maxEnemyAlt, detectAlt);
+                        } else {
+                            const enemyAlt = (obj.altitude !== undefined) ? obj.altitude : (obj.yOffset || 0);
+                            maxEnemyAlt = Math.max(maxEnemyAlt, enemyAlt);
+                        }
                         nearbyEnemies++;
                     }
                 }
