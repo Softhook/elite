@@ -20,7 +20,7 @@ describe('WeaponSystem Tests', () => {
             isPlayer: options.isPlayer || false,
             equippedWeapons: options.weapons || [WEAPON_UPGRADES[0]],
             currentWeaponIndex: 0,
-            disruption: 0,
+            targetingDisruption: 0, // Fixed: was 'disruption', should be 'targetingDisruption'
             _beamHeatStates: new Map(),
             weaponHeat: {}, // Correct property used by WeaponSystem._getHeatState
             credits: 0,
@@ -376,7 +376,7 @@ describe('WeaponSystem Tests', () => {
 
         test('should apply jitter based on disruption', () => {
             const owner = createMockOwner();
-            owner.disruption = 0;
+            owner.targetingDisruption = 0;
 
             const baseAngle = 0;
             // With 0 disruption, jitter should be minimal
@@ -386,7 +386,7 @@ describe('WeaponSystem Tests', () => {
 
         test('should apply more jitter with higher disruption', () => {
             const owner = createMockOwner();
-            owner.disruption = 1.0; // Max disruption
+            owner.targetingDisruption = 1.0; // Max disruption
 
             // Run multiple times and check variance
             const angles = [];

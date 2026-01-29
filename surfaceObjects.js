@@ -1241,7 +1241,7 @@ class Turret extends SurfaceObject {
 
         this.range = config.RANGE || 1000;
         this.rangeSq = this.range * this.range;
-        this.detectionHeightThreshold = config.DETECTION_HEIGHT_THRESHOLD || 30; // Height above turret's ground level for detection
+        this.detectionHeightThreshold = config.DETECTION_HEIGHT_THRESHOLD || 50; // Radar altitude threshold for detection
         this.color = color(120, 120, 120);
         this.angle = 0;
         this.cooldown = 0;
@@ -1259,17 +1259,32 @@ class Turret extends SurfaceObject {
         if (!player) return;
         this.cooldown -= dt;
 
-        // Simple stealth detection: player detected if at or above turret altitude
-        // This makes stealth visually intuitive: stay below enemies to hide
+        // Stealth detection based on EITHER radar altitude OR absolute altitude
+        // - Radar altitude > threshold: Player flying high above terrain (detected)
+        // - Absolute altitude very high: Player at high elevation regardless of terrain (detected)
         const turretBaseAltitude = this.yOffset || 0;
         const playerAltitude = player.altitude || 0;
         // Height calculation must match draw() method: baseH (sz * 0.2) + headH (sz * 0.6) = sz * 0.8
         const headHeight = this.size * 0.8;
         this.altitude = turretBaseAltitude + headHeight;
 
-        // Use detection threshold (slightly above base) so low-flying players can stay hidden
-        const detectAltitude = turretBaseAltitude + (this.detectionHeightThreshold || 0);
-        const isDetected = playerAltitude >= detectAltitude;
+        // Detection threshold: default 50 units of radar altitude
+        const detectionThreshold = this.detectionHeightThreshold !== undefined ? 
+            this.detectionHeightThreshold : 50;
+        
+        // Check radar altitude if available from surfaceMode
+        let radarDetection = false;
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.altitude !== undefined) {
+            const playerRadarAltitude = surfaceMode.radarAltitude !== undefined ? 
+                surfaceMode.radarAltitude : surfaceMode.altitude;
+            radarDetection = playerRadarAltitude > detectionThreshold;
+        }
+        
+        // Also detect if player has very high absolute altitude (on hilltop)
+        // This ensures players on high ground are always visible
+        const absoluteDetection = playerAltitude > (turretBaseAltitude + detectionThreshold);
+        
+        const isDetected = radarDetection || absoluteDetection;
 
         // Quick range gate using world space (faster than visual math)
         const worldDx = player.pos.x - this.pos.x;

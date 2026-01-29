@@ -49,7 +49,7 @@ const SURFACE_CONFIG = {
     // Turret Configuration
     TURRET: {
         RANGE: 1000,
-        DETECTION_HEIGHT_THRESHOLD: 30, // Units above turret base for detection
+        DETECTION_HEIGHT_THRESHOLD: 50, // Radar altitude threshold for detection
         HEALTH: 150,
         FIRE_RATE: 2.0,                 // Seconds between shots
         TURN_SPEED: 5,                  // Radians per second factor
@@ -105,7 +105,8 @@ class SurfaceMode {
         // Surface position tracking
         this.surfaceX = 0;
         this.surfaceY = 0;
-        this.altitude = SURFACE_CONFIG.DEFAULT_ALTITUDE;
+        this.altitude = SURFACE_CONFIG.DEFAULT_ALTITUDE; // Absolute altitude
+        this.radarAltitude = SURFACE_CONFIG.DEFAULT_ALTITUDE; // Altitude above local terrain
         this.objectCache = new Map(); // Cache for persistent objects
         this.debugMode = false; // Set to true to spawn only one turret for testing
         this.isLanded = false; // Track landed state
@@ -497,6 +498,10 @@ class SurfaceMode {
                 const currentGroundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
                 const minAbsoluteAlt = currentGroundH + SURFACE_CONFIG.MIN_ALTITUDE;
                 this.altitude = constrain(this.altitude, minAbsoluteAlt, SURFACE_CONFIG.MAX_ALTITUDE);
+                
+                // Calculate and store radar altitude (height above local terrain)
+                // This is used by turrets and drones for stealth detection
+                this.radarAltitude = this.altitude - currentGroundH;
 
                 this._updatePhysics(dt);
             } else if (this.controlMode === 'ASTRONAUT') {
