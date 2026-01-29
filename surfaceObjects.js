@@ -1612,79 +1612,78 @@ class SurfaceStation extends SurfaceObject {
         const headColor = lerpColor(this.color, color(220), 0.3);
         const lightColor = lerpColor(this.color, color(255, 255, 200), 0.8);
 
-        // --- Central Core Tower ---
-        const coreH = 140;
-        const coreDvX = coreH * Math.sin(extrusionAngle);
-        const coreDvY = coreH * Math.cos(extrusionAngle);
-        const coreRx = x - coreDvX;
-        const coreRy = y - coreDvY;
+        // --- Ground Base ---
+        // A broad, low rectangular base that anchors the station to the ground.
+        const baseH = 36;
+        const baseDv = baseH * Math.cos(extrusionAngle);
+        const baseRadius = 110;
+        Draw3D.drawCylinder(x, y - baseDv, baseRadius, baseH, 12, lerpColor(this.color, color(30), 0.1), extrusionAngle, sunAngle);
 
-        // Base structure (hexagonal feel)
-        Draw3D.drawCylinder(coreRx, coreRy, 60, coreH, 8, this.color, extrusionAngle, sunAngle);
-
-        // --- Command Center (Head) ---
-        // Wider section at top
-        const headH = 40;
-        const headDvX = headH * Math.sin(extrusionAngle);
-        const headDvY = headH * Math.cos(extrusionAngle);
-        const headRx = coreRx - headDvX; // Stack on top
-        const headRy = coreRy - headDvY;
-
-        // Draw head on top of core
-        Draw3D.drawCylinder(headRx, headRy, 90, headH, 16, headColor, extrusionAngle, sunAngle);
-
-        // --- Windows/Lights ---
-        // Simple ring of lights on the head
-        noFill();
-        stroke(lightColor);
-        strokeWeight(2);
-        ellipse(headRx - headDvX, headRy - headDvY, 100, 30); // Top of head ring
-
-        // --- Rotating Radar Dish ---
-        const radarH = 30;
-        const radarDvX = radarH * Math.sin(extrusionAngle);
-        const radarDvY = radarH * Math.cos(extrusionAngle);
-        const radarBaseX = headRx - headDvX;
-        const radarBaseY = headRy - headDvY;
-
-        push();
-        translate(radarBaseX, radarBaseY);
-        const radarAngle = now * 0.001;
-        rotate(radarAngle);
-
-        // Dish support
-        fill(60); noStroke();
-        rect(-5, -5, 10, 20);
-
-        // Dish
-        fill(200); stroke(100); strokeWeight(1);
-        ellipse(0, -15, 60, 20); // The dish
-        pop();
-
-        // --- Landing Pads / Extensions ---
-        // 4 arms extending out from the base of the core tower
+        // Attach four rectangular hangars/platforms at ground level around the base
+        const padW = 60;
+        const padL = 140;
+        const padH = 18;
+        const padDist = baseRadius - padL * 0.35; // place pads near edge of base
         for (let i = 0; i < 4; i++) {
-            const angle = i * Math.PI / 2 + Math.PI / 4;
-            const dist = 90;
-            const armW = 40;
-            const armL = 100;
+            const a = i * Math.PI / 2 + Math.PI / 4;
+            const px = x + Math.cos(a) * padDist;
+            const py = (y - baseDv) + Math.sin(a) * padDist;
+            Draw3D.drawBox3D(px, py, padW, padL, padH, color(70, 75, 80), extrusionAngle, sunAngle);
 
-            // Position arms at base of core (coreRx/coreRy position, not ground)
-            const ax = coreRx + Math.cos(angle) * dist;
-            const ay = coreRy + Math.sin(angle) * dist;
-
-            // Draw arms below the upper prism
-            const armH = 20;
-            Draw3D.drawBox3D(ax, ay, armW, armL, armH, color(70, 75, 80), extrusionAngle, sunAngle);
-
-            // Landing lights on top of pads
+            // Small approach lights on outer edge of each pad
             if ((now % 2000) < 1000) {
-                const lightX = ax - armH * Math.sin(extrusionAngle);
-                const lightY = ay - armH * Math.cos(extrusionAngle);
-                fill(255, 0, 0); noStroke();
-                ellipse(lightX, lightY, 5, 3);
+                const lightX = px - padH * Math.sin(extrusionAngle);
+                const lightY = py - padH * Math.cos(extrusionAngle);
+                fill(255, 180, 60); noStroke();
+                ellipse(lightX + Math.cos(a) * padL * 0.45, lightY + Math.sin(a) * padL * 0.45, 6, 3);
             }
         }
+
+        // --- Central Core Tower (rises from base) ---
+        const coreH = 140;
+        const coreDv = coreH * Math.cos(extrusionAngle);
+        const coreCenterY = (y - baseDv) - coreDv;
+        Draw3D.drawCylinder(x, coreCenterY, 60, coreH, 8, this.color, extrusionAngle, sunAngle);
+
+        // --- Command Center (Head) ---
+        const headH = 40;
+        const headDv = headH * Math.cos(extrusionAngle);
+        const headCenterY = coreCenterY - headDv;
+        Draw3D.drawCylinder(x, headCenterY, 90, headH, 16, headColor, extrusionAngle, sunAngle);
+
+        // --- Rotating Radar Dish (on head roof) ---
+        const radarH = 30;
+        const radarDv = radarH * Math.cos(extrusionAngle);
+        const radarBaseX = x;
+        const radarBaseY = headCenterY - headDv;
+
+        // Improved radar dish: pedestal, concave dish, support arm and feed horn
+        // Replace dish with a rotating antenna/panel array: central mast with three tilted panels
+        push();
+        translate(radarBaseX, radarBaseY);
+        const sweep = now * 0.0007; // slower rotation speed
+
+        // Central mast
+        Draw3D.drawCylinder(0, 6, 4, 20, 8, lerpColor(this.color, color(40), 0.15), extrusionAngle, sunAngle);
+
+        // Rotating panels (3 panels evenly spaced)
+        for (let i = 0; i < 3; i++) {
+            push();
+            rotate(sweep + i * (Math.PI * 2 / 3));
+            // Offset out from mast
+            translate(0, -32);
+            // Tilt panel slightly toward viewer for readability
+            rotate(-Math.PI / 6);
+            Draw3D.drawBox3D(0, 0, 10, 48, 6, color(120, 140, 160), extrusionAngle, sunAngle);
+            // Small support strut to mast
+            Draw3D.drawRod(0, 6, 0, 32, 3, color(90), extrusionAngle, sunAngle, false);
+            pop();
+        }
+
+        // Beacon light at mast top
+        noStroke(); fill(255, 200, 80);
+        ellipse(0, -6, 6, 4);
+        pop();
     }
 }
 
