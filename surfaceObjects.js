@@ -248,8 +248,8 @@ class ImperialBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Imperial Structure";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 7.89) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (2 + (Math.sin(seed) * 0.5 + 0.5) * 3);
+        this.variant = calculateVariant(seed, 7.89, 5);
+        this.height = calculateHeight(size, seed, 2, 5);
         this.maxHealth = 300;
         this.health = 300;
 
@@ -260,7 +260,7 @@ class ImperialBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -351,8 +351,8 @@ class SeparatistBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Separatist Outpost";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 5.67) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (0.8 + (Math.sin(seed) * 0.5 + 0.5) * 1.5);
+        this.variant = calculateVariant(seed, 5.67, 5);
+        this.height = calculateHeight(size, seed, 0.8, 2.3);
         this.maxHealth = 250;
         this.health = 250;
 
@@ -363,7 +363,7 @@ class SeparatistBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -452,8 +452,8 @@ class MilitaryBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Military Installation";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 3.14) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (1.5 + (Math.sin(seed) * 0.5 + 0.5) * 1);
+        this.variant = calculateVariant(seed, 3.14, 5);
+        this.height = calculateHeight(size, seed, 1.5, 2.5);
         this.maxHealth = 400;
         this.health = 400;
 
@@ -464,7 +464,7 @@ class MilitaryBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -549,8 +549,8 @@ class PostHumanBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Posthuman Structure";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 9.99) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (2 + (Math.sin(seed) * 0.5 + 0.5) * 2);
+        this.variant = calculateVariant(seed, 9.99, 5);
+        this.height = calculateHeight(size, seed, 2, 4);
         this.maxHealth = 500;
         this.health = 500;
         this.pulsePhase = seed; // For animations
@@ -566,7 +566,7 @@ class PostHumanBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
         const pulse = (Math.sin(this.pulsePhase) * 0.5 + 0.5);
 
@@ -654,8 +654,8 @@ class OffworldBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Offworld Colony";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 4.56) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (1 + (Math.sin(seed) * 0.5 + 0.5) * 1.5);
+        this.variant = calculateVariant(seed, 4.56, 5);
+        this.height = calculateHeight(size, seed, 1, 2.5);
         this.maxHealth = 200;
         this.health = 200;
 
@@ -666,7 +666,7 @@ class OffworldBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -749,8 +749,8 @@ class MiningBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Mining Facility";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 6.28) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (1.5 + (Math.sin(seed) * 0.5 + 0.5) * 2);
+        this.variant = calculateVariant(seed, 6.28, 5);
+        this.height = calculateHeight(size, seed, 1.2, 3.2);
         this.maxHealth = 350;
         this.health = 350;
 
@@ -761,7 +761,7 @@ class MiningBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -848,8 +848,8 @@ class IndustrialBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Industrial Complex";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 2.71) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (1.2 + (Math.sin(seed) * 0.5 + 0.5) * 1.8);
+        this.variant = calculateVariant(seed, 2.71, 5);
+        this.height = calculateHeight(size, seed, 1.5, 3.5);
         this.maxHealth = 400;
         this.health = 400;
 
@@ -860,7 +860,7 @@ class IndustrialBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -947,8 +947,8 @@ class RefineryBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Refinery";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 1.41) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (2 + (Math.sin(seed) * 0.5 + 0.5) * 2);
+        this.variant = calculateVariant(seed, 8.31, 5);
+        this.height = calculateHeight(size, seed, 2, 4);
         this.maxHealth = 300;
         this.health = 300;
 
@@ -959,7 +959,7 @@ class RefineryBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -1045,8 +1045,8 @@ class AgriculturalBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Agricultural Facility";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 8.76) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (0.8 + (Math.sin(seed) * 0.5 + 0.5) * 1);
+        this.variant = calculateVariant(seed, 1.23, 5);
+        this.height = calculateHeight(size, seed, 0.8, 1.8);
         this.maxHealth = 150;
         this.health = 150;
 
@@ -1057,7 +1057,7 @@ class AgriculturalBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -1133,8 +1133,8 @@ class ServiceBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Service Structure";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 3.33) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (1.5 + (Math.sin(seed) * 0.5 + 0.5) * 1.5);
+        this.variant = calculateVariant(seed, 5.55, 5);
+        this.height = calculateHeight(size, seed, 1, 2.5);
         this.maxHealth = 180;
         this.health = 180;
 
@@ -1145,7 +1145,7 @@ class ServiceBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
