@@ -1507,88 +1507,11 @@ const SpaceObjectRenderers = {
             const localX = Math.cos(angle) * r;
             const localY = Math.sin(angle) * r; // Flat circle on the "floor"
 
-            // Rotate (localX, localY) by obj.angle
-            // The "floor" plane is perpendicular to the Z axis.
-            // In Draw3D's simple projection, the "side" view compresses the Y axis of the floor circle?
-            // Draw3D usually draws prisms facing the camera.
-            // To place items "on" the prism top face:
-            // The prism top face is drawn at screen (px, py).
-            // A point (r, angle) on that face:
-            // x_screen = px + r * cos(angle)
-            // y_screen = py + r * sin(angle) * perspective_foreshortening?
-            // Draw3D.drawPrism draws a regular polygon. It doesn't squash it into an ellipse (unless sides is large and we interpret it as such).
-            // Actually Draw3D.drawPrism draws a regular polygon at (x,y). It does NOT apply perspective tilt to the face itself, only to the sides (depth).
-            // So the "top" face is facing the camera directly (or is a cross-section).
-            // If the station is a tower, we are looking at it from the side.
-            // So the "floor" is actually a line or a thin ellipse if we had true 3D.
-            // But Draw3D style is "top-down 2.5D" where objects are often drawn "standing up" towards the camera?
-            // No, `drawPrism` draws a shape at x,y and extrudes it by `depth` in direction `angle`.
-            // This implies we are looking "down" at the object, and `depth` is the vertical height (Z).
-            // So the "Top" face is the one closest to the camera.
-            // So the "Soil" is a flat polygon facing the camera.
-            // So plants should be placed on this polygon.
-
             const px = pSoil.x + Math.cos(angle) * r;
             const py = pSoil.y + Math.sin(angle) * r;
 
             const sway = Math.sin(breeze + i) * size * 0.02;
 
-            // Trunk
-            // Trunks grow "up" (towards camera? or along station axis?)
-            // If the station is a tower, trees should grow "out" from the axis? Or "up" along the axis?
-            // Usually "gravity" is centrifugal or linear.
-            // If it's a tower, gravity is likely "down" (towards base). Trees grow "up" (towards top).
-            // So trees should grow along the Z axis (station axis).
-            // So we draw the trunk as a prism starting at (px, py) and extruding "up".
-            // But `drawPrism` extrudes "down" (depth).
-            // So we want the Tree Top at `z_tree_top`.
-            // Tree Base is at `soilZ`.
-            // Tree Height `trunkH`.
-            // Tree Top Z = `soilZ + trunkH`.
-            // But wait, if the floor is facing the camera, then "Up" is towards the camera (Z-buffer).
-            // But `drawPrism` depth is along screen Y (rotated).
-            // This renderer is confusing.
-            // Let's look at `satellite`. It draws a central bus and panels.
-            // It seems `Draw3D` is "Side View" where `depth` is "Thickness away from camera"?
-            // OR `Draw3D` is "Top View" where `depth` is "Height"?
-            // `getDepthVector` uses `sin(theta), cos(theta)`.
-            // If theta=0, dv=(0, depth).
-            // If I draw a rect at 0,0 and another at 0,10.
-            // It looks like a tower viewed from slightly above-side.
-
-            // If I want trees to stand UP from the soil (perpendicular to the soil face):
-            // Since the soil face is drawn as a flat polygon on screen, "Perpendicular" means "Towards the camera".
-            // But we can't draw "towards the camera" easily with this 2D canvas except by draw order.
-            // AND `drawPrism` extrudes sideways/downwards.
-
-            // Let's assume the "Soil" face is the ground.
-            // Trees should stick out of it.
-            // If we use `drawBox3D` or `drawPrism` for trees, they will also be extruded along the station axis.
-            // This means trees are "lying down" on the soil?
-            // Or is the station axis the "Up" direction?
-            // If the station axis is "Up", then the soil face is a cross-section.
-            // This means the "Garden" is a slice of the cylinder.
-            // If so, we can't see the "floor" as a circle. We see it as a line/ellipse edge-on.
-            // BUT `drawPrism` draws a full circle (polygon).
-            // This implies the object is viewed "Top Down" (looking down the axis).
-            // BUT `orbitalGarden` (and others) rotate.
-            // When they rotate, the "depth" vector rotates.
-            // This implies the "depth" is the side of the cylinder.
-            // So we are looking at the "Top" of the cylinder, and the "Side" is extruded.
-            // So the "Soil" is the circular floor we see.
-            // So trees should stand up *towards the camera*.
-            // To simulate trees standing up towards the camera, we just draw them on top (draw order) and maybe give them a little "height" effect (parallax?).
-            // Or we just draw them as blobs on the circle.
-
-            // Let's stick to drawing them as small prisms/boxes on the surface.
-            // If I draw a box at (px, py), it sits on the surface.
-            // To make it look like a tree, maybe just a small circle (top down view of tree).
-            // OR, if we want to simulate the "Cupola" being a dome over it, we are looking into the dome.
-
-            // Trunk (Top down view = dot)
-            // Foliage (Top down view = larger circle)
-
-            // Let's try drawing them as simple circles/blobs since we are looking "down" into the garden.
 
             const trunkH = size * 0.02; // Not height, but thickness/size
             // Draw trunk
@@ -1605,33 +1528,6 @@ const SpaceObjectRenderers = {
         // Central Tree (Top down)
         fill(50, 180, 80);
         ellipse(pSoil.x, pSoil.y, size * 0.25, size * 0.25);
-
-        // 3. The Cupola (Glass Dome)
-        // Stacked prisms to form a dome shape
-        // We need to draw them "above" the soil.
-        // "Above" means "closer to camera" in Z-order, but also physically "higher" in the stack if it's a tower.
-        // Wait, if `drawPrism` is Top-Down, then "stacking" means drawing smaller concentric shapes?
-        // OR does `drawPrism` simulate a long cylinder lying on the screen?
-        // If `angle` rotates the depth vector, then it's a cylinder lying on the screen.
-        // If `angle=0`, depth is (0, depth). Vertical cylinder.
-        // We see the Top Face at (x,y). We see the Side extending to (x, y+depth).
-        // So we are looking at the Top Face, and the side goes "down" the screen.
-        // So the "Top" face is the "Top" of the station.
-        // So if we want to stack things, we should draw the "Bottom" things first (at y+depth), and "Top" things last (at y).
-        // My `getPos` logic moves "Up" (negative depth).
-        // So `getPos(0)` is the center. `getPos(0.1)` is "higher" (closer to top).
-        // So we should draw from Bottom (negative z) to Top (positive z).
-        // And we should use the painter's algorithm (draw bottom first).
-
-        // My previous logic:
-        // Base at -0.15.
-        // Soil at -0.10.
-        // Cupola 1 at 0.05.
-        // Cupola 2 at 0.15.
-        // Cupola 3 at 0.22.
-
-        // This order is correct for Painter's Algorithm if we are looking from the "Top".
-        // (The things "higher" up the stack cover the things "lower" down).
 
         const domeColor = color(200, 240, 255, 40);
         const domeRibColor = color(200, 240, 255, 80);
@@ -1661,32 +1557,6 @@ const SpaceObjectRenderers = {
         // We need to rotate the ring around the center pRotRing
         translate(pRotRing.x, pRotRing.y);
         rotate(ringPhase);
-        // Draw ring at 0,0 (relative)
-        // Note: DrawRing3D draws at x,y with angle.
-        // If we rotate the context, we rotate the whole drawing.
-        // But we want the ring to spin around the station axis.
-        // Since the station is top-down, spinning is just rotating the polygon.
-        // But Draw3D takes `angle` to rotate the depth vector.
-        // If we rotate the context, we rotate the depth vector too!
-        // We want the depth vector to stay aligned with the station (obj.angle).
-        // So we shouldn't rotate the context if we want the 3D extrusion to look consistent.
-        // Instead, we should pass `obj.angle + ringPhase` to Draw3D?
-        // No, `angle` in Draw3D rotates the extrusion direction.
-        // If we change `angle`, the ring will extrude in a different direction than the station.
-        // That would look broken.
-        // We want the shape to rotate, but the extrusion to stay fixed.
-        // Draw3D doesn't support rotating the shape independently of the extrusion easily.
-        // `drawRing3D` draws vertices based on `i * angleStep`.
-        // We can just add an offset to the vertex angle calculation?
-        // Draw3D doesn't expose that.
-        // Workaround: Rotate context, but counter-rotate the `angle` param?
-        // If we rotate context by `R`, and pass `angle - R`, then `depthVector` direction:
-        // `getDepthVector` uses `angle`.
-        // `dv` will be calculated based on `angle - R`.
-        // Then `dv` is drawn in rotated context.
-        // Rotated `dv` = `dv` rotated by `R`.
-        // `dv(angle - R)` rotated by `R` = `dv(angle)`.
-        // Yes! That works.
 
         Draw3D.drawRing3D(0, 0, size * 0.65, size * 0.55, 16, size * 0.02, color(100, 120, 140), obj.angle - ringPhase, sunAngle);
         pop();
