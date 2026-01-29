@@ -621,7 +621,7 @@ class SaveSelectionScreen {
             this.addHoverEffect();
             if (typeof soundManager !== 'undefined') soundManager.playSound('click');
         } else if (keyCode === ENTER) {
-            if (typeof soundManager !== 'undefined') soundManager.playSound('uiTransition');
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
             this.confirmSelection();
         } else if (keyCode === ESCAPE) {
             // Go back to title screen
