@@ -1,3 +1,11 @@
+// ****** surfaceObjects.js ******
+// Surface object classes for planetary surface gameplay
+
+// Validate critical dependencies
+if (typeof Draw3D === 'undefined') {
+    console.warn('Draw3D not loaded - surface object rendering may fail');
+}
+
 class SurfaceObject {
     constructor(x, y, size) {
         this.pos = createVector(x, y);
@@ -1255,7 +1263,8 @@ class Turret extends SurfaceObject {
         // This makes stealth visually intuitive: stay below enemies to hide
         const turretBaseAltitude = this.yOffset || 0;
         const playerAltitude = player.altitude || 0;
-        const headHeight = (this.size * 0.2) + (this.size * 0.6); // Base + head height
+        // Height calculation must match draw() method: baseH (sz * 0.2) + headH (sz * 0.6) = sz * 0.8
+        const headHeight = this.size * 0.8;
         this.altitude = turretBaseAltitude + headHeight;
 
         // Use detection threshold (slightly above base) so low-flying players can stay hidden
@@ -1826,10 +1835,12 @@ class DefenseDrone extends SurfaceObject {
         // Update yOffset and altitude based on terrain
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.terrain) {
             const terrainHeight = surfaceMode.terrain.getHeightAt(this.pos.x, this.pos.y);
-            this.altitude = terrainHeight + this.flyingHeight;
-            // Visual offset must match altitude so projectiles fire from the correct logical height
-            // and the player can verify they are safely below the drone
-            this.yOffset = this.altitude;
+            if (terrainHeight !== null && terrainHeight !== undefined && !isNaN(terrainHeight)) {
+                this.altitude = terrainHeight + this.flyingHeight;
+                // yOffset represents terrain height only (for Draw3D ground positioning)
+                // altitude is the full height above sea level for collision/aiming
+                this.yOffset = terrainHeight;
+            }
         }
 
         // Apply drag
