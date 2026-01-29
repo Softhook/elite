@@ -11,8 +11,7 @@ const SURFACE_CONFIG = {
     MAX_ALTITUDE: 1000,
     DEFAULT_ALTITUDE: 500, // Default starting altitude above terrain
     TURN_SPEED: 2.5,           // Radians per second
-    MAX_SPEED: 300,            // Legacy - now uses SHIP_DEFINITIONS
-    STRAFE_SPEED: 200,         // Legacy - now uses SharedPhysics
+    // Movement (now uses SHIP_DEFINITIONS and SharedPhysics)
     CLIMB_SPEED: 150,
 
     // Terrain mesh
@@ -49,7 +48,7 @@ const SURFACE_CONFIG = {
     // Turret Configuration
     TURRET: {
         RANGE: 1000,
-        DETECTION_HEIGHT_THRESHOLD: 30, // Units above turret base for detection
+        DETECTION_HEIGHT_THRESHOLD: 50, // Radar altitude threshold for detection
         HEALTH: 150,
         FIRE_RATE: 2.0,                 // Seconds between shots
         TURN_SPEED: 5,                  // Radians per second factor
@@ -105,7 +104,8 @@ class SurfaceMode {
         // Surface position tracking
         this.surfaceX = 0;
         this.surfaceY = 0;
-        this.altitude = SURFACE_CONFIG.DEFAULT_ALTITUDE;
+        this.altitude = SURFACE_CONFIG.DEFAULT_ALTITUDE; // Absolute altitude
+        this.radarAltitude = SURFACE_CONFIG.DEFAULT_ALTITUDE; // Altitude above local terrain
         this.objectCache = new Map(); // Cache for persistent objects
         this.debugMode = false; // Set to true to spawn only one turret for testing
         this.isLanded = false; // Track landed state
@@ -497,6 +497,10 @@ class SurfaceMode {
                 const currentGroundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
                 const minAbsoluteAlt = currentGroundH + SURFACE_CONFIG.MIN_ALTITUDE;
                 this.altitude = constrain(this.altitude, minAbsoluteAlt, SURFACE_CONFIG.MAX_ALTITUDE);
+                
+                // Calculate and store radar altitude (height above local terrain)
+                // This is used by turrets and drones for stealth detection
+                this.radarAltitude = this.altitude - currentGroundH;
 
                 this._updatePhysics(dt);
             } else if (this.controlMode === 'ASTRONAUT') {
@@ -522,16 +526,9 @@ class SurfaceMode {
 
             this._checkSurfaceCollisions();
 
-            // Update starSystem like when docked - NPCs move but player is invulnerable
-            // Commented out to prevent sound leaks from space combat while on surface
-            /*
-            if (this.starSystem && typeof this.starSystem.updateWhileDocked === 'function') {
-                this.starSystem.updateWhileDocked();
-            }
-            */
-
             // Update projectiles only (surface projectiles need to move)
-            // This is safe as it only updates existing projectiles without spawning/firing
+            // Note: StarSystem.updateWhileDocked() is intentionally not called to prevent
+            // sound leaks from space combat while on surface
             if (this.starSystem && typeof this.starSystem._updateProjectiles === 'function') {
                 this.starSystem._updateProjectiles();
             }
@@ -926,8 +923,6 @@ class SurfaceMode {
                 // Use the object's logical footprint radius
                 const hitRadius = Math.max((obj.size || 40) * 0.6, 20);
                 const hitRadiusSq = hitRadius * hitRadius;
-
-
 
                 if (distSq < hitRadiusSq) {
 
@@ -1381,7 +1376,23 @@ class SurfaceMode {
             // Draw Target Reticle if this object is the player's target
             if (this.player && this.player.target === obj) {
                 const drawX = obj.pos.x;
-                const drawY = obj.pos.y - (obj.yOffset || 0);
+                let drawY;
+                
+                // Turrets are drawn at obj.pos.y (not obj.pos.y - yOffset)
+                // because their draw() method handles yOffset internally
+                if (obj.type === 'Turret') {
+                    // Turret head center (top surface) calculation:
+                    // groundVisualY = y - yOffset * cos(angle)
+                    // headRoofY = groundVisualY - (baseH + headH) * cos(angle)
+                    // Combined: headRoofY = y - (yOffset + baseH + headH) * cos(angle)
+                    const extrusionAngle = this._getExtrusionAngle();
+                    const sz = obj.size || 40;
+                    const totalOffset = (obj.yOffset || 0) + sz * 0.8; // yOffset + base + head
+                    drawY = obj.pos.y - totalOffset * Math.cos(extrusionAngle);
+                } else {
+                    // Other objects are drawn at obj.pos.y - yOffset, so reticle goes there too
+                    drawY = obj.pos.y - (obj.yOffset || 0);
+                }
 
                 push();
                 translate(drawX, drawY);

@@ -92,6 +92,12 @@ class SurfaceTerrain {
      */
     getHeightAt(worldX, worldY) {
         if (!this.planet) return 0;
+        
+        // Check if p5.js noise function is available
+        if (typeof noise !== 'function') {
+            console.warn('p5.js noise function not available in getHeightAt');
+            return 0;
+        }
 
         // Performance: Clear cache each frame and use cached values
         if (typeof frameCount !== 'undefined' && frameCount !== this.heightCacheFrame) {

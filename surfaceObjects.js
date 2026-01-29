@@ -1,3 +1,11 @@
+// ****** surfaceObjects.js ******
+// Surface object classes for planetary surface gameplay
+
+// Validate critical dependencies
+if (typeof Draw3D === 'undefined') {
+    console.warn('Draw3D not loaded - surface object rendering may fail');
+}
+
 class SurfaceObject {
     constructor(x, y, size) {
         this.pos = createVector(x, y);
@@ -248,8 +256,8 @@ class ImperialBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Imperial Structure";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 7.89) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (2 + (Math.sin(seed) * 0.5 + 0.5) * 3);
+        this.variant = calculateVariant(seed, 7.89, 5);
+        this.height = calculateHeight(size, seed, 2, 5);
         this.maxHealth = 300;
         this.health = 300;
 
@@ -260,7 +268,7 @@ class ImperialBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -351,8 +359,8 @@ class SeparatistBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Separatist Outpost";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 5.67) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (0.8 + (Math.sin(seed) * 0.5 + 0.5) * 1.5);
+        this.variant = calculateVariant(seed, 5.67, 5);
+        this.height = calculateHeight(size, seed, 0.8, 2.3);
         this.maxHealth = 250;
         this.health = 250;
 
@@ -363,7 +371,7 @@ class SeparatistBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -452,8 +460,8 @@ class MilitaryBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Military Installation";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 3.14) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (1.5 + (Math.sin(seed) * 0.5 + 0.5) * 1);
+        this.variant = calculateVariant(seed, 3.14, 5);
+        this.height = calculateHeight(size, seed, 1.5, 2.5);
         this.maxHealth = 400;
         this.health = 400;
 
@@ -464,7 +472,7 @@ class MilitaryBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -549,8 +557,8 @@ class PostHumanBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Posthuman Structure";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 9.99) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (2 + (Math.sin(seed) * 0.5 + 0.5) * 2);
+        this.variant = calculateVariant(seed, 9.99, 5);
+        this.height = calculateHeight(size, seed, 2, 4);
         this.maxHealth = 500;
         this.health = 500;
         this.pulsePhase = seed; // For animations
@@ -566,7 +574,7 @@ class PostHumanBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
         const pulse = (Math.sin(this.pulsePhase) * 0.5 + 0.5);
 
@@ -654,8 +662,8 @@ class OffworldBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Offworld Colony";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 4.56) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (1 + (Math.sin(seed) * 0.5 + 0.5) * 1.5);
+        this.variant = calculateVariant(seed, 4.56, 5);
+        this.height = calculateHeight(size, seed, 1, 2.5);
         this.maxHealth = 200;
         this.health = 200;
 
@@ -666,7 +674,7 @@ class OffworldBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -749,8 +757,8 @@ class MiningBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Mining Facility";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 6.28) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (1.5 + (Math.sin(seed) * 0.5 + 0.5) * 2);
+        this.variant = calculateVariant(seed, 6.28, 5);
+        this.height = calculateHeight(size, seed, 1.5, 3.5);
         this.maxHealth = 350;
         this.health = 350;
 
@@ -761,7 +769,7 @@ class MiningBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -848,8 +856,8 @@ class IndustrialBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Industrial Complex";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 2.71) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (1.2 + (Math.sin(seed) * 0.5 + 0.5) * 1.8);
+        this.variant = calculateVariant(seed, 2.71, 5);
+        this.height = calculateHeight(size, seed, 1.2, 3.0);
         this.maxHealth = 400;
         this.health = 400;
 
@@ -860,7 +868,7 @@ class IndustrialBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -947,8 +955,8 @@ class RefineryBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Refinery";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 1.41) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (2 + (Math.sin(seed) * 0.5 + 0.5) * 2);
+        this.variant = calculateVariant(seed, 1.41, 5);
+        this.height = calculateHeight(size, seed, 2, 4);
         this.maxHealth = 300;
         this.health = 300;
 
@@ -959,7 +967,7 @@ class RefineryBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -1045,8 +1053,8 @@ class AgriculturalBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Agricultural Facility";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 8.76) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (0.8 + (Math.sin(seed) * 0.5 + 0.5) * 1);
+        this.variant = calculateVariant(seed, 8.76, 5);
+        this.height = calculateHeight(size, seed, 0.8, 1.8);
         this.maxHealth = 150;
         this.health = 150;
 
@@ -1057,7 +1065,7 @@ class AgriculturalBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -1133,8 +1141,8 @@ class ServiceBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Service Structure";
         this.seed = seed;
-        this.variant = Math.floor((Math.sin(seed * 3.33) * 0.5 + 0.5) * 5); // 5 variants
-        this.height = size * (1.5 + (Math.sin(seed) * 0.5 + 0.5) * 1.5);
+        this.variant = calculateVariant(seed, 3.33, 5);
+        this.height = calculateHeight(size, seed, 1.5, 3.0);
         this.maxHealth = 180;
         this.health = 180;
 
@@ -1145,7 +1153,7 @@ class ServiceBuilding extends SurfaceObject {
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
-        const extrusionAngle = 0.15;
+        const extrusionAngle = SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
         const sz = this.size;
 
         if (this.variant === 0) {
@@ -1233,7 +1241,7 @@ class Turret extends SurfaceObject {
 
         this.range = config.RANGE || 1000;
         this.rangeSq = this.range * this.range;
-        this.detectionHeightThreshold = config.DETECTION_HEIGHT_THRESHOLD || 30; // Height above turret's ground level for detection
+        this.detectionHeightThreshold = config.DETECTION_HEIGHT_THRESHOLD || 50; // Radar altitude threshold for detection
         this.color = color(120, 120, 120);
         this.angle = 0;
         this.cooldown = 0;
@@ -1251,16 +1259,32 @@ class Turret extends SurfaceObject {
         if (!player) return;
         this.cooldown -= dt;
 
-        // Simple stealth detection: player detected if at or above turret altitude
-        // This makes stealth visually intuitive: stay below enemies to hide
+        // Stealth detection based on EITHER radar altitude OR absolute altitude
+        // - Radar altitude > threshold: Player flying high above terrain (detected)
+        // - Absolute altitude very high: Player at high elevation regardless of terrain (detected)
         const turretBaseAltitude = this.yOffset || 0;
         const playerAltitude = player.altitude || 0;
-        const headHeight = (this.size * 0.2) + (this.size * 0.6); // Base + head height
+        // Height calculation must match draw() method: baseH (sz * 0.2) + headH (sz * 0.6) = sz * 0.8
+        const headHeight = this.size * 0.8;
         this.altitude = turretBaseAltitude + headHeight;
 
-        // Use detection threshold (slightly above base) so low-flying players can stay hidden
-        const detectAltitude = turretBaseAltitude + (this.detectionHeightThreshold || 0);
-        const isDetected = playerAltitude >= detectAltitude;
+        // Detection threshold: default 50 units of radar altitude
+        const detectionThreshold = this.detectionHeightThreshold !== undefined ? 
+            this.detectionHeightThreshold : 50;
+        
+        // Check radar altitude if available from surfaceMode
+        let radarDetection = false;
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.altitude !== undefined) {
+            const playerRadarAltitude = surfaceMode.radarAltitude !== undefined ? 
+                surfaceMode.radarAltitude : surfaceMode.altitude;
+            radarDetection = playerRadarAltitude > detectionThreshold;
+        }
+        
+        // Also detect if player has very high absolute altitude (on hilltop)
+        // This ensures players on high ground are always visible
+        const absoluteDetection = playerAltitude > (turretBaseAltitude + detectionThreshold);
+        
+        const isDetected = radarDetection || absoluteDetection;
 
         // Quick range gate using world space (faster than visual math)
         const worldDx = player.pos.x - this.pos.x;
@@ -1826,10 +1850,12 @@ class DefenseDrone extends SurfaceObject {
         // Update yOffset and altitude based on terrain
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.terrain) {
             const terrainHeight = surfaceMode.terrain.getHeightAt(this.pos.x, this.pos.y);
-            this.altitude = terrainHeight + this.flyingHeight;
-            // Visual offset must match altitude so projectiles fire from the correct logical height
-            // and the player can verify they are safely below the drone
-            this.yOffset = this.altitude;
+            if (terrainHeight !== null && terrainHeight !== undefined && !isNaN(terrainHeight)) {
+                this.altitude = terrainHeight + this.flyingHeight;
+                // yOffset represents terrain height only (for Draw3D ground positioning)
+                // altitude is the full height above sea level for collision/aiming
+                this.yOffset = terrainHeight;
+            }
         }
 
         // Apply drag
