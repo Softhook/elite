@@ -712,11 +712,11 @@ function handleSecretBaseNavigation() {
 
     if (player.showSecretBaseNavigation) {
         showSecretBaseStatus();
-        soundManager?.playSound('uiTransition');
+        soundManager?.playSound('click');
     } else {
         player._cachedNavigation = null;
         uiManager?.addMessage("Secret Base Navigation: DEACTIVATED", [150, 150, 150]);
-        soundManager?.playSound('uiTransition');
+        soundManager?.playSound('click');
     }
     return true;
 }
@@ -766,11 +766,9 @@ function handleWantedToggle() {
     if (!isCurrentlyWanted) {
         uiManager?.addMessage(`WANTED in ${currentSystem.name} system!`, 'crimson');
         GS_LOG(`ALERT: Police alert issued in ${currentSystem.name}!`);
-        soundManager?.playSound('uiTransition');
     } else {
         uiManager?.addMessage(`Legal status cleared in ${currentSystem.name}`, 'lightgreen');
         GS_LOG(`NOTICE: Police alert cleared in ${currentSystem.name}.`);
-        soundManager?.playSound('uiTransition');
     }
     return true;
 }
@@ -811,7 +809,7 @@ function handleAutopilot(autopilotKey) {
             if (!player.autopilotEnabled) {
                 // Start autopilot with first target (station)
                 player.toggleAutopilot('station');
-                soundManager?.playSound('uiTransition');
+                soundManager?.playSound('click');
             } else {
                 // Find current position in cycle and move to next
                 const currentIndex = cycleOrder.indexOf(player.autopilotTarget);
@@ -827,7 +825,7 @@ function handleAutopilot(autopilotKey) {
                     } else {
                         // Move to next target in cycle
                         player.toggleAutopilot(cycleOrder[nextIndex]);
-                        soundManager?.playSound('uiTransition');
+                        soundManager?.playSound('click');
                     }
                 }
             }

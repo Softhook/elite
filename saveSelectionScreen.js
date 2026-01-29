@@ -644,7 +644,7 @@ class SaveSelectionScreen {
             const btn = this.getStartNewButtonRect(xPos + hoverOffset, currentSlotY, slotWidth, slotHeight);
             if (mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h) {
                 this.selectedOption = i; // Focus the slot
-                if (typeof soundManager !== 'undefined') soundManager.playSound('uiTransition');
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
                 // Explicitly start a new game in this slot (overwrites if present)
                 this.startNewGame(i);
                 return;
@@ -653,7 +653,7 @@ class SaveSelectionScreen {
             if (mouseX >= xPos + hoverOffset && mouseX <= xPos + hoverOffset + slotWidth &&
                 mouseY >= currentSlotY && mouseY <= currentSlotY + slotHeight) {
                 this.selectedOption = i;
-                if (typeof soundManager !== 'undefined') soundManager.playSound('uiTransition');
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click');
                 this.confirmSelection();
                 return;
             }

@@ -302,7 +302,6 @@ class GameStateManager {
             }
             // Menu navigation
             else if (isMenuState(newState)) {
-                soundManager.playSound('uiTransition');
             }
             // Galaxy map
             else if (newState === "GALAXY_MAP" && prevState !== "GALAXY_MAP") {
@@ -312,7 +311,6 @@ class GameStateManager {
             }
             // Station menu navigation
             else if ((newState === "DOCKED" || newState === "DOCKED_SPACE_OBJECT") && isStationState(prevState)) {
-                soundManager.playSound('uiTransition');
             }
             // Game over
             else if (newState === "GAME_OVER") {
