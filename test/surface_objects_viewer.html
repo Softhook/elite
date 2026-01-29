@@ -251,7 +251,8 @@
             } else {
                 const obj = objects[focusedIndex];
                 const rotCap = ('angle' in obj) ? 'draggable rotation' : 'static orientation';
-                info.innerHTML = `Viewing ${focusedIndex + 1}/${objects.length}: ${obj.type || obj.constructor.name} — ${rotCap}.`;
+                const name = (obj && typeof obj.getDisplayName === 'function') ? obj.getDisplayName() : (obj.type || (obj.constructor && obj.constructor.name) || 'Surface Object');
+                info.innerHTML = `Viewing ${focusedIndex + 1}/${objects.length}: ${name} — ${rotCap}.`;
             }
         }
 
@@ -294,7 +295,8 @@
                     obj.draw(obj.pos.x, obj.pos.y, sunAngle);
                     // label
                     push(); noStroke(); fill(220); textSize(12); textAlign(CENTER, TOP);
-                    text(obj.type || obj.constructor.name, obj.pos.x, obj.pos.y + (obj.size * 0.6) + 6);
+                    const gridName = (obj && typeof obj.getDisplayName === 'function') ? obj.getDisplayName() : (obj.type || (obj.constructor && obj.constructor.name) || 'Surface Object');
+                    text(gridName, obj.pos.x, obj.pos.y + (obj.size * 0.6) + 6);
                     pop();
                 }
             } else {
@@ -308,7 +310,8 @@
                 obj.draw(obj.pos.x, obj.pos.y, sunAngle);
 
                 push(); fill(230); textSize(18); textAlign(CENTER, TOP);
-                text(`${focusedIndex + 1}/${objects.length} — ${obj.type || obj.constructor.name}`, width / 2, height / 2 + obj.size * 0.65 + 10);
+                const focusedName = (obj && typeof obj.getDisplayName === 'function') ? obj.getDisplayName() : (obj.type || (obj.constructor && obj.constructor.name) || 'Surface Object');
+                text(`${focusedIndex + 1}/${objects.length} — ${focusedName}`, width / 2, height / 2 + obj.size * 0.65 + 10);
                 textSize(12);
                 text(`← ↑ : prev   ↓ → : next   Esc : exit`, width / 2, height - 36);
                 pop();

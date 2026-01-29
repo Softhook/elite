@@ -21,6 +21,14 @@ class SurfaceObject {
     get hull() { return this.health; }
     get maxHull() { return this.maxHealth; }
 
+    // Friendly display name used by HUD/minimap/target overlays
+    getDisplayName() {
+        if (this.displayName) return this.displayName;
+        if (this.type) return this.type;
+        if (this.constructor && this.constructor.name) return this.constructor.name;
+        return 'Surface Object';
+    }
+
     update(dt, player) {
     }
 
@@ -137,6 +145,11 @@ class Building extends SurfaceObject {
         super(x, y, size);
         this.type = type || 'skyscraper';
         this.seed = seed;
+
+        // Friendly display name for generic building types
+        if (!this.displayName && this.type) {
+            this.displayName = this.type.charAt(0).toUpperCase() + this.type.slice(1);
+        }
 
         this.color = this._getTypeColor(customColor);
         this.height = this._getTypeHeight();
@@ -265,6 +278,9 @@ class ImperialBuilding extends SurfaceObject {
         this.primaryColor = color(200, 170, 80);  // Gold
         this.accentColor = color(160, 80, 220);    // purple
         this.stoneColor = color(220, 215, 200);   // White marble
+
+        const imperialNames = ["Obelisk", "Palace", "Spire", "Triumphal Arch", "Senate Hall"];
+        this.displayName = imperialNames[this.variant] || this.type;
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
@@ -295,7 +311,9 @@ class ImperialBuilding extends SurfaceObject {
             Draw3D.drawBox3D(x, y - baseDv, sz * 1.2, sz * 0.8, baseH, this.stoneColor, extrusionAngle, sunAngle);
             // Central gold dome - positioned to sit flat on base top
             const domeY = y - baseDv;
-            Draw3D.drawDome(x, domeY, domeR, 8, this.primaryColor, extrusionAngle, sunAngle);
+            // Make dome tip project "up" away from the viewer by flipping extrusion angle
+            const domeAngle = extrusionAngle + Math.PI;
+            Draw3D.drawDome(x, domeY, domeR, 8, this.primaryColor, domeAngle, sunAngle);
             // Corner columns
             for (let i = -1; i <= 1; i += 2) {
                 Draw3D.drawCylinder(x + i * sz * 0.5, y - baseDv + sz * 0.3, sz * 0.08, baseH * 0.8, 8, this.stoneColor, extrusionAngle, sunAngle);
@@ -368,6 +386,9 @@ class SeparatistBuilding extends SurfaceObject {
         this.primaryColor = color(120, 80, 50);   // Rust brown
         this.accentColor = color(180, 100, 40);   // Orange
         this.metalColor = color(90, 85, 80);      // Scrap metal
+
+        const separatistNames = ["Bunker", "Watchtower", "Barricade", "Scrap Shelter", "Fuel Depot"];
+        this.displayName = separatistNames[this.variant] || this.type;
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
@@ -393,16 +414,27 @@ class SeparatistBuilding extends SurfaceObject {
             const towerDv = towerH * Math.cos(extrusionAngle);
             const legW = sz * 0.15;
 
-            // Four support legs
-            for (let i = -1; i <= 1; i += 2) {
-                for (let j = -1; j <= 1; j += 2) {
-                    Draw3D.drawBox3D(x + i * sz * 0.25, y + j * sz * 0.25 - towerDv * 0.5, legW, legW, towerH * 0.8, this.metalColor, extrusionAngle, sunAngle);
-                }
-            }
-            // Observation platform
+            // Observation platform (compute first so we can align legs to its underside)
             const platformH = sz * 0.15;
             const platformDv = platformH * Math.cos(extrusionAngle);
-            Draw3D.drawBox3D(x, y - towerDv, sz * 0.8, sz * 0.8, platformH, this.primaryColor, extrusionAngle, sunAngle);
+            const platformTopY = y - towerDv;
+            const platformUndersideY = platformTopY + platformDv;
+
+            // Four support legs - position so their TOP faces sit directly under the platform
+            const legHeight = towerH * 0.8;
+            for (let i = -1; i <= 1; i += 2) {
+                for (let j = -1; j <= 1; j += 2) {
+                    const legX = x + i * sz * 0.25;
+                    // Keep leg top aligned to the platform underside so platform is centered on legs
+                    const legY = platformUndersideY;
+                    Draw3D.drawBox3D(legX, legY, legW, legW, legHeight, this.metalColor, extrusionAngle, sunAngle);
+                }
+            }
+
+            // Observation platform (draw on top of legs)
+            Draw3D.drawBox3D(x, platformTopY, sz * 0.8, sz * 0.8, platformH, this.primaryColor, extrusionAngle, sunAngle);
+            // Searchlight - sits flush on platform top
+            Draw3D.drawCylinder(x, platformTopY - platformDv, sz * 0.1, sz * 0.15, 6, this.accentColor, extrusionAngle, sunAngle);
             // Searchlight - sits flush on platform top
             Draw3D.drawCylinder(x, y - towerDv - platformDv, sz * 0.1, sz * 0.15, 6, this.accentColor, extrusionAngle, sunAngle);
 
@@ -471,6 +503,9 @@ class MilitaryBuilding extends SurfaceObject {
         this.primaryColor = color(70, 80, 60);    // Olive drab
         this.accentColor = color(50, 50, 50);     // Dark gray
         this.metalColor = color(100, 100, 105);   // Steel
+
+        const militaryNames = ["Hangar", "Barracks", "Radar Array", "Bunker", "Tank Depot"];
+        this.displayName = militaryNames[this.variant] || this.type;
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
@@ -485,7 +520,8 @@ class MilitaryBuilding extends SurfaceObject {
             // Main hangar body
             Draw3D.drawBox3D(x, y - hangarDv, sz * 1.8, sz * 1.2, hangarH, this.primaryColor, extrusionAngle, sunAngle);
             // Arched roof section - sits flush on hangar top
-            Draw3D.drawDome(x, y - hangarDv, sz * 0.8, 6, this.accentColor, extrusionAngle, sunAngle);
+            const hangarDomeAngle = extrusionAngle + Math.PI;
+            Draw3D.drawDome(x, y - hangarDv, sz * 0.8, 6, this.accentColor, hangarDomeAngle, sunAngle);
             // Door markings
             Draw3D.drawBox3D(x, y - hangarDv * 0.4, sz * 0.8, sz * 0.05, hangarH * 0.5, color(180, 180, 40), extrusionAngle, sunAngle);
 
@@ -569,6 +605,9 @@ class PostHumanBuilding extends SurfaceObject {
         this.primaryColor = color(0, 200, 220);   // Cyan
         this.accentColor = color(180, 50, 200);   // Magenta
         this.darkColor = color(30, 20, 50);       // Dark purple
+
+        const postNames = ["Monolith", "Floating Cube", "Crystal Spire", "Data Obelisk", "Singularity Well"];
+        this.displayName = postNames[this.variant] || this.type;
     }
 
     update(dt, player) {
@@ -673,6 +712,9 @@ class OffworldBuilding extends SurfaceObject {
         this.primaryColor = color(180, 180, 190);  // Silver
         this.accentColor = color(100, 150, 200);   // Blue
         this.glassColor = color(200, 220, 255, 180); // Translucent
+
+        const offworldNames = ["Biodome", "Hab Unit", "Landing Pad", "Comms Array", "Solar Farm"];
+        this.displayName = offworldNames[this.variant] || this.type;
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
@@ -688,7 +730,8 @@ class OffworldBuilding extends SurfaceObject {
             // Base ring
             Draw3D.drawCylinder(x, y, domeR * 1.1, baseH, 12, this.primaryColor, extrusionAngle, sunAngle);
             // Main glass dome - sits flush on base ring
-            Draw3D.drawDome(x, y - baseDv, domeR, 10, this.glassColor, extrusionAngle, sunAngle);
+            const domeAngle = extrusionAngle + Math.PI;
+            Draw3D.drawDome(x, y - baseDv, domeR, 10, this.glassColor, domeAngle, sunAngle);
             // Airlock entrance
             Draw3D.drawBox3D(x + sz * 0.6, y, sz * 0.25, sz * 0.3, sz * 0.4, this.primaryColor, extrusionAngle, sunAngle);
 
@@ -770,6 +813,9 @@ class MiningBuilding extends SurfaceObject {
         this.primaryColor = color(180, 150, 50);   // Yellow machinery
         this.accentColor = color(200, 100, 30);    // Orange
         this.structureColor = color(100, 80, 60);  // Brown
+
+        const miningNames = ["Drill Rig", "Ore Silo", "Conveyor", "Excavator", "Crusher"];
+        this.displayName = miningNames[this.variant] || this.type;
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
@@ -869,6 +915,9 @@ class IndustrialBuilding extends SurfaceObject {
         this.primaryColor = color(80, 75, 70);     // Dark gray
         this.accentColor = color(150, 40, 30);     // Red
         this.metalColor = color(60, 60, 65);       // Black metal
+
+        const industrialNames = ["Factory", "Storage Tanks", "Pipe Network", "Assembly Hall", "Power Plant"];
+        this.displayName = industrialNames[this.variant] || this.type;
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
@@ -970,6 +1019,9 @@ class RefineryBuilding extends SurfaceObject {
         this.primaryColor = color(160, 160, 170);  // Chrome
         this.accentColor = color(220, 120, 30);    // Orange
         this.pipeColor = color(140, 140, 145);     // Lighter chrome
+
+        const refineryNames = ["Distillation Tower", "Spherical Tank", "Cracking Unit", "Flare Stack", "Pump Station"];
+        this.displayName = refineryNames[this.variant] || this.type;
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
@@ -1069,6 +1121,9 @@ class AgriculturalBuilding extends SurfaceObject {
         this.primaryColor = color(100, 140, 80);   // Green
         this.accentColor = color(120, 90, 60);     // Brown
         this.glassColor = color(180, 220, 180, 150); // Green-tinted glass
+
+        const agriNames = ["Greenhouse", "Grain Silo", "Water Tower", "Barn", "Windmill"];
+        this.displayName = agriNames[this.variant] || this.type;
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
@@ -1083,7 +1138,8 @@ class AgriculturalBuilding extends SurfaceObject {
             // Foundation
             Draw3D.drawBox3D(x, y - baseDv, sz * 1.2, sz * 0.8, baseH, this.accentColor, extrusionAngle, sunAngle);
             // Glass dome - sits flush on foundation
-            Draw3D.drawDome(x, y - baseDv, sz * 0.55, 8, this.glassColor, extrusionAngle, sunAngle);
+            const domeAngle = extrusionAngle + Math.PI;
+            Draw3D.drawDome(x, y - baseDv, sz * 0.55, 8, this.glassColor, domeAngle, sunAngle);
 
         } else if (this.variant === 1) {
             // GRAIN SILO - Tall cylindrical storage
@@ -1093,7 +1149,8 @@ class AgriculturalBuilding extends SurfaceObject {
             // Main silo cylinder
             Draw3D.drawCylinder(x, y - siloDv, sz * 0.35, siloH, 10, this.accentColor, extrusionAngle, sunAngle);
             // Domed top - sits flush on silo cylinder
-            Draw3D.drawDome(x, y - siloDv, sz * 0.38, 8, this.primaryColor, extrusionAngle, sunAngle);
+            const siloDomeAngle = extrusionAngle + Math.PI;
+            Draw3D.drawDome(x, y - siloDv, sz * 0.38, 8, this.primaryColor, siloDomeAngle, sunAngle);
 
         } else if (this.variant === 2) {
             // WATER TOWER - Elevated tank
@@ -1159,6 +1216,9 @@ class ServiceBuilding extends SurfaceObject {
         this.primaryColor = color(80, 120, 180);   // Blue
         this.accentColor = color(220, 220, 230);   // White
         this.lightColor = color(255, 220, 100);    // Yellow
+
+        const serviceNames = ["Comm Tower", "Shop", "Parking Structure", "Hotel", "Medical Center"];
+        this.displayName = serviceNames[this.variant] || this.type;
     }
 
     draw(x, y, sunAngle = -Math.PI / 4) {
@@ -1691,20 +1751,28 @@ class ShieldGenerator extends SurfaceObject {
         Draw3D.drawCylinder(x, y - baseDv - pillarDv, sz * 0.25, pillarH, 6, flashColor || color(40, 50, 60), extrusionAngle, sunAngle);
 
         // Energy dome (pulsing)
-        const domeY = y - baseDv - pillarDv;
         const pulseScale = 1 + Math.sin(this.pulsePhase) * 0.1;
+        const domeR = sz * 0.4 * pulseScale;
         const domeColor = flashColor || lerpColor(color(50, 150, 255, 180), color(100, 200, 255, 220), (Math.sin(this.pulsePhase) + 1) / 2);
-        Draw3D.drawDome(x, domeY, sz * 0.4 * pulseScale, 8, domeColor, extrusionAngle, sunAngle);
 
-        // Energy ring around base
-        const ringPulse = (Math.sin(this.pulsePhase * 2) + 1) / 2;
-        const ringSize = sz * 0.9 + ringPulse * 10;
-        push();
-        noFill();
-        stroke(50, 150, 255, 100 + ringPulse * 50);
-        strokeWeight(2);
-        ellipse(x, y, ringSize, ringSize * 0.4);
-        pop();
+        // Position dome so it sits flat on top of the pillar/prism beneath.
+        // The dome should point "up" (away from the viewer). To achieve this without
+        // changing convex/concave behavior, flip the extrusion angle by PI so the
+        // dome's tip projects in the opposite direction while remaining convex.
+        const domeAngle = extrusionAngle + Math.PI;
+        // Center the dome rim on top of the pillar: pillar top is at (x, y - baseDv - pillarDv)
+        const domeY = y - baseDv - pillarDv;
+        // Draw a short pedestal/ring below the dome so the dome sits on it
+        const pedestalRadius = domeR * 1.2;
+        const pedestalHeight = domeR * 0.15;
+        // Slightly lower the pedestal top so the dome visually rests on it
+        const pedestalY = domeY + pedestalHeight * 0.05;
+        const pedestalColor = lerpColor(baseColor, color(30, 30, 40), 0.6);
+        Draw3D.drawCylinder(x, pedestalY, pedestalRadius, pedestalHeight, 12, pedestalColor, extrusionAngle, sunAngle);
+
+        Draw3D.drawDome(x, domeY, domeR, 8, domeColor, domeAngle, sunAngle);
+
+        // Energy ring removed — visual simplified so dome sits directly on pedestal
 
         // --- Health Bar ---
         if (this.health < this.maxHealth && this.maxHealth > 0) {
