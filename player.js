@@ -2991,25 +2991,36 @@ class Player {
     _checkSurfaceObjectClick() {
         if (!surfaceMode || !surfaceMode.surfaceObjects) return null;
 
-        // Get perspective scale from surfaceMode for accurate coordinate transform
+        // Get perspective scale and extrusion angle from surfaceMode
         const perspectiveScale = (typeof surfaceMode._getPerspectiveScale === 'function') 
             ? surfaceMode._getPerspectiveScale() 
             : 1.0;
+        const extrusionAngle = (typeof surfaceMode._getExtrusionAngle === 'function')
+            ? surfaceMode._getExtrusionAngle()
+            : 0.5;
 
-        // Convert screen coords to world coords (inverse of surface mode camera transform)
-        // Surface mode uses: translate(center) -> scale(perspective) -> translate(-player)
-        // So inverse is: (screen - center) / scale + player
-        const worldX = (mouseX - width / 2) / perspectiveScale + this.pos.x;
-        const worldY = (mouseY - height / 2) / perspectiveScale + this.pos.y;
+        // Get active entity (ship or astronaut) and its altitude (matching camera logic)
+        const activeEntity = (surfaceMode.controlMode === 'SHIP') ? this : surfaceMode.astronaut;
+        const activeAlt = (activeEntity && activeEntity.altitude !== undefined) 
+            ? activeEntity.altitude 
+            : surfaceMode.altitude;
+        const visualYOffset = activeAlt * Math.cos(extrusionAngle);
+
+        // Convert screen coords to world coords
+        // Camera transform: translate(center) -> scale(perspective) -> translate(-surfaceX, -(surfaceY - visualYOffset))
+        // Inverse: (screen - center) / scale + surfacePos
+        const worldX = (mouseX - width / 2) / perspectiveScale + surfaceMode.surfaceX;
+        const worldY = (mouseY - height / 2) / perspectiveScale + (surfaceMode.surfaceY - visualYOffset);
 
         for (const obj of surfaceMode.surfaceObjects) {
             if (!obj || obj.destroyed) continue;
 
-            // Use object's size for hit detection, with some buffer for easier clicking
+            // Use object's size for hit detection, with buffer for easier clicking
             const hitRadius = (obj.size || 40) / 2 + 15;
 
-            // Check distance in world coordinates (x,y plane)
-            const d = dist(worldX, worldY, obj.pos.x, obj.pos.y);
+            // Objects are drawn at pos.y - yOffset, so we need to check at their visual position
+            const visualY = obj.pos.y - (obj.yOffset || 0);
+            const d = dist(worldX, worldY, obj.pos.x, visualY);
 
             if (d < hitRadius) {
                 return obj;
