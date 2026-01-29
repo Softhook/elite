@@ -338,8 +338,8 @@ class ImperialBuilding extends SurfaceObject {
             for (let i = -2; i <= 2; i++) {
                 Draw3D.drawCylinder(x + i * sz * 0.3, y - hallDv + sz * 0.35, sz * 0.06, hallH * 0.9, 8, this.stoneColor, extrusionAngle, sunAngle);
             }
-            // Triangular pediment
-            Draw3D.drawCone(x, y - hallDv - sz * 0.2, sz * 0.7, sz * 0.3, 3, this.primaryColor, extrusionAngle, sunAngle);
+            // Triangular pediment - sits flush on hall top
+            Draw3D.drawCone(x, y - hallDv, sz * 0.7, sz * 0.3, 3, this.primaryColor, extrusionAngle, sunAngle);
         }
     }
 
@@ -498,8 +498,8 @@ class MilitaryBuilding extends SurfaceObject {
             for (let i = -1; i <= 1; i++) {
                 Draw3D.drawBox3D(x + i * sz * 0.5, y - blockDv, sz * 0.45, sz * 0.7, blockH, this.primaryColor, extrusionAngle, sunAngle);
             }
-            // Command antenna
-            Draw3D.drawCylinder(x, y - blockDv - sz * 0.3, sz * 0.05, sz * 0.5, 6, this.metalColor, extrusionAngle, sunAngle);
+            // Command antenna - sits flush on center block
+            Draw3D.drawCylinder(x, y - blockDv, sz * 0.05, sz * 0.5, 6, this.metalColor, extrusionAngle, sunAngle);
 
         } else if (this.variant === 2) {
             // RADAR ARRAY - Dish on tower
