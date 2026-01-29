@@ -847,21 +847,7 @@ describe('SurfaceMode Astronaut Integration', () => {
         expect(sm.astronaut.pos.x).toBeCloseTo(player.pos.x);
     });
 
-    test.skip('movement input while landed triggers astronaut deployment', () => {
-        // Ensure Astronaut class is available
-        global.Astronaut = class MockAstronaut {
-            constructor(pos) { this.pos = pos.copy(); this.altitude = 0; }
-            handleInput() { return false; }
-            update() { }
-        };
-
-        // Simulate W key press (force true)
-        global.keyIsDown.mockReturnValue(true);
-
-        sm._updatePhysics(0.016); // Should call _checkDisembarkTrigger
-
-        expect(sm.controlMode).toBe('ASTRONAUT');
-    });
+    // NOTE: test removed — previously checked movement-triggered disembark.
 
     test('boardShip switches control mode back to ship', () => {
         global.Astronaut = class MockAstronaut {
