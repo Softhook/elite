@@ -11,8 +11,7 @@ const SURFACE_CONFIG = {
     MAX_ALTITUDE: 1000,
     DEFAULT_ALTITUDE: 500, // Default starting altitude above terrain
     TURN_SPEED: 2.5,           // Radians per second
-    MAX_SPEED: 300,            // Legacy - now uses SHIP_DEFINITIONS
-    STRAFE_SPEED: 200,         // Legacy - now uses SharedPhysics
+    // Movement (now uses SHIP_DEFINITIONS and SharedPhysics)
     CLIMB_SPEED: 150,
 
     // Terrain mesh
@@ -527,16 +526,9 @@ class SurfaceMode {
 
             this._checkSurfaceCollisions();
 
-            // Update starSystem like when docked - NPCs move but player is invulnerable
-            // Commented out to prevent sound leaks from space combat while on surface
-            /*
-            if (this.starSystem && typeof this.starSystem.updateWhileDocked === 'function') {
-                this.starSystem.updateWhileDocked();
-            }
-            */
-
             // Update projectiles only (surface projectiles need to move)
-            // This is safe as it only updates existing projectiles without spawning/firing
+            // Note: StarSystem.updateWhileDocked() is intentionally not called to prevent
+            // sound leaks from space combat while on surface
             if (this.starSystem && typeof this.starSystem._updateProjectiles === 'function') {
                 this.starSystem._updateProjectiles();
             }

@@ -2991,10 +2991,14 @@ class Player {
     _checkSurfaceObjectClick() {
         if (!surfaceMode || !surfaceMode.surfaceObjects) return null;
 
+        // Get perspective scale from surfaceMode for accurate coordinate transform
+        const perspectiveScale = (typeof surfaceMode._getPerspectiveScale === 'function') 
+            ? surfaceMode._getPerspectiveScale() 
+            : 1.0;
+
         // Convert screen coords to world coords (inverse of surface mode camera transform)
         // Surface mode uses: translate(center) -> scale(perspective) -> translate(-player)
         // So inverse is: (screen - center) / scale + player
-        const perspectiveScale = map(surfaceMode.altitude, 10, 500, 1.2, 0.6);
         const worldX = (mouseX - width / 2) / perspectiveScale + this.pos.x;
         const worldY = (mouseY - height / 2) / perspectiveScale + this.pos.y;
 
@@ -3004,9 +3008,8 @@ class Player {
             // Use object's size for hit detection, with some buffer for easier clicking
             const hitRadius = (obj.size || 40) / 2 + 15;
 
-            // Account for visual offset (drawing subtracts yOffset)
-            const visualY = obj.pos.y - (obj.yOffset || 0);
-            const d = dist(worldX, worldY, obj.pos.x, visualY);
+            // Check distance in world coordinates (x,y plane)
+            const d = dist(worldX, worldY, obj.pos.x, obj.pos.y);
 
             if (d < hitRadius) {
                 return obj;
