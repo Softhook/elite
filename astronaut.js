@@ -97,7 +97,7 @@ class Astronaut {
 
         // Spawn grenade projectile
         // Velocity vector based on facing angle + arc
-        const throwSpeed = 80; // slower so arc is visible
+        const throwSpeed = 150; // restore previous throw speed for familiar feel
         const vx = Math.cos(this.facingAngle) * throwSpeed;
         const vy = Math.sin(this.facingAngle) * throwSpeed;
 
@@ -212,11 +212,11 @@ class Grenade {
         this.pos = createVector(x, y);
         this.vel = createVector(vx, vy);
         this.size = 6;
-        this.color = color(255, 120, 30);
+        this.color = color(50, 255, 50); // green like earlier commit
 
         this.altitude = startAltitude + 15; // Start at hand height above ground
-        this.verticalVel = 120; // stronger upward velocity for visible arc
-        this.gravity = -200; // Gravity pulling down (negative reduces verticalVel)
+        this.verticalVel = 40; // Initial upward velocity for arc (restored)
+        this.gravity = -80; // Gravity pulling down (restored)
 
         // Track previous position for trail rendering and maintain history
         this.prevPos = this.pos.copy();
@@ -232,41 +232,37 @@ class Grenade {
     }
 
     update() {
-        // Match Projectile.update() frame-rate independence
-        const timeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
+        // Use fixed-step physics here to match previous behavior and ensure a clear arc
+        const dt = 1 / 60;
 
-        // Record previous position and push to trail (before movement)
+        // Move in world plane
+        this.pos.add(p5.Vector.mult(this.vel, dt));
+
+        // Vertical arc physics (fixed dt)
+        this.verticalVel += this.gravity * dt;
+        this.altitude += this.verticalVel * dt;
+
+        // Lifespan (frame-independent not necessary for grenade feel)
+        this.lifespan -= 1;
+        if (this.lifespan <= 0) this.destroyed = true;
+
+        // After moving, record trail point so the trajectory reflects the arc
         if (!this.prevPos) this.prevPos = this.pos.copy();
         this.prevPos.set(this.pos.x, this.pos.y);
         this.trail.push({ x: this.pos.x, y: this.pos.y, alt: this.altitude });
         if (this.trail.length > this.trailMax) this.trail.shift();
 
-        // Move in world plane
-        this.pos.add(p5.Vector.mult(this.vel, timeScale));
-
-        // Vertical arc physics (timeScale applied)
-        this.verticalVel += this.gravity * timeScale;
-        this.altitude += this.verticalVel * timeScale;
-
-        // Lifespan
-        this.lifespan -= timeScale;
-        if (this.lifespan <= 0) this.destroyed = true;
-
         // Terrain collision: if we have a global surfaceMode, sample terrain and explode on impact
         if (!this.destroyed && typeof surfaceMode !== 'undefined' && surfaceMode && typeof surfaceMode._getTerrainHeightAt === 'function') {
             const terrainH = surfaceMode._getTerrainHeightAt(this.pos.x, this.pos.y);
             if (this.altitude <= terrainH) {
-                // Create surface explosion at terrain altitude
                 try {
-                    // Prefer surfaceMode helper to ensure consistent visuals
                     if (typeof surfaceMode._createSurfaceExplosion === 'function') {
                         surfaceMode._createSurfaceExplosion(this.pos.x, this.pos.y, terrainH, 24, [255, 200, 50]);
                     } else if (this.system && typeof this.system.addExplosion === 'function') {
                         this.system.addExplosion(this.pos.x, this.pos.y, 24, [255, 200, 50], true, false, terrainH);
                     }
-                } catch (e) {
-                    // Fallback: mark destroyed even if explosion call fails
-                }
+                } catch (e) { }
                 this.destroyed = true;
             }
         }
@@ -322,23 +318,19 @@ class Grenade {
 
         // Draw trailing curved trajectory from stored trail points
         if (this.trail && this.trail.length > 0) {
+            // Draw a smooth curve through trail points using curveVertex
             noFill();
-            for (let i = 0; i < this.trail.length - 1; i++) {
-                const a = this.trail[i];
-                const b = this.trail[i + 1];
-                const ay = toVisualY(a.y, a.alt || 0);
-                const by = toVisualY(b.y, b.alt || 0);
-                const alpha = map(i, 0, Math.max(1, this.trail.length - 2), 40, 200);
-                stroke(255, 180, 100, alpha);
-                strokeWeight((1 + i * 0.2) * counterScale);
-                line(a.x, ay, b.x, by);
+            beginShape();
+            for (let i = 0; i < this.trail.length; i++) {
+                const t = this.trail[i];
+                const ty = toVisualY(t.y, t.alt || 0);
+                stroke(50, 255, 50, map(i, 0, this.trail.length - 1, 60, 200));
+                strokeWeight((1 + i * 0.1) * counterScale);
+                curveVertex(t.x, ty);
             }
-            // Last segment from last trail point to current position
-            const last = this.trail[this.trail.length - 1];
-            const lastY = toVisualY(last.y, last.alt || 0);
-            stroke(255, 200, 120, 220);
-            strokeWeight(2.5 * counterScale);
-            line(last.x, lastY, drawX, visualY);
+            // connect to current position for a smooth tip
+            curveVertex(drawX, visualY);
+            endShape();
         }
 
         // Draw grenade body at visual height
