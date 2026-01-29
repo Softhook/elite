@@ -18,6 +18,7 @@ const SURFACE_CONFIG = {
     MESH_RESOLUTION: 100,      // Grid resolution
     MESH_SIZE: 4000,           // World units covered
     DEFAULT_FEATURE_SEED: 12345, // Fallback seed for terrain generation
+    HIGH_TERRAIN_THRESHOLD: 350, // Height (0-500) treated as high ground for defenses
 
     // Transition
     TRANSITION_DURATION: 2000, // ms for enter/exit transitions
@@ -215,6 +216,26 @@ class SurfaceMode {
     }
 
     /**
+     * Deterministic planet seed for surface object placement
+     * Falls back through nameHash -> featureRand -> seed -> hashed name -> default
+     * @returns {number}
+     * @private
+     */
+    _getPlanetSeed() {
+        if (typeof this.planet?.nameHash === 'number') return this.planet.nameHash;
+        if (typeof this.planet?.featureRand === 'number') return Math.floor(this.planet.featureRand * 1000000);
+        if (typeof this.planet?.seed === 'number') return this.planet.seed;
+        if (this.planet?.name) {
+            let hash = 0;
+            for (let i = 0; i < this.planet.name.length; i++) {
+                hash = this._hash(hash + this.planet.name.charCodeAt(i));
+            }
+            return hash >>> 0; // Ensure unsigned
+        }
+        return 12345;
+    }
+
+    /**
      * Find the best canyon/valley location for shield generator placement
      * Searches multiple deterministic locations and scores them based on terrain features
      * @param {number} searchCount - Number of locations to probe
@@ -291,6 +312,9 @@ class SurfaceMode {
         this.player = player;
         this.planet = planet;
         this.starSystem = starSystem;
+
+        // Reset cached surface objects so new terrain/building logic can repopulate cleanly
+        this.objectCache.clear();
 
         // Save player position for return
         this.savedPlayerPos = player.pos.copy();
@@ -1113,7 +1137,7 @@ class SurfaceMode {
         this.surfaceObjects = [];
         const resolution = SURFACE_CONFIG.MESH_RESOLUTION;
         const cellSize = SURFACE_CONFIG.MESH_SIZE / resolution;
-        const planetSeed = this.planet.nameHash || 12345;
+        const planetSeed = this._getPlanetSeed();
 
         // DEBUG MODE: Spawn exactly one turret and no other buildings
         if (this.debugMode) {
@@ -1199,7 +1223,7 @@ class SurfaceMode {
                     // Settlement Zones: Large areas where buildings cluster
                     const settlementNoise = noise(activeGridX * 0.015 + 500, activeGridY * 0.015 + 500);
                     const isSettlementZone = settlementNoise > 0.60;
-                    const isHighTerrain = h > 100;
+                    const isHighTerrain = h > SURFACE_CONFIG.HIGH_TERRAIN_THRESHOLD;
 
                     // Get civilization color and economy type for buildings
                     const civColor = (this.planet && this.planet.cityLightsColor) ? this.planet.cityLightsColor : null;
