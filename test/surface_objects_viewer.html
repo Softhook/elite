@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Surface Objects Viewer</title>
+    <script src="../libraries/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background: #081014;
+            color: #e6eef8;
+            font-family: sans-serif;
+        }
+
+        #ui {
+            position: absolute;
+            left: 12px;
+            top: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        button,
+        select {
+            margin: 4px 6px 4px 0;
+            padding: 6px 8px;
+            background: #142030;
+            color: #e6eef8;
+            border: 1px solid #2a4658;
+            border-radius: 4px;
+        }
+
+        h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="ui">
+        <h3>Surface Objects Viewer</h3>
+        <button id="respawn">Respawn All</button>
+        <button id="shuffle">Shuffle Positions</button>
+        <label>Scale: <select id="scale">
+                <option>0.6</option>
+                <option selected>1</option>
+                <option>1.4</option>
+                <option>2</option>
+            </select></label>
+        <div id="info" style="margin-top:8px;font-size:12px;color:#9fb8d6"></div>
+    </div>
+
+    <script>
+        let objects = [];
+        let scaleFactor = 1;
+        let focusedIndex = -1;
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartAngle = 0;
+        let lastTimestamp = 0;
+
+        function setup() {
+            createCanvas(window.innerWidth, window.innerHeight);
+            angleMode(RADIANS);
+            spawnAllObjects();
+
+            document.getElementById('respawn').addEventListener('click', spawnAllObjects);
+            document.getElementById('shuffle').addEventListener('click', shufflePositions);
+            document.getElementById('scale').addEventListener('change', (e) => { scaleFactor = parseFloat(e.target.value) || 1; arrangeGrid(); updateInfo(); });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (objects.length === 0) return;
+                    if (focusedIndex === -1) focusIndex(0);
+                    else focusIndex((focusedIndex + 1) % objects.length);
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (objects.length === 0) return;
+                    if (focusedIndex === -1) focusIndex(objects.length - 1);
+                    else focusIndex((focusedIndex - 1 + objects.length) % objects.length);
+                } else if (e.key === 'Escape') {
+                    if (focusedIndex !== -1) clearFocus();
+                }
+            });
+
+            lastTimestamp = millis();
+        }
+
+        function mousePressed() {
+            if (focusedIndex !== -1 && objects[focusedIndex] && ('angle' in objects[focusedIndex])) {
+                isDragging = true;
+                dragStartX = mouseX;
+                dragStartAngle = objects[focusedIndex].angle || 0;
+            }
+        }
+
+        function mouseDragged() {
+            if (isDragging && focusedIndex !== -1) {
+                const obj = objects[focusedIndex];
+                const dragDelta = (mouseX - dragStartX) * 0.01;
+                obj.angle = dragStartAngle + dragDelta;
+            }
+        }
+
+        function mouseReleased() {
+            isDragging = false;
+        }
+
+        function windowResized() {
+            resizeCanvas(window.innerWidth, window.innerHeight);
+            arrangeGrid();
+        }
+
+        function spawnAllObjects() {
+            objects = [];
+
+            // Create a representative set: one sample per economy/system type
+            const centerSize = 48;
+            const seedBase = 42;
+
+            // Singletons and special objects
+            objects.push(new SecretCache(0, 0, 28));
+            objects.push(new SurfaceStation(0, 0, 80));
+            objects.push(new ShieldGenerator(0, 0));
+
+            // Instantiate every unique building class and all their visual variants
+            const examples = [];
+            examples.push(new SecretCache(0, 0, 12));
+
+            // Helper: find a seed that maps to a desired variant using calculateVariant
+            function findSeedForVariant(multiplier, variantCount, targetVariant, maxTry = 5000) {
+                if (typeof calculateVariant !== 'function') return targetVariant + 1; // fallback
+                for (let s = 0; s < maxTry; s++) {
+                    const v = calculateVariant(s, multiplier, variantCount);
+                    if (v === targetVariant) return s;
+                }
+                return targetVariant + 100; // fallback seed
+            }
+
+            // Building base variants (explicit types)
+            examples.push(new Building(0, 0, 36, 'skyscraper', 11));
+            examples.push(new Building(0, 0, 36, 'factory', 12));
+            examples.push(new Building(0, 0, 36, 'silo', 13));
+
+            // Economy-specific building classes and their variant multipliers (from source)
+            const economyClasses = [
+                { cls: ImperialBuilding, multiplier: 7.89 },
+                { cls: SeparatistBuilding, multiplier: 5.67 },
+                { cls: MilitaryBuilding, multiplier: 3.14 },
+                { cls: PostHumanBuilding, multiplier: 9.99 },
+                { cls: OffworldBuilding, multiplier: 4.56 },
+                { cls: MiningBuilding, multiplier: 6.28 },
+                { cls: IndustrialBuilding, multiplier: 2.71 },
+                { cls: RefineryBuilding, multiplier: 1.41 },
+                { cls: AgriculturalBuilding, multiplier: 8.76 },
+                { cls: ServiceBuilding, multiplier: 3.33 }
+            ];
+
+            // Each of the above uses 5 variants (0..4) per calculateVariant calls in source
+            const VARIANT_COUNT = 5;
+
+            let xOffset = 0;
+            for (const entry of economyClasses) {
+                if (typeof entry.cls !== 'function') continue;
+                for (let v = 0; v < VARIANT_COUNT; v++) {
+                    const seed = findSeedForVariant(entry.multiplier, VARIANT_COUNT, v);
+                    const inst = new entry.cls(xOffset, 0, 44, seed);
+                    // store which variant we forced for debugging/labels
+                    inst._viewerVariant = v;
+                    examples.push(inst);
+                    xOffset += 110;
+                }
+                // small gap between families
+                xOffset += 40;
+            }
+
+            // Stations, defense and special
+            if (typeof SurfaceStation !== 'undefined') examples.push(new SurfaceStation(0, 0, 90));
+            if (typeof ShieldGenerator !== 'undefined') examples.push(new ShieldGenerator(0, 0));
+            examples.push(new Turret(0, 0, 40));
+            examples.push(new DefenseDrone(0, 0));
+
+            // Push examples into objects
+            for (let ex of examples) objects.push(ex);
+
+            // Debug: log instantiated types so we can verify presence
+            console.log('Surface viewer instanced objects:', objects.map(o => (o && o.constructor) ? o.constructor.name + (o.type ? (' - ' + o.type) : '') : String(o)));
+
+            // Ensure PostHumanBuilding is visually prominent if present
+            const postHuman = objects.find(o => o && o.constructor && o.constructor.name === 'PostHumanBuilding');
+            if (postHuman) {
+                postHuman._viewerBaseSize = Math.max(postHuman._viewerBaseSize || postHuman.size || 60, 120);
+            }
+
+            // Normalize base sizes for viewer convenience
+            for (let obj of objects) {
+                if (!obj._viewerBaseSize) obj._viewerBaseSize = obj.size || centerSize;
+            }
+
+            focusedIndex = -1;
+            arrangeGrid();
+            updateInfo();
+        }
+
+        function arrangeGrid() {
+            if (objects.length === 0) return;
+            if (focusedIndex !== -1) {
+                resizeCanvas(window.innerWidth, window.innerHeight);
+                return;
+            }
+
+            const padding = 220 * scaleFactor;
+            let cols = Math.floor((window.innerWidth - 100) / padding);
+            if (cols < 1) cols = 1;
+            const rows = Math.ceil(objects.length / cols);
+            const totalGridHeight = (rows - 1) * padding;
+            const requiredHeight = totalGridHeight + 300;
+            if (height < requiredHeight || (height > window.innerHeight && requiredHeight < height)) {
+                resizeCanvas(window.innerWidth, Math.max(window.innerHeight, requiredHeight));
+            }
+            const startX = width / 2 - (cols - 1) * padding / 2;
+            const startY = (height > requiredHeight) ? (height / 2 - totalGridHeight / 2) : 150;
+
+            for (let i = 0; i < objects.length; i++) {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                objects[i].pos.x = startX + col * padding;
+                objects[i].pos.y = startY + row * padding;
+                objects[i].size = (objects[i]._viewerBaseSize) ? objects[i]._viewerBaseSize * 0.9 * scaleFactor : (objects[i].size * scaleFactor);
+            }
+        }
+
+        function shufflePositions() {
+            for (let obj of objects) {
+                obj.pos.x = Math.random() * width * 0.8 + width * 0.1;
+                obj.pos.y = Math.random() * height * 0.8 + height * 0.1;
+            }
+            updateInfo();
+        }
+
+        function updateInfo() {
+            const info = document.getElementById('info');
+            if (focusedIndex === -1) {
+                info.innerHTML = `Types: ${objects.length} — Use arrow keys to focus an object.`;
+            } else {
+                const obj = objects[focusedIndex];
+                const rotCap = ('angle' in obj) ? 'draggable rotation' : 'static orientation';
+                info.innerHTML = `Viewing ${focusedIndex + 1}/${objects.length}: ${obj.type || obj.constructor.name} — ${rotCap}.`;
+            }
+        }
+
+        function focusIndex(i) {
+            if (objects.length === 0) return;
+            focusedIndex = (i + objects.length) % objects.length;
+            try { if (!document.fullscreenElement) document.documentElement.requestFullscreen?.(); } catch (e) { }
+            arrangeGrid();
+            updateInfo();
+        }
+
+        function clearFocus() {
+            focusedIndex = -1;
+            try { if (document.fullscreenElement) document.exitFullscreen?.(); } catch (e) { }
+            arrangeGrid();
+            updateInfo();
+        }
+
+        function draw() {
+            // delta in seconds
+            const now = millis();
+            const dt = Math.min((now - lastTimestamp) / 1000, 0.1);
+            lastTimestamp = now;
+
+            background(12, 18, 22);
+
+            // simple sun indicator (lighting direction)
+            push();
+            noStroke();
+            fill(255, 240, 180, 200);
+            ellipse(40, 40, 36, 36);
+            pop();
+
+            const sunAngle = (typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.DEFAULT_SUN_ANGLE) ? SURFACE_RENDER_CONSTANTS.DEFAULT_SUN_ANGLE : -Math.PI/4;
+
+            if (focusedIndex === -1) {
+                for (let obj of objects) {
+                    if (obj.update) obj.update(dt, null, null);
+                    // draw expects x,y
+                    obj.draw(obj.pos.x, obj.pos.y, sunAngle);
+                    // label
+                    push(); noStroke(); fill(220); textSize(12); textAlign(CENTER, TOP);
+                    text(obj.type || obj.constructor.name, obj.pos.x, obj.pos.y + (obj.size * 0.6) + 6);
+                    pop();
+                }
+            } else {
+                const obj = objects[focusedIndex];
+                const oldX = obj.pos.x, oldY = obj.pos.y, oldSize = obj.size;
+
+                obj.pos.x = width / 2; obj.pos.y = height / 2;
+                obj.size = Math.floor(Math.min(width, height) * 0.6);
+
+                if (obj.update) obj.update(dt, null, null);
+                obj.draw(obj.pos.x, obj.pos.y, sunAngle);
+
+                push(); fill(230); textSize(18); textAlign(CENTER, TOP);
+                text(`${focusedIndex + 1}/${objects.length} — ${obj.type || obj.constructor.name}`, width / 2, height / 2 + obj.size * 0.65 + 10);
+                textSize(12);
+                text(`← ↑ : prev   ↓ → : next   Esc : exit`, width / 2, height - 36);
+                pop();
+
+                obj.pos.x = oldX; obj.pos.y = oldY; obj.size = oldSize;
+            }
+        }
+    </script>
+
+    <script src="../draw3d.js"></script>
+    <script src="../surfaceObjectUtils.js"></script>
+    <script src="../colorConstants.js"></script>
+    <script src="../surfaceObjects.js"></script>
+</body>
+
+</html>
