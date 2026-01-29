@@ -701,8 +701,8 @@ class OffworldBuilding extends SurfaceObject {
             Draw3D.drawCylinder(x, y - podDv, sz * 0.4, podH, 10, this.primaryColor, extrusionAngle, sunAngle);
             // Connected side pod
             Draw3D.drawCylinder(x + sz * 0.5, y - podDv * 0.5, sz * 0.25, podH * 0.6, 10, this.primaryColor, extrusionAngle, sunAngle);
-            // Blue window ring
-            Draw3D.drawCylinder(x, y - podDv - sz * 0.1, sz * 0.42, sz * 0.08, 10, this.accentColor, extrusionAngle, sunAngle);
+            // Blue window ring - sits flush on pod top
+            Draw3D.drawCylinder(x, y - podDv, sz * 0.42, sz * 0.08, 10, this.accentColor, extrusionAngle, sunAngle);
 
         } else if (this.variant === 2) {
             // LANDING PAD - Flat platform with lights
@@ -922,9 +922,9 @@ class IndustrialBuilding extends SurfaceObject {
 
             // Main hall structure
             Draw3D.drawBox3D(x, y - hallDv, sz * 1.6, sz * 0.6, hallH, this.primaryColor, extrusionAngle, sunAngle);
-            // Modular roof sections
+            // Modular roof sections - sit flush on hall top
             for (let i = -1; i <= 1; i++) {
-                Draw3D.drawBox3D(x + i * sz * 0.45, y - hallDv - sz * 0.05, sz * 0.3, sz * 0.5, sz * 0.08, this.metalColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(x + i * sz * 0.45, y - hallDv, sz * 0.3, sz * 0.5, sz * 0.08, this.metalColor, extrusionAngle, sunAngle);
             }
             // Loading dock
             Draw3D.drawBox3D(x + sz * 0.7, y - hallDv * 0.3, sz * 0.3, sz * 0.4, hallH * 0.5, this.accentColor, extrusionAngle, sunAngle);
@@ -1009,12 +1009,13 @@ class RefineryBuilding extends SurfaceObject {
 
             // Main processing box
             Draw3D.drawBox3D(x, y - unitDv, sz * 0.8, sz * 0.6, unitH, this.primaryColor, extrusionAngle, sunAngle);
-            // Left exhaust stack
-            Draw3D.drawCylinder(x - sz * 0.25, y - unitDv - sz * 0.2, sz * 0.08, sz * 0.4, 8, this.pipeColor, extrusionAngle, sunAngle);
-            // Right exhaust stack
-            Draw3D.drawCylinder(x + sz * 0.25, y - unitDv - sz * 0.2, sz * 0.08, sz * 0.4, 8, this.pipeColor, extrusionAngle, sunAngle);
-            // Flame tip
-            Draw3D.drawCone(x - sz * 0.25, y - unitDv - sz * 0.6, sz * 0.06, sz * 0.15, 6, this.accentColor, extrusionAngle, sunAngle);
+            // Left exhaust stack - sits flush on unit top
+            Draw3D.drawCylinder(x - sz * 0.25, y - unitDv, sz * 0.08, sz * 0.4, 8, this.pipeColor, extrusionAngle, sunAngle);
+            // Right exhaust stack - sits flush on unit top
+            Draw3D.drawCylinder(x + sz * 0.25, y - unitDv, sz * 0.08, sz * 0.4, 8, this.pipeColor, extrusionAngle, sunAngle);
+            // Flame tip on left stack
+            const stackDv = (sz * 0.4) * Math.cos(extrusionAngle);
+            Draw3D.drawCone(x - sz * 0.25, y - unitDv - stackDv, sz * 0.06, sz * 0.15, 6, this.accentColor, extrusionAngle, sunAngle);
 
         } else if (this.variant === 3) {
             // FLARE STACK - Tall stack with burning flare
@@ -1025,8 +1026,8 @@ class RefineryBuilding extends SurfaceObject {
             Draw3D.drawBox3D(x, y - flareDv * 0.1, sz * 0.5, sz * 0.5, sz * 0.15, this.primaryColor, extrusionAngle, sunAngle);
             // Tall stack
             Draw3D.drawCylinder(x, y - flareDv, sz * 0.1, flareH, 8, this.pipeColor, extrusionAngle, sunAngle);
-            // Burning flare (orange cone)
-            Draw3D.drawCone(x, y - flareDv - sz * 0.2, sz * 0.2, sz * 0.4, 6, this.accentColor, extrusionAngle, sunAngle);
+            // Burning flare (orange cone) - sits flush on stack top
+            Draw3D.drawCone(x, y - flareDv, sz * 0.2, sz * 0.4, 6, this.accentColor, extrusionAngle, sunAngle);
 
         } else {
             // PUMP STATION - Low building with valves
@@ -1035,9 +1036,9 @@ class RefineryBuilding extends SurfaceObject {
 
             // Main building
             Draw3D.drawBox3D(x, y - pumpDv, sz * 1.0, sz * 0.6, pumpH, this.primaryColor, extrusionAngle, sunAngle);
-            // Valve wheels
+            // Valve wheels - sit flush on building top
             for (let i = -1; i <= 1; i++) {
-                Draw3D.drawCylinder(x + i * sz * 0.3, y - pumpDv - sz * 0.1, sz * 0.12, sz * 0.06, 8, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawCylinder(x + i * sz * 0.3, y - pumpDv, sz * 0.12, sz * 0.06, 8, this.accentColor, extrusionAngle, sunAngle);
             }
             // Horizontal pipes
             Draw3D.drawCylinder(x, y - pumpDv * 0.5 + sz * 0.3, sz * 0.12, sz * 0.8, 8, this.pipeColor, extrusionAngle + Math.PI / 2, sunAngle);
@@ -1115,8 +1116,8 @@ class AgriculturalBuilding extends SurfaceObject {
 
             // Main structure
             Draw3D.drawBox3D(x, y - barnDv, sz * 1.0, sz * 0.7, barnH, this.accentColor, extrusionAngle, sunAngle);
-            // Peaked roof
-            Draw3D.drawCone(x, y - barnDv - sz * 0.15, sz * 0.55, sz * 0.35, 4, this.primaryColor, extrusionAngle, sunAngle);
+            // Peaked roof - sits flush on barn top
+            Draw3D.drawCone(x, y - barnDv, sz * 0.55, sz * 0.35, 4, this.primaryColor, extrusionAngle, sunAngle);
             // Barn door
             Draw3D.drawBox3D(x, y - barnDv * 0.3, sz * 0.25, sz * 0.02, barnH * 0.6, color(80, 60, 40), extrusionAngle, sunAngle);
 
@@ -1185,8 +1186,8 @@ class ServiceBuilding extends SurfaceObject {
 
             // Main building
             Draw3D.drawBox3D(x, y - shopDv, sz * 1.0, sz * 0.7, shopH, this.primaryColor, extrusionAngle, sunAngle);
-            // Sign on front
-            Draw3D.drawBox3D(x, y - shopDv - sz * 0.05, sz * 0.8, sz * 0.02, sz * 0.2, this.lightColor, extrusionAngle, sunAngle);
+            // Sign on front - sits flush on building top
+            Draw3D.drawBox3D(x, y - shopDv, sz * 0.8, sz * 0.02, sz * 0.2, this.lightColor, extrusionAngle, sunAngle);
             // Awning
             Draw3D.drawBox3D(x, y - shopDv * 0.3, sz * 1.1, sz * 0.25, sz * 0.05, this.accentColor, extrusionAngle, sunAngle);
 
@@ -1213,8 +1214,8 @@ class ServiceBuilding extends SurfaceObject {
                 const balY = y - hotelDv * (0.3 + i * 0.2);
                 Draw3D.drawBox3D(x + sz * 0.35, balY, sz * 0.15, sz * 0.4, sz * 0.03, this.accentColor, extrusionAngle, sunAngle);
             }
-            // Rooftop sign
-            Draw3D.drawBox3D(x, y - hotelDv - sz * 0.1, sz * 0.5, sz * 0.05, sz * 0.15, this.lightColor, extrusionAngle, sunAngle);
+            // Rooftop sign - sits flush on tower top
+            Draw3D.drawBox3D(x, y - hotelDv, sz * 0.5, sz * 0.05, sz * 0.15, this.lightColor, extrusionAngle, sunAngle);
 
         } else {
             // MEDICAL CENTER - Low with cross symbol
@@ -1223,10 +1224,10 @@ class ServiceBuilding extends SurfaceObject {
 
             // Main building
             Draw3D.drawBox3D(x, y - medDv, sz * 1.2, sz * 0.8, medH, this.accentColor, extrusionAngle, sunAngle);
-            // Red cross horizontal
-            Draw3D.drawBox3D(x, y - medDv - sz * 0.05, sz * 0.3, sz * 0.1, sz * 0.05, color(200, 50, 50), extrusionAngle, sunAngle);
-            // Red cross vertical
-            Draw3D.drawBox3D(x, y - medDv - sz * 0.05, sz * 0.1, sz * 0.3, sz * 0.05, color(200, 50, 50), extrusionAngle, sunAngle);
+            // Red cross horizontal - sits flush on building top
+            Draw3D.drawBox3D(x, y - medDv, sz * 0.3, sz * 0.1, sz * 0.05, color(200, 50, 50), extrusionAngle, sunAngle);
+            // Red cross vertical - sits flush on building top
+            Draw3D.drawBox3D(x, y - medDv, sz * 0.1, sz * 0.3, sz * 0.05, color(200, 50, 50), extrusionAngle, sunAngle);
             // Entrance canopy
             Draw3D.drawBox3D(x, y - medDv * 0.2 + sz * 0.3, sz * 0.4, sz * 0.3, sz * 0.1, this.primaryColor, extrusionAngle, sunAngle);
         }
