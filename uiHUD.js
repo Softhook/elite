@@ -852,7 +852,14 @@ class UIHUD {
         const sectionSpacing = 8;
         const autopilotOffset = player?.autopilotEnabled ? 35 : 0;
         const panelX = width - panelWidth - 20;
-        const panelY = 80 + autopilotOffset;
+        
+        // In surface mode, position panel above the altitude bar
+        // Altitude bar spans from (height/2 - 100) to (height/2 + 100), so we use height/2 - 120 for clearance
+        // Otherwise use normal position
+        const isSurfaceMode = (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive());
+        const panelY = isSurfaceMode ? 
+            Math.min(80 + autopilotOffset, height / 2 - 120) : // Position with 20px clearance above altitude bar
+            80 + autopilotOffset; // Normal position in space
 
         // Get uiManager for minimap reference
         const minimapSize = typeof uiManager !== 'undefined' ? uiManager.minimapSize : 200;

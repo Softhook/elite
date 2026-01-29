@@ -1376,7 +1376,18 @@ class SurfaceMode {
             // Draw Target Reticle if this object is the player's target
             if (this.player && this.player.target === obj) {
                 const drawX = obj.pos.x;
-                const drawY = obj.pos.y - (obj.yOffset || 0);
+                let drawY = obj.pos.y - (obj.yOffset || 0);
+                
+                // For turrets, center reticle on the head (top square surface)
+                // Turret head center is at: groundY - (baseH + headH) * cos(extrusionAngle)
+                // where baseH = sz * 0.2, headH = sz * 0.6, total = sz * 0.8
+                if (obj.type === 'Turret') {
+                    const extrusionAngle = this._getExtrusionAngle(); // Use consistent method
+                    const sz = obj.size || 40;
+                    const totalHeight = sz * 0.8; // base + head height
+                    const visualOffset = totalHeight * Math.cos(extrusionAngle);
+                    drawY = drawY - visualOffset; // Move reticle up to head center
+                }
 
                 push();
                 translate(drawX, drawY);
