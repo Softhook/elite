@@ -2014,40 +2014,52 @@ class DefenseDrone extends SurfaceObject {
 
         // Simple ship body
         const sz = this.size;
-        const bodyH = sz * 0.4;
+        // Slightly larger extrusion to give a solid hull
+        const bodyH = sz * 0.45;
 
-        push();
-        translate(x, y);
-        rotate(this.angle);
-
-        // Main body
-        const bodyverts = [
-            { x: -sz * 0.3, y: -sz * 0.2 },
-            { x: sz * 0.5, y: 0 },
-            { x: -sz * 0.3, y: sz * 0.2 }
+        // Compute hull vertices in world coordinates so rotation pivot is exact.
+        // Local coordinates: center at (0,0), nose forward at +X.
+        const localVerts = [
+            { x: sz * 0.4, y: 0 }, // nose/front (top center forward)
+            { x: -sz * 0.55, y: -sz * 0.25 },
+            { x: -sz * 0.2, y: -sz * 0.05 },
+            { x: -sz * 0.2, y: sz * 0.05 },
+            { x: -sz * 0.55, y: sz * 0.25 }
         ];
 
-        // Apply extrusion
-        const compAngle = extrusionAngle - this.angle;
-        const dvX = bodyH * Math.sin(compAngle);
-        const dvY = bodyH * Math.cos(compAngle);
+        const c = Math.cos(this.angle);
+        const s = Math.sin(this.angle);
 
-        const extrudedVerts = bodyverts.map(v => ({
-            x: v.x - dvX,
-            y: v.y - dvY
+        const worldVerts = localVerts.map(p => ({
+            x: x + (p.x * c - p.y * s),
+            y: y + (p.x * s + p.y * c)
         }));
 
-        Draw3D.drawExtrudedShape(extrudedVerts, bodyH, shipColor, compAngle, sunAngle);
+        // Ensure consistent winding for the top face so back-face culling works correctly.
+        // Compute signed area and reverse if it's negative (clockwise) to keep CCW order.
+        const lenW = worldVerts.length;
+        let area = 0;
+        for (let i = 0; i < lenW; i++) {
+            const a = worldVerts[i];
+            const b = worldVerts[(i + 1) % lenW];
+            area += (a.x * b.y - b.x * a.y);
+        }
+        // If area < 0 it's clockwise in canvas coords — reverse to make it CCW
+        if (area < 0) worldVerts.reverse();
 
-        // Engine glow (if moving)
+        // Pass world-space front-face verts into Draw3D (extrusion handled by draw function)
+        Draw3D.drawExtrudedShape(worldVerts, bodyH, shipColor, extrusionAngle, sunAngle);
+
+        // Engine glow behind the nose (rear of hull) - compute rear world position
         if (this.speed > 10) {
             const glowAlpha = map(this.speed, 0, this.maxSpeed, 50, 200);
+            const rearLocal = { x: -sz * 0.45, y: 0 };
+            const rearWorldX = x + (rearLocal.x * c - rearLocal.y * s);
+            const rearWorldY = y + (rearLocal.x * s + rearLocal.y * c);
             fill(255, 150, 0, glowAlpha);
             noStroke();
-            ellipse(-sz * 0.3, 0, sz * 0.2, sz * 0.15);
+            ellipse(rearWorldX, rearWorldY, sz * 0.22, sz * 0.14);
         }
-
-        pop();
 
         // --- Health Bar ---
         if (this.health < this.maxHealth && this.maxHealth > 0) {
