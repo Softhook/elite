@@ -157,16 +157,27 @@ class SurfaceTerrain {
         this.mesh = [];
 
         const featureRand = this._getFeatureRand();
-        const palette = this.planet.palette || [color(128, 128, 128)];
         const resolution = this.config.MESH_RESOLUTION;
 
-        // Pre-extract palette RGB values (avoids repeated .levels access)
-        const paletteRGB = palette.map(c => ({
-            r: c.levels[0],
-            g: c.levels[1],
-            b: c.levels[2]
+        // Pick three predominant colors from the planet palette.
+        // Prefer feature colors (skip the base at index 0) when available.
+        const srcPal = this.planet.palette || [color(128, 128, 128)];
+        let threeColors = [];
+        if (srcPal.length >= 4) {
+            threeColors = [srcPal[1], srcPal[2], srcPal[3]];
+        } else {
+            // Fallback: take up to first three entries, repeat last if needed
+            threeColors = srcPal.slice(0, 3);
+            while (threeColors.length < 3) threeColors.push(srcPal[srcPal.length - 1]);
+        }
+
+        // Convert to raw RGB and compute luminance so we can map dark->low, bright->high
+        const threeRGB = threeColors.map(c => ({
+            r: c.levels[0], g: c.levels[1], b: c.levels[2],
+            lum: 0.299 * c.levels[0] + 0.587 * c.levels[1] + 0.114 * c.levels[2]
         }));
-        const paletteMaxIdx = paletteRGB.length - 1;
+        // Sort ascending by luminance: [lowColor, midColor, highColor]
+        threeRGB.sort((a, b) => a.lum - b.lum);
 
         // Pre-compute constants
         const sampleMultiplier = 0.003;
@@ -191,29 +202,35 @@ class SurfaceTerrain {
                 // Height from noise (0-500 range, no negative terrain)
                 const height = noiseVal * 500;
 
-                // Color from palette (using raw RGB, no p5.Color allocation)
-                // Power curve pushes noise towards extremes
+                // Use the same power curve and contrast bias as planet rendering
+                // so terrain colors match the visual style of the planet texture.
                 const nColor = Math.min(1, Math.max(0, Math.pow(noiseVal, 1.3)));
-                const nScaled = nColor * paletteMaxIdx;
-                const paletteIdx = Math.floor(nScaled);
-                const lerpFactor = nScaled - paletteIdx;
+                const paletteLen = threeRGB.length; // 3
+                const scaled = nColor * (paletteLen - 1); // 0..2
+                const paletteIdx = Math.floor(scaled);
+                const lerpFactor = scaled - paletteIdx;
 
-                // Contrast bias sharpens transitions
+                // Contrast bias (matches planet.renderPlanetTexture)
                 const contrastBias = 2.6;
                 let cf = ((lerpFactor - 0.5) * contrastBias) + 0.5;
-                cf = cf < 0 ? 0 : (cf > 1 ? 1 : cf); // Inline clamp
+                cf = cf < 0 ? 0 : (cf > 1 ? 1 : cf);
 
-                const col1 = paletteRGB[paletteIdx];
-                const col2 = paletteRGB[Math.min(paletteIdx + 1, paletteMaxIdx)];
+                const col1 = threeRGB[paletteIdx];
+                const col2 = threeRGB[Math.min(paletteIdx + 1, paletteLen - 1)];
+
+                // Interpolate between the two adjacent predominant colors
+                const rVal = col1.r + (col2.r - col1.r) * cf;
+                const gVal = col1.g + (col2.g - col1.g) * cf;
+                const bVal = col1.b + (col2.b - col1.b) * cf;
 
                 // Store raw RGB values (no p5.Color object allocation)
                 this.mesh[gy][gx] = {
                     worldX: worldX,
                     worldY: worldY,
                     height: height,
-                    r: col1.r + (col2.r - col1.r) * cf,
-                    g: col1.g + (col2.g - col1.g) * cf,
-                    b: col1.b + (col2.b - col1.b) * cf
+                    r: rVal,
+                    g: gVal,
+                    b: bVal
                 };
             }
         }
