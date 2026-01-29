@@ -927,8 +927,6 @@ class SurfaceMode {
                 const hitRadius = Math.max((obj.size || 40) * 0.6, 20);
                 const hitRadiusSq = hitRadius * hitRadius;
 
-
-
                 if (distSq < hitRadiusSq) {
 
                     obj.takeDamage(proj.damage || 10);
