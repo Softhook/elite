@@ -215,8 +215,10 @@ This refactoring successfully achieved its goals:
 - ✅ Eliminated significant code duplication
 - ✅ Improved maintainability
 - ✅ Standardized patterns
-- ✅ Zero functionality changes
 - ✅ Zero security issues
 - ✅ All tests passing
+- ✅ Backward compatibility preserved (after corrections)
 
-The surfaceMode codebase is now cleaner, more consistent, and easier to maintain while preserving complete backward compatibility.
+**Note:** Initial implementation had unintended changes to building parameters (variant seeds and height multipliers). These were identified during code review and corrected to maintain save game compatibility.
+
+The surfaceMode codebase is now cleaner, more consistent, and easier to maintain.

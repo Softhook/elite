@@ -758,7 +758,7 @@ class MiningBuilding extends SurfaceObject {
         this.type = "Mining Facility";
         this.seed = seed;
         this.variant = calculateVariant(seed, 6.28, 5);
-        this.height = calculateHeight(size, seed, 1.2, 3.2);
+        this.height = calculateHeight(size, seed, 1.5, 3.5);
         this.maxHealth = 350;
         this.health = 350;
 
@@ -857,7 +857,7 @@ class IndustrialBuilding extends SurfaceObject {
         this.type = "Industrial Complex";
         this.seed = seed;
         this.variant = calculateVariant(seed, 2.71, 5);
-        this.height = calculateHeight(size, seed, 1.5, 3.5);
+        this.height = calculateHeight(size, seed, 1.2, 3.0);
         this.maxHealth = 400;
         this.health = 400;
 
@@ -955,7 +955,7 @@ class RefineryBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Refinery";
         this.seed = seed;
-        this.variant = calculateVariant(seed, 8.31, 5);
+        this.variant = calculateVariant(seed, 1.41, 5);
         this.height = calculateHeight(size, seed, 2, 4);
         this.maxHealth = 300;
         this.health = 300;
@@ -1053,7 +1053,7 @@ class AgriculturalBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Agricultural Facility";
         this.seed = seed;
-        this.variant = calculateVariant(seed, 1.23, 5);
+        this.variant = calculateVariant(seed, 8.76, 5);
         this.height = calculateHeight(size, seed, 0.8, 1.8);
         this.maxHealth = 150;
         this.health = 150;
@@ -1141,8 +1141,8 @@ class ServiceBuilding extends SurfaceObject {
         super(x, y, size);
         this.type = "Service Structure";
         this.seed = seed;
-        this.variant = calculateVariant(seed, 5.55, 5);
-        this.height = calculateHeight(size, seed, 1, 2.5);
+        this.variant = calculateVariant(seed, 3.33, 5);
+        this.height = calculateHeight(size, seed, 1.5, 3.0);
         this.maxHealth = 180;
         this.health = 180;
 
