@@ -1376,17 +1376,22 @@ class SurfaceMode {
             // Draw Target Reticle if this object is the player's target
             if (this.player && this.player.target === obj) {
                 const drawX = obj.pos.x;
-                let drawY = obj.pos.y - (obj.yOffset || 0);
+                let drawY;
                 
-                // For turrets, center reticle on the head (top square surface)
-                // Turret head center is at: groundY - (baseH + headH) * cos(extrusionAngle)
-                // where baseH = sz * 0.2, headH = sz * 0.6, total = sz * 0.8
+                // Turrets are drawn at obj.pos.y (not obj.pos.y - yOffset)
+                // because their draw() method handles yOffset internally
                 if (obj.type === 'Turret') {
-                    const extrusionAngle = this._getExtrusionAngle(); // Use consistent method
+                    // Turret head center (top surface) calculation:
+                    // groundVisualY = y - yOffset * cos(angle)
+                    // headRoofY = groundVisualY - (baseH + headH) * cos(angle)
+                    // Combined: headRoofY = y - (yOffset + baseH + headH) * cos(angle)
+                    const extrusionAngle = this._getExtrusionAngle();
                     const sz = obj.size || 40;
-                    const totalHeight = sz * 0.8; // base + head height
-                    const visualOffset = totalHeight * Math.cos(extrusionAngle);
-                    drawY = drawY - visualOffset; // Move reticle up to head center
+                    const totalOffset = (obj.yOffset || 0) + sz * 0.8; // yOffset + base + head
+                    drawY = obj.pos.y - totalOffset * Math.cos(extrusionAngle);
+                } else {
+                    // Other objects are drawn at obj.pos.y - yOffset, so reticle goes there too
+                    drawY = obj.pos.y - (obj.yOffset || 0);
                 }
 
                 push();
