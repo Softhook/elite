@@ -97,7 +97,7 @@ class Astronaut {
 
         // Spawn grenade projectile
         // Velocity vector based on facing angle + arc
-        const throwSpeed = 150;
+        const throwSpeed = 80; // slower so arc is visible
         const vx = Math.cos(this.facingAngle) * throwSpeed;
         const vy = Math.sin(this.facingAngle) * throwSpeed;
 
@@ -105,6 +105,10 @@ class Astronaut {
             // Create grenade object (Using world coordinates - no visual offsets)
             // Astronaut.pos is already in world space.
             const grenade = new Grenade(this.pos.x, this.pos.y, vx, vy, this.facingAngle, this.altitude);
+            // Attach to starSystem so grenade can create explosions via system APIs
+            grenade.system = surfaceMode.starSystem;
+            // Associate owner with player for damage attribution
+            grenade.owner = (surfaceMode.player || this);
             surfaceMode.starSystem.projectiles.push(grenade);
 
             if (typeof soundManager !== 'undefined') {
@@ -127,35 +131,75 @@ class Astronaut {
      * Draw the astronaut
      */
     draw(x, y, sunAngle) {
-        // Simple figure
-        const extrusionAngle = 0.5;
+        // Improved 3D-looking astronaut using Draw3D primitives and consistent projection helpers
         const sz = this.size;
 
-        // Visual position: World Y - compressed Altitude
-        const groundVisualY = y - (this.altitude || 0) * Math.cos(extrusionAngle);
+        // Use surfaceMode helpers if present for consistent projection
+        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+            ? surfaceMode._getExtrusionAngle()
+            : 0.5;
 
-        // Bobbing animation
+        const toVisualY = (worldY, alt) => {
+            if (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY) return surfaceMode._toVisualY(worldY, alt);
+            return worldY - (alt * Math.cos(extrusionAngle));
+        };
+
+        // Visual base (on ground) and small bob when walking
+        const groundVisualY = toVisualY(y, this.altitude || 0);
         const bob = Math.sin(this.walkCycle) * 2;
+        const baseY = groundVisualY + bob;
 
-        // Use Draw3D logic (simplified here as direct calls or Draw3D methods)
-        const currentY = groundVisualY + bob;
+        // Lighting: approximate diffuse based on sun angle (2D projection)
+        const sunDirX = Math.cos(sunAngle);
+        const sunDirY = Math.sin(sunAngle);
+        const light = 0.5 + 0.5 * Math.max(0, sunDirX * Math.cos(this.facingAngle) + sunDirY * Math.sin(this.facingAngle));
 
-        // Body color
-        const bodyColor = color(200, 200, 200); // White suit
-        const helmetColor = color(255, 180, 50); // Gold visor
+        const suitBase = color(220 * light, 220 * light, 230 * light);
+        const suitShade = color(120 * light, 120 * light, 130 * light);
+        const visor = color(255 * (0.6 + 0.4 * light), 200 * (0.6 + 0.4 * light), 80 * (0.6 + 0.4 * light));
 
-        // Body (Note: drawBox3D takes the TOP position, so subtract height)
-        const bodyTopY = currentY - this.height * Math.cos(extrusionAngle);
-        Draw3D.drawBox3D(x, bodyTopY, sz, sz, this.height, bodyColor, extrusionAngle, sunAngle);
+        // Torso (extruded box) - drawBox3D expects top position, so compute top Y
+        const torsoH = this.height * 0.6;
+        const torsoTopY = baseY - torsoH * Math.cos(extrusionAngle);
+        Draw3D.drawBox3D(x, torsoTopY, sz * 0.9, sz * 0.6, torsoH, suitBase, extrusionAngle, sunAngle);
 
-        // Helmet (Mounted on top of body)
-        const helmetY = bodyTopY - 2;
-        Draw3D.drawDome(x, helmetY, sz * 0.4, 6, helmetColor, extrusionAngle, sunAngle);
+        // Backpack - behind torso
+        const backOffsetX = -Math.cos(this.facingAngle) * sz * 0.35;
+        const backX = x + backOffsetX;
+        const backTopY = torsoTopY - (torsoH * 0.15);
+        Draw3D.drawBox3D(backX, backTopY, sz * 0.45, sz * 0.5, torsoH * 0.6, suitShade, extrusionAngle, sunAngle);
 
-        // Backpack (Offset from center)
-        const backX = x - Math.cos(this.facingAngle) * sz * 0.4;
-        const backY = currentY - 5; // Use groundVisualY base
-        Draw3D.drawBox3D(backX, backY - 8 * Math.cos(extrusionAngle), sz * 0.6, sz * 0.4, 8, color(150), extrusionAngle, sunAngle);
+        // Legs - two extruded boxes; position relative to base
+        const legH = this.height * 0.5;
+        const legYOffset = sz * 0.2;
+        const leftLegX = x - legYOffset;
+        const rightLegX = x + legYOffset;
+        const legTopY = baseY - legH * Math.cos(extrusionAngle);
+        Draw3D.drawBox3D(leftLegX, legTopY, sz * 0.25, sz * 0.45, legH, suitBase, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(rightLegX, legTopY, sz * 0.25, sz * 0.45, legH, suitBase, extrusionAngle, sunAngle);
+
+        // Arms - small boxes rotated slightly by facing angle
+        const armLen = sz * 0.7;
+        const armW = sz * 0.18;
+        // Left arm
+        push();
+        translate(x - sz * 0.45, torsoTopY + sz * 0.05);
+        rotate(this.facingAngle * 0.2);
+        Draw3D.drawBox3D(0, 0 - (armLen * Math.cos(extrusionAngle) * 0.5), armW, armLen, armW, suitBase, extrusionAngle, sunAngle);
+        pop();
+        // Right arm
+        push();
+        translate(x + sz * 0.45, torsoTopY + sz * 0.05);
+        rotate(-this.facingAngle * 0.2);
+        Draw3D.drawBox3D(0, 0 - (armLen * Math.cos(extrusionAngle) * 0.5), armW, armLen, armW, suitBase, extrusionAngle, sunAngle);
+        pop();
+
+        // Helmet - dome on top of torso
+        const helmetRadius = sz * 0.45;
+        const helmetY = torsoTopY - helmetRadius * Math.cos(extrusionAngle) - sz * 0.05;
+        Draw3D.drawDome(x, helmetY, helmetRadius, 8, visor, extrusionAngle, sunAngle);
+
+        // SurfaceMode already draws the ground shadow; avoid duplicate shadow here.
     }
 }
 
@@ -168,11 +212,16 @@ class Grenade {
         this.pos = createVector(x, y);
         this.vel = createVector(vx, vy);
         this.size = 6;
-        this.color = color(50, 255, 50);
+        this.color = color(255, 120, 30);
 
         this.altitude = startAltitude + 15; // Start at hand height above ground
-        this.verticalVel = 40; // Initial upward velocity for arc
-        this.gravity = -80; // Gravity pulling down
+        this.verticalVel = 120; // stronger upward velocity for visible arc
+        this.gravity = -200; // Gravity pulling down (negative reduces verticalVel)
+
+        // Track previous position for trail rendering and maintain history
+        this.prevPos = this.pos.copy();
+        this.trail = [];
+        this.trailMax = 12;
 
         this.isSurface = true;
         this.owner = { isPlayer: true }; // Acts as player for damage
@@ -183,19 +232,44 @@ class Grenade {
     }
 
     update() {
-        // We need 'dt' passed in, but projectile.js usually just calls update()? 
-        // StarSystem calls update(dt) on projectiles if we modify it, but standard might not.
-        // Assuming 60fps for simple physics if dt missing, or 1/60
-        const dt = 1 / 60;
+        // Match Projectile.update() frame-rate independence
+        const timeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
 
-        this.pos.add(p5.Vector.mult(this.vel, dt));
+        // Record previous position and push to trail (before movement)
+        if (!this.prevPos) this.prevPos = this.pos.copy();
+        this.prevPos.set(this.pos.x, this.pos.y);
+        this.trail.push({ x: this.pos.x, y: this.pos.y, alt: this.altitude });
+        if (this.trail.length > this.trailMax) this.trail.shift();
 
-        // Vertical Arc Physics
-        this.verticalVel += this.gravity * dt;
-        this.altitude += this.verticalVel * dt;
+        // Move in world plane
+        this.pos.add(p5.Vector.mult(this.vel, timeScale));
 
-        this.lifespan--;
+        // Vertical arc physics (timeScale applied)
+        this.verticalVel += this.gravity * timeScale;
+        this.altitude += this.verticalVel * timeScale;
+
+        // Lifespan
+        this.lifespan -= timeScale;
         if (this.lifespan <= 0) this.destroyed = true;
+
+        // Terrain collision: if we have a global surfaceMode, sample terrain and explode on impact
+        if (!this.destroyed && typeof surfaceMode !== 'undefined' && surfaceMode && typeof surfaceMode._getTerrainHeightAt === 'function') {
+            const terrainH = surfaceMode._getTerrainHeightAt(this.pos.x, this.pos.y);
+            if (this.altitude <= terrainH) {
+                // Create surface explosion at terrain altitude
+                try {
+                    // Prefer surfaceMode helper to ensure consistent visuals
+                    if (typeof surfaceMode._createSurfaceExplosion === 'function') {
+                        surfaceMode._createSurfaceExplosion(this.pos.x, this.pos.y, terrainH, 24, [255, 200, 50]);
+                    } else if (this.system && typeof this.system.addExplosion === 'function') {
+                        this.system.addExplosion(this.pos.x, this.pos.y, 24, [255, 200, 50], true, false, terrainH);
+                    }
+                } catch (e) {
+                    // Fallback: mark destroyed even if explosion call fails
+                }
+                this.destroyed = true;
+            }
+        }
     }
 
     // Custom check collision method called by SurfaceMode
@@ -218,27 +292,63 @@ class Grenade {
         const drawX = (x !== undefined) ? x : this.pos.x;
         const drawY = (y !== undefined) ? y : this.pos.y;
 
-        // Simple 3D projection for altitude
-        const extrusionAngle = 0.5; // Match global
+        // Use surfaceMode projection helpers when available
+        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+            ? surfaceMode._getExtrusionAngle()
+            : 0.5;
+        const toVisualY = (worldY, alt) => {
+            if (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY) return surfaceMode._toVisualY(worldY, alt);
+            return worldY - (alt * Math.cos(extrusionAngle));
+        };
 
-        // [FIX] Project shadow on local terrain instead of flat world-plane
-        let terrainH = 0;
-        if (typeof surfaceMode !== 'undefined' && surfaceMode && typeof surfaceMode._getTerrainHeightAt === 'function') {
-            terrainH = surfaceMode._getTerrainHeightAt(drawX, drawY);
+        const terrainH = (typeof surfaceMode !== 'undefined' && surfaceMode && typeof surfaceMode._getTerrainHeightAt === 'function')
+            ? surfaceMode._getTerrainHeightAt(drawX, drawY)
+            : 0;
+
+        const groundVisualY = toVisualY(drawY, terrainH);
+        const visualY = toVisualY(drawY, this.altitude || 0);
+
+        // Shadow oriented by sunAngle (small ellipse)
+        push();
+        const shadowOffset = 2;
+        const offsetX = Math.cos(sunAngle + Math.PI) * shadowOffset;
+        const offsetY = Math.sin(sunAngle + Math.PI) * shadowOffset;
+        translate(drawX + offsetX, groundVisualY + offsetY);
+        rotate(sunAngle + Math.PI / 2);
+        noStroke();
+        fill(0, 0, 0, 100);
+        ellipse(0, 0, this.size * counterScale, this.size * 0.5 * counterScale);
+        pop();
+
+        // Draw trailing curved trajectory from stored trail points
+        if (this.trail && this.trail.length > 0) {
+            noFill();
+            for (let i = 0; i < this.trail.length - 1; i++) {
+                const a = this.trail[i];
+                const b = this.trail[i + 1];
+                const ay = toVisualY(a.y, a.alt || 0);
+                const by = toVisualY(b.y, b.alt || 0);
+                const alpha = map(i, 0, Math.max(1, this.trail.length - 2), 40, 200);
+                stroke(255, 180, 100, alpha);
+                strokeWeight((1 + i * 0.2) * counterScale);
+                line(a.x, ay, b.x, by);
+            }
+            // Last segment from last trail point to current position
+            const last = this.trail[this.trail.length - 1];
+            const lastY = toVisualY(last.y, last.alt || 0);
+            stroke(255, 200, 120, 220);
+            strokeWeight(2.5 * counterScale);
+            line(last.x, lastY, drawX, visualY);
         }
 
-        const groundVisualY = drawY - (terrainH * Math.cos(extrusionAngle));
-        const visualY = drawY - (this.altitude * Math.cos(extrusionAngle)); // Visual height offset
-
-        // Shadow on ground (Projected onto terrain)
-        fill(0, 0, 0, 100);
+        // Draw grenade body at visual height
+        push();
+        translate(drawX, visualY);
+        scale(counterScale);
         noStroke();
-        ellipse(drawX, groundVisualY, this.size * counterScale, this.size * 0.5 * counterScale);
-
-        // Draw grenade body (At visual height)
         fill(this.color);
-        noStroke();
-        ellipse(drawX, visualY, this.size * counterScale, this.size * counterScale);
+        ellipse(0, 0, this.size, this.size);
+        pop();
     }
 }
 
