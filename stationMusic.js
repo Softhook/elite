@@ -97,29 +97,30 @@ class StationMusicManager {
                 dynamicRange: 0.15,  // Subtle dynamics for majesty
             },
 
-            // Military: Industrial march - harsh, disciplined, cold
+            // Military: Disciplined march with clear melodic logic
             military: {
-                baseNote: 38, // D2 - low and aggressive
-                scale: [0, 2, 3, 5, 6, 8, 10], // Minor with tritone
+                baseNote: 40, // E2 - low but clear
+                // Harmonic minor gives a stronger tonal center and resolving leading tone
+                scale: [0, 2, 3, 5, 7, 8, 11],
                 motifs: [
-                    [0, 0, 0, 6, 0, 0, 0, 5],         // Harsh march with tritone
-                    [0, 3, 5, 6, 5, 3, 0, 0],         // Military tension
-                    [6, 5, 3, 0, 6, 5, 3, 0],         // Grinding repetition
-                    [0, null, 6, null, 0, null, 5],   // Staccato command
+                    [0, null, 0, 4, 5, null, 4],     // Tonic call, response to fifth
+                    [0, 2, 3, 5, 3, 2, 0],           // Stepwise march line
+                    [5, 7, 5, 3, 0],                 // Simple phrased return
+                    [0, 0, 7, 0],                    // Strong repeated tonic with octave
                 ],
-                harmonyInterval: 6,  // Tritone (devil's interval - tension)
-                noteInterval: 366,   // Strict march tempo (was 22 frames)
-                filterFreq: 1800,    // Cutting, cold
-                filterRes: 4.0,      // Resonant edge
-                attackTime: 0.01,    // Very sharp staccato
-                releaseTime: 0.15,   // Short, clipped
-                oscType: 'square',   // Harsh square wave
-                osc2Type: 'sawtooth',
-                detune: 0,           // Cold precision
-                noteGlide: 0,        // No glide - strict
-                reverbDecay: 0.4,    // Minimal - controlled environment
-                dynamicRange: 0.05,  // Uniform volume - discipline
-                volumeMultiplier: 0.9,
+                harmonyInterval: 12, // Octave doubling for solidity
+                noteInterval: 360,   // March tempo that's musical and clear
+                filterFreq: 1700,    // Warm but defined
+                filterRes: 1.8,      // Mild resonance
+                attackTime: 0.02,    // Crisp but not brittle
+                releaseTime: 0.28,   // Short sustain for march clarity
+                oscType: 'triangle', // Noble, rounded timbre
+                osc2Type: 'sine',    // Pure supporting octave
+                detune: 4,           // Slight width
+                noteGlide: 0.01,     // Minimal smoothing
+                reverbDecay: 0.9,    // Small hall for presence
+                dynamicRange: 0.15,  // Natural emphasis on strong beats
+                volumeMultiplier: 1.0,
             },
 
             // Agricultural: Celtic folk - pastoral jig, pennywhistle feel
@@ -220,31 +221,31 @@ class StationMusicManager {
                 dynamicRange: 0.15,  // Natural dynamics
             },
 
-            // Refinery: Harsh, industrial, slightly dissonant
+            // Refinery: Warmed industrial ambience - melodic, resilient, rhythmic
             refinery: {
-                // Shifted to mid-range and opened filter so it's audible
-                baseNote: 44, // A2 - higher so melodies cut through
-                scale: [0, 3, 5, 6, 7, 10], // Minor/dissonant palette but more mid-focused
+                baseNote: 44, // A2 - centered for clear mids
+                // Minor-pentatonic palette for grit without harsh dissonance
+                scale: [0, 3, 5, 7, 10],
                 motifs: [
-                    [0, 5, 6, 5, 0, 1, 0],        // Grinding dissonance
-                    [0, 0, 7, 6, 5, 0],           // Industrial clash
-                    [7, 6, 5, 1, 0, 5, 6, 7],     // Harsh machinery
-                    [0, 1, 0, 6, 7, 6, 0],        // Burning process
+                    [0, 3, 5, 7, 5, 3, 0],        // Grinding but musical
+                    [7, 5, 3, 0, 3, 5, 7],        // Industrial call-and-response
+                    [0, null, 5, null, 7, 5, 3],  // Sparse, rhythmic phrases
+                    [0, 1, 0, 3, 5, null, 3],     // Slightly chromatic passing tone
                 ],
-                harmonyInterval: 7, // Fifth below for stronger presence
-                noteInterval: 400,   // Slightly slower so notes are perceptible (was 24 frames)
-                filterFreq: 2600,   // Opened up so the mid/high content is audible
-                filterRes: 3.0,     // Some resonance edge
-                attackTime: 0.02,
-                releaseTime: 0.5,
-                oscType: 'sawtooth', // Harsher industrial sound
+                harmonyInterval: 12, // Octave drone for warmth and clarity
+                noteInterval: 350,   // Slightly upbeat so melodies feel purposeful
+                filterFreq: 2200,    // Open mids for presence
+                filterRes: 1.8,      // Tame resonance to avoid harsh peaks
+                attackTime: 0.04,
+                releaseTime: 0.6,
+                oscType: 'sawtooth', // Industrial edge, softened by second osc
                 osc2Type: 'triangle',
-                detune: 12,          // Detuned for grit
-                noteGlide: 0,        // No glide - harsh
-                reverbDecay: 0.6,    // Short metallic
-                dynamicRange: 0.12,  // Some dynamics
-                volumeMultiplier: 1.15, // Slightly louder than other themes
-                envelope2Range: 0.7,    // Stronger harmony/drone for presence
+                detune: 6,           // Mild detune for richness
+                noteGlide: 0.02,     // Gentle transitions
+                reverbDecay: 1.2,    // Metallic but pleasant space
+                dynamicRange: 0.18,  // Expressive but controlled
+                volumeMultiplier: 1.0, // Balanced loudness
+                envelope2Range: 0.6,   // Supportive harmony/drone
             },
 
             // Post Human: Ambient electronica - crystalline, transcendent, floating
