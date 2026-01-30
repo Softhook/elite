@@ -123,6 +123,12 @@ function validateShipDefinitions() {
  */
 function initializeGameObjects() {
     gameStateManager = new GameStateManager();
+    // Ensure enemy ability methods are mixed into Enemy.prototype before any Enemy instances
+    if (typeof applyEnemyAbilityMethods === 'function') {
+        applyEnemyAbilityMethods();
+    } else {
+        console.warn('applyEnemyAbilityMethods not available during initializeGameObjects()');
+    }
     galaxy = new Galaxy();
     player = new Player();
     uiManager = new UIManager();
@@ -1124,6 +1130,16 @@ function __validatePayload(payload) {
 
 function __buildSaveData() {
     // Build and soft-coerce critical fields to avoid aborting saves on transient state
+    // Ensure planets have deterministic save-ready fields before serializing
+    try {
+        if (galaxy && Array.isArray(galaxy.systems)) {
+            galaxy.systems.forEach(sys => {
+                if (!sys || !Array.isArray(sys.planets)) return;
+                sys.planets.forEach(pl => { try { if (pl && typeof pl.prepareForSave === 'function') pl.prepareForSave(); } catch (e) { /* ignore */ } });
+            });
+        }
+    } catch (e) { /* ignore */ }
+
     const playerData = player.getSaveData();
     // Normalize credits
     if (!(typeof playerData.credits === 'number' && isFinite(playerData.credits) && playerData.credits >= 0)) {
@@ -1181,6 +1197,38 @@ function __buildSaveData() {
         return { state: "IN_FLIGHT" };
     })();
 
+    // Capture surface/save-at-base metadata when appropriate so loads resume on-planet
+    const savedSurface = (() => {
+        try {
+            if (!gameStateManager) return null;
+            const st = gameStateManager.currentState;
+            if (st !== 'SURFACE_MODE' && st !== 'VIEWING_BASE') return null;
+            if (typeof surfaceMode === 'undefined' || !surfaceMode || !surfaceMode.planet) return null;
+
+            const planet = surfaceMode.planet;
+            let planetIndex = -1;
+            try {
+                planetIndex = (player && player.currentSystem && Array.isArray(player.currentSystem.planets))
+                    ? player.currentSystem.planets.indexOf(planet)
+                    : -1;
+            } catch (e) { planetIndex = -1; }
+
+            const baseObj = (typeof uiManager !== 'undefined' && uiManager && uiManager.currentBaseObject) ? uiManager.currentBaseObject : null;
+
+            return {
+                state: st,
+                planetIndex: planetIndex >= 0 ? planetIndex : null,
+                baseId: baseObj ? (baseObj.id || null) : null,
+                basePos: baseObj && baseObj.pos ? { x: baseObj.pos.x, y: baseObj.pos.y } : null,
+                controlMode: surfaceMode.controlMode || 'SHIP',
+                playerPos: player && player.pos ? { x: player.pos.x, y: player.pos.y } : null,
+                astronautPos: (surfaceMode.astronaut && surfaceMode.astronaut.pos) ? { x: surfaceMode.astronaut.pos.x, y: surfaceMode.astronaut.pos.y } : null
+            };
+        } catch (e) {
+            return null;
+        }
+    })();
+
     return {
         playerData,
         galaxyData: galaxy.getSaveData(),
@@ -1189,6 +1237,7 @@ function __buildSaveData() {
         savedAt: Date.now(),
         version: 2,
         dockingState,
+        savedSurface,
         newsManager: GameGlobals.newsManager ? GameGlobals.newsManager.toJSON() : null,
         eventManager: GameGlobals.eventManager ? GameGlobals.eventManager.toJSON() : null
     };
@@ -1493,7 +1542,99 @@ function loadGame(slotIndex) {
                 }
 
                 // Default to in-flight if no docking context was restored
-                if (gameStateManager && !restoredDockState) {
+                // But first, if the save recorded a surface/base marker, restore SURFACE_MODE
+                let restoredSurface = false;
+                try {
+                    const savedSurface = savedData.savedSurface;
+                    if (savedSurface && player.currentSystem && Array.isArray(player.currentSystem.planets) && savedSurface.planetIndex !== null && savedSurface.planetIndex !== undefined) {
+                        const planet = player.currentSystem.planets[savedSurface.planetIndex];
+                        if (planet) {
+                            // If playerPos was saved, restore ship position first so surface.enter can reference it
+                            if (savedSurface.playerPos && player && player.pos) {
+                                try { player.pos.set(savedSurface.playerPos.x, savedSurface.playerPos.y); } catch (e) { /* ignore */ }
+                            }
+
+                            if (typeof surfaceMode !== 'undefined' && surfaceMode) {
+                                try {
+                                    // Ensure deterministic terrain/object generation by seeding
+                                    // p5 random/noise from the planet's persisted featureRand or seed.
+                                    try {
+                                        const seedFromFeature = (typeof planet.featureRand === 'number') ? Math.floor(planet.featureRand * 1000000) : null;
+                                        const useSeed = (seedFromFeature !== null) ? seedFromFeature : (typeof planet.seed === 'number' ? planet.seed : Math.floor(Math.random() * 1000000));
+                                        if (typeof randomSeed === 'function') {
+                                            try { randomSeed(useSeed); } catch (e) { /* ignore */ }
+                                        }
+                                        if (typeof noiseSeed === 'function') {
+                                            try { noiseSeed(useSeed); } catch (e) { /* ignore */ }
+                                        }
+                                    } catch (e) { /* ignore seeding failures */ }
+
+                                    surfaceMode.enter(player, planet, player.currentSystem, { force: true });
+
+                                    // Place ship low to the surface so restores allow boarding.
+                                    try {
+                                        const groundH = (typeof surfaceMode._getTerrainHeightAt === 'function') ? surfaceMode._getTerrainHeightAt(player.pos.x, player.pos.y) : null;
+                                        if (groundH !== null && typeof SURFACE_CONFIG !== 'undefined') {
+                                            // Place at minimum allowed altitude (close to ground) so landing state can be detected
+                                            surfaceMode.altitude = groundH + (SURFACE_CONFIG.MIN_ALTITUDE || 10);
+                                            surfaceMode.player.altitude = surfaceMode.altitude;
+                                            // Mark landed for immediate boarding availability
+                                            surfaceMode.isLanded = true;
+                                        }
+                                    } catch (e) { /* ignore altitude restore failures */ }
+
+                                    // Restore control mode (ASTRONAUT vs SHIP)
+                                    if (savedSurface.controlMode === 'ASTRONAUT') {
+                                        // Create astronaut first, then flip control mode to avoid
+                                        // a transient state where controlMode === 'ASTRONAUT' but
+                                        // surfaceMode.astronaut is null (which can cause update-time errors).
+                                        if (savedSurface.astronautPos && typeof Astronaut !== 'undefined') {
+                                            surfaceMode.astronaut = new Astronaut(createVector(savedSurface.astronautPos.x, savedSurface.astronautPos.y), { skipSpawnOffset: true });
+                                            try { surfaceMode.astronaut.altitude = surfaceMode._getTerrainHeightAt(surfaceMode.astronaut.pos.x, surfaceMode.astronaut.pos.y); } catch (e) { /* ignore */ }
+                                            surfaceMode.controlMode = 'ASTRONAUT';
+                                        } else {
+                                            // Missing astronaut position in save — fallback to ship control
+                                            surfaceMode.controlMode = 'SHIP';
+                                            console.warn('Saved surface state requested ASTRONAUT control but astronautPos is missing. Defaulting to SHIP control.');
+                                        }
+                                    } else {
+                                        surfaceMode.controlMode = 'SHIP';
+                                    }
+
+                                    // Attempt to re-link current base object for UI if base info saved
+                                    if (typeof uiManager !== 'undefined' && uiManager && savedSurface.baseId) {
+                                        // Search spawned surface objects for matching id or approximate position
+                                        for (const obj of surfaceMode.surfaceObjects || []) {
+                                            if (!obj) continue;
+                                            if (savedSurface.baseId && obj.id && obj.id === savedSurface.baseId) {
+                                                uiManager.currentBaseObject = obj; break;
+                                            }
+                                            if (savedSurface.basePos && obj.pos && Math.abs((obj.pos.x || 0) - savedSurface.basePos.x) < 2 && Math.abs((obj.pos.y || 0) - savedSurface.basePos.y) < 2) {
+                                                uiManager.currentBaseObject = obj; break;
+                                            }
+                                        }
+                                    }
+
+                                    // If base object found and save indicated we were viewing it, open VIEWING_BASE
+                                    if (uiManager && uiManager.currentBaseObject) {
+                                        if (gameStateManager) {
+                                            gameStateManager._returnFromBaseState = 'SURFACE_MODE';
+                                            try { gameStateManager.setState('VIEWING_BASE'); } catch (e) { /* ignore */ }
+                                        }
+                                    }
+
+                                    restoredSurface = true;
+                                } catch (e) {
+                                    console.warn('Failed to enter surface mode during load:', e);
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Error while attempting to restore saved surface state:', e);
+                }
+
+                if (gameStateManager && !restoredDockState && !restoredSurface) {
                     gameStateManager.currentDockedSpaceObject = null;
                     gameStateManager.currentDockedStation = null;
                     player.isDockedAndInvulnerable = false;

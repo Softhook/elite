@@ -79,6 +79,8 @@ const STATION_STATES = [
     "VIEWING_SPACE_OBJECT_REPAIRS",
     "VIEWING_SPACE_OBJECT_SHIPYARD",
     "VIEWING_SPACE_OBJECT_UPGRADES"
+    ,"VIEWING_BASE"
+            ,"VIEWING_BASE"
 ];
 
 class GameStateManager {
@@ -825,6 +827,7 @@ class GameStateManager {
             case "VIEWING_STORAGE":
             case "VIEWING_RECORD":
             case "VIEWING_NEWS":
+            case "VIEWING_BASE":
                 if (!player) break;
                 try {
                     // Keep player completely stationary while docked
@@ -868,7 +871,8 @@ class GameStateManager {
                     this.currentState === "VIEWING_SHIP_DETAIL" ||
                     this.currentState === "VIEWING_UPGRADES" ||
                     this.currentState === "VIEWING_WEAPON_DETAIL" ||
-                    this.currentState === "VIEWING_REPAIRS") &&
+                    this.currentState === "VIEWING_REPAIRS" ||
+                    this.currentState === "VIEWING_BASE") &&
                     typeof stationMusicManager !== 'undefined' && stationMusicManager) {
                     stationMusicManager.update();
                 }
@@ -1384,6 +1388,21 @@ class GameStateManager {
                 }
                 break;
 
+            case "VIEWING_BASE":
+                // Draw surface mode behind the base menu so the world remains visible
+                if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+                    surfaceMode.draw();
+                }
+                // Draw Base Services menu via UIManager
+                if (uiManager && player) {
+                    try {
+                        uiManager.drawBaseMenu(player, uiManager.currentBaseObject);
+                    } catch (e) {
+                        console.error("Error drawing base menu:", e);
+                    }
+                }
+                break;
+
             default:
                 console.error(`Unknown game state in draw(): ${this.currentState}`);
                 background(255, 0, 0);
@@ -1773,6 +1792,9 @@ class GameStateManager {
                     break;
                 case "VIEWING_NEWS":
                     uiManager.drawNewsMenu(player);
+                    break;
+                case "VIEWING_BASE":
+                    uiManager.drawBaseMenu(player, uiManager.currentBaseObject);
                     break;
             }
         } catch (e) {

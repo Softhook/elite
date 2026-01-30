@@ -744,6 +744,93 @@ class Galaxy {
         this.currentSystemIndex = data.currentSystemIndex ?? 0;
         this._initialized = this.systems.length > 0;
 
+        // --- Rebuild deterministic planet buffers for the saved current system ---
+        // Seed RNG with the same seed used to generate this system, then create
+        // planet buffers deterministically so visuals match the saved state.
+        try {
+            const curIdx = this.currentSystemIndex ?? 0;
+            const curSys = this.systems[curIdx];
+                if (curSys && Array.isArray(curSys.planets)) {
+                const systemSeed = sessionSeed ? curSys.systemIndex + sessionSeed : curSys.systemIndex;
+
+                for (let i = 0; i < curSys.planets.length; i++) {
+                    const pl = curSys.planets[i];
+                    try {
+                        // Prefer per-planet seed derived from featureRand so regenerated textures
+                        // match the visuals the player saw when the planet was rendered.
+                        let useSeed = systemSeed;
+                        if (pl && typeof pl.featureRand === 'number') {
+                            useSeed = Math.floor(pl.featureRand * 1000000);
+                        } else if (pl && typeof pl.seed === 'number') {
+                            useSeed = Math.floor(pl.seed);
+                        }
+
+                        if (typeof randomSeed === 'function') randomSeed(useSeed);
+                        if (typeof noiseSeed === 'function') {
+                            try { noiseSeed(useSeed); } catch (e) { console.warn('noiseSeed failed for planet buffer rebuild:', e); }
+                        }
+
+                        if (pl && typeof pl.ensureBuffers === 'function') pl.ensureBuffers();
+                        else if (pl && typeof pl.createBuffers === 'function') pl.createBuffers();
+                    } catch (e) {
+                        console.warn('Galaxy.loadSaveData: planet buffer creation failed for system', curIdx, 'planet', i, e);
+                    }
+
+                    // Diagnostic: compare saved JSON vs rehydrated planet properties (more verbose)
+                    try {
+                        if (typeof DEBUG_SAVELOAD !== 'undefined' && DEBUG_SAVELOAD) {
+                            const savedPlanets = (data && data.systems && data.systems[curIdx] && data.systems[curIdx].planets) ? data.systems[curIdx].planets : null;
+                            const saved = savedPlanets && savedPlanets[i] ? savedPlanets[i] : null;
+                            const savedPalette = saved ? {
+                                baseColor: saved.baseColor || null,
+                                featureColor1: saved.featureColor1 || null,
+                                featureColor2: saved.featureColor2 || null,
+                                featureColor3: saved.featureColor3 || null
+                            } : null;
+
+                            const restoredPalette = pl ? {
+                                baseColor: (pl.baseColor && pl.baseColor.levels) ? Array.from(pl.baseColor.levels) : null,
+                                featureColor1: (pl.featureColor1 && pl.featureColor1.levels) ? Array.from(pl.featureColor1.levels) : null,
+                                featureColor2: (pl.featureColor2 && pl.featureColor2.levels) ? Array.from(pl.featureColor2.levels) : null,
+                                featureColor3: (pl.featureColor3 && pl.featureColor3.levels) ? Array.from(pl.featureColor3.levels) : null
+                            } : null;
+
+                            const bufferInfo = pl ? {
+                                buffersCreated: !!pl.buffersCreated,
+                                planetBufferSize: pl.planetBuffer ? { w: pl.planetBuffer.width, h: pl.planetBuffer.height } : null,
+                                cityLightsBuffer: !!pl.cityLightsBuffer,
+                                ringsBuffer: !!pl.ringsBuffer
+                            } : null;
+
+                            const diagnostics = {
+                                idx: i,
+                                savedFeatureRand: saved ? saved.featureRand : null,
+                                restoredFeatureRand: pl ? pl.featureRand : null,
+                                savedNoiseScale: saved ? saved.noiseScale : null,
+                                restoredNoiseScale: pl ? pl.noiseScale : null,
+                                savedNoisePersistence: saved ? saved.noisePersistence : null,
+                                restoredNoisePersistence: pl ? pl.noisePersistence : null,
+                                savedPalette,
+                                restoredPalette,
+                                bufferInfo,
+                                savedCityLightsDensity: saved ? saved.cityLightsDensity : null,
+                                restoredCityLightsDensity: pl ? pl.cityLightsDensity : null
+                            };
+                            console.log('Planet load diagnostics:', diagnostics);
+                        }
+                    } catch (e) { console.warn('Planet diagnostics failed:', e); }
+                }
+
+                // Reset random/noise seeds to non-deterministic values so runtime remains varied
+                if (typeof randomSeed === 'function') randomSeed();
+                if (typeof noiseSeed === 'function') {
+                    try { noiseSeed(Math.floor(Math.random() * 1000000000)); } catch (e) { console.warn('noiseSeed reset failed:', e); }
+                }
+            }
+        } catch (e) {
+            console.error('Galaxy.loadSaveData: failed to rebuild planet buffers for current system', e);
+        }
+
         // Debug: Log the loaded systems
         console.log("Loaded systems after fromJSON:", this.systems);
 

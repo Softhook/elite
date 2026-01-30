@@ -75,6 +75,9 @@ class UIStationMenus {
         this.newsScrollMax = 0;
         this.newsSourceFilter = 'ALL';
         this.selectedNewsItem = null; // For detail view
+        // Base menu areas (for player-built bases / hab units)
+        this.baseRepairButtonArea = {};
+        this.baseBackButtonArea = {};
     }
 
     /**
@@ -651,6 +654,106 @@ class UIStationMenus {
         uiManager.spaceObjectRepairsBodyguardsButtonArea = this.spaceObjectRepairsBodyguardsButtonArea;
         uiManager.spaceObjectRepairsBackButtonArea = this.spaceObjectRepairsBackButtonArea;
         pop();
+    }
+
+    /**
+     * Draws a simple Base Services menu for player-built bases (surface hab units).
+     * Offers free repairs and other base-specific utilities.
+     * @param {Player} player
+     * @param {Object} panelRect
+     * @param {number} headerHeight
+     * @param {Object} baseObj - The surface base object (OffworldBuilding)
+     * @param {UIManager} uiManager
+     */
+    drawBaseMenu(player, panelRect, headerHeight, baseObj, uiManager) {
+        this.baseRepairButtonArea = {};
+        this.baseBackButtonArea = {};
+        if (!player) return;
+
+        push();
+        uiManager.drawPanelBG(STANDARD_PANEL_BG, [120, 200, 140]);
+
+        // Use station-style header if possible (pass baseObj as station-like)
+        const system = galaxy?.getCurrentSystem();
+        const headerTitle = (baseObj && baseObj.displayName) ? baseObj.displayName : 'Player Base';
+        const headerH = uiManager.drawStationHeader('Base Services', { name: headerTitle }, player, system);
+        const { x: pX, y: pY, w: pW, h: pH } = panelRect;
+        const L = STATION_LAYOUT;
+
+        // Description
+        const descY = UIComponents.drawScreenDescription('Welcome to your base. Repairs and basic services are provided free of charge.', pX, pY, pW, headerH);
+
+        // Free Repair option (full repair)
+        const rowH = 50;
+        const repairRow = UIComponents.drawListRow({
+            x: pX + L.CONTENT_PADDING,
+            y: descY,
+            w: pW - L.CONTENT_PADDING * 2,
+            h: rowH,
+            index: 0,
+            isHighlighted: true
+        });
+
+        UIComponents.drawListRowText({
+            leftText: 'Base Repairs (FREE)',
+            subText: 'Full hull restoration at no cost',
+            rightText: 'FREE',
+            rowX: repairRow.x,
+            rowY: repairRow.y,
+            rowW: repairRow.w - 100,
+            rowH: repairRow.h,
+            leftColor: [180, 255, 200]
+        });
+
+        const repairBtn = UIComponents.drawButton(
+            repairRow.x + repairRow.w - 90, repairRow.y + (repairRow.h - L.BTN_HEIGHT_SMALL) / 2,
+            80, L.BTN_HEIGHT_SMALL,
+            'REPAIR', [0, 120, 0], [0, 200, 0], 3, { textSize: STATION_TEXT_SIZE.SMALL }
+        );
+
+        this.baseRepairButtonArea = { ...repairBtn, action: 'BASE_REPAIR' };
+
+        // Additional quick services suggestions (display only for now)
+        const suggestY = repairRow.y + rowH + L.BTN_SPACING;
+        UIComponents.setTextStyle({ fill: [220], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
+        text('Other available base services:', pX + L.CONTENT_PADDING, suggestY);
+        UIComponents.setTextStyle({ fill: [180, 200, 180], size: STATION_TEXT_SIZE.SMALL, align: [LEFT, TOP] });
+        text('- Access secret storage (if installed)\n- Replenish basic supplies\n- Assign repair drones (future)', pX + L.CONTENT_PADDING + 10, suggestY + 20);
+
+        // Back button
+        const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: 'BACK' });
+        this.baseBackButtonArea = backBtn;
+
+        // Sync to uiManager for compatibility
+        uiManager.baseRepairButtonArea = this.baseRepairButtonArea;
+        uiManager.baseBackButtonArea = this.baseBackButtonArea;
+
+        pop();
+    }
+
+    /**
+     * Handles clicks in the Base Services menu. Repairs are free here.
+     * @returns {boolean}
+     */
+    handleBaseClick(mx, my, player, repairButtonArea, backButtonArea, addMessageFn) {
+        if (repairButtonArea && UIComponents.isClickInArea(mx, my, repairButtonArea)) {
+            let missing = player.maxHull - player.hull;
+            if (missing <= 0) {
+                addMessageFn('Your ship is already fully repaired!');
+                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+            } else {
+                player.hull = player.maxHull;
+                addMessageFn('Ship fully repaired at your base (no charge).');
+                if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+                if (typeof saveGame === 'function') saveGame();
+            }
+            return true;
+        }
+        if (backButtonArea && UIComponents.isClickInArea(mx, my, backButtonArea)) {
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
+            return 'BACK';
+        }
+        return false;
     }
 
     /**

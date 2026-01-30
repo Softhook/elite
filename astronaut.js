@@ -2,11 +2,14 @@
  * Astronaut class - Player control on planet surface
  */
 class Astronaut {
-    constructor(startPos) {
+    constructor(startPos, options = {}) {
         this.pos = startPos.copy();
 
-        // Offset slightly to prevent clipping/instant re-boarding
-        this.pos.x += 30;
+        // Offset slightly to prevent clipping/instant re-boarding when deployed normally
+        // Allow callers (e.g., load path) to skip this offset by passing { skipSpawnOffset: true }
+        if (!options.skipSpawnOffset) {
+            this.pos.x += 30;
+        }
 
         this.vel = createVector(0, 0);
         this.facingAngle = 0; // Radians

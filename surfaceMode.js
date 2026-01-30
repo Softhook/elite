@@ -302,8 +302,11 @@ class SurfaceMode {
     /**
      * Enter surface mode
      */
-    enter(player, planet, starSystem) {
-        if (!this.canEnter(player, planet)) {
+    // enter(player, planet, starSystem, options = {})
+    // options.force: when true, skip canEnter checks (used for restoring from save)
+    enter(player, planet, starSystem, options = {}) {
+        const force = options && options.force;
+        if (!force && !this.canEnter(player, planet)) {
             console.warn("Cannot enter surface mode - conditions not met");
             return false;
         }
@@ -778,7 +781,15 @@ class SurfaceMode {
      * Update astronaut physics and logic
      */
     _updateAstronaut(dt) {
-        if (!this.astronaut) return;
+        // Defensive guard: if astronaut or essential positions are missing,
+        // fall back to ship control to avoid null-dereferences during update.
+        if (!this.astronaut || !this.astronaut.pos || !this.player || !this.player.pos) {
+            if (this.controlMode === 'ASTRONAUT') {
+                console.warn('SurfaceMode: astronaut or player pos missing during _updateAstronaut — switching to SHIP control.');
+                this.controlMode = 'SHIP';
+            }
+            return;
+        }
 
         // Handle Input
         const isMoving = this.astronaut.handleInput(this);
@@ -829,6 +840,35 @@ class SurfaceMode {
             const dist = p5.Vector.dist(this.astronaut.pos, this.player.pos);
             if (dist < 30) { // Boarding range (Reduced to prevent instant re-boarding)
                 this.boardShip();
+                return; // Immediately return to avoid using this.astronaut after it was nulled
+            }
+        }
+
+        // Detect entering a player-built base: if astronaut walks into a player-built OffworldBuilding,
+        // open the Base Services menu.
+        if (this.surfaceObjects && Array.isArray(this.surfaceObjects) && this.astronaut && this.astronaut.pos) {
+            for (const obj of this.surfaceObjects) {
+                if (!obj || obj.destroyed) continue;
+                const isOffworld = (obj.constructor && obj.constructor.name === 'OffworldBuilding') || (obj.type === 'OffworldBuilding');
+                if (!isOffworld) continue;
+                if (!obj.playerBuilt) continue;
+
+                const dx = obj.pos.x - this.astronaut.pos.x;
+                const dy = obj.pos.y - this.astronaut.pos.y;
+                const distSq = dx * dx + dy * dy;
+                const entryRadius = Math.max((obj.size || 40) / 2, 30);
+                if (distSq <= entryRadius * entryRadius) {
+                    if (typeof uiManager !== 'undefined' && uiManager) uiManager.currentBaseObject = obj;
+                    if (typeof gameStateManager !== 'undefined' && gameStateManager) {
+                        gameStateManager._returnFromBaseState = 'SURFACE_MODE';
+                        try {
+                            gameStateManager.setState('VIEWING_BASE');
+                        } catch (e) { /* ignore */ }
+                        // Save game on entering base so player-built bases persist immediately
+                        try { if (typeof saveGame === 'function') saveGame(); } catch (e) { /* ignore save errors */ }
+                    }
+                    return; // stop further astronaut processing this frame
+                }
             }
         }
     }
@@ -874,6 +914,9 @@ class SurfaceMode {
         hab.yOffset = groundH;
         hab.size = size;
 
+        // mark as player-built so entry detection and UI can identify it
+        hab.playerBuilt = true;
+
         this.surfaceObjects.push(hab);
 
         // Add to planet persistent descriptors so it survives saves and grid regeneration
@@ -908,6 +951,17 @@ class SurfaceMode {
         if (typeof uiManager !== 'undefined') uiManager.addMessage('Hab unit constructed', [100, 255, 140]);
         if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
             soundManager.playSound('build');
+        }
+
+        // Open base services menu immediately after constructing a player base
+        if (typeof uiManager !== 'undefined' && uiManager) {
+            try {
+                uiManager.currentBaseObject = hab;
+                if (typeof gameStateManager !== 'undefined' && gameStateManager) {
+                    gameStateManager._returnFromBaseState = 'SURFACE_MODE';
+                    gameStateManager.setState('VIEWING_BASE');
+                }
+            } catch (e) { /* ignore if UI not ready */ }
         }
 
         // Trigger a save so built structures persist (if available)
@@ -1296,7 +1350,9 @@ class SurfaceMode {
                                 if (typeof desc.variant !== 'undefined') obj.variant = desc.variant;
                                 obj.yOffset = (typeof desc.yOffset !== 'undefined') ? desc.yOffset : this._getTerrainHeightAt(desc.x, desc.y);
                                 obj.displayName = desc.displayName || obj.displayName;
-                                obj.destroyed = !!desc.destroyed;
+                                    obj.destroyed = !!desc.destroyed;
+                                    // Flag instances spawned from saved player descriptors
+                                    obj.playerBuilt = true;
                             } else if (typeof SurfaceObject !== 'undefined') {
                                 obj = new SurfaceObject(desc.x, desc.y, desc.size || 40);
                                 obj.yOffset = (typeof desc.yOffset !== 'undefined') ? desc.yOffset : this._getTerrainHeightAt(desc.x, desc.y);

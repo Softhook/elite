@@ -596,7 +596,7 @@ class UIManager {
             "IN_FLIGHT", "DOCKED", "SURFACE_MODE", "VIEWING_MARKET", "VIEWING_MISSIONS", "VIEWING_SHIPYARD",
             "VIEWING_SHIP_DETAIL", "VIEWING_UPGRADES", "VIEWING_WEAPON_DETAIL", "VIEWING_REPAIRS", "VIEWING_PROTECTION", "VIEWING_POLICE",
             "VIEWING_IMPERIAL_RECRUITMENT", "VIEWING_SEPARATIST_RECRUITMENT", "VIEWING_MILITARY_RECRUITMENT",
-            "VIEWING_STORAGE", "VIEWING_RECORD", "VIEWING_NEWS",
+            "VIEWING_STORAGE", "VIEWING_RECORD", "VIEWING_NEWS", "VIEWING_BASE",
             "GALAXY_MAP", "JUMPING", "DOCKED_SPACE_OBJECT", "VIEWING_SPACE_OBJECT_MARKET", "VIEWING_SPACE_OBJECT_REPAIRS",
             "VIEWING_SPACE_OBJECT_SHIPYARD", "VIEWING_SPACE_OBJECT_UPGRADES"
         ];
@@ -865,6 +865,44 @@ class UIManager {
                 gameStateManager.setState("DOCKED");
                 return true;
             }
+            return false;
+        }
+        // --- VIEWING_BASE State (Player-built base services) ---
+        else if (currentState === "VIEWING_BASE") {
+            // Delegate to stationMenus.handleBaseClick
+            const result = this.stationMenus.handleBaseClick(mx, my, player,
+                this.baseRepairButtonArea,
+                this.baseBackButtonArea,
+                (msg, col) => this.addMessage(msg, col)
+            );
+            if (result === 'BACK') {
+                if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
+                if (gameStateManager) {
+                    const returnState = gameStateManager._returnFromBaseState || 'DOCKED';
+                    gameStateManager._returnFromBaseState = null;
+
+                    // If we're returning to surface, nudge the astronaut away from the base
+                    if (returnState === 'SURFACE_MODE' && this.currentBaseObject && typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.astronaut) {
+                        try {
+                            const base = this.currentBaseObject;
+                            const moveDistance = (base.size ? (base.size / 2) : 30) + 60; // safe clearance
+                            // Move astronaut north (negative Y) so they don't immediately retrigger entry
+                            surfaceMode.astronaut.pos.y = (base.pos && typeof base.pos.y === 'number') ? (base.pos.y - moveDistance) : (surfaceMode.astronaut.pos.y - moveDistance);
+                            // Recenter surface camera on astronaut
+                            surfaceMode.surfaceX = surfaceMode.astronaut.pos.x;
+                            surfaceMode.surfaceY = surfaceMode.astronaut.pos.y;
+                            // Clear current base reference to avoid accidental re-entry checks
+                            this.currentBaseObject = null;
+                        } catch (e) {
+                            // Non-fatal; fall back to normal return
+                        }
+                    }
+
+                    gameStateManager.setState(returnState);
+                }
+                return true;
+            }
+            if (result === true) return true;
             return false;
         }
         // --- VIEWING_POLICE State ---
@@ -1288,6 +1326,25 @@ class UIManager {
 
         // Sync button areas back
         this.storageButtonAreas = this.stationMenus.storageButtonAreas;
+        pop();
+    }
+
+    /** Draws the Base Services menu for surface/player-built bases */
+    drawBaseMenu(player, baseObj) {
+        if (!player) return;
+
+        push();
+        const panelRect = this.getPanelRect();
+        this.drawPanelBG(STANDARD_PANEL_BG, [120, 200, 140]);
+
+        const system = galaxy?.getCurrentSystem();
+        const headerHeight = this.drawStationHeader('Base Services', { name: baseObj?.displayName || 'Player Base' }, player, system);
+
+        this.stationMenus.drawBaseMenu(player, panelRect, headerHeight, baseObj, this);
+
+        // Sync areas back
+        this.baseRepairButtonArea = this.stationMenus.baseRepairButtonArea;
+        this.baseBackButtonArea = this.stationMenus.baseBackButtonArea;
         pop();
     }
 

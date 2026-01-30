@@ -435,6 +435,66 @@ class Planet {
     }
 
     /**
+     * Ensure graphics buffers are created. Safe to call multiple times.
+     * This wraps `createBuffers()` and provides a defensive guard/logging.
+     */
+    ensureBuffers() {
+        if (this.buffersCreated) return;
+        try {
+            this.createBuffers();
+        } catch (e) {
+            console.warn('Planet.ensureBuffers: createBuffers failed', e, this);
+        }
+    }
+
+    /**
+     * Prepare lightweight derived fields required for saving without
+     * creating heavy graphics buffers. This computes palette defaults,
+     * ensures seed fields exist, and sets cityLights defaults so `toJSON`
+     * produces stable output even if buffers were never created.
+     */
+    prepareForSave() {
+        // Ensure featureRand exists
+        if (typeof this.featureRand !== 'number' || isNaN(this.featureRand)) {
+            this.featureRand = (Math.random() * 10000) || 0;
+        }
+
+        // Ensure noise params exist
+        if (typeof this.noiseScale !== 'number' || isNaN(this.noiseScale)) this.noiseScale = 0.01;
+        if (typeof this.noisePersistence !== 'number' || isNaN(this.noisePersistence)) this.noisePersistence = 0.5;
+
+        // Ensure color objects exist; if not, attempt to coerce from numeric arrays
+        const makeColor = (c) => {
+            if (!c) return null;
+            if (typeof c === 'object' && Array.isArray(c)) {
+                return (typeof color === 'function') ? color(c[0], c[1], c[2], c[3] ?? 255) : null;
+            }
+            return c; // assume already a p5.Color
+        };
+
+        if (!this.baseColor) this.baseColor = makeColor(this.baseColor) || (typeof color === 'function' ? color(128, 128, 128) : null);
+        if (!this.featureColor1) this.featureColor1 = makeColor(this.featureColor1) || this.baseColor;
+        if (!this.featureColor2) this.featureColor2 = makeColor(this.featureColor2) || this.featureColor1;
+        if (!this.featureColor3) this.featureColor3 = makeColor(this.featureColor3) || this.featureColor2;
+
+        // Ensure palette array
+        if (!Array.isArray(this.palette) || this.palette.length < 4) {
+            this.palette = [this.baseColor, this.featureColor1, this.featureColor2, this.featureColor3];
+        }
+
+        // City lights defaults
+        if (typeof this.isInhabited === 'undefined') this.isInhabited = false;
+        if (typeof this.cityLightsDensity === 'undefined' || this.cityLightsDensity === null) {
+            this.cityLightsDensity = this.isInhabited ? (this.cityLightsDensity || 0.5) : 0;
+        }
+
+        // Ensure a numeric seed for terrain usage
+        if (typeof this.seed === 'undefined' || this.seed === null) {
+            this.seed = Math.floor((this.featureRand || 0) * 1000000);
+        }
+    }
+
+    /**
      * Frees memory by disposing graphics buffers when leaving a system
      */
     disposeBuffers() {
@@ -1187,56 +1247,82 @@ class Planet {
     }
 
     static fromJSON(data) {
-        // Helper to parse stored color formats (array [r,g,b,a] or string)
+        // Deterministic deserialization: construct a Planet instance without running
+        // the normal constructor (which relies on random()). This avoids transient
+        // randomness during load and ensures saved fields are restored exactly.
         const parseColor = (val) => {
             if (!val) return null;
             if (Array.isArray(val)) {
-                // Expect [r,g,b,a]
                 return (typeof color === 'function') ? color(val[0], val[1], val[2], val[3]) : null;
             }
-            // Fallback: try parsing string via p5 `color()` if available
             return (typeof color === 'function') ? color(val) : null;
         };
 
-        // Parse base/feature colors (supports both old string format and new RGBA arrays)
-        let c1 = parseColor(data.baseColor) || undefined;
-        let c2 = parseColor(data.featureColor1) || undefined;
-        const p = new Planet(data.pos.x, data.pos.y, data.size, c1, c2, data.systemName || "Unknown", data.planetIndex || 0);
+        const p = Object.create(Planet.prototype);
 
-        // Restore other colors and properties
-        p.featureColor2 = parseColor(data.featureColor2) || p.featureColor2;
-        p.featureColor3 = parseColor(data.featureColor3) || p.featureColor3;
-        p.featureRand = (typeof data.featureRand !== 'undefined') ? data.featureRand : p.featureRand;
-        p.noiseScale = (typeof data.noiseScale !== 'undefined') ? data.noiseScale : p.noiseScale;
-        p.noisePersistence = (typeof data.noisePersistence !== 'undefined') ? data.noisePersistence : p.noisePersistence;
+        // Basic spatial properties
+        p.pos = (typeof createVector === 'function' && data.pos && typeof data.pos.x === 'number') ? createVector(data.pos.x, data.pos.y) : { x: (data.pos?.x || 0), y: (data.pos?.y || 0) };
+        p.size = data.size || 0;
+        p.radius = p.size * 0.5;
+        p.radiusSq = p.radius * p.radius;
+
+        // Preserve explicit flags
+        p.isSun = !!data.isSun;
+
+        // Colors (use saved values if present)
+        p.baseColor = parseColor(data.baseColor) || null;
+        p.featureColor1 = parseColor(data.featureColor1) || null;
+        p.featureColor2 = parseColor(data.featureColor2) || null;
+        p.featureColor3 = parseColor(data.featureColor3) || null;
+
+        // Palette and deterministic noise parameters
+        p.palette = [p.baseColor, p.featureColor1, p.featureColor2, p.featureColor3];
+        p.featureRand = (typeof data.featureRand !== 'undefined') ? data.featureRand : 0;
+        p.noiseScale = (typeof data.noiseScale !== 'undefined') ? data.noiseScale : (0.01);
+        p.noisePersistence = (typeof data.noisePersistence !== 'undefined') ? data.noisePersistence : 0.5;
+
+        // Atmosphere & rings
         p.hasAtmosphere = !!data.hasAtmosphere;
         p.atmosphereColor = parseColor(data.atmosphereColor) || null;
         p.hasRings = !!data.hasRings;
-        p.ringAngle = (typeof data.ringAngle !== 'undefined') ? data.ringAngle : p.ringAngle;
-        p.ringPerspective = (typeof data.ringPerspective !== 'undefined') ? data.ringPerspective : p.ringPerspective;
-        p.ringInnerRad = (typeof data.ringInnerRad !== 'undefined') ? data.ringInnerRad : p.ringInnerRad;
-        p.ringOuterRad = (typeof data.ringOuterRad !== 'undefined') ? data.ringOuterRad : p.ringOuterRad;
-        p.numRingSegments = (typeof data.numRingSegments !== 'undefined') ? data.numRingSegments : p.numRingSegments;
-        p.ringColor1 = parseColor(data.ringColor1) || p.ringColor1;
-        p.ringColor2 = parseColor(data.ringColor2) || p.ringColor2;
-        p.rotationSpeed = (typeof data.rotationSpeed !== 'undefined') ? data.rotationSpeed : p.rotationSpeed;
-        p.currentRotation = (typeof data.currentRotation !== 'undefined') ? data.currentRotation : p.currentRotation;
+        p.ringAngle = (typeof data.ringAngle !== 'undefined') ? data.ringAngle : 0;
+        p.ringPerspective = (typeof data.ringPerspective !== 'undefined') ? data.ringPerspective : 0.2;
+        p.ringInnerRad = (typeof data.ringInnerRad !== 'undefined') ? data.ringInnerRad : (p.radius * 1.2);
+        p.ringOuterRad = (typeof data.ringOuterRad !== 'undefined') ? data.ringOuterRad : (p.ringInnerRad * 1.4);
+        p.numRingSegments = (typeof data.numRingSegments !== 'undefined') ? data.numRingSegments : 0;
+        p.ringColor1 = parseColor(data.ringColor1) || null;
+        p.ringColor2 = parseColor(data.ringColor2) || null;
+
+        // Rotation and animation
+        p.rotationSpeed = (typeof data.rotationSpeed !== 'undefined') ? data.rotationSpeed : 0.0;
+        p.currentRotation = (typeof data.currentRotation !== 'undefined') ? data.currentRotation : 0;
+
+        // Inhabited / city lights
         p.isInhabited = !!data.isInhabited;
-        p.cityLightsColor = parseColor(data.cityLightsColor) || p.cityLightsColor;
-        p.cityLightsDensity = (typeof data.cityLightsDensity !== 'undefined') ? data.cityLightsDensity : p.cityLightsDensity;
-        p.name = data.name || p.name; // Use saved name if available
+        p.cityLightsColor = parseColor(data.cityLightsColor) || null;
+        p.cityLightsDensity = (typeof data.cityLightsDensity !== 'undefined') ? data.cityLightsDensity : 0.5;
+        p.cityLightsBuffer = null;
+        p.cityLightsBufferDark = null;
 
-        // Ensure isSun flag is respected when restoring (fall back to planetIndex===0)
-        p.isSun = (typeof data.isSun !== 'undefined') ? !!data.isSun : !!(p.planetIndex === 0);
+        // Metadata
+        p.name = data.name || '';
+        p.systemName = data.systemName || 'Unknown';
+        p.planetIndex = (typeof data.planetIndex !== 'undefined') ? data.planetIndex : 0;
 
-        // Rebuild palette so rendered textures use restored feature colors
-        p.palette = [p.baseColor, p.featureColor1, p.featureColor2, p.featureColor3];
+        // Rendering buffers state
+        p.buffersCreated = false;
+        p.shadowOffset = null;
 
-        // Restore any simple descriptors for player-built surface objects.
-        // These remain as descriptors here; SurfaceMode will rehydrate them into SurfaceObject instances.
-        p.playerBuiltSurfaceObjects = Array.isArray(data.playerBuiltSurfaceObjects)
-            ? data.playerBuiltSurfaceObjects.map(d => d)
-            : [];
+        // Persisted player-built objects (simple descriptors)
+        p.playerBuiltSurfaceObjects = Array.isArray(data.playerBuiltSurfaceObjects) ? data.playerBuiltSurfaceObjects.map(d => d) : [];
+
+        // Other persisted properties (keep symmetry with toJSON)
+        p.economyType = data.economyType || null;
+        p.techLevel = (typeof data.techLevel === 'number') ? data.techLevel : null;
+        p.isInhabited = !!data.isInhabited;
+
+        // Ensure palette exists (fill with nulls if needed)
+        if (!Array.isArray(p.palette)) p.palette = [p.baseColor, p.featureColor1, p.featureColor2, p.featureColor3];
 
         return p;
     }
