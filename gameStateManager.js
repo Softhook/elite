@@ -79,8 +79,7 @@ const STATION_STATES = [
     "VIEWING_SPACE_OBJECT_REPAIRS",
     "VIEWING_SPACE_OBJECT_SHIPYARD",
     "VIEWING_SPACE_OBJECT_UPGRADES"
-    ,"VIEWING_BASE"
-            ,"VIEWING_BASE"
+    , "VIEWING_BASE"
 ];
 
 class GameStateManager {
@@ -254,16 +253,26 @@ class GameStateManager {
             }
 
             const isInFlight = newState === "IN_FLIGHT";
+            const isSurface = newState === "SURFACE_MODE";
             const wasInFlight = prevState === "IN_FLIGHT";
+            const wasSurface = prevState === "SURFACE_MODE";
+
+            // Both Flight and Surface modes are considered "Active" for music purposes
+            // This grouping ensures we don't restart music when switching between them
+            const isActiveState = isInFlight || isSurface;
+            const wasActiveState = wasInFlight || wasSurface;
+
             const isStationState = STATION_STATES.includes(newState);
             const isGameOver = newState === "GAME_OVER";
 
-            // Start space music when entering IN_FLIGHT from non-flight states
-            if (isInFlight && !wasInFlight) {
+            // Start space music ONLY when entering an Active state from a Non-Active state
+            // (e.g. Loading -> Surface, or Docked -> Flight)
+            // This explicitly prevents double-initiation when moving Surface <-> Flight
+            if (isActiveState && !wasActiveState) {
                 spaceMusicManager.start(3000); // 3s fade-in
             }
-            // Stop space music when docking or game over
-            else if ((isStationState || isGameOver) && wasInFlight) {
+            // Stop space music when docking or game over (leaving Active state)
+            else if ((isStationState || isGameOver) && wasActiveState) {
                 spaceMusicManager.stop(2000); // 2s fade-out
             }
         } catch (e) {
