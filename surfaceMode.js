@@ -131,6 +131,8 @@ class SurfaceMode {
 
         // Key state
         this._keyPressed = false;
+        // Build key state (prevents repeat while held)
+        this._buildKeyPressed = false;
 
         // Saved player position for return
         this.savedPlayerPos = null;
@@ -809,6 +811,18 @@ class SurfaceMode {
         this.surfaceY = this.astronaut.pos.y;
         this.altitude = groundH + 30; // Camera height above astronaut (closer than ship)
 
+            // Build base: Press 'B' (keyCode 66) to build a hab unit in front of the astronaut
+            if (keyIsDown && typeof keyIsDown === 'function') {
+                if (keyIsDown(66)) { // 'B'
+                    if (!this._buildKeyPressed) {
+                        this._buildKeyPressed = true;
+                        this._attemptBuildHabUnit();
+                    }
+                } else {
+                    this._buildKeyPressed = false;
+                }
+            }
+
         // Check for Boarding (proximity to ship)
         // Only board if not moving (to avoid accidental trigger while walking past)
         if (!isMoving) {
@@ -816,6 +830,89 @@ class SurfaceMode {
             if (dist < 30) { // Boarding range (Reduced to prevent instant re-boarding)
                 this.boardShip();
             }
+        }
+    }
+
+    /**
+     * Attempt to build a hab unit in front of the astronaut.
+     * Simple placement: a fixed-distance spawn that checks for space and snaps to terrain.
+     */
+    _attemptBuildHabUnit() {
+        if (!this.astronaut || !this.surfaceObjects) return;
+
+        const distance = 80;
+        const angle = this.astronaut.facingAngle || 0;
+        const bx = this.astronaut.pos.x + Math.cos(angle) * distance;
+        const by = this.astronaut.pos.y + Math.sin(angle) * distance;
+
+        // Sample terrain height and set yOffset
+        const groundH = this._getTerrainHeightAt(bx, by);
+
+        // Check for collisions with nearby surface objects
+        const minClearance = 60; // minimum distance from other objects
+        for (const obj of this.surfaceObjects) {
+            if (!obj || obj.destroyed) continue;
+            const dx = obj.pos.x - bx;
+            const dy = obj.pos.y - by;
+            const distSq = dx * dx + dy * dy;
+            const safeDist = Math.pow((obj.size || 40) / 2 + minClearance, 2);
+            if (distSq < safeDist) {
+                if (typeof uiManager !== 'undefined') uiManager.addMessage('Not enough space to build here', [255, 160, 100]);
+                return;
+            }
+        }
+
+        if (typeof OffworldBuilding === 'undefined') {
+            if (typeof uiManager !== 'undefined') uiManager.addMessage('Build failed: building module missing', [255, 80, 80]);
+            return;
+        }
+
+        const size = 60;
+        const hab = new OffworldBuilding(bx, by, size, Math.floor(Math.random() * 100000));
+        hab.variant = 1; // HAB UNIT variant in OffworldBuilding
+        hab.displayName = 'Hab Unit (Player Built)';
+        hab.yOffset = groundH;
+        hab.size = size;
+
+        this.surfaceObjects.push(hab);
+
+        // Add to planet persistent descriptors so it survives saves and grid regeneration
+        if (this.planet) {
+            const descriptor = {
+                type: hab.type || 'OffworldBuilding',
+                x: hab.pos ? hab.pos.x : hab.x || bx,
+                y: hab.pos ? hab.pos.y : hab.y || by,
+                size: hab.size || size,
+                seed: hab.seed || null,
+                variant: (typeof hab.variant !== 'undefined') ? hab.variant : null,
+                yOffset: (typeof hab.yOffset !== 'undefined') ? hab.yOffset : 0,
+                displayName: hab.displayName || null,
+                destroyed: !!hab.destroyed
+            };
+            if (!Array.isArray(this.planet.playerBuiltSurfaceObjects)) this.planet.playerBuiltSurfaceObjects = [];
+            this.planet.playerBuiltSurfaceObjects.push(descriptor);
+        }
+
+        // Also cache into the objectCache for the current grid cell so it persists while moving around
+        try {
+            const resolution = SURFACE_CONFIG.MESH_RESOLUTION || 16;
+            const cellSize = SURFACE_CONFIG.MESH_SIZE / resolution;
+            const cellX = Math.round((bx) / cellSize);
+            const cellY = Math.round((by) / cellSize);
+            const cellKey = `${cellX},${cellY}`;
+            this.objectCache.set(cellKey, hab);
+        } catch (e) {
+            // Ignore cache errors
+        }
+
+        if (typeof uiManager !== 'undefined') uiManager.addMessage('Hab unit constructed', [100, 255, 140]);
+        if (typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+            soundManager.playSound('build');
+        }
+
+        // Trigger a save so built structures persist (if available)
+        if (typeof saveGame === 'function') {
+            try { saveGame(); } catch (e) { /* ignore save errors */ }
         }
     }
 
@@ -1185,6 +1282,29 @@ class SurfaceMode {
                 const h = this._getTerrainHeightAt(wx, wy);
                 const subHash = (cellHash * 123.45) % 1;
                 const objSeed = cellHash * 100000;
+
+                // Check for any player-built surface objects that belong to this cell
+                if (this.planet && Array.isArray(this.planet.playerBuiltSurfaceObjects)) {
+                    for (const desc of this.planet.playerBuiltSurfaceObjects) {
+                        if (!desc || desc.destroyed) continue;
+                        const descCellX = Math.round((desc.x || 0) / cellSize);
+                        const descCellY = Math.round((desc.y || 0) / cellSize);
+                        if (descCellX === activeGridX && descCellY === activeGridY) {
+                            // Instantiate known types (OffworldBuilding) or fallback to a generic SurfaceObject
+                            if (typeof OffworldBuilding !== 'undefined' && (String(desc.type).toLowerCase().indexOf('offworld') !== -1 || desc.type === 'OffworldBuilding')) {
+                                obj = new OffworldBuilding(desc.x, desc.y, desc.size || 40, desc.seed || 0);
+                                if (typeof desc.variant !== 'undefined') obj.variant = desc.variant;
+                                obj.yOffset = (typeof desc.yOffset !== 'undefined') ? desc.yOffset : this._getTerrainHeightAt(desc.x, desc.y);
+                                obj.displayName = desc.displayName || obj.displayName;
+                                obj.destroyed = !!desc.destroyed;
+                            } else if (typeof SurfaceObject !== 'undefined') {
+                                obj = new SurfaceObject(desc.x, desc.y, desc.size || 40);
+                                obj.yOffset = (typeof desc.yOffset !== 'undefined') ? desc.yOffset : this._getTerrainHeightAt(desc.x, desc.y);
+                            }
+                            break;
+                        }
+                    }
+                }
 
                 // --- 1. SHIELD GENERATOR (Planet Boss) ---
                 // [CRITICAL FIX] Check for generator spawning FIRST, before zone or habitation checks.

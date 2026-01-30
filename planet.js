@@ -160,6 +160,10 @@ class Planet {
         // Surface mission flag - set by mission system when surface strike mission is active
         // For testing: always true to allow surface descent on any planet
         this.hasSurfaceMission = true; // TODO: Set to false in production, enable via mission
+        
+        // Player-built surface objects (persisted per-planet)
+        // Stored as simple descriptors for serialization; rehydrated by SurfaceMode at runtime.
+        this.playerBuiltSurfaceObjects = [];
     }
 
     /**
@@ -1003,6 +1007,15 @@ class Planet {
             }
             textSize(STATION_TEXT_SIZE.BODY); // Fixed size for all planets
             text(this.name, 0, 0);
+
+            // If this planet has any player-built surface objects, show a small marker under the name
+            if (Array.isArray(this.playerBuiltSurfaceObjects) && this.playerBuiltSurfaceObjects.length > 0) {
+                // Use a smaller helper text size and greenish tint to indicate player base
+                textSize(STATION_TEXT_SIZE.HELPER);
+                fill(160, 255, 170, 220);
+                // Draw beneath the main name (offset by the main text size)
+                text('(player base)', 0, STATION_TEXT_SIZE.BODY * 0.9);
+            }
             pop();
         }
 
@@ -1150,6 +1163,26 @@ class Planet {
             systemName: this.systemName,
             planetIndex: this.planetIndex,
             isSun: !!this.isSun
+            ,
+            // Persist any player-built surface objects (stored as simple descriptors)
+            playerBuiltSurfaceObjects: Array.isArray(this.playerBuiltSurfaceObjects)
+                ? this.playerBuiltSurfaceObjects.map(o => {
+                    // Support both already-serialized descriptors and runtime object instances
+                    const x = o.pos ? (o.pos.x || 0) : (o.x ?? o.posX ?? null);
+                    const y = o.pos ? (o.pos.y || 0) : (o.y ?? o.posY ?? null);
+                    return {
+                        type: o.type || o.kind || 'OffworldBuilding',
+                        x: x,
+                        y: y,
+                        size: o.size || null,
+                        seed: o.seed || o._seed || null,
+                        variant: (typeof o.variant !== 'undefined') ? o.variant : null,
+                        yOffset: (typeof o.yOffset !== 'undefined') ? o.yOffset : 0,
+                        displayName: o.displayName || o.name || null,
+                        destroyed: !!o.destroyed
+                    };
+                })
+                : []
         };
     }
 
@@ -1198,6 +1231,12 @@ class Planet {
 
         // Rebuild palette so rendered textures use restored feature colors
         p.palette = [p.baseColor, p.featureColor1, p.featureColor2, p.featureColor3];
+
+        // Restore any simple descriptors for player-built surface objects.
+        // These remain as descriptors here; SurfaceMode will rehydrate them into SurfaceObject instances.
+        p.playerBuiltSurfaceObjects = Array.isArray(data.playerBuiltSurfaceObjects)
+            ? data.playerBuiltSurfaceObjects.map(d => d)
+            : [];
 
         return p;
     }
