@@ -221,31 +221,38 @@ class StationMusicManager {
                 dynamicRange: 0.15,  // Natural dynamics
             },
 
-            // Refinery: Warmed industrial ambience - melodic, resilient, rhythmic
+            // Refinery: Melodic industrial with rhythmic pulse and clearer phrasing
             refinery: {
                 baseNote: 44, // A2 - centered for clear mids
-                // Minor-pentatonic palette for grit without harsh dissonance
+                // Minor-pentatonic palette keeps grit but avoids harsh dissonance
                 scale: [0, 3, 5, 7, 10],
                 motifs: [
-                    [0, 3, 5, 7, 5, 3, 0],        // Grinding but musical
-                    [7, 5, 3, 0, 3, 5, 7],        // Industrial call-and-response
-                    [0, null, 5, null, 7, 5, 3],  // Sparse, rhythmic phrases
-                    [0, 1, 0, 3, 5, null, 3],     // Slightly chromatic passing tone
+                    [0, null, 5, 7, 5, 3, 0],        // Call-response with resolve
+                    [0, 3, 5, 7, null, 7, 5, 3],     // Rising phrase and echo
+                    [7, null, 0, 0, 7, null, 5, 3],  // Pulsing return and anchor
+                    [0, 5, 7, 8, 7, 5],              // Slight passing tone for color
                 ],
-                harmonyInterval: 12, // Octave drone for warmth and clarity
-                noteInterval: 350,   // Slightly upbeat so melodies feel purposeful
-                filterFreq: 2200,    // Open mids for presence
-                filterRes: 1.8,      // Tame resonance to avoid harsh peaks
-                attackTime: 0.04,
-                releaseTime: 0.6,
-                oscType: 'sawtooth', // Industrial edge, softened by second osc
-                osc2Type: 'triangle',
-                detune: 6,           // Mild detune for richness
-                noteGlide: 0.02,     // Gentle transitions
-                reverbDecay: 1.2,    // Metallic but pleasant space
-                dynamicRange: 0.18,  // Expressive but controlled
-                volumeMultiplier: 1.0, // Balanced loudness
-                envelope2Range: 0.6,   // Supportive harmony/drone
+                // Make the refinery more corded and slower
+                harmonyInterval: 12, // Octave drone for a corded feel
+                noteInterval: 720,   // Much slower so chords can breathe
+                filterFreq: 1800,     // Warm mids for clarity
+                filterRes: 2.2,       // Slight character without ringing
+                attackTime: 0.12,
+                releaseTime: 2.0,
+                oscType: 'triangle',  // Rounded main voice
+                osc2Type: 'sawtooth',  // Rich body beneath
+                detune: 6,            // Gentle chorus for thickness
+                noteGlide: 0.04,      // Gentle smoothing
+                reverbDecay: 1.8,     // More spacious metallic environment
+                dynamicRange: 0.2,    // Expressive but controlled
+                volumeMultiplier: 1.05,
+                envelope2Range: 0.9,  // Strong sustained harmony/drone for chord-like texture
+                rhythmVariation: 0.08, // Slight humanized timing
+                filterSweep: { min: 800, max: 2000, speed: 0.006 }, // Very slow movement
+                // Chance to double certain melody notes an octave up for a corded/voiced texture
+                octaveDoublingProb: 0.28,
+                // How many phrase loops before regenerating motifs (smaller -> more variety)
+                regenerateAfterPhrases: 2,
             },
 
             // Post Human: Ambient electronica - crystalline, transcendent, floating
@@ -649,6 +656,16 @@ class StationMusicManager {
             }
         }
 
+        // Theme-driven octave doubling (preferred for corded/refinery textures)
+        if (this.theme && typeof this.theme.octaveDoublingProb === 'number' && this.theme.octaveDoublingProb > 0) {
+            const prob = Math.max(0, Math.min(1, this.theme.octaveDoublingProb));
+            for (let i = 0; i < this.melody.length; i++) {
+                if (this.melody[i] !== null && Math.random() < prob) {
+                    this.melody[i] += 12;
+                }
+            }
+        }
+
         // Reset playback position
         this.noteIndex = 0;
         this.phraseIndex = 0;
@@ -866,7 +883,8 @@ class StationMusicManager {
             // When we loop back to start, maybe regenerate for variety
             if (this.noteIndex === 0) {
                 this.phraseIndex++;
-                if (this.phraseIndex >= 3) {
+                const regenAfter = (this.theme && typeof this.theme.regenerateAfterPhrases === 'number') ? this.theme.regenerateAfterPhrases : 3;
+                if (this.phraseIndex >= regenAfter) {
                     this.generateMelody({ stationType: this.stationType });
                 }
             }
