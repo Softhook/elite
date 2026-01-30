@@ -1202,7 +1202,10 @@ function __buildSaveData() {
         try {
             if (!gameStateManager) return null;
             const st = gameStateManager.currentState;
-            if (st !== 'SURFACE_MODE' && st !== 'VIEWING_BASE') return null;
+            // Check if we are logically on the surface (state is surface mode OR landed flag is true)
+            // This is safer than relying only on the state string
+            const isSurface = (st === 'SURFACE_MODE' || st === 'VIEWING_BASE') || (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isLanded);
+            if (!isSurface) return null;
             if (typeof surfaceMode === 'undefined' || !surfaceMode || !surfaceMode.planet) return null;
 
             const planet = surfaceMode.planet;
@@ -1546,6 +1549,7 @@ function loadGame(slotIndex) {
                 let restoredSurface = false;
                 try {
                     const savedSurface = savedData.savedSurface;
+
                     if (savedSurface && player.currentSystem && Array.isArray(player.currentSystem.planets) && savedSurface.planetIndex !== null && savedSurface.planetIndex !== undefined) {
                         const planet = player.currentSystem.planets[savedSurface.planetIndex];
                         if (planet) {

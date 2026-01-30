@@ -360,6 +360,14 @@ class SurfaceMode {
 
         // Initialize terrain module (lightweight setup only)
         this.terrain.setPlanet(planet);
+
+        // Ensure noise seed is consistent with the planet
+        if (typeof noiseSeed === 'function') {
+            const seed = this._getPlanetSeed();
+            try { noiseSeed(seed); } catch (e) { /* ignore */ }
+            if (typeof randomSeed === 'function') { try { randomSeed(seed); } catch (e) { /* ignore */ } }
+        }
+
         this.terrain.createBuffer(width, height);
         this.projectiles = [];
         this.surfaceObjects = [];
@@ -526,7 +534,7 @@ class SurfaceMode {
                 const currentGroundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
                 const minAbsoluteAlt = currentGroundH + SURFACE_CONFIG.MIN_ALTITUDE;
                 this.altitude = constrain(this.altitude, minAbsoluteAlt, SURFACE_CONFIG.MAX_ALTITUDE);
-                
+
                 // Calculate and store radar altitude (height above local terrain)
                 // This is used by turrets and drones for stealth detection
                 this.radarAltitude = this.altitude - currentGroundH;
@@ -822,17 +830,17 @@ class SurfaceMode {
         this.surfaceY = this.astronaut.pos.y;
         this.altitude = groundH + 30; // Camera height above astronaut (closer than ship)
 
-            // Build base: Press 'B' (keyCode 66) to build a hab unit in front of the astronaut
-            if (keyIsDown && typeof keyIsDown === 'function') {
-                if (keyIsDown(66)) { // 'B'
-                    if (!this._buildKeyPressed) {
-                        this._buildKeyPressed = true;
-                        this._attemptBuildHabUnit();
-                    }
-                } else {
-                    this._buildKeyPressed = false;
+        // Build base: Press 'B' (keyCode 66) to build a hab unit in front of the astronaut
+        if (keyIsDown && typeof keyIsDown === 'function') {
+            if (keyIsDown(66)) { // 'B'
+                if (!this._buildKeyPressed) {
+                    this._buildKeyPressed = true;
+                    this._attemptBuildHabUnit();
                 }
+            } else {
+                this._buildKeyPressed = false;
             }
+        }
 
         // Check for Boarding (proximity to ship)
         // Only board if not moving (to avoid accidental trigger while walking past)
@@ -1350,9 +1358,9 @@ class SurfaceMode {
                                 if (typeof desc.variant !== 'undefined') obj.variant = desc.variant;
                                 obj.yOffset = (typeof desc.yOffset !== 'undefined') ? desc.yOffset : this._getTerrainHeightAt(desc.x, desc.y);
                                 obj.displayName = desc.displayName || obj.displayName;
-                                    obj.destroyed = !!desc.destroyed;
-                                    // Flag instances spawned from saved player descriptors
-                                    obj.playerBuilt = true;
+                                obj.destroyed = !!desc.destroyed;
+                                // Flag instances spawned from saved player descriptors
+                                obj.playerBuilt = true;
                             } else if (typeof SurfaceObject !== 'undefined') {
                                 obj = new SurfaceObject(desc.x, desc.y, desc.size || 40);
                                 obj.yOffset = (typeof desc.yOffset !== 'undefined') ? desc.yOffset : this._getTerrainHeightAt(desc.x, desc.y);
@@ -1577,7 +1585,7 @@ class SurfaceMode {
             if (this.player && this.player.target === obj) {
                 const drawX = obj.pos.x;
                 let drawY;
-                
+
                 // Turrets are drawn at obj.pos.y (not obj.pos.y - yOffset)
                 // because their draw() method handles yOffset internally
                 if (obj.type === 'Turret') {

@@ -160,7 +160,7 @@ class Planet {
         // Surface mission flag - set by mission system when surface strike mission is active
         // For testing: always true to allow surface descent on any planet
         this.hasSurfaceMission = true; // TODO: Set to false in production, enable via mission
-        
+
         // Player-built surface objects (persisted per-planet)
         // Stored as simple descriptors for serialization; rehydrated by SurfaceMode at runtime.
         this.playerBuiltSurfaceObjects = [];

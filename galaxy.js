@@ -1,5 +1,6 @@
 // ****** Galaxy.js ******
 
+
 /**
  * Galaxy Configuration Constants
  * Centralized configuration for galaxy generation parameters
@@ -750,7 +751,7 @@ class Galaxy {
         try {
             const curIdx = this.currentSystemIndex ?? 0;
             const curSys = this.systems[curIdx];
-                if (curSys && Array.isArray(curSys.planets)) {
+            if (curSys && Array.isArray(curSys.planets)) {
                 const systemSeed = sessionSeed ? curSys.systemIndex + sessionSeed : curSys.systemIndex;
 
                 for (let i = 0; i < curSys.planets.length; i++) {
