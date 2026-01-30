@@ -1266,8 +1266,13 @@ class Planet {
         p.radius = p.size * 0.5;
         p.radiusSq = p.radius * p.radius;
 
-        // Preserve explicit flags
-        p.isSun = !!data.isSun;
+        // Metadata
+        p.name = data.name || '';
+        p.systemName = data.systemName || 'Unknown';
+        p.planetIndex = (typeof data.planetIndex !== 'undefined') ? data.planetIndex : 0;
+
+        // Restore explicit flags, with safety fallback for isSun based on index
+        p.isSun = (typeof data.isSun !== 'undefined') ? !!data.isSun : !!(p.planetIndex === 0);
 
         // Colors (use saved values if present)
         p.baseColor = parseColor(data.baseColor) || null;
@@ -1275,15 +1280,36 @@ class Planet {
         p.featureColor2 = parseColor(data.featureColor2) || null;
         p.featureColor3 = parseColor(data.featureColor3) || null;
 
+        // EMERGENCY FALLBACKS: Ensure critical colors are never null to prevent render crashes
+        // If save data was partial, these might be missing.
+        if (!p.baseColor) p.baseColor = (typeof color === 'function') ? color(128) : { levels: [128, 128, 128, 255] };
+        if (!p.featureColor1) p.featureColor1 = p.baseColor;
+        if (!p.featureColor2) p.featureColor2 = p.featureColor1;
+        if (!p.featureColor3) p.featureColor3 = p.featureColor2;
+
         // Palette and deterministic noise parameters
         p.palette = [p.baseColor, p.featureColor1, p.featureColor2, p.featureColor3];
         p.featureRand = (typeof data.featureRand !== 'undefined') ? data.featureRand : 0;
+
+        // Restore seed for compatibility with other systems (e.g. surface generation)
+        if (typeof data.seed === 'number') {
+            p.seed = data.seed;
+        } else {
+            // Re-derive if missing (legacy saves)
+            p.seed = Math.floor(p.featureRand * 1000000);
+        }
+
         p.noiseScale = (typeof data.noiseScale !== 'undefined') ? data.noiseScale : (0.01);
         p.noisePersistence = (typeof data.noisePersistence !== 'undefined') ? data.noisePersistence : 0.5;
 
         // Atmosphere & rings
         p.hasAtmosphere = !!data.hasAtmosphere;
         p.atmosphereColor = parseColor(data.atmosphereColor) || null;
+        // Safety: if it says it has atmosphere, it MUST have a color
+        if (p.hasAtmosphere && !p.atmosphereColor) {
+            p.atmosphereColor = (typeof color === 'function') ? color(200, 220, 255, 100) : { levels: [200, 200, 255, 100] };
+        }
+
         p.hasRings = !!data.hasRings;
         p.ringAngle = (typeof data.ringAngle !== 'undefined') ? data.ringAngle : 0;
         p.ringPerspective = (typeof data.ringPerspective !== 'undefined') ? data.ringPerspective : 0.2;
@@ -1293,6 +1319,12 @@ class Planet {
         p.ringColor1 = parseColor(data.ringColor1) || null;
         p.ringColor2 = parseColor(data.ringColor2) || null;
 
+        // Safety: rings need colors
+        if (p.hasRings) {
+            if (!p.ringColor1) p.ringColor1 = (typeof lerpColor === 'function') ? lerpColor(p.baseColor, (typeof color === 'function' ? color(200) : p.baseColor), 0.6) : p.baseColor;
+            if (!p.ringColor2) p.ringColor2 = (typeof lerpColor === 'function') ? lerpColor(p.featureColor1, (typeof color === 'function' ? color(150) : p.featureColor1), 0.6) : p.featureColor1;
+        }
+
         // Rotation and animation
         p.rotationSpeed = (typeof data.rotationSpeed !== 'undefined') ? data.rotationSpeed : 0.0;
         p.currentRotation = (typeof data.currentRotation !== 'undefined') ? data.currentRotation : 0;
@@ -1300,14 +1332,14 @@ class Planet {
         // Inhabited / city lights
         p.isInhabited = !!data.isInhabited;
         p.cityLightsColor = parseColor(data.cityLightsColor) || null;
+        if (p.isInhabited && !p.cityLightsColor) {
+            // Default warm yellow lights
+            p.cityLightsColor = (typeof color === 'function') ? color(255, 240, 180, 200) : { levels: [255, 240, 180, 200] };
+        }
+
         p.cityLightsDensity = (typeof data.cityLightsDensity !== 'undefined') ? data.cityLightsDensity : 0.5;
         p.cityLightsBuffer = null;
         p.cityLightsBufferDark = null;
-
-        // Metadata
-        p.name = data.name || '';
-        p.systemName = data.systemName || 'Unknown';
-        p.planetIndex = (typeof data.planetIndex !== 'undefined') ? data.planetIndex : 0;
 
         // Rendering buffers state
         p.buffersCreated = false;
@@ -1319,7 +1351,6 @@ class Planet {
         // Other persisted properties (keep symmetry with toJSON)
         p.economyType = data.economyType || null;
         p.techLevel = (typeof data.techLevel === 'number') ? data.techLevel : null;
-        p.isInhabited = !!data.isInhabited;
 
         // Ensure palette exists (fill with nulls if needed)
         if (!Array.isArray(p.palette)) p.palette = [p.baseColor, p.featureColor1, p.featureColor2, p.featureColor3];

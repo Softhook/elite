@@ -98,6 +98,7 @@ class Galaxy {
         this.hyperdriveRange = GALAXY_CONFIG.DEFAULT_HYPERDRIVE_RANGE;
         this._initialized = false;
         this._warnedEmptyOnce = false;
+        this.sessionSeed = null;
     }
 
     // =========================================================================
@@ -110,6 +111,7 @@ class Galaxy {
      */
     initGalaxySystems(globalSessionSeed) {
         console.log(">>> Galaxy.initGalaxySystems() called for procedural generation.");
+        this.sessionSeed = globalSessionSeed;
         this.systems = [];
 
         // Use constants from configuration
@@ -700,6 +702,7 @@ class Galaxy {
     /** Loads saved data into systems and sets current index. Regenerates connections. */
     loadSaveData(data, sessionSeed) {
         console.log("Galaxy.loadSaveData called with data:", data);
+        this.sessionSeed = sessionSeed;
 
         if (!data || !Array.isArray(data.systems)) {
             console.warn("Galaxy.loadSaveData: No data or systems array missing.");
@@ -752,7 +755,9 @@ class Galaxy {
             const curIdx = this.currentSystemIndex ?? 0;
             const curSys = this.systems[curIdx];
             if (curSys && Array.isArray(curSys.planets)) {
-                const systemSeed = sessionSeed ? curSys.systemIndex + sessionSeed : curSys.systemIndex;
+                // Use stored sessionSeed, falling back to argument or null logic handling
+                const seedToUse = this.sessionSeed;
+                const systemSeed = seedToUse ? curSys.systemIndex + seedToUse : curSys.systemIndex;
 
                 for (let i = 0; i < curSys.planets.length; i++) {
                     const pl = curSys.planets[i];
