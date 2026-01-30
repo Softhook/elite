@@ -27,8 +27,10 @@ class StationMusicManager {
         // Audio components (p5.sound)
         this.osc = null;
         this.osc2 = null; // Secondary oscillator for harmonies/drones
+        this.osc3 = null; // Tertiary oscillator for additional voice
         this.envelope = null;
         this.envelope2 = null;
+        this.envelope3 = null;
         this.reverb = null;
         this.filter = null;
         this.masterGain = null;
@@ -36,9 +38,12 @@ class StationMusicManager {
         // Melody state
         this.melody = [];        // Main melodic phrase (composed, not random)
         this.harmony = [];       // Secondary harmony notes
+        this.harmony2 = [];      // Tertiary harmony notes
         this.noteIndex = 0;
         this.phraseIndex = 0;    // Track which phrase variation we're on
         this.lastNoteTime = 0;   // Timestamp of last played note
+
+        this.lastHarmony2Freq = 0;
 
         this.stopTimeout = null; // Track pending stop timeout
         this.noteInterval = 500; // ms between notes (default)
@@ -109,6 +114,10 @@ class StationMusicManager {
                     [0, 0, 7, 0],                    // Strong repeated tonic with octave
                 ],
                 harmonyInterval: 12, // Octave doubling for solidity
+                // Add an upper fifth voice to create triadic spread
+                harmonyInterval2: -7,
+                osc3Type: 'sawtooth',
+                envelope3Range: 0.6,
                 noteInterval: 360,   // March tempo that's musical and clear
                 filterFreq: 1700,    // Warm but defined
                 filterRes: 1.8,      // Mild resonance
@@ -173,28 +182,32 @@ class StationMusicManager {
                 volumeMultiplier: 1.1,
             },
 
-            // Mining: Ambient doom - ultra-low drones, cavernous, crushing
+            // Mining: Reworked - more active, higher low-end and rhythmic
             mining: {
-                baseNote: 28, // E1 - very low
-                scale: [0, 3, 5, 7, 10], // Minor pentatonic
+                baseNote: 40, // E2 - audible low-mid register
+                scale: [0, 2, 3, 5, 7, 10], // Minor with step for melodic motion
                 motifs: [
-                    [0, null, 7, null, 5, null, 0],    // Sparse with rests
-                    [0, null, null, 5, null, 3, 0],   // Echoing depths
-                    [7, null, 5, null, 0, null, -5],  // Descending shaft
-                    [0, 5, null, 7, null, 5, 0, null], // Dripping echoes
+                    [0, 0, null, 5, 7, null],        // Repeating pulse with resolve
+                    [0, 3, 5, null, 5, 3],           // Short rising phrase
+                    [7, null, 5, 3, 0, null],        // Anchored return
+                    [0, 5, 7, 5, null, 0],           // Drifting motif with bounce
                 ],
-                harmonyInterval: 12, // Octave below (rumble)
-                noteInterval: 833,   // Very slow, cavernous (was 50 frames)
-                filterFreq: 600,     // Very dark
-                filterRes: 2.0,      // Warm dark resonance
-                attackTime: 0.08,
-                releaseTime: 1.2,    // Long echo tail
-                oscType: 'triangle', // Default soft oscillator
-                osc2Type: 'sine',
-                detune: 3,           // Slight detuning
-                noteGlide: 0.1,      // Some glide for drones
-                reverbDecay: 2.0,    // Cavernous
-                dynamicRange: 0.1,   // Subtle dynamics
+                harmonyInterval: 12, // Octave below to keep body
+                // tertiary drone but not too deep (adds mid-low color)
+                harmonyInterval2: 19,
+                osc3Type: 'sine',
+                envelope3Range: 0.6,
+                noteInterval: 360,   // Faster so phrases feel active
+                filterFreq: 1100,    // Open mids for presence
+                filterRes: 2.6,      // Slight character
+                attackTime: 0.04,
+                releaseTime: 0.7,    // Shorter tail so texture isn't smothering
+                oscType: 'triangle', // Rounded main voice
+                osc2Type: 'sawtooth', // Adds harmonic body
+                detune: 6,           // Some width
+                noteGlide: 0.06,     // Gentle smoothing for drones
+                reverbDecay: 1.4,    // Less cavernous, more room-like
+                dynamicRange: 0.18,  // More expressive
             },
 
             // Tourism: Bright, welcoming, major arpeggios
@@ -448,6 +461,11 @@ class StationMusicManager {
             this.envelope2.setADSR(0.3, 0.2, 0.6, 0.8);
             this.envelope2.setRange(0.4, 0);
 
+            // Create tertiary envelope for additional voice/harmony
+            this.envelope3 = new p5.Envelope();
+            this.envelope3.setADSR(0.25, 0.2, 0.6, 1.2);
+            this.envelope3.setRange(0.5, 0);
+
             // Create low-pass filter to soften the sound
             this.filter = new p5.LowPass();
             this.filter.freq(2000);
@@ -458,6 +476,11 @@ class StationMusicManager {
             this.osc.connect(this.filter);
             this.osc2.disconnect();
             this.osc2.connect(this.filter);
+            // Connect tertiary oscillator if present
+            if (this.osc3) {
+                try { this.osc3.disconnect(); } catch (e) { }
+                try { this.osc3.connect(this.filter); } catch (e) { }
+            }
 
             // Master gain controls overall station music loudness (including reverb)
             this.masterGain = new p5.Gain();
@@ -530,6 +553,23 @@ class StationMusicManager {
                 console.warn('StationMusicManager: Error switching osc2 type:', e);
             }
         }
+
+        // Tertiary oscillator
+        const osc3Type = this.theme.osc3Type || null;
+        if (!this.isPlaying && osc3Type) {
+            try {
+                if (this.osc3) {
+                    try { this.osc3.stop(); } catch (e) { /* may already be stopped */ }
+                    try { this.osc3.disconnect(); } catch (e) { /* ignore */ }
+                }
+                this.osc3 = this.createOscillator(osc3Type);
+                this.osc3.disconnect();
+                this.osc3.connect(this.filter);
+                this.currentOsc3Type = osc3Type;
+            } catch (e) {
+                console.warn('StationMusicManager: Error switching osc3 type:', e);
+            }
+        }
     }
 
     /**
@@ -587,6 +627,21 @@ class StationMusicManager {
                 }
             }
 
+            // Configure tertiary envelope if theme requests it
+            if (this.envelope3) {
+                try {
+                    this.envelope3.setADSR(
+                        this.theme.attackTime * 1.5,
+                        0.2,
+                        0.6,
+                        this.theme.releaseTime * 1.6
+                    );
+                    if (typeof this.theme.envelope3Range === 'number') {
+                        try { this.envelope3.setRange(this.theme.envelope3Range, 0); } catch (e) { }
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
             // Update reverb decay if theme specifies
             if (this.reverb && this.theme.reverbDecay) {
                 try {
@@ -599,6 +654,7 @@ class StationMusicManager {
         // Build the full melody by selecting and combining motifs
         this.melody = [];
         this.harmony = [];
+        this.harmony2 = [];
 
         // Select 2-3 motifs and combine them into a longer phrase
         const numMotifs = 2 + Math.floor(Math.random() * 2);
@@ -620,6 +676,7 @@ class StationMusicManager {
                     // Rest - represented as null in melody
                     this.melody.push(null);
                     this.harmony.push(null);
+                    this.harmony2.push(null);
                 } else {
                     // Convert scale degree to actual note
                     const midiNote = this.scaleToMidi(degree, this.theme.baseNote, this.theme.scale);
@@ -628,6 +685,12 @@ class StationMusicManager {
                     // Add harmony note (interval below the melody)
                     const harmonyNote = midiNote - this.theme.harmonyInterval;
                     this.harmony.push(harmonyNote);
+                    // Add optional tertiary harmony (if theme defines an interval)
+                    if (typeof this.theme.harmonyInterval2 === 'number') {
+                        this.harmony2.push(midiNote - this.theme.harmonyInterval2);
+                    } else {
+                        this.harmony2.push(null);
+                    }
                 }
             }
 
@@ -719,6 +782,7 @@ class StationMusicManager {
         try {
             this.osc.start();
             this.osc2.start();
+            if (this.osc3) try { this.osc3.start(); } catch (e) { }
             this.isPlaying = true;
             // Apply theme volume multiplier if present so certain themes (e.g. refinery)
             // can be louder to remain audible.
@@ -770,6 +834,9 @@ class StationMusicManager {
                 }
                 if (this.osc2) {
                     this.osc2.stop();
+                }
+                if (this.osc3) {
+                    try { this.osc3.stop(); } catch (e) { }
                 }
                 this.stopTimeout = null;
             } catch (e) {
@@ -870,6 +937,25 @@ class StationMusicManager {
                 this.envelope2.play(this.osc2, 0, 0.1);
             }
 
+            // Play tertiary harmony if available
+            const harmony2Note = (this.harmony2 && this.harmony2.length > 0) ? this.harmony2[this.noteIndex] : null;
+            if (this.osc3 && this.envelope3 && harmony2Note !== null) {
+                let harmony2Freq = this.midiToFreq(harmony2Note);
+                // Optionally apply detune for richness
+                const detune2 = (this.theme && this.theme.detune) ? this.theme.detune : 0;
+                if (detune2 > 0) {
+                    const detuneRatio2 = Math.pow(2, detune2 / 1200);
+                    harmony2Freq *= detuneRatio2;
+                }
+                if (glideTime > 0 && this.lastHarmony2Freq > 0) {
+                    this.osc3.freq(harmony2Freq, glideTime);
+                } else {
+                    this.osc3.freq(harmony2Freq);
+                }
+                this.lastHarmony2Freq = harmony2Freq;
+                this.envelope3.play(this.osc3, 0, 0.12);
+            }
+
             // Advance to next note
             this.noteIndex = (this.noteIndex + 1) % this.melody.length;
 
@@ -943,6 +1029,11 @@ class StationMusicManager {
                 try { this.osc2.stop(); } catch (_) { }
                 this.osc2.disconnect();
                 this.osc2 = null;
+            }
+            if (this.osc3) {
+                try { this.osc3.stop(); } catch (_) { }
+                try { this.osc3.disconnect(); } catch (_) { }
+                this.osc3 = null;
             }
             if (this.filter) {
                 this.filter.disconnect();
