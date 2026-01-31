@@ -407,6 +407,7 @@ class SurfaceMode {
         this.transitionStartTime = millis();
         this.transitionProgress = 0;
         this._terrainReady = false; // Flag for deferred initialization
+        this._terrainRequested = false;
         this.isLanded = false;
 
         // Mute space ambient sounds
@@ -635,17 +636,18 @@ class SurfaceMode {
             const focusX = this.surfaceX - visualXOffset;
             const focusY = this.surfaceY - visualYOffset; // Corrected: ship center is focal point
 
-            // Update terrain - regenerate if player moved to new grid cell
-            if (this.terrain.generateMesh(focusX, focusY)) {
-                // Force buffer update when mesh regenerates (player moved to new grid cell)
-                // Pass sunAngle to ensure lighting matches logic.
-                const sunAngle = this._getSunAngle();
-                this.terrain.updateBuffer(this.altitude, width, height, true, sunAngle);
-                this._spawnObjects(this.terrain.getGridPosition().x, this.terrain.getGridPosition().y);
-            } else {
-                // Conditionally update buffer based on altitude change (skip if stable)
-                const sunAngle = this._getSunAngle();
-                this.terrain.updateBuffer(this.altitude, width, height, false, sunAngle);
+            // Update terrain - worker handles mesh generation and buffer swapping
+            // Pass sunAngle to ensure consistent lighting
+            const sunAngle = this._getSunAngle();
+            const bufferSwapped = this.terrain.update(focusX, focusY, false, sunAngle);
+
+            if (bufferSwapped) {
+                // If buffer swapped, we might want to respawn objects relative to the new grid center
+                // But objects are world-space persistent. We only need to spawn new ones if we moved far enough.
+                // The terrain update handles the grid shift.
+                const gridPos = this.terrain.getGridPosition();
+                // Optimize: only respawn if grid significantly changed or it's a fresh load
+                this._spawnObjects(gridPos.x, gridPos.y);
             }
 
             // Update surface objects (single pass, dt-corrected)
@@ -708,7 +710,7 @@ class SurfaceMode {
 
         // During ENTERING phase, perform deferred terrain initialization immediately
         // This runs during the fade so the user sees the transition animation
-        if (this.state === SURFACE_STATE.ENTERING && !this._terrainReady) {
+        if (this.state === SURFACE_STATE.ENTERING && !this._terrainRequested) {
             // Smarter Regeneration: Center mesh and spawns on the camera focus point
             const extrusionAngle = this._getExtrusionAngle();
             const visualXOffset = this.altitude * Math.sin(extrusionAngle);
@@ -717,12 +719,38 @@ class SurfaceMode {
             const focusX = this.surfaceX - visualXOffset;
             const focusY = this.surfaceY - visualYOffset; // Corrected: ship center is focal point
 
-            // Generate terrain mesh and buffer - this takes ~50-100ms
-            if (this.terrain.generateMesh(focusX, focusY, true)) {
-                this.terrain.updateBuffer(this.altitude, width, height, false, this._getSunAngle());
-                this._spawnObjects(this.terrain.getGridPosition().x, this.terrain.getGridPosition().y);
+            // Generate terrain mesh and buffer - asynchronously request from worker
+            // We force a request here
+            this.terrain.update(focusX, focusY, true, this._getSunAngle());
+            this._terrainRequested = true;
+            this._terrainReady = false;
+        }
+
+        // Check if terrain has received its first buffer
+        if (this.state === SURFACE_STATE.ENTERING && this._terrainRequested && !this._terrainReady) {
+            // We need to allow the terrain to "poll" for the worker response
+            // The terrain.update() call in the main loop handles data retrieval, but it might not run during transition 
+            // if we are strictly in this function.
+            // However, update() calls _updateTransition(), so we are inside the main loop.
+            // But we need to call terrain.update() to actually check for the message!
+
+            // NOTE: The main update() loop DOES NOT call terrain.update() if state is ENTERING.
+            // It only calls _updateTransition().
+            // So we must manually poll terrain.update() here to receive the worker message.
+            const extrusionAngle = this._getExtrusionAngle();
+            const visualXOffset = this.altitude * Math.sin(extrusionAngle);
+            const visualYOffset = this.altitude * Math.cos(extrusionAngle);
+            const focusX = this.surfaceX - visualXOffset;
+            const focusY = this.surfaceY - visualYOffset;
+
+            this.terrain.update(focusX, focusY, false, this._getSunAngle());
+
+            if (this.terrain.currentBuffer) {
+                this._terrainReady = true;
+                // Spawn initial objects once we have the grid
+                const gridPos = this.terrain.getGridPosition();
+                this._spawnObjects(gridPos.x, gridPos.y);
             }
-            this._terrainReady = true;
         }
 
         // Only transition to ACTIVE when BOTH fade is complete AND terrain is ready
