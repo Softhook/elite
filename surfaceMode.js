@@ -2260,7 +2260,7 @@ class SurfaceMode {
         const compassX = width - compassSize / 2 - compassMargin;
         const compassY = height - compassSize / 2 - compassMargin;
         const compassRadius = compassSize / 2 - 20; // Slightly smaller for labels
-        const markerMaxRadius = compassRadius - 20; // Max distance for markers
+        const markerMaxRadius = compassRadius - 5; // Max distance for markers - moved closer to edge
 
         push();
         translate(compassX, compassY);
@@ -2348,20 +2348,41 @@ class SurfaceMode {
             }
         }
 
-        // 2. Local Tactical Markers (Compass)
+        // 2. Persistent Player-Built Infrastructure (Compass)
+        // Draw from planet's persistent list so they clamp/persist even when far away
+        if (this.planet && Array.isArray(this.planet.playerBuiltSurfaceObjects)) {
+            for (const desc of this.planet.playerBuiltSurfaceObjects) {
+                if (desc.destroyed) continue;
+                const dx = desc.x - this.player.pos.x;
+                const dy = desc.y - this.player.pos.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx);
+                const markerDist = map(dist, 0, 3000, 0, markerMaxRadius, true);
+
+                push();
+                rotate(angle);
+                noStroke();
+                fill(0, 255, 100, 220); // Green dot for infrastructure
+                ellipse(markerDist, 0, 4, 4);
+                pop();
+            }
+        }
+
+        // 3. Local Tactical Markers (Compass)
         for (const obj of this.surfaceObjects) {
             if (obj.destroyed) continue;
 
-            // Only show relevant tactical targets
             // Check for SurfaceStation, ShieldGenerator, Turret, DefenseDrone, and SecretCache
             const isStation = (obj.constructor && obj.constructor.name === 'SurfaceStation');
-            const isShieldGen = (obj.constructor && obj.constructor.name === 'ShieldGenerator') || obj.isTarget;
             const isTurret = (obj.constructor && obj.constructor.name === 'Turret');
             const isDrone = (obj.constructor && obj.constructor.name === 'DefenseDrone');
             const isCache = obj.isCache === true;
+            const isPlayerBuilt = obj.playerBuilt === true;
 
-            if (!isStation && !isShieldGen && !isTurret && !isDrone && !isCache) continue;
-            if (isShieldGen) continue; // Handled by persistent waypoint above
+            // Skip types already handled by persistent loops (Mission Waypoint & Infrastructure)
+            if (isPlayerBuilt) continue;
+
+            if (!isStation && !isTurret && !isDrone && !isCache) continue;
 
             const dx = obj.pos.x - this.player.pos.x;
             const dy = obj.pos.y - this.player.pos.y;
@@ -2387,11 +2408,6 @@ class SurfaceMode {
                 // Surface Stations - Blue, slightly larger
                 fill(50, 150, 255, 220);
                 ellipse(markerDist, 0, 7, 7);
-            } else if (isShieldGen) {
-                // Main Target (Shield Generator) - Red, larger, pulsing
-                const pulse = (Math.sin(millis() * 0.01) + 1) * 0.5;
-                fill(255, 0, 0, 200 + pulse * 55);
-                ellipse(markerDist, 0, 8 + pulse * 2, 8 + pulse * 2);
             } else if (isTurret) {
                 // Turrets - Orange, smaller
                 fill(255, 150, 0, 200);
@@ -2402,13 +2418,8 @@ class SurfaceMode {
                 ellipse(markerDist, 0, 4, 4);
             } else if (isCache) {
                 // Secret Caches - Green
-                // Discovery mode: Clamp to edge if far, show actual position if close (within tracking range)
                 fill(50, 255, 100, 220);
-                if (dist > 3000) {
-                    ellipse(markerMaxRadius, 0, 6, 6); // Clamped to edge
-                } else {
-                    ellipse(markerDist, 0, 6, 6); // Moving towards center
-                }
+                ellipse(markerDist, 0, 6, 6);
             }
             pop();
         }
