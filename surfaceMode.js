@@ -2194,9 +2194,9 @@ class SurfaceMode {
     handleKeyDown(keyCode, key) {
         if (this.state !== SURFACE_STATE.ACTIVE) return false;
 
-        // Altitude controls (T/G)
-        if (key === 't' || key === 'T') { this.altitudeInput = 1; return true; }
-        if (key === 'g' || key === 'G') { this.altitudeInput = -1; return true; }
+        // Altitude controls (Z/X)
+        if (key === 'z' || key === 'Z') { this.altitudeInput = 1; return true; }
+        if (key === 'x' || key === 'X') { this.altitudeInput = -1; return true; }
 
         // Debug mode toggle removed - set this.debugMode = true in code if needed for debugging
 
@@ -2219,7 +2219,7 @@ class SurfaceMode {
     handleKeyUp(keyCode, key) {
         if (this.state !== SURFACE_STATE.ACTIVE) return false;
 
-        if (key === 't' || key === 'T' || key === 'g' || key === 'G') {
+        if (key === 'z' || key === 'Z' || key === 'x' || key === 'X') {
             this.altitudeInput = 0; return true;
         }
 

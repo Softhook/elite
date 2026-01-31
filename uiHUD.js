@@ -680,11 +680,11 @@ class UIHUD {
                 displayText = `Autopilot Engaged: ${targetLabel} ${hint}`;
                 // Append descent hint if available
                 if (canDescendToPlanet) {
-                    displayText += `   [PRESS G TO DESCEND]`;
+                    displayText += `   [PRESS X TO DESCEND]`;
                 }
             } else {
                 // Autopilot OFF, but Descent POSSIBLE
-                displayText = `Orbiting - [PRESS G TO DESCEND]`;
+                displayText = `Orbiting - [PRESS X TO DESCEND]`;
             }
 
             const autopilotY = 45 + 24 + 5;
@@ -852,12 +852,12 @@ class UIHUD {
         const sectionSpacing = 8;
         const autopilotOffset = player?.autopilotEnabled ? 35 : 0;
         const panelX = width - panelWidth - 20;
-        
+
         // In surface mode, position panel above the altitude bar
         // Altitude bar spans from (height/2 - 100) to (height/2 + 100), so we use height/2 - 120 for clearance
         // Otherwise use normal position
         const isSurfaceMode = (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive());
-        const panelY = isSurfaceMode ? 
+        const panelY = isSurfaceMode ?
             Math.min(80 + autopilotOffset, height / 2 - 120) : // Position with 20px clearance above altitude bar
             80 + autopilotOffset; // Normal position in space
 

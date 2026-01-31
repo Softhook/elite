@@ -552,7 +552,7 @@ function handleSingleKeyActions() {
             return handleMinimapZoomOut();
         case 'c':
             return handleCloakActivation();
-        case 'g':
+        case 'x':
             return handleSurfaceDescent();
     }
     return false;

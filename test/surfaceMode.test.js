@@ -771,21 +771,21 @@ describe('SurfaceMode Input Handling', () => {
         sm.state = SURFACE_STATE.ACTIVE;
     });
 
-    test('handleKeyDown T sets altitude input to 1 (ascend)', () => {
-        const result = sm.handleKeyDown(84, 't');
+    test('handleKeyDown Z sets altitude input to 1 (ascend)', () => {
+        const result = sm.handleKeyDown(90, 'z');
         expect(result).toBe(true);
         expect(sm.altitudeInput).toBe(1);
     });
 
-    test('handleKeyDown G sets altitude input to -1 (descend)', () => {
-        const result = sm.handleKeyDown(71, 'g');
+    test('handleKeyDown X sets altitude input to -1 (descend)', () => {
+        const result = sm.handleKeyDown(88, 'x');
         expect(result).toBe(true);
         expect(sm.altitudeInput).toBe(-1);
     });
 
     test('handleKeyUp clears altitude input', () => {
         sm.altitudeInput = 1;
-        const result = sm.handleKeyUp(84, 't');
+        const result = sm.handleKeyUp(90, 'z');
         expect(result).toBe(true);
         expect(sm.altitudeInput).toBe(0);
     });

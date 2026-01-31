@@ -95,7 +95,7 @@ class SurfaceHUD {
         const textSizeToUse = (typeof STATION_TEXT_SIZE !== 'undefined') ? STATION_TEXT_SIZE.BODY : 12;
         textSize(textSizeToUse);
         fill(255, 255, 100);
-        text("[T] Ascend [G] Descend", width / 2, hintY + 10);
+        text("[Z] Ascend [X] Descend", width / 2, hintY + 10);
     }
 
     /**
