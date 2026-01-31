@@ -1430,7 +1430,15 @@ class WeaponSystem {
 
             // Surface mode filter: pass isSurface flag so explosions render in surface mode
             const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
-            system.addExplosion(hitPoint.x, hitPoint.y, hitSize, hitColor, inSurfaceMode);
+
+            if (inSurfaceMode && typeof surfaceMode._createSurfaceExplosion === 'function') {
+                // Pass world coordinates and target altitude to the specialized surface explosion creator
+                const altitude = (target && target.altitude !== undefined) ? target.altitude : (target && target.yOffset ? target.yOffset : 0);
+                surfaceMode._createSurfaceExplosion(hitPoint.x, hitPoint.y, altitude, hitSize, hitColor);
+            } else if (system.addExplosion) {
+                // Fallback for space mode or if surfaceMode helper is missing
+                system.addExplosion(hitPoint.x, hitPoint.y, hitSize, hitColor, inSurfaceMode);
+            }
         }
     }
 

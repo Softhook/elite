@@ -6,7 +6,7 @@
  * Constants for surface object rendering
  */
 const SURFACE_RENDER_CONSTANTS = {
-    EXTRUSION_ANGLE: 0.15,
+    EXTRUSION_ANGLE: 0,
     DEFAULT_SUN_ANGLE: -Math.PI / 4
 };
 
@@ -72,7 +72,7 @@ function createBuildingConfig(x, y, size, seed, style) {
     const variant = calculateVariant(seed, style.variantSeedMultiplier, style.variantCount);
     const height = calculateHeight(size, seed, style.heightMultiplier[0], style.heightMultiplier[1]);
     const colors = initializeBuildingColors(style.colors);
-    
+
     return {
         x,
         y,

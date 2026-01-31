@@ -60,7 +60,7 @@ class Explosion {
         // Play sound via the manager, passing position and listener
         // Ensure 'player' global object is accessible
         if (!this.silent && soundManager && player?.pos) {
-            soundManager.playExplosion(this.size, this.pos.x, this.pos.y, player.pos, this);
+            soundManager.playExplosion(this.size, this.pos.x, this.pos.y, player.pos, this, this.altitude);
         }
     }
 
@@ -220,34 +220,60 @@ class Explosion {
         }
     }
 
-    draw() {
+    /**
+     * Draw the explosion
+     * @param {number} x - Optional override x (default: this.pos.x)
+     * @param {number} y - Optional override y (default: this.pos.y)
+     * @param {number} sunAngle - Optional sun angle (NOT USED by basic explosions)
+     * @param {number} counterScale - Optional scale multiplier (default: 1.0)
+     */
+    draw(x, y, sunAngle, counterScale = 1.0) {
+        const drawX = (x !== undefined) ? x : this.pos.x;
+        const drawY = (y !== undefined) ? y : this.pos.y;
+
+        // Apply visual altitude offset for surface mode
+        let finalX = drawX;
+        let finalY = drawY;
+
+        if (this.isSurface) {
+            const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : 0.5;
+
+            const alt = this.altitude || 0;
+
+            finalX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(drawX, alt)
+                : drawX - alt * Math.sin(extrusionAngle);
+
+            finalY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(drawY, alt)
+                : drawY - alt * Math.cos(extrusionAngle);
+        }
+
         push();
         blendMode(ADD); // Makes overlapping particles brighter
         noStroke();
 
-        // Calculate visual Y offset for surface mode
-        let visualYOffset = 0;
-        if (this.isSurface) {
-            const extrusionAngle = 0.5;
-            // The position 'y' is the world ground Y.
-            // If altitude is provided, use it (e.g. for mid-air explosions).
-            // Default to 0 for ground-level explosions (which will still be offset by terrain height if y incorporates it).
-            visualYOffset = (this.altitude || 0) * Math.cos(extrusionAngle);
-        }
-
         // Draw initial flash
         if (this.currentFrame < 10) {
             const flashOpacity = map(this.currentFrame, 0, 10, 150, 0);
-            const flashSize = this.size * map(this.currentFrame, 0, 10, 1.0, 2.0);
+            const flashSize = (this.size * counterScale) * map(this.currentFrame, 0, 10, 1.0, 2.0);
             fill(255, 255, 200, flashOpacity);
-            ellipse(this.pos.x, this.pos.y - visualYOffset, flashSize, flashSize);
+            ellipse(finalX, finalY, flashSize, flashSize);
         }
 
         // Draw particles
         for (let i = 0, len = this.particles.length; i < len; i++) {
             const p = this.particles[i];
+            const pSize = p.size * counterScale;
+            // Particles store absolute positions. When drawing, we offset relative to the base position.
+            // This ensures counter-scaling and projected drawing works correctly.
+            const px = p.pos.x + (finalX - this.pos.x);
+            const py = p.pos.y + (finalY - this.pos.y);
+
             fill(p.color[0], p.color[1], p.color[2], p.opacity);
-            ellipse(p.pos.x, p.pos.y - visualYOffset, p.size, p.size);
+            ellipse(px, py, pSize, pSize);
         }
 
         // Reset blend mode for debris
@@ -256,9 +282,14 @@ class Explosion {
         // Draw debris
         for (let i = 0, len = this.debris.length; i < len; i++) {
             const d = this.debris[i];
+            const dx = d.pos.x + (finalX - this.pos.x);
+            const dy = d.pos.y + (finalY - this.pos.y);
+            const dSize = d.size * counterScale;
+
             push();
-            translate(d.pos.x, d.pos.y - visualYOffset);
+            translate(dx, dy);
             rotate(d.rotation % TWO_PI); // Normalize rotation angle
+            scale(counterScale);
             fill(d.color[0], d.color[1], d.color[2], d.opacity);
             stroke(0, min(d.opacity, 100));
             strokeWeight(1);

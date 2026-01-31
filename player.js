@@ -2057,38 +2057,32 @@ class Player {
                 // Surface mode filter: check if we're in surface mode for proper explosion rendering
                 const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
 
-                // Main large explosion
-                this.currentSystem.addExplosion(
-                    this.pos.x,
-                    this.pos.y,
-                    this.size * 3, // Larger explosion
-                    [100, 150, 255], // Blueish-white core
-                    inSurfaceMode, // Mark as surface explosion if in surface mode
-                    false, // silent
-                    inSurfaceMode ? (this.altitude || 0) : 0 // altitude
-                );
+                if (inSurfaceMode && typeof surfaceMode._createSurfaceExplosion === 'function') {
+                    // Use centralized surface mode API for projection
+                    surfaceMode._createSurfaceExplosion(this.pos.x, this.pos.y, this.altitude || 0, this.size * 3, [100, 150, 255]);
+                } else {
+                    // Space mode or fallback
+                    this.currentSystem.addExplosion(this.pos.x, this.pos.y, this.size * 3, [100, 150, 255]);
+                }
 
                 // Create cascading secondary explosions
                 for (let i = 0; i < 12; i++) { // More secondary explosions
                     setTimeout(() => {
                         // Check if currentSystem still exists when timeout runs
                         if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
-                            // Random offset explosions around ship
-                            this.currentSystem.addExplosion(
-                                this.pos.x + random(-this.size * 1.2, this.size * 1.2),
-                                this.pos.y + random(-this.size * 1.2, this.size * 1.2),
-                                this.size * random(0.7, 1.5), // Varied sizes
-                                [
-                                    random(100, 200), // Random blue tint
-                                    random(150, 255),
-                                    random(200, 255)
-                                ],
-                                inSurfaceMode, // Mark as surface explosion if in surface mode
-                                false, // silent
-                                inSurfaceMode ? (this.altitude || 0) : 0 // altitude
-                            );
+                            const offX = random(-this.size * 1.2, this.size * 1.2);
+                            const offY = random(-this.size * 1.2, this.size * 1.2);
+                            const sz = this.size * random(0.7, 1.5);
+                            const col = [random(100, 200), random(150, 255), random(200, 255)];
+
+                            if (inSurfaceMode && typeof surfaceMode._createSurfaceExplosion === 'function') {
+                                // Add random offsets in world space, the API will project them
+                                surfaceMode._createSurfaceExplosion(this.pos.x + offX, this.pos.y + offY, this.altitude || 0, sz, col);
+                            } else {
+                                this.currentSystem.addExplosion(this.pos.x + offX, this.pos.y + offY, sz, col);
+                            }
                         }
-                    }, i * 120); // Staggered timing for cascade effect (total duration ~1.4 seconds)
+                    }, i * (1000 / 12)); // Spread over 1 second
                 }
 
                 // Delay GAME_OVER state change until after the explosion cascade
@@ -2992,8 +2986,8 @@ class Player {
         if (!surfaceMode || !surfaceMode.surfaceObjects) return null;
 
         // Get perspective scale and extrusion angle from surfaceMode
-        const perspectiveScale = (typeof surfaceMode._getPerspectiveScale === 'function') 
-            ? surfaceMode._getPerspectiveScale() 
+        const perspectiveScale = (typeof surfaceMode._getPerspectiveScale === 'function')
+            ? surfaceMode._getPerspectiveScale()
             : 1.0;
         const extrusionAngle = (typeof surfaceMode._getExtrusionAngle === 'function')
             ? surfaceMode._getExtrusionAngle()
@@ -3001,8 +2995,8 @@ class Player {
 
         // Get active entity (ship or astronaut) and its altitude (matching camera logic)
         const activeEntity = (surfaceMode.controlMode === 'SHIP') ? this : surfaceMode.astronaut;
-        const activeAlt = (activeEntity && activeEntity.altitude !== undefined) 
-            ? activeEntity.altitude 
+        const activeAlt = (activeEntity && activeEntity.altitude !== undefined)
+            ? activeEntity.altitude
             : surfaceMode.altitude;
         const visualYOffset = activeAlt * Math.cos(extrusionAngle);
 

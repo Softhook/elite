@@ -138,19 +138,22 @@ class Astronaut {
         const sz = this.size;
 
         // Use surfaceMode helpers if present for consistent projection
+        // Use surfaceMode helpers for total visual projection (X and Y shifts)
         const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
             ? surfaceMode._getExtrusionAngle()
             : 0.5;
 
-        const toVisualY = (worldY, alt) => {
-            if (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY) return surfaceMode._toVisualY(worldY, alt);
-            return worldY - (alt * Math.cos(extrusionAngle));
-        };
+        // Visual base (on ground) - includes horizontal slant from altitude
+        const visualX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+            ? surfaceMode._toVisualX(x, this.altitude || 0)
+            : x - ((this.altitude || 0) * Math.sin(extrusionAngle));
 
-        // Visual base (on ground) and small bob when walking
-        const groundVisualY = toVisualY(y, this.altitude || 0);
+        const visualY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+            ? surfaceMode._toVisualY(y, this.altitude || 0)
+            : y - ((this.altitude || 0) * Math.cos(extrusionAngle));
+
         const bob = Math.sin(this.walkCycle) * 2;
-        const baseY = groundVisualY + bob;
+        const baseY = visualY + bob;
 
         // Lighting: approximate diffuse based on sun angle (2D projection)
         const sunDirX = Math.cos(sunAngle);
@@ -161,38 +164,46 @@ class Astronaut {
         const suitShade = color(120 * light, 120 * light, 130 * light);
         const visor = color(255 * (0.6 + 0.4 * light), 200 * (0.6 + 0.4 * light), 80 * (0.6 + 0.4 * light));
 
-        // Torso (extruded box) - drawBox3D expects top position, so compute top Y
+        // Torso (extruded box) - drawBox3D expects top position
+        // We calculate the top in pseudo-3D space by shifting the base backwards by height
         const torsoH = this.height * 0.6;
+        const torsoTopX = visualX - torsoH * Math.sin(extrusionAngle);
         const torsoTopY = baseY - torsoH * Math.cos(extrusionAngle);
-        Draw3D.drawBox3D(x, torsoTopY, sz * 0.9, sz * 0.6, torsoH, suitBase, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(torsoTopX, torsoTopY, sz * 0.9, sz * 0.6, torsoH, suitBase, extrusionAngle, sunAngle);
 
         // Backpack - behind torso
         const backOffsetX = -Math.cos(this.facingAngle) * sz * 0.35;
-        const backX = x + backOffsetX;
-        const backTopY = torsoTopY - (torsoH * 0.15);
+        const backX = visualX + backOffsetX - (torsoH * 0.15) * Math.sin(extrusionAngle); // Adjust for backpack height
+        const backTopY = torsoTopY - (torsoH * 0.15) * Math.cos(extrusionAngle);
         Draw3D.drawBox3D(backX, backTopY, sz * 0.45, sz * 0.5, torsoH * 0.6, suitShade, extrusionAngle, sunAngle);
 
-        // Legs - two extruded boxes; position relative to base
+        // Legs - positioned relative to the projected base
         const legH = this.height * 0.5;
         const legYOffset = sz * 0.2;
-        const leftLegX = x - legYOffset;
-        const rightLegX = x + legYOffset;
-        const legTopY = baseY - legH * Math.cos(extrusionAngle);
-        Draw3D.drawBox3D(leftLegX, legTopY, sz * 0.25, sz * 0.45, legH, suitBase, extrusionAngle, sunAngle);
-        Draw3D.drawBox3D(rightLegX, legTopY, sz * 0.25, sz * 0.45, legH, suitBase, extrusionAngle, sunAngle);
+        const leftLegBaseX = visualX - legYOffset;
+        const rightLegBaseX = visualX + legYOffset;
+
+        // Leg tops are shifted backwards from their bases
+        const legTopX_L = leftLegBaseX - legH * Math.sin(extrusionAngle);
+        const legTopY_L = baseY - legH * Math.cos(extrusionAngle);
+        const legTopX_R = rightLegBaseX - legH * Math.sin(extrusionAngle);
+        const legTopY_R = baseY - legH * Math.cos(extrusionAngle);
+
+        Draw3D.drawBox3D(legTopX_L, legTopY_L, sz * 0.25, sz * 0.45, legH, suitBase, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(legTopX_R, legTopY_R, sz * 0.25, sz * 0.45, legH, suitBase, extrusionAngle, sunAngle);
 
         // Arms - small boxes rotated slightly by facing angle
         const armLen = sz * 0.7;
         const armW = sz * 0.18;
         // Left arm
         push();
-        translate(x - sz * 0.45, torsoTopY + sz * 0.05);
+        translate(torsoTopX - sz * 0.45, torsoTopY + sz * 0.05);
         rotate(this.facingAngle * 0.2);
         Draw3D.drawBox3D(0, 0 - (armLen * Math.cos(extrusionAngle) * 0.5), armW, armLen, armW, suitBase, extrusionAngle, sunAngle);
         pop();
         // Right arm
         push();
-        translate(x + sz * 0.45, torsoTopY + sz * 0.05);
+        translate(torsoTopX + sz * 0.45, torsoTopY + sz * 0.05);
         rotate(-this.facingAngle * 0.2);
         Draw3D.drawBox3D(0, 0 - (armLen * Math.cos(extrusionAngle) * 0.5), armW, armLen, armW, suitBase, extrusionAngle, sunAngle);
         pop();
@@ -200,7 +211,8 @@ class Astronaut {
         // Helmet - dome on top of torso
         const helmetRadius = sz * 0.45;
         const helmetY = torsoTopY - helmetRadius * Math.cos(extrusionAngle) - sz * 0.05;
-        Draw3D.drawDome(x, helmetY, helmetRadius, 8, visor, extrusionAngle, sunAngle);
+        // Use torsoTopX to ensure head aligns with the top of the slanted body
+        Draw3D.drawDome(torsoTopX, helmetY, helmetRadius, 8, visor, extrusionAngle, sunAngle);
 
         // SurfaceMode already draws the ground shadow; avoid duplicate shadow here.
     }
@@ -261,11 +273,15 @@ class Grenade {
             if (this.altitude <= terrainH) {
                 try {
                     if (typeof surfaceMode._createSurfaceExplosion === 'function') {
+                        // Pass world coordinates and impact altitude; the API handles the visual projection
                         surfaceMode._createSurfaceExplosion(this.pos.x, this.pos.y, terrainH, 24, [255, 200, 50]);
                     } else if (this.system && typeof this.system.addExplosion === 'function') {
+                        // Fallback: provide raw coordinates and altitude to the central system
                         this.system.addExplosion(this.pos.x, this.pos.y, 24, [255, 200, 50], true, false, terrainH);
                     }
-                } catch (e) { }
+                } catch (e) {
+                    console.error("Error creating grenade explosion:", e);
+                }
                 this.destroyed = true;
             }
         }
@@ -291,58 +307,60 @@ class Grenade {
         const drawX = (x !== undefined) ? x : this.pos.x;
         const drawY = (y !== undefined) ? y : this.pos.y;
 
-        // Use surfaceMode projection helpers when available
         const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
             ? surfaceMode._getExtrusionAngle()
             : 0.5;
-        const toVisualY = (worldY, alt) => {
-            if (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY) return surfaceMode._toVisualY(worldY, alt);
-            return worldY - (alt * Math.cos(extrusionAngle));
-        };
 
+        // Visual position with full pseudo-3D projection
+        const finalX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+            ? surfaceMode._toVisualX(drawX, this.altitude)
+            : drawX - (this.altitude * Math.sin(extrusionAngle));
+
+        const finalY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+            ? surfaceMode._toVisualY(drawY, this.altitude)
+            : drawY - (this.altitude * Math.cos(extrusionAngle));
+
+        // Draw shadow on ground
         const terrainH = (typeof surfaceMode !== 'undefined' && surfaceMode && typeof surfaceMode._getTerrainHeightAt === 'function')
-            ? surfaceMode._getTerrainHeightAt(drawX, drawY)
-            : 0;
+            ? surfaceMode._getTerrainHeightAt(drawX, drawY) : 0;
+        const groundX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+            ? surfaceMode._toVisualX(drawX, terrainH) : drawX - (terrainH * Math.sin(extrusionAngle));
+        const groundY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+            ? surfaceMode._toVisualY(drawY, terrainH) : drawY - (terrainH * Math.cos(extrusionAngle));
 
-        const groundVisualY = toVisualY(drawY, terrainH);
-        const visualY = toVisualY(drawY, this.altitude || 0);
-
-        // Shadow oriented by sunAngle (small ellipse)
         push();
-        const shadowOffset = 2;
-        const offsetX = Math.cos(sunAngle + Math.PI) * shadowOffset;
-        const offsetY = Math.sin(sunAngle + Math.PI) * shadowOffset;
-        translate(drawX + offsetX, groundVisualY + offsetY);
-        rotate(sunAngle + Math.PI / 2);
         noStroke();
-        fill(0, 0, 0, 100);
-        ellipse(0, 0, this.size * counterScale, this.size * 0.5 * counterScale);
+        fill(0, 100);
+        ellipse(groundX, groundY, this.size * 1.2, this.size * 0.4);
         pop();
 
-        // Draw trailing curved trajectory from stored trail points
-        if (this.trail && this.trail.length > 0) {
-            // Draw a smooth curve through trail points using curveVertex
+        // Draw trail
+        if (this.trail.length > 1) {
+            push();
             noFill();
+            stroke(50, 255, 50, 100);
+            strokeWeight(2 * counterScale);
             beginShape();
-            for (let i = 0; i < this.trail.length; i++) {
-                const t = this.trail[i];
-                const ty = toVisualY(t.y, t.alt || 0);
-                stroke(50, 255, 50, map(i, 0, this.trail.length - 1, 60, 200));
-                strokeWeight((1 + i * 0.1) * counterScale);
-                curveVertex(t.x, ty);
+            for (let p of this.trail) {
+                const tx = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                    ? surfaceMode._toVisualX(p.x, p.alt) : p.x - (p.alt * Math.sin(extrusionAngle));
+                const ty = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                    ? surfaceMode._toVisualY(p.y, p.alt) : p.y - (p.alt * Math.cos(extrusionAngle));
+                vertex(tx, ty);
             }
-            // connect to current position for a smooth tip
-            curveVertex(drawX, visualY);
+            // smooth tip to current position
+            vertex(finalX, finalY);
             endShape();
+            pop();
         }
 
-        // Draw grenade body at visual height
+        // Draw grenade body at visual position
         push();
-        translate(drawX, visualY);
+        translate(finalX, finalY);
         scale(counterScale);
         noStroke();
         fill(this.color);
-        ellipse(0, 0, this.size, this.size);
+        ellipse(0, 0, this.size, this.size * 0.7);
         pop();
     }
 }

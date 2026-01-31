@@ -225,7 +225,12 @@ class Projectile {
             this.destroyed = true;
             if (system && typeof system.addExplosion === 'function') {
                 const col = Array.isArray(this.color) ? this.color : (this.color && this.color.levels) ? [this.color.levels[0], this.color.levels[1], this.color.levels[2]] : [255, 150, 0];
-                system.addExplosion(this.pos.x, this.pos.y, 8, col);
+
+                if (this.isSurface && typeof surfaceMode !== 'undefined' && surfaceMode && typeof surfaceMode._createSurfaceExplosion === 'function') {
+                    surfaceMode._createSurfaceExplosion(this.pos.x, this.pos.y, this.altitude || 0, 8, col);
+                } else {
+                    system.addExplosion(this.pos.x, this.pos.y, 8, col);
+                }
             }
             return;
         }
@@ -237,7 +242,12 @@ class Projectile {
             this.lifespan = 0;
             if (system && typeof system.addExplosion === 'function') {
                 const col = Array.isArray(this.color) ? this.color : (this.color && this.color.levels) ? [this.color.levels[0], this.color.levels[1], this.color.levels[2]] : [255, 150, 0];
-                system.addExplosion(this.pos.x, this.pos.y, 12, col);
+
+                if (this.isSurface && typeof surfaceMode !== 'undefined' && surfaceMode && typeof surfaceMode._createSurfaceExplosion === 'function') {
+                    surfaceMode._createSurfaceExplosion(this.pos.x, this.pos.y, this.altitude || 0, 12, col);
+                } else {
+                    system.addExplosion(this.pos.x, this.pos.y, 12, col);
+                }
             }
         }
     }
@@ -254,16 +264,28 @@ class Projectile {
         const drawY = (y !== undefined) ? y : this.pos.y;
 
         // Apply visual altitude offset for surface projectiles
+        let finalX = drawX;
         let finalY = drawY;
         if (this.isSurface) {
-            const extrusionAngle = 0.5;
-            finalY -= (this.altitude || 0) * Math.cos(extrusionAngle);
+            const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : 0.5;
+
+            const alt = this.altitude || 0;
+
+            finalX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(drawX, alt)
+                : drawX - alt * Math.sin(extrusionAngle);
+
+            finalY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(drawY, alt)
+                : drawY - alt * Math.cos(extrusionAngle);
         }
 
         // Use cached type checks to avoid repeated string comparisons
         if (this._isMissile) {
             push();
-            translate(drawX, finalY);
+            translate(finalX, finalY);
             scale(counterScale);
             rotate(this.vel.heading());
             fill(this.color);
@@ -297,7 +319,7 @@ class Projectile {
             }
         } else if (this._isTangle) {
             push();
-            translate(drawX, finalY);
+            translate(finalX, finalY);
             scale(counterScale);
 
             // Energy field background
@@ -348,21 +370,28 @@ class Projectile {
             const ownerPos = this.owner && this.owner.pos ? this.owner.pos : null;
             if (ownerPos) {
                 let ownerVisualY = ownerPos.y;
+                let ownerVisualX = ownerPos.x;
                 if (this.isSurface) {
-                    const extrusionAngle = 0.5;
                     const ownerAlt = (this.owner.altitude !== undefined) ? this.owner.altitude : (this.owner.yOffset || 0);
-                    ownerVisualY -= ownerAlt * Math.cos(extrusionAngle);
+
+                    ownerVisualX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                        ? surfaceMode._toVisualX(ownerPos.x, ownerAlt)
+                        : ownerPos.x - ownerAlt * Math.sin(extrusionAngle);
+
+                    ownerVisualY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                        ? surfaceMode._toVisualY(ownerPos.y, ownerAlt)
+                        : ownerPos.y - ownerAlt * Math.cos(extrusionAngle);
                 }
-                line(ownerPos.x, ownerVisualY, drawX, finalY);
+                line(ownerVisualX, ownerVisualY, finalX, finalY);
             } else {
                 // Fallback to a short line pointing to the projectile
-                line(drawX - (this.size * 2), finalY, drawX, finalY);
+                line(finalX - (this.size * 2), finalY, finalX, finalY);
             }
             pop();
         } else if (this._isStorm) {
             // Storm projectile: swirling energy orb
             push();
-            translate(drawX, finalY);
+            translate(finalX, finalY);
             scale(counterScale);
             const timeNow = (typeof millis === 'function') ? millis() : Date.now();
             const pulse = 1 + Math.sin(timeNow * 0.01) * 0.2;
@@ -395,7 +424,7 @@ class Projectile {
         } else {
             // Standard projectile drawing
             push();
-            translate(drawX, finalY);
+            translate(finalX, finalY);
             scale(counterScale);
             fill(this.color);
             noStroke();

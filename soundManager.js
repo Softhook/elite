@@ -143,34 +143,34 @@ class SoundManager {
             },
             // Generic UI screen transition
             uiTransition: {
-  "oldParams": true,
-  "wave_type": 2,
-  "p_env_attack": 0,
-  "p_env_sustain": 0.6641,
-  "p_env_punch": 0,
-  "p_env_decay": 1,
-  "p_base_freq": 0.182,
-  "p_freq_limit": 0,
-  "p_freq_ramp": -0.008,
-  "p_freq_dramp": 0.067,
-  "p_vib_strength": 0.904,
-  "p_vib_speed": 0.098,
-  "p_arp_mod": 0,
-  "p_arp_speed": 0,
-  "p_duty": 0,
-  "p_duty_ramp": 0,
-  "p_repeat_speed": 0,
-  "p_pha_offset": 0,
-  "p_pha_ramp": 0,
-  "p_lpf_freq": 0.09,
-  "p_lpf_ramp": 0,
-  "p_lpf_resonance": 0,
-  "p_hpf_freq": 0.101,
-  "p_hpf_ramp": 0,
-  "sound_vol": 0.25,
-  "sample_rate": 44100,
-  "sample_size": 8
-},
+                "oldParams": true,
+                "wave_type": 2,
+                "p_env_attack": 0,
+                "p_env_sustain": 0.6641,
+                "p_env_punch": 0,
+                "p_env_decay": 1,
+                "p_base_freq": 0.182,
+                "p_freq_limit": 0,
+                "p_freq_ramp": -0.008,
+                "p_freq_dramp": 0.067,
+                "p_vib_strength": 0.904,
+                "p_vib_speed": 0.098,
+                "p_arp_mod": 0,
+                "p_arp_speed": 0,
+                "p_duty": 0,
+                "p_duty_ramp": 0,
+                "p_repeat_speed": 0,
+                "p_pha_offset": 0,
+                "p_pha_ramp": 0,
+                "p_lpf_freq": 0.09,
+                "p_lpf_ramp": 0,
+                "p_lpf_resonance": 0,
+                "p_hpf_freq": 0.101,
+                "p_hpf_ramp": 0,
+                "sound_vol": 0.25,
+                "sample_rate": 44100,
+                "sample_size": 8
+            },
             // Map open/close are subtle variants
             mapOpen: {
                 "oldParams": true,
@@ -1535,7 +1535,7 @@ class SoundManager {
      * @param {number} sourceY - World Y coordinate of the sound source.
      * @param {p5.Vector} listenerPos - The world position of the listener (player).
      */
-    playWorldSound(name, sourceX, sourceY, listenerPos, sourceEntity = null) {
+    playWorldSound(name, sourceX, sourceY, listenerPos, sourceEntity = null, altitude = 0) {
         // Surface mode filter: only allow sounds from surface entities or player
         // Block all space battle sounds from enemies/NPCs updating in background
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
@@ -1564,14 +1564,29 @@ class SoundManager {
             return;
         }
 
+        // Apply visual altitude offset for surface mode
+        let actualX = sourceX;
+        let actualY = sourceY;
+
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+            const extrusionAngle = (typeof surfaceMode._getExtrusionAngle === 'function')
+                ? surfaceMode._getExtrusionAngle() : 0.5;
+
+            // Project world coordinates based on altitude
+            actualX = (typeof surfaceMode._toVisualX === 'function')
+                ? surfaceMode._toVisualX(sourceX, altitude) : sourceX - altitude * Math.sin(extrusionAngle);
+            actualY = (typeof surfaceMode._toVisualY === 'function')
+                ? surfaceMode._toVisualY(sourceY, altitude) : sourceY - altitude * Math.cos(extrusionAngle);
+        }
+
         // Validate coordinates early
-        if (typeof sourceX !== 'number' || typeof sourceY !== 'number' || isNaN(sourceX) || isNaN(sourceY)) {
-            console.warn(`playWorldSound: Invalid coordinates for '${name}'`, { sourceX, sourceY });
+        if (typeof actualX !== 'number' || typeof actualY !== 'number' || isNaN(actualX) || isNaN(actualY)) {
+            console.warn(`playWorldSound: Invalid coordinates for '${name}'`, { actualX, actualY });
             return;
         }
 
         const baseVolume = soundEntry.definition.sound_vol;
-        const intendedVolume = this._computeIntendedVolume(baseVolume, sourceX, sourceY, listenerPos);
+        const intendedVolume = this._computeIntendedVolume(baseVolume, actualX, actualY, listenerPos);
         const dockedVolume = this._applyDockedAttenuation(intendedVolume);
 
         // UI indicator (always call, regardless of volume/throttling)
@@ -1886,14 +1901,16 @@ class SoundManager {
      * @param {number} sourceY - World Y coordinate of the explosion.
      * @param {p5.Vector} listenerPos - The world position of the listener (player).
      */
-    playExplosion(size = 30, sourceX, sourceY, listenerPos, sourceEntity = null) {
+    playExplosion(size = 30, sourceX, sourceY, listenerPos, sourceEntity = null, altitude = 0) {
         if (!listenerPos) {
             console.warn("SoundManager.playExplosion: listenerPos is required.");
             return;
         }
-        // Simple size check for sound selection
-        const soundName = size > 60 ? 'explosionLarge' : 'explosionSmall';
-        this.playWorldSound(soundName, sourceX, sourceY, listenerPos, sourceEntity);
+
+        // Determine sound variant based on size
+        const soundName = size > 60 ? 'explosionLarge' : (size > 25 ? 'explosion' : 'explosionSmall');
+
+        this.playWorldSound(soundName, sourceX, sourceY, listenerPos, sourceEntity, altitude);
     }
 
     /**

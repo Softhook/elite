@@ -92,7 +92,7 @@ class SurfaceTerrain {
      */
     getHeightAt(worldX, worldY) {
         if (!this.planet) return 0;
-        
+
         // Check if p5.js noise function is available
         if (typeof noise !== 'function') {
             console.warn('p5.js noise function not available in getHeightAt');
@@ -319,13 +319,19 @@ class SurfaceTerrain {
 
                 cellsDrawn++;
 
+                // Project terrain vertices for consistent pseudo-3D look
+                // This ensures terrain hills align with the extrusion angle of objects
+                const extrusionAngle = (this.config.EXTRUSION_ANGLE !== undefined) ? this.config.EXTRUSION_ANGLE : 0.5;
+                const cosA = Math.cos(extrusionAngle);
+                const sinA = Math.sin(extrusionAngle);
+
                 // Grid-based X offsets
                 const colX0 = baseOffsetX + gx * cellSize;
                 const colX1 = baseOffsetX + (gx + 1) * cellSize;
 
                 // Lighting calculation
                 const slopeX = ((c10.height - c00.height) + (c11.height - c01.height)) * 0.5;
-                const slopeY = ((c01.height - c00.height) + (c11.height - c10.height)) * 0.5;
+                const slopeY = ((c01.height - c00.height) + (c11.height - c01.height)) * 0.5;
 
                 const sunIntensity = slopeX * 0.008 + slopeY * 0.010;
                 const avgHeight = (c00.height + c10.height + c01.height + c11.height) * 0.25;
@@ -340,12 +346,13 @@ class SurfaceTerrain {
                 // Direct RGB access (no .color.levels)
                 this.buffer.fill(c00.r * shade, c00.g * shade, c00.b * shade);
 
-                // Draw quad using grid-calculated positions
+                // Draw quad using grid-calculated positions WITH extrusion projection
+                // Projection: ScreenX = WorldX - height * sin(angle), ScreenY = WorldY - height * cos(angle)
                 this.buffer.quad(
-                    cx + colX0, cy + rowY0 - c00.height,
-                    cx + colX1, cy + rowY0 - c10.height,
-                    cx + colX1, cy + rowY1 - c11.height,
-                    cx + colX0, cy + rowY1 - c01.height
+                    cx + colX0 - c00.height * sinA, cy + rowY0 - c00.height * cosA,
+                    cx + colX1 - c10.height * sinA, cy + rowY0 - c10.height * cosA,
+                    cx + colX1 - c11.height * sinA, cy + rowY1 - c11.height * cosA,
+                    cx + colX0 - c01.height * sinA, cy + rowY1 - c01.height * cosA
                 );
             }
         }
