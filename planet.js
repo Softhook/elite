@@ -164,6 +164,12 @@ class Planet {
         // Player-built surface objects (persisted per-planet)
         // Stored as simple descriptors for serialization; rehydrated by SurfaceMode at runtime.
         this.playerBuiltSurfaceObjects = [];
+
+        // Tracks unique keys of destroyed deterministic surface buildings/turrets/caches
+        this.destroyedSurfaceObjects = [];
+
+        // Cached target position for mission objectives (Shield Generator)
+        this.targetPos = null;
     }
 
     /**
@@ -1248,7 +1254,9 @@ class Planet {
                         destroyed: !!o.destroyed
                     };
                 })
-                : []
+                : [],
+            destroyedSurfaceObjects: Array.isArray(this.destroyedSurfaceObjects) ? [...this.destroyedSurfaceObjects] : [],
+            targetPos: this.targetPos ? { x: this.targetPos.x, y: this.targetPos.y } : null
         };
     }
 
@@ -1353,6 +1361,12 @@ class Planet {
 
         // Persisted player-built objects (simple descriptors)
         p.playerBuiltSurfaceObjects = Array.isArray(data.playerBuiltSurfaceObjects) ? data.playerBuiltSurfaceObjects.map(d => d) : [];
+
+        // Persisted destroyed state for deterministic objects
+        p.destroyedSurfaceObjects = Array.isArray(data.destroyedSurfaceObjects) ? [...data.destroyedSurfaceObjects] : [];
+
+        // Persisted target position
+        p.targetPos = data.targetPos ? { x: data.targetPos.x, y: data.targetPos.y } : null;
 
         // Other persisted properties (keep symmetry with toJSON)
         p.economyType = data.economyType || null;

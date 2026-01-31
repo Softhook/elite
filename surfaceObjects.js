@@ -46,8 +46,11 @@ class SurfaceObject {
 
     takeDamage(amount) {
         this.health -= amount;
-        if (this.health <= 0) {
+        if (this.health <= 0 && !this.destroyed) {
             this.destroyed = true;
+            if (typeof surfaceMode !== 'undefined' && this.cellKey) {
+                surfaceMode.registerDestruction(this.cellKey);
+            }
             this.onDestroy();
         }
     }
@@ -1609,14 +1612,36 @@ class Turret extends SurfaceObject {
         if (!isDetected || worldDistSq > this.rangeSq) return;
 
         // Calculate turret aiming based on visual positions (matches drone logic)
-        const extrusionAngle = 0.5; // Must match Draw3D usage in draw()
-        const turretVisualY = this.pos.y - (this.altitude * Math.cos(extrusionAngle));
-        const playerVisualY = player.pos.y - (playerAltitude * Math.cos(extrusionAngle));
+        let targetAngle = 0;
+        if (typeof surfaceMode !== 'undefined' && surfaceMode) {
+            const turretAlt = this.altitude || (this.yOffset || 0);
+            const playerAlt = player.altitude || 0;
 
-        const dx = player.pos.x - this.pos.x;
-        const dy = playerVisualY - turretVisualY;
+            let turretVisualX, turretVisualY, playerVisualX, playerVisualY;
 
-        const targetAngle = Math.atan2(dy, dx);
+            // Use projection helpers if available
+            if (surfaceMode._toVisualX && surfaceMode._toVisualY) {
+                turretVisualX = surfaceMode._toVisualX(this.pos.x, turretAlt);
+                turretVisualY = surfaceMode._toVisualY(this.pos.y, turretAlt);
+                playerVisualX = surfaceMode._toVisualX(player.pos.x, playerAlt);
+                playerVisualY = surfaceMode._toVisualY(player.pos.y, playerAlt);
+            } else {
+                const extrusionAngle = 0.5;
+                turretVisualX = this.pos.x - (turretAlt * Math.sin(extrusionAngle));
+                turretVisualY = this.pos.y - (turretAlt * Math.cos(extrusionAngle));
+                playerVisualX = player.pos.x - (playerAlt * Math.sin(extrusionAngle));
+                playerVisualY = player.pos.y - (playerAlt * Math.cos(extrusionAngle));
+            }
+
+            const visualDX = playerVisualX - turretVisualX;
+            const visualDY = playerVisualY - turretVisualY;
+            targetAngle = Math.atan2(visualDY, visualDX);
+        } else {
+            // Fallback for non-surface mode
+            const dx = player.pos.x - this.pos.x;
+            const dy = player.pos.y - this.pos.y;
+            targetAngle = Math.atan2(dy, dx);
+        }
         let diff = targetAngle - this.angle;
 
         // Normalize
@@ -1699,8 +1724,11 @@ class Turret extends SurfaceObject {
         this.health -= amount;
         this.lastHitTime = millis(); // Flash effect trigger
         console.log(`Turret [${this.id}] took ${amount} damage, health now: ${this.health}/${this.maxHealth}`);
-        if (this.health <= 0) {
+        if (this.health <= 0 && !this.destroyed) {
             this.destroyed = true;
+            if (typeof surfaceMode !== 'undefined' && this.cellKey) {
+                surfaceMode.registerDestruction(this.cellKey);
+            }
             this.onDestroy();
         }
     }
@@ -1974,8 +2002,11 @@ class ShieldGenerator extends SurfaceObject {
         this.health -= amount;
         this.lastHitTime = millis();
         console.log(`Shield Generator took ${amount} damage, health: ${this.health}/${this.maxHealth}`);
-        if (this.health <= 0) {
+        if (this.health <= 0 && !this.destroyed) {
             this.destroyed = true;
+            if (typeof surfaceMode !== 'undefined' && this.cellKey) {
+                surfaceMode.registerDestruction(this.cellKey);
+            }
             this.onDestroy();
         }
     }
@@ -2282,8 +2313,11 @@ class DefenseDrone extends SurfaceObject {
         this.health -= amount;
         this.lastHitTime = millis();
         console.log(`Defense Drone took ${amount} damage, health: ${this.health}/${this.maxHealth}`);
-        if (this.health <= 0) {
+        if (this.health <= 0 && !this.destroyed) {
             this.destroyed = true;
+            if (typeof surfaceMode !== 'undefined' && this.cellKey) {
+                surfaceMode.registerDestruction(this.cellKey);
+            }
             this.onDestroy();
         }
     }

@@ -109,6 +109,8 @@ class SurfaceMode {
         this.altitude = SURFACE_CONFIG.DEFAULT_ALTITUDE; // Absolute altitude
         this.radarAltitude = SURFACE_CONFIG.DEFAULT_ALTITUDE; // Altitude above local terrain
         this.objectCache = new Map(); // Cache for persistent objects
+        this.destroyedCells = new Set(); // Set of cellKeys for destroyed buildings/turrets
+        this.playerBuiltMap = new Map(); // Map of cellKey -> surface object descriptor
         this.debugMode = false; // Set to true to spawn only one turret for testing
         this.isLanded = false; // Track landed state
 
@@ -259,17 +261,21 @@ class SurfaceMode {
     _findBestCanyonLocation(searchCount = 12) {
         const seed = this.planet.seed || 12345;
         let bestScore = -Infinity;
-        let bestX = this.surfaceX;
-        let bestY = this.surfaceY;
+        // Use planet center in space as a STABLE origin for deterministic placement
+        const originX = this.planet.pos.x;
+        const originY = this.planet.pos.y;
+        let bestX = originX;
+        let bestY = originY;
 
         for (let i = 0; i < searchCount; i++) {
             const mixedSeed = this._hash(seed ^ this._hash(i));
             const angle = ((mixedSeed >>> 0) / 0xFFFFFFFF) * Math.PI * 2;
             const mixedRadius = this._hash(mixedSeed);
-            const radius = 6000 + (Math.abs(mixedRadius % 6000)); // 6km to 12km
+            // Search in a predictable range around the planet's space coordinates
+            const radius = 6000 + (Math.abs(mixedRadius % 8000)); // 6km to 14km
 
-            const tx = this.surfaceX + Math.cos(angle) * radius;
-            const ty = this.surfaceY + Math.sin(angle) * radius;
+            const tx = originX + Math.cos(angle) * radius;
+            const ty = originY + Math.sin(angle) * radius;
 
             // Sample center height
             const hCenter = this.terrain.getHeightAt(tx, ty);
@@ -332,6 +338,30 @@ class SurfaceMode {
 
         // Reset cached surface objects so new terrain/building logic can repopulate cleanly
         this.objectCache.clear();
+        this.destroyedCells.clear();
+        this.playerBuiltMap.clear();
+
+        // Restore destroyed state from planet
+        if (this.planet.destroyedSurfaceObjects) {
+            for (const key of this.planet.destroyedSurfaceObjects) {
+                this.destroyedCells.add(key);
+            }
+        }
+
+        // Optimization: Pre-index player-built objects by cellKey for O(1) lookups during mesh generation
+        if (Array.isArray(this.planet.playerBuiltSurfaceObjects)) {
+            const resolution = SURFACE_CONFIG.MESH_RESOLUTION;
+            const cellSize = SURFACE_CONFIG.MESH_SIZE / resolution;
+            for (const desc of this.planet.playerBuiltSurfaceObjects) {
+                if (!desc) continue;
+                const descCellX = Math.round((desc.x || 0) / cellSize);
+                const descCellY = Math.round((desc.y || 0) / cellSize);
+                const key = `${descCellX},${descCellY}`;
+                this.playerBuiltMap.set(key, desc);
+            }
+        }
+
+        console.log(`Surface state restored: ${this.destroyedCells.size} destroyed objects, ${this.playerBuiltMap.size} player-built structures.`);
 
         // Save player position for return
         this.savedPlayerPos = player.pos.copy();
@@ -398,13 +428,19 @@ class SurfaceMode {
         this.projectiles = [];
         this.surfaceObjects = [];
 
-        // Calculate deterministic target position for Shield Generator (Planet Boss)
-        // Enable for ALL planets, not just inhabited ones
-        this.targetPos = null;
+        // Initialize mission target (Shield Generator)
         if (this.planet) {
-            const result = this._findBestCanyonLocation(12);
-            this.targetPos = createVector(result.x, result.y);
-            console.log(`[CanyonRun] Target found in valley! Score: ${Math.round(result.score)}, Height: ${Math.round(this.terrain.getHeightAt(result.x, result.y))}`);
+            // Restore from planet if already calculated/saved
+            if (this.planet.targetPos) {
+                this.targetPos = createVector(this.planet.targetPos.x, this.planet.targetPos.y);
+                console.log(`[Persistence] Restored target position from planet: ${this.targetPos.x.toFixed(0)}, ${this.targetPos.y.toFixed(0)}`);
+            } else {
+                const result = this._findBestCanyonLocation(12);
+                this.targetPos = createVector(result.x, result.y);
+                // Save back to planet for persistence
+                this.planet.targetPos = { x: result.x, y: result.y };
+                console.log(`[Persistence] Generated new deterministic target position: ${this.targetPos.x.toFixed(0)}, ${this.targetPos.y.toFixed(0)}`);
+            }
         }
 
         // NOTE: Heavy terrain operations (generateMesh, updateBuffer, _spawnObjects)
@@ -443,6 +479,27 @@ class SurfaceMode {
         // Change music chords on ascent (start of transition)
         if (typeof spaceMusicManager !== 'undefined') {
             spaceMusicManager.advanceChordProgression();
+        }
+    }
+
+    /**
+     * Register that an object at a specific cell has been destroyed.
+     * Persists this state to the planet so it remains gone on re-entry.
+     */
+    registerDestruction(cellKey) {
+        if (!cellKey || !this.planet) return;
+
+        // Add to active set for current session
+        if (!this.destroyedCells.has(cellKey)) {
+            this.destroyedCells.add(cellKey);
+
+            // Sync to planet for long-term persistence (saving/loading/leaving/returning)
+            if (!this.planet.destroyedSurfaceObjects) {
+                this.planet.destroyedSurfaceObjects = [];
+            }
+            this.planet.destroyedSurfaceObjects.push(cellKey);
+
+            console.log(`[Persistence] Object at ${cellKey} registered as destroyed.`);
         }
     }
 
@@ -1345,6 +1402,7 @@ class SurfaceMode {
             const debugTurret = new Turret(turretX, turretY);
             debugTurret.yOffset = turretH;
             debugTurret.id = "DEBUG_TURRET";
+            debugTurret.cellKey = cellKey;
             this.surfaceObjects.push(debugTurret);
             this.objectCache.set(cellKey, debugTurret);
             return;
@@ -1376,28 +1434,29 @@ class SurfaceMode {
                 const subHash = (cellHash * 123.45) % 1;
                 const objSeed = cellHash * 100000;
 
+                // --- 0. DESTRUCTION CHECK ---
+                // If this cell was previously destroyed, skip all spawning logic
+                if (this.destroyedCells.has(cellKey)) {
+                    this.objectCache.set(cellKey, null);
+                    continue;
+                }
+
                 // Check for any player-built surface objects that belong to this cell
-                if (this.planet && Array.isArray(this.planet.playerBuiltSurfaceObjects)) {
-                    for (const desc of this.planet.playerBuiltSurfaceObjects) {
-                        if (!desc || desc.destroyed) continue;
-                        const descCellX = Math.round((desc.x || 0) / cellSize);
-                        const descCellY = Math.round((desc.y || 0) / cellSize);
-                        if (descCellX === activeGridX && descCellY === activeGridY) {
-                            // Instantiate known types (OffworldBuilding) or fallback to a generic SurfaceObject
-                            if (typeof OffworldBuilding !== 'undefined' && (String(desc.type).toLowerCase().indexOf('offworld') !== -1 || desc.type === 'OffworldBuilding')) {
-                                obj = new OffworldBuilding(desc.x, desc.y, desc.size || 40, desc.seed || 0);
-                                if (typeof desc.variant !== 'undefined') obj.variant = desc.variant;
-                                obj.yOffset = (typeof desc.yOffset !== 'undefined') ? desc.yOffset : this._getTerrainHeightAt(desc.x, desc.y);
-                                obj.displayName = desc.displayName || obj.displayName;
-                                obj.destroyed = !!desc.destroyed;
-                                // Flag instances spawned from saved player descriptors
-                                obj.playerBuilt = true;
-                            } else if (typeof SurfaceObject !== 'undefined') {
-                                obj = new SurfaceObject(desc.x, desc.y, desc.size || 40);
-                                obj.yOffset = (typeof desc.yOffset !== 'undefined') ? desc.yOffset : this._getTerrainHeightAt(desc.x, desc.y);
-                            }
-                            break;
-                        }
+                // OPTIMIZED: Uses pre-indexed map instead of O(N) loop
+                const desc = this.playerBuiltMap.get(cellKey);
+                if (desc && !desc.destroyed) {
+                    // Instantiate known types (OffworldBuilding) or fallback to a generic SurfaceObject
+                    if (typeof OffworldBuilding !== 'undefined' && (String(desc.type).toLowerCase().indexOf('offworld') !== -1 || desc.type === 'OffworldBuilding')) {
+                        obj = new OffworldBuilding(desc.x, desc.y, desc.size || 40, desc.seed || 0);
+                        if (typeof desc.variant !== 'undefined') obj.variant = desc.variant;
+                        obj.yOffset = (typeof desc.yOffset !== 'undefined') ? desc.yOffset : this._getTerrainHeightAt(desc.x, desc.y);
+                        obj.displayName = desc.displayName || obj.displayName;
+                        obj.destroyed = !!desc.destroyed;
+                        // Flag instances spawned from saved player descriptors
+                        obj.playerBuilt = true;
+                    } else if (typeof SurfaceObject !== 'undefined') {
+                        obj = new SurfaceObject(desc.x, desc.y, desc.size || 40);
+                        obj.yOffset = (typeof desc.yOffset !== 'undefined') ? desc.yOffset : this._getTerrainHeightAt(desc.x, desc.y);
                     }
                 }
 
@@ -1411,6 +1470,7 @@ class SurfaceMode {
                 if (isTargetCell && typeof ShieldGenerator !== 'undefined') {
                     obj = new ShieldGenerator(wx, wy);
                     obj.yOffset = h;
+                    obj.cellKey = cellKey;
                     this.surfaceObjects.push(obj);
                     this.objectCache.set(cellKey, obj);
                     continue; // Skip the rest for this cell
@@ -1495,6 +1555,7 @@ class SurfaceMode {
                 // If an object was created, finalize and cache it
                 if (obj) {
                     obj.yOffset = h;
+                    obj.cellKey = cellKey; // Store the key for persistence when destroyed
                     this.surfaceObjects.push(obj);
                     this.objectCache.set(cellKey, obj);
                 } else {
@@ -2244,13 +2305,25 @@ class SurfaceMode {
             const dy = this.targetPos.y - this.player.pos.y;
             const distSq = dx * dx + dy * dy;
 
-            // Only show if generator not yet destroyed (or check if objective active)
-            // We'll check if it's found in surfaceObjects and destroyed
+            // Only show if generator not yet destroyed
             let targetDestroyed = false;
-            for (const obj of this.surfaceObjects) {
-                if (((obj.constructor && obj.constructor.name === 'ShieldGenerator') || obj.isTarget) && obj.destroyed) {
-                    targetDestroyed = true;
-                    break;
+
+            // 1. Check persistent destruction state via cell key
+            const resolution = SURFACE_CONFIG.MESH_RESOLUTION;
+            const cellSize = SURFACE_CONFIG.MESH_SIZE / resolution;
+            const tx = Math.round(this.targetPos.x / cellSize);
+            const ty = Math.round(this.targetPos.y / cellSize);
+            const targetKey = `${tx},${ty}`;
+
+            if (this.destroyedCells.has(targetKey)) {
+                targetDestroyed = true;
+            } else {
+                // 2. Fallback: check currently spawned objects in the grid
+                for (const obj of this.surfaceObjects) {
+                    if (obj && (obj.isTarget || (obj.constructor && obj.constructor.name === 'ShieldGenerator')) && obj.destroyed) {
+                        targetDestroyed = true;
+                        break;
+                    }
                 }
             }
 
