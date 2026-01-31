@@ -352,6 +352,18 @@ class SurfaceMode {
         this.playerAngle = player.angle || -Math.PI / 2;
         this.playerSpeed = player.vel ? player.vel.mag() : 0;
 
+        // Calculate and lock Sun Angle on entry
+        // Uses planet rotation to determine initial Day/Night status
+        // But keeps it static during surface play (per user request)
+        if (this.planet && this.planet.pos) {
+            // Sun is at (0,0). Planet is at this.planet.pos.
+            // Angle FROM Planet TO Sun in space = atan2(-py, -px).
+            // The planet texture is rotated by this.planet.currentRotation.
+            this.sunAngle = Math.atan2(-this.planet.pos.y, -this.planet.pos.x) - (this.planet.currentRotation || 0);
+        } else {
+            this.sunAngle = -Math.PI / 4;
+        }
+
         // Reset inputs
         this.turnInput = 0;
         this.thrustInput = 0;
@@ -559,11 +571,14 @@ class SurfaceMode {
             // Update terrain - regenerate if player moved to new grid cell
             if (this.terrain.generateMesh(this.surfaceX, this.surfaceY)) {
                 // Force buffer update when mesh regenerates (player moved to new grid cell)
-                this.terrain.updateBuffer(this.altitude, width, height, true);
+                // Pass sunAngle to ensure lighting matches logic.
+                const sunAngle = this._getSunAngle();
+                this.terrain.updateBuffer(this.altitude, width, height, true, sunAngle);
                 this._spawnObjects(this.terrain.getGridPosition().x, this.terrain.getGridPosition().y);
             } else {
                 // Conditionally update buffer based on altitude change (skip if stable)
-                this.terrain.updateBuffer(this.altitude, width, height);
+                const sunAngle = this._getSunAngle();
+                this.terrain.updateBuffer(this.altitude, width, height, false, sunAngle);
             }
 
             // Update surface objects (single pass, dt-corrected)
@@ -629,7 +644,7 @@ class SurfaceMode {
         if (this.state === SURFACE_STATE.ENTERING && !this._terrainReady) {
             // Generate terrain mesh and buffer - this takes ~50-100ms
             if (this.terrain.generateMesh(this.surfaceX, this.surfaceY, true)) {
-                this.terrain.updateBuffer(this.altitude, width, height);
+                this.terrain.updateBuffer(this.altitude, width, height, false, this._getSunAngle());
                 this._spawnObjects(this.terrain.getGridPosition().x, this.terrain.getGridPosition().y);
             }
             this._terrainReady = true;
@@ -1277,12 +1292,12 @@ class SurfaceMode {
      * Uses planet position relative to origin (where sun is) to calculate light direction
      */
     _getSunAngle() {
-        if (!this.planet || !this.planet.pos) {
-            return -Math.PI / 4; // Default fallback
+        // Return the locked sun angle calculated at entry
+        // This ensures proper lighting direction without the sun noticeably moving during gameplay
+        if (this.sunAngle !== undefined) {
+            return this.sunAngle;
         }
-        // Sun is at origin (0,0), planet orbits around it
-        // Sun direction from planet surface = angle from planet to origin
-        return Math.atan2(-this.planet.pos.y, -this.planet.pos.x);
+        return -Math.PI / 4; // Default fallback
     }
 
     /**
@@ -1300,7 +1315,8 @@ class SurfaceMode {
      * Draw terrain mesh - delegates to terrain module
      */
     _drawTerrain() {
-        this.terrain.draw();
+        // Pass the dynamic sun angle to the terrain renderer so mountains are lit correctly
+        this.terrain.draw(this._getSunAngle());
     }
 
     _spawnObjects(gridX, gridY) {

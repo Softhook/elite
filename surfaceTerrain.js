@@ -253,11 +253,14 @@ class SurfaceTerrain {
      * @param {number} altitude - Current player altitude for perspective scale
      * @param {number} screenWidth - Screen width
      * @param {number} screenHeight - Screen height
+     * @param {boolean} forceUpdate - Force regeneration
+     * @param {number} sunAngle - Sun Angle in radians (default -PI/4)
      */
-    updateBuffer(altitude, screenWidth, screenHeight, forceUpdate = false) {
+    updateBuffer(altitude, screenWidth, screenHeight, forceUpdate = false, sunAngle = -Math.PI / 4) {
         if (!this.buffer || this.mesh.length === 0) return;
 
         // Performance: Skip buffer update if altitude hasn't changed significantly
+        // Note: We ignore sunAngle changes for caching because sun is locked during gameplay
         const altitudeDelta = Math.abs(altitude - this.lastBufferAltitude);
         if (!forceUpdate && this.lastBufferAltitude >= 0 && altitudeDelta < 15) {
             return;
@@ -274,6 +277,10 @@ class SurfaceTerrain {
         const resMinus1 = resolution - 1;
         const cellSize = this.config.MESH_SIZE / resolution;
         const halfRes = Math.floor(resolution / 2);
+
+        // Pre-calculate sun direction vectors
+        const sunDirX = Math.cos(sunAngle);
+        const sunDirY = Math.sin(sunAngle);
 
         // Calculate viewport bounds for culling
         const perspectiveScale = map(altitude, this.config.MIN_ALTITUDE, this.config.MAX_ALTITUDE, 1.2, 0.6);
@@ -329,11 +336,17 @@ class SurfaceTerrain {
                 const colX0 = baseOffsetX + gx * cellSize;
                 const colX1 = baseOffsetX + (gx + 1) * cellSize;
 
-                // Lighting calculation
+                // Lighting calculation based on Sun Angle
                 const slopeX = ((c10.height - c00.height) + (c11.height - c01.height)) * 0.5;
                 const slopeY = ((c01.height - c00.height) + (c11.height - c01.height)) * 0.5;
 
-                const sunIntensity = slopeX * 0.008 + slopeY * 0.010;
+                // Dynamic lighting: Dot product of slope normal and sun direction
+                // Sun direction is (sunDirX, sunDirY). Slope "Normal" is roughly (-slopeX, -slopeY, 1).
+                // Simplified: Light falls on slope facing the sun.
+                // We invert signs because slopeX positive means "uphill to right", which faces LEFT.
+                // If sun is LEFT (negative X), it should light up. (-slopeX * -1) = positive.
+                const sunIntensity = (slopeX * -sunDirX + slopeY * -sunDirY) * 0.015;
+
                 const avgHeight = (c00.height + c10.height + c01.height + c11.height) * 0.25;
                 const heightLight = avgHeight * 0.0008;
                 const steepness = (slopeX < 0 ? -slopeX : slopeX) + (slopeY < 0 ? -slopeY : slopeY);
