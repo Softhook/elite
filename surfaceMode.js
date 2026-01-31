@@ -15,8 +15,8 @@ const SURFACE_CONFIG = {
     CLIMB_SPEED: 150,
 
     // Terrain mesh
-    MESH_RESOLUTION: 100,      // Grid resolution
-    MESH_SIZE: 4000,           // World units covered
+    MESH_RESOLUTION: 120,      // Grid resolution (increased for better detail)
+    MESH_SIZE: 4200,           // World units covered (centered on camera focus)
     DEFAULT_FEATURE_SEED: 12345, // Fallback seed for terrain generation
     HIGH_TERRAIN_THRESHOLD: 350, // Height (0-500) treated as high ground for defenses
 
@@ -627,8 +627,16 @@ class SurfaceMode {
                 this._updateAstronaut(dt);
             }
 
+            // Smarter Regeneration: Center mesh and spawns on the camera focus point
+            const extrusionAngle = this._getExtrusionAngle();
+            const visualXOffset = this.altitude * Math.sin(extrusionAngle);
+            const visualYOffset = this.altitude * Math.cos(extrusionAngle);
+
+            const focusX = this.surfaceX - visualXOffset;
+            const focusY = this.surfaceY - visualYOffset; // Corrected: ship center is focal point
+
             // Update terrain - regenerate if player moved to new grid cell
-            if (this.terrain.generateMesh(this.surfaceX, this.surfaceY)) {
+            if (this.terrain.generateMesh(focusX, focusY)) {
                 // Force buffer update when mesh regenerates (player moved to new grid cell)
                 // Pass sunAngle to ensure lighting matches logic.
                 const sunAngle = this._getSunAngle();
@@ -701,8 +709,16 @@ class SurfaceMode {
         // During ENTERING phase, perform deferred terrain initialization immediately
         // This runs during the fade so the user sees the transition animation
         if (this.state === SURFACE_STATE.ENTERING && !this._terrainReady) {
+            // Smarter Regeneration: Center mesh and spawns on the camera focus point
+            const extrusionAngle = this._getExtrusionAngle();
+            const visualXOffset = this.altitude * Math.sin(extrusionAngle);
+            const visualYOffset = this.altitude * Math.cos(extrusionAngle);
+
+            const focusX = this.surfaceX - visualXOffset;
+            const focusY = this.surfaceY - visualYOffset; // Corrected: ship center is focal point
+
             // Generate terrain mesh and buffer - this takes ~50-100ms
-            if (this.terrain.generateMesh(this.surfaceX, this.surfaceY, true)) {
+            if (this.terrain.generateMesh(focusX, focusY, true)) {
                 this.terrain.updateBuffer(this.altitude, width, height, false, this._getSunAngle());
                 this._spawnObjects(this.terrain.getGridPosition().x, this.terrain.getGridPosition().y);
             }
@@ -1089,21 +1105,29 @@ class SurfaceMode {
      * @private
      */
     _getViewportBounds(padding = 200) {
-        // Defensive null check - surface mode should always have player,
-        // but guard against edge cases during initialization/cleanup
         if (!this.player || !this.player.pos) {
-            return { left: 0, right: width, top: 0, bottom: height };
+            return { minX: 0, maxX: width, minY: 0, maxY: height };
         }
 
         const perspectiveScale = this._getPerspectiveScale();
+        const extrusionAngle = this._getExtrusionAngle();
+
+        // Calculate the camera focus point in world coordinates
+        // This is where the camera is actually looking, accounting for altitude extrusion
+        const visualXOffset = this.altitude * Math.sin(extrusionAngle);
+        const visualYOffset = this.altitude * Math.cos(extrusionAngle);
+
+        const focusX = this.surfaceX - visualXOffset;
+        const focusY = this.surfaceY - visualYOffset; // Corrected: ship center is focal point
+
         const viewportWidth = (width / perspectiveScale) + padding * 2;
         const viewportHeight = (height / perspectiveScale) + padding * 2;
 
         return {
-            left: this.player.pos.x - viewportWidth / 2,
-            right: this.player.pos.x + viewportWidth / 2,
-            top: this.player.pos.y - viewportHeight / 2,
-            bottom: this.player.pos.y + viewportHeight / 2
+            minX: focusX - viewportWidth / 2,
+            maxX: focusX + viewportWidth / 2,
+            minY: focusY - viewportHeight / 2,
+            maxY: focusY + viewportHeight / 2
         };
     }
 
@@ -1337,7 +1361,9 @@ class SurfaceMode {
         this._drawGameHUD();
 
         // Draw surface-specific HUD (altitude bar, compass)
-        this._drawHUD();
+        if (typeof surfaceHud !== 'undefined' && surfaceHud) {
+            surfaceHud.draw(this);
+        }
 
         // Transition overlay
         if (this.state === SURFACE_STATE.ENTERING ||
@@ -1641,10 +1667,11 @@ class SurfaceMode {
         // Use dynamic sun angle from planet position
         const sunAngle = this._getSunAngle();
 
-        // Calculate viewport bounds for culling
-        // Use increased padding (600) to account for normalized terrain height (0-500)
-        // so objects on high ground at the bottom edge aren't culled
-        const viewport = this._getViewportBounds(600);
+        // Use minimal padding for visual projection culling
+        const viewport = this._getViewportBounds(50);
+        const extrusionAngle = this._getExtrusionAngle();
+        const sin = Math.sin(extrusionAngle);
+        const cos = Math.cos(extrusionAngle);
 
         let objectsDrawn = 0;
         let objectsCulled = 0;
@@ -1652,13 +1679,16 @@ class SurfaceMode {
         for (let obj of this.surfaceObjects) {
             if (!obj || obj.destroyed) continue;
 
-            // Viewport culling: check if object is within visible bounds
-            // Use object size to create a bounding box
+            const objAlt = (typeof obj.altitude !== 'undefined') ? obj.altitude : (obj.yOffset || 0);
             const objSize = obj.size || 50;
-            // Viewport culling for objects
             const objHeight = obj.height || (objSize * 2);
-            if (obj.pos.x + objSize < viewport.minX || obj.pos.x - objSize > viewport.maxX ||
-                obj.pos.y + objSize < viewport.minY || obj.pos.y - objHeight > viewport.maxY) {
+
+            // Visual Projection Culling: Project logical position to visual on-screen position
+            const visX = obj.pos.x - objAlt * sin;
+            const visY = obj.pos.y - objAlt * cos;
+
+            if (visX + objSize < viewport.minX || visX - objSize > viewport.maxX ||
+                visY + objSize < viewport.minY || visY - objHeight > viewport.maxY) {
                 objectsCulled++;
                 continue;
             }
@@ -1668,7 +1698,7 @@ class SurfaceMode {
             // Local coordinates and altitude for surface objects
             const worldX = obj.pos.x;
             const worldY = obj.pos.y;
-            const objAlt = (typeof obj.altitude !== 'undefined') ? obj.altitude : (obj.yOffset || 0);
+            // objAlt already declared above
 
             // Objects now handle their internal visual projection using world coords and altitude
             if (obj.draw) {
@@ -1742,16 +1772,24 @@ class SurfaceMode {
         const counterScale = this._getCounterScale();
         const sunAngle = this._getSunAngle();
 
-        // Viewport culling padding (large enough for fast projectiles)
-        const viewport = this._getViewportBounds(400);
+        const extrusionAngle = this._getExtrusionAngle();
+        const sin = Math.sin(extrusionAngle);
+        const cos = Math.cos(extrusionAngle);
+
+        // Viewport culling padding
+        const viewport = this._getViewportBounds(100);
 
         push();
         for (let i = 0; i < projectiles.length; i++) {
             const proj = projectiles[i];
             if (proj && !proj.destroyed && (proj.isSurface || proj.owner === this.player)) {
-                // Cull projectiles far outside view
-                if (proj.pos.x < viewport.minX || proj.pos.x > viewport.maxX ||
-                    proj.pos.y < viewport.minY || proj.pos.y > viewport.maxY) {
+                // Precise Culling: Project to visual coordinates
+                const alt = proj.altitude || 0;
+                const visX = proj.pos.x - alt * sin;
+                const visY = proj.pos.y - alt * cos;
+
+                if (visX < viewport.minX || visX > viewport.maxX ||
+                    visY < viewport.minY || visY > viewport.maxY) {
                     continue;
                 }
 
@@ -1770,15 +1808,24 @@ class SurfaceMode {
         const explosions = this.starSystem.explosions;
         if (!explosions) return;
 
-        // Calculate viewport bounds for culling
-        const viewport = this._getViewportBounds(600);
+        const extrusionAngle = this._getExtrusionAngle();
+        const sin = Math.sin(extrusionAngle);
+        const cos = Math.cos(extrusionAngle);
+
+        // Viewport culling padding
+        const viewport = this._getViewportBounds(100);
 
         for (let i = 0; i < explosions.length; i++) {
             const exp = explosions[i];
-            if (exp && !exp.destroyed && exp.isSurface) {
-                // Viewport culling for explosions
-                if (exp.pos.x < viewport.minX || exp.pos.x > viewport.maxX ||
-                    exp.pos.y < viewport.minY || exp.pos.y > viewport.maxY) {
+            if (exp && !exp.isDone() && (exp.isSurface || exp.owner === this.player)) {
+                // Precise Culling: Project to visual coordinates
+                const alt = exp.altitude || 0;
+                const visX = exp.pos.x - alt * sin;
+                const visY = exp.pos.y - alt * cos;
+                const expSize = exp.size || 30;
+
+                if (visX + expSize < viewport.minX || visX - expSize > viewport.maxX ||
+                    visY + expSize < viewport.minY || visY - expSize > viewport.maxY) {
                     continue;
                 }
 
@@ -2063,371 +2110,12 @@ class SurfaceMode {
     }
 
     /**
-     * Draw HUD elements
+     * Draw HUD elements (delegated to surfaceHud.js)
      */
     _drawHUD() {
-        push();
-
-        // Performance stats (top left, only if debugMode is explicitly enabled)
-        const terrainStats = this.terrain?.lastCullStats;
-        if (this.debugMode) {
-            push();
-            const DEBUG_PANEL_HEIGHT_BASIC = 95;
-            const DEBUG_PANEL_HEIGHT_EXTENDED = 110;
-            const panelHeight = this.debugMode && this.player ? DEBUG_PANEL_HEIGHT_EXTENDED : DEBUG_PANEL_HEIGHT_BASIC;
-            fill(0, 0, 0, 180);
-            stroke(80, 80, 80);
-            strokeWeight(1);
-            rect(10, 10, 200, panelHeight, 3);
-
-            fill(100, 255, 100);
-            noStroke();
-            textSize(10);
-            textAlign(LEFT, TOP);
-            text('Surface Render Stats:', 15, 15);
-
-            fill(200);
-            if (terrainStats) {
-                const total = terrainStats.drawn + terrainStats.culled;
-                const cullPercent = total > 0 ? ((terrainStats.culled / total) * 100).toFixed(1) : 0;
-                text(`Terrain: ${terrainStats.drawn}/${total} (${cullPercent}% culled)`, 15, 30);
-            }
-            if (this._lastObjectCullStats) {
-                const total = this._lastObjectCullStats.drawn + this._lastObjectCullStats.culled;
-                const cullPercent = total > 0 ? ((this._lastObjectCullStats.culled / total) * 100).toFixed(1) : 0;
-                text(`Objects: ${this._lastObjectCullStats.drawn}/${total} (${cullPercent}% culled)`, 15, 45);
-            }
-
-            text(`FPS: ${Math.round(frameRate())}`, 15, 60);
-            text(`R-ALT: ${Math.round(this.altitude)}`, 15, 75);
-
-            // Show terrain height and absolute altitude for debugging (only in debug mode)
-            if (this.debugMode && this.player) {
-                const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
-                text(`Ground: ${Math.round(groundH)}`, 15, 90);
-                text(`Abs-ALT: ${Math.round(this.player.altitude)}`, 15, 105);
-            }
-            pop();
+        if (typeof surfaceHud !== 'undefined' && surfaceHud) {
+            surfaceHud.draw(this);
         }
-
-        // Surface Controls Hint (Top Center)
-        const hintY = 45 + 24 + 5;
-        fill(40, 80, 120, 200);
-        noStroke();
-        rect(0, hintY, width, 20);
-
-        textAlign(CENTER, CENTER);
-        // Ensure consistent typeface
-        if (typeof font !== 'undefined' && font) textFont(font);
-        textSize(STATION_TEXT_SIZE.BODY);
-        fill(255, 255, 100);
-        text("[T] Ascend [G] Descend", width / 2, hintY + 10);
-
-        // Altitude bar
-        const barX = width - 50;
-        const barY = height / 2 - 100;
-        const barHeight = 200;
-        const barWidth = 25;
-
-        fill(0, 0, 0, 180);
-        stroke(80, 80, 80);
-        strokeWeight(1);
-        rect(barX, barY, barWidth, barHeight, 3);
-
-        // Get terrain height at player position
-        const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
-
-        // Player's absolute altitude (terrain is now 0-500, so no negative values)
-        const absAlt = Math.max(0, this.player?.altitude || 0);
-        // Display range matches configured max altitude
-        const maxDisplayAlt = SURFACE_CONFIG.MAX_ALTITUDE;
-
-        // Find highest nearby enemy altitude (detection threshold)
-        let maxEnemyAlt = 0;
-        let nearbyEnemies = 0;
-        const detectionRange = 800; // Check enemies within this range
-
-        if (this.surfaceObjects && this.surfaceObjects.length > 0) {
-            for (const obj of this.surfaceObjects) {
-                if (obj && (obj.constructor.name === 'Turret' || obj.constructor.name === 'DefenseDrone') && !obj.destroyed) {
-                    // Check if enemy is nearby (world space distance)
-                    const dx = obj.pos.x - this.player.pos.x;
-                    const dy = obj.pos.y - this.player.pos.y;
-                    const distSq = dx * dx + dy * dy;
-
-                    if (distSq < detectionRange * detectionRange) {
-                        // Use the same altitude logic their detection uses
-                        if (obj.constructor.name === 'Turret') {
-                            const baseAlt = obj.yOffset || 0;
-                            const detectAlt = baseAlt + (obj.detectionHeightThreshold || 0);
-                            maxEnemyAlt = Math.max(maxEnemyAlt, detectAlt);
-                        } else {
-                            const enemyAlt = (obj.altitude !== undefined) ? obj.altitude : (obj.yOffset || 0);
-                            maxEnemyAlt = Math.max(maxEnemyAlt, enemyAlt);
-                        }
-                        nearbyEnemies++;
-                    }
-                }
-            }
-        }
-
-        // Determine detection status
-        const isDetected = nearbyEnemies > 0 && absAlt >= maxEnemyAlt;
-
-        // Draw ground level indicator
-        if (groundH >= 0 && groundH <= maxDisplayAlt) {
-            const groundY = barY + barHeight - (barHeight * groundH / maxDisplayAlt);
-            stroke(100, 200, 100);
-            strokeWeight(2);
-            line(barX, groundY, barX + barWidth, groundY);
-
-            // Label
-            noStroke();
-            fill(100, 200, 100);
-            textSize(9);
-            textAlign(LEFT, CENTER);
-            text('GND', barX + barWidth + 5, groundY);
-        }
-
-        // Draw detection threshold (highest enemy relative altitude) - yellow/orange dashed line
-        if (nearbyEnemies > 0 && maxEnemyAlt >= 0 && maxEnemyAlt <= maxDisplayAlt) {
-            const detectionY = barY + barHeight - (barHeight * maxEnemyAlt / maxDisplayAlt);
-
-            // Dashed line
-            stroke(255, 200, 0);
-            strokeWeight(2);
-            drawingContext.setLineDash([5, 5]);
-            line(barX, detectionY, barX + barWidth, detectionY);
-            drawingContext.setLineDash([]);
-
-            // Red zone above detection threshold (danger zone)
-            fill(255, 80, 80, 60);
-            noStroke();
-            const dangerZoneHeight = detectionY - barY;
-            if (dangerZoneHeight > 0) {
-                rect(barX + 2, barY + 2, barWidth - 4, dangerZoneHeight);
-            }
-
-            // Label
-            noStroke();
-            fill(255, 200, 0);
-            textSize(9);
-            textAlign(LEFT, CENTER);
-            text('DET', barX + barWidth + 5, detectionY);
-        }
-
-        // Player altitude indicator (color-coded by detection status)
-        const playerAltY = barY + barHeight - (barHeight * Math.min(absAlt, maxDisplayAlt) / maxDisplayAlt);
-
-        // Color: Green if hidden, Red if detected
-        if (isDetected) {
-            stroke(255, 50, 50);
-            fill(255, 50, 50);
-        } else {
-            stroke(50, 255, 50);
-            fill(50, 255, 50);
-        }
-        strokeWeight(3);
-        line(barX - 5, playerAltY, barX + barWidth + 5, playerAltY);
-
-        // Player altitude triangle marker
-        noStroke();
-        triangle(
-            barX + barWidth + 8, playerAltY,
-            barX + barWidth + 15, playerAltY - 4,
-            barX + barWidth + 15, playerAltY + 4
-        );
-
-        // Labels
-        noStroke();
-        fill(255);
-        textSize(11);
-        textAlign(CENTER, TOP);
-        text('ALT', barX + barWidth / 2, barY - 18);
-
-        // Show absolute altitude value with detection status
-        if (isDetected) {
-            fill(255, 100, 100);
-            text(Math.floor(absAlt) + ' [!]', barX + barWidth / 2, barY + barHeight + 5);
-        } else {
-            fill(100, 255, 100);
-            text(Math.floor(absAlt), barX + barWidth / 2, barY + barHeight + 5);
-        }
-
-        // Compass - positioned at bottom-right corner (same as minimap in space), sized to match minimap
-        const compassSize = 250; // 
-        const compassMargin = 0;  // Match minimap margin
-        const compassX = width - compassSize / 2 - compassMargin;
-        const compassY = height - compassSize / 2 - compassMargin;
-        const compassRadius = compassSize / 2 - 20; // Slightly smaller for labels
-        const markerMaxRadius = compassRadius - 5; // Max distance for markers - moved closer to edge
-
-        push();
-        translate(compassX, compassY);
-
-        // Background circle with semi-transparent fill (match minimap style)
-        fill(10, 15, 40, 180);
-        stroke(0, 200, 0, 200);
-        strokeWeight(1);
-        ellipse(0, 0, compassSize, compassSize);
-
-        // Inner reference circle
-        noFill();
-        stroke(100, 100, 100, 100);
-        strokeWeight(1);
-        ellipse(0, 0, compassSize - 40, compassSize - 40);
-
-        // Cardinal direction labels
-        fill(200);
-        noStroke();
-        textSize(12);
-        textAlign(CENTER, CENTER);
-        text('N', 0, -compassRadius);
-        text('S', 0, compassRadius);
-        text('E', compassRadius, 0);
-        text('W', -compassRadius, 0);
-
-
-
-
-
-        // Player heading indicator
-        push();
-        rotate(this.playerAngle);
-        stroke(255, 50, 50);
-        strokeWeight(1);
-        line(0, 0, markerMaxRadius, 0);
-        pop();
-
-        // 1. Mission Waypoint (Shield Generator) - Locked to edge
-        if (this.targetPos) {
-            const dx = this.targetPos.x - this.player.pos.x;
-            const dy = this.targetPos.y - this.player.pos.y;
-            const distSq = dx * dx + dy * dy;
-
-            // Only show if generator not yet destroyed
-            let targetDestroyed = false;
-
-            // 1. Check persistent destruction state via cell key
-            const resolution = SURFACE_CONFIG.MESH_RESOLUTION;
-            const cellSize = SURFACE_CONFIG.MESH_SIZE / resolution;
-            const tx = Math.round(this.targetPos.x / cellSize);
-            const ty = Math.round(this.targetPos.y / cellSize);
-            const targetKey = `${tx},${ty}`;
-
-            if (this.destroyedCells.has(targetKey)) {
-                targetDestroyed = true;
-            } else {
-                // 2. Fallback: check currently spawned objects in the grid
-                for (const obj of this.surfaceObjects) {
-                    if (obj && (obj.isTarget || (obj.constructor && obj.constructor.name === 'ShieldGenerator')) && obj.destroyed) {
-                        targetDestroyed = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!targetDestroyed) {
-                const angle = Math.atan2(dy, dx);
-                const dist = Math.sqrt(distSq);
-                const pulse = (Math.sin(millis() * 0.01) + 1) * 0.5;
-
-                // HYBRID COMPASS: Lock to edge when far (>3000m), move to center when near
-                // This provides waypoint navigation that transitions into tactical targeting
-                const targetMarkerDist = (dist > 3000)
-                    ? markerMaxRadius
-                    : map(dist, 0, 3000, 0, markerMaxRadius, true);
-
-                push();
-                rotate(angle);
-                noStroke();
-                // Pulsing red waypoint marker
-                fill(255, 0, 0, 200 + pulse * 55);
-                ellipse(targetMarkerDist, 0, 10 + pulse * 2, 10 + pulse * 2);
-                pop();
-            }
-        }
-
-        // 2. Persistent Player-Built Infrastructure (Compass)
-        // Draw from planet's persistent list so they clamp/persist even when far away
-        if (this.planet && Array.isArray(this.planet.playerBuiltSurfaceObjects)) {
-            for (const desc of this.planet.playerBuiltSurfaceObjects) {
-                if (desc.destroyed) continue;
-                const dx = desc.x - this.player.pos.x;
-                const dy = desc.y - this.player.pos.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const angle = Math.atan2(dy, dx);
-                const markerDist = map(dist, 0, 3000, 0, markerMaxRadius, true);
-
-                push();
-                rotate(angle);
-                noStroke();
-                fill(0, 255, 100, 220); // Green dot for infrastructure
-                ellipse(markerDist, 0, 4, 4);
-                pop();
-            }
-        }
-
-        // 3. Local Tactical Markers (Compass)
-        for (const obj of this.surfaceObjects) {
-            if (obj.destroyed) continue;
-
-            // Check for SurfaceStation, ShieldGenerator, Turret, DefenseDrone, and SecretCache
-            const isStation = (obj.constructor && obj.constructor.name === 'SurfaceStation');
-            const isTurret = (obj.constructor && obj.constructor.name === 'Turret');
-            const isDrone = (obj.constructor && obj.constructor.name === 'DefenseDrone');
-            const isCache = obj.isCache === true;
-            const isPlayerBuilt = obj.playerBuilt === true;
-
-            // Skip types already handled by persistent loops (Mission Waypoint & Infrastructure)
-            if (isPlayerBuilt) continue;
-
-            if (!isStation && !isTurret && !isDrone && !isCache) continue;
-
-            const dx = obj.pos.x - this.player.pos.x;
-            const dy = obj.pos.y - this.player.pos.y;
-            const distSq = dx * dx + dy * dy;
-
-            // Skip expensive sqrt and atan2 if object is way beyond tracking range (e.g. 5000m)
-            // markerMaxRadius is usually based on 3000m, but we can cull earlier
-            if (distSq > 25000000) continue; // 5000^2
-
-            const dist = Math.sqrt(distSq);
-
-            // Calculate angle on compass
-            const angle = Math.atan2(dy, dx);
-            // Map distance to compass radius - scaled for larger compass
-            // Use 3000 as max tracking distance 
-            const markerDist = map(dist, 0, 3000, 0, markerMaxRadius, true);
-
-            push();
-            rotate(angle);
-            noStroke();
-
-            if (isStation) {
-                // Surface Stations - Blue, slightly larger
-                fill(50, 150, 255, 220);
-                ellipse(markerDist, 0, 7, 7);
-            } else if (isTurret) {
-                // Turrets - Orange, smaller
-                fill(255, 150, 0, 200);
-                ellipse(markerDist, 0, 5, 5);
-            } else if (isDrone) {
-                // Defense Drones - Red, small
-                fill(255, 50, 50, 200);
-                ellipse(markerDist, 0, 4, 4);
-            } else if (isCache) {
-                // Secret Caches - Green
-                fill(50, 255, 100, 220);
-                ellipse(markerDist, 0, 6, 6);
-            }
-            pop();
-        }
-
-
-        pop();
-
-        pop();
     }
 
     /**

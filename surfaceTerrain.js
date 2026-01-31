@@ -284,17 +284,17 @@ class SurfaceTerrain {
 
         // Calculate viewport bounds for culling
         const perspectiveScale = map(altitude, this.config.MIN_ALTITUDE, this.config.MAX_ALTITUDE, 1.2, 0.6);
-        // Increased padding to 600 to account for max terrain height (500)
-        // This prevents terrain at the bottom edge from being culled when its height would extend into view
-        const cullPadding = 600 / perspectiveScale;
+        // Sharp padding (800) to account for max terrain height (500) and parallax shift at high altitude
+        const cullPadding = 800 / perspectiveScale;
         const visibleHalfWidth = (screenWidth / 2) / perspectiveScale + cullPadding;
         const visibleHalfHeight = (screenHeight / 2) / perspectiveScale + cullPadding;
 
         // Grid-based culling bounds (in grid units from center)
-        const minVisibleGX = Math.max(0, Math.floor(halfRes - visibleHalfWidth / cellSize) - 1);
-        const maxVisibleGX = Math.min(resMinus1, Math.ceil(halfRes + visibleHalfWidth / cellSize) + 1);
-        const minVisibleGY = Math.max(0, Math.floor(halfRes - visibleHalfHeight / cellSize) - 1);
-        const maxVisibleGY = Math.min(resMinus1, Math.ceil(halfRes + visibleHalfHeight / cellSize) + 1);
+        // Using +/- 2 padding for extra safety margin at edges
+        const minVisibleGX = Math.max(0, Math.floor(halfRes - visibleHalfWidth / cellSize) - 2);
+        const maxVisibleGX = Math.min(resMinus1, Math.ceil(halfRes + visibleHalfWidth / cellSize) + 2);
+        const minVisibleGY = Math.max(0, Math.floor(halfRes - visibleHalfHeight / cellSize) - 2);
+        const maxVisibleGY = Math.min(resMinus1, Math.ceil(halfRes + visibleHalfHeight / cellSize) + 2);
 
         let cellsDrawn = 0;
         let cellsCulled = 0;
