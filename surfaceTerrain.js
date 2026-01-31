@@ -210,7 +210,7 @@ class SurfaceTerrain {
                 gridY: targetGridY,
                 meshSize: this.config.MESH_SIZE,
                 resolution: this.config.MESH_RESOLUTION,
-                planetSeed: this.planet.seed || 12345,
+                planetSeed: (typeof this.planet.seed === 'number' ? this.planet.seed : Math.floor((this.planet.featureRand || 0) * 1000000)) || 12345,
                 planetPalette: planetPalette,
                 sunAngle: sunAngle,
                 extrusionAngle: this.config.EXTRUSION_ANGLE,

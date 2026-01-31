@@ -15,7 +15,7 @@ const SURFACE_CONFIG = {
     CLIMB_SPEED: 150,
 
     // Terrain mesh
-    MESH_RESOLUTION: 120,      // Grid resolution (increased for better detail)
+    MESH_RESOLUTION: 200,      // Grid resolution (increased for better detail)
     MESH_SIZE: 4200,           // World units covered (centered on camera focus)
     DEFAULT_FEATURE_SEED: 12345, // Fallback seed for terrain generation
     HIGH_TERRAIN_THRESHOLD: 350, // Height (0-500) treated as high ground for defenses
