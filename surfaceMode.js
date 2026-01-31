@@ -8,15 +8,16 @@
 const SURFACE_CONFIG = {
     // Flight mechanics
     MIN_ALTITUDE: 10,
-    MAX_ALTITUDE: 1000,
+    MAX_ALTITUDE: 2000,
     DEFAULT_ALTITUDE: 500, // Default starting altitude above terrain
     TURN_SPEED: 2.5,           // Radians per second
     // Movement (now uses SHIP_DEFINITIONS and SharedPhysics)
-    CLIMB_SPEED: 150,
+    CLIMB_SPEED: 200,
 
     // Terrain mesh
-    MESH_RESOLUTION: 200,      // Grid resolution (increased for better detail)
+    MESH_RESOLUTION: 160,      // Grid resolution (increased for better detail)
     MESH_SIZE: 4200,           // World units covered (centered on camera focus)
+    SPAWN_CELL_SIZE: 35,       // Fixed spawn density (independent of resolution)
     DEFAULT_FEATURE_SEED: 12345, // Fallback seed for terrain generation
     HIGH_TERRAIN_THRESHOLD: 350, // Height (0-500) treated as high ground for defenses
 
@@ -162,7 +163,9 @@ class SurfaceMode {
      * @private
      */
     _getPerspectiveScale() {
-        return map(this.altitude, SURFACE_CONFIG.MIN_ALTITUDE, SURFACE_CONFIG.MAX_ALTITUDE, 1.2, 0.6);
+        // Inverse scaling: simulation of real perspective (scale ~ 1/distance)
+        // Tuned: At alt 10, scale ~1.2. At alt 1000, scale ~0.6. At 5000, scale ~0.2.
+        return 1200 / (this.altitude + 1000);
     }
 
     /**
@@ -1076,12 +1079,28 @@ class SurfaceMode {
 
         // Also cache into the objectCache for the current grid cell so it persists while moving around
         try {
-            const resolution = SURFACE_CONFIG.MESH_RESOLUTION || 16;
-            const cellSize = SURFACE_CONFIG.MESH_SIZE / resolution;
-            const cellX = Math.round((bx) / cellSize);
-            const cellY = Math.round((by) / cellSize);
+            const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || 35;
+            const cellX = Math.floor((bx) / cellSize);
+            const cellY = Math.floor((by) / cellSize);
             const cellKey = `${cellX},${cellY}`;
+
             this.objectCache.set(cellKey, hab);
+
+            // CRITICAL: Also add to the runtime map so _spawnObjects can find it when grid shifts
+            // Re-use descriptor from above (or create minimal one if this.planet was null)
+            const mapDesc = {
+                type: hab.type || 'OffworldBuilding',
+                x: hab.pos ? hab.pos.x : hab.x || bx,
+                y: hab.pos ? hab.pos.y : hab.y || by,
+                size: hab.size || size,
+                seed: hab.seed || null,
+                variant: (typeof hab.variant !== 'undefined') ? hab.variant : null,
+                yOffset: (typeof hab.yOffset !== 'undefined') ? hab.yOffset : 0,
+                displayName: hab.displayName || null,
+                destroyed: !!hab.destroyed
+            };
+            this.playerBuiltMap.set(cellKey, mapDesc);
+
         } catch (e) {
             // Ignore cache errors
         }
@@ -1462,11 +1481,18 @@ class SurfaceMode {
             return;
         }
 
-        // Iterate over the entire active grid area
-        for (let gy = 0; gy < resolution; gy++) {
-            for (let gx = 0; gx < resolution; gx++) {
-                const activeGridX = gridX + (gx - Math.floor(resolution / 2));
-                const activeGridY = gridY + (gy - Math.floor(resolution / 2));
+        // Use a fixed spawn density independent of visual mesh resolution
+        // Previous tuning was based on Resolution 120 over Size 4200 => Cell Size 35
+        const SPAWN_CELL_SIZE = SURFACE_CONFIG.SPAWN_CELL_SIZE || 35;
+        const spawnResolution = Math.ceil(SURFACE_CONFIG.MESH_SIZE / SPAWN_CELL_SIZE);
+
+        // Iterate over the spawn grid area
+        for (let gy = 0; gy < spawnResolution; gy++) {
+            for (let gx = 0; gx < spawnResolution; gx++) {
+                // Calculate world position based on fixed spawn density
+                // Use floor to keep indices integral for hashing
+                const activeGridX = Math.floor(gridX * (SURFACE_CONFIG.MESH_SIZE / SURFACE_CONFIG.MESH_RESOLUTION) / SPAWN_CELL_SIZE) + (gx - Math.floor(spawnResolution / 2));
+                const activeGridY = Math.floor(gridY * (SURFACE_CONFIG.MESH_SIZE / SURFACE_CONFIG.MESH_RESOLUTION) / SPAWN_CELL_SIZE) + (gy - Math.floor(spawnResolution / 2));
 
                 const cellKey = `${activeGridX},${activeGridY}`;
 
@@ -1482,8 +1508,8 @@ class SurfaceMode {
                 const x = activeGridX;
                 const y = activeGridY;
                 const cellHash = (Math.abs(Math.sin(x * 12.9898 + y * 78.233 + planetSeed) * 43758.5453) % 1);
-                const wx = activeGridX * cellSize;
-                const wy = activeGridY * cellSize;
+                const wx = activeGridX * SPAWN_CELL_SIZE;
+                const wy = activeGridY * SPAWN_CELL_SIZE;
                 const h = this._getTerrainHeightAt(wx, wy);
                 const subHash = (cellHash * 123.45) % 1;
                 const objSeed = cellHash * 100000;
@@ -1620,10 +1646,13 @@ class SurfaceMode {
 
         // Periodically clean cache to prevent memory leak (remove distant objects)
         if (frameCount % 600 === 0) {
-            const keepRadius = resolution;
+            const keepRadius = spawnResolution * 1.5;
+            const centerSpawnGridX = Math.floor(gridX * (SURFACE_CONFIG.MESH_SIZE / SURFACE_CONFIG.MESH_RESOLUTION) / SPAWN_CELL_SIZE);
+            const centerSpawnGridY = Math.floor(gridY * (SURFACE_CONFIG.MESH_SIZE / SURFACE_CONFIG.MESH_RESOLUTION) / SPAWN_CELL_SIZE);
+
             for (const [key, obj] of this.objectCache) {
                 const [ox, oy] = key.split(',').map(Number);
-                if (Math.abs(ox - gridX) > keepRadius || Math.abs(oy - gridY) > keepRadius) {
+                if (Math.abs(ox - centerSpawnGridX) > keepRadius || Math.abs(oy - centerSpawnGridY) > keepRadius) {
                     this.objectCache.delete(key);
                 }
             }
