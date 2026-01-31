@@ -123,12 +123,6 @@ function validateShipDefinitions() {
  */
 function initializeGameObjects() {
     gameStateManager = new GameStateManager();
-    // Ensure enemy ability methods are mixed into Enemy.prototype before any Enemy instances
-    if (typeof applyEnemyAbilityMethods === 'function') {
-        applyEnemyAbilityMethods();
-    } else {
-        console.warn('applyEnemyAbilityMethods not available during initializeGameObjects()');
-    }
     galaxy = new Galaxy();
     player = new Player();
     uiManager = new UIManager();

@@ -78,8 +78,8 @@ const STATION_STATES = [
     "VIEWING_SPACE_OBJECT_MARKET",
     "VIEWING_SPACE_OBJECT_REPAIRS",
     "VIEWING_SPACE_OBJECT_SHIPYARD",
-    "VIEWING_SPACE_OBJECT_UPGRADES"
-    , "VIEWING_BASE"
+    "VIEWING_SPACE_OBJECT_UPGRADES",
+    "VIEWING_BASE"
 ];
 
 class GameStateManager {
@@ -638,7 +638,7 @@ class GameStateManager {
         const isUndocking = newState === "IN_FLIGHT" && STATION_STATES.includes(prevState);
         const isDocking = newState === "DOCKED" && prevState === "IN_FLIGHT";
         const isSpaceObjectDocking = newState === "DOCKED_SPACE_OBJECT" && prevState === "IN_FLIGHT";
-        const isInStation = newState === "DOCKED" || newState === "DOCKED_SPACE_OBJECT";
+        const isStationaryState = STATION_STATES.includes(newState);
         const isInMenu = ["VIEWING_MARKET", "VIEWING_MISSIONS"].includes(newState);
 
         if (isUndocking) {
@@ -647,10 +647,17 @@ class GameStateManager {
             this._handleDocking(prevState);
         } else if (isSpaceObjectDocking) {
             this._handleSpaceObjectDocking(prevState);
-        } else if (isInStation || isInMenu) {
-            // Ensure player is stopped in these states
+        } else if (isStationaryState) {
+            // Ensure player is stopped and invulnerable in all station/base menu states
             if (player) {
                 player.vel.set(0, 0);
+                player.isDockedAndInvulnerable = true;
+
+                // Deactivate cloak when stationary (silently)
+                if (player.isCloaked) {
+                    player.isCloaked = false;
+                    player.cloakDurationTimer = 0;
+                }
             }
         }
     }
@@ -841,6 +848,11 @@ class GameStateManager {
                 try {
                     // Keep player completely stationary while docked
                     player.vel.set(0, 0);
+
+                    // Update surface mode logic if active (allows transitions to finish and terrain to update)
+                    if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+                        surfaceMode.update(deltaTime);
+                    }
 
                     // Update station music
                     if (typeof stationMusicManager !== 'undefined' && stationMusicManager) {

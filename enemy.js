@@ -1215,3 +1215,8 @@ if (typeof applyEnemyDamageSystemMethods === 'function') {
 if (typeof applyEnemyRenderingMethods === 'function') {
     applyEnemyRenderingMethods();
 }
+
+// Apply ability methods from enemyAbilities.js to Enemy prototype
+if (typeof applyEnemyAbilityMethods === 'function') {
+    applyEnemyAbilityMethods();
+}
