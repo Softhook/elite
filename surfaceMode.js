@@ -357,8 +357,10 @@ class SurfaceMode {
         // But keeps it static during surface play (per user request)
         if (this.planet && this.planet.pos) {
             // Sun is at (0,0). Planet is at this.planet.pos.
-            // Angle FROM Planet TO Sun in space = atan2(-py, -px).
-            // The planet texture is rotated by this.planet.currentRotation.
+            // Simplified: Use the direct angle from Planet to Sun in world space.
+            // Subtract Rotation to align "Surface North" with "Planet North".
+            // If we don't subtract rotation, "Up" on surface = "Up" in Space.
+            // But "Up" on surface usually means "North", which is rotated by currentRotation.
             this.sunAngle = Math.atan2(-this.planet.pos.y, -this.planet.pos.x) - (this.planet.currentRotation || 0);
         } else {
             this.sunAngle = -Math.PI / 4;
@@ -1890,17 +1892,46 @@ class SurfaceMode {
         const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
         const radarAlt = shipAlt - groundH;
         const shadowOffset = Math.max(0, (radarAlt - SURFACE_CONFIG.MIN_ALTITUDE) * SURFACE_CONFIG.SHADOW_ALTITUDE_SCALE);
+
+        // Calculate Shadow Angle
+        // We want the shadow to be cast from the *Visual* representation of the ship
+        // The Ship Sprite is shifted by parallax: (shipAlt * sin(extrusion), shipAlt * cos(extrusion))
+        // So we must offset the shadow reference point by this same amount to center it under the sprite
+        // THEN apply the sun-based shadow vector.
+
+
+        const startX = this.player.pos.x - (shipAlt * Math.sin(extrusionAngle));
+        const startY = this.player.pos.y - (shipAlt * Math.cos(extrusionAngle));
+
         const shadowOffsetX = Math.cos(sunAngle + Math.PI) * shadowOffset;
         const shadowOffsetY = Math.sin(sunAngle + Math.PI) * shadowOffset;
+
 
         // Shadow on ground
         if (!this.player.destroyed && !this.player.isDying) {
             push();
-            // Ground position for shadow - projected on terrain
-            const shadowX = this.player.pos.x + shadowOffsetX;
-            const shadowY = this.player.pos.y + shadowOffsetY;
-            const visualShadowX = this._toVisualX(shadowX, groundH);
-            const visualShadowY = this._toVisualY(shadowY, groundH);
+
+            // Ground position for shadow
+            // We calculate the logical shadow position first, then project it to visual coordinates.
+            // Crucially, we apply a 'Visual Shift' to align the shadow with the perceived position of the 
+            // extruded ship sprite, compensating for the parallax gap caused by altitude extrusion.
+
+            // 1. Logical Shadow Position
+            const logicalShadowX = this.player.pos.x + shadowOffsetX;
+            const logicalShadowY = this.player.pos.y + shadowOffsetY;
+
+            // 2. Project to Visual Space at Ground Height
+            let visualShadowX = this._toVisualX(logicalShadowX, groundH);
+            let visualShadowY = this._toVisualY(logicalShadowY, groundH);
+
+            // 3. Apply Parallax Correction
+            // Pull the shadow back to align with the ship's extruded visual position
+            const visualShiftX = -(shipAlt - groundH) * Math.sin(extrusionAngle);
+            const visualShiftY = -(shipAlt - groundH) * Math.cos(extrusionAngle);
+
+            visualShadowX += visualShiftX;
+            visualShadowY += visualShiftY;
+
             translate(visualShadowX, visualShadowY);
             rotate(this.player.angle);
 
@@ -1953,7 +1984,9 @@ class SurfaceMode {
             scale(counterScale);
             translate(-this.player.pos.x, -this.player.pos.y);
 
-            this.player.draw();
+            // Pass the calculated Sun Angle to the player draw function
+            // so the ship's self-shading matches the environment
+            this.player.draw(sunAngle);
             pop();
         }
     }

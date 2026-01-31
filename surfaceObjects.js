@@ -1403,11 +1403,11 @@ class AgriculturalBuilding extends SurfaceObject {
             const millDv = millH * Math.cos(extrusionAngle);
 
             // Tower
-            Draw3D.drawCylinder(x, y - millDv, sz * 0.2, millH, 8, this.accentColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(baseX, baseY - millDv, sz * 0.2, millH, 8, this.accentColor, extrusionAngle, sunAngle);
             // Hub
-            Draw3D.drawCylinder(x, y - millDv - sz * 0.15, sz * 0.15, sz * 0.2, 8, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(baseX, baseY - millDv - sz * 0.15, sz * 0.15, sz * 0.2, 8, this.primaryColor, extrusionAngle, sunAngle);
             // Blades (simplified as box)
-            Draw3D.drawBox3D(x, y - millDv - sz * 0.25, sz * 0.08, sz * 0.6, sz * 0.05, color(220, 220, 220), extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(baseX, baseY - millDv - sz * 0.25, sz * 0.08, sz * 0.6, sz * 0.05, color(220, 220, 220), extrusionAngle, sunAngle);
         }
     }
 

@@ -1693,7 +1693,7 @@ class Player {
     }
 
     /** Draws the player ship using its specific draw function. */
-    draw() {
+    draw(overrideSunAngle = null) {
         // Don't draw ship if exploding
         if (this.exploding) {
             // Show final flash during first 300ms (cache millis call)
@@ -1725,7 +1725,13 @@ class Player {
 
         // Calculate sun angle relative to ship's rotation for 3D shading
         // Sun is at (0,0) in world space.
-        const sunAngle = atan2(-this.pos.y, -this.pos.x);
+        // For Surface Mode, we accept an override since (0,0) is not the sun.
+        let sunAngle;
+        if (overrideSunAngle !== null && overrideSunAngle !== undefined) {
+            sunAngle = overrideSunAngle;
+        } else {
+            sunAngle = atan2(-this.pos.y, -this.pos.x);
+        }
         const localSunAngle = sunAngle - this.angle;
 
         // Apply cloak transparency effect
