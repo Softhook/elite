@@ -6634,6 +6634,13 @@ class StarSystem {
                 }
             }
         }
+
+        // Sync all planets with the new economy type
+        if (Array.isArray(this.planets)) {
+            for (const planet of this.planets) {
+                if (planet) planet.economyType = economyType;
+            }
+        }
     }
 
     /**

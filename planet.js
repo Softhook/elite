@@ -492,6 +492,11 @@ class Planet {
         if (typeof this.seed === 'undefined' || this.seed === null) {
             this.seed = Math.floor((this.featureRand || 0) * 1000000);
         }
+
+        // Ensure economy and tech level are captured if they were set externally 
+        // (usually by StarSystem.createRandomPlanets)
+        if (typeof this.economyType === 'undefined' || this.economyType === null) this.economyType = null;
+        if (typeof this.techLevel !== 'number') this.techLevel = 3;
     }
 
     /**
@@ -1222,8 +1227,9 @@ class Planet {
             name: this.name,
             systemName: this.systemName,
             planetIndex: this.planetIndex,
-            isSun: !!this.isSun
-            ,
+            isSun: !!this.isSun,
+            economyType: this.economyType || null,
+            techLevel: (typeof this.techLevel === 'number') ? this.techLevel : 3,
             // Persist any player-built surface objects (stored as simple descriptors)
             playerBuiltSurfaceObjects: Array.isArray(this.playerBuiltSurfaceObjects)
                 ? this.playerBuiltSurfaceObjects.map(o => {
