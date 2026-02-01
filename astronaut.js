@@ -30,7 +30,7 @@ class Astronaut {
 
         // Grenade system
         this.grenadeCooldown = 0;
-        this.grenadeMaxCooldown = 60; // 1 second at 60fps
+        this.grenadeMaxCooldown = 1.0; // 1 second cooldown
     }
 
     /**
@@ -124,10 +124,41 @@ class Astronaut {
      * Update physics
      */
     update(dt) {
+        if (this.destroyed) return;
         this.pos.add(p5.Vector.mult(this.vel, dt));
+        this.vel.mult(Math.pow(0.85, dt * 60)); // High friction on ground
+        this.speed = this.vel.mag();
 
-        // Cooldowns
-        if (this.grenadeCooldown > 0) this.grenadeCooldown--;
+        if (this.grenadeCooldown > 0) this.grenadeCooldown -= dt;
+    }
+
+    /**
+     * Handle taking damage from projectiles or explosions
+     */
+    takeDamage(amount) {
+        if (this.destroyed) return;
+
+        this.health -= amount;
+
+        // Proxy damage to the ship's hull so the main UI reflects player health
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.player) {
+            const player = surfaceMode.player;
+            // Astronauts on foot are not protected by ship shields
+            const oldShield = player.shield;
+            player.shield = 0;
+            player.takeDamage(amount);
+
+            // Only restore shield if player is still alive 
+            // (avoids re-enabling shields on a dead ship)
+            if (!player.destroyed) {
+                player.shield = oldShield;
+            }
+        }
+
+        if (this.health <= 0) {
+            this.health = 0;
+            this.destroyed = true;
+        }
     }
 
     /**

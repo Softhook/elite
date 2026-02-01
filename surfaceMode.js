@@ -656,8 +656,9 @@ class SurfaceMode {
 
             // Update surface objects (single pass, dt-corrected)
             if (this.surfaceObjects) {
+                const target = this.controlMode === 'ASTRONAUT' ? this.astronaut : this.player;
                 for (let obj of this.surfaceObjects) {
-                    if (obj.update) obj.update(dt, this.player, this.starSystem);
+                    if (obj.update) obj.update(dt, target, this.starSystem);
                 }
             }
 
@@ -962,6 +963,8 @@ class SurfaceMode {
         // Sync camera focus to astronaut
         this.surfaceX = this.astronaut.pos.x;
         this.surfaceY = this.astronaut.pos.y;
+        this.playerAngle = this.astronaut.facingAngle || 0;
+        this.radarAltitude = 0; // Astronaut is on the ground
         this.altitude = groundH + 30; // Camera height above astronaut (closer than ship)
 
         // Build base: Press 'B' (keyCode 66) to build a hab unit in front of the astronaut
@@ -1299,42 +1302,37 @@ class SurfaceMode {
      * @private
      */
     _checkEnemyProjectileCollisions() {
-        if (!this.player || this.player.destroyed) return;
+        const target = (this.controlMode === 'ASTRONAUT') ? this.astronaut : this.player;
+        if (!target || target.destroyed) return;
 
         for (let proj of this.starSystem.projectiles) {
             if (!proj || proj.destroyed) continue;
             if (!proj.isSurface) continue;
-            if (proj.owner === this.player) continue;
-
-            // REMOVED: Altitude interpolation causes visual offset
-            // Projectiles should maintain constant altitude set at spawn
+            // Don't hit self
+            if (proj.owner === target || proj.owner === this.player) continue;
 
             // Use VISUAL coordinates for collision (what the player sees on screen)
             const projAlt = proj.altitude || 0;
-            const playerAlt = this.player.altitude || 0;
+            const targetAlt = target.altitude || 0;
 
-            // Calculate visual Y positions (accounting for altitude offset)
+            // Calculate visual positions (accounting for altitude/perspective)
             const projVisualX = this._toVisualX(proj.pos.x, projAlt);
             const projVisualY = this._toVisualY(proj.pos.y, projAlt);
-            const playerVisualX = this._toVisualX(this.player.pos.x, playerAlt);
-            const playerVisualY = this._toVisualY(this.player.pos.y, playerAlt);
+            const targetVisualX = this._toVisualX(target.pos.x, targetAlt);
+            const targetVisualY = this._toVisualY(target.pos.y, targetAlt);
 
-            // Distance check using visual coordinates
-            const dx = projVisualX - playerVisualX;
-            const dy = projVisualY - playerVisualY;
+            // Distance check in screen/visual space
+            const dx = projVisualX - targetVisualX;
+            const dy = projVisualY - targetVisualY;
             const distSq = dx * dx + dy * dy;
 
-            // FIX: Use radius (size/2), not diameter (size)
-            const hitRadius = this.player.size / 2;
+            // Use appropriate hit radius (astronaut is smaller than ship)
+            const hitRadius = (target.size || 20) / 2;
             const hitRadiusSq = hitRadius * hitRadius;
 
-
-
             if (distSq < hitRadiusSq) {
-                // Visual collision - if it looks like a hit on screen, it is a hit
-                this.player.takeDamage(proj.damage || 5);
-                // Create explosion at visual impact point using unified standard
-                this._createSurfaceExplosion(proj.pos.x, proj.pos.y, proj.altitude, 15, [255, 50, 50]);
+                target.takeDamage(proj.damage || 5);
+                this._createSurfaceExplosion(proj.pos.x, proj.pos.y, proj.altitude, target === this.astronaut ? 10 : 15, [255, 50, 50]);
                 proj.destroyed = true;
             }
         }

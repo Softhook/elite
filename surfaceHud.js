@@ -72,9 +72,11 @@ class SurfaceHUD {
         text(`R-ALT: ${Math.round(surfaceMode.altitude)}`, 15, 75);
 
         // Show terrain height and absolute altitude for debugging
-        const groundH = surfaceMode._getTerrainHeightAt(surfaceMode.player.pos.x, surfaceMode.player.pos.y);
+        const activeEntity = (surfaceMode.controlMode === 'ASTRONAUT') ? surfaceMode.astronaut : surfaceMode.player;
+        const groundH = surfaceMode._getTerrainHeightAt(surfaceMode.surfaceX, surfaceMode.surfaceY);
+        const absAlt = activeEntity?.altitude || 0;
         text(`Ground: ${Math.round(groundH)}`, 15, 90);
-        text(`Abs-ALT: ${Math.round(surfaceMode.player.altitude)}`, 15, 105);
+        text(`Abs-ALT: ${Math.round(absAlt)}`, 15, 105);
         pop();
     }
 
@@ -113,9 +115,9 @@ class SurfaceHUD {
         strokeWeight(1);
         rect(barX, barY, barWidth, barHeight, 3);
 
-        const player = surfaceMode.player;
-        const groundH = surfaceMode._getTerrainHeightAt(player.pos.x, player.pos.y);
-        const absAlt = Math.max(0, player.altitude || 0);
+        const activeEntity = (surfaceMode.controlMode === 'ASTRONAUT') ? surfaceMode.astronaut : surfaceMode.player;
+        const groundH = surfaceMode._getTerrainHeightAt(surfaceMode.surfaceX, surfaceMode.surfaceY);
+        const absAlt = Math.max(0, activeEntity?.altitude || 0);
         const maxDisplayAlt = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.MAX_ALTITUDE : 2000;
 
         // Find nearest threat for detection warning
@@ -126,8 +128,8 @@ class SurfaceHUD {
         if (surfaceMode.surfaceObjects) {
             for (const obj of surfaceMode.surfaceObjects) {
                 if (obj && !obj.destroyed && (obj.constructor.name === 'Turret' || obj.constructor.name === 'DefenseDrone')) {
-                    const dx = obj.pos.x - player.pos.x;
-                    const dy = obj.pos.y - player.pos.y;
+                    const dx = obj.pos.x - surfaceMode.surfaceX;
+                    const dy = obj.pos.y - surfaceMode.surfaceY;
                     if (dx * dx + dy * dy < detectionRange * detectionRange) {
                         const enemyAlt = (obj.altitude !== undefined) ? obj.altitude : (obj.yOffset || 0);
                         const detectThreshold = (obj.constructor.name === 'Turret')
@@ -259,15 +261,13 @@ class SurfaceHUD {
 
         // 1. Mission Target
         if (surfaceMode.targetPos) {
-            const dx = surfaceMode.targetPos.x - player.pos.x;
-            const dy = surfaceMode.targetPos.y - player.pos.y;
+            const dx = surfaceMode.targetPos.x - surfaceMode.surfaceX;
+            const dy = surfaceMode.targetPos.y - surfaceMode.surfaceY;
 
             // Check if destroyed
             let targetDestroyed = false;
             if (surfaceMode.destroyedCells) {
-                const resolution = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.MESH_RESOLUTION : 128;
-                const meshSize = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.MESH_SIZE : 10000;
-                const cellSize = meshSize / resolution;
+                const cellSize = (typeof SURFACE_CONFIG !== 'undefined') ? (SURFACE_CONFIG.SPAWN_CELL_SIZE || 35) : 35;
                 const tx = Math.round(surfaceMode.targetPos.x / cellSize);
                 const ty = Math.round(surfaceMode.targetPos.y / cellSize);
                 if (surfaceMode.destroyedCells.has(`${tx},${ty}`)) targetDestroyed = true;
@@ -293,8 +293,8 @@ class SurfaceHUD {
         if (planet && planet.playerBuiltSurfaceObjects) {
             for (const desc of planet.playerBuiltSurfaceObjects) {
                 if (desc.destroyed) continue;
-                const dx = desc.x - player.pos.x;
-                const dy = desc.y - player.pos.y;
+                const dx = desc.x - surfaceMode.surfaceX;
+                const dy = desc.y - surfaceMode.surfaceY;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 const angle = Math.atan2(dy, dx);
                 const mDist = map(dist, 0, 3000, 0, maxRadius, true);
@@ -320,8 +320,8 @@ class SurfaceHUD {
         for (const obj of surfaceMode.surfaceObjects) {
             if (obj.destroyed || obj.playerBuilt) continue;
 
-            const dx = obj.pos.x - player.pos.x;
-            const dy = obj.pos.y - player.pos.y;
+            const dx = obj.pos.x - surfaceMode.surfaceX;
+            const dy = obj.pos.y - surfaceMode.surfaceY;
             const dSq = dx * dx + dy * dy;
 
             if (dSq > 25000000) continue; // 5000m cull
