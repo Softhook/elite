@@ -4,9 +4,10 @@
 
 /**
  * Constants for surface object rendering
+ * EXTRUSION_ANGLE must match SURFACE_CONFIG.EXTRUSION_ANGLE (0.5)
  */
 const SURFACE_RENDER_CONSTANTS = {
-    EXTRUSION_ANGLE: 0,
+    EXTRUSION_ANGLE: 0.5,
     DEFAULT_SUN_ANGLE: -Math.PI / 4
 };
 

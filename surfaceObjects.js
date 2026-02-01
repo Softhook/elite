@@ -1600,7 +1600,8 @@ class Turret extends SurfaceObject {
                 playerVisualX = surfaceMode._toVisualX(player.pos.x, playerAlt);
                 playerVisualY = surfaceMode._toVisualY(player.pos.y, playerAlt);
             } else {
-                const extrusionAngle = 0.5;
+                // Fallback manual projection using centralized getExtrusionAngle()
+                const extrusionAngle = getExtrusionAngle();
                 turretVisualX = this.pos.x - (turretAlt * Math.sin(extrusionAngle));
                 turretVisualY = this.pos.y - (turretAlt * Math.cos(extrusionAngle));
                 playerVisualX = player.pos.x - (playerAlt * Math.sin(extrusionAngle));
@@ -2136,8 +2137,8 @@ class DefenseDrone extends SurfaceObject {
                     playerVisualX = surfaceMode._toVisualX(player.pos.x, playerAlt);
                     playerVisualY = surfaceMode._toVisualY(player.pos.y, playerAlt);
                 } else {
-                    // Fallback manual projection matching standard 0.5 angle
-                    const extrusionAngle = 0.5;
+                    // Fallback manual projection using centralized getExtrusionAngle()
+                    const extrusionAngle = getExtrusionAngle();
                     droneVisualX = this.pos.x - (droneAlt * Math.sin(extrusionAngle));
                     droneVisualY = this.pos.y - (droneAlt * Math.cos(extrusionAngle));
                     playerVisualX = player.pos.x - (playerAlt * Math.sin(extrusionAngle));
