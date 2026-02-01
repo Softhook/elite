@@ -39,6 +39,7 @@ global.SurfaceTerrain = class SurfaceTerrain {
         return Math.sin(x * 0.01) * 20 + Math.cos(y * 0.01) * 20;
     }
     getGridPosition() { return { x: 0, y: 0 }; }
+    update(x, y, force, sunAngle) { return false; }
     draw() { }
     cleanup() { }
 };
@@ -619,9 +620,10 @@ describe('SurfaceMode Viewport Bounds', () => {
     });
 
     test('_getViewportBounds centers on player', () => {
+        sm.altitude = 0; // Eliminate perspective offset for baseline centering test
         const bounds = sm._getViewportBounds();
-        const centerX = (bounds.left + bounds.right) / 2;
-        const centerY = (bounds.top + bounds.bottom) / 2;
+        const centerX = (bounds.minX + bounds.maxX) / 2;
+        const centerY = (bounds.minY + bounds.maxY) / 2;
         expect(centerX).toBeCloseTo(player.pos.x, 0);
         expect(centerY).toBeCloseTo(player.pos.y, 0);
     });
@@ -629,11 +631,11 @@ describe('SurfaceMode Viewport Bounds', () => {
     test('_getViewportBounds increases with altitude', () => {
         sm.altitude = SURFACE_CONFIG.MIN_ALTITUDE;
         const lowBounds = sm._getViewportBounds();
-        const lowWidth = lowBounds.right - lowBounds.left;
+        const lowWidth = lowBounds.maxX - lowBounds.minX;
 
         sm.altitude = SURFACE_CONFIG.MAX_ALTITUDE;
         const highBounds = sm._getViewportBounds();
-        const highWidth = highBounds.right - highBounds.left;
+        const highWidth = highBounds.maxX - highBounds.minX;
 
         expect(highWidth).toBeGreaterThan(lowWidth);
     });
@@ -642,8 +644,8 @@ describe('SurfaceMode Viewport Bounds', () => {
         const boundsNoPad = sm._getViewportBounds(0);
         const boundsPad = sm._getViewportBounds(500);
 
-        const widthNoPad = boundsNoPad.right - boundsNoPad.left;
-        const widthPad = boundsPad.right - boundsPad.left;
+        const widthNoPad = boundsNoPad.maxX - boundsNoPad.minX;
+        const widthPad = boundsPad.maxX - boundsPad.minX;
 
         expect(widthPad).toBeGreaterThan(widthNoPad);
     });
@@ -652,8 +654,8 @@ describe('SurfaceMode Viewport Bounds', () => {
         sm.player = null;
         const bounds = sm._getViewportBounds();
         expect(bounds).toBeDefined();
-        expect(bounds.left).toBe(0);
-        expect(bounds.right).toBe(width);
+        expect(bounds.minX).toBe(0);
+        expect(bounds.maxX).toBe(width);
     });
 });
 
@@ -942,6 +944,7 @@ describe('SurfaceMode Transitions', () => {
     test('ENTERING transitions to ACTIVE when complete', () => {
         sm.enter(player, planet, starSystem);
         sm.transitionStartTime = millis() - SURFACE_CONFIG.TRANSITION_DURATION * 2;
+        sm._terrainRequested = true; // Ensure logic doesn't reset _terrainReady
         sm._terrainReady = true;
 
         sm._updateTransition();

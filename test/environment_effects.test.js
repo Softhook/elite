@@ -5,6 +5,16 @@
 global.createVector = (x, y) => ({
     x: x || 0,
     y: y || 0,
+    set: function (x, y) {
+        if (typeof x === 'object') {
+            this.x = x.x;
+            this.y = x.y;
+        } else {
+            this.x = x || 0;
+            this.y = y || 0;
+        }
+        return this;
+    },
     add: function (v) { this.x += v.x; this.y += v.y; return this; },
     sub: function (v) { this.x -= v.x; this.y -= v.y; return this; },
     mult: function (n) { this.x *= n; this.y *= n; return this; },
@@ -46,6 +56,19 @@ global.abs = Math.abs;
 global.radians = (deg) => deg * (Math.PI / 180);
 global.deltaTime = 16;
 global.millis = () => Date.now();
+global.FRAME_TIME_BASELINE_MS = 16.666;
+global.HALF_PI = Math.PI / 2;
+global.QUARTER_PI = Math.PI / 4;
+global.PREDICTION_FPS_BASELINE = 60;
+global.ROTATION_THRESHOLD_RAD = 0.02;
+global.STRAFE_THRUST_MULTIPLIER = 0.5;
+global.REVERSE_THRUST_MULTIPLIER = 0.3;
+global.DESPAWN_DISTANCE_MULTIPLIER = 1.2;
+global.JUMP_FADE_OUT_DURATION = 1.0;
+global.JUMP_FADE_IN_DURATION = 1.0;
+global.DRAG_EFFECT_DEFAULT_DURATION = 3.0;
+global.DRAG_EFFECT_DEFAULT_MULTIPLIER = 2.0;
+global.DRAG_CONSECUTIVE_HIT_MULT = 1.5;
 
 // FIX: Add mult to p5.Vector static methods
 global.p5 = {
@@ -100,13 +123,63 @@ global.SHIP_DEFINITIONS = {
 // Additional required globals for Enemy/StarSystem
 global.width = 2000;
 global.height = 2000;
-global.AI_STATE = { IDLE: 'IDLE', ATTACKING: 'ATTACKING' };
-global.AI_ROLE = { PIRATE: 'PIRATE' };
-global.WEAPON_TYPE = { PROJECTILE: 'projectile' };
-global.TARGET_SCORE_INVALID = -9999;
+global.AI_STATE = {
+    IDLE: 'IDLE',
+    ATTACKING: 'ATTACKING',
+    TRADING: 'TRADING',
+    DOCKING: 'DOCKING',
+    DOCKING_APPROACH: 'DOCKING_APPROACH',
+    PATROLLING: 'PATROLLING',
+    APPROACHING: 'APPROACHING',
+    ATTACK_PASS: 'ATTACK_PASS',
+    REPOSITIONING: 'REPOSITIONING',
+    SNIPING: 'SNIPING',
+    COLLECTING_CARGO: 'COLLECTING_CARGO',
+    TRANSPORTING: 'TRANSPORTING',
+    GUARDING: 'GUARDING',
+    LEAVING_SYSTEM: 'LEAVING_SYSTEM'
+};
+global.AI_ROLE = {
+    PIRATE: 'PIRATE',
+    POLICE: 'POLICE',
+    HAULER: 'HAULER',
+    TRANSPORT: 'TRANSPORT',
+    MINER: 'MINER',
+    MISSIONARY: 'MISSIONARY',
+    GUARD: 'GUARD',
+    BOUNTY_HUNTER: 'BOUNTY_HUNTER',
+    ALIEN: 'ALIEN',
+    COMBAT: 'COMBAT'
+};
+global.WEAPON_TYPE = { PROJECTILE: 'projectile', BEAM: 'beam', TURRET: 'turret', MISSILE: 'missile' };
+global.TARGET_SCORE_INVALID = -Infinity;
+global.TARGET_SCORE_BASE_WANTED = 100;
+global.TARGET_SCORE_WANTED_PIRATE_BONUS = 20;
+global.TARGET_SCORE_PIRATE_CARGO_BASE = 30;
+global.TARGET_SCORE_PIRATE_CARGO_MULT = 1.5;
+global.TARGET_SCORE_PIRATE_PREY_HAULER = 40;
+global.TARGET_SCORE_RETALIATION_PIRATE = 60;
+global.TARGET_SCORE_RETALIATION_HAULER = 40;
+global.TARGET_SCORE_DISTANCE_PENALTY_MULT = 0.15;
+global.TARGET_SCORE_DISTANCE_PENALTY_CAP = 150;
+global.TARGET_SCORE_ALLY_ENGAGED_PENALTY = 25;
+global.TARGET_SCORE_ALLY_ENGAGED_CAP = 75;
+global.TARGET_SCORE_PROXIMITY_BONUS_MAX = 30;
+global.TARGET_SCORE_PROXIMITY_THRESHOLD = 300;
+global.TARGET_SCORE_HULL_DAMAGE_MAX_BONUS = 20;
+global.TARGET_SCORE_HULL_DAMAGE_MULT = 20;
+global.TARGET_SCORE_COMBAT_VS_ALIEN_BONUS = 500;
+global.TARGET_SCORE_COMBAT_RIVALRY_BONUS = 500;
+global.TARGET_SCORE_COMBAT_STANDARD_ENGAGE = 100;
+global.TARGET_SCORE_COMBAT_LOW_PRIORITY = 0;
+global.TARGET_SCORE_SAME_FACTION_PENALTY = 200;
+global.TARGET_SCORE_BOUNTY_CONTRACT = 1000;
+global.TARGET_SCORE_CURRENT_TARGET_BONUS = 200;
+global.MAX_TARGETING_RADIUS = 3000;
+global.DEFAULT_SCAN_INTERVAL = 2;
+global.GUARD_ENGAGEMENT_LOCK_DURATION = 5;
 global.SHIELD_RECHARGE_RATE_MULTIPLIER = 1;
-global.TARGET_SCORE_DISTANCE_PENALTY_MULT = 1;
-global.TARGET_SCORE_DISTANCE_PENALTY_CAP = 100;
+global.DEFAULT_DELTA_SECONDS = 0.016;
 
 // Mock uiManager
 global.uiManager = { addMessage: jest.fn() };
@@ -235,7 +308,10 @@ describe('Environmental Effects Integration', () => {
         enemy.weapons = [enemy.currentWeapon];
 
         // Mock WeaponSystem.fire
-        global.WeaponSystem = { fire: jest.fn() };
+        global.WeaponSystem = {
+            fire: jest.fn(),
+            coolWeaponHeat: jest.fn()
+        };
 
         // Attempt firing
         enemy.fireWeapon();

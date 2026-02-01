@@ -353,12 +353,13 @@ class SurfaceMode {
 
         // Optimization: Pre-index player-built objects by cellKey for O(1) lookups during mesh generation
         if (Array.isArray(this.planet.playerBuiltSurfaceObjects)) {
-            const resolution = SURFACE_CONFIG.MESH_RESOLUTION;
-            const cellSize = SURFACE_CONFIG.MESH_SIZE / resolution;
+            // CRITICAL: Use fixed SPAWN_CELL_SIZE (35) for consistent indexing across modes/sessions
+            const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || 35;
             for (const desc of this.planet.playerBuiltSurfaceObjects) {
-                if (!desc) continue;
-                const descCellX = Math.round((desc.x || 0) / cellSize);
-                const descCellY = Math.round((desc.y || 0) / cellSize);
+                if (!desc || typeof desc.x !== 'number') continue;
+                // Use floor for consistent grid keying with _spawnObjects and construction
+                const descCellX = Math.floor(desc.x / cellSize);
+                const descCellY = Math.floor(desc.y / cellSize);
                 const key = `${descCellX},${descCellY}`;
                 this.playerBuiltMap.set(key, desc);
             }
@@ -1101,6 +1102,18 @@ class SurfaceMode {
             };
             this.playerBuiltMap.set(cellKey, mapDesc);
 
+            // CRITICAL: If this cell was previously marked as destroyed (e.g. we built over a pirate base),
+            // we MUST clear that flag so the new building doesn't get skipped during load/respawn.
+            if (this.destroyedCells.has(cellKey)) {
+                this.destroyedCells.delete(cellKey);
+                // Also remove from planet list to persist the "un-destroyed" state
+                if (this.planet && Array.isArray(this.planet.destroyedSurfaceObjects)) {
+                    const idx = this.planet.destroyedSurfaceObjects.indexOf(cellKey);
+                    if (idx !== -1) this.planet.destroyedSurfaceObjects.splice(idx, 1);
+                }
+                console.log(`[Persistence] Cell ${cellKey} un-destroyed (reclaimed by player).`);
+            }
+
         } catch (e) {
             // Ignore cache errors
         }
@@ -1567,67 +1580,69 @@ class SurfaceMode {
                     }
                 }
 
-                // 0. Habitation Check - Uninhabited planets spawn secret caches instead
-                // [DEBUG FIX] If near target, we ignore the habitability check to spawn the boss base
-                if (this.planet && !this.planet.isInhabited && !isNearTarget) {
-                    // SECRET CACHE SPAWNING for uninhabited planets
-                    if (cellHash < 0.00005 && typeof SecretCache !== 'undefined') {
-                        obj = new SecretCache(wx, wy, objSeed);
-                    }
-                } else {
-                    // Settlement Zones: Large areas where buildings cluster
-                    const settlementNoise = noise(activeGridX * 0.015 + 500, activeGridY * 0.015 + 500);
-                    const isSettlementZone = settlementNoise > 0.60;
-                    const isHighTerrain = h > SURFACE_CONFIG.HIGH_TERRAIN_THRESHOLD;
-
-                    // Get civilization color and economy type for buildings
-                    const civColor = (this.planet && this.planet.cityLightsColor) ? this.planet.cityLightsColor : null;
-                    const economyType = this.planet?.economyType || 'Service';
-
-                    // TECH LEVEL affects defense density (0-5 scale)
-                    // [MASSIVE REDUCTION] Scaled down further for extreme sparse gameplay
-                    const techLevel = this.planet?.techLevel || 3;
-                    let techModifier = 0.0002 + (techLevel / 5) * 0.0003;
-                    const militaryBonus = (economyType === 'Military') ? 0.001 : 0;
-                    let defenseDensity = techModifier + militaryBonus;
-
-                    // --- SHIELD GENERATOR BASE DEFENSE ---
-                    if (isNearTarget && this.targetPos) {
-                        const tdx = wx - this.targetPos.x;
-                        const tdy = wy - this.targetPos.y;
-                        const distToTargetSq = tdx * tdx + tdy * tdy;
-                        // MASSIVELY REDUCED: Ultra-sparse defenses around target (max ~1%)
-                        defenseDensity = Math.max(defenseDensity, 0.001 + (1 - Math.sqrt(distToTargetSq) / 2000) * 0.005);
-                    }
-
-                    const buildingSize = 40 + (subHash * 40);
-
-                    // --- 1. Strategic Defense (High Ground) ---
-                    if (isHighTerrain || isNearTarget) {
-                        if (cellHash < defenseDensity) {
-                            let turretRatio = 0.3 + (techLevel / 5) * 0.4;
-                            if (subHash < (1 - turretRatio) * 0.5) obj = new DefenseDrone(wx, wy);
-                            else obj = new Turret(wx, wy);
+                if (!obj) {
+                    // 0. Habitation Check - Uninhabited planets spawn secret caches instead
+                    // [DEBUG FIX] If near target, we ignore the habitability check to spawn the boss base
+                    if (this.planet && !this.planet.isInhabited && !isNearTarget) {
+                        // SECRET CACHE SPAWNING for uninhabited planets
+                        if (cellHash < 0.00005 && typeof SecretCache !== 'undefined') {
+                            obj = new SecretCache(wx, wy, objSeed);
                         }
-                    }
-                    // --- 2. Settlements (Low/Mid Ground) ---
-                    else if (isSettlementZone) {
-                        if ((Math.abs(activeGridX) + Math.abs(activeGridY)) % 2 === 0) {
-                            if (cellHash < 0.10 || isNearTarget) {
-                                if (subHash < 0.03 && !isNearTarget) {
-                                    const stSize = 100 + (subHash * 1000);
-                                    obj = new SurfaceStation(wx, wy, stSize, civColor);
-                                } else {
-                                    obj = this._createEconomyBuilding(economyType, wx, wy, buildingSize, objSeed);
+                    } else {
+                        // Settlement Zones: Large areas where buildings cluster
+                        const settlementNoise = noise(activeGridX * 0.015 + 500, activeGridY * 0.015 + 500);
+                        const isSettlementZone = settlementNoise > 0.60;
+                        const isHighTerrain = h > SURFACE_CONFIG.HIGH_TERRAIN_THRESHOLD;
+
+                        // Get civilization color and economy type for buildings
+                        const civColor = (this.planet && this.planet.cityLightsColor) ? this.planet.cityLightsColor : null;
+                        const economyType = this.planet?.economyType || 'Service';
+
+                        // TECH LEVEL affects defense density (0-5 scale)
+                        // [MASSIVE REDUCTION] Scaled down further for extreme sparse gameplay
+                        const techLevel = this.planet?.techLevel || 3;
+                        let techModifier = 0.0002 + (techLevel / 5) * 0.0003;
+                        const militaryBonus = (economyType === 'Military') ? 0.001 : 0;
+                        let defenseDensity = techModifier + militaryBonus;
+
+                        // --- SHIELD GENERATOR BASE DEFENSE ---
+                        if (isNearTarget && this.targetPos) {
+                            const tdx = wx - this.targetPos.x;
+                            const tdy = wy - this.targetPos.y;
+                            const distToTargetSq = tdx * tdx + tdy * tdy;
+                            // MASSIVELY REDUCED: Ultra-sparse defenses around target (max ~1%)
+                            defenseDensity = Math.max(defenseDensity, 0.001 + (1 - Math.sqrt(distToTargetSq) / 2000) * 0.005);
+                        }
+
+                        const buildingSize = 40 + (subHash * 40);
+
+                        // --- 1. Strategic Defense (High Ground) ---
+                        if (isHighTerrain || isNearTarget) {
+                            if (cellHash < defenseDensity) {
+                                let turretRatio = 0.3 + (techLevel / 5) * 0.4;
+                                if (subHash < (1 - turretRatio) * 0.5) obj = new DefenseDrone(wx, wy);
+                                else obj = new Turret(wx, wy);
+                            }
+                        }
+                        // --- 2. Settlements (Low/Mid Ground) ---
+                        else if (isSettlementZone) {
+                            if ((Math.abs(activeGridX) + Math.abs(activeGridY)) % 2 === 0) {
+                                if (cellHash < 0.10 || isNearTarget) {
+                                    if (subHash < 0.03 && !isNearTarget) {
+                                        const stSize = 100 + (subHash * 1000);
+                                        obj = new SurfaceStation(wx, wy, stSize, civColor);
+                                    } else {
+                                        obj = this._createEconomyBuilding(economyType, wx, wy, buildingSize, objSeed);
+                                    }
                                 }
                             }
                         }
-                    }
-                    // --- 3. Outskirts / Wilderness ---
-                    else {
-                        if (cellHash < 0.003) {
-                            if (subHash < 0.25) obj = new DefenseDrone(wx, wy);
-                            else obj = this._createEconomyBuilding(economyType, wx, wy, 30, objSeed);
+                        // --- 3. Outskirts / Wilderness ---
+                        else {
+                            if (cellHash < 0.003) {
+                                if (subHash < 0.25) obj = new DefenseDrone(wx, wy);
+                                else obj = this._createEconomyBuilding(economyType, wx, wy, 30, objSeed);
+                            }
                         }
                     }
                 }
