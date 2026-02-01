@@ -34,6 +34,17 @@ const SURFACE_CONFIG = {
     SHADOW_BASE_OFFSET: 20,    // Base shadow offset distance
     SHADOW_ALTITUDE_SCALE: 0.15, // Shadow offset multiplier per altitude unit
 
+    // EVA and boarding
+    BOARDING_RANGE: 30,         // Distance within which player can board ship
+    REEBOARD_COOLDOWN: 2.0,     // Seconds before allowing re-boarding after disembark
+    HAB_UNIT_SIZE: 60,          // Standard size for hab units
+    
+    // Terrain detection
+    CANYON_DETECTION_DISTANCE: 400, // Distance to check for canyon edges
+    
+    // Cache cleanup
+    CACHE_CLEANUP_INTERVAL: 600, // Frames between cache cleanup operations
+
     // Defense Drone Configuration
     DRONE: {
         DETECTION_RANGE: 800,      // Units
@@ -230,6 +241,16 @@ class SurfaceMode {
     }
 
     /**
+     * Check if projectile is valid and should be processed
+     * @param {Object} proj - Projectile to validate
+     * @returns {boolean} True if projectile is valid and active
+     * @private
+     */
+    _isProjectileValid(proj) {
+        return proj && !proj.destroyed && proj.isSurface;
+    }
+
+    /**
      * Utility hash function for deterministic random number generation
      * Uses integer hashing to avoid directional bias
      * @param {number} v - Input value to hash
@@ -293,7 +314,7 @@ class SurfaceMode {
             const hCenter = this.terrain.getHeightAt(tx, ty);
 
             // Sample 4 surrounding points to check for canyon walls
-            const wallDist = 400;
+            const wallDist = SURFACE_CONFIG.CANYON_DETECTION_DISTANCE;
             const h1 = this.terrain.getHeightAt(tx + wallDist, ty);
             const h2 = this.terrain.getHeightAt(tx - wallDist, ty);
             const h3 = this.terrain.getHeightAt(tx, ty + wallDist);
@@ -921,7 +942,7 @@ class SurfaceMode {
         this.player.turnInput = 0;
 
         // Set cooldown to prevent immediate re-disembark logic
-        this.reboardCooldown = 2.0; // 2 Seconds buffer
+        this.reboardCooldown = SURFACE_CONFIG.REEBOARD_COOLDOWN;
 
         // Message
         if (typeof uiManager !== 'undefined') {
@@ -992,7 +1013,7 @@ class SurfaceMode {
         // Only board if not moving (to avoid accidental trigger while walking past)
         if (!isMoving) {
             const dist = p5.Vector.dist(this.astronaut.pos, this.player.pos);
-            if (dist < 30) { // Boarding range (Reduced to prevent instant re-boarding)
+            if (dist < SURFACE_CONFIG.BOARDING_RANGE) {
                 this.boardShip();
                 return; // Immediately return to avoid using this.astronaut after it was nulled
             }
@@ -1043,13 +1064,13 @@ class SurfaceMode {
         const groundH = this._getTerrainHeightAt(bx, by);
 
         // Check for collisions with nearby surface objects
-        const minClearance = 60; // minimum distance from other objects
+        const minClearance = SURFACE_CONFIG.HAB_UNIT_SIZE;
         for (const obj of this.surfaceObjects) {
             if (!obj || obj.destroyed) continue;
             const dx = obj.pos.x - bx;
             const dy = obj.pos.y - by;
             const distSq = dx * dx + dy * dy;
-            const safeDist = Math.pow((obj.size || 40) / 2 + minClearance, 2);
+            const safeDist = ((obj.size || 40) / 2 + minClearance) ** 2;
             if (distSq < safeDist) {
                 if (typeof uiManager !== 'undefined') uiManager.addMessage('Not enough space to build here', [255, 160, 100]);
                 return;
@@ -1209,24 +1230,12 @@ class SurfaceMode {
      */
     _checkProjectileTerrainCollisions() {
         for (let proj of this.starSystem.projectiles) {
-            if (!proj || proj.destroyed) continue;
-            if (!proj.isSurface) continue;
+            if (!this._isProjectileValid(proj)) continue;
 
             const projPos = proj.pos;
 
-            // REMOVED: Altitude interpolation causes visual offset
-            // Projectiles should maintain constant altitude set at spawn
-
-            // DISABLED: Terrain collision for projectiles
-            // Projectiles are energy weapons traveling through air - they shouldn't hit terrain
-            // This was causing player projectiles at low altitude to hit terrain immediately
-            // const terrainH = this._getTerrainHeightAt(projPos.x, projPos.y);
-            // const projAlt = proj.altitude || 0;
-            // 
-            // if (projAlt <= terrainH + 2) {
-            //     this._createSurfaceExplosion(projPos.x, projPos.y, terrainH, 8, [255, 100, 50], true);
-            //     proj.destroyed = true;
-            // }
+            // Terrain collision disabled: Projectiles are energy weapons traveling through air
+            // They should not hit terrain immediately at low altitude
         }
     }
 
@@ -1238,8 +1247,7 @@ class SurfaceMode {
         if (!this.surfaceObjects || this.surfaceObjects.length === 0) return;
 
         for (let proj of this.starSystem.projectiles) {
-            if (!proj || proj.destroyed) continue;
-            if (!proj.isSurface) continue;
+            if (!this._isProjectileValid(proj)) continue;
             if (proj.owner !== this.player) continue;
 
             const projPos = proj.pos;
@@ -1303,8 +1311,7 @@ class SurfaceMode {
         if (!target || target.destroyed) return;
 
         for (let proj of this.starSystem.projectiles) {
-            if (!proj || proj.destroyed) continue;
-            if (!proj.isSurface) continue;
+            if (!this._isProjectileValid(proj)) continue;
             // Don't hit self
             if (proj.owner === target || proj.owner === this.player) continue;
 
@@ -1601,7 +1608,7 @@ class SurfaceMode {
 
                         // Calculate defense density using helper method
                         const distToTargetSq = isNearTarget ? 
-                            Math.pow(wx - this.targetPos.x, 2) + Math.pow(wy - this.targetPos.y, 2) : 0;
+                            (wx - this.targetPos.x) ** 2 + (wy - this.targetPos.y) ** 2 : 0;
                         const defenseDensity = this._calculateDefenseDensity(
                             economyType, 
                             techLevel, 
@@ -1655,7 +1662,7 @@ class SurfaceMode {
         }
 
         // Periodically clean cache to prevent memory leak (remove distant objects)
-        if (frameCount % 600 === 0) {
+        if (frameCount % SURFACE_CONFIG.CACHE_CLEANUP_INTERVAL === 0) {
             const keepRadius = spawnResolution * 1.5;
             const centerSpawnGridX = Math.floor(gridX * (SURFACE_CONFIG.MESH_SIZE / SURFACE_CONFIG.MESH_RESOLUTION) / SPAWN_CELL_SIZE);
             const centerSpawnGridY = Math.floor(gridY * (SURFACE_CONFIG.MESH_SIZE / SURFACE_CONFIG.MESH_RESOLUTION) / SPAWN_CELL_SIZE);
