@@ -1437,8 +1437,20 @@ class Player {
             // No explicit check needed here to prevent firing.
         } else if (this.currentWeapon.type === WEAPON_TYPE.BEAM && this === player) { // Player aims beams with mouse
             // Convert screen mouse position to world coordinates
-            const worldMx = mouseX + (this.pos.x - width / 2);
-            const worldMy = mouseY + (this.pos.y - height / 2);
+            let worldMx = mouseX + (this.pos.x - width / 2);
+            let worldMy = mouseY + (this.pos.y - height / 2);
+            
+            // In surface mode, account for altitude projection offset
+            if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+                // Mouse is at visual position, need to convert back to world position
+                // The visual position is offset by: visualX = worldX - alt*sin(angle), visualY = worldY - alt*cos(angle)
+                // So to get world from visual: worldX = visualX + alt*sin(angle), worldY = visualY + alt*cos(angle)
+                const playerAlt = this.altitude || 0;
+                const extrusionAngle = typeof SurfaceUtils !== 'undefined' ? SurfaceUtils.getExtrusionAngle() : 0.5;
+                worldMx += playerAlt * Math.sin(extrusionAngle);
+                worldMy += playerAlt * Math.cos(extrusionAngle);
+            }
+            
             fireAngle = atan2(worldMy - this.pos.y, worldMx - this.pos.x);
         }
         // For turrets, WeaponSystem.fireTurret handles its own aiming if no target is passed.

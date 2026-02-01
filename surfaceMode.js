@@ -1419,6 +1419,7 @@ class SurfaceMode {
         this._drawSurfaceObjects();
         this._drawExplosions();
         this._drawProjectiles();
+        this._drawMines();
 
         // Draw beam and force wave effects (no projectile, direct rendering)
         this._drawBeams();
@@ -1871,6 +1872,29 @@ class SurfaceMode {
                 proj.draw(proj.pos.x, proj.pos.y, sunAngle, counterScale);
             }
         }
+        pop();
+    }
+
+    /**
+     * Draw mines at their world positions
+     * @private
+     */
+    _drawMines() {
+        if (!this.starSystem || !this.starSystem.mines) return;
+        
+        const mines = this.starSystem.mines;
+        if (mines.length === 0) return;
+
+        push();
+        this._clearShadow();
+
+        for (const mine of mines) {
+            if (mine && !mine.destroyed && typeof mine.draw === 'function') {
+                // Mine.draw() already handles altitude projection via SurfaceUtils
+                mine.draw();
+            }
+        }
+
         pop();
     }
 

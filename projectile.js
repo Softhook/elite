@@ -184,8 +184,28 @@ class Projectile {
 
         // Homing missile logic (using cached type check)
         if (this._isMissile && this.target && this.target.pos && !this.target.destroyed && (this.target.hull === undefined || this.target.hull > 0)) {
-            // Calculate desired direction vector (reuse temp vectors)
-            this._tempVec.set(this.target.pos.x - this.pos.x, this.target.pos.y - this.pos.y);
+            // Calculate desired direction vector
+            let targetX, targetY;
+            
+            // In surface mode, use visual coordinates for accurate homing
+            if (this.isSurface && typeof SurfaceUtils !== 'undefined') {
+                const missileAlt = this.altitude || 0;
+                const targetAlt = this.target.altitude || this.target.yOffset || 0;
+                
+                const missileVisualX = SurfaceUtils.toVisualX(this.pos.x, missileAlt);
+                const missileVisualY = SurfaceUtils.toVisualY(this.pos.y, missileAlt);
+                const targetVisualX = SurfaceUtils.toVisualX(this.target.pos.x, targetAlt);
+                const targetVisualY = SurfaceUtils.toVisualY(this.target.pos.y, targetAlt);
+                
+                targetX = targetVisualX - missileVisualX;
+                targetY = targetVisualY - missileVisualY;
+            } else {
+                // Normal space mode - use world coordinates
+                targetX = this.target.pos.x - this.pos.x;
+                targetY = this.target.pos.y - this.pos.y;
+            }
+            
+            this._tempVec.set(targetX, targetY);
             this._tempVec.setMag(this.missileSpeed);
 
             // Calculate steering force (reuse steer vector)

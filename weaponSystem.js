@@ -1356,9 +1356,38 @@ class WeaponSystem {
             return;
         }
 
-        // Calculate angle to target - use atan2 directly (Math. is faster than p5)
-        const dx = target.pos.x - owner.pos.x;
-        const dy = target.pos.y - owner.pos.y;
+        // Calculate angle to target
+        // In surface mode, use visual coordinates to account for altitude projection
+        let dx, dy;
+        
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+            // Get altitudes
+            const ownerAlt = owner.altitude || 0;
+            const targetAlt = target.altitude || target.yOffset || 0;
+            
+            // Convert to visual coordinates
+            let ownerVisualX, ownerVisualY, targetVisualX, targetVisualY;
+            if (typeof SurfaceUtils !== 'undefined') {
+                ownerVisualX = SurfaceUtils.toVisualX(owner.pos.x, ownerAlt);
+                ownerVisualY = SurfaceUtils.toVisualY(owner.pos.y, ownerAlt);
+                targetVisualX = SurfaceUtils.toVisualX(target.pos.x, targetAlt);
+                targetVisualY = SurfaceUtils.toVisualY(target.pos.y, targetAlt);
+            } else {
+                const extrusionAngle = 0.5;
+                ownerVisualX = owner.pos.x - ownerAlt * Math.sin(extrusionAngle);
+                ownerVisualY = owner.pos.y - ownerAlt * Math.cos(extrusionAngle);
+                targetVisualX = target.pos.x - targetAlt * Math.sin(extrusionAngle);
+                targetVisualY = target.pos.y - targetAlt * Math.cos(extrusionAngle);
+            }
+            
+            dx = targetVisualX - ownerVisualX;
+            dy = targetVisualY - ownerVisualY;
+        } else {
+            // Normal space mode - use world coordinates
+            dx = target.pos.x - owner.pos.x;
+            dy = target.pos.y - owner.pos.y;
+        }
+        
         const angleToTarget = atan2(dy, dx);
 
         // Update turret firing angle for visual sync
