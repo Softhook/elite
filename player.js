@@ -1437,18 +1437,36 @@ class Player {
             // No explicit check needed here to prevent firing.
         } else if (this.currentWeapon.type === WEAPON_TYPE.BEAM && this === player) { // Player aims beams with mouse
             // Convert screen mouse position to world coordinates
-            let worldMx = mouseX + (this.pos.x - width / 2);
-            let worldMy = mouseY + (this.pos.y - height / 2);
+            let worldMx, worldMy;
             
-            // In surface mode, account for altitude projection offset
+            // In surface mode, account for camera transformation (center translation, perspective scale, world translation)
             if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
-                // Mouse is at visual position, need to convert back to world position
-                // The visual position is offset by: visualX = worldX - alt*sin(angle), visualY = worldY - alt*cos(angle)
-                // So to get world from visual: worldX = visualX + alt*sin(angle), worldY = visualY + alt*cos(angle)
+                // Get perspective scale
+                const perspectiveScale = typeof surfaceMode._getPerspectiveScale === 'function' 
+                    ? surfaceMode._getPerspectiveScale() : 1.0;
+                const extrusionAngle = typeof SurfaceUtils !== 'undefined' 
+                    ? SurfaceUtils.getExtrusionAngle() : 0.5;
+                
+                // Player's altitude and visual offset
                 const playerAlt = this.altitude || 0;
-                const extrusionAngle = typeof SurfaceUtils !== 'undefined' ? SurfaceUtils.getExtrusionAngle() : 0.5;
-                worldMx += playerAlt * Math.sin(extrusionAngle);
-                worldMy += playerAlt * Math.cos(extrusionAngle);
+                const visualXOffset = surfaceMode.altitude * Math.sin(extrusionAngle);
+                const visualYOffset = surfaceMode.altitude * Math.cos(extrusionAngle);
+                
+                // Mouse relative to screen center
+                const mouseDX = mouseX - width / 2;
+                const mouseDY = mouseY - height / 2;
+                
+                // Undo perspective scale
+                const worldDX = mouseDX / perspectiveScale;
+                const worldDY = mouseDY / perspectiveScale;
+                
+                // Add camera position (surfaceX/Y) and subtract visual offset
+                worldMx = surfaceMode.surfaceX + worldDX - visualXOffset;
+                worldMy = surfaceMode.surfaceY + worldDY + visualYOffset;
+            } else {
+                // Normal space mode - simple screen to world conversion
+                worldMx = mouseX + (this.pos.x - width / 2);
+                worldMy = mouseY + (this.pos.y - height / 2);
             }
             
             fireAngle = atan2(worldMy - this.pos.y, worldMx - this.pos.x);

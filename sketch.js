@@ -864,7 +864,9 @@ function handleMinimapZoomIn() {
  * Handle cloak activation ('C' key)
  */
 function handleCloakActivation() {
-    if (gameStateManager.currentState !== "IN_FLIGHT" || !player || player.destroyed) {
+    // Allow cloak in both IN_FLIGHT and SURFACE_MODE states
+    const validStates = ["IN_FLIGHT", "SURFACE_MODE"];
+    if (!validStates.includes(gameStateManager.currentState) || !player || player.destroyed) {
         return false;
     }
 
