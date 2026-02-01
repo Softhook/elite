@@ -98,7 +98,7 @@ function getProjectionHelpers(worldX, worldY, altitude) {
     const visual = toVisualCoordinates(worldX, worldY, altitude, extrusionAngle);
     
     return {
-        extrusionAngle: extrusionAngle,
+        extrusionAngle,
         baseX: visual.x,
         baseY: visual.y
     };

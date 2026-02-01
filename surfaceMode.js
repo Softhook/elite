@@ -168,12 +168,6 @@ class SurfaceMode {
     // ============================================
 
     /**
-     * Calculate perspective scale factor based on current altitude
-     * Higher altitude = zoomed out (smaller scale), lower = zoomed in (larger scale)
-     * @returns {number} Scale factor (1.2 at min altitude, 0.6 at max altitude)
-     * @private
-     */
-    /**
      * Calculate perspective scale factor based on altitude
      * Simulates real perspective where distant objects appear smaller (scale ~ 1/distance)
      * Scaling factors:
