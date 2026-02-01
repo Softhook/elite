@@ -487,6 +487,7 @@ class UIHUD {
 
         if (gameStateManager?.currentState !== "GALAXY_MAP") {
             this.drawTargetOverlay(player);
+            this.drawTargetReticle(player);
         }
     }
 
@@ -1793,6 +1794,93 @@ class UIHUD {
             }
         }
         return -1;
+    }
+
+    /**
+     * Draws a tactical reticle over the player's current target.
+     * Handles both space and surface modes with correct projection.
+     * @param {Player} player - The player object
+     */
+    drawTargetReticle(player) {
+        if (!player || !player.target) return;
+        const target = player.target;
+        if (target.destroyed || !target.pos) return;
+
+        let screenX, screenY;
+        const targetSize = target.size || target.collisionRadius || (target.maxRadius * 0.8) || 50;
+
+        // Use global surfaceMode check to determine projection
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+            // --- Surface Mode Projection ---
+            const objAlt = (typeof target.altitude !== 'undefined') ? target.altitude : (target.yOffset || 0);
+
+            // Match surfaceMode's internal projection for targeting
+            const extrusionAngle = (typeof surfaceMode._getExtrusionAngle === 'function')
+                ? surfaceMode._getExtrusionAngle()
+                : 0.5;
+            const sinE = Math.sin(extrusionAngle);
+            const cosE = Math.cos(extrusionAngle);
+
+            const perspectiveScale = (typeof surfaceMode._getPerspectiveScale === 'function')
+                ? surfaceMode._getPerspectiveScale()
+                : 1.0;
+
+            // Camera focus (matches surfaceMode.draw)
+            const camFocusX = surfaceMode.surfaceX - (surfaceMode.altitude * sinE);
+            const camFocusY = surfaceMode.surfaceY - (surfaceMode.altitude * cosE);
+
+            // Object visual position
+            const reticleAlt = objAlt + (target.type === 'Turret' ? targetSize * 0.8 : targetSize * 0.2);
+            const objVisualWorldX = target.pos.x - (reticleAlt * sinE);
+            const objVisualWorldY = target.pos.y - (reticleAlt * cosE);
+
+            // Final screen pixels
+            screenX = (objVisualWorldX - camFocusX) * perspectiveScale + (width / 2);
+            screenY = (objVisualWorldY - camFocusY) * perspectiveScale + (height / 2);
+        } else {
+            // --- Space Mode Projection ---
+            // Assumes player is the camera focus at the center of screen
+            screenX = width / 2 + (target.pos.x - player.pos.x);
+            screenY = height / 2 + (target.pos.y - player.pos.y);
+        }
+
+        // Visibility Check: Only draw if the center is within a reasonable distance from the viewport
+        const margin = targetSize * 2;
+        if (screenX < -margin || screenX > width + margin ||
+            screenY < -margin || screenY > height + margin) {
+            return;
+        }
+
+        // Draw the reticle at the calculated screen position
+        push();
+        translate(screenX, screenY);
+        // Reticle is ALWAYS upright (no rotation)
+
+        noFill();
+        stroke(0, 255, 0, 200); // Tactical Green
+        strokeWeight(2);
+
+        // Box with circle design
+        ellipse(0, 0, targetSize * 1.6, targetSize * 1.6);
+
+        // Corner brackets
+        const bracketSize = targetSize * 0.3;
+        const offset = targetSize * 0.7;
+
+        // Top-left
+        line(-offset, -offset, -offset + bracketSize, -offset);
+        line(-offset, -offset, -offset, -offset + bracketSize);
+        // Top-right
+        line(offset, -offset, offset - bracketSize, -offset);
+        line(offset, -offset, offset, -offset + bracketSize);
+        // Bottom-left
+        line(-offset, offset, -offset + bracketSize, offset);
+        line(-offset, offset, -offset, offset - bracketSize);
+        // Bottom-right
+        line(offset, offset, offset - bracketSize, offset);
+        line(offset, offset, offset, offset - bracketSize);
+
+        pop();
     }
 }
 

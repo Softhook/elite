@@ -3834,31 +3834,7 @@ class SpaceObject {
 
         // --- Draw Player's Target Indicator for this space object ---
         if (typeof player !== 'undefined' && player.target === this) {
-            // Draw ship-style reticle (matching enemyRendering.js)
-            push();
-            noFill();
-            stroke(0, 255, 0, 200); // Bright green, semi-transparent
-            strokeWeight(2);
-
-            // Circle around the object (using size like ships do)
-            ellipse(0, 0, size * 1.6, size * 1.6);
-
-            // Corner brackets (matching ship style)
-            const bracketSize = size * 0.3;
-            const offset = size * 0.7;
-            // Top-left
-            line(-offset, -offset, -offset + bracketSize, -offset);
-            line(-offset, -offset, -offset, -offset + bracketSize);
-            // Top-right
-            line(offset, -offset, offset - bracketSize, -offset);
-            line(offset, -offset, offset, -offset + bracketSize);
-            // Bottom-left
-            line(-offset, offset, -offset + bracketSize, offset);
-            line(-offset, offset, -offset, offset - bracketSize);
-            // Bottom-right
-            line(offset, offset, offset - bracketSize, offset);
-            line(offset, offset, offset, offset - bracketSize);
-            pop();
+            // Target highlighting logic moved to centralized UIHUD.drawTargetReticle()
         }
 
         pop();

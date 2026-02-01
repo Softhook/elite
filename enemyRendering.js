@@ -477,39 +477,7 @@ class EnemyRendering {
         }
 
         // --- NEW: Draw Player's Target Indicator ---
-        // Check if THIS enemy instance is the player's current target.
-        // Assumes 'player' is globally accessible (which it is in your sketch.js).
-        if (typeof player !== 'undefined' && player.target === this) {
-            push(); // Isolate transformations for this indicator
-
-            // The canvas is already rotated to the enemy's angle.
-            // Drawing here will make the indicator rotate with the enemy.
-            noFill();
-            stroke(0, 255, 0, 200); // Bright green, semi-transparent
-            strokeWeight(2);
-
-            // Example: A circle around the ship
-            ellipse(0, 0, this.size * 1.6, this.size * 1.6); // Slightly larger than shield
-
-            // Example: Corner brackets
-            const bracketSize = this.size * 0.3;
-            const offset = this.size * 0.7; // Adjust offset to position brackets correctly
-            // Top-left
-            line(-offset, -offset, -offset + bracketSize, -offset);
-            line(-offset, -offset, -offset, -offset + bracketSize);
-            // Top-right
-            line(offset, -offset, offset - bracketSize, -offset);
-            line(offset, -offset, offset, -offset + bracketSize);
-            // Bottom-left
-            line(-offset, offset, -offset + bracketSize, offset);
-            line(-offset, offset, -offset, offset - bracketSize);
-            // Bottom-right
-            line(offset, offset, offset - bracketSize, offset);
-            line(offset, offset, offset, offset - bracketSize);
-
-            pop(); // Restore drawing state
-        }
-        // --- END NEW: Draw Player's Target Indicator ---
+        // Target highlighting logic moved to centralized UIHUD.drawTargetReticle()
 
         // --- Draw Health Bar (AFTER rotation, relative to 0,0) ---
         if (!this.destroyed && this.hull < this.maxHull && this.maxHull > 0) {

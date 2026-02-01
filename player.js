@@ -2991,7 +2991,7 @@ class Player {
     _checkSurfaceObjectClick() {
         if (!surfaceMode || !surfaceMode.surfaceObjects) return null;
 
-        // Get perspective scale and extrusion angle from surfaceMode
+        // 1. Get current simulation/camera parameters from surfaceMode
         const perspectiveScale = (typeof surfaceMode._getPerspectiveScale === 'function')
             ? surfaceMode._getPerspectiveScale()
             : 1.0;
@@ -2999,35 +2999,48 @@ class Player {
             ? surfaceMode._getExtrusionAngle()
             : 0.5;
 
-        // Get active entity (ship or astronaut) and its altitude (matching camera logic)
-        const activeEntity = (surfaceMode.controlMode === 'SHIP') ? this : surfaceMode.astronaut;
-        const activeAlt = (activeEntity && activeEntity.altitude !== undefined)
-            ? activeEntity.altitude
-            : surfaceMode.altitude;
-        const visualYOffset = activeAlt * Math.cos(extrusionAngle);
+        const sinE = Math.sin(extrusionAngle);
+        const cosE = Math.cos(extrusionAngle);
 
-        // Convert screen coords to world coords
-        // Camera transform: translate(center) -> scale(perspective) -> translate(-surfaceX, -(surfaceY - visualYOffset))
-        // Inverse: (screen - center) / scale + surfacePos
-        const worldX = (mouseX - width / 2) / perspectiveScale + surfaceMode.surfaceX;
-        const worldY = (mouseY - height / 2) / perspectiveScale + (surfaceMode.surfaceY - visualYOffset);
+        // 2. Identify the camera's focus point in world coordinates
+        // This matches the translation logic in surfaceMode.draw()
+        const camFocusX = surfaceMode.surfaceX - (surfaceMode.altitude * sinE);
+        const camFocusY = surfaceMode.surfaceY - (surfaceMode.altitude * cosE);
+
+        // 3. Iterate through objects and find those that "look" like they contain the mouse
+        let bestTarget = null;
+        let closestDist = Infinity;
 
         for (const obj of surfaceMode.surfaceObjects) {
             if (!obj || obj.destroyed) continue;
 
-            // Use object's size for hit detection, with buffer for easier clicking
-            const hitRadius = (obj.size || 40) / 2 + 15;
+            // Objects are projected based on their logic pos PLUS their current visual altitude
+            // Logic: visualX = worldX - altitude * sin(E)
+            const objAlt = (obj.altitude || obj.yOffset || 0);
+            const objVisualWorldX = obj.pos.x - (objAlt * sinE);
+            const objVisualWorldY = obj.pos.y - (objAlt * cosE);
 
-            // Objects are drawn at pos.y - yOffset, so we need to check at their visual position
-            const visualY = obj.pos.y - (obj.yOffset || 0);
-            const d = dist(worldX, worldY, obj.pos.x, visualY);
+            // Convert that visual world position to final screen coordinates
+            const screenX = (objVisualWorldX - camFocusX) * perspectiveScale + (width / 2);
+            const screenY = (objVisualWorldY - camFocusY) * perspectiveScale + (height / 2);
 
-            if (d < hitRadius) {
-                return obj;
+            // Distance check in screen space (pixels)
+            const dx = mouseX - screenX;
+            const dy = mouseY - screenY;
+            const distSq = dx * dx + dy * dy;
+
+            // Use the object's visual radius multiplied by perspective scale
+            // Add a static pixel buffer (20px) to make clicking targets easier on high-alt views
+            const clickRadius = ((obj.size || 40) / 2 * perspectiveScale) + 20;
+            const clickRadiusSq = clickRadius * clickRadius;
+
+            if (distSq < clickRadiusSq && distSq < closestDist) {
+                closestDist = distSq;
+                bestTarget = obj;
             }
         }
 
-        return null;
+        return bestTarget;
     }
 
     // =========================================================================

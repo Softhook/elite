@@ -1762,45 +1762,7 @@ class SurfaceMode {
                 obj.draw(worldX, worldY, sunAngle, objAlt);
             }
 
-            // Draw Target Reticle if this object is the player's target
-            if (this.player && this.player.target === obj) {
-                const sz = obj.size || 50;
-
-                // Position reticle on the visual center of the object
-                const reticleAlt = objAlt + (obj.type === 'Turret' ? sz * 0.8 : sz * 0.2);
-                const visualX = this._toVisualX(worldX, reticleAlt);
-                const visualY = this._toVisualY(worldY, reticleAlt);
-
-                push();
-                translate(visualX, visualY);
-                // Reticle drawing (consistent with EnemyRendering style)
-                noFill();
-                stroke(0, 255, 0, 200); // Green
-                strokeWeight(2);
-
-                const size = obj.size || 50;
-                // Draw circle slightly larger than object
-                ellipse(0, 0, size * 1.6, size * 1.6);
-
-                // Corner brackets
-                const bracketSize = size * 0.3;
-                const offset = size * 0.7;
-
-                // Top-left
-                line(-offset, -offset, -offset + bracketSize, -offset);
-                line(-offset, -offset, -offset, -offset + bracketSize);
-                // Top-right
-                line(offset, -offset, offset - bracketSize, -offset);
-                line(offset, -offset, offset, -offset + bracketSize);
-                // Bottom-left
-                line(-offset, offset, -offset + bracketSize, offset);
-                line(-offset, offset, -offset, offset - bracketSize);
-                // Bottom-right
-                line(offset, offset, offset - bracketSize, offset);
-                line(offset, offset, offset, offset - bracketSize);
-
-                pop();
-            }
+            // Target reticle drawing moved to centralized UIHUD.drawTargetReticle() called via drawHUD()
 
             // Debug visualization (only if debugMode is enabled)
             if (this.debugMode) {
