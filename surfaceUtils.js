@@ -158,4 +158,7 @@ if (typeof window !== 'undefined') {
     window.SurfaceUtils = SurfaceUtils;
 }
 
-console.log("surfaceUtils.js loaded");
+// Only log in debug mode
+if (typeof DEBUG !== 'undefined' && DEBUG) {
+    console.log("surfaceUtils.js loaded");
+}
