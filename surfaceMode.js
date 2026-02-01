@@ -173,6 +173,16 @@ class SurfaceMode {
      * @returns {number} Scale factor (1.2 at min altitude, 0.6 at max altitude)
      * @private
      */
+    /**
+     * Calculate perspective scale factor based on altitude
+     * Simulates real perspective where distant objects appear smaller (scale ~ 1/distance)
+     * Scaling factors:
+     * - At alt 10: scale ~1.2 (close objects appear larger)
+     * - At alt 1000: scale ~0.6 (medium distance)
+     * - At alt 5000: scale ~0.2 (far objects appear smaller)
+     * @returns {number} Scale factor for rendering
+     * @private
+     */
     _getPerspectiveScale() {
         // Inverse scaling: simulation of real perspective (scale ~ 1/distance)
         // Tuned: At alt 10, scale ~1.2. At alt 1000, scale ~0.6. At 5000, scale ~0.2.
@@ -1444,6 +1454,9 @@ class SurfaceMode {
     /**
      * Get sun angle relative to planet surface
      * Uses planet position relative to origin (where sun is) to calculate light direction
+     * The angle is locked at surface entry to prevent noticeable sun movement during gameplay
+     * @returns {number} Sun angle in radians
+     * @private
      */
     _getSunAngle() {
         // Return the locked sun angle calculated at entry
@@ -1466,7 +1479,9 @@ class SurfaceMode {
     }
 
     /**
-     * Draw terrain mesh - delegates to terrain module
+     * Draw terrain mesh with proper lighting
+     * Delegates to terrain module for rendering the 3D terrain buffer
+     * @private
      */
     _drawTerrain() {
         // Pass the dynamic sun angle to the terrain renderer so mountains are lit correctly

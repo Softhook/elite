@@ -1,12 +1,37 @@
 // ****** surfaceObjects.js ******
 // Surface object classes for planetary surface gameplay
+//
+// ARCHITECTURE:
+// - Base class: SurfaceObject - common behavior for all surface entities
+// - 17 specialized classes: Buildings, defenses, caches, stations
+// - All classes use unified projection helpers from surfaceObjectUtils.js
+//
+// RENDERING:
+// - All draw() methods use getProjectionHelpers() for consistent visual projection
+// - Objects are rendered with pseudo-3D extrusion using Draw3D primitives
+// - Visual coordinates account for altitude offset and extrusion angle
+//
+// ENTITY TYPES:
+// - Defense: Turret, DefenseDrone, ShieldGenerator
+// - Structures: ImperialBuilding, SeparatistBuilding, MilitaryBuilding, etc.
+// - Commerce: SurfaceStation, various economy-specific buildings
+// - Special: SecretCache (uninhabited planets)
 
 // Validate critical dependencies
 if (typeof Draw3D === 'undefined') {
     console.warn('Draw3D not loaded - surface object rendering may fail');
 }
 
+/**
+ * Base class for all surface objects (buildings, defenses, stations)
+ * Provides common properties and methods for surface entities
+ */
 class SurfaceObject {
+    /**
+     * @param {number} x - World X coordinate
+     * @param {number} y - World Y coordinate  
+     * @param {number} size - Object size/radius
+     */
     constructor(x, y, size) {
         this.pos = createVector(x, y);
         this.size = size || 50;
@@ -14,14 +39,17 @@ class SurfaceObject {
         this.maxHealth = 100;
         this.destroyed = false;
         this.color = color(150, 150, 150);
-        this.yOffset = 0;
+        this.yOffset = 0; // Height offset matching terrain (altitude semantics)
     }
 
     // Aliases for HUD compatibility
     get hull() { return this.health; }
     get maxHull() { return this.maxHealth; }
 
-    // Friendly display name used by HUD/minimap/target overlays
+    /**
+     * Get friendly display name for UI
+     * @returns {string} Human-readable object name
+     */
     getDisplayName() {
         if (this.displayName) return this.displayName;
         if (this.type) return this.type;
@@ -29,21 +57,39 @@ class SurfaceObject {
         return 'Surface Object';
     }
 
+    /**
+     * Update object state (override in subclasses)
+     * @param {number} dt - Delta time in seconds
+     * @param {Object} player - Player reference
+     */
     update(dt, player) {
     }
 
-    // Draw using Draw3D primitives
-    // worldX, worldY: World ground coordinates
-    // sunAngle: Lighting angle
-    // alt: Total altitude (ground altitude + entity altitude)
+    /**
+     * Draw object using Draw3D primitives (override in subclasses)
+     * Uses getProjectionHelpers() from surfaceObjectUtils.js for consistent projection
+     * @param {number} worldX - World X coordinate
+     * @param {number} worldY - World Y coordinate
+     * @param {number} sunAngle - Lighting angle in radians
+     * @param {number} alt - Total altitude (ground altitude + entity altitude)
+     */
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
         // Base implementation - individual objects handle projection
     }
 
+    /**
+     * Check collision with projectile
+     * @param {Object} projectile - Projectile to check
+     * @returns {boolean} True if collision detected
+     */
     checkCollision(projectile) {
         return false;
     }
 
+    /**
+     * Apply damage to object
+     * @param {number} amount - Damage amount
+     */
     takeDamage(amount) {
         this.health -= amount;
         if (this.health <= 0 && !this.destroyed) {
