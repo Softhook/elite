@@ -101,6 +101,24 @@ class SurfaceObject {
         }
     }
 
+    /**
+     * Apply drag/tangle effect to surface object (for DefenseDrone and other moving objects)
+     * @param {number} duration - Duration of the effect in seconds
+     * @param {number} dragMultiplier - Drag multiplier (higher = more drag)
+     * @param {number} rotationBlockMultiplier - Rotation blocking (lower = more blocked)
+     */
+    applyDragEffect(duration, dragMultiplier, rotationBlockMultiplier) {
+        // Only apply to objects that can move (drones)
+        // Turrets are stationary and don't need drag effects
+        if (this.type === 'Defense Drone') {
+            this.dragEffect = {
+                endTime: millis() + duration * 1000,
+                dragMultiplier: dragMultiplier || 10.0,
+                rotationBlockMultiplier: rotationBlockMultiplier || 0.1
+            };
+        }
+    }
+
     onDestroy() {
     }
 }
@@ -2318,6 +2336,11 @@ class DefenseDrone extends SurfaceObject {
 
         this.cooldown -= dt;
 
+        // Check if drag effect is active
+        const dragActive = this.dragEffect && millis() < this.dragEffect.endTime;
+        const dragMultiplier = dragActive ? this.dragEffect.dragMultiplier : 1.0;
+        const rotationBlock = dragActive ? this.dragEffect.rotationBlockMultiplier : 1.0;
+
         // Check if player is in range
         const dx = player.pos.x - this.pos.x;
         const dy = player.pos.y - this.pos.y;
@@ -2371,8 +2394,8 @@ class DefenseDrone extends SurfaceObject {
             while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
             while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
 
-            // Turn towards player
-            const turnSpeed = this.turnRate * dt;
+            // Turn towards player (affected by tangle effect)
+            const turnSpeed = this.turnRate * dt * rotationBlock;
             if (Math.abs(angleDiff) < turnSpeed) {
                 this.angle = targetAngle;
             } else {
@@ -2409,7 +2432,7 @@ class DefenseDrone extends SurfaceObject {
                 while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
                 while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
 
-                const turnSpeed = this.turnRate * 0.5 * dt;
+                const turnSpeed = this.turnRate * 0.5 * dt * rotationBlock;
                 if (Math.abs(angleDiff) < turnSpeed) {
                     this.angle = targetAngle;
                 } else {
@@ -2436,8 +2459,8 @@ class DefenseDrone extends SurfaceObject {
             }
         }
 
-        // Apply drag
-        this.speed *= Math.pow(0.95, dt * 60);
+        // Apply drag (enhanced by tangle effect)
+        this.speed *= Math.pow(0.95, dt * 60 * dragMultiplier);
     }
 
     fire(starSystem, player) {

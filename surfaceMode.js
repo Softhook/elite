@@ -1288,6 +1288,19 @@ class SurfaceMode {
                 if (distSq < hitRadiusSq) {
 
                     obj.takeDamage(proj.damage || 10);
+                    
+                    // Apply tangle effect if this is a tangle projectile
+                    if (proj.type === 'tangle' && typeof obj.applyDragEffect === 'function') {
+                        obj.applyDragEffect(
+                            proj.tangleDuration || 5.0,
+                            proj.dragMultiplier || 10.0,
+                            proj.rotationBlockMultiplier || 0.1
+                        );
+                        if (typeof uiManager !== 'undefined' && uiManager) {
+                            uiManager.addMessage(`${obj.getDisplayName()} caught in energy tangle!`, "#30FFB4");
+                        }
+                    }
+                    
                     proj.destroyed = true;
 
                     // Create explosion at the visual impact point using unified standard
@@ -1919,26 +1932,31 @@ class SurfaceMode {
         // Clear shadow settings to prevent visual artifacts
         this._clearShadow();
 
-        // Calculate visual offsets for beam ends
+        // Calculate visual offsets for beam ends (both X and Y for proper altitude projection)
         const extrusionAngle = this._getExtrusionAngle();
         // Start always matches the player's visual height
         const activeAlt = (this.controlMode === 'SHIP') ? (this.player.altitude || this.altitude) : (this.astronaut.altitude || 0);
-        const startAltOffset = activeAlt * Math.cos(extrusionAngle);
+        const startXOffset = activeAlt * Math.sin(extrusionAngle);
+        const startYOffset = activeAlt * Math.cos(extrusionAngle);
         // End matches target altitude (if known) or ground
-        const endAltOffset = (beam.targetAltitude || 0) * Math.cos(extrusionAngle);
+        const endAlt = beam.targetAltitude || 0;
+        const endXOffset = endAlt * Math.sin(extrusionAngle);
+        const endYOffset = endAlt * Math.cos(extrusionAngle);
 
-        const vStartY = beam.start.y - startAltOffset;
-        const vEndY = beam.end.y - endAltOffset;
+        const vStartX = beam.start.x - startXOffset;
+        const vStartY = beam.start.y - startYOffset;
+        const vEndX = beam.end.x - endXOffset;
+        const vEndY = beam.end.y - endYOffset;
 
         // Draw main beam line
         stroke(beam.color);
         strokeWeight(3 * counterScale);
-        line(beam.start.x, vStartY, beam.end.x, vEndY);
+        line(vStartX, vStartY, vEndX, vEndY);
 
         // Draw glow effect
         stroke(beam.color[0], beam.color[1], beam.color[2], 100);
         strokeWeight(6 * counterScale);
-        line(beam.start.x, vStartY, beam.end.x, vEndY);
+        line(vStartX, vStartY, vEndX, vEndY);
 
         pop();
     }

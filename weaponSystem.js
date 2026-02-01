@@ -1002,7 +1002,7 @@ class WeaponSystem {
 
         // Find nearest enemy if player is firing
         if (owner instanceof Player) {
-            // Surface mode filter: target surface objects instead of space enemies in surface mode
+            // Surface mode filter: target hostile surface objects (turrets, drones)
             if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
                 const surfaceObjects = surfaceMode.surfaceObjects;
                 if (!surfaceObjects || surfaceObjects.length === 0) return null;
@@ -1015,6 +1015,10 @@ class WeaponSystem {
                 for (let i = 0, len = surfaceObjects.length; i < len; i++) {
                     const obj = surfaceObjects[i];
                     if (!obj?.pos || obj.destroyed) continue;
+                    
+                    // Only target hostile objects (turrets and drones)
+                    const isHostile = (obj.type === 'Turret' || obj.type === 'Defense Drone');
+                    if (!isHostile) continue;
 
                     const dx = obj.pos.x - ownerX;
                     const dy = obj.pos.y - ownerY;
@@ -1206,6 +1210,13 @@ class WeaponSystem {
         // Create the mine
         const mine = new Mine(dropX, dropY, owner, damage, blastRadius, triggerRadius, color, health);
         mine.system = system;
+
+        // Apply surface mode properties if in surface mode
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+            mine.isSurface = true;
+            mine.altitude = owner.altitude || 0;
+            mine.startAltitude = mine.altitude;
+        }
 
         // Enforce 5-mine limit per owner
         // Initialize activeMines array if it doesn't exist
