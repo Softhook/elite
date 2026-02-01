@@ -45,6 +45,66 @@ function calculateVerticalOffset(height, extrusionAngle = SURFACE_RENDER_CONSTAN
 }
 
 /**
+ * Get extrusion angle from surfaceMode or fallback to constant
+ * Centralizes the fallback logic that was duplicated across all surface objects
+ * @returns {number} Extrusion angle in radians
+ */
+function getExtrusionAngle() {
+    if (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) {
+        return surfaceMode._getExtrusionAngle();
+    }
+    if (SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) {
+        return SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE;
+    }
+    return 0.5; // Final fallback
+}
+
+/**
+ * Convert world coordinates to visual coordinates with projection
+ * @param {number} worldX - World X coordinate
+ * @param {number} worldY - World Y coordinate
+ * @param {number} altitude - Object altitude
+ * @param {number} extrusionAngle - Optional extrusion angle (defaults to current)
+ * @returns {{x: number, y: number}} Visual coordinates
+ */
+function toVisualCoordinates(worldX, worldY, altitude, extrusionAngle = null) {
+    if (extrusionAngle === null) {
+        extrusionAngle = getExtrusionAngle();
+    }
+    
+    let visualX, visualY;
+    
+    if (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX && surfaceMode._toVisualY) {
+        visualX = surfaceMode._toVisualX(worldX, altitude);
+        visualY = surfaceMode._toVisualY(worldY, altitude);
+    } else {
+        visualX = worldX - altitude * Math.sin(extrusionAngle);
+        visualY = worldY - altitude * Math.cos(extrusionAngle);
+    }
+    
+    return { x: visualX, y: visualY };
+}
+
+/**
+ * Get projection helpers for rendering surface objects
+ * Returns both extrusion angle and visual coordinates in one call
+ * @param {number} worldX - World X coordinate
+ * @param {number} worldY - World Y coordinate
+ * @param {number} altitude - Object altitude
+ * @returns {{extrusionAngle: number, baseX: number, baseY: number}} Projection data
+ */
+function getProjectionHelpers(worldX, worldY, altitude) {
+    const extrusionAngle = getExtrusionAngle();
+    const visual = toVisualCoordinates(worldX, worldY, altitude, extrusionAngle);
+    
+    return {
+        extrusionAngle: extrusionAngle,
+        baseX: visual.x,
+        baseY: visual.y
+    };
+}
+
+/**
  * Initialize colors for a building from RGB arrays
  * @param {Object} colorConfig - Object with primary, accent, etc. as [r,g,b] arrays
  * @returns {Object} Object with p5.Color objects
@@ -94,6 +154,9 @@ if (typeof window !== 'undefined') {
     window.calculateVerticalOffset = calculateVerticalOffset;
     window.initializeBuildingColors = initializeBuildingColors;
     window.createBuildingConfig = createBuildingConfig;
+    window.getExtrusionAngle = getExtrusionAngle;
+    window.toVisualCoordinates = toVisualCoordinates;
+    window.getProjectionHelpers = getProjectionHelpers;
 }
 
 // For Node.js (testing)
@@ -104,7 +167,10 @@ if (typeof module !== 'undefined' && module.exports) {
         calculateHeight,
         calculateVerticalOffset,
         initializeBuildingColors,
-        createBuildingConfig
+        createBuildingConfig,
+        getExtrusionAngle,
+        toVisualCoordinates,
+        getProjectionHelpers
     };
 }
 
