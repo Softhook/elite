@@ -16,7 +16,7 @@ const SURFACE_CONFIG = {
 
     // Terrain mesh
     MESH_RESOLUTION: 160,      // Grid resolution (increased for better detail)
-    MESH_SIZE: 4200,           // World units covered (centered on camera focus)
+    MESH_SIZE: 6000,           // World units covered (increased to prevent edge visibility at MAX_ALTITUDE)
     SPAWN_CELL_SIZE: 35,       // Fixed spawn density (independent of resolution)
     DEFAULT_FEATURE_SEED: 12345, // Fallback seed for terrain generation
     HIGH_TERRAIN_THRESHOLD: 350, // Height (0-500) treated as high ground for defenses
@@ -165,62 +165,56 @@ class SurfaceMode {
 
     // ============================================
     // DRY Helper Methods - Shared Calculations
+    // Delegate to SurfaceUtils for consistency across surface-aware entities
     // ============================================
 
     /**
      * Calculate perspective scale factor based on altitude
-     * Simulates real perspective where distant objects appear smaller (scale ~ 1/distance)
-     * Scaling factors:
-     * - At alt 10: scale ~1.2 (close objects appear larger)
-     * - At alt 1000: scale ~0.6 (medium distance)
-     * - At alt 5000: scale ~0.2 (far objects appear smaller)
      * @returns {number} Scale factor for rendering
      * @private
      */
     _getPerspectiveScale() {
-        // Inverse scaling: simulation of real perspective (scale ~ 1/distance)
-        // Tuned: At alt 10, scale ~1.2. At alt 1000, scale ~0.6. At 5000, scale ~0.2.
-        return 1200 / (this.altitude + 1000);
+        return SurfaceUtils.getPerspectiveScale(this.altitude);
     }
 
     /**
-     * Calculate counter-scale factor to maintain constant screen size for UI elements
-     * This is the inverse of perspective scale - objects drawn with this stay same size
+     * Calculate counter-scale factor to maintain constant screen size
      * @returns {number} Counter-scale factor (inverse of perspective scale)
      * @private
      */
     _getCounterScale() {
-        return 1 / this._getPerspectiveScale();
+        return SurfaceUtils.getCounterScale(this.altitude);
     }
 
     /**
-     * Centralized extrusion angle for pseudo-3D projection.
-     * Keep all projection math consistent by using this helper.
+     * Get extrusion angle for pseudo-3D projection
+     * @returns {number} Extrusion angle in radians
+     * @private
      */
     _getExtrusionAngle() {
-        return (SURFACE_CONFIG.EXTRUSION_ANGLE !== undefined) ? SURFACE_CONFIG.EXTRUSION_ANGLE : 0.5;
+        return SurfaceUtils.getExtrusionAngle();
     }
 
     /**
-     * Convert a world X plus altitude into projected visual X.
-     * @param {number} worldX
-     * @param {number} altitude
-     * @returns {number}
+     * Convert world X coordinate to visual X coordinate
+     * @param {number} worldX - World X coordinate
+     * @param {number} altitude - Altitude above terrain (default: 0)
+     * @returns {number} Visual X coordinate
      * @private
      */
     _toVisualX(worldX, altitude = 0) {
-        return worldX - (altitude * Math.sin(this._getExtrusionAngle()));
+        return SurfaceUtils.toVisualX(worldX, altitude);
     }
 
     /**
-     * Convert a world Y plus altitude into projected visual Y.
-     * @param {number} worldY
-     * @param {number} altitude
-     * @returns {number}
+     * Convert world Y coordinate to visual Y coordinate
+     * @param {number} worldY - World Y coordinate
+     * @param {number} altitude - Altitude above terrain (default: 0)
+     * @returns {number} Visual Y coordinate
      * @private
      */
     _toVisualY(worldY, altitude = 0) {
-        return worldY - (altitude * Math.cos(this._getExtrusionAngle()));
+        return SurfaceUtils.toVisualY(worldY, altitude);
     }
 
     /**
@@ -1179,7 +1173,7 @@ class SurfaceMode {
     /**
      * Calculate viewport bounds for culling based on altitude and player position
      * @param {number} padding - Extra padding to avoid pop-in at edges (default: 200)
-     * @returns {{left: number, right: number, top: number, bottom: number}} Viewport bounds
+     * @returns {{minX: number, maxX: number, minY: number, maxY: number}} Viewport bounds
      * @private
      */
     _getViewportBounds(padding = 200) {
@@ -1187,26 +1181,14 @@ class SurfaceMode {
             return { minX: 0, maxX: width, minY: 0, maxY: height };
         }
 
-        const perspectiveScale = this._getPerspectiveScale();
-        const extrusionAngle = this._getExtrusionAngle();
-
-        // Calculate the camera focus point in world coordinates
-        // This is where the camera is actually looking, accounting for altitude extrusion
-        const visualXOffset = this.altitude * Math.sin(extrusionAngle);
-        const visualYOffset = this.altitude * Math.cos(extrusionAngle);
-
-        const focusX = this.surfaceX - visualXOffset;
-        const focusY = this.surfaceY - visualYOffset; // Corrected: ship center is focal point
-
-        const viewportWidth = (width / perspectiveScale) + padding * 2;
-        const viewportHeight = (height / perspectiveScale) + padding * 2;
-
-        return {
-            minX: focusX - viewportWidth / 2,
-            maxX: focusX + viewportWidth / 2,
-            minY: focusY - viewportHeight / 2,
-            maxY: focusY + viewportHeight / 2
-        };
+        return SurfaceUtils.getViewportBounds(
+            this.surfaceX, 
+            this.surfaceY, 
+            this.altitude,
+            width,
+            height,
+            padding
+        );
     }
 
     /**

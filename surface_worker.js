@@ -142,13 +142,10 @@ self.onmessage = function (e) {
         // If we draw it 1:1 with world units, it might be huge (4200x4200).
         // Let's use the resolution * a scale factor, or just map exactly.
         // To keep it sharp, let's use a reasonable pixel density. 
-        // 4200 units. If 1 unit = 1 pixel, that's a 4k texture. Doable.
-        const canvasSize = Math.ceil(meshSize * 1.2); // Add 20% padding for extrusion overflow?
-        // Actually, let's stick to the exact mesh size + margin.
-        // The render logic in surfaceTerrain used to draw to a buffer of max(W,H)*2.5.
-        // Let's behave similarly: we produce a large texture.
+        // 6000 units. If 1 unit = 1 pixel, that's a 6k texture. Adjust as needed.
+        const canvasSize = Math.ceil(meshSize * 1.2); // Add 20% padding for extrusion overflow
 
-        const bufferSide = 4500; // Fixed size covering the 4200 mesh + margin
+        const bufferSide = 6600; // Fixed size covering the 6000 mesh + margin for edge safety
         const off = new OffscreenCanvas(bufferSide, bufferSide);
         const ctx = off.getContext('2d', { alpha: true }); // Alpha true for transparency edges
 
