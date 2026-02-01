@@ -93,6 +93,17 @@ const SURFACE_STATE = {
  * 3. Translates by -player.pos to center camera on player
  * 
  * Objects are drawn at their world positions; the camera transform handles centering.
+ * 
+ * ALTITUDE SEMANTICS:
+ * - altitude: Absolute height above sea level (player altitude)
+ * - radarAltitude: Height above local terrain (altitude - terrain height)
+ * - yOffset: Height offset for surface objects (matches terrain height)
+ * - height: Visual 3D height of buildings/structures
+ * 
+ * RENDERING OPTIMIZATION:
+ * - Extrusion angle is cached per frame to avoid repeated calculations
+ * - Viewport culling eliminates off-screen object rendering
+ * - Object spawning uses fixed-density grid independent of terrain resolution
  */
 class SurfaceMode {
     constructor() {
@@ -157,9 +168,13 @@ class SurfaceMode {
     // ============================================
 
     /**
-     * Calculate perspective scale factor based on current altitude
-     * Higher altitude = zoomed out (smaller scale), lower = zoomed in (larger scale)
-     * @returns {number} Scale factor (1.2 at min altitude, 0.6 at max altitude)
+     * Calculate perspective scale factor based on altitude
+     * Simulates real perspective where distant objects appear smaller (scale ~ 1/distance)
+     * Scaling factors:
+     * - At alt 10: scale ~1.2 (close objects appear larger)
+     * - At alt 1000: scale ~0.6 (medium distance)
+     * - At alt 5000: scale ~0.2 (far objects appear smaller)
+     * @returns {number} Scale factor for rendering
      * @private
      */
     _getPerspectiveScale() {
@@ -1433,6 +1448,9 @@ class SurfaceMode {
     /**
      * Get sun angle relative to planet surface
      * Uses planet position relative to origin (where sun is) to calculate light direction
+     * The angle is locked at surface entry to prevent noticeable sun movement during gameplay
+     * @returns {number} Sun angle in radians
+     * @private
      */
     _getSunAngle() {
         // Return the locked sun angle calculated at entry
@@ -1455,7 +1473,9 @@ class SurfaceMode {
     }
 
     /**
-     * Draw terrain mesh - delegates to terrain module
+     * Draw terrain mesh with proper lighting
+     * Delegates to terrain module for rendering the 3D terrain buffer
+     * @private
      */
     _drawTerrain() {
         // Pass the dynamic sun angle to the terrain renderer so mountains are lit correctly
@@ -1595,22 +1615,17 @@ class SurfaceMode {
                         // Get civilization color and economy type for buildings
                         const civColor = (this.planet && this.planet.cityLightsColor) ? this.planet.cityLightsColor : null;
                         const economyType = this.planet?.economyType || 'Service';
-
-                        // TECH LEVEL affects defense density (0-5 scale)
-                        // [MASSIVE REDUCTION] Scaled down further for extreme sparse gameplay
                         const techLevel = this.planet?.techLevel || 3;
-                        let techModifier = 0.0002 + (techLevel / 5) * 0.0003;
-                        const militaryBonus = (economyType === 'Military') ? 0.001 : 0;
-                        let defenseDensity = techModifier + militaryBonus;
 
-                        // --- SHIELD GENERATOR BASE DEFENSE ---
-                        if (isNearTarget && this.targetPos) {
-                            const tdx = wx - this.targetPos.x;
-                            const tdy = wy - this.targetPos.y;
-                            const distToTargetSq = tdx * tdx + tdy * tdy;
-                            // MASSIVELY REDUCED: Ultra-sparse defenses around target (max ~1%)
-                            defenseDensity = Math.max(defenseDensity, 0.001 + (1 - Math.sqrt(distToTargetSq) / 2000) * 0.005);
-                        }
+                        // Calculate defense density using helper method
+                        const distToTargetSq = isNearTarget ? 
+                            Math.pow(wx - this.targetPos.x, 2) + Math.pow(wy - this.targetPos.y, 2) : 0;
+                        const defenseDensity = this._calculateDefenseDensity(
+                            economyType, 
+                            techLevel, 
+                            isNearTarget, 
+                            distToTargetSq
+                        );
 
                         const buildingSize = 40 + (subHash * 40);
 
@@ -1726,6 +1741,30 @@ class SurfaceMode {
                     ? new ServiceBuilding(x, y, size, seed)
                     : new Building(x, y, size, 'skyscraper', seed);
         }
+    }
+
+    /**
+     * Calculate defense density for a given cell based on planet tech level and economy
+     * @param {string} economyType - The planet's economy type
+     * @param {number} techLevel - The planet's tech level (0-5)
+     * @param {boolean} isNearTarget - Whether cell is near the shield generator target
+     * @param {number} distToTargetSq - Squared distance to target (only used if isNearTarget)
+     * @returns {number} Defense density value (0-1 probability)
+     * @private
+     */
+    _calculateDefenseDensity(economyType, techLevel, isNearTarget, distToTargetSq) {
+        // Base density from tech level
+        let techModifier = 0.0002 + (techLevel / 5) * 0.0003;
+        const militaryBonus = (economyType === 'Military') ? 0.001 : 0;
+        let defenseDensity = techModifier + militaryBonus;
+
+        // Enhanced density near shield generator base
+        if (isNearTarget) {
+            // MASSIVELY REDUCED: Ultra-sparse defenses around target (max ~1%)
+            defenseDensity = Math.max(defenseDensity, 0.001 + (1 - Math.sqrt(distToTargetSq) / 2000) * 0.005);
+        }
+
+        return defenseDensity;
     }
 
     /**

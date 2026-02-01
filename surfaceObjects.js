@@ -1,12 +1,37 @@
 // ****** surfaceObjects.js ******
 // Surface object classes for planetary surface gameplay
+//
+// ARCHITECTURE:
+// - Base class: SurfaceObject - common behavior for all surface entities
+// - 17 specialized classes: Buildings, defenses, caches, stations
+// - All classes use unified projection helpers from surfaceObjectUtils.js
+//
+// RENDERING:
+// - All draw() methods use getProjectionHelpers() for consistent visual projection
+// - Objects are rendered with pseudo-3D extrusion using Draw3D primitives
+// - Visual coordinates account for altitude offset and extrusion angle
+//
+// ENTITY TYPES:
+// - Defense: Turret, DefenseDrone, ShieldGenerator
+// - Structures: ImperialBuilding, SeparatistBuilding, MilitaryBuilding, etc.
+// - Commerce: SurfaceStation, various economy-specific buildings
+// - Special: SecretCache (uninhabited planets)
 
 // Validate critical dependencies
 if (typeof Draw3D === 'undefined') {
     console.warn('Draw3D not loaded - surface object rendering may fail');
 }
 
+/**
+ * Base class for all surface objects (buildings, defenses, stations)
+ * Provides common properties and methods for surface entities
+ */
 class SurfaceObject {
+    /**
+     * @param {number} x - World X coordinate
+     * @param {number} y - World Y coordinate  
+     * @param {number} size - Object size/radius
+     */
     constructor(x, y, size) {
         this.pos = createVector(x, y);
         this.size = size || 50;
@@ -14,14 +39,17 @@ class SurfaceObject {
         this.maxHealth = 100;
         this.destroyed = false;
         this.color = color(150, 150, 150);
-        this.yOffset = 0;
+        this.yOffset = 0; // Height offset matching terrain (altitude semantics)
     }
 
     // Aliases for HUD compatibility
     get hull() { return this.health; }
     get maxHull() { return this.maxHealth; }
 
-    // Friendly display name used by HUD/minimap/target overlays
+    /**
+     * Get friendly display name for UI
+     * @returns {string} Human-readable object name
+     */
     getDisplayName() {
         if (this.displayName) return this.displayName;
         if (this.type) return this.type;
@@ -29,21 +57,39 @@ class SurfaceObject {
         return 'Surface Object';
     }
 
+    /**
+     * Update object state (override in subclasses)
+     * @param {number} dt - Delta time in seconds
+     * @param {Object} player - Player reference
+     */
     update(dt, player) {
     }
 
-    // Draw using Draw3D primitives
-    // worldX, worldY: World ground coordinates
-    // sunAngle: Lighting angle
-    // alt: Total altitude (ground altitude + entity altitude)
+    /**
+     * Draw object using Draw3D primitives (override in subclasses)
+     * Uses getProjectionHelpers() from surfaceObjectUtils.js for consistent projection
+     * @param {number} worldX - World X coordinate
+     * @param {number} worldY - World Y coordinate
+     * @param {number} sunAngle - Lighting angle in radians
+     * @param {number} alt - Total altitude (ground altitude + entity altitude)
+     */
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
         // Base implementation - individual objects handle projection
     }
 
+    /**
+     * Check collision with projectile
+     * @param {Object} projectile - Projectile to check
+     * @returns {boolean} True if collision detected
+     */
     checkCollision(projectile) {
         return false;
     }
 
+    /**
+     * Apply damage to object
+     * @param {number} amount - Damage amount
+     */
     takeDamage(amount) {
         this.health -= amount;
         if (this.health <= 0 && !this.destroyed) {
@@ -84,13 +130,22 @@ class SecretCache extends SurfaceObject {
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
         const sz = this.size;
-        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) ? surfaceMode._getExtrusionAngle() : ((SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
-
-        // Apply visual projection to the logic base position
-        const baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-            ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
-        const baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-            ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        
+        // Use projection helpers when available; fall back to manual calculation in test/Node contexts
+        let extrusionAngle, baseX, baseY;
+        if (typeof getProjectionHelpers === 'function') {
+            ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
+        } else {
+            // Fallback: replicate original projection logic
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
+                ? surfaceMode._getExtrusionAngle() 
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+                    ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+            baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
 
         // Box base
         const boxH = sz * 0.6;
@@ -213,14 +268,22 @@ class Building extends SurfaceObject {
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
-        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) ? surfaceMode._getExtrusionAngle() : ((SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+        // Use projection helpers when available; fall back to manual calculation in test/Node contexts
+        let extrusionAngle, baseX, baseY;
+        if (typeof getProjectionHelpers === 'function') {
+            ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
+        } else {
+            // Fallback: replicate original projection logic
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
+                ? surfaceMode._getExtrusionAngle() 
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+                    ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+            baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
         const sz = this.size;
-
-        // Apply visual projection to the logic base position
-        const baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-            ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
-        const baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-            ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
 
         const dvX = this.height * Math.sin(extrusionAngle);
         const dvY = this.height * Math.cos(extrusionAngle);
@@ -305,14 +368,22 @@ class ImperialBuilding extends SurfaceObject {
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
-        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) ? surfaceMode._getExtrusionAngle() : ((SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+        // Use projection helpers when available; fall back to manual calculation in test/Node contexts
+        let extrusionAngle, baseX, baseY;
+        if (typeof getProjectionHelpers === 'function') {
+            ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
+        } else {
+            // Fallback: replicate original projection logic
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
+                ? surfaceMode._getExtrusionAngle() 
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+                    ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+            baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
         const sz = this.size;
-
-        // Apply visual projection to the logic base position
-        const baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-            ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
-        const baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-            ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
 
         if (this.variant === 0) {
             // OBELISK - Tall tapered column with gold cap
@@ -420,14 +491,22 @@ class SeparatistBuilding extends SurfaceObject {
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
-        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) ? surfaceMode._getExtrusionAngle() : ((SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+        // Use projection helpers when available; fall back to manual calculation in test/Node contexts
+        let extrusionAngle, baseX, baseY;
+        if (typeof getProjectionHelpers === 'function') {
+            ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
+        } else {
+            // Fallback: replicate original projection logic
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
+                ? surfaceMode._getExtrusionAngle() 
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+                    ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+            baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
         const sz = this.size;
-
-        // Apply visual projection to the logic base position
-        const baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-            ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
-        const baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-            ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
 
         if (this.variant === 0) {
             // BUNKER - Low, fortified
@@ -562,14 +641,22 @@ class MilitaryBuilding extends SurfaceObject {
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
-        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) ? surfaceMode._getExtrusionAngle() : ((SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+        // Use projection helpers when available; fall back to manual calculation in test/Node contexts
+        let extrusionAngle, baseX, baseY;
+        if (typeof getProjectionHelpers === 'function') {
+            ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
+        } else {
+            // Fallback: replicate original projection logic
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
+                ? surfaceMode._getExtrusionAngle() 
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+                    ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+            baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
         const sz = this.size;
-
-        // Apply visual projection to the logic base position
-        const baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-            ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
-        const baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-            ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
 
         if (this.variant === 0) {
             // HANGAR - Large arched structure
@@ -689,15 +776,23 @@ class PostHumanBuilding extends SurfaceObject {
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
-        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) ? surfaceMode._getExtrusionAngle() : ((SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+        // Use projection helpers when available; fall back to manual calculation in test/Node contexts
+        let extrusionAngle, baseX, baseY;
+        if (typeof getProjectionHelpers === 'function') {
+            ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
+        } else {
+            // Fallback: replicate original projection logic
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
+                ? surfaceMode._getExtrusionAngle() 
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+                    ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+            baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
         const sz = this.size;
         const pulse = (Math.sin(this.pulsePhase) * 0.5 + 0.5);
-
-        // Apply visual projection to the logic base position
-        const baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-            ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
-        const baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-            ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
 
         if (this.variant === 0) {
             // MONOLITH - Perfect black rectangle with glowing edges
@@ -819,14 +914,22 @@ class OffworldBuilding extends SurfaceObject {
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
-        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) ? surfaceMode._getExtrusionAngle() : ((SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+        // Use projection helpers when available; fall back to manual calculation in test/Node contexts
+        let extrusionAngle, baseX, baseY;
+        if (typeof getProjectionHelpers === 'function') {
+            ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
+        } else {
+            // Fallback: replicate original projection logic
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
+                ? surfaceMode._getExtrusionAngle() 
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+                    ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+            baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
         const sz = this.size;
-
-        // Apply visual projection to the logic base position
-        const baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-            ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
-        const baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-            ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
 
         if (this.variant === 0) {
             // BIODOME - Large geodesic dome
@@ -944,14 +1047,22 @@ class MiningBuilding extends SurfaceObject {
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
-        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) ? surfaceMode._getExtrusionAngle() : ((SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+        // Use projection helpers when available; fall back to manual calculation in test/Node contexts
+        let extrusionAngle, baseX, baseY;
+        if (typeof getProjectionHelpers === 'function') {
+            ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
+        } else {
+            // Fallback: replicate original projection logic
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
+                ? surfaceMode._getExtrusionAngle() 
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+                    ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+            baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
         const sz = this.size;
-
-        // Apply visual projection to the logic base position
-        const baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-            ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
-        const baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-            ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
 
         if (this.variant === 0) {
             // DRILL RIG - Tall drilling tower
@@ -1075,14 +1186,22 @@ class IndustrialBuilding extends SurfaceObject {
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
-        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) ? surfaceMode._getExtrusionAngle() : ((SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+        // Use projection helpers when available; fall back to manual calculation in test/Node contexts
+        let extrusionAngle, baseX, baseY;
+        if (typeof getProjectionHelpers === 'function') {
+            ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
+        } else {
+            // Fallback: replicate original projection logic
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
+                ? surfaceMode._getExtrusionAngle() 
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+                    ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+            baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
         const sz = this.size;
-
-        // Apply visual projection to the logic base position
-        const baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-            ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
-        const baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-            ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
 
         if (this.variant === 0) {
             // FACTORY - Large building with smokestack
@@ -1211,14 +1330,22 @@ class RefineryBuilding extends SurfaceObject {
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
-        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) ? surfaceMode._getExtrusionAngle() : ((SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+        // Use projection helpers when available; fall back to manual calculation in test/Node contexts
+        let extrusionAngle, baseX, baseY;
+        if (typeof getProjectionHelpers === 'function') {
+            ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
+        } else {
+            // Fallback: replicate original projection logic
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
+                ? surfaceMode._getExtrusionAngle() 
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+                    ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+            baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
         const sz = this.size;
-
-        // Apply visual projection to the logic base position
-        const baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-            ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
-        const baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-            ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
 
         if (this.variant === 0) {
             // DISTILLATION TOWER - Tall segmented column
@@ -1343,14 +1470,22 @@ class AgriculturalBuilding extends SurfaceObject {
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
-        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) ? surfaceMode._getExtrusionAngle() : ((SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+        // Use projection helpers when available; fall back to manual calculation in test/Node contexts
+        let extrusionAngle, baseX, baseY;
+        if (typeof getProjectionHelpers === 'function') {
+            ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
+        } else {
+            // Fallback: replicate original projection logic
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
+                ? surfaceMode._getExtrusionAngle() 
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+                    ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+            baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
         const sz = this.size;
-
-        // Apply visual projection to the logic base position
-        const baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-            ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
-        const baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-            ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
 
         if (this.variant === 0) {
             // GREENHOUSE - Arched glass structure
@@ -1445,14 +1580,22 @@ class ServiceBuilding extends SurfaceObject {
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
-        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) ? surfaceMode._getExtrusionAngle() : ((SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+        // Use projection helpers when available; fall back to manual calculation in test/Node contexts
+        let extrusionAngle, baseX, baseY;
+        if (typeof getProjectionHelpers === 'function') {
+            ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
+        } else {
+            // Fallback: replicate original projection logic
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
+                ? surfaceMode._getExtrusionAngle() 
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+                    ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+            baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
         const sz = this.size;
-
-        // Apply visual projection to the logic base position
-        const baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-            ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
-        const baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-            ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
 
         if (this.variant === 0) {
             // COMM TOWER - Tall antenna spire
@@ -1626,7 +1769,8 @@ class Turret extends SurfaceObject {
                 playerVisualX = surfaceMode._toVisualX(player.pos.x, playerAlt);
                 playerVisualY = surfaceMode._toVisualY(player.pos.y, playerAlt);
             } else {
-                const extrusionAngle = 0.5;
+                // Fallback manual projection using centralized getExtrusionAngle() if available
+                const extrusionAngle = (typeof getExtrusionAngle === 'function') ? getExtrusionAngle() : 0.5;
                 turretVisualX = this.pos.x - (turretAlt * Math.sin(extrusionAngle));
                 turretVisualY = this.pos.y - (turretAlt * Math.cos(extrusionAngle));
                 playerVisualX = player.pos.x - (playerAlt * Math.sin(extrusionAngle));
@@ -1737,13 +1881,25 @@ class Turret extends SurfaceObject {
         if (this.destroyed) return;
 
         const sz = this.size;
-        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) ? surfaceMode._getExtrusionAngle() : ((SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
-
-        // Calculate visual ground position (including terrain altitude)
-        const visualX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-            ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
-        const visualY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-            ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        
+        // Use projection helpers when available; fall back to manual calculation in test/Node contexts
+        let extrusionAngle, visualX, visualY;
+        if (typeof getProjectionHelpers === 'function') {
+            const helpers = getProjectionHelpers(worldX, worldY, alt);
+            extrusionAngle = helpers.extrusionAngle;
+            visualX = helpers.baseX;
+            visualY = helpers.baseY;
+        } else {
+            // Fallback: replicate original projection logic
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
+                ? surfaceMode._getExtrusionAngle() 
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+                    ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+            visualX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            visualY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
 
         const baseH = sz * 0.2;
         const headH = sz * 0.6;
@@ -1875,14 +2031,22 @@ class SurfaceStation extends SurfaceObject {
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
-        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) ? surfaceMode._getExtrusionAngle() : ((SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+        // Use projection helpers when available; fall back to manual calculation in test/Node contexts
+        let extrusionAngle, baseX, baseY;
+        if (typeof getProjectionHelpers === 'function') {
+            ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
+        } else {
+            // Fallback: replicate original projection logic
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
+                ? surfaceMode._getExtrusionAngle() 
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+                    ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+            baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
         const now = millis();
-
-        // Apply visual projection to the logic base position
-        const baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-            ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
-        const baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-            ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
 
         // Derive component colors from base color for consistency
         const headColor = lerpColor(this.color, color(220), 0.3);
@@ -2022,13 +2186,21 @@ class ShieldGenerator extends SurfaceObject {
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
         const sz = this.size;
-        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) ? surfaceMode._getExtrusionAngle() : ((SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
-
-        // Apply visual projection to the logic base position
-        const baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-            ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
-        const baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-            ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        // Use projection helpers when available; fall back to manual calculation in test/Node contexts
+        let extrusionAngle, baseX, baseY;
+        if (typeof getProjectionHelpers === 'function') {
+            ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
+        } else {
+            // Fallback: replicate original projection logic
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
+                ? surfaceMode._getExtrusionAngle() 
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+                    ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+            baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
 
         // Damage flash
         let flashColor = null;
@@ -2180,8 +2352,8 @@ class DefenseDrone extends SurfaceObject {
                     playerVisualX = surfaceMode._toVisualX(player.pos.x, playerAlt);
                     playerVisualY = surfaceMode._toVisualY(player.pos.y, playerAlt);
                 } else {
-                    // Fallback manual projection matching standard 0.5 angle
-                    const extrusionAngle = 0.5;
+                    // Fallback manual projection using centralized getExtrusionAngle() if available
+                    const extrusionAngle = (typeof getExtrusionAngle === 'function') ? getExtrusionAngle() : 0.5;
                     droneVisualX = this.pos.x - (droneAlt * Math.sin(extrusionAngle));
                     droneVisualY = this.pos.y - (droneAlt * Math.cos(extrusionAngle));
                     playerVisualX = player.pos.x - (playerAlt * Math.sin(extrusionAngle));
@@ -2332,14 +2504,24 @@ class DefenseDrone extends SurfaceObject {
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
         if (this.destroyed) return;
 
-        const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
-            ? surfaceMode._getExtrusionAngle() : 0.5;
-
-        // Apply visual projection to the logic base position (absolute altitude)
-        const visualX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-            ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
-        const visualY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-            ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        // Use projection helpers when available; fall back to manual calculation in test/Node contexts
+        let extrusionAngle, visualX, visualY;
+        if (typeof getProjectionHelpers === 'function') {
+            const helpers = getProjectionHelpers(worldX, worldY, alt);
+            extrusionAngle = helpers.extrusionAngle;
+            visualX = helpers.baseX;
+            visualY = helpers.baseY;
+        } else {
+            // Fallback: replicate original projection logic
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
+                ? surfaceMode._getExtrusionAngle() 
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+                    ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
+            visualX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            visualY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
 
         // Damage flash
         let flashColor = null;
