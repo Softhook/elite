@@ -1762,7 +1762,10 @@ class Turret extends SurfaceObject {
         // This ensures players on high ground are always visible
         const absoluteDetection = playerAltitude > (turretBaseAltitude + detectionThreshold);
 
-        const isDetected = radarDetection || absoluteDetection;
+        // Cloak detection: cloaked players cannot be detected
+        const playerCloaked = player.isCloaked || false;
+
+        const isDetected = !playerCloaked && (radarDetection || absoluteDetection);
 
         // Quick range gate using world space (faster than visual math)
         const worldDx = player.pos.x - this.pos.x;
@@ -2346,13 +2349,16 @@ class DefenseDrone extends SurfaceObject {
         const dy = player.pos.y - this.pos.y;
         const distSq = dx * dx + dy * dy;
 
-        // Simple stealth detection: player detected if at or above drone altitude
+        // Cloak detection: cloaked players cannot be detected
+        const playerCloaked = player.isCloaked || false;
+        
+        // Simple stealth detection: player detected if at or above drone altitude (and not cloaked)
         // This makes stealth visually intuitive: stay below enemies to hide
         const droneAltitude = this.altitude || (this.yOffset || 0);
         const playerAltitude = player.altitude || 0;
 
 
-        const isDetected = distSq < this.rangeSq && playerAltitude >= droneAltitude;
+        const isDetected = !playerCloaked && distSq < this.rangeSq && playerAltitude >= droneAltitude;
 
         if (isDetected) {
             this.chasePlayer = true;

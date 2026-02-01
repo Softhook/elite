@@ -811,10 +811,24 @@ class WeaponSystem {
         let minDist = beamLength;
 
         // Snapshot cache values to avoid race conditions with multiple beams
-        const startX = start.x;
-        const startY = start.y;
+        let startX = start.x;
+        let startY = start.y;
         const dirX = dir.x;
         const dirY = dir.y;
+        
+        // In surface mode, convert beam start to visual coordinates
+        const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
+        if (inSurfaceMode && owner) {
+            const ownerAlt = owner.altitude || 0;
+            if (typeof SurfaceUtils !== 'undefined') {
+                startX = SurfaceUtils.toVisualX(startX, ownerAlt);
+                startY = SurfaceUtils.toVisualY(startY, ownerAlt);
+            } else {
+                const extrusionAngle = 0.5;
+                startX -= ownerAlt * Math.sin(extrusionAngle);
+                startY -= ownerAlt * Math.cos(extrusionAngle);
+            }
+        }
 
         defaultEnd.set(startX + dirX * beamLength, startY + dirY * beamLength);
 
@@ -823,8 +837,24 @@ class WeaponSystem {
             if (radius <= 0) return;
             if (typeof target.isDestroyed === 'function' && target.isDestroyed()) return;
 
-            const relX = target.pos.x - startX;
-            const relY = target.pos.y - startY;
+            // Get target position (convert to visual coordinates in surface mode)
+            let targetX = target.pos.x;
+            let targetY = target.pos.y;
+            
+            if (inSurfaceMode) {
+                const targetAlt = target.altitude || target.yOffset || 0;
+                if (typeof SurfaceUtils !== 'undefined') {
+                    targetX = SurfaceUtils.toVisualX(targetX, targetAlt);
+                    targetY = SurfaceUtils.toVisualY(targetY, targetAlt);
+                } else {
+                    const extrusionAngle = 0.5;
+                    targetX -= targetAlt * Math.sin(extrusionAngle);
+                    targetY -= targetAlt * Math.cos(extrusionAngle);
+                }
+            }
+
+            const relX = targetX - startX;
+            const relY = targetY - startY;
             const projLength = relX * dirX + relY * dirY;
 
             if (projLength <= 0 || projLength > minDist) return;
