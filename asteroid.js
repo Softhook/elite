@@ -284,23 +284,6 @@ class Asteroid {
 
         pop();
 
-        // --- Draw Health Bar ---
-        if (this.health < this.maxHealth && this.maxHealth > 0) {
-            const healthPercent = this.health / this.maxHealth;
-            const barW = this.size * 0.7;
-            const barH = 5;
-            const barX = this.pos.x - barW / 2;
-            const barY = this.pos.y - this.maxRadius - 14;
-
-            push();
-            rectMode(CORNER);
-            noStroke();
-            fill(HEALTH_BAR_COLORS.BG);
-            rect(barX, barY, barW, barH);
-            fill(HEALTH_BAR_COLORS.FILL);
-            rect(barX, barY, barW * healthPercent, barH);
-            pop();
-        }
     }
 
     /** Applies damage to the asteroid's health. */
