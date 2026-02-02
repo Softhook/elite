@@ -1703,7 +1703,7 @@ class SurfaceMode {
                         
                         // --- 4. Flora and Fauna (scattered across landscape) ---
                         // Only spawn if no building/defense was placed
-                        if (!obj && this.planet && this.planet.isInhabited) {
+                        if (!obj && this.planet) {
                             // Get planet colors for flora/fauna
                             const planetColors = this.planet.palette || [
                                 this.planet.baseColor,
@@ -1712,15 +1712,32 @@ class SurfaceMode {
                                 this.planet.featureColor3
                             ];
                             
-                            // Flora spawning - sparse (1% density, reduced from 5%)
-                            const FLORA_SPAWN_MIN = 0.975;
-                            const FLORA_SPAWN_MAX = 0.985;
-                            if (cellHash > FLORA_SPAWN_MIN && cellHash < FLORA_SPAWN_MAX) {
-                                obj = this._createFlora(planetColors, wx, wy, objSeed);
-                            }
-                            // Fauna spawning - very sparse (0.5% density, reduced from 2%)
-                            else if (cellHash > 0.990 && cellHash < 0.995) {
-                                obj = this._createFauna(planetColors, wx, wy, objSeed);
+                            // Per-planet density variation (some planets have almost none)
+                            // Use planet's feature random for consistent density per planet
+                            const planetDensityFactor = this.planet.featureRand ? 
+                                (Math.sin(this.planet.featureRand * 0.01) * 0.5 + 0.5) : 0.5;
+                            
+                            // Inhabited vs Uninhabited spawning rules
+                            if (this.planet.isInhabited) {
+                                // INHABITED: Only flora, no fauna (civilization has displaced wildlife)
+                                // Much sparser flora (0.3% base * planet factor)
+                                const inhabitedFloraMin = 0.990;
+                                const inhabitedFloraMax = 0.993;
+                                if (cellHash > inhabitedFloraMin && cellHash < inhabitedFloraMax && planetDensityFactor > 0.3) {
+                                    obj = this._createFlora(planetColors, wx, wy, objSeed);
+                                }
+                            } else {
+                                // UNINHABITED: Both flora and fauna thrive
+                                // Flora spawning - moderate (2% base * planet factor)
+                                const wildFloraMin = 0.970;
+                                const wildFloraMax = 0.990;
+                                if (cellHash > wildFloraMin && cellHash < wildFloraMax && planetDensityFactor > 0.2) {
+                                    obj = this._createFlora(planetColors, wx, wy, objSeed);
+                                }
+                                // Fauna spawning - sparse (1% base * planet factor)
+                                else if (cellHash > 0.990 && cellHash < 1.000 && planetDensityFactor > 0.4) {
+                                    obj = this._createFauna(planetColors, wx, wy, objSeed);
+                                }
                             }
                         }
                     }
