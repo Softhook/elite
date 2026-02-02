@@ -29,16 +29,16 @@ class SurfaceFlora {
      * @param {number} x - World X coordinate
      * @param {number} y - World Y coordinate
      * @param {number} size - Flora size
-     * @param {string} economyType - Planet economy type for color variation
+     * @param {Array} planetColors - Array of planet colors from palette [baseColor, feature1, feature2, feature3]
      */
-    constructor(x, y, size, economyType) {
+    constructor(x, y, size, planetColors) {
         this.pos = createVector(x, y);
         this.size = size || 20;
         this.yOffset = 0; // Height offset matching terrain
         this.destroyed = false;
-        this.economyType = economyType || 'Service';
+        this.planetColors = planetColors || [];
         this.seed = Math.random() * 1000;
-        this.color = this._getEconomyColor();
+        this.color = this._getPlanetBasedColor();
         
         // Health system (compatible with SurfaceObject)
         this.health = 50; // Flora has moderate durability
@@ -46,34 +46,24 @@ class SurfaceFlora {
     }
 
     /**
-     * Get color based on planet economy type
+     * Get color based on planet palette colors with slight variation
      * @returns {p5.Color} Color for this flora
      */
-    _getEconomyColor() {
-        // Use seed for deterministic color variation (0 to 1 range)
-        const getVariation = (multiplier, range) => {
-            return (Math.sin(this.seed * multiplier) * 0.5 + 0.5) * range;
-        };
+    _getPlanetBasedColor() {
+        // Use seed for deterministic selection and variation
+        const colorIndex = Math.floor((Math.sin(this.seed * 1.1) * 0.5 + 0.5) * this.planetColors.length);
+        const baseCol = this.planetColors[colorIndex] || this.planetColors[0] || color(100, 150, 100);
         
-        switch (this.economyType) {
-            case 'Agricultural':
-                return color(60 + getVariation(1.1, 40), 180 + getVariation(1.7, 40), 80 + getVariation(2.3, 40)); // Green/yellow
-            case 'Mining':
-                return color(140 + getVariation(1.1, 40), 120 + getVariation(1.7, 40), 100 + getVariation(2.3, 40)); // Brown/gray
-            case 'Industrial':
-                return color(100 + getVariation(1.1, 40), 100 + getVariation(1.7, 40), 100 + getVariation(2.3, 40)); // Gray
-            case 'Refinery':
-                return color(180 + getVariation(1.1, 40), 140 + getVariation(1.7, 40), 80 + getVariation(2.3, 40)); // Orange/brown
-            case 'PostHuman':
-                return color(140 + getVariation(1.1, 40), 180 + getVariation(3.1, 60), 220 + getVariation(6.3, 35)); // Cyan/blue
-            case 'Offworld':
-                return color(180 + getVariation(1.1, 40), 100 + getVariation(1.7, 40), 200 + getVariation(4.2, 55)); // Purple/magenta
-            case 'Military':
-                return color(80 + getVariation(1.1, 40), 120 + getVariation(1.7, 40), 80 + getVariation(2.3, 40)); // Dark green
-            case 'Service':
-            default:
-                return color(100 + getVariation(5.1, 80), 160 + getVariation(3.1, 60), 120 + getVariation(3.7, 60)); // Varied green
-        }
+        // Shift color slightly for variety using seed-based variation
+        const hueShift = (Math.sin(this.seed * 2.3) * 0.5 + 0.5) * 40 - 20; // -20 to +20
+        const satShift = (Math.sin(this.seed * 3.7) * 0.5 + 0.5) * 30 - 15; // -15 to +15
+        const brightShift = (Math.sin(this.seed * 4.1) * 0.5 + 0.5) * 30 - 15; // -15 to +15
+        
+        const r = constrain(red(baseCol) + hueShift, 0, 255);
+        const g = constrain(green(baseCol) + satShift, 0, 255);
+        const b = constrain(blue(baseCol) + brightShift, 0, 255);
+        
+        return color(r, g, b);
     }
 
     update(dt, player) {
@@ -353,16 +343,16 @@ class SurfaceFauna {
      * @param {number} x - World X coordinate
      * @param {number} y - World Y coordinate
      * @param {number} size - Fauna size
-     * @param {string} economyType - Planet economy type for color variation
+     * @param {Array} planetColors - Array of planet colors from palette [baseColor, feature1, feature2, feature3]
      */
-    constructor(x, y, size, economyType) {
+    constructor(x, y, size, planetColors) {
         this.pos = createVector(x, y);
         this.size = size || 15;
         this.yOffset = 0; // Height offset matching terrain
         this.destroyed = false;
-        this.economyType = economyType || 'Service';
+        this.planetColors = planetColors || [];
         this.seed = Math.random() * 1000;
-        this.color = this._getEconomyColor();
+        this.color = this._getPlanetBasedColor();
         
         // Health system (compatible with SurfaceObject)
         this.health = 30; // Fauna is very fragile (more fragile than flora)
@@ -384,34 +374,25 @@ class SurfaceFauna {
     }
 
     /**
-     * Get color based on planet economy type
+     * Get color based on planet palette colors with slight variation
      * @returns {p5.Color} Color for this fauna
      */
-    _getEconomyColor() {
-        // Use seed for deterministic color variation (0 to 1 range)
-        const getVariation = (multiplier, range) => {
-            return (Math.sin(this.seed * multiplier) * 0.5 + 0.5) * range;
-        };
+    _getPlanetBasedColor() {
+        // Use seed for deterministic selection and variation
+        // Fauna tends to use different colors than flora for variety
+        const colorIndex = Math.floor((Math.sin(this.seed * 5.3) * 0.5 + 0.5) * this.planetColors.length);
+        const baseCol = this.planetColors[colorIndex] || this.planetColors[0] || color(100, 100, 120);
         
-        switch (this.economyType) {
-            case 'Agricultural':
-                return color(140 + getVariation(1.1, 40), 100 + getVariation(1.7, 40), 60 + getVariation(2.3, 40)); // Brown/tan
-            case 'Mining':
-                return color(120 + getVariation(1.1, 40), 120 + getVariation(1.7, 40), 130 + getVariation(2.3, 40)); // Rocky gray
-            case 'Industrial':
-                return color(80 + getVariation(1.1, 40), 80 + getVariation(1.7, 40), 90 + getVariation(2.3, 40)); // Dark gray
-            case 'Refinery':
-                return color(160 + getVariation(1.1, 40), 100 + getVariation(1.7, 40), 60 + getVariation(2.3, 40)); // Rusty
-            case 'PostHuman':
-                return color(120 + getVariation(1.1, 40), 160 + getVariation(1.7, 40), 200 + getVariation(3.1, 55)); // Blue
-            case 'Offworld':
-                return color(160 + getVariation(1.1, 40), 80 + getVariation(1.7, 40), 180 + getVariation(3.1, 55)); // Purple
-            case 'Military':
-                return color(60 + getVariation(1.1, 40), 80 + getVariation(1.7, 40), 60 + getVariation(2.3, 40)); // Camo green
-            case 'Service':
-            default:
-                return color(120 + getVariation(4.2, 60), 100 + getVariation(5.3, 60), 80 + getVariation(6.1, 60)); // Varied earth tones
-        }
+        // Shift color differently than flora for more variety
+        const hueShift = (Math.sin(this.seed * 6.7) * 0.5 + 0.5) * 50 - 25; // -25 to +25
+        const satShift = (Math.sin(this.seed * 7.1) * 0.5 + 0.5) * 40 - 20; // -20 to +20
+        const brightShift = (Math.sin(this.seed * 8.3) * 0.5 + 0.5) * 40 - 20; // -20 to +20
+        
+        const r = constrain(red(baseCol) + hueShift, 0, 255);
+        const g = constrain(green(baseCol) + satShift, 0, 255);
+        const b = constrain(blue(baseCol) + brightShift, 0, 255);
+        
+        return color(r, g, b);
     }
 
     /**

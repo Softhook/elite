@@ -1704,15 +1704,23 @@ class SurfaceMode {
                         // --- 4. Flora and Fauna (scattered across landscape) ---
                         // Only spawn if no building/defense was placed
                         if (!obj && this.planet && this.planet.isInhabited) {
+                            // Get planet colors for flora/fauna
+                            const planetColors = this.planet.palette || [
+                                this.planet.baseColor,
+                                this.planet.featureColor1,
+                                this.planet.featureColor2,
+                                this.planet.featureColor3
+                            ];
+                            
                             // Flora spawning - sparse (1% density, reduced from 5%)
                             const FLORA_SPAWN_MIN = 0.975;
                             const FLORA_SPAWN_MAX = 0.985;
                             if (cellHash > FLORA_SPAWN_MIN && cellHash < FLORA_SPAWN_MAX) {
-                                obj = this._createFlora(economyType, wx, wy, objSeed);
+                                obj = this._createFlora(planetColors, wx, wy, objSeed);
                             }
                             // Fauna spawning - very sparse (0.5% density, reduced from 2%)
                             else if (cellHash > 0.990 && cellHash < 0.995) {
-                                obj = this._createFauna(economyType, wx, wy, objSeed);
+                                obj = this._createFauna(planetColors, wx, wy, objSeed);
                             }
                         }
                     }
@@ -1802,61 +1810,61 @@ class SurfaceMode {
     }
 
     /**
-     * Create flora based on planet economy type and random seed
-     * @param {string} economyType - The planet's economy type
+     * Create flora based on planet colors and random seed
+     * @param {Array} planetColors - Array of planet colors from palette
      * @param {number} x - World X coordinate
      * @param {number} y - World Y coordinate
      * @param {number} seed - Random seed for variation
      * @returns {SurfaceFlora} The created flora
      * @private
      */
-    _createFlora(economyType, x, y, seed) {
+    _createFlora(planetColors, x, y, seed) {
         const rand = (seed * 7.919) % 1;
         const size = 15 + (seed % 20);
         
         // Choose flora type based on random value
         if (rand < 0.2 && typeof AlienTree !== 'undefined') {
-            return new AlienTree(x, y, size, economyType);
+            return new AlienTree(x, y, size, planetColors);
         } else if (rand < 0.4 && typeof CrystalPlant !== 'undefined') {
-            return new CrystalPlant(x, y, size, economyType);
+            return new CrystalPlant(x, y, size, planetColors);
         } else if (rand < 0.6 && typeof TentaclePlant !== 'undefined') {
-            return new TentaclePlant(x, y, size, economyType);
+            return new TentaclePlant(x, y, size, planetColors);
         } else if (rand < 0.8 && typeof SporeStalk !== 'undefined') {
-            return new SporeStalk(x, y, size, economyType);
+            return new SporeStalk(x, y, size, planetColors);
         } else if (typeof BubbleBush !== 'undefined') {
-            return new BubbleBush(x, y, size, economyType);
+            return new BubbleBush(x, y, size, planetColors);
         }
         
         // Fallback to AlienTree if available
-        return typeof AlienTree !== 'undefined' ? new AlienTree(x, y, size, economyType) : null;
+        return typeof AlienTree !== 'undefined' ? new AlienTree(x, y, size, planetColors) : null;
     }
 
     /**
-     * Create fauna based on planet economy type and random seed
-     * @param {string} economyType - The planet's economy type
+     * Create fauna based on planet colors and random seed
+     * @param {Array} planetColors - Array of planet colors from palette
      * @param {number} x - World X coordinate
      * @param {number} y - World Y coordinate
      * @param {number} seed - Random seed for variation
      * @returns {SurfaceFauna} The created fauna
      * @private
      */
-    _createFauna(economyType, x, y, seed) {
+    _createFauna(planetColors, x, y, seed) {
         const rand = (seed * 13.579) % 1;
         const size = 10 + (seed % 15);
         
         // Choose fauna type based on random value
         if (rand < 0.25 && typeof SlitherCreature !== 'undefined') {
-            return new SlitherCreature(x, y, size, economyType);
+            return new SlitherCreature(x, y, size, planetColors);
         } else if (rand < 0.5 && typeof FloaterCreature !== 'undefined') {
-            return new FloaterCreature(x, y, size, economyType);
+            return new FloaterCreature(x, y, size, planetColors);
         } else if (rand < 0.75 && typeof RollerCreature !== 'undefined') {
-            return new RollerCreature(x, y, size, economyType);
+            return new RollerCreature(x, y, size, planetColors);
         } else if (typeof StalkCreature !== 'undefined') {
-            return new StalkCreature(x, y, size, economyType);
+            return new StalkCreature(x, y, size, planetColors);
         }
         
         // Fallback to SlitherCreature if available
-        return typeof SlitherCreature !== 'undefined' ? new SlitherCreature(x, y, size, economyType) : null;
+        return typeof SlitherCreature !== 'undefined' ? new SlitherCreature(x, y, size, planetColors) : null;
     }
 
     /**
@@ -1892,8 +1900,9 @@ class SurfaceMode {
         // Use dynamic sun angle from planet position
         const sunAngle = this._getSunAngle();
 
-        // Use minimal padding for visual projection culling
-        const viewport = this._getViewportBounds(50);
+        // Use adequate padding for visual projection culling to prevent pop-in
+        // Flora/fauna need more padding due to varied sizes and movement
+        const viewport = this._getViewportBounds(300);
         const extrusionAngle = this._getExtrusionAngle();
         const sin = Math.sin(extrusionAngle);
         const cos = Math.cos(extrusionAngle);
