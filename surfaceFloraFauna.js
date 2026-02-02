@@ -39,6 +39,10 @@ class SurfaceFlora {
         this.economyType = economyType || 'Service';
         this.seed = Math.random() * 1000;
         this.color = this._getEconomyColor();
+        
+        // Health system (compatible with SurfaceObject)
+        this.health = 50; // Flora is fragile
+        this.maxHealth = 50;
     }
 
     /**
@@ -78,6 +82,37 @@ class SurfaceFlora {
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
         // Base implementation - override in subclasses
+    }
+
+    /**
+     * Apply damage to flora
+     * @param {number} amount - Damage amount
+     */
+    takeDamage(amount) {
+        this.health -= amount;
+        if (this.health <= 0 && !this.destroyed) {
+            this.destroyed = true;
+            if (typeof surfaceMode !== 'undefined' && this.cellKey) {
+                surfaceMode.registerDestruction(this.cellKey);
+            }
+            this.onDestroy();
+        }
+    }
+
+    /**
+     * Called when flora is destroyed
+     */
+    onDestroy() {
+        // Flora doesn't drop anything or create explosions
+    }
+
+    /**
+     * Check collision with projectile (compatible with surface object system)
+     * @param {Object} projectile - Projectile to check
+     * @returns {boolean} True if collision detected
+     */
+    checkCollision(projectile) {
+        return false; // Use default radius-based collision in surfaceMode
     }
 }
 
@@ -329,6 +364,10 @@ class SurfaceFauna {
         this.seed = Math.random() * 1000;
         this.color = this._getEconomyColor();
         
+        // Health system (compatible with SurfaceObject)
+        this.health = 30; // Fauna is fragile
+        this.maxHealth = 30;
+        
         // Movement - use seed for deterministic variation
         const getVariation = (multiplier) => Math.sin(this.seed * multiplier) * 0.5 + 0.5;
         
@@ -409,6 +448,37 @@ class SurfaceFauna {
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
         // Base implementation - override in subclasses
+    }
+
+    /**
+     * Apply damage to fauna
+     * @param {number} amount - Damage amount
+     */
+    takeDamage(amount) {
+        this.health -= amount;
+        if (this.health <= 0 && !this.destroyed) {
+            this.destroyed = true;
+            if (typeof surfaceMode !== 'undefined' && this.cellKey) {
+                surfaceMode.registerDestruction(this.cellKey);
+            }
+            this.onDestroy();
+        }
+    }
+
+    /**
+     * Called when fauna is destroyed
+     */
+    onDestroy() {
+        // Fauna doesn't drop anything or create explosions
+    }
+
+    /**
+     * Check collision with projectile (compatible with surface object system)
+     * @param {Object} projectile - Projectile to check
+     * @returns {boolean} True if collision detected
+     */
+    checkCollision(projectile) {
+        return false; // Use default radius-based collision in surfaceMode
     }
 }
 
