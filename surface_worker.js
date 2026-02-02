@@ -294,12 +294,9 @@ self.onmessage = function (e) {
                 const colX0 = baseOffsetX + gx * cellSize;
                 const colX1 = baseOffsetX + (gx + 1) * cellSize;
 
-                // Fix for "white line" artifact:
-                // Sub-pixel gaps between quads can let the background show through.
-                // We stroke the quad with the same color to seal these gaps.
+                // Render quad without stroke for better performance
+                // Extend quads slightly to prevent sub-pixel gaps
                 ctx.fillStyle = `rgb(${r},${g},${b})`;
-                ctx.strokeStyle = `rgb(${r},${g},${b})`;
-                ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.moveTo(cx + colX0 - h00 * sinA, cy + rowY0 - h00 * cosA);
                 ctx.lineTo(cx + colX1 - h10 * sinA, cy + rowY0 - h10 * cosA);
@@ -307,7 +304,6 @@ self.onmessage = function (e) {
                 ctx.lineTo(cx + colX0 - h01 * sinA, cy + rowY1 - h01 * cosA);
                 ctx.closePath();
                 ctx.fill();
-                ctx.stroke();
             }
         }
 
