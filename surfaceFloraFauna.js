@@ -54,14 +54,14 @@ class SurfaceFlora {
         const colorIndex = Math.floor((Math.sin(this.seed * 1.1) * 0.5 + 0.5) * this.planetColors.length);
         const baseCol = this.planetColors[colorIndex] || this.planetColors[0] || color(100, 150, 100);
         
-        // Shift color slightly for variety using seed-based variation
-        const hueShift = (Math.sin(this.seed * 2.3) * 0.5 + 0.5) * 40 - 20; // -20 to +20
-        const satShift = (Math.sin(this.seed * 3.7) * 0.5 + 0.5) * 30 - 15; // -15 to +15
-        const brightShift = (Math.sin(this.seed * 4.1) * 0.5 + 0.5) * 30 - 15; // -15 to +15
+        // Shift RGB channels slightly for variety using seed-based variation
+        const rShift = (Math.sin(this.seed * 2.3) * 0.5 + 0.5) * 40 - 20; // -20 to +20
+        const gShift = (Math.sin(this.seed * 3.7) * 0.5 + 0.5) * 30 - 15; // -15 to +15
+        const bShift = (Math.sin(this.seed * 4.1) * 0.5 + 0.5) * 30 - 15; // -15 to +15
         
-        const r = constrain(red(baseCol) + hueShift, 0, 255);
-        const g = constrain(green(baseCol) + satShift, 0, 255);
-        const b = constrain(blue(baseCol) + brightShift, 0, 255);
+        const r = constrain(red(baseCol) + rShift, 0, 255);
+        const g = constrain(green(baseCol) + gShift, 0, 255);
+        const b = constrain(blue(baseCol) + bShift, 0, 255);
         
         return color(r, g, b);
     }
@@ -383,14 +383,14 @@ class SurfaceFauna {
         const colorIndex = Math.floor((Math.sin(this.seed * 5.3) * 0.5 + 0.5) * this.planetColors.length);
         const baseCol = this.planetColors[colorIndex] || this.planetColors[0] || color(100, 100, 120);
         
-        // Shift color differently than flora for more variety
-        const hueShift = (Math.sin(this.seed * 6.7) * 0.5 + 0.5) * 50 - 25; // -25 to +25
-        const satShift = (Math.sin(this.seed * 7.1) * 0.5 + 0.5) * 40 - 20; // -20 to +20
-        const brightShift = (Math.sin(this.seed * 8.3) * 0.5 + 0.5) * 40 - 20; // -20 to +20
+        // Shift RGB channels differently than flora for more variety
+        const rShift = (Math.sin(this.seed * 6.7) * 0.5 + 0.5) * 50 - 25; // -25 to +25
+        const gShift = (Math.sin(this.seed * 7.1) * 0.5 + 0.5) * 40 - 20; // -20 to +20
+        const bShift = (Math.sin(this.seed * 8.3) * 0.5 + 0.5) * 40 - 20; // -20 to +20
         
-        const r = constrain(red(baseCol) + hueShift, 0, 255);
-        const g = constrain(green(baseCol) + satShift, 0, 255);
-        const b = constrain(blue(baseCol) + brightShift, 0, 255);
+        const r = constrain(red(baseCol) + rShift, 0, 255);
+        const g = constrain(green(baseCol) + gShift, 0, 255);
+        const b = constrain(blue(baseCol) + bShift, 0, 255);
         
         return color(r, g, b);
     }
