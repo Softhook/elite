@@ -295,7 +295,6 @@ self.onmessage = function (e) {
                 const colX1 = baseOffsetX + (gx + 1) * cellSize;
 
                 // Render quad without stroke for better performance
-                // Extend quads slightly to prevent sub-pixel gaps
                 ctx.fillStyle = `rgb(${r},${g},${b})`;
                 ctx.beginPath();
                 ctx.moveTo(cx + colX0 - h00 * sinA, cy + rowY0 - h00 * cosA);

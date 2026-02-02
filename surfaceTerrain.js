@@ -27,6 +27,8 @@ class SurfaceTerrain {
 
         // Smooth transition state
         this.transitionBuffer = null; // Previous buffer fading out
+        this.transitionGridX = null; // Grid X of transition buffer
+        this.transitionGridY = null; // Grid Y of transition buffer
         this.transitionAlpha = 0; // 0 to 1, controls fade
         this.transitionDuration = 300; // ms for smooth fade
         this.transitionStartTime = 0;
@@ -85,6 +87,8 @@ class SurfaceTerrain {
         this.pendingBuffer = null;
         this.isGenerating = false;
         this.transitionBuffer = null;
+        this.transitionGridX = null;
+        this.transitionGridY = null;
         this.transitionAlpha = 0;
         this.lastSwapTime = 0;
 
@@ -196,6 +200,8 @@ class SurfaceTerrain {
                     this.transitionBuffer.close();
                 }
                 this.transitionBuffer = null;
+                this.transitionGridX = null;
+                this.transitionGridY = null;
                 this.transitionAlpha = 0;
             }
         }
@@ -213,6 +219,8 @@ class SurfaceTerrain {
                         this.transitionBuffer.close();
                     }
                     this.transitionBuffer = this.currentBuffer;
+                    this.transitionGridX = this.currentGridX;
+                    this.transitionGridY = this.currentGridY;
                     this.transitionAlpha = 0;
                     this.transitionStartTime = now;
                 }
@@ -275,30 +283,33 @@ class SurfaceTerrain {
 
         const cellSize = this.config.MESH_SIZE / this.config.MESH_RESOLUTION;
 
-        // The buffer is centered at (currentGridX, currentGridY)
-        // Center of the texture in World Space is:
-        const bufferWorldCX = this.currentGridX * cellSize;
-        const bufferWorldCY = this.currentGridY * cellSize;
-
-        // Draw centered
-        const w = this.currentBuffer.width;
-        const h = this.currentBuffer.height;
-
-        const bx = bufferWorldCX - w / 2;
-        const by = bufferWorldCY - h / 2;
-
         if (typeof drawingContext !== 'undefined') {
             const ctx = drawingContext;
             
             // Draw transition buffer (fading out) if exists
-            if (this.transitionBuffer && this.transitionAlpha < 1) {
+            if (this.transitionBuffer && this.transitionAlpha < 1 && this.transitionGridX !== null) {
+                // Calculate position for transition buffer using its own grid coordinates
+                const transitionWorldCX = this.transitionGridX * cellSize;
+                const transitionWorldCY = this.transitionGridY * cellSize;
+                const tw = this.transitionBuffer.width;
+                const th = this.transitionBuffer.height;
+                const tbx = transitionWorldCX - tw / 2;
+                const tby = transitionWorldCY - th / 2;
+                
                 const oldAlpha = ctx.globalAlpha;
                 ctx.globalAlpha = 1 - this.transitionAlpha; // Fade out old
-                ctx.drawImage(this.transitionBuffer, bx, by, w, h);
+                ctx.drawImage(this.transitionBuffer, tbx, tby, tw, th);
                 ctx.globalAlpha = oldAlpha;
             }
             
             // Draw current buffer (fading in if in transition)
+            const bufferWorldCX = this.currentGridX * cellSize;
+            const bufferWorldCY = this.currentGridY * cellSize;
+            const w = this.currentBuffer.width;
+            const h = this.currentBuffer.height;
+            const bx = bufferWorldCX - w / 2;
+            const by = bufferWorldCY - h / 2;
+            
             if (this.transitionBuffer && this.transitionAlpha < 1) {
                 const oldAlpha = ctx.globalAlpha;
                 ctx.globalAlpha = this.transitionAlpha; // Fade in new
