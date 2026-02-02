@@ -1700,6 +1700,19 @@ class SurfaceMode {
                                 else obj = this._createEconomyBuilding(economyType, wx, wy, 30, objSeed);
                             }
                         }
+                        
+                        // --- 4. Flora and Fauna (scattered across landscape) ---
+                        // Only spawn if no building/defense was placed
+                        if (!obj && this.planet && this.planet.isInhabited) {
+                            // Flora spawning - more common
+                            if (cellHash > 0.85 && cellHash < 0.90) {
+                                obj = this._createFlora(economyType, wx, wy, objSeed);
+                            }
+                            // Fauna spawning - less common
+                            else if (cellHash > 0.92 && cellHash < 0.94) {
+                                obj = this._createFauna(economyType, wx, wy, objSeed);
+                            }
+                        }
                     }
                 }
 
@@ -1784,6 +1797,64 @@ class SurfaceMode {
                     ? new ServiceBuilding(x, y, size, seed)
                     : new Building(x, y, size, 'skyscraper', seed);
         }
+    }
+
+    /**
+     * Create flora based on planet economy type and random seed
+     * @param {string} economyType - The planet's economy type
+     * @param {number} x - World X coordinate
+     * @param {number} y - World Y coordinate
+     * @param {number} seed - Random seed for variation
+     * @returns {SurfaceFlora} The created flora
+     * @private
+     */
+    _createFlora(economyType, x, y, seed) {
+        const rand = (seed * 7.919) % 1;
+        const size = 15 + (seed % 20);
+        
+        // Choose flora type based on random value
+        if (rand < 0.2 && typeof AlienTree !== 'undefined') {
+            return new AlienTree(x, y, size, economyType);
+        } else if (rand < 0.4 && typeof CrystalPlant !== 'undefined') {
+            return new CrystalPlant(x, y, size, economyType);
+        } else if (rand < 0.6 && typeof TentaclePlant !== 'undefined') {
+            return new TentaclePlant(x, y, size, economyType);
+        } else if (rand < 0.8 && typeof SporeStalk !== 'undefined') {
+            return new SporeStalk(x, y, size, economyType);
+        } else if (typeof BubbleBush !== 'undefined') {
+            return new BubbleBush(x, y, size, economyType);
+        }
+        
+        // Fallback to AlienTree if available
+        return typeof AlienTree !== 'undefined' ? new AlienTree(x, y, size, economyType) : null;
+    }
+
+    /**
+     * Create fauna based on planet economy type and random seed
+     * @param {string} economyType - The planet's economy type
+     * @param {number} x - World X coordinate
+     * @param {number} y - World Y coordinate
+     * @param {number} seed - Random seed for variation
+     * @returns {SurfaceFauna} The created fauna
+     * @private
+     */
+    _createFauna(economyType, x, y, seed) {
+        const rand = (seed * 13.579) % 1;
+        const size = 10 + (seed % 15);
+        
+        // Choose fauna type based on random value
+        if (rand < 0.25 && typeof SlitherCreature !== 'undefined') {
+            return new SlitherCreature(x, y, size, economyType);
+        } else if (rand < 0.5 && typeof FloaterCreature !== 'undefined') {
+            return new FloaterCreature(x, y, size, economyType);
+        } else if (rand < 0.75 && typeof RollerCreature !== 'undefined') {
+            return new RollerCreature(x, y, size, economyType);
+        } else if (typeof StalkCreature !== 'undefined') {
+            return new StalkCreature(x, y, size, economyType);
+        }
+        
+        // Fallback to SlitherCreature if available
+        return typeof SlitherCreature !== 'undefined' ? new SlitherCreature(x, y, size, economyType) : null;
     }
 
     /**
