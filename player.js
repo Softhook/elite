@@ -3103,15 +3103,36 @@ class Player {
         for (const obj of surfaceMode.surfaceObjects) {
             if (!obj || obj.destroyed) continue;
 
-            // Objects are projected based on their logic pos PLUS their current visual altitude
-            // Logic: visualX = worldX - altitude * sin(E)
-            const objAlt = (obj.altitude || obj.yOffset || 0);
-            const objVisualWorldX = obj.pos.x - (objAlt * sinE);
-            const objVisualWorldY = obj.pos.y - (objAlt * cosE);
+            // Flora/fauna render without lateral altitude offsets; project to their visual body center
+            const isFlora = (typeof SurfaceFlora !== 'undefined') && obj instanceof SurfaceFlora;
+            const isFauna = (typeof SurfaceFauna !== 'undefined') && obj instanceof SurfaceFauna;
 
-            // Convert that visual world position to final screen coordinates
-            const screenX = (objVisualWorldX - camFocusX) * perspectiveScale + (width / 2);
-            const screenY = (objVisualWorldY - camFocusY) * perspectiveScale + (height / 2);
+            let screenX, screenY;
+
+            if (isFlora || isFauna) {
+                const terrainAlt = obj.yOffset || 0;
+                const hasAlt = typeof obj.altitude === 'number';
+                const baseAlt = hasAlt ? obj.altitude : terrainAlt;
+
+                const anchorX = obj.pos.x;
+                const anchorY = obj.pos.y - (terrainAlt + baseAlt);
+                const visualLift = (isFauna && typeof obj.floatHeight === 'number')
+                    ? obj.floatHeight * 0.4
+                    : (obj.size || 40) * 0.25;
+
+                screenX = (anchorX - camFocusX) * perspectiveScale + (width / 2);
+                screenY = ((anchorY - visualLift) - camFocusY) * perspectiveScale + (height / 2);
+            } else {
+                // Objects are projected based on their logic pos PLUS their current visual altitude
+                // Logic: visualX = worldX - altitude * sin(E)
+                const objAlt = (obj.altitude || obj.yOffset || 0);
+                const objVisualWorldX = obj.pos.x - (objAlt * sinE);
+                const objVisualWorldY = obj.pos.y - (objAlt * cosE);
+
+                // Convert that visual world position to final screen coordinates
+                screenX = (objVisualWorldX - camFocusX) * perspectiveScale + (width / 2);
+                screenY = (objVisualWorldY - camFocusY) * perspectiveScale + (height / 2);
+            }
 
             // Distance check in screen space (pixels)
             const dx = mouseX - screenX;

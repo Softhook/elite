@@ -1812,9 +1812,6 @@ class UIHUD {
         // Use global surfaceMode check to determine projection
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
             // --- Surface Mode Projection ---
-            const objAlt = (typeof target.altitude !== 'undefined') ? target.altitude : (target.yOffset || 0);
-
-            // Match surfaceMode's internal projection for targeting
             const extrusionAngle = (typeof surfaceMode._getExtrusionAngle === 'function')
                 ? surfaceMode._getExtrusionAngle()
                 : 0.5;
@@ -1829,14 +1826,31 @@ class UIHUD {
             const camFocusX = surfaceMode.surfaceX - (surfaceMode.altitude * sinE);
             const camFocusY = surfaceMode.surfaceY - (surfaceMode.altitude * cosE);
 
-            // Object visual position
-            const reticleAlt = objAlt + (target.type === 'Turret' ? targetSize * 0.8 : targetSize * 0.2);
-            const objVisualWorldX = target.pos.x - (reticleAlt * sinE);
-            const objVisualWorldY = target.pos.y - (reticleAlt * cosE);
+            const terrainAlt = target.yOffset || 0;
+            const hasExplicitAltitude = typeof target.altitude === 'number';
+            const baseAlt = hasExplicitAltitude ? target.altitude : terrainAlt;
 
-            // Final screen pixels
-            screenX = (objVisualWorldX - camFocusX) * perspectiveScale + (width / 2);
-            screenY = (objVisualWorldY - camFocusY) * perspectiveScale + (height / 2);
+            const isFlora = (typeof SurfaceFlora !== 'undefined') && target instanceof SurfaceFlora;
+            const isFauna = (typeof SurfaceFauna !== 'undefined') && target instanceof SurfaceFauna;
+
+            if (isFlora || isFauna) {
+                // Flora/fauna render without lateral altitude offset; anchor to their visual body
+                const anchorX = target.pos.x;
+                const anchorY = target.pos.y - (terrainAlt + baseAlt);
+                const visualLift = (isFauna && typeof target.floatHeight === 'number')
+                    ? target.floatHeight * 0.4
+                    : targetSize * 0.25;
+
+                screenX = (anchorX - camFocusX) * perspectiveScale + (width / 2);
+                screenY = ((anchorY - visualLift) - camFocusY) * perspectiveScale + (height / 2);
+            } else {
+                const reticleAlt = baseAlt + (target.type === 'Turret' ? targetSize * 0.8 : targetSize * 0.2);
+                const objVisualWorldX = target.pos.x - (reticleAlt * sinE);
+                const objVisualWorldY = target.pos.y - (reticleAlt * cosE);
+
+                screenX = (objVisualWorldX - camFocusX) * perspectiveScale + (width / 2);
+                screenY = (objVisualWorldY - camFocusY) * perspectiveScale + (height / 2);
+            }
         } else {
             // --- Space Mode Projection ---
             // Assumes player is the camera focus at the center of screen
