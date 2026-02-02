@@ -792,6 +792,14 @@ describe('SurfaceMode Input Handling', () => {
         expect(sm.altitudeInput).toBe(0);
     });
 
+    test('handleKeyUp clears altitude input even when EXITING', () => {
+        sm.state = SURFACE_STATE.EXITING;
+        sm.altitudeInput = 1;
+        const result = sm.handleKeyUp(90, 'z');
+        expect(result).toBe(true);
+        expect(sm.altitudeInput).toBe(0);
+    });
+
     test('handleKeyDown returns false when not ACTIVE', () => {
         sm.state = SURFACE_STATE.INACTIVE;
         const result = sm.handleKeyDown(84, 't');
@@ -1077,6 +1085,55 @@ describe('SurfaceMode Explosions', () => {
         expect(() => {
             sm._createSurfaceExplosion(100, 200, 0, 15, [255, 100, 50]);
         }).not.toThrow();
+    });
+});
+
+// ============================================
+// Shield Generator Spawning Tests
+// ============================================
+
+describe('SurfaceMode Shield Generator Spawning', () => {
+    let sm, player, planet, starSystem;
+
+    beforeEach(() => {
+        sm = new SurfaceMode();
+        player = createMockPlayer({ x: 1000, y: 50 });
+        planet = createMockPlanet({ x: 1000, y: 0, radius: 200 });
+        starSystem = createMockStarSystem();
+    });
+
+    test('only one shield generator spawns at target position', () => {
+        sm.enter(player, planet, starSystem);
+        
+        // Set a specific target position
+        sm.targetPos = createVector(100, 200);
+        
+        // Spawn objects multiple times (simulating terrain updates)
+        sm._spawnObjects(0, 0);
+        const firstCount = sm.surfaceObjects.filter(obj => obj.type === 'ShieldGenerator').length;
+        
+        sm._spawnObjects(0, 0);
+        const secondCount = sm.surfaceObjects.filter(obj => obj.type === 'ShieldGenerator').length;
+        
+        // Should be exactly 1 shield generator both times
+        expect(firstCount).toBe(1);
+        expect(secondCount).toBe(1);
+    });
+
+    test('shield generator spawns at exact target position', () => {
+        sm.enter(player, planet, starSystem);
+        
+        // Set a specific target position
+        const targetX = 100;
+        const targetY = 200;
+        sm.targetPos = createVector(targetX, targetY);
+        
+        sm._spawnObjects(0, 0);
+        
+        const generators = sm.surfaceObjects.filter(obj => obj.type === 'ShieldGenerator');
+        expect(generators.length).toBe(1);
+        expect(generators[0].pos.x).toBe(targetX);
+        expect(generators[0].pos.y).toBe(targetY);
     });
 });
 
