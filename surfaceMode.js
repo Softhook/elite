@@ -35,7 +35,7 @@ const SURFACE_CONFIG = {
     SHADOW_ALTITUDE_SCALE: 0.15, // Shadow offset multiplier per altitude unit
 
     // EVA and boarding
-    BOARDING_RANGE: 45,         // Distance within which player can board ship
+    BOARDING_RANGE: 40,         // Distance within which player can board ship
     REEBOARD_COOLDOWN: 2.0,     // Seconds before allowing re-boarding after disembark
     HAB_UNIT_SIZE: 60,          // Standard size for hab units
     

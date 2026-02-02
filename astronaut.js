@@ -14,7 +14,7 @@ class Astronaut {
         this.vel = createVector(0, 0);
         this.facingAngle = 0; // Radians
         this.speed = 0;
-        this.maxSpeed = 40; // Walking speed (much slower than ship)
+        this.maxSpeed = 50; // Walking speed (much slower than ship)
         this.turnSpeed = 4.0;
         this.size = 10; // Small size
         this.height = 15; // Visual height
