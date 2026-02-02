@@ -171,7 +171,7 @@ class SoundManager {
                 "sample_rate": 44100,
                 "sample_size": 8
             },
-            
+
             //low hull/health warning
             warning: {
             "oldParams": true,
@@ -198,7 +198,7 @@ class SoundManager {
             "p_lpf_resonance": -0.1437287488302117,
             "p_hpf_freq": 0.45290300017575674,
             "p_hpf_ramp": -0.008254094400859979,
-            "sound_vol": 0.25,
+            "sound_vol": 0.15,
             "sample_rate": 44100,
             "sample_size": 8
             },
