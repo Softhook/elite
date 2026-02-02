@@ -31,6 +31,12 @@ class Astronaut {
         // Grenade system
         this.grenadeCooldown = 0;
         this.grenadeMaxCooldown = 1.0; // 1 second cooldown
+
+        // Movement diagnostics
+        this.lastPos = startPos.copy();
+        this.stuckTimer = 0;
+        this.hasMoveInput = false;
+        this.lastMoveDir = createVector(0, 0);
     }
 
     /**
@@ -42,6 +48,9 @@ class Astronaut {
 
         const dt = deltaTime / 1000;
         let isMoving = false;
+
+        // Reset per-frame input flag
+        this.hasMoveInput = false;
 
         // Directional Input Vector
         let dx = 0;
@@ -57,6 +66,7 @@ class Astronaut {
 
         if (dx !== 0 || dy !== 0) {
             isMoving = true;
+            this.hasMoveInput = true;
 
             // Normalize vector to prevent faster diagonal movement
             // We can use a simple magnitude check or p5 vector normalize if available, 
@@ -66,6 +76,9 @@ class Astronaut {
                 dx /= mag;
                 dy /= mag;
             }
+
+            // Cache last input direction for anti-stuck nudge
+            this.lastMoveDir.set(dx, dy);
 
             // Set Velocity
             this.vel.x = dx * this.maxSpeed;
@@ -130,6 +143,29 @@ class Astronaut {
         this.speed = this.vel.mag();
 
         if (this.grenadeCooldown > 0) this.grenadeCooldown -= dt;
+
+        // Anti-stuck: if input is held but position is not advancing, do a single gentle step after a pause
+        const displacement = p5.Vector.dist(this.lastPos, this.pos);
+        if (this.hasMoveInput && this.lastMoveDir.magSq() > 0) {
+            if (displacement < 0.35) {
+                this.stuckTimer += dt;
+                if (this.stuckTimer > 0.45) {
+                    // Single step forward, then reset timer to avoid rapid jitter
+                    const step = Math.max(6, this.maxSpeed * 0.12);
+                    this.pos.x += this.lastMoveDir.x * step;
+                    this.pos.y += this.lastMoveDir.y * step;
+                    this.vel.x = this.lastMoveDir.x * this.maxSpeed * 0.4;
+                    this.vel.y = this.lastMoveDir.y * this.maxSpeed * 0.4;
+                    this.stuckTimer = 0;
+                }
+            } else {
+                this.stuckTimer = 0;
+            }
+        } else {
+            this.stuckTimer = 0;
+        }
+
+        this.lastPos.set(this.pos);
     }
 
     /**

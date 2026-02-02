@@ -1854,7 +1854,7 @@ class Turret extends SurfaceObject {
             this,
             config.PROJECTILE_SPEED || DEFAULT_WEAPON_CONFIG.TURRET_SPEED,      // Speed
             config.PROJECTILE_DAMAGE || 5,      // Damage
-            [255, 50, 50],    // Color (Red) - Array for consistency
+            [255, 255, 0],    // Color (Yellow) - surface turret projectile
             'enemy_projectile',
             null,
             config.PROJECTILE_LIFESPAN || 120   // Lifespan
