@@ -210,7 +210,7 @@ class SurfaceTerrain {
         }
 
         // Request new buffer early (when > 5 cells away) to ensure it's ready before we need it
-        // The larger buffer size means we can request earlier without visible edges
+        // Earlier request threshold ensures buffer is ready before edges become visible
         if (!this.isGenerating && (forceRequest || this.currentBuffer === null || dist > 5)) {
             this.isGenerating = true;
 

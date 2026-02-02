@@ -143,7 +143,6 @@ self.onmessage = function (e) {
         // Let's use the resolution * a scale factor, or just map exactly.
         // To keep it sharp, let's use a reasonable pixel density. 
         // 5000 units. If 1 unit = 1 pixel, that's a 5k texture. Adjust as needed.
-        const canvasSize = Math.ceil(meshSize * 1.2); // Add 20% padding for extrusion overflow
 
         const bufferSide = 5500; // Fixed size covering the 5000 mesh + margin for edge safety
         const off = new OffscreenCanvas(bufferSide, bufferSide);
