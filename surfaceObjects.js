@@ -2331,6 +2331,11 @@ class DefenseDrone extends SurfaceObject {
 
         // Visual
         this.color = color(180, 50, 50); // Pirate red
+        
+        // Terrain height caching (performance optimization)
+        this._cachedTerrainHeight = null;
+        this._cachedTerrainPos = null;
+        this._terrainCacheDistance = 50; // Re-sample if moved more than 50 units
     }
 
     update(dt, player, starSystem) {
@@ -2460,19 +2465,41 @@ class DefenseDrone extends SurfaceObject {
         this.pos.x += Math.cos(this.angle) * this.speed * dt;
         this.pos.y += Math.sin(this.angle) * this.speed * dt;
 
-        // Update yOffset and altitude based on terrain
+        // Update yOffset and altitude based on terrain (with caching for performance)
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.terrain) {
-            const terrainHeight = surfaceMode.terrain.getHeightAt(this.pos.x, this.pos.y);
-            if (terrainHeight !== null && terrainHeight !== undefined && !isNaN(terrainHeight)) {
-                this.altitude = terrainHeight + this.flyingHeight;
+            // Check if we need to update cached terrain height
+            let needsUpdate = !this._cachedTerrainPos;
+            if (this._cachedTerrainPos) {
+                const dx = this.pos.x - this._cachedTerrainPos.x;
+                const dy = this.pos.y - this._cachedTerrainPos.y;
+                const distSq = dx * dx + dy * dy;
+                needsUpdate = distSq > (this._terrainCacheDistance * this._terrainCacheDistance);
+            }
+            
+            if (needsUpdate) {
+                const terrainHeight = surfaceMode.terrain.getHeightAt(this.pos.x, this.pos.y);
+                if (terrainHeight !== null && terrainHeight !== undefined && !isNaN(terrainHeight)) {
+                    this._cachedTerrainHeight = terrainHeight;
+                    this._cachedTerrainPos = { x: this.pos.x, y: this.pos.y };
+                }
+            }
+            
+            // Use cached value
+            if (this._cachedTerrainHeight !== null) {
+                this.altitude = this._cachedTerrainHeight + this.flyingHeight;
                 // yOffset represents terrain height only (for Draw3D ground positioning)
                 // altitude is the full height above sea level for collision/aiming
-                this.yOffset = terrainHeight;
+                this.yOffset = this._cachedTerrainHeight;
             }
         }
 
         // Apply drag (enhanced by tangle effect)
-        this.speed *= Math.pow(0.95, dt * 60 * dragMultiplier);
+        // Optimize: Math.pow is expensive, use approximation for small dt
+        // For dt = 0.016 (60 fps), pow(0.95, dt*60) ≈ 0.95
+        // For general case, use exponential decay: e^(ln(0.95) * dt * 60)
+        // Which simplifies to: speed *= exp(k * dt) where k = 60 * ln(0.95) ≈ -3.08
+        const dragConstant = -3.08 * dragMultiplier; // Pre-calculated: 60 * Math.log(0.95)
+        this.speed *= Math.exp(dragConstant * dt);
     }
 
     fire(starSystem, player) {

@@ -65,11 +65,17 @@ class SurfaceHUD {
         if (surfaceMode._lastObjectCullStats) {
             const total = surfaceMode._lastObjectCullStats.drawn + surfaceMode._lastObjectCullStats.culled;
             const cullPercent = total > 0 ? ((surfaceMode._lastObjectCullStats.culled / total) * 100).toFixed(1) : 0;
-            text(`Objects: ${surfaceMode._lastObjectCullStats.drawn}/${total} (${cullPercent}% culled)`, 15, 45);
+            text(`Render: ${surfaceMode._lastObjectCullStats.drawn}/${total} (${cullPercent}% culled)`, 15, 45);
+        }
+        
+        if (surfaceMode._lastUpdateCullStats) {
+            const total = surfaceMode._lastUpdateCullStats.updated + surfaceMode._lastUpdateCullStats.culled;
+            const cullPercent = total > 0 ? ((surfaceMode._lastUpdateCullStats.culled / total) * 100).toFixed(1) : 0;
+            text(`Update: ${surfaceMode._lastUpdateCullStats.updated}/${total} (${cullPercent}% culled)`, 15, 60);
         }
 
-        text(`FPS: ${Math.round(frameRate())}`, 15, 60);
-        text(`R-ALT: ${Math.round(surfaceMode.altitude)}`, 15, 75);
+        text(`FPS: ${Math.round(frameRate())}`, 15, 75);
+        text(`R-ALT: ${Math.round(surfaceMode.altitude)}`, 15, 90);
 
         // Show terrain height and absolute altitude for debugging
         const activeEntity = (surfaceMode.controlMode === 'ASTRONAUT') ? surfaceMode.astronaut : surfaceMode.player;
