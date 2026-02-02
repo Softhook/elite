@@ -171,6 +171,37 @@ class SoundManager {
                 "sample_rate": 44100,
                 "sample_size": 8
             },
+
+                    warning: {
+            "oldParams": true,
+            "wave_type": 0,
+            "p_env_attack": 0.07323597693103852,
+            "p_env_sustain": 0.3188241873901167,
+            "p_env_punch": 0.06246788102368313,
+            "p_env_decay": 0.6510869850223191,
+            "p_base_freq": 0.48658898990642485,
+            "p_freq_limit": 0,
+            "p_freq_ramp": -0.00004791666326283143,
+            "p_freq_dramp": -0.1748298813936133,
+            "p_vib_strength": -0.20708986004041602,
+            "p_vib_speed": -0.2649549703976093,
+            "p_arp_mod": -0.3934973843108529,
+            "p_arp_speed": 0.14538310008171718,
+            "p_duty": -0.013321469903501804,
+            "p_duty_ramp": -0.43697157535520015,
+            "p_repeat_speed": 0.8129163142972429,
+            "p_pha_offset": -0.3304976516653228,
+            "p_pha_ramp": -0.004824826643740143,
+            "p_lpf_freq": 0.792732987412036,
+            "p_lpf_ramp": 0.0220836122536358,
+            "p_lpf_resonance": -0.1437287488302117,
+            "p_hpf_freq": 0.45290300017575674,
+            "p_hpf_ramp": -0.008254094400859979,
+            "sound_vol": 0.25,
+            "sample_rate": 44100,
+            "sample_size": 8
+            },
+            
             // Map open/close are subtle variants
             mapOpen: {
                 "oldParams": true,

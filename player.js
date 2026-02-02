@@ -284,6 +284,14 @@ class Player {
         // Navigation
         this.showSecretBaseNavigation = false;
         this._cachedNavigation = null;
+        // Hull warning tracking: prevent repeated spamming of warning sounds
+        // Keys are thresholds in percent: 100,90,80,...10
+        this._hullWarningTriggered = {};
+        [100,90,80,70,60,50,40,30,20,10].forEach(t => this._hullWarningTriggered[t] = false);
+        // Margin (percent) above threshold required to reset the triggered flag
+        this._hullWarningResetMargin = 6; // percent
+        // Track scheduled timeout IDs so they can be cleared on death/state change
+        this._hullWarningTimeouts = [];
     }
 
     /**
@@ -1535,6 +1543,21 @@ class Player {
                 this.cloakCooldownTimer = 0;
             }
         }
+        // Reset hull-warning triggers when hull recovers sufficiently above thresholds
+        try {
+            if (typeof this._hullWarningTriggered === 'object' && this.maxHull > 0) {
+                const hullPercentNow = (this.hull / this.maxHull) * 100;
+                const resetMargin = Number(this._hullWarningResetMargin) || 6;
+                const thresholdsToCheck = [100,90,80,70,60,50,40,30,20,10];
+                for (const tt of thresholdsToCheck) {
+                    if (this._hullWarningTriggered[tt] && hullPercentNow > (tt + resetMargin)) {
+                        this._hullWarningTriggered[tt] = false;
+                    }
+                }
+            }
+        } catch (e) {
+            // Non-fatal
+        }
         // ---- End new section ----
 
 
@@ -1992,6 +2015,9 @@ class Player {
             this.lastAttackTime = millis();
         }
 
+        // Mark the time of any incoming damage so systems (autopilot) can react
+        this.lastDamageTime = millis();
+
         if (this.destroyed || amount <= 0) return { damage: 0, shieldHit: false };
 
         // Taking damage breaks cloak
@@ -2001,6 +2027,9 @@ class Player {
                 uiManager.addMessage("Cloak disrupted by damage!", [255, 150, 100]);
             }
         }
+
+        // Snapshot previous hull percent (used to detect threshold crossings)
+        const prevHullPercent = (this.maxHull > 0) ? (this.hull / this.maxHull) * 100 : 0;
 
         let shieldHit = false;
         let actualDamage = amount;
@@ -2059,12 +2088,64 @@ class Player {
         }
 
         // Check for destruction
+        // Compute current hull percent and handle hull-warning thresholds
+        const curHullPercent = (this.maxHull > 0) ? (this.hull / this.maxHull) * 100 : 0;
+
+        try {
+            // Update last damage timestamp (used by autopilot disable)
+            this.lastDamageTime = millis();
+
+            // Check threshold crossings (multiple thresholds may be crossed in one hit)
+            const thresholds = [100,90,80,70,60,50,40,30,20,10];
+            const playSpacingMs = 150; // spacing between consecutive threshold plays
+            let playIndex = 0;
+            for (const t of thresholds) {
+                // Trigger when we moved from >= threshold to < threshold
+                if (prevHullPercent >= t && curHullPercent < t && !this._hullWarningTriggered[t]) {
+                    this._hullWarningTriggered[t] = true;
+
+                    // Schedule single play for this threshold (spaced to avoid overlap)
+                    try {
+                        const timeoutId = setTimeout(() => {
+                            if (!this.destroyed && typeof soundManager !== 'undefined' && typeof soundManager.playSound === 'function') {
+                                soundManager.playSound('warning');
+                            }
+                        }, playIndex * playSpacingMs);
+                        this._hullWarningTimeouts.push(timeoutId);
+                        playIndex++;
+                    } catch (e) {
+                        // ignore scheduling errors
+                    }
+                }
+            }
+        } catch (e) {
+            // Non-fatal if sound system errors; continue with normal damage flow
+            console.warn('Hull warning trigger failed:', e);
+        }
+
         if (this.hull <= 0) {
             this.hull = 0;
             this.destroyed = true;
             this.explosionStartTime = millis(); // Track start time
             this.exploding = true; // Flag to track explosion sequence
             this.isDying = true; // Flag to prevent interactions during death animation
+
+            // Clear any scheduled hull warning plays and reset flags on death
+            try {
+                if (Array.isArray(this._hullWarningTimeouts)) {
+                    for (const id of this._hullWarningTimeouts) {
+                        try { clearTimeout(id); } catch (_) {}
+                    }
+                    this._hullWarningTimeouts = [];
+                }
+                if (this._hullWarningTriggered) {
+                    for (const k in this._hullWarningTriggered) {
+                        this._hullWarningTriggered[k] = false;
+                    }
+                }
+            } catch (e) {
+                // non-fatal
+            }
 
             // Create player explosion (larger, more dramatic)
             if (this.currentSystem && typeof this.currentSystem.addExplosion === 'function') {
