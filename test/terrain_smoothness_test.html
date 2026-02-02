@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terrain Smoothness Test</title>
+    <script src="../libraries/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            background: #0a0f28;
+            color: #0f0;
+        }
+        #info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 1px solid #0f0;
+            border-radius: 5px;
+        }
+        #info h2 {
+            margin: 0 0 10px 0;
+            color: #0ff;
+        }
+        .stat {
+            margin: 5px 0;
+        }
+        .good {
+            color: #0f0;
+        }
+        .warning {
+            color: #ff0;
+        }
+        .bad {
+            color: #f00;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h2>Terrain Smoothness Test</h2>
+        <div class="stat">FPS: <span id="fps">0</span></div>
+        <div class="stat">State: <span id="state">Initializing</span></div>
+        <div class="stat">Transition: <span id="transition">None</span></div>
+        <div class="stat">Buffer Swaps: <span id="swaps">0</span></div>
+        <div class="stat">Position: <span id="pos">0, 0</span></div>
+        <div style="margin-top: 10px; color: #888;">
+            Arrow keys: Move<br>
+            Space: Speed boost<br>
+            Watch for smooth transitions!
+        </div>
+    </div>
+
+    <script>
+        // Mock SURFACE_CONFIG
+        const SURFACE_CONFIG = {
+            MESH_SIZE: 6000,
+            MESH_RESOLUTION: 160,
+            DEFAULT_FEATURE_SEED: 12345,
+            SUN_ANGLE: -Math.PI / 4,
+            EXTRUSION_ANGLE: 0.5
+        };
+    </script>
+    <script src="../surfaceTerrain.js"></script>
+
+    <script>
+        let terrain;
+        let playerX = 0;
+        let playerY = 0;
+        let speed = 5;
+        let mockPlanet;
+        let bufferSwaps = 0;
+        let frameRateSmooth = 60;
+        
+        function setup() {
+            createCanvas(800, 600);
+            angleMode(RADIANS);
+            
+            // Create mock planet
+            mockPlanet = {
+                seed: 12345,
+                featureRand: 0.5,
+                palette: [
+                    { levels: [80, 60, 40] },
+                    { levels: [120, 100, 70] },
+                    { levels: [150, 130, 90] },
+                    { levels: [180, 160, 110] }
+                ]
+            };
+            
+            // Initialize terrain
+            terrain = new SurfaceTerrain(SURFACE_CONFIG);
+            terrain.setPlanet(mockPlanet);
+            
+            console.log("Terrain system initialized");
+        }
+        
+        function draw() {
+            // Update FPS display (smooth)
+            frameRateSmooth = frameRateSmooth * 0.9 + frameRate() * 0.1;
+            document.getElementById('fps').textContent = Math.round(frameRateSmooth);
+            
+            // Update position display
+            document.getElementById('pos').textContent = `${Math.round(playerX)}, ${Math.round(playerY)}`;
+            
+            // Handle input
+            let moveSpeed = speed;
+            if (keyIsDown(32)) { // Space for boost
+                moveSpeed *= 3;
+            }
+            
+            if (keyIsDown(LEFT_ARROW)) {
+                playerX -= moveSpeed;
+            }
+            if (keyIsDown(RIGHT_ARROW)) {
+                playerX += moveSpeed;
+            }
+            if (keyIsDown(UP_ARROW)) {
+                playerY -= moveSpeed;
+            }
+            if (keyIsDown(DOWN_ARROW)) {
+                playerY += moveSpeed;
+            }
+            
+            // Update terrain
+            const swapped = terrain.update(playerX, playerY, false, SURFACE_CONFIG.SUN_ANGLE);
+            if (swapped) {
+                bufferSwaps++;
+                document.getElementById('swaps').textContent = bufferSwaps;
+            }
+            
+            // Update state display
+            if (terrain.isGenerating) {
+                document.getElementById('state').textContent = 'Generating...';
+            } else if (terrain.pendingBuffer) {
+                document.getElementById('state').textContent = 'Buffer Ready';
+            } else {
+                document.getElementById('state').textContent = 'Active';
+            }
+            
+            // Update transition display
+            if (terrain.transitionBuffer && terrain.transitionAlpha < 1) {
+                const percent = Math.round(terrain.transitionAlpha * 100);
+                document.getElementById('transition').textContent = `Fading ${percent}%`;
+            } else {
+                document.getElementById('transition').textContent = 'None';
+            }
+            
+            // Clear background
+            background(20, 20, 40);
+            
+            // Setup view transform (player centered)
+            push();
+            translate(width / 2 - playerX, height / 2 - playerY);
+            
+            // Draw terrain
+            terrain.draw();
+            
+            // Draw player (simple crosshair)
+            stroke(0, 255, 0);
+            strokeWeight(2);
+            noFill();
+            line(playerX - 20, playerY, playerX + 20, playerY);
+            line(playerX, playerY - 20, playerX, playerY + 20);
+            circle(playerX, playerY, 40);
+            
+            pop();
+            
+            // Draw info overlay
+            fill(0, 255, 0, 100);
+            noStroke();
+            textAlign(CENTER, TOP);
+            textSize(14);
+            text('Move with arrow keys - Watch for smooth terrain transitions!', width / 2, height - 30);
+        }
+        
+        function keyPressed() {
+            // Force buffer refresh on 'R'
+            if (key === 'r' || key === 'R') {
+                terrain.update(playerX, playerY, true, SURFACE_CONFIG.SUN_ANGLE);
+                console.log("Forced terrain refresh");
+            }
+        }
+    </script>
+</body>
+</html>
