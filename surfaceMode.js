@@ -247,7 +247,7 @@ class SurfaceMode {
      * @private
      */
     _isProjectileValid(proj) {
-        return proj && !proj.destroyed && proj.isSurface;
+        return proj && !proj.destroyed && proj.isSurface && proj.pos;
     }
 
     /**
@@ -688,6 +688,7 @@ class SurfaceMode {
             if (this.surfaceObjects) {
                 const target = this.controlMode === 'ASTRONAUT' ? this.astronaut : this.player;
                 for (let obj of this.surfaceObjects) {
+                    if (!obj || obj.destroyed) continue;
                     if (obj.update) obj.update(dt, target, this.starSystem);
                 }
             }
@@ -1023,7 +1024,7 @@ class SurfaceMode {
         // open the Base Services menu.
         if (this.surfaceObjects && Array.isArray(this.surfaceObjects) && this.astronaut && this.astronaut.pos) {
             for (const obj of this.surfaceObjects) {
-                if (!obj || obj.destroyed) continue;
+                if (!obj || obj.destroyed || !obj.pos) continue;
                 const isOffworld = (obj.constructor && obj.constructor.name === 'OffworldBuilding') || (obj.type === 'OffworldBuilding');
                 if (!isOffworld) continue;
                 if (!obj.playerBuilt) continue;
@@ -1066,7 +1067,7 @@ class SurfaceMode {
         // Check for collisions with nearby surface objects
         const minClearance = SURFACE_CONFIG.HAB_UNIT_SIZE;
         for (const obj of this.surfaceObjects) {
-            if (!obj || obj.destroyed) continue;
+            if (!obj || obj.destroyed || !obj.pos) continue;
             const dx = obj.pos.x - bx;
             const dy = obj.pos.y - by;
             const distSq = dx * dx + dy * dy;
@@ -1254,7 +1255,7 @@ class SurfaceMode {
             const projAlt = proj.altitude || 0;
 
             for (let obj of this.surfaceObjects) {
-                if (!obj || obj.destroyed) continue;
+                if (!obj || obj.destroyed || !obj.pos) continue;
 
                 // Use VISUAL coordinates for collision (what the player sees on screen)
                 const objAlt = obj.altitude || obj.yOffset || 0; // Needed for debug logging
