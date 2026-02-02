@@ -1704,12 +1704,16 @@ class SurfaceMode {
                         // --- 4. Flora and Fauna (scattered across landscape) ---
                         // Only spawn if no building/defense was placed
                         if (!obj && this.planet && this.planet.isInhabited) {
-                            // Flora spawning - more common
-                            if (cellHash > 0.85 && cellHash < 0.90) {
+                            // Flora spawning - more common (5% density)
+                            const FLORA_SPAWN_MIN = 0.85;
+                            const FLORA_SPAWN_MAX = 0.90;
+                            if (cellHash > FLORA_SPAWN_MIN && cellHash < FLORA_SPAWN_MAX) {
                                 obj = this._createFlora(economyType, wx, wy, objSeed);
                             }
-                            // Fauna spawning - less common
-                            else if (cellHash > 0.92 && cellHash < 0.94) {
+                            // Fauna spawning - less common (2% density)
+                            const FAUNA_SPAWN_MIN = 0.92;
+                            const FAUNA_SPAWN_MAX = 0.94;
+                            else if (cellHash > FAUNA_SPAWN_MIN && cellHash < FAUNA_SPAWN_MAX) {
                                 obj = this._createFauna(economyType, wx, wy, objSeed);
                             }
                         }

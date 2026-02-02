@@ -46,33 +46,29 @@ class SurfaceFlora {
      * @returns {p5.Color} Color for this flora
      */
     _getEconomyColor() {
-        // Use seed for deterministic color variation
-        const r1 = (Math.sin(this.seed) * 0.5 + 0.5) * 40;
-        const r2 = (Math.sin(this.seed * 1.7) * 0.5 + 0.5) * 40;
-        const r3 = (Math.sin(this.seed * 2.3) * 0.5 + 0.5) * 40;
-        const r4 = (Math.sin(this.seed * 3.1) * 0.5 + 0.5) * 60;
-        const r5 = (Math.sin(this.seed * 4.2) * 0.5 + 0.5) * 55;
-        const r6 = (Math.sin(this.seed * 5.1) * 0.5 + 0.5) * 80;
-        const r7 = (Math.sin(this.seed * 6.3) * 0.5 + 0.5) * 35;
+        // Use seed for deterministic color variation (0 to 1 range)
+        const getVariation = (multiplier, range) => {
+            return (Math.sin(this.seed * multiplier) * 0.5 + 0.5) * range;
+        };
         
         switch (this.economyType) {
             case 'Agricultural':
-                return color(60 + r1, 180 + r1, 80 + r1); // Green/yellow
+                return color(60 + getVariation(1.1, 40), 180 + getVariation(1.7, 40), 80 + getVariation(2.3, 40)); // Green/yellow
             case 'Mining':
-                return color(140 + r1, 120 + r1, 100 + r1); // Brown/gray
+                return color(140 + getVariation(1.1, 40), 120 + getVariation(1.7, 40), 100 + getVariation(2.3, 40)); // Brown/gray
             case 'Industrial':
-                return color(100 + r1, 100 + r1, 100 + r1); // Gray
+                return color(100 + getVariation(1.1, 40), 100 + getVariation(1.7, 40), 100 + getVariation(2.3, 40)); // Gray
             case 'Refinery':
-                return color(180 + r1, 140 + r1, 80 + r1); // Orange/brown
+                return color(180 + getVariation(1.1, 40), 140 + getVariation(1.7, 40), 80 + getVariation(2.3, 40)); // Orange/brown
             case 'PostHuman':
-                return color(140 + r1, 180 + r4, 220 + r7); // Cyan/blue
+                return color(140 + getVariation(1.1, 40), 180 + getVariation(3.1, 60), 220 + getVariation(6.3, 35)); // Cyan/blue
             case 'Offworld':
-                return color(180 + r1, 100 + r1, 200 + r5); // Purple/magenta
+                return color(180 + getVariation(1.1, 40), 100 + getVariation(1.7, 40), 200 + getVariation(4.2, 55)); // Purple/magenta
             case 'Military':
-                return color(80 + r1, 120 + r1, 80 + r1); // Dark green
+                return color(80 + getVariation(1.1, 40), 120 + getVariation(1.7, 40), 80 + getVariation(2.3, 40)); // Dark green
             case 'Service':
             default:
-                return color(100 + r6, 160 + r4, 120 + r4); // Varied green
+                return color(100 + getVariation(5.1, 80), 160 + getVariation(3.1, 60), 120 + getVariation(3.7, 60)); // Varied green
         }
     }
 
@@ -308,6 +304,16 @@ class BubbleBush extends SurfaceFlora {
  * Provides common properties and movement behavior
  */
 class SurfaceFauna {
+    // Movement configuration constants
+    static MOVE_SPEED_MIN = 5;
+    static MOVE_SPEED_MAX = 15;
+    static TURN_SPEED_MIN = 0.5;
+    static TURN_SPEED_MAX = 1.0;
+    static MOVE_DURATION_MIN = 2;
+    static MOVE_DURATION_MAX = 5;
+    static PAUSE_DURATION_MIN = 1;
+    static PAUSE_DURATION_MAX = 3;
+
     /**
      * @param {number} x - World X coordinate
      * @param {number} y - World Y coordinate
@@ -324,16 +330,18 @@ class SurfaceFauna {
         this.color = this._getEconomyColor();
         
         // Movement - use seed for deterministic variation
-        this.moveSpeed = 5 + (Math.sin(this.seed * 1.1) * 0.5 + 0.5) * 10; // Slow movement
-        this.moveAngle = (Math.sin(this.seed * 2.3) * 0.5 + 0.5) * Math.PI * 2;
-        this.turnSpeed = 0.5 + (Math.sin(this.seed * 3.7) * 0.5 + 0.5) * 0.5;
+        const getVariation = (multiplier) => Math.sin(this.seed * multiplier) * 0.5 + 0.5;
+        
+        this.moveSpeed = SurfaceFauna.MOVE_SPEED_MIN + getVariation(1.1) * (SurfaceFauna.MOVE_SPEED_MAX - SurfaceFauna.MOVE_SPEED_MIN);
+        this.moveAngle = getVariation(2.3) * Math.PI * 2;
+        this.turnSpeed = SurfaceFauna.TURN_SPEED_MIN + getVariation(3.7) * (SurfaceFauna.TURN_SPEED_MAX - SurfaceFauna.TURN_SPEED_MIN);
         this.moveTimer = 0;
-        this.moveDuration = 2 + (Math.sin(this.seed * 4.1) * 0.5 + 0.5) * 3; // Move for 2-5 seconds
-        this.pauseDuration = 1 + (Math.sin(this.seed * 5.3) * 0.5 + 0.5) * 2; // Pause for 1-3 seconds
+        this.moveDuration = SurfaceFauna.MOVE_DURATION_MIN + getVariation(4.1) * (SurfaceFauna.MOVE_DURATION_MAX - SurfaceFauna.MOVE_DURATION_MIN);
+        this.pauseDuration = SurfaceFauna.PAUSE_DURATION_MIN + getVariation(5.3) * (SurfaceFauna.PAUSE_DURATION_MAX - SurfaceFauna.PAUSE_DURATION_MIN);
         this.isPaused = false;
         
         // Animation
-        this.animTime = (Math.sin(this.seed * 6.7) * 0.5 + 0.5) * Math.PI * 2;
+        this.animTime = getVariation(6.7) * Math.PI * 2;
     }
 
     /**
@@ -341,31 +349,29 @@ class SurfaceFauna {
      * @returns {p5.Color} Color for this fauna
      */
     _getEconomyColor() {
-        // Use seed for deterministic color variation
-        const r1 = (Math.sin(this.seed) * 0.5 + 0.5) * 40;
-        const r2 = (Math.sin(this.seed * 1.7) * 0.5 + 0.5) * 40;
-        const r3 = (Math.sin(this.seed * 2.3) * 0.5 + 0.5) * 40;
-        const r4 = (Math.sin(this.seed * 3.1) * 0.5 + 0.5) * 55;
-        const r5 = (Math.sin(this.seed * 4.2) * 0.5 + 0.5) * 60;
+        // Use seed for deterministic color variation (0 to 1 range)
+        const getVariation = (multiplier, range) => {
+            return (Math.sin(this.seed * multiplier) * 0.5 + 0.5) * range;
+        };
         
         switch (this.economyType) {
             case 'Agricultural':
-                return color(140 + r1, 100 + r1, 60 + r1); // Brown/tan
+                return color(140 + getVariation(1.1, 40), 100 + getVariation(1.7, 40), 60 + getVariation(2.3, 40)); // Brown/tan
             case 'Mining':
-                return color(120 + r1, 120 + r1, 130 + r1); // Rocky gray
+                return color(120 + getVariation(1.1, 40), 120 + getVariation(1.7, 40), 130 + getVariation(2.3, 40)); // Rocky gray
             case 'Industrial':
-                return color(80 + r1, 80 + r1, 90 + r1); // Dark gray
+                return color(80 + getVariation(1.1, 40), 80 + getVariation(1.7, 40), 90 + getVariation(2.3, 40)); // Dark gray
             case 'Refinery':
-                return color(160 + r1, 100 + r1, 60 + r1); // Rusty
+                return color(160 + getVariation(1.1, 40), 100 + getVariation(1.7, 40), 60 + getVariation(2.3, 40)); // Rusty
             case 'PostHuman':
-                return color(120 + r1, 160 + r1, 200 + r4); // Blue
+                return color(120 + getVariation(1.1, 40), 160 + getVariation(1.7, 40), 200 + getVariation(3.1, 55)); // Blue
             case 'Offworld':
-                return color(160 + r1, 80 + r1, 180 + r4); // Purple
+                return color(160 + getVariation(1.1, 40), 80 + getVariation(1.7, 40), 180 + getVariation(3.1, 55)); // Purple
             case 'Military':
-                return color(60 + r1, 80 + r1, 60 + r1); // Camo green
+                return color(60 + getVariation(1.1, 40), 80 + getVariation(1.7, 40), 60 + getVariation(2.3, 40)); // Camo green
             case 'Service':
             default:
-                return color(120 + r5, 100 + r5, 80 + r5); // Varied earth tones
+                return color(120 + getVariation(4.2, 60), 100 + getVariation(5.3, 60), 80 + getVariation(6.1, 60)); // Varied earth tones
         }
     }
 
