@@ -1649,7 +1649,8 @@ class SurfaceMode {
                         if (cellHash < 0.00005 && typeof SecretCache !== 'undefined') {
                             obj = new SecretCache(wx, wy, objSeed);
                         }
-                    } else {
+                    } else if (this.planet && this.planet.isInhabited) {
+                        // INHABITED PLANETS: Buildings and urban development
                         // Settlement Zones: Large areas where buildings cluster
                         const settlementNoise = noise(activeGridX * 0.015 + 500, activeGridY * 0.015 + 500);
                         const isSettlementZone = settlementNoise > 0.60;
@@ -1700,50 +1701,50 @@ class SurfaceMode {
                                 else obj = this._createEconomyBuilding(economyType, wx, wy, 30, objSeed);
                             }
                         }
+                    }
+                    
+                    // --- 4. Flora and Fauna (scattered across landscape) ---
+                    // Spawn on ALL planets (inhabited and uninhabited) if no building/defense was placed
+                    if (!obj && this.planet) {
+                        // Get planet colors for flora/fauna
+                        const planetColors = this.planet.palette || [
+                            this.planet.baseColor,
+                            this.planet.featureColor1,
+                            this.planet.featureColor2,
+                            this.planet.featureColor3
+                        ];
                         
-                        // --- 4. Flora and Fauna (scattered across landscape) ---
-                        // Only spawn if no building/defense was placed
-                        if (!obj && this.planet) {
-                            // Get planet colors for flora/fauna
-                            const planetColors = this.planet.palette || [
-                                this.planet.baseColor,
-                                this.planet.featureColor1,
-                                this.planet.featureColor2,
-                                this.planet.featureColor3
-                            ];
+                        // Per-planet density variation (some planets have almost none)
+                        // Use planet's feature random for consistent density per planet
+                        const DENSITY_WAVE_FREQUENCY = 0.01;  // How fast density varies across planets
+                        const DENSITY_AMPLITUDE = 0.5;        // Half range of variation
+                        const DENSITY_BASELINE = 0.5;         // Center point (0.5 = 50%)
+                        const planetDensityFactor = this.planet.featureRand ? 
+                            (Math.sin(this.planet.featureRand * DENSITY_WAVE_FREQUENCY) * DENSITY_AMPLITUDE + DENSITY_BASELINE) : DENSITY_BASELINE;
+                        
+                        // Inhabited vs Uninhabited spawning rules
+                        if (this.planet.isInhabited) {
+                            // INHABITED: Only flora, no fauna (civilization has displaced wildlife)
+                            // Much sparser flora (0.3% base * planet factor)
+                            const inhabitedFloraMin = 0.990;
+                            const inhabitedFloraMax = 0.993;
+                            if (cellHash > inhabitedFloraMin && cellHash < inhabitedFloraMax && planetDensityFactor > 0.3) {
+                                obj = this._createFlora(planetColors, wx, wy, objSeed);
+                            }
+                        } else {
+                            // UNINHABITED: Both flora and fauna thrive
+                            // Flora spawning - moderate (2% base * planet factor)
+                            const wildFloraMin = 0.970;
+                            const wildFloraMax = 0.990;
+                            const wildFaunaMin = 0.990;
+                            const wildFaunaMax = 0.999;  // Explicit max instead of 1.000
                             
-                            // Per-planet density variation (some planets have almost none)
-                            // Use planet's feature random for consistent density per planet
-                            const DENSITY_WAVE_FREQUENCY = 0.01;  // How fast density varies across planets
-                            const DENSITY_AMPLITUDE = 0.5;        // Half range of variation
-                            const DENSITY_BASELINE = 0.5;         // Center point (0.5 = 50%)
-                            const planetDensityFactor = this.planet.featureRand ? 
-                                (Math.sin(this.planet.featureRand * DENSITY_WAVE_FREQUENCY) * DENSITY_AMPLITUDE + DENSITY_BASELINE) : DENSITY_BASELINE;
-                            
-                            // Inhabited vs Uninhabited spawning rules
-                            if (this.planet.isInhabited) {
-                                // INHABITED: Only flora, no fauna (civilization has displaced wildlife)
-                                // Much sparser flora (0.3% base * planet factor)
-                                const inhabitedFloraMin = 0.990;
-                                const inhabitedFloraMax = 0.993;
-                                if (cellHash > inhabitedFloraMin && cellHash < inhabitedFloraMax && planetDensityFactor > 0.3) {
-                                    obj = this._createFlora(planetColors, wx, wy, objSeed);
-                                }
-                            } else {
-                                // UNINHABITED: Both flora and fauna thrive
-                                // Flora spawning - moderate (2% base * planet factor)
-                                const wildFloraMin = 0.970;
-                                const wildFloraMax = 0.990;
-                                const wildFaunaMin = 0.990;
-                                const wildFaunaMax = 0.999;  // Explicit max instead of 1.000
-                                
-                                if (cellHash > wildFloraMin && cellHash < wildFloraMax && planetDensityFactor > 0.2) {
-                                    obj = this._createFlora(planetColors, wx, wy, objSeed);
-                                }
-                                // Fauna spawning - sparse (0.9% base * planet factor)
-                                else if (cellHash > wildFaunaMin && cellHash < wildFaunaMax && planetDensityFactor > 0.4) {
-                                    obj = this._createFauna(planetColors, wx, wy, objSeed);
-                                }
+                            if (cellHash > wildFloraMin && cellHash < wildFloraMax && planetDensityFactor > 0.2) {
+                                obj = this._createFlora(planetColors, wx, wy, objSeed);
+                            }
+                            // Fauna spawning - sparse (0.9% base * planet factor)
+                            else if (cellHash > wildFaunaMin && cellHash < wildFaunaMax && planetDensityFactor > 0.4) {
+                                obj = this._createFauna(planetColors, wx, wy, objSeed);
                             }
                         }
                     }
