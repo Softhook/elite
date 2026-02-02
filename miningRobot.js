@@ -1,25 +1,25 @@
 // ****** miningRobot.js ******
 
 /**
- * Mining Robot - Small autonomous vehicles that mine asteroids near secret bases
- * These robots patrol around the base, find asteroids, mine them, and return resources
+ * Mining Robot - Small autonomous vehicles that mine surface resources near player bases
+ * These robots patrol around surface bases, find mineable rocks, extract resources, and return them
  */
 
 // Robot states
 const ROBOT_STATE = {
     IDLE: 'idle',
     SEEKING: 'seeking',
-    MOVING_TO_ASTEROID: 'moving_to_asteroid',
+    MOVING_TO_RESOURCE: 'moving_to_resource',
     MINING: 'mining',
     RETURNING: 'returning'
 };
 
 class MiningRobot {
     /**
-     * Creates a mining robot
-     * @param {number} x - X position
-     * @param {number} y - Y position
-     * @param {Station} homeBase - The station this robot belongs to
+     * Creates a mining robot for surface operations
+     * @param {number} x - X position (world coordinates)
+     * @param {number} y - Y position (world coordinates)
+     * @param {Object} homeBase - The surface base this robot belongs to (OffworldBuilding)
      */
     constructor(x, y, homeBase) {
         this.pos = createVector(x, y);
@@ -27,25 +27,26 @@ class MiningRobot {
         this.angle = random(TWO_PI);
         this.size = 12; // Small size
         this.homeBase = homeBase;
+        this.yOffset = 0; // Terrain height (set by surface mode)
         
         // Movement properties
-        this.maxSpeed = 2.5;
-        this.acceleration = 0.05;
+        this.maxSpeed = 80; // Surface units per second
+        this.acceleration = 40;
         this.rotationSpeed = 0.04;
         this.arrivalRadius = 30; // How close to get to target
         
         // State machine
         this.state = ROBOT_STATE.IDLE;
         this.stateTimer = 0;
-        this.targetAsteroid = null;
+        this.targetResource = null;
         this.targetPos = null;
         
         // Mining properties
         this.miningTime = 0;
-        this.miningDuration = 120; // 2 seconds at 60fps
-        this.cargoCapacity = 5;
-        this.cargo = 0; // Current cargo count
-        this.miningRange = 800; // How far from base to look for asteroids
+        this.miningDuration = 3.0; // 3 seconds of mining
+        this.cargoCapacity = 10;
+        this.cargo = 0; // Current cargo count (minerals)
+        this.miningRange = 500; // How far from base to look for resources
         
         // Visual properties
         this.drillRotation = 0;
@@ -53,42 +54,50 @@ class MiningRobot {
         this.lightTimer = random(TWO_PI);
         
         // Patrol properties
-        this.patrolRadius = 600; // Stay within this radius of base
+        this.patrolRadius = 400; // Stay within this radius of base
         this.idleWaitTime = 0;
-        this.maxIdleTime = 60; // Wait 1 second before seeking
+        this.maxIdleTime = 2.0; // Wait 2 seconds before seeking
     }
     
     /**
      * Updates the robot's behavior and movement
-     * @param {Array} asteroids - List of asteroids in the system
-     * @param {number} deltaTime - Time elapsed since last frame (ms)
+     * @param {Array} mineableRocks - List of mineable rocks in the area
+     * @param {number} dt - Time elapsed since last frame (seconds)
+     * @param {Object} surfaceMode - Reference to surface mode for terrain queries
      */
-    update(asteroids, deltaTime = 16.67) {
-        const dt = deltaTime / 1000; // Convert to seconds
-        this.stateTimer++;
+    update(mineableRocks, dt, surfaceMode) {
+        this.stateTimer += dt;
         this.lightTimer += 0.05;
+        
+        // Update terrain height
+        if (surfaceMode && typeof surfaceMode._getTerrainHeightAt === 'function') {
+            this.yOffset = surfaceMode._getTerrainHeightAt(this.pos.x, this.pos.y);
+        }
         
         // Update state machine
         switch (this.state) {
             case ROBOT_STATE.IDLE:
-                this.updateIdle();
+                this.updateIdle(dt);
                 break;
             case ROBOT_STATE.SEEKING:
-                this.updateSeeking(asteroids);
+                this.updateSeeking(mineableRocks);
                 break;
-            case ROBOT_STATE.MOVING_TO_ASTEROID:
-                this.updateMovingToAsteroid();
+            case ROBOT_STATE.MOVING_TO_RESOURCE:
+                this.updateMovingToResource(dt);
                 break;
             case ROBOT_STATE.MINING:
                 this.updateMining(dt);
                 break;
             case ROBOT_STATE.RETURNING:
-                this.updateReturning();
+                this.updateReturning(dt);
                 break;
         }
         
         // Apply physics
-        this.pos.add(this.vel);
+        const moveX = this.vel.x * dt;
+        const moveY = this.vel.y * dt;
+        this.pos.x += moveX;
+        this.pos.y += moveY;
         
         // Slow drill when not mining
         if (this.state !== ROBOT_STATE.MINING) {
@@ -99,10 +108,11 @@ class MiningRobot {
     
     /**
      * Idle state - wait then start seeking
+     * @param {number} dt - Delta time in seconds
      */
-    updateIdle() {
+    updateIdle(dt) {
         this.vel.mult(0.95); // Slow down
-        this.idleWaitTime++;
+        this.idleWaitTime += dt;
         
         if (this.idleWaitTime >= this.maxIdleTime) {
             this.state = ROBOT_STATE.SEEKING;
@@ -111,55 +121,56 @@ class MiningRobot {
     }
     
     /**
-     * Seeking state - look for nearby asteroids
-     * @param {Array} asteroids - List of asteroids to search
+     * Seeking state - look for nearby mineable rocks
+     * @param {Array} mineableRocks - List of rocks to search
      */
-    updateSeeking(asteroids) {
-        // Find nearest asteroid within range
-        let closestAsteroid = null;
+    updateSeeking(mineableRocks) {
+        // Find nearest rock within range
+        let closestRock = null;
         let closestDist = this.miningRange;
         
-        for (const asteroid of asteroids) {
-            if (!asteroid || asteroid.destroyed || asteroid.health <= 0) continue;
+        for (const rock of mineableRocks) {
+            if (!rock || rock.destroyed || rock.depleted) continue;
             
-            const dist = p5.Vector.dist(this.pos, asteroid.pos);
+            const dist = p5.Vector.dist(this.pos, rock.pos);
             
-            // Check if asteroid is within patrol range of base
-            const distFromBase = p5.Vector.dist(asteroid.pos, this.homeBase.pos);
+            // Check if rock is within patrol range of base
+            const distFromBase = p5.Vector.dist(rock.pos, this.homeBase.pos);
             if (distFromBase > this.patrolRadius) continue;
             
             if (dist < closestDist) {
                 closestDist = dist;
-                closestAsteroid = asteroid;
+                closestRock = rock;
             }
         }
         
-        if (closestAsteroid && this.cargo < this.cargoCapacity) {
-            this.targetAsteroid = closestAsteroid;
-            this.state = ROBOT_STATE.MOVING_TO_ASTEROID;
+        if (closestRock && this.cargo < this.cargoCapacity) {
+            this.targetResource = closestRock;
+            this.state = ROBOT_STATE.MOVING_TO_RESOURCE;
         } else if (this.cargo > 0) {
             // Return to base if we have cargo
             this.state = ROBOT_STATE.RETURNING;
         } else {
-            // No asteroids found, idle for a bit
+            // No rocks found, idle for a bit
             this.state = ROBOT_STATE.IDLE;
         }
     }
     
     /**
-     * Moving to asteroid state
+     * Moving to resource state
+     * @param {number} dt - Delta time in seconds
      */
-    updateMovingToAsteroid() {
+    updateMovingToResource(dt) {
         // Check if target still valid
-        if (!this.targetAsteroid || this.targetAsteroid.destroyed || this.targetAsteroid.health <= 0) {
-            this.targetAsteroid = null;
+        if (!this.targetResource || this.targetResource.destroyed || this.targetResource.depleted) {
+            this.targetResource = null;
             this.state = ROBOT_STATE.SEEKING;
             return;
         }
         
-        // Move towards asteroid
-        const target = this.targetAsteroid.pos;
-        this.moveTowards(target);
+        // Move towards resource
+        const target = this.targetResource.pos;
+        this.moveTowards(target, dt);
         
         // Check if arrived
         const dist = p5.Vector.dist(this.pos, target);
@@ -171,40 +182,44 @@ class MiningRobot {
     }
     
     /**
-     * Mining state - extract resources from asteroid
+     * Mining state - extract resources from rock
      * @param {number} dt - Delta time in seconds
      */
     updateMining(dt) {
         // Check if target still valid
-        if (!this.targetAsteroid || this.targetAsteroid.destroyed || this.targetAsteroid.health <= 0) {
-            this.targetAsteroid = null;
+        if (!this.targetResource || this.targetResource.destroyed || this.targetResource.depleted) {
+            this.targetResource = null;
             this.state = ROBOT_STATE.SEEKING;
             return;
         }
         
         this.vel.mult(0.9); // Stay mostly still
-        this.miningTime++;
+        this.miningTime += dt;
         this.drillSpeed = 0.3; // Spin the drill
         
-        // Face the asteroid
-        const target = this.targetAsteroid.pos;
+        // Face the resource
+        const target = this.targetResource.pos;
         const desired = p5.Vector.sub(target, this.pos);
         const targetAngle = desired.heading();
         this.angle = this.lerpAngle(this.angle, targetAngle, 0.1);
         
         // Mining complete
         if (this.miningTime >= this.miningDuration) {
-            // Extract a small amount from asteroid
-            if (this.targetAsteroid.health > 0) {
-                const damage = min(10, this.targetAsteroid.health);
-                this.targetAsteroid.health -= damage;
+            // Extract minerals from rock
+            if (this.targetResource.resourceAmount > 0) {
+                const extracted = Math.min(3, this.targetResource.resourceAmount);
+                this.targetResource.resourceAmount -= extracted;
+                
+                // Check if resource is depleted
+                if (this.targetResource.resourceAmount <= 0) {
+                    this.targetResource.depleted = true;
+                }
                 
                 // Add to cargo
-                const extracted = Math.ceil(damage / 10);
-                this.cargo = min(this.cargoCapacity, this.cargo + extracted);
+                this.cargo = Math.min(this.cargoCapacity, this.cargo + extracted);
             }
             
-            this.targetAsteroid = null;
+            this.targetResource = null;
             
             // Decide next action
             if (this.cargo >= this.cargoCapacity) {
@@ -217,15 +232,16 @@ class MiningRobot {
     
     /**
      * Returning to base state
+     * @param {number} dt - Delta time in seconds
      */
-    updateReturning() {
+    updateReturning(dt) {
         // Move towards base
         const target = this.homeBase.pos;
-        this.moveTowards(target);
+        this.moveTowards(target, dt);
         
         // Check if arrived at base
         const dist = p5.Vector.dist(this.pos, target);
-        if (dist < this.homeBase.dockingRadius * 0.5) {
+        if (dist < this.homeBase.size) {
             // Deposit cargo
             this.depositCargo();
             this.cargo = 0;
@@ -236,8 +252,9 @@ class MiningRobot {
     /**
      * Move towards a target position
      * @param {p5.Vector} target - Target position
+     * @param {number} dt - Delta time in seconds
      */
-    moveTowards(target) {
+    moveTowards(target, dt) {
         const desired = p5.Vector.sub(target, this.pos);
         const dist = desired.mag();
         
@@ -254,7 +271,7 @@ class MiningRobot {
         
         // Steering = desired - current velocity
         const steer = p5.Vector.sub(desired, this.vel);
-        steer.limit(this.acceleration);
+        steer.limit(this.acceleration * dt);
         this.vel.add(steer);
         this.vel.limit(this.maxSpeed);
         
@@ -269,25 +286,27 @@ class MiningRobot {
      * Deposit mined cargo to base storage
      */
     depositCargo() {
-        if (!this.homeBase || !this.homeBase.miningStorage || this.cargo <= 0) return;
+        if (!this.homeBase || this.cargo <= 0) return;
+        
+        // Get or initialize storage on home base
+        if (!this.homeBase.miningStorage) {
+            this.homeBase.miningStorage = [];
+        }
+        if (!this.homeBase.miningStorageCapacity) {
+            this.homeBase.miningStorageCapacity = 100;
+        }
         
         // Add minerals to base storage
         const mineralsToAdd = this.cargo;
         
-        // Check if storage has capacity
-        if (!this.homeBase.miningStorageCapacity) {
-            this.homeBase.miningStorageCapacity = 100; // Default capacity
-        }
-        
-        const currentAmount = this.homeBase.miningStorage.find(item => item.name === 'Minerals')?.quantity || 0;
+        const existingMinerals = this.homeBase.miningStorage.find(item => item.name === 'Minerals');
+        const currentAmount = existingMinerals ? existingMinerals.quantity : 0;
         const availableSpace = this.homeBase.miningStorageCapacity - currentAmount;
         const actuallyAdded = Math.min(mineralsToAdd, availableSpace);
         
         if (actuallyAdded > 0) {
-            // Add to storage
-            const existingEntry = this.homeBase.miningStorage.find(item => item.name === 'Minerals');
-            if (existingEntry) {
-                existingEntry.quantity += actuallyAdded;
+            if (existingMinerals) {
+                existingMinerals.quantity += actuallyAdded;
             } else {
                 this.homeBase.miningStorage.push({ name: 'Minerals', quantity: actuallyAdded });
             }
@@ -315,18 +334,26 @@ class MiningRobot {
     }
     
     /**
-     * Renders the mining robot using 3D primitives
-     * @param {number} tx - Translation X (for camera offset)
-     * @param {number} ty - Translation Y (for camera offset)
+     * Renders the mining robot on the surface using 3D primitives
+     * @param {Object} surfaceMode - Reference to surface mode for projection
      */
-    draw(tx, ty) {
+    draw(surfaceMode) {
+        if (!surfaceMode) return;
+        
+        // Use surface projection helpers
+        const alt = this.yOffset + 5; // Slightly above terrain
+        const { extrusionAngle, baseX, baseY } = 
+            typeof getProjectionHelpers === 'function' 
+            ? getProjectionHelpers(this.pos.x, this.pos.y, alt)
+            : { extrusionAngle: 0.5, baseX: this.pos.x, baseY: this.pos.y };
+        
+        const sunAngle = surfaceMode._getSunAngle ? surfaceMode._getSunAngle() : -Math.PI / 4;
+        
         push();
-        translate(this.pos.x + tx, this.pos.y + ty);
+        translate(baseX, baseY);
         rotate(this.angle);
         
         const s = this.size;
-        const extrusionAngle = PI / 4; // 45-degree extrusion
-        const sunAngle = 0; // Fixed sun angle
         
         // Body colors
         const bodyColor = color(140, 120, 100);
@@ -384,7 +411,7 @@ class MiningRobot {
         
         // Cargo indicator (small boxes on back if carrying)
         if (this.cargo > 0) {
-            const cargoBoxes = Math.min(3, Math.ceil(this.cargo / 2));
+            const cargoBoxes = Math.min(3, Math.ceil(this.cargo / 4));
             for (let i = 0; i < cargoBoxes; i++) {
                 const cargoColor = color(180, 140, 90);
                 Draw3D.drawBox3D(-s * 0.6, -s * 0.2 + i * s * 0.2, s * 0.25, s * 0.25, s * 0.25, cargoColor, extrusionAngle, sunAngle);
@@ -406,7 +433,7 @@ class MiningRobot {
                 return color(100, 100, 255, 150 + brightness * 100); // Blue
             case ROBOT_STATE.SEEKING:
                 return color(255, 255, 100, 150 + brightness * 100); // Yellow
-            case ROBOT_STATE.MOVING_TO_ASTEROID:
+            case ROBOT_STATE.MOVING_TO_RESOURCE:
                 return color(255, 200, 100, 150 + brightness * 100); // Orange
             case ROBOT_STATE.MINING:
                 return color(255, 100, 100, 200 + brightness * 50); // Red (active)
@@ -415,5 +442,59 @@ class MiningRobot {
             default:
                 return color(150, 150, 150, 150);
         }
+    }
+}
+
+/**
+ * MineableRock - Surface rocks that can be mined for resources
+ */
+class MineableRock {
+    constructor(x, y, size = 20, seed = 0) {
+        this.pos = createVector(x, y);
+        this.size = size;
+        this.seed = seed;
+        this.yOffset = 0; // Terrain height
+        this.resourceAmount = Math.floor(random(10, 30)); // Amount of minerals
+        this.depleted = false;
+        this.destroyed = false;
+        this.color = color(120 + random(-20, 20), 100 + random(-20, 20), 80 + random(-20, 20));
+    }
+    
+    /**
+     * Draw the mineable rock
+     * @param {Object} surfaceMode - Reference to surface mode for projection
+     */
+    draw(surfaceMode) {
+        if (!surfaceMode || this.destroyed || this.depleted) return;
+        
+        const alt = this.yOffset;
+        const { extrusionAngle, baseX, baseY} = 
+            typeof getProjectionHelpers === 'function' 
+            ? getProjectionHelpers(this.pos.x, this.pos.y, alt)
+            : { extrusionAngle: 0.5, baseX: this.pos.x, baseY: this.pos.y };
+        
+        const sunAngle = surfaceMode._getSunAngle ? surfaceMode._getSunAngle() : -Math.PI / 4;
+        
+        push();
+        translate(baseX, baseY);
+        
+        // Draw as irregular rock
+        const s = this.size;
+        const h = s * 0.6;
+        
+        // Main rock body
+        Draw3D.drawBox3D(0, 0, s, s * 0.8, h, this.color, extrusionAngle, sunAngle);
+        
+        // Additional irregular chunks
+        Draw3D.drawBox3D(s * 0.2, s * 0.2, s * 0.5, s * 0.5, h * 0.7, this.color, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(-s * 0.2, -s * 0.1, s * 0.4, s * 0.6, h * 0.5, this.color, extrusionAngle, sunAngle);
+        
+        // Mineral vein indicator (if rich in resources)
+        if (this.resourceAmount > 20) {
+            const veinColor = color(180, 160, 100, 180);
+            Draw3D.drawBox3D(s * 0.1, 0, s * 0.2, s * 0.3, h * 0.8, veinColor, extrusionAngle, sunAngle);
+        }
+        
+        pop();
     }
 }

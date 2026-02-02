@@ -64,12 +64,6 @@ class Station {
         // Pre-generate crate field (positions/styles) for richer decoration (cheap per-frame)
         this.crateField = null;
         this._generateCrates();
-        
-        // Mining robot system (for secret bases only)
-        this.miningRobots = [];
-        this.miningStorage = []; // Separate storage for mined resources
-        this.miningStorageCapacity = 100; // Maximum storage for mined ore
-        this.robotsInitialized = false; // Flag to track if robots have been spawned
     }
 
     /**

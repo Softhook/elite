@@ -144,6 +144,11 @@ class SurfaceMode {
         // Astronaut Mode
         this.controlMode = 'SHIP'; // 'SHIP' or 'ASTRONAUT'
         this.astronaut = null;
+        
+        // Mining robots and mineable resources
+        this.miningRobots = []; // All mining robots on the surface
+        this.mineableRocks = []; // Mineable resource rocks
+        this.robotSpawnCooldown = 0; // Cooldown to prevent continuous spawning
 
         // Player physics
         this.playerAngle = -Math.PI / 2; // Start facing UP
@@ -761,6 +766,16 @@ class SurfaceMode {
             if (this.starSystem && typeof this.starSystem._updateHarpoons === 'function') {
                 this.starSystem._updateHarpoons();
             }
+            
+            // Update mining robots
+            this._updateMiningRobots(dt);
+            
+            // Periodically check for new player bases and initialize robots
+            this.robotSpawnCooldown -= dt;
+            if (this.robotSpawnCooldown <= 0) {
+                this.robotSpawnCooldown = 5; // Check every 5 seconds
+                this._initializeMiningRobotsForBases();
+            }
 
             // Note: altitude control happens BEFORE _updatePhysics() so player.altitude
             // is calculated with current radar altitude, ensuring turrets see accurate data
@@ -821,6 +836,8 @@ class SurfaceMode {
                 // Spawn initial objects once we have the grid
                 const gridPos = this.terrain.getGridPosition();
                 this._spawnObjects(gridPos.x, gridPos.y);
+                // Initialize mining robots for player bases
+                this._initializeMiningRobotsForBases();
             }
         }
 
@@ -1453,6 +1470,7 @@ class SurfaceMode {
 
         // Draw surface objects, explosions, and projectiles (all use world coords)
         this._drawSurfaceObjects();
+        this._drawMiningRobots(); // Draw mining robots and mineable rocks
         this._drawExplosions();
         this._drawProjectiles();
         this._drawMines();
@@ -1913,6 +1931,99 @@ class SurfaceMode {
         }
 
         return defenseDensity;
+    }
+
+    /**
+     * Initialize mining robots and mineable rocks for player bases
+     * @private
+     */
+    _initializeMiningRobotsForBases() {
+        if (typeof MiningRobot === 'undefined' || typeof MineableRock === 'undefined') return;
+        
+        // Find all player-built Hab Units (variant 1 of OffworldBuilding)
+        for (const obj of this.surfaceObjects) {
+            if (!obj || obj.destroyed) continue;
+            
+            // Check if it's a player-built Hab Unit
+            const isHabUnit = obj.playerBuilt && 
+                             obj.constructor && 
+                             obj.constructor.name === 'OffworldBuilding' && 
+                             obj.variant === 1;
+            
+            if (!isHabUnit) continue;
+            
+            // Initialize storage if needed
+            if (!obj.miningStorage) {
+                obj.miningStorage = [];
+                obj.miningStorageCapacity = 100;
+            }
+            
+            // Check if robots already spawned for this base
+            if (!obj.robotsInitialized) {
+                obj.robotsInitialized = true;
+                
+                // Spawn 2-3 mining robots per base
+                const robotCount = Math.floor(random(2, 4));
+                for (let i = 0; i < robotCount; i++) {
+                    const angle = (i / robotCount) * TWO_PI;
+                    const dist = 50 + random(20);
+                    const rx = obj.pos.x + Math.cos(angle) * dist;
+                    const ry = obj.pos.y + Math.sin(angle) * dist;
+                    
+                    const robot = new MiningRobot(rx, ry, obj);
+                    robot.yOffset = this._getTerrainHeightAt(rx, ry);
+                    this.miningRobots.push(robot);
+                }
+                
+                // Spawn mineable rocks around the base
+                const rockCount = Math.floor(random(8, 15));
+                for (let i = 0; i < rockCount; i++) {
+                    const angle = random(TWO_PI);
+                    const dist = random(150, 400);
+                    const rockX = obj.pos.x + Math.cos(angle) * dist;
+                    const rockY = obj.pos.y + Math.sin(angle) * dist;
+                    
+                    const rockSize = random(15, 30);
+                    const rock = new MineableRock(rockX, rockY, rockSize, Math.floor(random(100000)));
+                    rock.yOffset = this._getTerrainHeightAt(rockX, rockY);
+                    this.mineableRocks.push(rock);
+                }
+            }
+        }
+    }
+
+    /**
+     * Update mining robots
+     * @param {number} dt - Delta time in seconds
+     * @private
+     */
+    _updateMiningRobots(dt) {
+        if (!this.miningRobots || this.miningRobots.length === 0) return;
+        
+        for (let robot of this.miningRobots) {
+            if (!robot) continue;
+            robot.update(this.mineableRocks, dt, this);
+        }
+    }
+
+    /**
+     * Draw mining robots and mineable rocks
+     * @private
+     */
+    _drawMiningRobots() {
+        if (!this.miningRobots || this.miningRobots.length === 0) return;
+        
+        // Draw mineable rocks first (they're static)
+        for (let rock of this.mineableRocks) {
+            if (!rock || rock.destroyed || rock.depleted) continue;
+            rock.draw(this);
+        }
+        
+        // Draw robots
+        for (let robot of this.miningRobots) {
+            if (!robot) continue;
+            robot.draw(this);
+        }
     }
 
     /**
