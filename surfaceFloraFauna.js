@@ -8,7 +8,7 @@
 //
 // RENDERING:
 // - All draw() methods use Draw3D primitives for consistent visual projection
-// - Colors vary based on planet economy type for visual diversity
+// - Colors vary based on planet colours for visual diversity
 // - Organic, alien designs using creative combinations of primitives
 //
 // ENTITY TYPES:
@@ -43,6 +43,14 @@ class SurfaceFlora {
         // Health system (compatible with SurfaceObject)
         this.health = 50; // Flora has moderate durability
         this.maxHealth = 50;
+    }
+
+    _deriveCellKey() {
+        if (typeof SURFACE_CONFIG === 'undefined' || !SURFACE_CONFIG.SPAWN_CELL_SIZE) return null;
+        const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE;
+        const cellX = Math.floor(this.pos.x / cellSize);
+        const cellY = Math.floor(this.pos.y / cellSize);
+        return `${cellX},${cellY}`;
     }
 
     /**
@@ -82,8 +90,9 @@ class SurfaceFlora {
         this.health -= amount;
         if (this.health <= 0 && !this.destroyed) {
             this.destroyed = true;
-            if (typeof surfaceMode !== 'undefined' && this.cellKey) {
-                surfaceMode.registerDestruction(this.cellKey);
+            if (typeof surfaceMode !== 'undefined') {
+                const cellKey = this.cellKey || this._deriveCellKey();
+                if (cellKey) surfaceMode.registerDestruction(cellKey);
             }
             this.onDestroy();
         }
@@ -102,7 +111,14 @@ class SurfaceFlora {
      * @returns {boolean} True if collision detected
      */
     checkCollision(projectile) {
-        return false; // Use default radius-based collision in surfaceMode
+        if (!projectile || !projectile.pos) return false;
+        const projAlt = projectile.altitude || 0;
+        const objAlt = this.altitude || this.yOffset || 0;
+        const dx = projectile.pos.x - this.pos.x;
+        const dy = projectile.pos.y - this.pos.y;
+        const dz = projAlt - objAlt;
+        const radius = Math.max((this.size || 20) * 0.5, 8);
+        return dx * dx + dy * dy + dz * dz <= radius * radius;
     }
 }
 
@@ -110,8 +126,8 @@ class SurfaceFlora {
  * Alien tree with organic branching structure
  */
 class AlienTree extends SurfaceFlora {
-    constructor(x, y, size, economyType) {
-        super(x, y, size, economyType);
+    constructor(x, y, size, planetColors) {
+        super(x, y, size, planetColors);
         this.height = size * (2.5 + Math.sin(this.seed) * 0.5);
         this.trunkColor = color(
             red(this.color) * 0.5,
@@ -126,7 +142,7 @@ class AlienTree extends SurfaceFlora {
 
         const extrusionAngle = 0.5;
         const x = worldX;
-        const y = worldY;
+        const y = worldY - (alt + (this.yOffset || 0));
         
         // Trunk
         const trunkW = this.size * 0.3;
@@ -161,8 +177,8 @@ class AlienTree extends SurfaceFlora {
  * Crystal-like plant formation
  */
 class CrystalPlant extends SurfaceFlora {
-    constructor(x, y, size, economyType) {
-        super(x, y, size, economyType);
+    constructor(x, y, size, planetColors) {
+        super(x, y, size, planetColors);
         this.height = size * (1.5 + Math.sin(this.seed) * 0.3);
         this.crystals = Math.floor(4 + (this.seed % 5));
         this.crystalColor = color(
@@ -178,7 +194,7 @@ class CrystalPlant extends SurfaceFlora {
 
         const extrusionAngle = 0.5;
         const x = worldX;
-        const y = worldY;
+        const y = worldY - (alt + (this.yOffset || 0));
 
         // Multiple crystal spikes arranged in a cluster
         for (let i = 0; i < this.crystals; i++) {
@@ -202,8 +218,8 @@ class CrystalPlant extends SurfaceFlora {
  * Tentacle-like plant with writhing appendages
  */
 class TentaclePlant extends SurfaceFlora {
-    constructor(x, y, size, economyType) {
-        super(x, y, size, economyType);
+    constructor(x, y, size, planetColors) {
+        super(x, y, size, planetColors);
         this.height = size * (1.2 + Math.sin(this.seed) * 0.2);
         this.tentacles = Math.floor(5 + (this.seed % 4));
         this.baseColor = color(
@@ -218,7 +234,7 @@ class TentaclePlant extends SurfaceFlora {
 
         const extrusionAngle = 0.5;
         const x = worldX;
-        const y = worldY;
+        const y = worldY - (alt + (this.yOffset || 0));
 
         // Base bulb
         Draw3D.drawPrism(x, y, this.size * 0.5, 8, this.size * 0.3, this.baseColor, extrusionAngle, sunAngle);
@@ -246,8 +262,8 @@ class TentaclePlant extends SurfaceFlora {
  * Spore-emitting stalk plant
  */
 class SporeStalk extends SurfaceFlora {
-    constructor(x, y, size, economyType) {
-        super(x, y, size, economyType);
+    constructor(x, y, size, planetColors) {
+        super(x, y, size, planetColors);
         this.height = size * (2 + Math.sin(this.seed) * 0.4);
         this.sporeColor = color(
             red(this.color) + 80,
@@ -262,7 +278,7 @@ class SporeStalk extends SurfaceFlora {
 
         const extrusionAngle = 0.5;
         const x = worldX;
-        const y = worldY;
+        const y = worldY - (alt + (this.yOffset || 0));
 
         // Thin stalk
         const stalkW = this.size * 0.2;
@@ -289,8 +305,8 @@ class SporeStalk extends SurfaceFlora {
  * Bubble-like bush formation
  */
 class BubbleBush extends SurfaceFlora {
-    constructor(x, y, size, economyType) {
-        super(x, y, size, economyType);
+    constructor(x, y, size, planetColors) {
+        super(x, y, size, planetColors);
         this.height = size * (0.8 + Math.sin(this.seed) * 0.2);
         this.bubbles = Math.floor(6 + (this.seed % 5));
     }
@@ -300,7 +316,7 @@ class BubbleBush extends SurfaceFlora {
 
         const extrusionAngle = 0.5;
         const x = worldX;
-        const y = worldY;
+        const y = worldY - (alt + (this.yOffset || 0));
 
         // Multiple spherical bubbles clustered together
         for (let i = 0; i < this.bubbles; i++) {
@@ -357,6 +373,9 @@ class SurfaceFauna {
         // Health system (compatible with SurfaceObject)
         this.health = 30; // Fauna is very fragile (more fragile than flora)
         this.maxHealth = 30;
+
+        // Deterministic RNG seeded off the instance seed for repeatable movement
+        this._rngState = Math.floor(this.seed * 100000) >>> 0;
         
         // Movement - use seed for deterministic variation
         const getVariation = (multiplier) => Math.sin(this.seed * multiplier) * 0.5 + 0.5;
@@ -371,6 +390,24 @@ class SurfaceFauna {
         
         // Animation
         this.animTime = getVariation(6.7) * Math.PI * 2;
+    }
+
+    _rand() {
+        // Simple LCG for deterministic pseudo-randomness
+        this._rngState = (1664525 * this._rngState + 1013904223) >>> 0;
+        return this._rngState / 0x100000000;
+    }
+
+    _randCentered() {
+        return this._rand() - 0.5;
+    }
+
+    _deriveCellKey() {
+        if (typeof SURFACE_CONFIG === 'undefined' || !SURFACE_CONFIG.SPAWN_CELL_SIZE) return null;
+        const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE;
+        const cellX = Math.floor(this.pos.x / cellSize);
+        const cellY = Math.floor(this.pos.y / cellSize);
+        return `${cellX},${cellY}`;
     }
 
     /**
@@ -410,7 +447,7 @@ class SurfaceFauna {
                 this.isPaused = false;
                 this.moveTimer = 0;
                 // Random new direction
-                this.moveAngle += (Math.random() - 0.5) * Math.PI;
+                this.moveAngle += this._randCentered() * Math.PI;
             }
         } else {
             if (this.moveTimer >= this.moveDuration) {
@@ -422,7 +459,7 @@ class SurfaceFauna {
                 this.pos.y += Math.sin(this.moveAngle) * this.moveSpeed * dt;
                 
                 // Slight direction variation while moving
-                this.moveAngle += (Math.random() - 0.5) * this.turnSpeed * dt;
+                this.moveAngle += this._randCentered() * this.turnSpeed * dt;
             }
         }
     }
@@ -439,8 +476,9 @@ class SurfaceFauna {
         this.health -= amount;
         if (this.health <= 0 && !this.destroyed) {
             this.destroyed = true;
-            if (typeof surfaceMode !== 'undefined' && this.cellKey) {
-                surfaceMode.registerDestruction(this.cellKey);
+            if (typeof surfaceMode !== 'undefined') {
+                const cellKey = this.cellKey || this._deriveCellKey();
+                if (cellKey) surfaceMode.registerDestruction(cellKey);
             }
             this.onDestroy();
         }
@@ -459,7 +497,14 @@ class SurfaceFauna {
      * @returns {boolean} True if collision detected
      */
     checkCollision(projectile) {
-        return false; // Use default radius-based collision in surfaceMode
+        if (!projectile || !projectile.pos) return false;
+        const projAlt = projectile.altitude || 0;
+        const objAlt = this.altitude || this.yOffset || 0;
+        const dx = projectile.pos.x - this.pos.x;
+        const dy = projectile.pos.y - this.pos.y;
+        const dz = projAlt - objAlt;
+        const radius = Math.max((this.size || 20) * 0.5, 8);
+        return dx * dx + dy * dy + dz * dz <= radius * radius;
     }
 }
 
@@ -467,8 +512,8 @@ class SurfaceFauna {
  * Slithering snake-like creature
  */
 class SlitherCreature extends SurfaceFauna {
-    constructor(x, y, size, economyType) {
-        super(x, y, size, economyType);
+    constructor(x, y, size, planetColors) {
+        super(x, y, size, planetColors);
         this.segments = 6;
         this.height = size * 0.3;
     }
@@ -478,7 +523,7 @@ class SlitherCreature extends SurfaceFauna {
 
         const extrusionAngle = 0.5;
         const x = worldX;
-        const y = worldY;
+        const y = worldY - (alt + (this.yOffset || 0));
 
         // Draw segmented body with sine wave motion
         for (let i = 0; i < this.segments; i++) {
@@ -507,8 +552,8 @@ class SlitherCreature extends SurfaceFauna {
  * Floating jellyfish-like creature
  */
 class FloaterCreature extends SurfaceFauna {
-    constructor(x, y, size, economyType) {
-        super(x, y, size, economyType);
+    constructor(x, y, size, planetColors) {
+        super(x, y, size, planetColors);
         this.floatHeight = size * 2;
         this.tentacles = 4;
     }
@@ -518,9 +563,10 @@ class FloaterCreature extends SurfaceFauna {
 
         const extrusionAngle = 0.5;
         const x = worldX;
-        // Float above surface with bobbing motion
+        // Float above surface with bobbing motion and altitude offset
         const floatOffset = Math.sin(this.animTime) * this.size * 0.3;
-        const y = worldY - this.floatHeight - floatOffset;
+        const groundY = worldY - (alt + (this.yOffset || 0));
+        const y = groundY - this.floatHeight - floatOffset;
 
         // Bell/dome body
         const bellColor = color(
@@ -562,8 +608,8 @@ class FloaterCreature extends SurfaceFauna {
  * Rolling ball-like creature
  */
 class RollerCreature extends SurfaceFauna {
-    constructor(x, y, size, economyType) {
-        super(x, y, size, economyType);
+    constructor(x, y, size, planetColors) {
+        super(x, y, size, planetColors);
         this.spikes = 8;
     }
 
@@ -572,7 +618,7 @@ class RollerCreature extends SurfaceFauna {
 
         const extrusionAngle = 0.5;
         const x = worldX;
-        const y = worldY;
+        const y = worldY - (alt + (this.yOffset || 0));
 
         // Main body sphere
         Draw3D.drawPrism(x, y, this.size, 12, this.size * 0.8, this.color, extrusionAngle, sunAngle);
@@ -600,8 +646,8 @@ class RollerCreature extends SurfaceFauna {
  * Tall stalking creature on long legs
  */
 class StalkCreature extends SurfaceFauna {
-    constructor(x, y, size, economyType) {
-        super(x, y, size, economyType);
+    constructor(x, y, size, planetColors) {
+        super(x, y, size, planetColors);
         this.bodyHeight = size * 2;
         this.legs = 4;
         this.legLength = size * 1.5;
@@ -612,7 +658,7 @@ class StalkCreature extends SurfaceFauna {
 
         const extrusionAngle = 0.5;
         const x = worldX;
-        const y = worldY;
+        const y = worldY - (alt + (this.yOffset || 0));
 
         // Legs with walking animation
         const walkCycle = Math.sin(this.animTime * 2);
