@@ -1734,12 +1734,13 @@ class SurfaceMode {
                                 // Flora spawning - moderate (2% base * planet factor)
                                 const wildFloraMin = 0.970;
                                 const wildFloraMax = 0.990;
+                                const wildFaunaMin = 0.990;
+                                const wildFaunaMax = 0.999;  // Explicit max instead of 1.000
+                                
                                 if (cellHash > wildFloraMin && cellHash < wildFloraMax && planetDensityFactor > 0.2) {
                                     obj = this._createFlora(planetColors, wx, wy, objSeed);
                                 }
-                                // Fauna spawning - sparse (1% base * planet factor)
-                                const wildFaunaMin = 0.990;
-                                const wildFaunaMax = 0.999;  // Explicit max instead of 1.000
+                                // Fauna spawning - sparse (0.9% base * planet factor)
                                 else if (cellHash > wildFaunaMin && cellHash < wildFaunaMax && planetDensityFactor > 0.4) {
                                     obj = this._createFauna(planetColors, wx, wy, objSeed);
                                 }
