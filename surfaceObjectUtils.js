@@ -8,7 +8,9 @@
  */
 const SURFACE_RENDER_CONSTANTS = {
     EXTRUSION_ANGLE: 0.5,
-    DEFAULT_SUN_ANGLE: -Math.PI / 4
+    DEFAULT_SUN_ANGLE: -Math.PI / 4,
+    TWO_PI: Math.PI * 2,
+    DAMAGE_FLASH_DURATION: 150 // ms
 };
 
 /**
@@ -147,6 +149,51 @@ function createBuildingConfig(x, y, size, seed, style) {
     };
 }
 
+/**
+ * Normalize angle difference to [-PI, PI] range
+ * Used for smooth rotation and turning behaviors
+ * @param {number} targetAngle - Target angle in radians
+ * @param {number} currentAngle - Current angle in radians
+ * @returns {number} Normalized angle difference
+ */
+function normalizeAngleDifference(targetAngle, currentAngle) {
+    let diff = targetAngle - currentAngle;
+    const TWO_PI = SURFACE_RENDER_CONSTANTS.TWO_PI;
+    while (diff < -Math.PI) diff += TWO_PI;
+    while (diff > Math.PI) diff -= TWO_PI;
+    return diff;
+}
+
+/**
+ * Check if entity should show damage flash effect
+ * @param {number} lastHitTime - Timestamp of last hit (from millis())
+ * @param {number} duration - Flash duration in ms (default: 150)
+ * @returns {boolean} True if should show flash
+ */
+function shouldShowDamageFlash(lastHitTime, duration = SURFACE_RENDER_CONSTANTS.DAMAGE_FLASH_DURATION) {
+    if (!lastHitTime || typeof millis !== 'function') return false;
+    return millis() - lastHitTime < duration;
+}
+
+/**
+ * Apply smooth frame-rate independent rotation towards target angle
+ * @param {number} currentAngle - Current angle in radians
+ * @param {number} targetAngle - Target angle in radians
+ * @param {number} turnSpeed - Turn speed in radians per second
+ * @param {number} dt - Delta time in seconds
+ * @returns {number} New angle after applying rotation
+ */
+function smoothRotateTowards(currentAngle, targetAngle, turnSpeed, dt) {
+    const diff = normalizeAngleDifference(targetAngle, currentAngle);
+    const maxTurn = turnSpeed * dt;
+    
+    if (Math.abs(diff) <= maxTurn) {
+        return targetAngle;
+    }
+    
+    return currentAngle + Math.sign(diff) * maxTurn;
+}
+
 // Make available globally
 if (typeof window !== 'undefined') {
     window.SURFACE_RENDER_CONSTANTS = SURFACE_RENDER_CONSTANTS;
@@ -158,6 +205,9 @@ if (typeof window !== 'undefined') {
     window.getExtrusionAngle = getExtrusionAngle;
     window.toVisualCoordinates = toVisualCoordinates;
     window.getProjectionHelpers = getProjectionHelpers;
+    window.normalizeAngleDifference = normalizeAngleDifference;
+    window.shouldShowDamageFlash = shouldShowDamageFlash;
+    window.smoothRotateTowards = smoothRotateTowards;
 }
 
 // For Node.js (testing)
@@ -171,7 +221,10 @@ if (typeof module !== 'undefined' && module.exports) {
         createBuildingConfig,
         getExtrusionAngle,
         toVisualCoordinates,
-        getProjectionHelpers
+        getProjectionHelpers,
+        normalizeAngleDifference,
+        shouldShowDamageFlash,
+        smoothRotateTowards
     };
 }
 

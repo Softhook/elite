@@ -1807,20 +1807,21 @@ class Turret extends SurfaceObject {
             const dy = player.pos.y - this.pos.y;
             targetAngle = Math.atan2(dy, dx);
         }
-        let diff = targetAngle - this.angle;
-
-        // Normalize
-        const TWO_PI = Math.PI * 2;
-        while (diff < -Math.PI) diff += TWO_PI;
-        while (diff > Math.PI) diff -= TWO_PI;
-
-        // Frame-rate independent turn, clamp like drone behavior to avoid overshoot
+        // Use utility function for smooth rotation
         const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.TURRET : {};
-        const maxTurn = (config.TURN_SPEED || 5) * dt;
-        if (Math.abs(diff) <= maxTurn) {
-            this.angle = targetAngle;
+        const turnSpeed = config.TURN_SPEED || 5;
+        
+        if (typeof smoothRotateTowards === 'function') {
+            this.angle = smoothRotateTowards(this.angle, targetAngle, turnSpeed, dt);
         } else {
-            this.angle += Math.sign(diff) * maxTurn;
+            // Fallback to manual implementation
+            let diff = normalizeAngleDifference(targetAngle, this.angle);
+            const maxTurn = turnSpeed * dt;
+            if (Math.abs(diff) <= maxTurn) {
+                this.angle = targetAngle;
+            } else {
+                this.angle += Math.sign(diff) * maxTurn;
+            }
         }
 
         // Fire if ready
@@ -1925,11 +1926,10 @@ class Turret extends SurfaceObject {
         const baseH = sz * 0.2;
         const headH = sz * 0.6;
 
-        // Damage flash effect - flash white when recently hit
-        let damageFlash = false;
-        if (this.lastHitTime && millis() - this.lastHitTime < 150) {
-            damageFlash = true;
-        }
+        // Damage flash effect - use utility function
+        const damageFlash = (typeof shouldShowDamageFlash === 'function') 
+            ? shouldShowDamageFlash(this.lastHitTime)
+            : (this.lastHitTime && millis() - this.lastHitTime < 150);
 
         // Health-based color tinting (damaged turrets look redder)
         const healthRatio = this.health / this.maxHealth;
@@ -2223,11 +2223,11 @@ class ShieldGenerator extends SurfaceObject {
                 ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
         }
 
-        // Damage flash
-        let flashColor = null;
-        if (this.lastHitTime && millis() - this.lastHitTime < 150) {
-            flashColor = color(255, 255, 255);
-        }
+        // Damage flash - use utility function
+        const damageFlash = (typeof shouldShowDamageFlash === 'function') 
+            ? shouldShowDamageFlash(this.lastHitTime)
+            : (this.lastHitTime && millis() - this.lastHitTime < 150);
+        const flashColor = damageFlash ? color(255, 255, 255) : null;
 
         // Health-based color tint
         const healthRatio = this.health / this.maxHealth;
@@ -2394,18 +2394,20 @@ class DefenseDrone extends SurfaceObject {
             const visualDY = playerVisualY - droneVisualY;
 
             const targetAngle = Math.atan2(visualDY, visualDX);
-            let angleDiff = targetAngle - this.angle;
-
-            // Normalize angle difference
-            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-
-            // Turn towards player (affected by tangle effect)
-            const turnSpeed = this.turnRate * dt * rotationBlock;
-            if (Math.abs(angleDiff) < turnSpeed) {
-                this.angle = targetAngle;
+            
+            // Use utility function for smooth rotation
+            const turnSpeed = this.turnRate * rotationBlock;
+            if (typeof smoothRotateTowards === 'function') {
+                this.angle = smoothRotateTowards(this.angle, targetAngle, turnSpeed, dt);
             } else {
-                this.angle += Math.sign(angleDiff) * turnSpeed;
+                // Fallback to manual implementation
+                let angleDiff = normalizeAngleDifference(targetAngle, this.angle);
+                const maxTurn = turnSpeed * dt;
+                if (Math.abs(angleDiff) < maxTurn) {
+                    this.angle = targetAngle;
+                } else {
+                    this.angle += Math.sign(angleDiff) * maxTurn;
+                }
             }
 
             // Accelerate towards player
@@ -2433,16 +2435,20 @@ class DefenseDrone extends SurfaceObject {
             } else {
                 // Move towards patrol target
                 const targetAngle = Math.atan2(pdy, pdx);
-                let angleDiff = targetAngle - this.angle;
-
-                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-
-                const turnSpeed = this.turnRate * 0.5 * dt * rotationBlock;
-                if (Math.abs(angleDiff) < turnSpeed) {
-                    this.angle = targetAngle;
+                
+                // Use utility function for smooth rotation
+                const turnSpeed = this.turnRate * 0.5 * rotationBlock;
+                if (typeof smoothRotateTowards === 'function') {
+                    this.angle = smoothRotateTowards(this.angle, targetAngle, turnSpeed, dt);
                 } else {
-                    this.angle += Math.sign(angleDiff) * turnSpeed;
+                    // Fallback to manual implementation
+                    let angleDiff = normalizeAngleDifference(targetAngle, this.angle);
+                    const maxTurn = turnSpeed * dt;
+                    if (Math.abs(angleDiff) < maxTurn) {
+                        this.angle = targetAngle;
+                    } else {
+                        this.angle += Math.sign(angleDiff) * maxTurn;
+                    }
                 }
 
                 // Slower speed during patrol
@@ -2552,11 +2558,11 @@ class DefenseDrone extends SurfaceObject {
                 ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
         }
 
-        // Damage flash
-        let flashColor = null;
-        if (this.lastHitTime && millis() - this.lastHitTime < 150) {
-            flashColor = color(255, 255, 255);
-        }
+        // Damage flash - use utility function
+        const damageFlash = (typeof shouldShowDamageFlash === 'function') 
+            ? shouldShowDamageFlash(this.lastHitTime)
+            : (this.lastHitTime && millis() - this.lastHitTime < 150);
+        const flashColor = damageFlash ? color(255, 255, 255) : null;
 
         // Health-based color
         const healthRatio = this.health / this.maxHealth;

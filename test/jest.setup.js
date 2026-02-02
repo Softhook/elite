@@ -480,6 +480,59 @@ global.DRAG_EFFECT_DEFAULT_MULTIPLIER = 10.0;
 global.WEAPON_LOG = jest.fn();
 global.ENV_LOG = jest.fn();
 
+// ============================================
+// Surface Mode Utilities
+// ============================================
+
+global.SurfaceUtils = {
+    EXTRUSION_ANGLE: 0.5,
+    
+    getExtrusionAngle() {
+        return this.EXTRUSION_ANGLE;
+    },
+    
+    getPerspectiveScale(altitude) {
+        return 1200 / (altitude + 1000);
+    },
+    
+    toVisualX(worldX, altitude) {
+        return worldX - altitude * Math.sin(this.EXTRUSION_ANGLE);
+    },
+    
+    toVisualY(worldY, altitude) {
+        return worldY - altitude * Math.cos(this.EXTRUSION_ANGLE);
+    },
+    
+    projectToVisual(worldX, worldY, altitude) {
+        return {
+            x: this.toVisualX(worldX, altitude),
+            y: this.toVisualY(worldY, altitude)
+        };
+    },
+    
+    getViewportBounds(focusX, focusY, altitude, screenWidth, screenHeight, padding = 200) {
+        const perspectiveScale = this.getPerspectiveScale(altitude);
+        const extrusionAngle = this.getExtrusionAngle();
+
+        // Calculate visual offsets for the focus point
+        const visualXOffset = altitude * Math.sin(extrusionAngle);
+        const visualYOffset = altitude * Math.cos(extrusionAngle);
+
+        const adjustedFocusX = focusX - visualXOffset;
+        const adjustedFocusY = focusY - visualYOffset;
+
+        const viewportWidth = (screenWidth / perspectiveScale) + padding * 2;
+        const viewportHeight = (screenHeight / perspectiveScale) + padding * 2;
+
+        return {
+            minX: adjustedFocusX - viewportWidth / 2,
+            maxX: adjustedFocusX + viewportWidth / 2,
+            minY: adjustedFocusY - viewportHeight / 2,
+            maxY: adjustedFocusY + viewportHeight / 2
+        };
+    }
+};
+
 
 // ============================================
 // Helper: Clear all mocks between tests
