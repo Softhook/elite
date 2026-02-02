@@ -22,8 +22,8 @@ describe('SurfaceTerrain Smoothing', () => {
         }));
 
         mockConfig = {
-            MESH_SIZE: 6000,
-            MESH_RESOLUTION: 160,
+            MESH_SIZE: 4200,
+            MESH_RESOLUTION: 120,
             DEFAULT_FEATURE_SEED: 12345,
             SUN_ANGLE: -Math.PI / 4,
             EXTRUSION_ANGLE: 0.5
@@ -60,7 +60,7 @@ describe('SurfaceTerrain Smoothing', () => {
 
     test('should enforce minimum swap interval', () => {
         // Simulate receiving first buffer
-        const mockBitmap1 = { width: 6600, height: 6600, close: jest.fn() };
+        const mockBitmap1 = { width: 4600, height: 4600, close: jest.fn() };
         terrain.pendingBuffer = { bitmap: mockBitmap1, gridX: 0, gridY: 0 };
         
         // Set time to 0
@@ -72,7 +72,7 @@ describe('SurfaceTerrain Smoothing', () => {
         expect(terrain.currentBuffer).toBe(mockBitmap1);
 
         // Simulate receiving second buffer immediately
-        const mockBitmap2 = { width: 6600, height: 6600, close: jest.fn() };
+        const mockBitmap2 = { width: 4600, height: 4600, close: jest.fn() };
         terrain.pendingBuffer = { bitmap: mockBitmap2, gridX: 1, gridY: 1 };
         
         // Time hasn't advanced enough (only 50ms)
@@ -84,8 +84,8 @@ describe('SurfaceTerrain Smoothing', () => {
         expect(terrain.currentBuffer).toBe(mockBitmap1);
         expect(terrain.pendingBuffer).not.toBeNull();
 
-        // Time advances past cooldown (250ms total)
-        global.performance.now.mockReturnValue(250);
+        // Time advances past cooldown (150ms total, more than minSwapInterval of 100ms)
+        global.performance.now.mockReturnValue(150);
         
         // Now it should swap
         const swapped3 = terrain.update(0, 0, false);
@@ -95,7 +95,7 @@ describe('SurfaceTerrain Smoothing', () => {
 
     test('should create transition buffer when swapping', () => {
         // Set up initial buffer
-        const mockBitmap1 = { width: 6600, height: 6600, close: jest.fn() };
+        const mockBitmap1 = { width: 4600, height: 4600, close: jest.fn() };
         terrain.currentBuffer = mockBitmap1;
         terrain.currentGridX = 0;
         terrain.currentGridY = 0;
@@ -104,11 +104,11 @@ describe('SurfaceTerrain Smoothing', () => {
         terrain.lastSwapTime = 0;
 
         // Prepare new buffer
-        const mockBitmap2 = { width: 6600, height: 6600, close: jest.fn() };
+        const mockBitmap2 = { width: 4600, height: 4600, close: jest.fn() };
         terrain.pendingBuffer = { bitmap: mockBitmap2, gridX: 1, gridY: 1 };
         
-        // Advance time past cooldown
-        global.performance.now.mockReturnValue(250);
+        // Advance time past cooldown (150ms, more than minSwapInterval of 100ms)
+        global.performance.now.mockReturnValue(150);
 
         // Update should swap and create transition
         const swapped = terrain.update(0, 0, false);
@@ -120,32 +120,32 @@ describe('SurfaceTerrain Smoothing', () => {
 
     test('should update transition alpha over time', () => {
         // Set up transition state
-        const mockBitmap1 = { width: 6600, height: 6600, close: jest.fn() };
+        const mockBitmap1 = { width: 4600, height: 4600, close: jest.fn() };
         terrain.transitionBuffer = mockBitmap1;
         terrain.transitionAlpha = 0;
         terrain.transitionStartTime = 0;
-        terrain.transitionDuration = 300;
+        terrain.transitionDuration = 150;
         
-        // After 150ms (50% of duration)
-        global.performance.now.mockReturnValue(150);
+        // After 75ms (50% of duration)
+        global.performance.now.mockReturnValue(75);
         terrain.update(0, 0, false);
         expect(terrain.transitionAlpha).toBeCloseTo(0.5, 1);
 
-        // After 300ms (100% of duration)
-        global.performance.now.mockReturnValue(300);
+        // After 150ms (100% of duration)
+        global.performance.now.mockReturnValue(150);
         terrain.update(0, 0, false);
         expect(terrain.transitionAlpha).toBe(1);
         
         // After completion, transition buffer should be cleaned up
-        global.performance.now.mockReturnValue(301);
+        global.performance.now.mockReturnValue(151);
         terrain.update(0, 0, false);
         expect(mockBitmap1.close).toHaveBeenCalled();
         expect(terrain.transitionBuffer).toBeNull();
     });
 
     test('should handle buffer cleanup properly', () => {
-        const mockBitmap1 = { width: 6600, height: 6600, close: jest.fn() };
-        const mockBitmap2 = { width: 6600, height: 6600, close: jest.fn() };
+        const mockBitmap1 = { width: 4600, height: 4600, close: jest.fn() };
+        const mockBitmap2 = { width: 4600, height: 4600, close: jest.fn() };
         
         terrain.currentBuffer = mockBitmap1;
         terrain.transitionBuffer = mockBitmap2;
