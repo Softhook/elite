@@ -20,6 +20,8 @@ const SURFACE_CONFIG = {
     SPAWN_CELL_SIZE: 35,       // Fixed spawn density (independent of resolution)
     DEFAULT_FEATURE_SEED: 12345, // Fallback seed for terrain generation
     HIGH_TERRAIN_THRESHOLD: 350, // Height (0-500) treated as high ground for defenses
+    FLORA_LOW_GROUND_CUTOFF: 240, // Bias flora toward valleys/lowlands (0-500 height scale)
+    FAUNA_HIGH_GROUND_CUTOFF: 320, // Bias fauna toward ridges/highlands (0-500 height scale)
 
     // Transition
     TRANSITION_DURATION: 2000, // ms for enter/exit transitions
@@ -1721,6 +1723,17 @@ class SurfaceMode {
                         const DENSITY_BASELINE = 0.5;         // Center point (0.5 = 50%)
                         const planetDensityFactor = this.planet.featureRand ? 
                             (Math.sin(this.planet.featureRand * DENSITY_WAVE_FREQUENCY) * DENSITY_AMPLITUDE + DENSITY_BASELINE) : DENSITY_BASELINE;
+
+                        // Terrain height biasing for flora/fauna placement
+                        const floraLowCutoff = SURFACE_CONFIG.FLORA_LOW_GROUND_CUTOFF || (SURFACE_CONFIG.HIGH_TERRAIN_THRESHOLD * 0.65);
+                        const faunaHighCutoff = SURFACE_CONFIG.FAUNA_HIGH_GROUND_CUTOFF || SURFACE_CONFIG.HIGH_TERRAIN_THRESHOLD;
+                        const floraHeightBias = (h <= floraLowCutoff)
+                            ? 1
+                            : constrain(1 - (h - floraLowCutoff) / 120, 0.15, 1); // Quickly falls off above cutoff
+                        const faunaHeightBias = (h >= faunaHighCutoff)
+                            ? 1
+                            : constrain((h - (faunaHighCutoff - 120)) / 120, 0.1, 1); // Ramps up as we approach high ground
+                        const heightRand = (objSeed * 0.3571) % 1; // Deterministic per cell
                         
                         // Inhabited vs Uninhabited spawning rules
                         if (this.planet.isInhabited) {
@@ -1729,7 +1742,9 @@ class SurfaceMode {
                             const inhabitedFloraMin = 0.990;
                             const inhabitedFloraMax = 0.993;
                             if (cellHash > inhabitedFloraMin && cellHash < inhabitedFloraMax && planetDensityFactor > 0.3) {
-                                obj = this._createFlora(planetColors, wx, wy, objSeed);
+                                if (heightRand < floraHeightBias) {
+                                    obj = this._createFlora(planetColors, wx, wy, objSeed);
+                                }
                             }
                         } else {
                             // UNINHABITED: Both flora and fauna thrive
@@ -1740,11 +1755,15 @@ class SurfaceMode {
                             const wildFaunaMax = 0.999;  // Explicit max instead of 1.000
                             
                             if (cellHash > wildFloraMin && cellHash < wildFloraMax && planetDensityFactor > 0.2) {
-                                obj = this._createFlora(planetColors, wx, wy, objSeed);
+                                if (heightRand < floraHeightBias) {
+                                    obj = this._createFlora(planetColors, wx, wy, objSeed);
+                                }
                             }
                             // Fauna spawning - sparse (0.9% base * planet factor)
                             else if (cellHash > wildFaunaMin && cellHash < wildFaunaMax && planetDensityFactor > 0.4) {
-                                obj = this._createFauna(planetColors, wx, wy, objSeed);
+                                if (heightRand < faunaHeightBias) {
+                                    obj = this._createFauna(planetColors, wx, wy, objSeed);
+                                }
                             }
                         }
                     }
