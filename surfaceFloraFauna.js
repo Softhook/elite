@@ -37,8 +37,8 @@ class SurfaceFlora {
         this.yOffset = 0; // Height offset matching terrain
         this.destroyed = false;
         this.economyType = economyType || 'Service';
-        this.color = this._getEconomyColor();
         this.seed = Math.random() * 1000;
+        this.color = this._getEconomyColor();
     }
 
     /**
@@ -46,24 +46,33 @@ class SurfaceFlora {
      * @returns {p5.Color} Color for this flora
      */
     _getEconomyColor() {
+        // Use seed for deterministic color variation
+        const r1 = (Math.sin(this.seed) * 0.5 + 0.5) * 40;
+        const r2 = (Math.sin(this.seed * 1.7) * 0.5 + 0.5) * 40;
+        const r3 = (Math.sin(this.seed * 2.3) * 0.5 + 0.5) * 40;
+        const r4 = (Math.sin(this.seed * 3.1) * 0.5 + 0.5) * 60;
+        const r5 = (Math.sin(this.seed * 4.2) * 0.5 + 0.5) * 55;
+        const r6 = (Math.sin(this.seed * 5.1) * 0.5 + 0.5) * 80;
+        const r7 = (Math.sin(this.seed * 6.3) * 0.5 + 0.5) * 35;
+        
         switch (this.economyType) {
             case 'Agricultural':
-                return color(60 + random(40), 180 + random(40), 80 + random(40)); // Green/yellow
+                return color(60 + r1, 180 + r1, 80 + r1); // Green/yellow
             case 'Mining':
-                return color(140 + random(40), 120 + random(40), 100 + random(40)); // Brown/gray
+                return color(140 + r1, 120 + r1, 100 + r1); // Brown/gray
             case 'Industrial':
-                return color(100 + random(40), 100 + random(40), 100 + random(40)); // Gray
+                return color(100 + r1, 100 + r1, 100 + r1); // Gray
             case 'Refinery':
-                return color(180 + random(40), 140 + random(40), 80 + random(40)); // Orange/brown
-            case 'Post Human':
-                return color(140 + random(40), 180 + random(60), 220 + random(35)); // Cyan/blue
+                return color(180 + r1, 140 + r1, 80 + r1); // Orange/brown
+            case 'PostHuman':
+                return color(140 + r1, 180 + r4, 220 + r7); // Cyan/blue
             case 'Offworld':
-                return color(180 + random(40), 100 + random(40), 200 + random(55)); // Purple/magenta
+                return color(180 + r1, 100 + r1, 200 + r5); // Purple/magenta
             case 'Military':
-                return color(80 + random(40), 120 + random(40), 80 + random(40)); // Dark green
+                return color(80 + r1, 120 + r1, 80 + r1); // Dark green
             case 'Service':
             default:
-                return color(100 + random(80), 160 + random(60), 120 + random(60)); // Varied green
+                return color(100 + r6, 160 + r4, 120 + r4); // Varied green
         }
     }
 
@@ -311,20 +320,20 @@ class SurfaceFauna {
         this.yOffset = 0; // Height offset matching terrain
         this.destroyed = false;
         this.economyType = economyType || 'Service';
-        this.color = this._getEconomyColor();
         this.seed = Math.random() * 1000;
+        this.color = this._getEconomyColor();
         
-        // Movement
-        this.moveSpeed = 5 + Math.random() * 10; // Slow movement
-        this.moveAngle = Math.random() * Math.PI * 2;
-        this.turnSpeed = 0.5 + Math.random() * 0.5;
+        // Movement - use seed for deterministic variation
+        this.moveSpeed = 5 + (Math.sin(this.seed * 1.1) * 0.5 + 0.5) * 10; // Slow movement
+        this.moveAngle = (Math.sin(this.seed * 2.3) * 0.5 + 0.5) * Math.PI * 2;
+        this.turnSpeed = 0.5 + (Math.sin(this.seed * 3.7) * 0.5 + 0.5) * 0.5;
         this.moveTimer = 0;
-        this.moveDuration = 2 + Math.random() * 3; // Move for 2-5 seconds
-        this.pauseDuration = 1 + Math.random() * 2; // Pause for 1-3 seconds
+        this.moveDuration = 2 + (Math.sin(this.seed * 4.1) * 0.5 + 0.5) * 3; // Move for 2-5 seconds
+        this.pauseDuration = 1 + (Math.sin(this.seed * 5.3) * 0.5 + 0.5) * 2; // Pause for 1-3 seconds
         this.isPaused = false;
         
         // Animation
-        this.animTime = Math.random() * Math.PI * 2;
+        this.animTime = (Math.sin(this.seed * 6.7) * 0.5 + 0.5) * Math.PI * 2;
     }
 
     /**
@@ -332,24 +341,31 @@ class SurfaceFauna {
      * @returns {p5.Color} Color for this fauna
      */
     _getEconomyColor() {
+        // Use seed for deterministic color variation
+        const r1 = (Math.sin(this.seed) * 0.5 + 0.5) * 40;
+        const r2 = (Math.sin(this.seed * 1.7) * 0.5 + 0.5) * 40;
+        const r3 = (Math.sin(this.seed * 2.3) * 0.5 + 0.5) * 40;
+        const r4 = (Math.sin(this.seed * 3.1) * 0.5 + 0.5) * 55;
+        const r5 = (Math.sin(this.seed * 4.2) * 0.5 + 0.5) * 60;
+        
         switch (this.economyType) {
             case 'Agricultural':
-                return color(140 + random(40), 100 + random(40), 60 + random(40)); // Brown/tan
+                return color(140 + r1, 100 + r1, 60 + r1); // Brown/tan
             case 'Mining':
-                return color(120 + random(40), 120 + random(40), 130 + random(40)); // Rocky gray
+                return color(120 + r1, 120 + r1, 130 + r1); // Rocky gray
             case 'Industrial':
-                return color(80 + random(40), 80 + random(40), 90 + random(40)); // Dark gray
+                return color(80 + r1, 80 + r1, 90 + r1); // Dark gray
             case 'Refinery':
-                return color(160 + random(40), 100 + random(40), 60 + random(40)); // Rusty
-            case 'Post Human':
-                return color(120 + random(40), 160 + random(40), 200 + random(55)); // Blue
+                return color(160 + r1, 100 + r1, 60 + r1); // Rusty
+            case 'PostHuman':
+                return color(120 + r1, 160 + r1, 200 + r4); // Blue
             case 'Offworld':
-                return color(160 + random(40), 80 + random(40), 180 + random(55)); // Purple
+                return color(160 + r1, 80 + r1, 180 + r4); // Purple
             case 'Military':
-                return color(60 + random(40), 80 + random(40), 60 + random(40)); // Camo green
+                return color(60 + r1, 80 + r1, 60 + r1); // Camo green
             case 'Service':
             default:
-                return color(120 + random(60), 100 + random(60), 80 + random(60)); // Varied earth tones
+                return color(120 + r5, 100 + r5, 80 + r5); // Varied earth tones
         }
     }
 
