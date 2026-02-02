@@ -41,7 +41,7 @@ class SurfaceFlora {
         this.color = this._getEconomyColor();
         
         // Health system (compatible with SurfaceObject)
-        this.health = 50; // Flora is fragile
+        this.health = 50; // Flora has moderate durability
         this.maxHealth = 50;
     }
 
@@ -365,7 +365,7 @@ class SurfaceFauna {
         this.color = this._getEconomyColor();
         
         // Health system (compatible with SurfaceObject)
-        this.health = 30; // Fauna is fragile
+        this.health = 30; // Fauna is very fragile (more fragile than flora)
         this.maxHealth = 30;
         
         // Movement - use seed for deterministic variation
