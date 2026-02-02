@@ -30,10 +30,10 @@ class SurfaceTerrain {
         this.transitionGridX = null; // Grid X of transition buffer
         this.transitionGridY = null; // Grid Y of transition buffer
         this.transitionAlpha = 0; // 0 to 1, controls fade
-        this.transitionDuration = 300; // ms for smooth fade
+        this.transitionDuration = 150; // ms for smooth fade (reduced for less noticeable transitions)
         this.transitionStartTime = 0;
         this.lastSwapTime = 0;
-        this.minSwapInterval = 200; // ms minimum between swaps
+        this.minSwapInterval = 100; // ms minimum between swaps (reduced to allow more frequent updates)
 
         // Worker instance
         this.worker = null;
@@ -246,9 +246,10 @@ class SurfaceTerrain {
             dist = Math.sqrt(dx * dx + dy * dy);
         }
 
-        // Threshold: if > 15 cells away (approx 500 units), request new
+        // Threshold: if > 8 cells away (approx 280 units), request new
+        // Reduced threshold for more frequent, less noticeable transitions
         // Also request if we have no buffer at all and not generating
-        if (!this.isGenerating && (forceRequest || this.currentBuffer === null || dist > 15)) {
+        if (!this.isGenerating && (forceRequest || this.currentBuffer === null || dist > 8)) {
             this.isGenerating = true;
 
             // Prepare data for worker
