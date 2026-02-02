@@ -44,6 +44,10 @@ const SURFACE_CONFIG = {
     
     // Cache cleanup
     CACHE_CLEANUP_INTERVAL: 600, // Frames between cache cleanup operations
+    
+    // Performance
+    UPDATE_RANGE: 2000,         // Max distance for object updates (units)
+    BEAM_DISPLAY_DURATION: 150, // Beam visual duration (ms)
 
     // Defense Drone Configuration
     DRONE: {
@@ -685,12 +689,42 @@ class SurfaceMode {
             }
 
             // Update surface objects (single pass, dt-corrected)
+            // Apply viewport culling for distant objects to improve performance
             if (this.surfaceObjects) {
                 const target = this.controlMode === 'ASTRONAUT' ? this.astronaut : this.player;
+                
+                // Get viewport for culling (use constant from config)
+                const updateRange = SURFACE_CONFIG.UPDATE_RANGE || 2000;
+                const updateRangeSq = updateRange * updateRange;
+                
+                let objectsUpdated = 0;
+                let objectsCulled = 0;
+                
                 for (let obj of this.surfaceObjects) {
                     if (!obj || obj.destroyed) continue;
+                    
+                    // Distance-based culling for updates (world space is faster than visual)
+                    // Only update objects within reasonable range of player
+                    // Skip culling if object doesn't have pos property (always update these)
+                    if (target && target.pos && obj.pos) {
+                        const dx = obj.pos.x - target.pos.x;
+                        const dy = obj.pos.y - target.pos.y;
+                        const distSq = dx * dx + dy * dy;
+                        
+                        // Skip update for very distant objects (but still render them if visible)
+                        // Exceptions: Always update mission-critical objects (isTarget)
+                        if (distSq > updateRangeSq && !obj.isTarget) {
+                            objectsCulled++;
+                            continue;
+                        }
+                    }
+                    
+                    objectsUpdated++;
                     if (obj.update) obj.update(dt, target, this.starSystem);
                 }
+                
+                // Store stats for debug overlay
+                this._lastUpdateCullStats = { updated: objectsUpdated, culled: objectsCulled };
             }
 
             this._checkSurfaceCollisions();
@@ -1947,8 +1981,9 @@ class SurfaceMode {
         const beam = this.player.lastBeam;
         const now = millis();
 
-        // Only draw if beam was recently fired (within 150ms)
-        if (now - beam.time >= 150) return;
+        // Only draw if beam was recently fired (use constant from config)
+        const beamDuration = SURFACE_CONFIG.BEAM_DISPLAY_DURATION || 150;
+        if (now - beam.time >= beamDuration) return;
 
         // Calculate scale to maintain constant beam thickness
         const counterScale = this._getCounterScale();

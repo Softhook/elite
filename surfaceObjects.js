@@ -1807,20 +1807,26 @@ class Turret extends SurfaceObject {
             const dy = player.pos.y - this.pos.y;
             targetAngle = Math.atan2(dy, dx);
         }
-        let diff = targetAngle - this.angle;
-
-        // Normalize
-        const TWO_PI = Math.PI * 2;
-        while (diff < -Math.PI) diff += TWO_PI;
-        while (diff > Math.PI) diff -= TWO_PI;
-
-        // Frame-rate independent turn, clamp like drone behavior to avoid overshoot
+        // Use utility function for smooth rotation
         const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.TURRET : {};
-        const maxTurn = (config.TURN_SPEED || 5) * dt;
-        if (Math.abs(diff) <= maxTurn) {
-            this.angle = targetAngle;
+        const turnSpeed = config.TURN_SPEED || 5;
+        
+        if (typeof smoothRotateTowards === 'function') {
+            this.angle = smoothRotateTowards(this.angle, targetAngle, turnSpeed, dt);
         } else {
-            this.angle += Math.sign(diff) * maxTurn;
+            // Fallback to manual implementation with inline angle normalization
+            let diff = targetAngle - this.angle;
+            // Normalize diff to the range [-PI, PI] to get the shortest rotation direction
+            const TWO_PI = Math.PI * 2;
+            while (diff < -Math.PI) diff += TWO_PI;
+            while (diff > Math.PI) diff -= TWO_PI;
+            
+            const maxTurn = turnSpeed * dt;
+            if (Math.abs(diff) <= maxTurn) {
+                this.angle = targetAngle;
+            } else {
+                this.angle += Math.sign(diff) * maxTurn;
+            }
         }
 
         // Fire if ready
@@ -1925,11 +1931,10 @@ class Turret extends SurfaceObject {
         const baseH = sz * 0.2;
         const headH = sz * 0.6;
 
-        // Damage flash effect - flash white when recently hit
-        let damageFlash = false;
-        if (this.lastHitTime && millis() - this.lastHitTime < 150) {
-            damageFlash = true;
-        }
+        // Damage flash effect - use utility function
+        const damageFlash = (typeof shouldShowDamageFlash === 'function') 
+            ? shouldShowDamageFlash(this.lastHitTime)
+            : (this.lastHitTime && millis() - this.lastHitTime < 150);
 
         // Health-based color tinting (damaged turrets look redder)
         const healthRatio = this.health / this.maxHealth;
@@ -2223,11 +2228,11 @@ class ShieldGenerator extends SurfaceObject {
                 ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
         }
 
-        // Damage flash
-        let flashColor = null;
-        if (this.lastHitTime && millis() - this.lastHitTime < 150) {
-            flashColor = color(255, 255, 255);
-        }
+        // Damage flash - use utility function
+        const damageFlash = (typeof shouldShowDamageFlash === 'function') 
+            ? shouldShowDamageFlash(this.lastHitTime)
+            : (this.lastHitTime && millis() - this.lastHitTime < 150);
+        const flashColor = damageFlash ? color(255, 255, 255) : null;
 
         // Health-based color tint
         const healthRatio = this.health / this.maxHealth;
@@ -2331,6 +2336,21 @@ class DefenseDrone extends SurfaceObject {
 
         // Visual
         this.color = color(180, 50, 50); // Pirate red
+        
+        // Terrain height caching (performance optimization)
+        this._cachedTerrainHeight = null;
+        this._cachedTerrainPos = null;
+        this._terrainCacheDistance = 50; // Re-sample if moved more than 50 units
+        this._terrainInterpolationSpeed = 5.0; // Units per second for smooth height transitions
+    }
+
+    /**
+     * Clears any cached terrain data so altitude will be recalculated.
+     * Call this from any reset/destroy logic when reusing this instance.
+     */
+    clearTerrainCache() {
+        this._cachedTerrainHeight = null;
+        this._cachedTerrainPos = null;
     }
 
     update(dt, player, starSystem) {
@@ -2394,18 +2414,25 @@ class DefenseDrone extends SurfaceObject {
             const visualDY = playerVisualY - droneVisualY;
 
             const targetAngle = Math.atan2(visualDY, visualDX);
-            let angleDiff = targetAngle - this.angle;
-
-            // Normalize angle difference
-            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-
-            // Turn towards player (affected by tangle effect)
-            const turnSpeed = this.turnRate * dt * rotationBlock;
-            if (Math.abs(angleDiff) < turnSpeed) {
-                this.angle = targetAngle;
+            
+            // Use utility function for smooth rotation
+            const turnSpeed = this.turnRate * rotationBlock;
+            if (typeof smoothRotateTowards === 'function') {
+                this.angle = smoothRotateTowards(this.angle, targetAngle, turnSpeed, dt);
             } else {
-                this.angle += Math.sign(angleDiff) * turnSpeed;
+                // Fallback to manual implementation with inline angle normalization
+                let angleDiff = targetAngle - this.angle;
+                // Normalize angleDiff to the range [-PI, PI] to ensure shortest rotation direction
+                const TWO_PI = Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += TWO_PI;
+                while (angleDiff > Math.PI) angleDiff -= TWO_PI;
+                
+                const maxTurn = turnSpeed * dt;
+                if (Math.abs(angleDiff) < maxTurn) {
+                    this.angle = targetAngle;
+                } else {
+                    this.angle += Math.sign(angleDiff) * maxTurn;
+                }
             }
 
             // Accelerate towards player
@@ -2433,16 +2460,25 @@ class DefenseDrone extends SurfaceObject {
             } else {
                 // Move towards patrol target
                 const targetAngle = Math.atan2(pdy, pdx);
-                let angleDiff = targetAngle - this.angle;
-
-                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-
-                const turnSpeed = this.turnRate * 0.5 * dt * rotationBlock;
-                if (Math.abs(angleDiff) < turnSpeed) {
-                    this.angle = targetAngle;
+                
+                // Use utility function for smooth rotation
+                const turnSpeed = this.turnRate * 0.5 * rotationBlock;
+                if (typeof smoothRotateTowards === 'function') {
+                    this.angle = smoothRotateTowards(this.angle, targetAngle, turnSpeed, dt);
                 } else {
-                    this.angle += Math.sign(angleDiff) * turnSpeed;
+                    // Fallback to manual implementation with inline angle normalization
+                    let angleDiff = targetAngle - this.angle;
+                    // Normalize angleDiff to the range [-PI, PI] to ensure shortest rotation direction
+                    const TWO_PI = Math.PI * 2;
+                    while (angleDiff < -Math.PI) angleDiff += TWO_PI;
+                    while (angleDiff > Math.PI) angleDiff -= TWO_PI;
+                    
+                    const maxTurn = turnSpeed * dt;
+                    if (Math.abs(angleDiff) < maxTurn) {
+                        this.angle = targetAngle;
+                    } else {
+                        this.angle += Math.sign(angleDiff) * maxTurn;
+                    }
                 }
 
                 // Slower speed during patrol
@@ -2454,19 +2490,55 @@ class DefenseDrone extends SurfaceObject {
         this.pos.x += Math.cos(this.angle) * this.speed * dt;
         this.pos.y += Math.sin(this.angle) * this.speed * dt;
 
-        // Update yOffset and altitude based on terrain
+        // Update yOffset and altitude based on terrain (with caching and smooth interpolation)
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.terrain) {
-            const terrainHeight = surfaceMode.terrain.getHeightAt(this.pos.x, this.pos.y);
-            if (terrainHeight !== null && terrainHeight !== undefined && !isNaN(terrainHeight)) {
-                this.altitude = terrainHeight + this.flyingHeight;
+            // Check if we need to update cached terrain height
+            let needsUpdate = !this._cachedTerrainPos;
+            if (this._cachedTerrainPos) {
+                const dx = this.pos.x - this._cachedTerrainPos.x;
+                const dy = this.pos.y - this._cachedTerrainPos.y;
+                const distSq = dx * dx + dy * dy;
+                needsUpdate = distSq > (this._terrainCacheDistance * this._terrainCacheDistance);
+            }
+            
+            if (needsUpdate) {
+                const terrainHeight = surfaceMode.terrain.getHeightAt(this.pos.x, this.pos.y);
+                if (terrainHeight !== null && terrainHeight !== undefined && !isNaN(terrainHeight)) {
+                    // Smooth interpolation to prevent jerky movement
+                    if (this._cachedTerrainHeight !== null) {
+                        const heightDiff = terrainHeight - this._cachedTerrainHeight;
+                        const maxChange = this._terrainInterpolationSpeed * dt;
+                        if (Math.abs(heightDiff) > maxChange) {
+                            // Interpolate gradually
+                            this._cachedTerrainHeight += Math.sign(heightDiff) * maxChange;
+                        } else {
+                            // Close enough, use exact value
+                            this._cachedTerrainHeight = terrainHeight;
+                        }
+                    } else {
+                        // First time, set directly
+                        this._cachedTerrainHeight = terrainHeight;
+                    }
+                    this._cachedTerrainPos = { x: this.pos.x, y: this.pos.y };
+                }
+            }
+            
+            // Use cached value
+            if (this._cachedTerrainHeight !== null) {
+                this.altitude = this._cachedTerrainHeight + this.flyingHeight;
                 // yOffset represents terrain height only (for Draw3D ground positioning)
                 // altitude is the full height above sea level for collision/aiming
-                this.yOffset = terrainHeight;
+                this.yOffset = this._cachedTerrainHeight;
             }
         }
 
         // Apply drag (enhanced by tangle effect)
-        this.speed *= Math.pow(0.95, dt * 60 * dragMultiplier);
+        // Optimize: Math.pow is expensive, use exponential decay formula
+        // For dt = 0.016 (60 fps), pow(0.95, dt*60) ≈ 0.95
+        // For general case, use exponential decay: e^(ln(0.95) * dt * 60)
+        // Which simplifies to: speed *= exp(k * dt) where k = 60 * ln(0.95)
+        const dragConstant = 60 * Math.log(0.95) * dragMultiplier; // More precise: -3.0776835 per multiplier
+        this.speed *= Math.exp(dragConstant * dt);
     }
 
     fire(starSystem, player) {
@@ -2552,11 +2624,11 @@ class DefenseDrone extends SurfaceObject {
                 ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
         }
 
-        // Damage flash
-        let flashColor = null;
-        if (this.lastHitTime && millis() - this.lastHitTime < 150) {
-            flashColor = color(255, 255, 255);
-        }
+        // Damage flash - use utility function
+        const damageFlash = (typeof shouldShowDamageFlash === 'function') 
+            ? shouldShowDamageFlash(this.lastHitTime)
+            : (this.lastHitTime && millis() - this.lastHitTime < 150);
+        const flashColor = damageFlash ? color(255, 255, 255) : null;
 
         // Health-based color
         const healthRatio = this.health / this.maxHealth;

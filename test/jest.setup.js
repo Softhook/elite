@@ -480,6 +480,95 @@ global.DRAG_EFFECT_DEFAULT_MULTIPLIER = 10.0;
 global.WEAPON_LOG = jest.fn();
 global.ENV_LOG = jest.fn();
 
+// ============================================
+// Surface Mode Utilities
+// ============================================
+
+// Surface object rendering constants
+global.SURFACE_RENDER_CONSTANTS = {
+    EXTRUSION_ANGLE: 0.5,
+    DEFAULT_SUN_ANGLE: -Math.PI / 4,
+    TWO_PI: Math.PI * 2,
+    DAMAGE_FLASH_DURATION: 150 // ms
+};
+
+global.SurfaceUtils = {
+    EXTRUSION_ANGLE: 0.5,
+    
+    getExtrusionAngle() {
+        return this.EXTRUSION_ANGLE;
+    },
+    
+    getPerspectiveScale(altitude) {
+        return 1200 / (altitude + 1000);
+    },
+    
+    toVisualX(worldX, altitude) {
+        return worldX - altitude * Math.sin(this.EXTRUSION_ANGLE);
+    },
+    
+    toVisualY(worldY, altitude) {
+        return worldY - altitude * Math.cos(this.EXTRUSION_ANGLE);
+    },
+    
+    projectToVisual(worldX, worldY, altitude) {
+        return {
+            x: this.toVisualX(worldX, altitude),
+            y: this.toVisualY(worldY, altitude)
+        };
+    },
+    
+    getViewportBounds(focusX, focusY, altitude, screenWidth, screenHeight, padding = 200) {
+        const perspectiveScale = this.getPerspectiveScale(altitude);
+        const extrusionAngle = this.getExtrusionAngle();
+
+        // Calculate visual offsets for the focus point
+        const visualXOffset = altitude * Math.sin(extrusionAngle);
+        const visualYOffset = altitude * Math.cos(extrusionAngle);
+
+        const adjustedFocusX = focusX - visualXOffset;
+        const adjustedFocusY = focusY - visualYOffset;
+
+        const viewportWidth = (screenWidth / perspectiveScale) + padding * 2;
+        const viewportHeight = (screenHeight / perspectiveScale) + padding * 2;
+
+        return {
+            minX: adjustedFocusX - viewportWidth / 2,
+            maxX: adjustedFocusX + viewportWidth / 2,
+            minY: adjustedFocusY - viewportHeight / 2,
+            maxY: adjustedFocusY + viewportHeight / 2
+        };
+    }
+};
+
+// Surface object utilities
+global.normalizeAngleDifference = (targetAngle, currentAngle) => {
+    let diff = targetAngle - currentAngle;
+    const TWO_PI = Math.PI * 2;
+    while (diff < -Math.PI) diff += TWO_PI;
+    while (diff > Math.PI) diff -= TWO_PI;
+    return diff;
+};
+
+global.smoothRotateTowards = (currentAngle, targetAngle, turnSpeed, dt) => {
+    const diff = global.normalizeAngleDifference(targetAngle, currentAngle);
+    const maxTurn = turnSpeed * dt;
+    
+    if (Math.abs(diff) <= maxTurn) {
+        return targetAngle;
+    }
+    
+    return currentAngle + Math.sign(diff) * maxTurn;
+};
+
+global.shouldShowDamageFlash = (lastHitTime, duration) => {
+    if (!lastHitTime || typeof millis !== 'function') return false;
+    // Use constant if duration not provided
+    const flashDuration = duration !== undefined ? duration : 
+        (global.SURFACE_RENDER_CONSTANTS ? global.SURFACE_RENDER_CONSTANTS.DAMAGE_FLASH_DURATION : 150);
+    return millis() - lastHitTime < flashDuration;
+};
+
 
 // ============================================
 // Helper: Clear all mocks between tests
