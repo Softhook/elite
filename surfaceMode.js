@@ -401,8 +401,9 @@ class SurfaceMode {
 
         console.log(`Surface state restored: ${this.destroyedCells.size} destroyed objects, ${this.playerBuiltMap.size} player-built structures.`);
 
-        // Save player position for return
-        this.savedPlayerPos = player.pos.copy();
+        // Save player position for return - ensure we capture the entry point
+        // Store the x and y values explicitly to ensure they're not affected by any reference issues
+        this.savedPlayerPos = createVector(player.pos.x, player.pos.y);
 
         // Initialize surface position to player's current position to prevent offsets
         this.surfaceX = player.pos.x;
@@ -1612,12 +1613,16 @@ class SurfaceMode {
                 // --- 1. SHIELD GENERATOR (Planet Boss) ---
                 // [CRITICAL FIX] Check for generator spawning FIRST, before zone or habitation checks.
                 // This ensures it ALWAYS spawns in its calculated valley, even on wilderness/uninhabited planets.
-                const isTargetCell = this.targetPos &&
-                    Math.abs(wx - this.targetPos.x) < cellSize / 2 &&
-                    Math.abs(wy - this.targetPos.y) < cellSize / 2;
+                // FIX: Use the actual target cell coordinates to ensure only ONE cell spawns the generator
+                const targetCellX = this.targetPos ? Math.floor(this.targetPos.x / SPAWN_CELL_SIZE) : null;
+                const targetCellY = this.targetPos ? Math.floor(this.targetPos.y / SPAWN_CELL_SIZE) : null;
+                const isTargetCell = targetCellX !== null && 
+                    activeGridX === targetCellX && 
+                    activeGridY === targetCellY;
 
                 if (isTargetCell && typeof ShieldGenerator !== 'undefined') {
-                    obj = new ShieldGenerator(wx, wy);
+                    // Create generator at the actual target position, not the cell center
+                    obj = new ShieldGenerator(this.targetPos.x, this.targetPos.y);
                     obj.yOffset = h;
                     obj.cellKey = cellKey;
                     this.surfaceObjects.push(obj);
@@ -2309,8 +2314,7 @@ class SurfaceMode {
      * Handle surface control key up - only altitude
      */
     handleKeyUp(keyCode, key) {
-        if (this.state !== SURFACE_STATE.ACTIVE) return false;
-
+        // Allow key releases in any state to prevent stuck keys during transitions
         if (key === 'z' || key === 'Z' || key === 'x' || key === 'X') {
             this.altitudeInput = 0; return true;
         }
