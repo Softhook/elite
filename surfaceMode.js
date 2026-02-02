@@ -57,7 +57,7 @@ const SURFACE_CONFIG = {
         MAX_SPEED: 150,
         ACCELERATION: 200,
         TURN_RATE: 2.5,
-        FIRE_RATE: 2,            // Seconds between shots
+        FIRE_RATE: 1.5,            // Seconds between shots
         PROJECTILE_SPEED: 12,
         PROJECTILE_DAMAGE: 8,
         HEALTH: 100
@@ -68,10 +68,10 @@ const SURFACE_CONFIG = {
         RANGE: 1000,
         DETECTION_HEIGHT_THRESHOLD: 50, // Radar altitude threshold for detection
         HEALTH: 150,
-        FIRE_RATE: 1.2,                 // Seconds between shots
+        FIRE_RATE: 2.0,                 // Seconds between shots
         TURN_SPEED: 5,                  // Radians per second factor
         PROJECTILE_SPEED: 15,
-        PROJECTILE_DAMAGE: 10,
+        PROJECTILE_DAMAGE: 5,
         PROJECTILE_LIFESPAN: 120
     },
 
