@@ -1711,9 +1711,7 @@ class SurfaceMode {
                                 obj = this._createFlora(economyType, wx, wy, objSeed);
                             }
                             // Fauna spawning - less common (2% density)
-                            const FAUNA_SPAWN_MIN = 0.92;
-                            const FAUNA_SPAWN_MAX = 0.94;
-                            else if (cellHash > FAUNA_SPAWN_MIN && cellHash < FAUNA_SPAWN_MAX) {
+                            else if (cellHash > 0.92 && cellHash < 0.94) {
                                 obj = this._createFauna(economyType, wx, wy, objSeed);
                             }
                         }
