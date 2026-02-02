@@ -236,19 +236,17 @@ class Explosion {
         let finalY = drawY;
 
         if (this.isSurface) {
-            const extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
-                ? surfaceMode._getExtrusionAngle()
-                : 0.5;
-
             const alt = this.altitude || 0;
-
-            finalX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
-                ? surfaceMode._toVisualX(drawX, alt)
-                : drawX - alt * Math.sin(extrusionAngle);
-
-            finalY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
-                ? surfaceMode._toVisualY(drawY, alt)
-                : drawY - alt * Math.cos(extrusionAngle);
+            
+            // Use shared SurfaceUtils if available, otherwise fallback to direct calculation
+            if (typeof SurfaceUtils !== 'undefined') {
+                finalX = SurfaceUtils.toVisualX(drawX, alt);
+                finalY = SurfaceUtils.toVisualY(drawY, alt);
+            } else {
+                const extrusionAngle = 0.5; // Fallback constant
+                finalX = drawX - alt * Math.sin(extrusionAngle);
+                finalY = drawY - alt * Math.cos(extrusionAngle);
+            }
         }
 
         push();

@@ -756,23 +756,59 @@ class WeaponSystem {
             end.set(hit.point.x, hit.point.y);
         }
 
+        // Check if we're in surface mode
+        const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
+        
+        // In surface mode, convert coordinates to visual space for consistent rendering
+        // The hit detection already works in visual space, so we need start to match
+        let beamStartX = start.x;
+        let beamStartY = start.y;
+        let beamEndX = end.x;
+        let beamEndY = end.y;
+        
+        if (inSurfaceMode && owner) {
+            const ownerAlt = owner.altitude || 0;
+            if (typeof SurfaceUtils !== 'undefined') {
+                beamStartX = SurfaceUtils.toVisualX(start.x, ownerAlt);
+                beamStartY = SurfaceUtils.toVisualY(start.y, ownerAlt);
+            } else {
+                const extrusionAngle = 0.5;
+                beamStartX = start.x - ownerAlt * Math.sin(extrusionAngle);
+                beamStartY = start.y - ownerAlt * Math.cos(extrusionAngle);
+            }
+            // If we hit something, end is already in visual coordinates from hit detection
+            // If we didn't hit anything, convert the default end to visual coordinates
+            if (!hit.target) {
+                if (typeof SurfaceUtils !== 'undefined') {
+                    beamEndX = SurfaceUtils.toVisualX(end.x, ownerAlt);
+                    beamEndY = SurfaceUtils.toVisualY(end.y, ownerAlt);
+                } else {
+                    const extrusionAngle = 0.5;
+                    beamEndX = end.x - ownerAlt * Math.sin(extrusionAngle);
+                    beamEndY = end.y - ownerAlt * Math.cos(extrusionAngle);
+                }
+            }
+        }
+        
         // Store beam info for drawing - reuse lastBeam if possible
         if (!owner.lastBeam) {
             owner.lastBeam = {
-                start: createVector(start.x, start.y),
-                end: createVector(end.x, end.y),
+                start: createVector(beamStartX, beamStartY),
+                end: createVector(beamEndX, beamEndY),
                 color: weapon?.color || [255, 0, 0],
                 time: millis(),
                 hit: hit.target !== null,
-                targetAltitude: (hit.target && hit.target.altitude !== undefined) ? hit.target.altitude : 0
+                targetAltitude: (hit.target && hit.target.altitude !== undefined) ? hit.target.altitude : 0,
+                inSurfaceMode: inSurfaceMode // Flag to indicate coordinate system
             };
         } else {
-            owner.lastBeam.start.set(start.x, start.y);
-            owner.lastBeam.end.set(end.x, end.y);
+            owner.lastBeam.start.set(beamStartX, beamStartY);
+            owner.lastBeam.end.set(beamEndX, beamEndY);
             owner.lastBeam.color = weapon?.color || [255, 0, 0],
                 owner.lastBeam.time = millis();
             owner.lastBeam.hit = hit.target !== null;
             owner.lastBeam.targetAltitude = (hit.target && hit.target.altitude !== undefined) ? hit.target.altitude : 0;
+            owner.lastBeam.inSurfaceMode = inSurfaceMode; // Flag to indicate coordinate system
         }
 
         // Handle hit effects
@@ -811,10 +847,24 @@ class WeaponSystem {
         let minDist = beamLength;
 
         // Snapshot cache values to avoid race conditions with multiple beams
-        const startX = start.x;
-        const startY = start.y;
+        let startX = start.x;
+        let startY = start.y;
         const dirX = dir.x;
         const dirY = dir.y;
+        
+        // In surface mode, convert beam start to visual coordinates
+        const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
+        if (inSurfaceMode && owner) {
+            const ownerAlt = owner.altitude || 0;
+            if (typeof SurfaceUtils !== 'undefined') {
+                startX = SurfaceUtils.toVisualX(startX, ownerAlt);
+                startY = SurfaceUtils.toVisualY(startY, ownerAlt);
+            } else {
+                const extrusionAngle = 0.5;
+                startX -= ownerAlt * Math.sin(extrusionAngle);
+                startY -= ownerAlt * Math.cos(extrusionAngle);
+            }
+        }
 
         defaultEnd.set(startX + dirX * beamLength, startY + dirY * beamLength);
 
@@ -823,8 +873,24 @@ class WeaponSystem {
             if (radius <= 0) return;
             if (typeof target.isDestroyed === 'function' && target.isDestroyed()) return;
 
-            const relX = target.pos.x - startX;
-            const relY = target.pos.y - startY;
+            // Get target position (convert to visual coordinates in surface mode)
+            let targetX = target.pos.x;
+            let targetY = target.pos.y;
+            
+            if (inSurfaceMode) {
+                const targetAlt = target.altitude || target.yOffset || 0;
+                if (typeof SurfaceUtils !== 'undefined') {
+                    targetX = SurfaceUtils.toVisualX(targetX, targetAlt);
+                    targetY = SurfaceUtils.toVisualY(targetY, targetAlt);
+                } else {
+                    const extrusionAngle = 0.5;
+                    targetX -= targetAlt * Math.sin(extrusionAngle);
+                    targetY -= targetAlt * Math.cos(extrusionAngle);
+                }
+            }
+
+            const relX = targetX - startX;
+            const relY = targetY - startY;
             const projLength = relX * dirX + relY * dirY;
 
             if (projLength <= 0 || projLength > minDist) return;
@@ -1002,7 +1068,7 @@ class WeaponSystem {
 
         // Find nearest enemy if player is firing
         if (owner instanceof Player) {
-            // Surface mode filter: target surface objects instead of space enemies in surface mode
+            // Surface mode filter: target hostile surface objects (turrets, drones)
             if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
                 const surfaceObjects = surfaceMode.surfaceObjects;
                 if (!surfaceObjects || surfaceObjects.length === 0) return null;
@@ -1015,6 +1081,10 @@ class WeaponSystem {
                 for (let i = 0, len = surfaceObjects.length; i < len; i++) {
                     const obj = surfaceObjects[i];
                     if (!obj?.pos || obj.destroyed) continue;
+                    
+                    // Only target hostile objects (turrets and drones)
+                    const isHostile = (obj.type === 'Turret' || obj.type === 'Defense Drone');
+                    if (!isHostile) continue;
 
                     const dx = obj.pos.x - ownerX;
                     const dy = obj.pos.y - ownerY;
@@ -1207,6 +1277,13 @@ class WeaponSystem {
         const mine = new Mine(dropX, dropY, owner, damage, blastRadius, triggerRadius, color, health);
         mine.system = system;
 
+        // Apply surface mode properties if in surface mode
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+            mine.isSurface = true;
+            mine.altitude = owner.altitude || 0;
+            mine.startAltitude = mine.altitude;
+        }
+
         // Enforce 5-mine limit per owner
         // Initialize activeMines array if it doesn't exist
         if (!owner.activeMines) {
@@ -1345,9 +1422,38 @@ class WeaponSystem {
             return;
         }
 
-        // Calculate angle to target - use atan2 directly (Math. is faster than p5)
-        const dx = target.pos.x - owner.pos.x;
-        const dy = target.pos.y - owner.pos.y;
+        // Calculate angle to target
+        // In surface mode, use visual coordinates to account for altitude projection
+        let dx, dy;
+        
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+            // Get altitudes
+            const ownerAlt = owner.altitude || 0;
+            const targetAlt = target.altitude || target.yOffset || 0;
+            
+            // Convert to visual coordinates
+            let ownerVisualX, ownerVisualY, targetVisualX, targetVisualY;
+            if (typeof SurfaceUtils !== 'undefined') {
+                ownerVisualX = SurfaceUtils.toVisualX(owner.pos.x, ownerAlt);
+                ownerVisualY = SurfaceUtils.toVisualY(owner.pos.y, ownerAlt);
+                targetVisualX = SurfaceUtils.toVisualX(target.pos.x, targetAlt);
+                targetVisualY = SurfaceUtils.toVisualY(target.pos.y, targetAlt);
+            } else {
+                const extrusionAngle = 0.5;
+                ownerVisualX = owner.pos.x - ownerAlt * Math.sin(extrusionAngle);
+                ownerVisualY = owner.pos.y - ownerAlt * Math.cos(extrusionAngle);
+                targetVisualX = target.pos.x - targetAlt * Math.sin(extrusionAngle);
+                targetVisualY = target.pos.y - targetAlt * Math.cos(extrusionAngle);
+            }
+            
+            dx = targetVisualX - ownerVisualX;
+            dy = targetVisualY - ownerVisualY;
+        } else {
+            // Normal space mode - use world coordinates
+            dx = target.pos.x - owner.pos.x;
+            dy = target.pos.y - owner.pos.y;
+        }
+        
         const angleToTarget = atan2(dy, dx);
 
         // Update turret firing angle for visual sync
@@ -1394,6 +1500,28 @@ class WeaponSystem {
             target.lastShieldHitTime = millis();
         }
 
+        // Determine if we're in surface mode
+        const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
+        
+        // In surface mode, hit point from beam detection is in visual coordinates
+        // We need to convert back to world coordinates for explosions and sounds
+        let worldHitX = hitPoint.x;
+        let worldHitY = hitPoint.y;
+        
+        if (inSurfaceMode && target) {
+            const targetAlt = (target.altitude !== undefined) ? target.altitude : (target.yOffset ? target.yOffset : 0);
+            // Visual to world: add back the altitude offset
+            if (typeof SurfaceUtils !== 'undefined') {
+                const extrusionAngle = SurfaceUtils.getExtrusionAngle();
+                worldHitX = hitPoint.x + targetAlt * Math.sin(extrusionAngle);
+                worldHitY = hitPoint.y + targetAlt * Math.cos(extrusionAngle);
+            } else {
+                const extrusionAngle = 0.5;
+                worldHitX = hitPoint.x + targetAlt * Math.sin(extrusionAngle);
+                worldHitY = hitPoint.y + targetAlt * Math.cos(extrusionAngle);
+            }
+        }
+
         // Play a lightweight hit sound when shields absorb damage (throttled)
         if (targetHasShield) {
             try {
@@ -1401,7 +1529,7 @@ class WeaponSystem {
                 const last = target._lastShieldHitSoundTime || 0;
                 if (now - last > 150) { // throttle to avoid spam on beams/rapid fire
                     if (soundManager && player?.pos) {
-                        soundManager.playWorldSound('hit', hitPoint.x, hitPoint.y, player.pos, target);
+                        soundManager.playWorldSound('hit', worldHitX, worldHitY, player.pos, target);
                     }
                     target._lastShieldHitSoundTime = now;
                 }
@@ -1428,16 +1556,13 @@ class WeaponSystem {
                         [255, 0, 0];
             }
 
-            // Surface mode filter: pass isSurface flag so explosions render in surface mode
-            const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
-
             if (inSurfaceMode && typeof surfaceMode._createSurfaceExplosion === 'function') {
                 // Pass world coordinates and target altitude to the specialized surface explosion creator
                 const altitude = (target && target.altitude !== undefined) ? target.altitude : (target && target.yOffset ? target.yOffset : 0);
-                surfaceMode._createSurfaceExplosion(hitPoint.x, hitPoint.y, altitude, hitSize, hitColor);
+                surfaceMode._createSurfaceExplosion(worldHitX, worldHitY, altitude, hitSize, hitColor);
             } else if (system.addExplosion) {
                 // Fallback for space mode or if surfaceMode helper is missing
-                system.addExplosion(hitPoint.x, hitPoint.y, hitSize, hitColor, inSurfaceMode);
+                system.addExplosion(worldHitX, worldHitY, hitSize, hitColor, inSurfaceMode);
             }
         }
     }

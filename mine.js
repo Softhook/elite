@@ -88,7 +88,9 @@ class Mine {
 
         // Create explosion visual effect
         if (system && system.addExplosion) {
-            system.addExplosion(this.pos.x, this.pos.y, this.blastRadius / 10, this.color);
+            const isSurface = this.isSurface || false;
+            const altitude = this.altitude || 0;
+            system.addExplosion(this.pos.x, this.pos.y, this.blastRadius / 10, this.color, isSurface, false, altitude);
         }
 
         // Play explosion sound
@@ -190,7 +192,18 @@ class Mine {
         if (this.destroyed) return;
 
         push();
-        translate(this.pos.x, this.pos.y);
+        
+        // Apply altitude projection for surface mode
+        let drawX = this.pos.x;
+        let drawY = this.pos.y;
+        
+        if (this.isSurface && typeof SurfaceUtils !== 'undefined') {
+            const alt = this.altitude || 0;
+            drawX = SurfaceUtils.toVisualX(this.pos.x, alt);
+            drawY = SurfaceUtils.toVisualY(this.pos.y, alt);
+        }
+        
+        translate(drawX, drawY);
 
         // Visual indication of arming state
         if (!this.armed) {

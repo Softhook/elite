@@ -16,7 +16,7 @@ const SURFACE_CONFIG = {
 
     // Terrain mesh
     MESH_RESOLUTION: 160,      // Grid resolution (increased for better detail)
-    MESH_SIZE: 4200,           // World units covered (centered on camera focus)
+    MESH_SIZE: 6000,           // World units covered (increased to prevent edge visibility at MAX_ALTITUDE)
     SPAWN_CELL_SIZE: 35,       // Fixed spawn density (independent of resolution)
     DEFAULT_FEATURE_SEED: 12345, // Fallback seed for terrain generation
     HIGH_TERRAIN_THRESHOLD: 350, // Height (0-500) treated as high ground for defenses
@@ -33,6 +33,17 @@ const SURFACE_CONFIG = {
     // Shadow rendering
     SHADOW_BASE_OFFSET: 20,    // Base shadow offset distance
     SHADOW_ALTITUDE_SCALE: 0.15, // Shadow offset multiplier per altitude unit
+
+    // EVA and boarding
+    BOARDING_RANGE: 30,         // Distance within which player can board ship
+    REEBOARD_COOLDOWN: 2.0,     // Seconds before allowing re-boarding after disembark
+    HAB_UNIT_SIZE: 60,          // Standard size for hab units
+    
+    // Terrain detection
+    CANYON_DETECTION_DISTANCE: 400, // Distance to check for canyon edges
+    
+    // Cache cleanup
+    CACHE_CLEANUP_INTERVAL: 600, // Frames between cache cleanup operations
 
     // Defense Drone Configuration
     DRONE: {
@@ -165,62 +176,56 @@ class SurfaceMode {
 
     // ============================================
     // DRY Helper Methods - Shared Calculations
+    // Delegate to SurfaceUtils for consistency across surface-aware entities
     // ============================================
 
     /**
      * Calculate perspective scale factor based on altitude
-     * Simulates real perspective where distant objects appear smaller (scale ~ 1/distance)
-     * Scaling factors:
-     * - At alt 10: scale ~1.2 (close objects appear larger)
-     * - At alt 1000: scale ~0.6 (medium distance)
-     * - At alt 5000: scale ~0.2 (far objects appear smaller)
      * @returns {number} Scale factor for rendering
      * @private
      */
     _getPerspectiveScale() {
-        // Inverse scaling: simulation of real perspective (scale ~ 1/distance)
-        // Tuned: At alt 10, scale ~1.2. At alt 1000, scale ~0.6. At 5000, scale ~0.2.
-        return 1200 / (this.altitude + 1000);
+        return SurfaceUtils.getPerspectiveScale(this.altitude);
     }
 
     /**
-     * Calculate counter-scale factor to maintain constant screen size for UI elements
-     * This is the inverse of perspective scale - objects drawn with this stay same size
+     * Calculate counter-scale factor to maintain constant screen size
      * @returns {number} Counter-scale factor (inverse of perspective scale)
      * @private
      */
     _getCounterScale() {
-        return 1 / this._getPerspectiveScale();
+        return SurfaceUtils.getCounterScale(this.altitude);
     }
 
     /**
-     * Centralized extrusion angle for pseudo-3D projection.
-     * Keep all projection math consistent by using this helper.
+     * Get extrusion angle for pseudo-3D projection
+     * @returns {number} Extrusion angle in radians
+     * @private
      */
     _getExtrusionAngle() {
-        return (SURFACE_CONFIG.EXTRUSION_ANGLE !== undefined) ? SURFACE_CONFIG.EXTRUSION_ANGLE : 0.5;
+        return SurfaceUtils.getExtrusionAngle();
     }
 
     /**
-     * Convert a world X plus altitude into projected visual X.
-     * @param {number} worldX
-     * @param {number} altitude
-     * @returns {number}
+     * Convert world X coordinate to visual X coordinate
+     * @param {number} worldX - World X coordinate
+     * @param {number} altitude - Altitude above terrain (default: 0)
+     * @returns {number} Visual X coordinate
      * @private
      */
     _toVisualX(worldX, altitude = 0) {
-        return worldX - (altitude * Math.sin(this._getExtrusionAngle()));
+        return SurfaceUtils.toVisualX(worldX, altitude);
     }
 
     /**
-     * Convert a world Y plus altitude into projected visual Y.
-     * @param {number} worldY
-     * @param {number} altitude
-     * @returns {number}
+     * Convert world Y coordinate to visual Y coordinate
+     * @param {number} worldY - World Y coordinate
+     * @param {number} altitude - Altitude above terrain (default: 0)
+     * @returns {number} Visual Y coordinate
      * @private
      */
     _toVisualY(worldY, altitude = 0) {
-        return worldY - (altitude * Math.cos(this._getExtrusionAngle()));
+        return SurfaceUtils.toVisualY(worldY, altitude);
     }
 
     /**
@@ -233,6 +238,16 @@ class SurfaceMode {
             drawingContext.shadowBlur = 0;
             drawingContext.shadowColor = 'transparent';
         }
+    }
+
+    /**
+     * Check if projectile is valid and should be processed
+     * @param {Object} proj - Projectile to validate
+     * @returns {boolean} True if projectile is valid and active
+     * @private
+     */
+    _isProjectileValid(proj) {
+        return proj && !proj.destroyed && proj.isSurface && proj.pos;
     }
 
     /**
@@ -299,7 +314,7 @@ class SurfaceMode {
             const hCenter = this.terrain.getHeightAt(tx, ty);
 
             // Sample 4 surrounding points to check for canyon walls
-            const wallDist = 400;
+            const wallDist = SURFACE_CONFIG.CANYON_DETECTION_DISTANCE;
             const h1 = this.terrain.getHeightAt(tx + wallDist, ty);
             const h2 = this.terrain.getHeightAt(tx - wallDist, ty);
             const h3 = this.terrain.getHeightAt(tx, ty + wallDist);
@@ -673,6 +688,7 @@ class SurfaceMode {
             if (this.surfaceObjects) {
                 const target = this.controlMode === 'ASTRONAUT' ? this.astronaut : this.player;
                 for (let obj of this.surfaceObjects) {
+                    if (!obj || obj.destroyed) continue;
                     if (obj.update) obj.update(dt, target, this.starSystem);
                 }
             }
@@ -927,7 +943,7 @@ class SurfaceMode {
         this.player.turnInput = 0;
 
         // Set cooldown to prevent immediate re-disembark logic
-        this.reboardCooldown = 2.0; // 2 Seconds buffer
+        this.reboardCooldown = SURFACE_CONFIG.REEBOARD_COOLDOWN;
 
         // Message
         if (typeof uiManager !== 'undefined') {
@@ -998,7 +1014,7 @@ class SurfaceMode {
         // Only board if not moving (to avoid accidental trigger while walking past)
         if (!isMoving) {
             const dist = p5.Vector.dist(this.astronaut.pos, this.player.pos);
-            if (dist < 30) { // Boarding range (Reduced to prevent instant re-boarding)
+            if (dist < SURFACE_CONFIG.BOARDING_RANGE) {
                 this.boardShip();
                 return; // Immediately return to avoid using this.astronaut after it was nulled
             }
@@ -1008,7 +1024,7 @@ class SurfaceMode {
         // open the Base Services menu.
         if (this.surfaceObjects && Array.isArray(this.surfaceObjects) && this.astronaut && this.astronaut.pos) {
             for (const obj of this.surfaceObjects) {
-                if (!obj || obj.destroyed) continue;
+                if (!obj || obj.destroyed || !obj.pos) continue;
                 const isOffworld = (obj.constructor && obj.constructor.name === 'OffworldBuilding') || (obj.type === 'OffworldBuilding');
                 if (!isOffworld) continue;
                 if (!obj.playerBuilt) continue;
@@ -1049,13 +1065,13 @@ class SurfaceMode {
         const groundH = this._getTerrainHeightAt(bx, by);
 
         // Check for collisions with nearby surface objects
-        const minClearance = 60; // minimum distance from other objects
+        const minClearance = SURFACE_CONFIG.HAB_UNIT_SIZE;
         for (const obj of this.surfaceObjects) {
-            if (!obj || obj.destroyed) continue;
+            if (!obj || obj.destroyed || !obj.pos) continue;
             const dx = obj.pos.x - bx;
             const dy = obj.pos.y - by;
             const distSq = dx * dx + dy * dy;
-            const safeDist = Math.pow((obj.size || 40) / 2 + minClearance, 2);
+            const safeDist = ((obj.size || 40) / 2 + minClearance) ** 2;
             if (distSq < safeDist) {
                 if (typeof uiManager !== 'undefined') uiManager.addMessage('Not enough space to build here', [255, 160, 100]);
                 return;
@@ -1179,7 +1195,7 @@ class SurfaceMode {
     /**
      * Calculate viewport bounds for culling based on altitude and player position
      * @param {number} padding - Extra padding to avoid pop-in at edges (default: 200)
-     * @returns {{left: number, right: number, top: number, bottom: number}} Viewport bounds
+     * @returns {{minX: number, maxX: number, minY: number, maxY: number}} Viewport bounds
      * @private
      */
     _getViewportBounds(padding = 200) {
@@ -1187,26 +1203,14 @@ class SurfaceMode {
             return { minX: 0, maxX: width, minY: 0, maxY: height };
         }
 
-        const perspectiveScale = this._getPerspectiveScale();
-        const extrusionAngle = this._getExtrusionAngle();
-
-        // Calculate the camera focus point in world coordinates
-        // This is where the camera is actually looking, accounting for altitude extrusion
-        const visualXOffset = this.altitude * Math.sin(extrusionAngle);
-        const visualYOffset = this.altitude * Math.cos(extrusionAngle);
-
-        const focusX = this.surfaceX - visualXOffset;
-        const focusY = this.surfaceY - visualYOffset; // Corrected: ship center is focal point
-
-        const viewportWidth = (width / perspectiveScale) + padding * 2;
-        const viewportHeight = (height / perspectiveScale) + padding * 2;
-
-        return {
-            minX: focusX - viewportWidth / 2,
-            maxX: focusX + viewportWidth / 2,
-            minY: focusY - viewportHeight / 2,
-            maxY: focusY + viewportHeight / 2
-        };
+        return SurfaceUtils.getViewportBounds(
+            this.surfaceX, 
+            this.surfaceY, 
+            this.altitude,
+            width,
+            height,
+            padding
+        );
     }
 
     /**
@@ -1227,24 +1231,12 @@ class SurfaceMode {
      */
     _checkProjectileTerrainCollisions() {
         for (let proj of this.starSystem.projectiles) {
-            if (!proj || proj.destroyed) continue;
-            if (!proj.isSurface) continue;
+            if (!this._isProjectileValid(proj)) continue;
 
             const projPos = proj.pos;
 
-            // REMOVED: Altitude interpolation causes visual offset
-            // Projectiles should maintain constant altitude set at spawn
-
-            // DISABLED: Terrain collision for projectiles
-            // Projectiles are energy weapons traveling through air - they shouldn't hit terrain
-            // This was causing player projectiles at low altitude to hit terrain immediately
-            // const terrainH = this._getTerrainHeightAt(projPos.x, projPos.y);
-            // const projAlt = proj.altitude || 0;
-            // 
-            // if (projAlt <= terrainH + 2) {
-            //     this._createSurfaceExplosion(projPos.x, projPos.y, terrainH, 8, [255, 100, 50], true);
-            //     proj.destroyed = true;
-            // }
+            // Terrain collision disabled: Projectiles are energy weapons traveling through air
+            // They should not hit terrain immediately at low altitude
         }
     }
 
@@ -1256,15 +1248,14 @@ class SurfaceMode {
         if (!this.surfaceObjects || this.surfaceObjects.length === 0) return;
 
         for (let proj of this.starSystem.projectiles) {
-            if (!proj || proj.destroyed) continue;
-            if (!proj.isSurface) continue;
+            if (!this._isProjectileValid(proj)) continue;
             if (proj.owner !== this.player) continue;
 
             const projPos = proj.pos;
             const projAlt = proj.altitude || 0;
 
             for (let obj of this.surfaceObjects) {
-                if (!obj || obj.destroyed) continue;
+                if (!obj || obj.destroyed || !obj.pos) continue;
 
                 // Use VISUAL coordinates for collision (what the player sees on screen)
                 const objAlt = obj.altitude || obj.yOffset || 0; // Needed for debug logging
@@ -1298,6 +1289,19 @@ class SurfaceMode {
                 if (distSq < hitRadiusSq) {
 
                     obj.takeDamage(proj.damage || 10);
+                    
+                    // Apply tangle effect if this is a tangle projectile
+                    if (proj.type === 'tangle' && typeof obj.applyDragEffect === 'function') {
+                        obj.applyDragEffect(
+                            proj.tangleDuration || 5.0,
+                            proj.dragMultiplier || 10.0,
+                            proj.rotationBlockMultiplier || 0.1
+                        );
+                        if (typeof uiManager !== 'undefined' && uiManager) {
+                            uiManager.addMessage(`${obj.getDisplayName()} caught in energy tangle!`, "#30FFB4");
+                        }
+                    }
+                    
                     proj.destroyed = true;
 
                     // Create explosion at the visual impact point using unified standard
@@ -1321,8 +1325,7 @@ class SurfaceMode {
         if (!target || target.destroyed) return;
 
         for (let proj of this.starSystem.projectiles) {
-            if (!proj || proj.destroyed) continue;
-            if (!proj.isSurface) continue;
+            if (!this._isProjectileValid(proj)) continue;
             // Don't hit self
             if (proj.owner === target || proj.owner === this.player) continue;
 
@@ -1417,6 +1420,7 @@ class SurfaceMode {
         this._drawSurfaceObjects();
         this._drawExplosions();
         this._drawProjectiles();
+        this._drawMines();
 
         // Draw beam and force wave effects (no projectile, direct rendering)
         this._drawBeams();
@@ -1619,7 +1623,7 @@ class SurfaceMode {
 
                         // Calculate defense density using helper method
                         const distToTargetSq = isNearTarget ? 
-                            Math.pow(wx - this.targetPos.x, 2) + Math.pow(wy - this.targetPos.y, 2) : 0;
+                            (wx - this.targetPos.x) ** 2 + (wy - this.targetPos.y) ** 2 : 0;
                         const defenseDensity = this._calculateDefenseDensity(
                             economyType, 
                             techLevel, 
@@ -1673,7 +1677,7 @@ class SurfaceMode {
         }
 
         // Periodically clean cache to prevent memory leak (remove distant objects)
-        if (frameCount % 600 === 0) {
+        if (frameCount % SURFACE_CONFIG.CACHE_CLEANUP_INTERVAL === 0) {
             const keepRadius = spawnResolution * 1.5;
             const centerSpawnGridX = Math.floor(gridX * (SURFACE_CONFIG.MESH_SIZE / SURFACE_CONFIG.MESH_RESOLUTION) / SPAWN_CELL_SIZE);
             const centerSpawnGridY = Math.floor(gridY * (SURFACE_CONFIG.MESH_SIZE / SURFACE_CONFIG.MESH_RESOLUTION) / SPAWN_CELL_SIZE);
@@ -1872,6 +1876,29 @@ class SurfaceMode {
         pop();
     }
 
+    /**
+     * Draw mines at their world positions
+     * @private
+     */
+    _drawMines() {
+        if (!this.starSystem || !this.starSystem.mines) return;
+        
+        const mines = this.starSystem.mines;
+        if (mines.length === 0) return;
+
+        push();
+        this._clearShadow();
+
+        for (const mine of mines) {
+            if (mine && !mine.destroyed && typeof mine.draw === 'function') {
+                // Mine.draw() already handles altitude projection via SurfaceUtils
+                mine.draw();
+            }
+        }
+
+        pop();
+    }
+
     _drawExplosions() {
         if (!this.starSystem || !this.starSystem.explosions) return;
         if (!this.player) return;
@@ -1930,26 +1957,42 @@ class SurfaceMode {
         // Clear shadow settings to prevent visual artifacts
         this._clearShadow();
 
-        // Calculate visual offsets for beam ends
-        const extrusionAngle = this._getExtrusionAngle();
-        // Start always matches the player's visual height
-        const activeAlt = (this.controlMode === 'SHIP') ? (this.player.altitude || this.altitude) : (this.astronaut.altitude || 0);
-        const startAltOffset = activeAlt * Math.cos(extrusionAngle);
-        // End matches target altitude (if known) or ground
-        const endAltOffset = (beam.targetAltitude || 0) * Math.cos(extrusionAngle);
+        let vStartX, vStartY, vEndX, vEndY;
+        
+        // Check if beam coordinates are already in visual space (surface mode beam)
+        if (beam.inSurfaceMode) {
+            // Beam was fired in surface mode - coordinates are already visual
+            vStartX = beam.start.x;
+            vStartY = beam.start.y;
+            vEndX = beam.end.x;
+            vEndY = beam.end.y;
+        } else {
+            // Beam was fired in space mode or legacy - convert world to visual coordinates
+            const extrusionAngle = this._getExtrusionAngle();
+            // Start always matches the player's visual height
+            const activeAlt = (this.controlMode === 'SHIP') ? (this.player.altitude || this.altitude) : (this.astronaut.altitude || 0);
+            const startXOffset = activeAlt * Math.sin(extrusionAngle);
+            const startYOffset = activeAlt * Math.cos(extrusionAngle);
+            // End matches target altitude (if known) or ground
+            const endAlt = beam.targetAltitude || 0;
+            const endXOffset = endAlt * Math.sin(extrusionAngle);
+            const endYOffset = endAlt * Math.cos(extrusionAngle);
 
-        const vStartY = beam.start.y - startAltOffset;
-        const vEndY = beam.end.y - endAltOffset;
+            vStartX = beam.start.x - startXOffset;
+            vStartY = beam.start.y - startYOffset;
+            vEndX = beam.end.x - endXOffset;
+            vEndY = beam.end.y - endYOffset;
+        }
 
         // Draw main beam line
         stroke(beam.color);
         strokeWeight(3 * counterScale);
-        line(beam.start.x, vStartY, beam.end.x, vEndY);
+        line(vStartX, vStartY, vEndX, vEndY);
 
         // Draw glow effect
         stroke(beam.color[0], beam.color[1], beam.color[2], 100);
         strokeWeight(6 * counterScale);
-        line(beam.start.x, vStartY, beam.end.x, vEndY);
+        line(vStartX, vStartY, vEndX, vEndY);
 
         pop();
     }

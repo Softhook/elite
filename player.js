@@ -1436,10 +1436,18 @@ class Player {
             // If a target is locked (effectiveTarget is valid), the missile will home.
             // No explicit check needed here to prevent firing.
         } else if (this.currentWeapon.type === WEAPON_TYPE.BEAM && this === player) { // Player aims beams with mouse
-            // Convert screen mouse position to world coordinates
-            const worldMx = mouseX + (this.pos.x - width / 2);
-            const worldMy = mouseY + (this.pos.y - height / 2);
-            fireAngle = atan2(worldMy - this.pos.y, worldMx - this.pos.x);
+            // In surface mode, beam works in screen space - ship is at screen center, aim at cursor
+            if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+                // Simple: ship at screen center, aim at mouse position
+                const dx = mouseX - width / 2;
+                const dy = mouseY - height / 2;
+                fireAngle = atan2(dy, dx);
+            } else {
+                // Normal space mode - convert screen mouse position to world coordinates
+                const worldMx = mouseX + (this.pos.x - width / 2);
+                const worldMy = mouseY + (this.pos.y - height / 2);
+                fireAngle = atan2(worldMy - this.pos.y, worldMx - this.pos.x);
+            }
         }
         // For turrets, WeaponSystem.fireTurret handles its own aiming if no target is passed.
         // If a target is passed (effectiveTarget), it will be used.
