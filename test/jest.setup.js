@@ -533,6 +533,31 @@ global.SurfaceUtils = {
     }
 };
 
+// Surface object utilities
+global.normalizeAngleDifference = (targetAngle, currentAngle) => {
+    let diff = targetAngle - currentAngle;
+    const TWO_PI = Math.PI * 2;
+    while (diff < -Math.PI) diff += TWO_PI;
+    while (diff > Math.PI) diff -= TWO_PI;
+    return diff;
+};
+
+global.smoothRotateTowards = (currentAngle, targetAngle, turnSpeed, dt) => {
+    const diff = global.normalizeAngleDifference(targetAngle, currentAngle);
+    const maxTurn = turnSpeed * dt;
+    
+    if (Math.abs(diff) <= maxTurn) {
+        return targetAngle;
+    }
+    
+    return currentAngle + Math.sign(diff) * maxTurn;
+};
+
+global.shouldShowDamageFlash = (lastHitTime, duration = 150) => {
+    if (!lastHitTime || typeof millis !== 'function') return false;
+    return millis() - lastHitTime < duration;
+};
+
 
 // ============================================
 // Helper: Clear all mocks between tests

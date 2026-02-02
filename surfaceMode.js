@@ -44,6 +44,10 @@ const SURFACE_CONFIG = {
     
     // Cache cleanup
     CACHE_CLEANUP_INTERVAL: 600, // Frames between cache cleanup operations
+    
+    // Performance
+    UPDATE_RANGE: 2000,         // Max distance for object updates (units)
+    BEAM_DISPLAY_DURATION: 150, // Beam visual duration (ms)
 
     // Defense Drone Configuration
     DRONE: {
@@ -689,8 +693,8 @@ class SurfaceMode {
             if (this.surfaceObjects) {
                 const target = this.controlMode === 'ASTRONAUT' ? this.astronaut : this.player;
                 
-                // Get viewport for culling (use generous padding for update range)
-                const updateRange = 2000; // Update objects within 2000 units of player
+                // Get viewport for culling (use constant from config)
+                const updateRange = SURFACE_CONFIG.UPDATE_RANGE || 2000;
                 const updateRangeSq = updateRange * updateRange;
                 
                 let objectsUpdated = 0;
@@ -1976,8 +1980,9 @@ class SurfaceMode {
         const beam = this.player.lastBeam;
         const now = millis();
 
-        // Only draw if beam was recently fired (within 150ms)
-        if (now - beam.time >= 150) return;
+        // Only draw if beam was recently fired (use constant from config)
+        const beamDuration = SURFACE_CONFIG.BEAM_DISPLAY_DURATION || 150;
+        if (now - beam.time >= beamDuration) return;
 
         // Calculate scale to maintain constant beam thickness
         const counterScale = this._getCounterScale();
