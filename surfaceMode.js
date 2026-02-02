@@ -1956,21 +1956,32 @@ class SurfaceMode {
         // Clear shadow settings to prevent visual artifacts
         this._clearShadow();
 
-        // Calculate visual offsets for beam ends (both X and Y for proper altitude projection)
-        const extrusionAngle = this._getExtrusionAngle();
-        // Start always matches the player's visual height
-        const activeAlt = (this.controlMode === 'SHIP') ? (this.player.altitude || this.altitude) : (this.astronaut.altitude || 0);
-        const startXOffset = activeAlt * Math.sin(extrusionAngle);
-        const startYOffset = activeAlt * Math.cos(extrusionAngle);
-        // End matches target altitude (if known) or ground
-        const endAlt = beam.targetAltitude || 0;
-        const endXOffset = endAlt * Math.sin(extrusionAngle);
-        const endYOffset = endAlt * Math.cos(extrusionAngle);
+        let vStartX, vStartY, vEndX, vEndY;
+        
+        // Check if beam coordinates are already in visual space (surface mode beam)
+        if (beam.inSurfaceMode) {
+            // Beam was fired in surface mode - coordinates are already visual
+            vStartX = beam.start.x;
+            vStartY = beam.start.y;
+            vEndX = beam.end.x;
+            vEndY = beam.end.y;
+        } else {
+            // Beam was fired in space mode or legacy - convert world to visual coordinates
+            const extrusionAngle = this._getExtrusionAngle();
+            // Start always matches the player's visual height
+            const activeAlt = (this.controlMode === 'SHIP') ? (this.player.altitude || this.altitude) : (this.astronaut.altitude || 0);
+            const startXOffset = activeAlt * Math.sin(extrusionAngle);
+            const startYOffset = activeAlt * Math.cos(extrusionAngle);
+            // End matches target altitude (if known) or ground
+            const endAlt = beam.targetAltitude || 0;
+            const endXOffset = endAlt * Math.sin(extrusionAngle);
+            const endYOffset = endAlt * Math.cos(extrusionAngle);
 
-        const vStartX = beam.start.x - startXOffset;
-        const vStartY = beam.start.y - startYOffset;
-        const vEndX = beam.end.x - endXOffset;
-        const vEndY = beam.end.y - endYOffset;
+            vStartX = beam.start.x - startXOffset;
+            vStartY = beam.start.y - startYOffset;
+            vEndX = beam.end.x - endXOffset;
+            vEndY = beam.end.y - endYOffset;
+        }
 
         // Draw main beam line
         stroke(beam.color);

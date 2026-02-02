@@ -756,23 +756,59 @@ class WeaponSystem {
             end.set(hit.point.x, hit.point.y);
         }
 
+        // Check if we're in surface mode
+        const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
+        
+        // In surface mode, convert coordinates to visual space for consistent rendering
+        // The hit detection already works in visual space, so we need start to match
+        let beamStartX = start.x;
+        let beamStartY = start.y;
+        let beamEndX = end.x;
+        let beamEndY = end.y;
+        
+        if (inSurfaceMode && owner) {
+            const ownerAlt = owner.altitude || 0;
+            if (typeof SurfaceUtils !== 'undefined') {
+                beamStartX = SurfaceUtils.toVisualX(start.x, ownerAlt);
+                beamStartY = SurfaceUtils.toVisualY(start.y, ownerAlt);
+            } else {
+                const extrusionAngle = 0.5;
+                beamStartX = start.x - ownerAlt * Math.sin(extrusionAngle);
+                beamStartY = start.y - ownerAlt * Math.cos(extrusionAngle);
+            }
+            // If we hit something, end is already in visual coordinates from hit detection
+            // If we didn't hit anything, convert the default end to visual coordinates
+            if (!hit.target) {
+                if (typeof SurfaceUtils !== 'undefined') {
+                    beamEndX = SurfaceUtils.toVisualX(end.x, ownerAlt);
+                    beamEndY = SurfaceUtils.toVisualY(end.y, ownerAlt);
+                } else {
+                    const extrusionAngle = 0.5;
+                    beamEndX = end.x - ownerAlt * Math.sin(extrusionAngle);
+                    beamEndY = end.y - ownerAlt * Math.cos(extrusionAngle);
+                }
+            }
+        }
+        
         // Store beam info for drawing - reuse lastBeam if possible
         if (!owner.lastBeam) {
             owner.lastBeam = {
-                start: createVector(start.x, start.y),
-                end: createVector(end.x, end.y),
+                start: createVector(beamStartX, beamStartY),
+                end: createVector(beamEndX, beamEndY),
                 color: weapon?.color || [255, 0, 0],
                 time: millis(),
                 hit: hit.target !== null,
-                targetAltitude: (hit.target && hit.target.altitude !== undefined) ? hit.target.altitude : 0
+                targetAltitude: (hit.target && hit.target.altitude !== undefined) ? hit.target.altitude : 0,
+                inSurfaceMode: inSurfaceMode // Flag to indicate coordinate system
             };
         } else {
-            owner.lastBeam.start.set(start.x, start.y);
-            owner.lastBeam.end.set(end.x, end.y);
+            owner.lastBeam.start.set(beamStartX, beamStartY);
+            owner.lastBeam.end.set(beamEndX, beamEndY);
             owner.lastBeam.color = weapon?.color || [255, 0, 0],
                 owner.lastBeam.time = millis();
             owner.lastBeam.hit = hit.target !== null;
             owner.lastBeam.targetAltitude = (hit.target && hit.target.altitude !== undefined) ? hit.target.altitude : 0;
+            owner.lastBeam.inSurfaceMode = inSurfaceMode; // Flag to indicate coordinate system
         }
 
         // Handle hit effects
@@ -1464,6 +1500,28 @@ class WeaponSystem {
             target.lastShieldHitTime = millis();
         }
 
+        // Determine if we're in surface mode
+        const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
+        
+        // In surface mode, hit point from beam detection is in visual coordinates
+        // We need to convert back to world coordinates for explosions and sounds
+        let worldHitX = hitPoint.x;
+        let worldHitY = hitPoint.y;
+        
+        if (inSurfaceMode && target) {
+            const targetAlt = (target.altitude !== undefined) ? target.altitude : (target.yOffset ? target.yOffset : 0);
+            // Visual to world: add back the altitude offset
+            if (typeof SurfaceUtils !== 'undefined') {
+                const extrusionAngle = SurfaceUtils.getExtrusionAngle();
+                worldHitX = hitPoint.x + targetAlt * Math.sin(extrusionAngle);
+                worldHitY = hitPoint.y + targetAlt * Math.cos(extrusionAngle);
+            } else {
+                const extrusionAngle = 0.5;
+                worldHitX = hitPoint.x + targetAlt * Math.sin(extrusionAngle);
+                worldHitY = hitPoint.y + targetAlt * Math.cos(extrusionAngle);
+            }
+        }
+
         // Play a lightweight hit sound when shields absorb damage (throttled)
         if (targetHasShield) {
             try {
@@ -1471,7 +1529,7 @@ class WeaponSystem {
                 const last = target._lastShieldHitSoundTime || 0;
                 if (now - last > 150) { // throttle to avoid spam on beams/rapid fire
                     if (soundManager && player?.pos) {
-                        soundManager.playWorldSound('hit', hitPoint.x, hitPoint.y, player.pos, target);
+                        soundManager.playWorldSound('hit', worldHitX, worldHitY, player.pos, target);
                     }
                     target._lastShieldHitSoundTime = now;
                 }
@@ -1498,16 +1556,13 @@ class WeaponSystem {
                         [255, 0, 0];
             }
 
-            // Surface mode filter: pass isSurface flag so explosions render in surface mode
-            const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
-
             if (inSurfaceMode && typeof surfaceMode._createSurfaceExplosion === 'function') {
                 // Pass world coordinates and target altitude to the specialized surface explosion creator
                 const altitude = (target && target.altitude !== undefined) ? target.altitude : (target && target.yOffset ? target.yOffset : 0);
-                surfaceMode._createSurfaceExplosion(hitPoint.x, hitPoint.y, altitude, hitSize, hitColor);
+                surfaceMode._createSurfaceExplosion(worldHitX, worldHitY, altitude, hitSize, hitColor);
             } else if (system.addExplosion) {
                 // Fallback for space mode or if surfaceMode helper is missing
-                system.addExplosion(hitPoint.x, hitPoint.y, hitSize, hitColor, inSurfaceMode);
+                system.addExplosion(worldHitX, worldHitY, hitSize, hitColor, inSurfaceMode);
             }
         }
     }
