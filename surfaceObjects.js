@@ -1814,8 +1814,13 @@ class Turret extends SurfaceObject {
         if (typeof smoothRotateTowards === 'function') {
             this.angle = smoothRotateTowards(this.angle, targetAngle, turnSpeed, dt);
         } else {
-            // Fallback to manual implementation
-            let diff = normalizeAngleDifference(targetAngle, this.angle);
+            // Fallback to manual implementation with inline angle normalization
+            let diff = targetAngle - this.angle;
+            // Normalize diff to the range [-PI, PI] to get the shortest rotation direction
+            const TWO_PI = Math.PI * 2;
+            while (diff < -Math.PI) diff += TWO_PI;
+            while (diff > Math.PI) diff -= TWO_PI;
+            
             const maxTurn = turnSpeed * dt;
             if (Math.abs(diff) <= maxTurn) {
                 this.angle = targetAngle;
@@ -2336,6 +2341,16 @@ class DefenseDrone extends SurfaceObject {
         this._cachedTerrainHeight = null;
         this._cachedTerrainPos = null;
         this._terrainCacheDistance = 50; // Re-sample if moved more than 50 units
+        this._terrainInterpolationSpeed = 5.0; // Units per second for smooth height transitions
+    }
+
+    /**
+     * Clears any cached terrain data so altitude will be recalculated.
+     * Call this from any reset/destroy logic when reusing this instance.
+     */
+    clearTerrainCache() {
+        this._cachedTerrainHeight = null;
+        this._cachedTerrainPos = null;
     }
 
     update(dt, player, starSystem) {
@@ -2405,8 +2420,13 @@ class DefenseDrone extends SurfaceObject {
             if (typeof smoothRotateTowards === 'function') {
                 this.angle = smoothRotateTowards(this.angle, targetAngle, turnSpeed, dt);
             } else {
-                // Fallback to manual implementation
-                let angleDiff = normalizeAngleDifference(targetAngle, this.angle);
+                // Fallback to manual implementation with inline angle normalization
+                let angleDiff = targetAngle - this.angle;
+                // Normalize angleDiff to the range [-PI, PI] to ensure shortest rotation direction
+                const TWO_PI = Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += TWO_PI;
+                while (angleDiff > Math.PI) angleDiff -= TWO_PI;
+                
                 const maxTurn = turnSpeed * dt;
                 if (Math.abs(angleDiff) < maxTurn) {
                     this.angle = targetAngle;
@@ -2446,8 +2466,13 @@ class DefenseDrone extends SurfaceObject {
                 if (typeof smoothRotateTowards === 'function') {
                     this.angle = smoothRotateTowards(this.angle, targetAngle, turnSpeed, dt);
                 } else {
-                    // Fallback to manual implementation
-                    let angleDiff = normalizeAngleDifference(targetAngle, this.angle);
+                    // Fallback to manual implementation with inline angle normalization
+                    let angleDiff = targetAngle - this.angle;
+                    // Normalize angleDiff to the range [-PI, PI] to ensure shortest rotation direction
+                    const TWO_PI = Math.PI * 2;
+                    while (angleDiff < -Math.PI) angleDiff += TWO_PI;
+                    while (angleDiff > Math.PI) angleDiff -= TWO_PI;
+                    
                     const maxTurn = turnSpeed * dt;
                     if (Math.abs(angleDiff) < maxTurn) {
                         this.angle = targetAngle;
@@ -2465,7 +2490,7 @@ class DefenseDrone extends SurfaceObject {
         this.pos.x += Math.cos(this.angle) * this.speed * dt;
         this.pos.y += Math.sin(this.angle) * this.speed * dt;
 
-        // Update yOffset and altitude based on terrain (with caching for performance)
+        // Update yOffset and altitude based on terrain (with caching and smooth interpolation)
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.terrain) {
             // Check if we need to update cached terrain height
             let needsUpdate = !this._cachedTerrainPos;
@@ -2479,7 +2504,21 @@ class DefenseDrone extends SurfaceObject {
             if (needsUpdate) {
                 const terrainHeight = surfaceMode.terrain.getHeightAt(this.pos.x, this.pos.y);
                 if (terrainHeight !== null && terrainHeight !== undefined && !isNaN(terrainHeight)) {
-                    this._cachedTerrainHeight = terrainHeight;
+                    // Smooth interpolation to prevent jerky movement
+                    if (this._cachedTerrainHeight !== null) {
+                        const heightDiff = terrainHeight - this._cachedTerrainHeight;
+                        const maxChange = this._terrainInterpolationSpeed * dt;
+                        if (Math.abs(heightDiff) > maxChange) {
+                            // Interpolate gradually
+                            this._cachedTerrainHeight += Math.sign(heightDiff) * maxChange;
+                        } else {
+                            // Close enough, use exact value
+                            this._cachedTerrainHeight = terrainHeight;
+                        }
+                    } else {
+                        // First time, set directly
+                        this._cachedTerrainHeight = terrainHeight;
+                    }
                     this._cachedTerrainPos = { x: this.pos.x, y: this.pos.y };
                 }
             }
@@ -2494,11 +2533,11 @@ class DefenseDrone extends SurfaceObject {
         }
 
         // Apply drag (enhanced by tangle effect)
-        // Optimize: Math.pow is expensive, use approximation for small dt
+        // Optimize: Math.pow is expensive, use exponential decay formula
         // For dt = 0.016 (60 fps), pow(0.95, dt*60) ≈ 0.95
         // For general case, use exponential decay: e^(ln(0.95) * dt * 60)
-        // Which simplifies to: speed *= exp(k * dt) where k = 60 * ln(0.95) ≈ -3.08
-        const dragConstant = -3.08 * dragMultiplier; // Pre-calculated: 60 * Math.log(0.95)
+        // Which simplifies to: speed *= exp(k * dt) where k = 60 * ln(0.95)
+        const dragConstant = 60 * Math.log(0.95) * dragMultiplier; // More precise: -3.0776835 per multiplier
         this.speed *= Math.exp(dragConstant * dt);
     }
 

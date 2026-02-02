@@ -484,6 +484,14 @@ global.ENV_LOG = jest.fn();
 // Surface Mode Utilities
 // ============================================
 
+// Surface object rendering constants
+global.SURFACE_RENDER_CONSTANTS = {
+    EXTRUSION_ANGLE: 0.5,
+    DEFAULT_SUN_ANGLE: -Math.PI / 4,
+    TWO_PI: Math.PI * 2,
+    DAMAGE_FLASH_DURATION: 150 // ms
+};
+
 global.SurfaceUtils = {
     EXTRUSION_ANGLE: 0.5,
     
@@ -553,9 +561,12 @@ global.smoothRotateTowards = (currentAngle, targetAngle, turnSpeed, dt) => {
     return currentAngle + Math.sign(diff) * maxTurn;
 };
 
-global.shouldShowDamageFlash = (lastHitTime, duration = 150) => {
+global.shouldShowDamageFlash = (lastHitTime, duration) => {
     if (!lastHitTime || typeof millis !== 'function') return false;
-    return millis() - lastHitTime < duration;
+    // Use constant if duration not provided
+    const flashDuration = duration !== undefined ? duration : 
+        (global.SURFACE_RENDER_CONSTANTS ? global.SURFACE_RENDER_CONSTANTS.DAMAGE_FLASH_DURATION : 150);
+    return millis() - lastHitTime < flashDuration;
 };
 
 

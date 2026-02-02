@@ -79,13 +79,13 @@ Successfully completed a comprehensive refactoring of the surface mode codebase 
    - **Impact:** Reduces terrain lookups by ~60% for slow-moving drones
 
 3. **Math Optimization: Replace Math.pow() with Math.exp()**
-   - **Location:** `surfaceObjects.js:2474`
+   - **Location:** `surfaceObjects.js:2501-2502`
    - **Before:** `speed *= Math.pow(0.95, dt * 60 * dragMultiplier)`
-   - **After:** `speed *= Math.exp(-3.08 * dragMultiplier * dt)`
+   - **After:** `speed *= Math.exp(60 * Math.log(0.95) * dragMultiplier * dt)`
    - **Rationale:** 
      - Math.pow() is expensive for non-integer exponents
      - Exponential decay: pow(0.95, dt*60) ≈ exp(60*ln(0.95)*dt)
-     - Pre-calculated constant: -3.08 ≈ 60 * Math.log(0.95)
+     - Calculated constant: 60 * Math.log(0.95) ≈ -3.0776835
    - **Impact:** 10-15% faster drag calculations
 
 4. **Enhanced Debug HUD**

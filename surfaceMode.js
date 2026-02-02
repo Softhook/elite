@@ -705,7 +705,8 @@ class SurfaceMode {
                     
                     // Distance-based culling for updates (world space is faster than visual)
                     // Only update objects within reasonable range of player
-                    if (target && obj.pos) {
+                    // Skip culling if object doesn't have pos property (always update these)
+                    if (target && target.pos && obj.pos) {
                         const dx = obj.pos.x - target.pos.x;
                         const dy = obj.pos.y - target.pos.y;
                         const distSq = dx * dx + dy * dy;
