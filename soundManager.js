@@ -171,8 +171,9 @@ class SoundManager {
                 "sample_rate": 44100,
                 "sample_size": 8
             },
-
-                    warning: {
+            
+            //low hull/health warning
+            warning: {
             "oldParams": true,
             "wave_type": 0,
             "p_env_attack": 0.07323597693103852,
@@ -1819,6 +1820,24 @@ class SoundManager {
         this._playAnyAudio(audioToPlay, volume, { resetTime: true });
     }
 
+    // Check if an audio object is currently playing to avoid restarting it mid-play
+    _isAudioPlaying(audioObj) {
+        try {
+            if (!audioObj) return false;
+            const hasMediaState = typeof audioObj.paused === 'boolean' && typeof audioObj.currentTime === 'number';
+            if (hasMediaState) {
+                const duration = typeof audioObj.duration === 'number' ? audioObj.duration : Number.POSITIVE_INFINITY;
+                return !audioObj.paused && audioObj.currentTime > 0 && audioObj.currentTime < (duration - 0.02);
+            }
+            if (typeof audioObj._isPlaying === 'boolean') {
+                return audioObj._isPlaying;
+            }
+        } catch (e) {
+            return false;
+        }
+        return false;
+    }
+
     /**
      * Helper to play either an HTMLAudioElement or an sfxr WebAudio wrapper.
      * - For HTMLAudioElement: optionally sets volume and resets currentTime
@@ -1900,6 +1919,12 @@ class SoundManager {
         const soundEntry = this.sounds[name];
         if (!soundEntry || !soundEntry.audio || typeof soundEntry.audio.play !== 'function') {
             console.warn(`playSound: Sound '${name}' not found or is not playable.`);
+            return;
+        }
+
+        // Do not interrupt the warning tone if it is already playing
+        const isWarning = name === 'warning';
+        if (isWarning && this._isAudioPlaying(soundEntry.audio)) {
             return;
         }
 
