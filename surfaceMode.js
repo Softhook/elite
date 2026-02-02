@@ -15,8 +15,8 @@ const SURFACE_CONFIG = {
     CLIMB_SPEED: 200,
 
     // Terrain mesh
-    MESH_RESOLUTION: 160,      // Grid resolution (increased for better detail)
-    MESH_SIZE: 6000,           // World units covered (increased to prevent edge visibility at MAX_ALTITUDE)
+    MESH_RESOLUTION: 120,      // Grid resolution (balanced for detail and performance)
+    MESH_SIZE: 5000,           // World units covered (smaller mesh with earlier buffer requests to ensure seamless swaps)
     SPAWN_CELL_SIZE: 35,       // Fixed spawn density (independent of resolution)
     DEFAULT_FEATURE_SEED: 12345, // Fallback seed for terrain generation
     HIGH_TERRAIN_THRESHOLD: 350, // Height (0-500) treated as high ground for defenses
