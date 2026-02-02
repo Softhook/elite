@@ -145,24 +145,26 @@ class Astronaut {
         if (this.grenadeCooldown > 0) this.grenadeCooldown -= dt;
 
         // Anti-stuck: if input is held but position is not advancing, do a single gentle step after a pause
-        const displacement = p5.Vector.dist(this.lastPos, this.pos);
-        if (this.hasMoveInput && this.lastMoveDir.magSq() > 0) {
-            if (displacement < 0.35) {
-                this.stuckTimer += dt;
-                if (this.stuckTimer > 0.45) {
-                    // Single step forward, then reset timer to avoid rapid jitter
-                    const step = Math.max(6, this.maxSpeed * 0.12);
-                    this.pos.x += this.lastMoveDir.x * step;
-                    this.pos.y += this.lastMoveDir.y * step;
-                    this.vel.x = this.lastMoveDir.x * this.maxSpeed * 0.4;
-                    this.vel.y = this.lastMoveDir.y * this.maxSpeed * 0.4;
+        if (typeof Astronaut !== 'undefined' && Astronaut.ANTI_STUCK_ENABLED) {
+            const displacement = p5.Vector.dist(this.lastPos, this.pos);
+            if (this.hasMoveInput && this.lastMoveDir.magSq() > 0) {
+                if (displacement < 0.35) {
+                    this.stuckTimer += dt;
+                    if (this.stuckTimer > 0.45) {
+                        // Single step forward, then reset timer to avoid rapid jitter
+                        const step = Math.max(6, this.maxSpeed * 0.12);
+                        this.pos.x += this.lastMoveDir.x * step;
+                        this.pos.y += this.lastMoveDir.y * step;
+                        this.vel.x = this.lastMoveDir.x * this.maxSpeed * 0.4;
+                        this.vel.y = this.lastMoveDir.y * this.maxSpeed * 0.4;
+                        this.stuckTimer = 0;
+                    }
+                } else {
                     this.stuckTimer = 0;
                 }
             } else {
                 this.stuckTimer = 0;
             }
-        } else {
-            this.stuckTimer = 0;
         }
 
         this.lastPos.set(this.pos);
@@ -284,6 +286,15 @@ class Astronaut {
         // SurfaceMode already draws the ground shadow; avoid duplicate shadow here.
     }
 }
+
+// Global toggle and helpers so anti-stuck can be disabled/re-enabled at runtime
+Astronaut.ANTI_STUCK_ENABLED = true;
+Astronaut.setAntiStuckEnabled = function (enabled) {
+    Astronaut.ANTI_STUCK_ENABLED = !!enabled;
+};
+Astronaut.prototype.setAntiStuckEnabled = function (enabled) {
+    Astronaut.setAntiStuckEnabled(enabled);
+};
 
 /**
  * Grenade Projectile
