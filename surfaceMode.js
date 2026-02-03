@@ -759,7 +759,7 @@ class SurfaceMode {
                 // Get viewport for culling (use constant from config)
                 const updateRange = SURFACE_CONFIG.UPDATE_RANGE || 2000;
                 const updateRangeSq = updateRange * updateRange;
-                // Tighter culling for fauna wandering behavior (half the normal range)
+                // Tighter culling for fauna wandering behavior (reduced to 70% of normal range)
                 // Fauna can skip movement updates when far away since they just wander randomly
                 const faunaReducedRangeSq = (updateRange * 0.7) ** 2;
 
@@ -778,8 +778,9 @@ class SurfaceMode {
                         const distSq = dx * dx + dy * dy;
 
                         // More aggressive culling for fauna (they just wander when not targeting bases)
-                        // Check if object is fauna by duck-typing (has moveAngle property)
-                        const isFauna = typeof obj.moveAngle !== 'undefined';
+                        // Check if object is fauna (SurfaceFauna class instances)
+                        const isFauna = obj.constructor && obj.constructor.name && 
+                                       obj.constructor.name.includes('Creature');
                         const effectiveRangeSq = isFauna ? faunaReducedRangeSq : updateRangeSq;
 
                         // Skip update for very distant objects (but still render them if visible)
@@ -2204,8 +2205,8 @@ class SurfaceMode {
 
         const updateRange = SURFACE_CONFIG.UPDATE_RANGE || 2000;
         const updateRangeSq = updateRange * updateRange;
-        const cleanupRangeSq = updateRange * 1.5;
-        const cleanupRangeSqVal = cleanupRangeSq * cleanupRangeSq;
+        const cleanupDist = updateRange * 1.5;
+        const cleanupDistSq = cleanupDist * cleanupDist;
         const playerPos = (this.controlMode === 'ASTRONAUT' && this.astronaut) ? this.astronaut.pos : this.player.pos;
 
         let robotsUpdated = 0;
@@ -2222,7 +2223,7 @@ class SurfaceMode {
 
                 // Distance-based cleanup: if robot is too far from player, remove it.
                 // It will be re-instantiated when the player returns and base initialization runs.
-                if (distSq > cleanupRangeSqVal) {
+                if (distSq > cleanupDistSq) {
                     // Force the base to re-initialize robots when player returns
                     if (robot.homeBase) {
                         robot.homeBase.robotsInitialized = false;
