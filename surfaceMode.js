@@ -179,6 +179,16 @@ class SurfaceMode {
         // Build key state (prevents repeat while held)
         this._buildKeyPressed = false;
 
+        // Frame-level cached values (initialized with safe defaults)
+        // These are recalculated at the start of each draw() call
+        // CRITICAL: Must be initialized to prevent undefined access during ENTERING state
+        this._cachedPerspectiveScale = 1.0;
+        this._cachedBaseLODLevel = SURFACE_CONFIG.LOD.SIMPLIFIED;
+        this._cachedExtrusionAngle = SURFACE_CONFIG.EXTRUSION_ANGLE;
+        this._cachedExtrusionSin = Math.sin(SURFACE_CONFIG.EXTRUSION_ANGLE);
+        this._cachedExtrusionCos = Math.cos(SURFACE_CONFIG.EXTRUSION_ANGLE);
+        this._cachedCounterScale = 1.0;
+
         // Saved player position for return
         this.savedPlayerPos = null;
 
@@ -765,6 +775,11 @@ class SurfaceMode {
                 // Tighter culling for fauna wandering behavior (reduced to 70% of normal range)
                 // Fauna can skip movement updates when far away since they just wander randomly
                 const faunaReducedRangeSq = (updateRange * 0.7) ** 2;
+                
+                // Add hysteresis margin to prevent jitter at boundary (5% buffer)
+                const HYSTERESIS_FACTOR = 1.05;
+                const updateRangeHysteresisSq = updateRangeSq * HYSTERESIS_FACTOR;
+                const faunaReducedHysteresisSq = faunaReducedRangeSq * HYSTERESIS_FACTOR;
 
                 let objectsUpdated = 0;
                 let objectsCulled = 0;
@@ -783,18 +798,27 @@ class SurfaceMode {
                         // More aggressive culling for fauna (they just wander when not targeting bases)
                         // Use pre-set flag instead of expensive constructor.name check
                         const isFauna = obj.isFauna === true;
-                        const effectiveRangeSq = isFauna ? faunaReducedRangeSq : updateRangeSq;
+                        
+                        // Use hysteresis to prevent boundary jitter:
+                        // - If object was culled last frame, use larger range to bring it back in
+                        // - If object was updated last frame, use normal range
+                        const wasCulled = obj._wasCulledLastFrame === true;
+                        const effectiveRangeSq = isFauna ? 
+                            (wasCulled ? faunaReducedHysteresisSq : faunaReducedRangeSq) :
+                            (wasCulled ? updateRangeHysteresisSq : updateRangeSq);
 
                         // Skip update for very distant objects (but still render them if visible)
                         // Exceptions: Always update mission-critical objects (isTarget) or fauna attacking bases
                         const shouldAlwaysUpdate = obj.isTarget || (isFauna && obj.targetBase);
                         if (distSq > effectiveRangeSq && !shouldAlwaysUpdate) {
                             objectsCulled++;
+                            obj._wasCulledLastFrame = true;  // Mark as culled for next frame
                             continue;
                         }
                     }
 
                     objectsUpdated++;
+                    obj._wasCulledLastFrame = false;  // Mark as updated for next frame
                     if (obj.update) obj.update(dt, target, this.starSystem);
                 }
 
@@ -1327,13 +1351,20 @@ class SurfaceMode {
             return { minX: 0, maxX: width, minY: 0, maxY: height };
         }
 
+        // Validate padding is non-negative to prevent invalid bounds
+        const safePadding = Math.max(0, padding || 0);
+
+        // Validate altitude is within reasonable bounds to prevent NaN propagation
+        const safeAltitude = isNaN(this.altitude) ? SURFACE_CONFIG.DEFAULT_ALTITUDE : 
+                           Math.max(0, Math.min(this.altitude, SURFACE_CONFIG.MAX_ALTITUDE * 2));
+
         return SurfaceUtils.getViewportBounds(
             this.surfaceX,
             this.surfaceY,
-            this.altitude,
+            safeAltitude,
             width,
             height,
-            padding
+            safePadding
         );
     }
 
@@ -1523,15 +1554,20 @@ class SurfaceMode {
 
         if (!this.planet) return;
 
-        // Cache frequently-used values for the frame to avoid recalculation
-        // These are used by multiple draw methods and LOD calculations
-        this._cachedPerspectiveScale = this._getPerspectiveScale();
-        this._cachedBaseLODLevel = this.altitude < SURFACE_CONFIG.LOD.DETAIL_THRESHOLD ? 
-                                    SURFACE_CONFIG.LOD.FULL_DETAIL : SURFACE_CONFIG.LOD.SIMPLIFIED;
-        this._cachedExtrusionAngle = this._getExtrusionAngle();
-        this._cachedExtrusionSin = Math.sin(this._cachedExtrusionAngle);
-        this._cachedExtrusionCos = Math.cos(this._cachedExtrusionAngle);
-        this._cachedCounterScale = this._getCounterScale();
+        // CRITICAL: Only update cache values when in active rendering states
+        // During EXITING, continue using last valid cached values for smooth transition
+        // This prevents cache corruption during state transitions
+        if (this.state !== SURFACE_STATE.EXITING) {
+            // Cache frequently-used values for the frame to avoid recalculation
+            // These are used by multiple draw methods and LOD calculations
+            this._cachedPerspectiveScale = this._getPerspectiveScale();
+            this._cachedBaseLODLevel = this.altitude < SURFACE_CONFIG.LOD.DETAIL_THRESHOLD ? 
+                                        SURFACE_CONFIG.LOD.FULL_DETAIL : SURFACE_CONFIG.LOD.SIMPLIFIED;
+            this._cachedExtrusionAngle = this._getExtrusionAngle();
+            this._cachedExtrusionSin = Math.sin(this._cachedExtrusionAngle);
+            this._cachedExtrusionCos = Math.cos(this._cachedExtrusionAngle);
+            this._cachedCounterScale = this._getCounterScale();
+        }
 
         push();
         // 1. Center camera on screen
@@ -2243,11 +2279,15 @@ class SurfaceMode {
                 // It will be re-instantiated when the player returns and base initialization runs.
                 if (distSq > cleanupDistSq) {
                     // Force the base to re-initialize robots when player returns
-                    if (robot.homeBase) {
+                    // CRITICAL: Check homeBase exists and is not destroyed before accessing
+                    if (robot.homeBase && !robot.homeBase.destroyed) {
                         robot.homeBase.robotsInitialized = false;
                         // Sync to descriptor to prevent duplicate spawns
-                        const desc = this.playerBuiltMap.get(robot.homeBase.cellKey);
-                        if (desc) desc.robotsInitialized = false;
+                        // Use optional chaining in case homeBase.cellKey is undefined
+                        if (robot.homeBase.cellKey) {
+                            const desc = this.playerBuiltMap.get(robot.homeBase.cellKey);
+                            if (desc) desc.robotsInitialized = false;
+                        }
                     }
                     return false;
                 }
