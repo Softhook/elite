@@ -712,13 +712,62 @@ class UIStationMenus {
         );
 
         this.baseRepairButtonArea = { ...repairBtn, action: 'BASE_REPAIR' };
+        
+        // Mining Storage button (if base has mining robots)
+        const hasMiningStorage = baseObj && baseObj.miningStorage && baseObj.miningStorage.length > 0;
+        const storageRow = UIComponents.drawListRow({
+            x: pX + L.CONTENT_PADDING,
+            y: repairRow.y + rowH,
+            w: pW - L.CONTENT_PADDING * 2,
+            h: rowH,
+            index: 1,
+            isHighlighted: hasMiningStorage
+        });
+        
+        const mineralCount = hasMiningStorage ? (baseObj.miningStorage.find(i => i.name === 'Minerals')?.quantity || 0) : 0;
+        // Use MINING_CONFIG if available, fallback to baseObj property, then default
+        const storageCapacity = (typeof MINING_CONFIG !== 'undefined') ? MINING_CONFIG.STORAGE_CAPACITY : 
+                                (baseObj?.miningStorageCapacity || 100);
+        
+        UIComponents.drawListRowText({
+            leftText: 'Mining Storage',
+            subText: hasMiningStorage ? `${mineralCount}/${storageCapacity} Minerals mined` : 'Robots mining ore seams...',
+            rightText: hasMiningStorage ? `${mineralCount}t` : '—',
+            rowX: storageRow.x,
+            rowY: storageRow.y,
+            rowW: storageRow.w - 100,
+            rowH: storageRow.h,
+            leftColor: hasMiningStorage ? [200, 200, 255] : [150]
+        });
+
+        if (hasMiningStorage) {
+            const storageBtn = UIComponents.drawButton(
+                storageRow.x + storageRow.w - 90, storageRow.y + (storageRow.h - L.BTN_HEIGHT_SMALL) / 2,
+                80, L.BTN_HEIGHT_SMALL,
+                'COLLECT', [0, 100, 120], [0, 150, 180], 3, { textSize: STATION_TEXT_SIZE.SMALL }
+            );
+            this.baseMiningStorageButtonArea = { ...storageBtn, action: 'COLLECT_MINERALS' };
+        } else {
+            this.baseMiningStorageButtonArea = null;
+        }
 
         // Additional quick services suggestions (display only for now)
-        const suggestY = repairRow.y + rowH + L.BTN_SPACING;
+        const suggestY = storageRow.y + rowH + L.BTN_SPACING;
         UIComponents.setTextStyle({ fill: [220], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
-        text('Other available base services:', pX + L.CONTENT_PADDING, suggestY);
+        text('Autonomous Mining Operations:', pX + L.CONTENT_PADDING, suggestY);
         UIComponents.setTextStyle({ fill: [180, 200, 180], size: STATION_TEXT_SIZE.SMALL, align: [LEFT, TOP] });
-        text('- Access secret storage (if installed)\n- Replenish basic supplies\n- Assign repair drones (future)', pX + L.CONTENT_PADDING + 10, suggestY + 20);
+        
+        // Count active robots for this base
+        let robotCount = 0;
+        if (typeof surfaceMode !== 'undefined' && surfaceMode.miningRobots) {
+            robotCount = surfaceMode.miningRobots.filter(r => r && r.homeBase === baseObj).length;
+        }
+        
+        // Get mining config values if available
+        const miningSpeed = (typeof MINING_CONFIG !== 'undefined') ? MINING_CONFIG.MINING_DURATION.toFixed(1) : '2.5';
+        const cargoCapacity = (typeof MINING_CONFIG !== 'undefined') ? MINING_CONFIG.CARGO_CAPACITY : 12;
+        
+        text(`- ${robotCount} mining robot${robotCount !== 1 ? 's' : ''} deployed\n- Robots mine ore seams at random locations (${miningSpeed}s per cycle)\n- Each robot carries up to ${cargoCapacity} units before returning`, pX + L.CONTENT_PADDING + 10, suggestY + 20);
 
         // Back button
         const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: 'BACK' });
@@ -749,6 +798,36 @@ class UIStationMenus {
             }
             return true;
         }
+        
+        // Mining storage button
+        if (this.baseMiningStorageButtonArea && UIComponents.isClickInArea(mx, my, this.baseMiningStorageButtonArea)) {
+            const baseObj = (typeof uiManager !== 'undefined') ? uiManager.currentBaseObject : null;
+            if (baseObj && baseObj.miningStorage) {
+                const mineralsEntry = baseObj.miningStorage.find(i => i.name === 'Minerals');
+                if (mineralsEntry && mineralsEntry.quantity > 0) {
+                    // Try to add minerals to player cargo (allow partial collection)
+                    const result = player.addCargo('Minerals', mineralsEntry.quantity, true);
+                    if (result && result.added > 0) {
+                        const collected = result.added;
+                        mineralsEntry.quantity -= collected;
+                        
+                        // Remove entry if depleted
+                        if (mineralsEntry.quantity <= 0) {
+                            baseObj.miningStorage = baseObj.miningStorage.filter(i => i.name !== 'Minerals');
+                        }
+                        
+                        addMessageFn(`Collected ${collected}t of Minerals from mining storage.`);
+                        if (typeof soundManager !== 'undefined') soundManager.playSound('cargo');
+                        if (typeof saveGame === 'function') saveGame();
+                    } else {
+                        addMessageFn('Not enough cargo space!');
+                        if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                    }
+                }
+            }
+            return true;
+        }
+        
         if (backButtonArea && UIComponents.isClickInArea(mx, my, backButtonArea)) {
             if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
             return 'BACK';
