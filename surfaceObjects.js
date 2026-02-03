@@ -148,16 +148,16 @@ class SecretCache extends SurfaceObject {
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
         const sz = this.size;
-        
+
         // Use projection helpers when available; fall back to manual calculation in test/Node contexts
         let extrusionAngle, baseX, baseY;
         if (typeof getProjectionHelpers === 'function') {
             ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
         } else {
             // Fallback: replicate original projection logic
-            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
-                ? surfaceMode._getExtrusionAngle() 
-                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined)
                     ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
             baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
                 ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
@@ -292,9 +292,9 @@ class Building extends SurfaceObject {
             ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
         } else {
             // Fallback: replicate original projection logic
-            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
-                ? surfaceMode._getExtrusionAngle() 
-                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined)
                     ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
             baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
                 ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
@@ -392,9 +392,9 @@ class ImperialBuilding extends SurfaceObject {
             ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
         } else {
             // Fallback: replicate original projection logic
-            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
-                ? surfaceMode._getExtrusionAngle() 
-                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined)
                     ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
             baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
                 ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
@@ -515,9 +515,9 @@ class SeparatistBuilding extends SurfaceObject {
             ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
         } else {
             // Fallback: replicate original projection logic
-            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
-                ? surfaceMode._getExtrusionAngle() 
-                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined)
                     ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
             baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
                 ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
@@ -665,9 +665,9 @@ class MilitaryBuilding extends SurfaceObject {
             ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
         } else {
             // Fallback: replicate original projection logic
-            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
-                ? surfaceMode._getExtrusionAngle() 
-                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined)
                     ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
             baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
                 ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
@@ -800,9 +800,9 @@ class PostHumanBuilding extends SurfaceObject {
             ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
         } else {
             // Fallback: replicate original projection logic
-            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
-                ? surfaceMode._getExtrusionAngle() 
-                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined)
                     ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
             baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
                 ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
@@ -929,6 +929,18 @@ class OffworldBuilding extends SurfaceObject {
 
         const offworldNames = ["Biodome", "Hab Unit", "Landing Pad", "Comms Array", "Solar Farm"];
         this.displayName = offworldNames[this.variant] || this.type;
+
+        // Background update tracking
+        this.lastBackgroundTick = Date.now();
+        this.miningStorage = [];
+        this.miningStorageCapacity = 100;
+
+        // Player base identification
+        if (this.variant === 1) { // Hab Unit
+            this.isPlayerBase = true;
+            this.maxHealth = 1000; // Bases are much tougher
+            this.health = 1000;
+        }
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0) {
@@ -938,9 +950,9 @@ class OffworldBuilding extends SurfaceObject {
             ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
         } else {
             // Fallback: replicate original projection logic
-            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
-                ? surfaceMode._getExtrusionAngle() 
-                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined)
                     ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
             baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
                 ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
@@ -1031,6 +1043,51 @@ class OffworldBuilding extends SurfaceObject {
                 Draw3D.drawBox3D(topX - (sz * 0.08) * Math.sin(extrusionAngle) + i * sz * 0.35, topY - (sz * 0.08) * Math.cos(extrusionAngle), sz * 0.3, sz * 0.5, sz * 0.02, this.accentColor, extrusionAngle, sunAngle);
             }
         }
+
+        // Draw health bar if damaged and is player base
+        if (this.isPlayerBase && this.health < this.maxHealth) {
+            this._drawHealthBar(baseX, baseY, sz, extrusionAngle, alt);
+        }
+    }
+
+    /**
+     * Draw a floating health bar for the base
+     * @private
+     */
+    _drawHealthBar(baseX, baseY, sz, extrusionAngle, alt) {
+        const barW = sz * 1.5;
+        const barH = 6;
+        const barYOffset = (this.height || sz) + 20; // Above the building
+
+        const dvX = barYOffset * Math.sin(extrusionAngle);
+        const dvY = barYOffset * Math.cos(extrusionAngle);
+
+        const bx = baseX - dvX;
+        const by = baseY - dvY;
+
+        push();
+        translate(bx, by);
+
+        // Background
+        fill(0, 150);
+        noStroke();
+        rectMode(CENTER);
+        rect(0, 0, barW, barH);
+
+        // Health
+        const hpWidth = (this.health / this.maxHealth) * barW;
+        const hpColor = lerpColor(color(255, 50, 50), color(50, 255, 50), this.health / this.maxHealth);
+        fill(hpColor);
+        rectMode(CORNER);
+        rect(-barW / 2, -barH / 2, hpWidth, barH);
+
+        // Label
+        fill(255);
+        textAlign(CENTER, BOTTOM);
+        textSize(12);
+        text(this.displayName, 0, -barH);
+
+        pop();
     }
 
     onDestroy() {
@@ -1071,9 +1128,9 @@ class MiningBuilding extends SurfaceObject {
             ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
         } else {
             // Fallback: replicate original projection logic
-            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
-                ? surfaceMode._getExtrusionAngle() 
-                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined)
                     ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
             baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
                 ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
@@ -1210,9 +1267,9 @@ class IndustrialBuilding extends SurfaceObject {
             ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
         } else {
             // Fallback: replicate original projection logic
-            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
-                ? surfaceMode._getExtrusionAngle() 
-                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined)
                     ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
             baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
                 ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
@@ -1354,9 +1411,9 @@ class RefineryBuilding extends SurfaceObject {
             ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
         } else {
             // Fallback: replicate original projection logic
-            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
-                ? surfaceMode._getExtrusionAngle() 
-                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined)
                     ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
             baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
                 ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
@@ -1494,9 +1551,9 @@ class AgriculturalBuilding extends SurfaceObject {
             ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
         } else {
             // Fallback: replicate original projection logic
-            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
-                ? surfaceMode._getExtrusionAngle() 
-                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined)
                     ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
             baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
                 ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
@@ -1604,9 +1661,9 @@ class ServiceBuilding extends SurfaceObject {
             ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
         } else {
             // Fallback: replicate original projection logic
-            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
-                ? surfaceMode._getExtrusionAngle() 
-                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined)
                     ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
             baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
                 ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
@@ -1810,7 +1867,7 @@ class Turret extends SurfaceObject {
         // Use utility function for smooth rotation
         const config = (typeof SURFACE_CONFIG !== 'undefined') ? SURFACE_CONFIG.TURRET : {};
         const turnSpeed = config.TURN_SPEED || 5;
-        
+
         if (typeof smoothRotateTowards === 'function') {
             this.angle = smoothRotateTowards(this.angle, targetAngle, turnSpeed, dt);
         } else {
@@ -1820,7 +1877,7 @@ class Turret extends SurfaceObject {
             const TWO_PI = Math.PI * 2;
             while (diff < -Math.PI) diff += TWO_PI;
             while (diff > Math.PI) diff -= TWO_PI;
-            
+
             const maxTurn = turnSpeed * dt;
             if (Math.abs(diff) <= maxTurn) {
                 this.angle = targetAngle;
@@ -1908,7 +1965,7 @@ class Turret extends SurfaceObject {
         if (this.destroyed) return;
 
         const sz = this.size;
-        
+
         // Use projection helpers when available; fall back to manual calculation in test/Node contexts
         let extrusionAngle, visualX, visualY;
         if (typeof getProjectionHelpers === 'function') {
@@ -1918,9 +1975,9 @@ class Turret extends SurfaceObject {
             visualY = helpers.baseY;
         } else {
             // Fallback: replicate original projection logic
-            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
-                ? surfaceMode._getExtrusionAngle() 
-                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined)
                     ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
             visualX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
                 ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
@@ -1932,7 +1989,7 @@ class Turret extends SurfaceObject {
         const headH = sz * 0.6;
 
         // Damage flash effect - use utility function
-        const damageFlash = (typeof shouldShowDamageFlash === 'function') 
+        const damageFlash = (typeof shouldShowDamageFlash === 'function')
             ? shouldShowDamageFlash(this.lastHitTime)
             : (this.lastHitTime && millis() - this.lastHitTime < 150);
 
@@ -2063,9 +2120,9 @@ class SurfaceStation extends SurfaceObject {
             ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
         } else {
             // Fallback: replicate original projection logic
-            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
-                ? surfaceMode._getExtrusionAngle() 
-                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined)
                     ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
             baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
                 ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
@@ -2218,9 +2275,9 @@ class ShieldGenerator extends SurfaceObject {
             ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
         } else {
             // Fallback: replicate original projection logic
-            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
-                ? surfaceMode._getExtrusionAngle() 
-                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined)
                     ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
             baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
                 ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
@@ -2229,7 +2286,7 @@ class ShieldGenerator extends SurfaceObject {
         }
 
         // Damage flash - use utility function
-        const damageFlash = (typeof shouldShowDamageFlash === 'function') 
+        const damageFlash = (typeof shouldShowDamageFlash === 'function')
             ? shouldShowDamageFlash(this.lastHitTime)
             : (this.lastHitTime && millis() - this.lastHitTime < 150);
         const flashColor = damageFlash ? color(255, 255, 255) : null;
@@ -2336,7 +2393,7 @@ class DefenseDrone extends SurfaceObject {
 
         // Visual
         this.color = color(180, 50, 50); // Pirate red
-        
+
         // Terrain height caching (performance optimization)
         this._cachedTerrainHeight = null;
         this._cachedTerrainPos = null;
@@ -2371,7 +2428,7 @@ class DefenseDrone extends SurfaceObject {
 
         // Cloak detection: cloaked players cannot be detected
         const playerCloaked = player.isCloaked || false;
-        
+
         // Simple stealth detection: player detected if at or above drone altitude (and not cloaked)
         // This makes stealth visually intuitive: stay below enemies to hide
         const droneAltitude = this.altitude || (this.yOffset || 0);
@@ -2414,7 +2471,7 @@ class DefenseDrone extends SurfaceObject {
             const visualDY = playerVisualY - droneVisualY;
 
             const targetAngle = Math.atan2(visualDY, visualDX);
-            
+
             // Use utility function for smooth rotation
             const turnSpeed = this.turnRate * rotationBlock;
             if (typeof smoothRotateTowards === 'function') {
@@ -2426,7 +2483,7 @@ class DefenseDrone extends SurfaceObject {
                 const TWO_PI = Math.PI * 2;
                 while (angleDiff < -Math.PI) angleDiff += TWO_PI;
                 while (angleDiff > Math.PI) angleDiff -= TWO_PI;
-                
+
                 const maxTurn = turnSpeed * dt;
                 if (Math.abs(angleDiff) < maxTurn) {
                     this.angle = targetAngle;
@@ -2460,7 +2517,7 @@ class DefenseDrone extends SurfaceObject {
             } else {
                 // Move towards patrol target
                 const targetAngle = Math.atan2(pdy, pdx);
-                
+
                 // Use utility function for smooth rotation
                 const turnSpeed = this.turnRate * 0.5 * rotationBlock;
                 if (typeof smoothRotateTowards === 'function') {
@@ -2472,7 +2529,7 @@ class DefenseDrone extends SurfaceObject {
                     const TWO_PI = Math.PI * 2;
                     while (angleDiff < -Math.PI) angleDiff += TWO_PI;
                     while (angleDiff > Math.PI) angleDiff -= TWO_PI;
-                    
+
                     const maxTurn = turnSpeed * dt;
                     if (Math.abs(angleDiff) < maxTurn) {
                         this.angle = targetAngle;
@@ -2500,7 +2557,7 @@ class DefenseDrone extends SurfaceObject {
                 const distSq = dx * dx + dy * dy;
                 needsUpdate = distSq > (this._terrainCacheDistance * this._terrainCacheDistance);
             }
-            
+
             if (needsUpdate) {
                 const terrainHeight = surfaceMode.terrain.getHeightAt(this.pos.x, this.pos.y);
                 if (terrainHeight !== null && terrainHeight !== undefined && !isNaN(terrainHeight)) {
@@ -2522,7 +2579,7 @@ class DefenseDrone extends SurfaceObject {
                     this._cachedTerrainPos = { x: this.pos.x, y: this.pos.y };
                 }
             }
-            
+
             // Use cached value
             if (this._cachedTerrainHeight !== null) {
                 this.altitude = this._cachedTerrainHeight + this.flyingHeight;
@@ -2614,9 +2671,9 @@ class DefenseDrone extends SurfaceObject {
             visualY = helpers.baseY;
         } else {
             // Fallback: replicate original projection logic
-            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle) 
-                ? surfaceMode._getExtrusionAngle() 
-                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined) 
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle()
+                : ((typeof SURFACE_RENDER_CONSTANTS !== 'undefined' && SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE !== undefined)
                     ? SURFACE_RENDER_CONSTANTS.EXTRUSION_ANGLE : 0.5);
             visualX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
                 ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
@@ -2625,7 +2682,7 @@ class DefenseDrone extends SurfaceObject {
         }
 
         // Damage flash - use utility function
-        const damageFlash = (typeof shouldShowDamageFlash === 'function') 
+        const damageFlash = (typeof shouldShowDamageFlash === 'function')
             ? shouldShowDamageFlash(this.lastHitTime)
             : (this.lastHitTime && millis() - this.lastHitTime < 150);
         const flashColor = damageFlash ? color(255, 255, 255) : null;

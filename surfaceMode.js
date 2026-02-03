@@ -38,13 +38,13 @@ const SURFACE_CONFIG = {
     BOARDING_RANGE: 40,         // Distance within which player can board ship
     REEBOARD_COOLDOWN: 2.0,     // Seconds before allowing re-boarding after disembark
     HAB_UNIT_SIZE: 60,          // Standard size for hab units
-    
+
     // Terrain detection
     CANYON_DETECTION_DISTANCE: 400, // Distance to check for canyon edges
-    
+
     // Cache cleanup
     CACHE_CLEANUP_INTERVAL: 600, // Frames between cache cleanup operations
-    
+
     // Performance
     UPDATE_RANGE: 2000,         // Max distance for object updates (units)
     BEAM_DISPLAY_DURATION: 150, // Beam visual duration (ms)
@@ -144,7 +144,7 @@ class SurfaceMode {
         // Astronaut Mode
         this.controlMode = 'SHIP'; // 'SHIP' or 'ASTRONAUT'
         this.astronaut = null;
-        
+
         // Mining robots and ore seam system
         this.miningRobots = []; // All mining robots on the surface
         this.oreSeams = new Map(); // Map of ore seam locations (shared across robots per base)
@@ -538,6 +538,29 @@ class SurfaceMode {
         if (!this.destroyedCells.has(cellKey)) {
             this.destroyedCells.add(cellKey);
 
+            // Update persistent descriptor if it's a player-built object
+            const desc = this.playerBuiltMap.get(cellKey);
+            if (desc) {
+                desc.destroyed = true;
+
+                // If it was a base, clean up associated mining systems
+                if (desc.variant === 1 && desc.type === 'OffworldBuilding') {
+                    // Destroy mining robots associated with this base
+                    if (this.miningRobots) {
+                        for (let robot of this.miningRobots) {
+                            if (robot.homeBase && robot.homeBase.cellKey === cellKey) {
+                                robot.destroyed = true;
+                            }
+                        }
+                    }
+
+                    // Remove shared ore seams for this base (identified by its creation coordinates)
+                    const baseKey = `base_${desc.x}_${desc.y}`;
+                    this.oreSeams.delete(baseKey);
+                    console.log(`[Persistence] Mining system for base at ${cellKey} cleaned up.`);
+                }
+            }
+
             // Sync to planet for long-term persistence (saving/loading/leaving/returning)
             if (!this.planet.destroyedSurfaceObjects) {
                 this.planet.destroyedSurfaceObjects = [];
@@ -698,17 +721,17 @@ class SurfaceMode {
             // Apply viewport culling for distant objects to improve performance
             if (this.surfaceObjects) {
                 const target = this.controlMode === 'ASTRONAUT' ? this.astronaut : this.player;
-                
+
                 // Get viewport for culling (use constant from config)
                 const updateRange = SURFACE_CONFIG.UPDATE_RANGE || 2000;
                 const updateRangeSq = updateRange * updateRange;
-                
+
                 let objectsUpdated = 0;
                 let objectsCulled = 0;
-                
+
                 for (let obj of this.surfaceObjects) {
                     if (!obj || obj.destroyed) continue;
-                    
+
                     // Distance-based culling for updates (world space is faster than visual)
                     // Only update objects within reasonable range of player
                     // Skip culling if object doesn't have pos property (always update these)
@@ -716,7 +739,7 @@ class SurfaceMode {
                         const dx = obj.pos.x - target.pos.x;
                         const dy = obj.pos.y - target.pos.y;
                         const distSq = dx * dx + dy * dy;
-                        
+
                         // Skip update for very distant objects (but still render them if visible)
                         // Exceptions: Always update mission-critical objects (isTarget)
                         if (distSq > updateRangeSq && !obj.isTarget) {
@@ -724,11 +747,11 @@ class SurfaceMode {
                             continue;
                         }
                     }
-                    
+
                     objectsUpdated++;
                     if (obj.update) obj.update(dt, target, this.starSystem);
                 }
-                
+
                 // Store stats for debug overlay
                 this._lastUpdateCullStats = { updated: objectsUpdated, culled: objectsCulled };
             }
@@ -766,16 +789,19 @@ class SurfaceMode {
             if (this.starSystem && typeof this.starSystem._updateHarpoons === 'function') {
                 this.starSystem._updateHarpoons();
             }
-            
+
             // Update mining robots
             this._updateMiningRobots(dt);
-            
+
             // Periodically check for new player bases and initialize robots
             this.robotSpawnCooldown -= dt;
             if (this.robotSpawnCooldown <= 0) {
                 this.robotSpawnCooldown = 5; // Check every 5 seconds
                 this._initializeMiningRobotsForBases();
             }
+
+            // Background activity catch-up for all bases (mining & damage)
+            this._updateBackgroundActivity(dt);
 
             // Note: altitude control happens BEFORE _updatePhysics() so player.altitude
             // is calculated with current radar altitude, ensuring turrets see accurate data
@@ -1256,8 +1282,8 @@ class SurfaceMode {
         }
 
         return SurfaceUtils.getViewportBounds(
-            this.surfaceX, 
-            this.surfaceY, 
+            this.surfaceX,
+            this.surfaceY,
             this.altitude,
             width,
             height,
@@ -1275,6 +1301,8 @@ class SurfaceMode {
         this._checkProjectileTerrainCollisions();
         this._checkPlayerProjectileCollisions();
         this._checkEnemyProjectileCollisions();
+        // Fauna-robot and fauna-building collisions are handled within their respective update() methods
+        // to maintain performance and localized behavior.
     }
 
     /**
@@ -1341,7 +1369,7 @@ class SurfaceMode {
                 if (distSq < hitRadiusSq) {
 
                     obj.takeDamage(proj.damage || 10);
-                    
+
                     // Apply tangle effect if this is a tangle projectile
                     if (proj.type === 'tangle' && typeof obj.applyDragEffect === 'function') {
                         obj.applyDragEffect(
@@ -1353,7 +1381,7 @@ class SurfaceMode {
                             uiManager.addMessage(`${obj.getDisplayName()} caught in energy tangle!`, "#30FFB4");
                         }
                     }
-                    
+
                     proj.destroyed = true;
 
                     // Create explosion at the visual impact point using unified standard
@@ -1620,6 +1648,16 @@ class SurfaceMode {
                         obj.yOffset = (typeof desc.yOffset !== 'undefined') ? desc.yOffset : this._getTerrainHeightAt(desc.x, desc.y);
                         obj.displayName = desc.displayName || obj.displayName;
                         obj.destroyed = !!desc.destroyed;
+
+                        // Restore persistent state for mining bases
+                        if (desc.variant === 1) {
+                            obj.robotsInitialized = !!desc.robotsInitialized;
+                            obj.miningStorage = Array.isArray(desc.miningStorage) ? desc.miningStorage : [];
+                            obj.miningStorageCapacity = desc.miningStorageCapacity || 100;
+                            obj.robotCount = desc.robotCount || 0;
+                            if (typeof desc.health === 'number') obj.health = desc.health;
+                        }
+
                         // Flag instances spawned from saved player descriptors
                         obj.playerBuilt = true;
                     } else if (typeof SurfaceObject !== 'undefined') {
@@ -1634,8 +1672,8 @@ class SurfaceMode {
                 // FIX: Use the actual target cell coordinates to ensure only ONE cell spawns the generator
                 const targetCellX = this.targetPos ? Math.floor(this.targetPos.x / SPAWN_CELL_SIZE) : null;
                 const targetCellY = this.targetPos ? Math.floor(this.targetPos.y / SPAWN_CELL_SIZE) : null;
-                const isTargetCell = targetCellX !== null && 
-                    activeGridX === targetCellX && 
+                const isTargetCell = targetCellX !== null &&
+                    activeGridX === targetCellX &&
                     activeGridY === targetCellY;
 
                 if (isTargetCell && typeof ShieldGenerator !== 'undefined') {
@@ -1680,12 +1718,12 @@ class SurfaceMode {
                         const techLevel = this.planet?.techLevel || 3;
 
                         // Calculate defense density using helper method
-                        const distToTargetSq = isNearTarget ? 
+                        const distToTargetSq = isNearTarget ?
                             (wx - this.targetPos.x) ** 2 + (wy - this.targetPos.y) ** 2 : 0;
                         const defenseDensity = this._calculateDefenseDensity(
-                            economyType, 
-                            techLevel, 
-                            isNearTarget, 
+                            economyType,
+                            techLevel,
+                            isNearTarget,
                             distToTargetSq
                         );
 
@@ -1720,7 +1758,7 @@ class SurfaceMode {
                             }
                         }
                     }
-                    
+
                     // --- 4. Flora and Fauna (scattered across landscape) ---
                     // Spawn on ALL planets (inhabited and uninhabited) if no building/defense was placed
                     if (!obj && this.planet) {
@@ -1731,15 +1769,20 @@ class SurfaceMode {
                             this.planet.featureColor2,
                             this.planet.featureColor3
                         ];
-                        
+
                         // Per-planet density variation (some planets have almost none)
                         // Use planet's feature random for consistent density per planet
                         const DENSITY_WAVE_FREQUENCY = 0.01;  // How fast density varies across planets
                         const DENSITY_AMPLITUDE = 0.5;        // Half range of variation
                         const DENSITY_BASELINE = 0.5;         // Center point (0.5 = 50%)
-                        const planetDensityFactor = this.planet.featureRand ? 
+                        const planetDensityFactor = this.planet.featureRand ?
                             (Math.sin(this.planet.featureRand * DENSITY_WAVE_FREQUENCY) * DENSITY_AMPLITUDE + DENSITY_BASELINE) : DENSITY_BASELINE;
-                        
+
+                        // Log density once per spawn cycle
+                        if (gx === 0 && gy === 0) {
+                            console.log(`[Spawn] Planet ${this.planet.name} Density Factor: ${planetDensityFactor.toFixed(3)} (Fauna Threshold: 0.4, Flora Threshold: 0.2)`);
+                        }
+
                         // Inhabited vs Uninhabited spawning rules
                         if (this.planet.isInhabited) {
                             // INHABITED: Only flora, no fauna (civilization has displaced wildlife)
@@ -1752,17 +1795,21 @@ class SurfaceMode {
                         } else {
                             // UNINHABITED: Both flora and fauna thrive
                             // Flora spawning - moderate (2% base * planet factor)
-                            const wildFloraMin = 0.970;
-                            const wildFloraMax = 0.990;
-                            const wildFaunaMin = 0.990;
-                            const wildFaunaMax = 0.999;  // Explicit max instead of 1.000
-                            
+                            const wildFloraMin = 0.940;
+                            const wildFloraMax = 0.970;
+                            const wildFaunaMin = 0.970;
+                            const wildFaunaMax = 0.999;
+
                             if (cellHash > wildFloraMin && cellHash < wildFloraMax && planetDensityFactor > 0.2) {
                                 obj = this._createFlora(planetColors, wx, wy, objSeed);
                             }
-                            // Fauna spawning - sparse (0.9% base * planet factor)
+                            // Fauna spawning - moderate (roughly 2.9% probability)
                             else if (cellHash > wildFaunaMin && cellHash < wildFaunaMax && planetDensityFactor > 0.4) {
                                 obj = this._createFauna(planetColors, wx, wy, objSeed);
+                                if (obj) {
+                                    obj.cellKey = cellKey;
+                                    console.log(`[Spawn] Spawned fauna ${obj.constructor.name} at ${cellKey} (Hash: ${cellHash.toFixed(4)}, Factor: ${planetDensityFactor.toFixed(2)})`);
+                                }
                             }
                         }
                     }
@@ -1863,7 +1910,7 @@ class SurfaceMode {
     _createFlora(planetColors, x, y, seed) {
         const rand = (seed * 7.919) % 1;
         const size = 15 + (seed % 20);
-        
+
         // Choose flora type based on random value
         if (rand < 0.2 && typeof AlienTree !== 'undefined') {
             return new AlienTree(x, y, size, planetColors);
@@ -1876,7 +1923,7 @@ class SurfaceMode {
         } else if (typeof BubbleBush !== 'undefined') {
             return new BubbleBush(x, y, size, planetColors);
         }
-        
+
         // Fallback to AlienTree if available
         return typeof AlienTree !== 'undefined' ? new AlienTree(x, y, size, planetColors) : null;
     }
@@ -1893,7 +1940,7 @@ class SurfaceMode {
     _createFauna(planetColors, x, y, seed) {
         const rand = (seed * 13.579) % 1;
         const size = 10 + (seed % 15);
-        
+
         // Choose fauna type based on random value
         if (rand < 0.25 && typeof SlitherCreature !== 'undefined') {
             return new SlitherCreature(x, y, size, planetColors);
@@ -1904,7 +1951,7 @@ class SurfaceMode {
         } else if (typeof StalkCreature !== 'undefined') {
             return new StalkCreature(x, y, size, planetColors);
         }
-        
+
         // Fallback to SlitherCreature if available
         return typeof SlitherCreature !== 'undefined' ? new SlitherCreature(x, y, size, planetColors) : null;
     }
@@ -1939,44 +1986,56 @@ class SurfaceMode {
      */
     _initializeMiningRobotsForBases() {
         if (typeof MiningRobot === 'undefined' || typeof OreSeam === 'undefined') return;
-        
+
         // Find all player-built Hab Units (variant 1 of OffworldBuilding)
         for (const obj of this.surfaceObjects) {
             if (!obj || obj.destroyed) continue;
-            
+
             // Check if it's a player-built Hab Unit
-            const isHabUnit = obj.playerBuilt && 
-                             obj.constructor && 
-                             obj.constructor.name === 'OffworldBuilding' && 
-                             obj.variant === 1;
-            
+            const isHabUnit = obj.playerBuilt &&
+                obj.constructor &&
+                obj.constructor.name === 'OffworldBuilding' &&
+                obj.variant === 1;
+
             if (!isHabUnit) continue;
-            
+
             // Initialize storage if needed
             if (!obj.miningStorage) {
                 obj.miningStorage = [];
                 obj.miningStorageCapacity = MINING_CONFIG.STORAGE_CAPACITY;
             }
-            
+
             // Check if robots already spawned for this base
             if (!obj.robotsInitialized) {
                 obj.robotsInitialized = true;
-                
+
                 // Create shared ore seam map for this base (if not exists)
                 const baseKey = `base_${obj.pos.x}_${obj.pos.y}`;
                 if (!this.oreSeams.has(baseKey)) {
                     this.oreSeams.set(baseKey, new Map());
                 }
                 const baseOreSeams = this.oreSeams.get(baseKey);
-                
+
                 // Spawn 2-3 mining robots per base
                 const robotCount = Math.floor(random(2, 4));
+                obj.robotCount = robotCount;
+
+                // Sync to descriptor for persistence
+                const desc = this.playerBuiltMap.get(obj.cellKey);
+                if (desc) {
+                    desc.robotCount = robotCount;
+                    desc.robotsInitialized = true;
+                    // Link the storage array so updates to one affect the other
+                    if (!desc.miningStorage) desc.miningStorage = obj.miningStorage;
+                    else obj.miningStorage = desc.miningStorage;
+                }
+
                 for (let i = 0; i < robotCount; i++) {
                     const angle = (i / robotCount) * TWO_PI;
                     const dist = 50 + random(20);
                     const rx = obj.pos.x + Math.cos(angle) * dist;
                     const ry = obj.pos.y + Math.sin(angle) * dist;
-                    
+
                     const robot = new MiningRobot(rx, ry, obj, baseOreSeams);
                     robot.yOffset = this._getTerrainHeightAt(rx, ry);
                     this.miningRobots.push(robot);
@@ -1986,19 +2045,131 @@ class SurfaceMode {
     }
 
     /**
+     * Update background activity for distant player bases (mining and hazard damage)
+     * Uses a timestamp-based catch-up system for performance.
+     * @param {number} dt - Frame delta time
+     * @private
+     */
+    _updateBackgroundActivity(dt) {
+        if (!this.playerBuiltMap) return;
+
+        const now = Date.now();
+        const updateRangeSq = (SURFACE_CONFIG.UPDATE_RANGE || 2000) ** 2;
+        const playerPos = (this.controlMode === 'ASTRONAUT' && this.astronaut) ? this.astronaut.pos : this.player.pos;
+
+        // Iterate over all player built objects (even those not currently spawned)
+        for (const [cellKey, desc] of this.playerBuiltMap) {
+            if (desc.destroyed) continue;
+
+            // Find active object instance if it exists (in cache or surfaceObjects)
+            let obj = this.objectCache.get(cellKey);
+
+            // If the object is active and within range, it's being simulated in high-fidelity
+            // so we skip background simulation to avoid double-dipping.
+            if (obj && playerPos) {
+                const dSq = (obj.pos.x - playerPos.x) ** 2 + (obj.pos.y - playerPos.y) ** 2;
+                if (dSq < updateRangeSq) {
+                    obj.lastBackgroundTick = now; // Keep tick updated so catch-up starts from here when it leaves range
+                    continue;
+                }
+            }
+
+            // BACKGROUND CATCH-UP LOGIC
+            // Ensure lastBackgroundTick exists
+            if (!desc.lastBackgroundTick) desc.lastBackgroundTick = now - (dt * 1000);
+
+            const timeElapsed = (now - desc.lastBackgroundTick) / 1000; // Seconds
+
+            // Minimum update frequency of 2 seconds for background logic to save processing
+            if (timeElapsed < 2.0) continue;
+
+            // 1. Process Mining (Simplified math)
+            if (desc.type === 'OffworldBuilding' && desc.variant === 1) { // Player Base
+                // Calculate mining rate based on expected robot performance
+                const robotCount = desc.robotCount || 3;
+                const mineRatePerRobot = 0.5; // minerals/sec
+                const mineralsEarned = robotCount * mineRatePerRobot * timeElapsed;
+
+                // Ensure storage array exists and contains 'Minerals'
+                if (!desc.miningStorage) desc.miningStorage = [];
+                let mineralStack = desc.miningStorage.find(item => item.name === 'Minerals');
+                if (!mineralStack) {
+                    mineralStack = { name: 'Minerals', quantity: 0 };
+                    desc.miningStorage.push(mineralStack);
+                }
+
+                const capacity = desc.miningStorageCapacity || 100;
+                mineralStack.quantity = Math.min(capacity, mineralStack.quantity + mineralsEarned);
+
+                // 2. Process Hazards (Simplified damage)
+                // Fauna density factor (0 to 1 based on planet)
+                const hazardLevel = this.planet ? (this.planet.hazardLevel || 0.2) : 0.1;
+                const damagePerSec = hazardLevel * 0.5;
+                const damageTaken = damagePerSec * timeElapsed;
+
+                desc.health = (desc.health !== undefined ? desc.health : 1000) - damageTaken;
+
+                // 3. Robot Attrition (Random chance based on hazard and time)
+                // Approx 5% chance per hour per hazard level
+                const attritionChance = hazardLevel * (timeElapsed / 3600) * 0.05;
+                if (Math.random() < attritionChance && desc.robotCount > 0) {
+                    desc.robotCount--;
+                    console.log(`Lost a mining robot to hazards at ${cellKey}. Remaining: ${desc.robotCount}`);
+                }
+
+                if (desc.health <= 0) {
+                    desc.destroyed = true;
+                    this.destroyedCells.add(cellKey);
+                    console.log(`Base at ${cellKey} destroyed in background!`);
+                }
+
+                // Sync properties back to cached object if it exists
+                if (obj) {
+                    obj.health = desc.health;
+                    obj.destroyed = desc.destroyed;
+                    obj.robotCount = desc.robotCount;
+                    // Since miningStorage array is linked, we just need to notify if needed
+                    // or ensure the active object's storage is synchronized.
+                }
+            }
+
+            desc.lastBackgroundTick = now;
+        }
+    }
+
+    /**
      * Update mining robots and regenerate ore seams
      * @param {number} dt - Delta time in seconds
      * @private
      */
     _updateMiningRobots(dt) {
-        if (!this.miningRobots || this.miningRobots.length === 0) return;
-        
-        // Update robots
-        for (let robot of this.miningRobots) {
-            if (!robot) continue;
+        if (!this.miningRobots) return;
+
+        const now = Date.now();
+        const cleanupRangeSq = (SURFACE_CONFIG.UPDATE_RANGE || 2000) * 1.5;
+        const cleanupRangeSqVal = cleanupRangeSq * cleanupRangeSq;
+        const playerPos = (this.controlMode === 'ASTRONAUT' && this.astronaut) ? this.astronaut.pos : this.player.pos;
+
+        // Update robots and filter out destroyed ones or those far away
+        this.miningRobots = this.miningRobots.filter(robot => {
+            if (!robot || robot.destroyed) return false;
+
+            // Distance-based cleanup: if robot is too far from player, remove it.
+            // It will be re-instantiated when the player returns and base initialization runs.
+            if (playerPos) {
+                const dx = robot.pos.x - playerPos.x;
+                const dy = robot.pos.y - playerPos.y;
+                if (dx * dx + dy * dy > cleanupRangeSqVal) {
+                    // Force the base to re-initialize robots when player returns
+                    if (robot.homeBase) robot.homeBase.robotsInitialized = false;
+                    return false;
+                }
+            }
+
             robot.update(dt, this);
-        }
-        
+            return true;
+        });
+
         // Regenerate ore seams slowly over time
         for (const [baseKey, baseSeams] of this.oreSeams) {
             for (const [seamKey, seam] of baseSeams) {
@@ -2013,7 +2184,7 @@ class SurfaceMode {
      */
     _drawMiningRobots() {
         if (!this.miningRobots || this.miningRobots.length === 0) return;
-        
+
         // Only draw robots - ore seams are not visible
         for (let robot of this.miningRobots) {
             if (!robot) continue;
@@ -2133,7 +2304,7 @@ class SurfaceMode {
      */
     _drawMines() {
         if (!this.starSystem || !this.starSystem.mines) return;
-        
+
         const mines = this.starSystem.mines;
         if (mines.length === 0) return;
 
@@ -2210,7 +2381,7 @@ class SurfaceMode {
         this._clearShadow();
 
         let vStartX, vStartY, vEndX, vEndY;
-        
+
         // Check if beam coordinates are already in visual space (surface mode beam)
         if (beam.inSurfaceMode) {
             // Beam was fired in surface mode - coordinates are already visual

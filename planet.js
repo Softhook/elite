@@ -1251,7 +1251,11 @@ class Planet {
                         variant: (typeof o.variant !== 'undefined') ? o.variant : null,
                         yOffset: (typeof o.yOffset !== 'undefined') ? o.yOffset : 0,
                         displayName: o.displayName || o.name || null,
-                        destroyed: !!o.destroyed
+                        destroyed: !!o.destroyed,
+                        health: (typeof o.health !== 'undefined') ? o.health : null,
+                        storage: (typeof o.storage !== 'undefined') ? o.storage : null,
+                        lastBackgroundTick: o.lastBackgroundTick || null,
+                        robotCount: (typeof o.robotCount !== 'undefined') ? o.robotCount : null
                     };
                 })
                 : [],
