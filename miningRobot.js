@@ -10,12 +10,12 @@
 const MINING_CONFIG = {
     // Robot Movement
     PATROL_RADIUS: 600,           // Maximum distance from base to mine
-    MAX_SPEED: 80,                // Units per second
-    ACCELERATION: 40,             // Acceleration rate
+    MAX_SPEED: 40,                // Units per second (reduced from 80)
+    ACCELERATION: 20,             // Acceleration rate (reduced from 40)
     ARRIVAL_RADIUS: 30,           // Distance to consider "arrived"
     
     // Mining Performance
-    MINING_DURATION: 2.5,         // Seconds to mine one location
+    MINING_DURATION: 5.0,         // Seconds to mine one location (increased from 2.5)
     CARGO_CAPACITY: 12,           // Maximum minerals per robot
     MINERALS_PER_MINE: 3,         // Minerals extracted per mining cycle
     
@@ -117,6 +117,10 @@ class MiningRobot {
         this.oreSeams = oreSeams; // Reference to shared ore seam map
         this.yOffset = 0; // Terrain height (set by surface mode)
         
+        // Health and destruction
+        this.destroyed = false;
+        this.health = 50; // Robots can be destroyed by fauna
+        
         // Movement properties (from config)
         this.maxSpeed = MINING_CONFIG.MAX_SPEED;
         this.acceleration = MINING_CONFIG.ACCELERATION;
@@ -150,6 +154,9 @@ class MiningRobot {
      * @param {Object} surfaceMode - Reference to surface mode for terrain queries
      */
     update(dt, surfaceMode) {
+        // Skip update if destroyed
+        if (this.destroyed) return;
+        
         this.stateTimer += dt;
         this.lightTimer += MINING_CONFIG.LIGHT_BLINK_SPEED;
         
@@ -157,6 +164,10 @@ class MiningRobot {
         if (surfaceMode && typeof surfaceMode._getTerrainHeightAt === 'function') {
             this.yOffset = surfaceMode._getTerrainHeightAt(this.pos.x, this.pos.y);
         }
+        
+        // Check collision with fauna
+        this.checkFaunaCollisions(surfaceMode);
+        if (this.destroyed) return; // Stop if just destroyed
         
         // Update state machine
         switch (this.state) {
@@ -191,7 +202,55 @@ class MiningRobot {
     }
     
     /**
+     * Check for collisions with surface fauna
+     * @param {Object} surfaceMode - Reference to surface mode
+     */
+    checkFaunaCollisions(surfaceMode) {
+        if (!surfaceMode || !surfaceMode.surfaceObjects) return;
+        
+        const collisionRadius = this.size * 0.7; // Collision detection radius
+        
+        for (const obj of surfaceMode.surfaceObjects) {
+            if (!obj || obj.destroyed) continue;
+            
+            // Check if it's fauna (has moveSpeed property or is SurfaceFauna subclass)
+            const isFauna = obj.moveSpeed !== undefined || 
+                           (obj.constructor && obj.constructor.name && 
+                            (obj.constructor.name.includes('Creature') || 
+                             obj.constructor.name.includes('Fauna')));
+            
+            if (!isFauna) continue;
+            
+            // Check distance
+            const dx = this.pos.x - obj.pos.x;
+            const dy = this.pos.y - obj.pos.y;
+            const distSq = dx * dx + dy * dy;
+            const combinedRadius = collisionRadius + (obj.size || 20);
+            
+            if (distSq < combinedRadius * combinedRadius) {
+                // Collision! Robot is destroyed
+                this.destroyed = true;
+                this.health = 0;
+                
+                // Create small explosion effect if possible
+                if (surfaceMode._createSurfaceExplosion) {
+                    surfaceMode._createSurfaceExplosion(
+                        this.pos.x, 
+                        this.pos.y, 
+                        this.yOffset, 
+                        this.size * 1.5, 
+                        [200, 150, 100]
+                    );
+                }
+                
+                break;
+            }
+        }
+    }
+    
+    /**
      * Idle state - wait then start seeking
+     * Only seeks if storage has space
      * @param {number} dt - Delta time in seconds
      */
     updateIdle(dt) {
@@ -199,15 +258,40 @@ class MiningRobot {
         this.idleWaitTime += dt;
         
         if (this.idleWaitTime >= this.maxIdleTime) {
-            this.state = ROBOT_STATE.SEEKING;
+            // Only start seeking if storage isn't full
+            if (!this.isBaseStorageFull()) {
+                this.state = ROBOT_STATE.SEEKING;
+            }
             this.idleWaitTime = 0;
         }
     }
     
     /**
+     * Check if base storage is full or nearly full
+     * @returns {boolean} True if storage is full
+     */
+    isBaseStorageFull() {
+        if (!this.homeBase || !this.homeBase.miningStorage) return false;
+        
+        const capacity = this.homeBase.miningStorageCapacity || MINING_CONFIG.STORAGE_CAPACITY;
+        const existingMinerals = this.homeBase.miningStorage.find(item => item.name === 'Minerals');
+        const currentAmount = existingMinerals ? existingMinerals.quantity : 0;
+        
+        // Consider full if less than one mining cycle worth of space
+        return (capacity - currentAmount) < MINING_CONFIG.MINERALS_PER_MINE;
+    }
+    
+    /**
      * Seeking state - find or create a mining location
+     * Stops seeking if base storage is full
      */
     updateSeeking() {
+        // Check if base storage is full - if so, go idle
+        if (this.isBaseStorageFull()) {
+            this.state = ROBOT_STATE.IDLE;
+            return;
+        }
+        
         // Try to find existing ore seam with ore
         let bestSeam = null;
         let bestDist = MINING_CONFIG.PATROL_RADIUS;
@@ -429,7 +513,7 @@ class MiningRobot {
      * @param {Object} surfaceMode - Reference to surface mode for projection
      */
     draw(surfaceMode) {
-        if (!surfaceMode) return;
+        if (!surfaceMode || this.destroyed) return;
         
         // Use surface projection helpers
         const alt = this.yOffset + 4; // Slightly above terrain

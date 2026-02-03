@@ -805,10 +805,10 @@ class UIStationMenus {
             if (baseObj && baseObj.miningStorage) {
                 const mineralsEntry = baseObj.miningStorage.find(i => i.name === 'Minerals');
                 if (mineralsEntry && mineralsEntry.quantity > 0) {
-                    // Try to add minerals to player cargo
-                    const result = player.addCargo('Minerals', mineralsEntry.quantity);
-                    if (result && result.success) {
-                        const collected = result.added || 0;
+                    // Try to add minerals to player cargo (allow partial collection)
+                    const result = player.addCargo('Minerals', mineralsEntry.quantity, true);
+                    if (result && result.added > 0) {
+                        const collected = result.added;
                         mineralsEntry.quantity -= collected;
                         
                         // Remove entry if depleted
