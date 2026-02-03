@@ -780,7 +780,7 @@ class RollerCreature extends SurfaceFauna {
         for (let i = 0; i < spikeCount; i++) {
             const angle = (i / this.spikes) * Math.PI * 2 + rotation;
             const sx = topX - 2 + Math.cos(angle) * this.size * 0.8;
-            const sy = topY - 5 + Math.sin(angle) * this.size * 0.8;
+            const sy = topY - 6 + Math.sin(angle) * this.size * 0.8;
             const spikeSize = this.size * 0.2;
 
             const spikeColor = color(
