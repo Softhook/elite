@@ -598,6 +598,35 @@ class SlitherCreature extends SurfaceFauna {
         super(x, y, size, planetColors, seed);
         this.segments = 6;
         this.height = size * 0.3;
+        // Track each segment's angle for smooth following
+        this.segmentAngles = new Array(this.segments).fill(this.moveAngle);
+    }
+
+    /**
+     * Update with smooth tail following
+     * @override
+     */
+    update(dt, player) {
+        super.update(dt, player);
+
+        if (this.destroyed) return;
+
+        // Smoothly interpolate each segment's angle towards the one in front
+        // The head follows moveAngle, each segment follows the previous segment
+        const smoothness = 5.0; // Higher = faster following
+
+        for (let i = this.segments - 1; i >= 0; i--) {
+            const targetAngle = i === 0 ? this.moveAngle : this.segmentAngles[i - 1];
+
+            // Calculate shortest angular distance
+            let angleDiff = targetAngle - this.segmentAngles[i];
+            // Normalize to [-PI, PI]
+            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+            // Smoothly interpolate
+            this.segmentAngles[i] += angleDiff * smoothness * dt;
+        }
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
@@ -621,13 +650,18 @@ class SlitherCreature extends SurfaceFauna {
             const progress = i / this.segments;
             const waveOffset = Math.sin(this.animTime + progress * Math.PI * 2) * this.size * 0.2;
 
-            // World-space offsets for the segment
-            const worldOffsetX = -Math.cos(this.moveAngle) * i * this.size * 0.3 + Math.sin(this.moveAngle) * waveOffset;
-            const worldOffsetY = -Math.sin(this.moveAngle) * i * this.size * 0.3 - Math.cos(this.moveAngle) * waveOffset;
+            // Use the smoothed angle for this segment
+            const segmentAngle = this.segmentAngles[i] || this.moveAngle;
 
-            // Project segment to visual space (assuming same altitude as head for performance)
-            const sx = baseX + worldOffsetX;
-            const sy = baseY + worldOffsetY;
+            // Calculate world-space position for this segment using its smooth angle
+            const segmentWorldX = worldX - Math.cos(segmentAngle) * i * this.size * 0.3 + Math.sin(segmentAngle) * waveOffset;
+            const segmentWorldY = worldY - Math.sin(segmentAngle) * i * this.size * 0.3 - Math.cos(segmentAngle) * waveOffset;
+
+            // Project each segment individually with proper altitude for smooth movement
+            const { baseX: sx, baseY: sy } =
+                typeof getProjectionHelpers === 'function'
+                    ? getProjectionHelpers(segmentWorldX, segmentWorldY, alt + this.height)
+                    : { baseX: segmentWorldX, baseY: segmentWorldY };
 
             const segSize = this.size * (1 - progress * 0.3);
             const segColor = color(
@@ -741,10 +775,12 @@ class RollerCreature extends SurfaceFauna {
         const spikeCount = lodLevel === 2 ? 4 : this.spikes;
         const rotation = this.animTime;
 
+        // Position spikes around the sphere's visual center (topX, topY)
+        // The topX, topY is already the correct visual center of the sphere
         for (let i = 0; i < spikeCount; i++) {
             const angle = (i / this.spikes) * Math.PI * 2 + rotation;
-            const sx = topX + Math.cos(angle) * this.size * 0.8;
-            const sy = topY + Math.sin(angle) * this.size * 0.8;
+            const sx = topX - 2 + Math.cos(angle) * this.size * 0.8;
+            const sy = topY - 5 + Math.sin(angle) * this.size * 0.8;
             const spikeSize = this.size * 0.2;
 
             const spikeColor = color(
