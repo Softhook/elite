@@ -752,13 +752,16 @@ class SurfaceMode {
             }
 
             // Update surface objects (single pass, dt-corrected)
-            // Apply viewport culling for distant objects to improve performance
+            // Apply distance-based culling for distant objects to improve performance
             if (this.surfaceObjects) {
                 const target = this.controlMode === 'ASTRONAUT' ? this.astronaut : this.player;
 
                 // Get viewport for culling (use constant from config)
                 const updateRange = SURFACE_CONFIG.UPDATE_RANGE || 2000;
                 const updateRangeSq = updateRange * updateRange;
+                // Tighter culling for fauna wandering behavior (half the normal range)
+                // Fauna can skip movement updates when far away since they just wander randomly
+                const faunaReducedRangeSq = (updateRange * 0.7) ** 2;
 
                 let objectsUpdated = 0;
                 let objectsCulled = 0;
@@ -774,9 +777,15 @@ class SurfaceMode {
                         const dy = obj.pos.y - target.pos.y;
                         const distSq = dx * dx + dy * dy;
 
+                        // More aggressive culling for fauna (they just wander when not targeting bases)
+                        // Check if object is fauna by duck-typing (has moveAngle property)
+                        const isFauna = typeof obj.moveAngle !== 'undefined';
+                        const effectiveRangeSq = isFauna ? faunaReducedRangeSq : updateRangeSq;
+
                         // Skip update for very distant objects (but still render them if visible)
-                        // Exceptions: Always update mission-critical objects (isTarget)
-                        if (distSq > updateRangeSq && !obj.isTarget) {
+                        // Exceptions: Always update mission-critical objects (isTarget) or fauna attacking bases
+                        const shouldAlwaysUpdate = obj.isTarget || (isFauna && obj.targetBase);
+                        if (distSq > effectiveRangeSq && !shouldAlwaysUpdate) {
                             objectsCulled++;
                             continue;
                         }
@@ -2193,20 +2202,27 @@ class SurfaceMode {
     _updateMiningRobots(dt) {
         if (!this.miningRobots) return;
 
-        const cleanupRangeSq = (SURFACE_CONFIG.UPDATE_RANGE || 2000) * 1.5;
+        const updateRange = SURFACE_CONFIG.UPDATE_RANGE || 2000;
+        const updateRangeSq = updateRange * updateRange;
+        const cleanupRangeSq = updateRange * 1.5;
         const cleanupRangeSqVal = cleanupRangeSq * cleanupRangeSq;
         const playerPos = (this.controlMode === 'ASTRONAUT' && this.astronaut) ? this.astronaut.pos : this.player.pos;
+
+        let robotsUpdated = 0;
+        let robotsCulled = 0;
 
         // Update robots and filter out destroyed ones or those far away
         this.miningRobots = this.miningRobots.filter(robot => {
             if (!robot || robot.destroyed) return false;
 
-            // Distance-based cleanup: if robot is too far from player, remove it.
-            // It will be re-instantiated when the player returns and base initialization runs.
             if (playerPos) {
                 const dx = robot.pos.x - playerPos.x;
                 const dy = robot.pos.y - playerPos.y;
-                if (dx * dx + dy * dy > cleanupRangeSqVal) {
+                const distSq = dx * dx + dy * dy;
+
+                // Distance-based cleanup: if robot is too far from player, remove it.
+                // It will be re-instantiated when the player returns and base initialization runs.
+                if (distSq > cleanupRangeSqVal) {
                     // Force the base to re-initialize robots when player returns
                     if (robot.homeBase) {
                         robot.homeBase.robotsInitialized = false;
@@ -2216,11 +2232,26 @@ class SurfaceMode {
                     }
                     return false;
                 }
+
+                // Update culling: Only update robots within UPDATE_RANGE
+                // Robots beyond this range stay frozen until player approaches
+                if (distSq <= updateRangeSq) {
+                    robot.update(dt, this);
+                    robotsUpdated++;
+                } else {
+                    robotsCulled++;
+                }
+            } else {
+                // No player pos, always update
+                robot.update(dt, this);
+                robotsUpdated++;
             }
 
-            robot.update(dt, this);
             return true;
         });
+
+        // Store culling stats for debug overlay
+        this._lastRobotUpdateStats = { updated: robotsUpdated, culled: robotsCulled };
 
         // Regenerate ore seams slowly over time
         for (const [baseKey, baseSeams] of this.oreSeams) {
@@ -2231,17 +2262,43 @@ class SurfaceMode {
     }
 
     /**
-     * Draw mining robots (ore seams are invisible - mined at random locations)
+     * Draw mining robots with viewport culling (ore seams are invisible - mined at random locations)
      * @private
      */
     _drawMiningRobots() {
         if (!this.miningRobots || this.miningRobots.length === 0) return;
 
-        // Only draw robots - ore seams are not visible
+        // Viewport culling for mining robots
+        const viewport = this._getViewportBounds(200);
+        const extrusionAngle = this._getExtrusionAngle();
+        const sin = Math.sin(extrusionAngle);
+        const cos = Math.cos(extrusionAngle);
+
+        let robotsDrawn = 0;
+        let robotsCulled = 0;
+
+        // Only draw robots that are visible
         for (let robot of this.miningRobots) {
             if (!robot) continue;
+
+            // Viewport culling: Check if robot is visible
+            const objAlt = robot.yOffset || 0;
+            const objSize = robot.size || 20;
+            const visX = robot.pos.x - objAlt * sin;
+            const visY = robot.pos.y - objAlt * cos;
+
+            if (visX + objSize < viewport.minX || visX - objSize > viewport.maxX ||
+                visY + objSize < viewport.minY || visY - objSize > viewport.maxY) {
+                robotsCulled++;
+                continue;
+            }
+
+            robotsDrawn++;
             robot.draw(this);
         }
+
+        // Store culling stats for debug overlay
+        this._lastRobotDrawStats = { drawn: robotsDrawn, culled: robotsCulled };
     }
 
     /**
@@ -2356,7 +2413,7 @@ class SurfaceMode {
     }
 
     /**
-     * Draw mines at their world positions
+     * Draw mines at their world positions with viewport culling
      * @private
      */
     _drawMines() {
@@ -2365,11 +2422,28 @@ class SurfaceMode {
         const mines = this.starSystem.mines;
         if (mines.length === 0) return;
 
+        // Viewport culling for mines
+        const viewport = this._getViewportBounds(150);
+        const extrusionAngle = this._getExtrusionAngle();
+        const sin = Math.sin(extrusionAngle);
+        const cos = Math.cos(extrusionAngle);
+
         push();
         this._clearShadow();
 
         for (const mine of mines) {
             if (mine && !mine.destroyed && typeof mine.draw === 'function') {
+                // Viewport culling: Check if mine is visible
+                const alt = mine.altitude || 0;
+                const mineSize = mine.size || 20;
+                const visX = mine.pos.x - alt * sin;
+                const visY = mine.pos.y - alt * cos;
+
+                if (visX + mineSize < viewport.minX || visX - mineSize > viewport.maxX ||
+                    visY + mineSize < viewport.minY || visY - mineSize > viewport.maxY) {
+                    continue;
+                }
+
                 // Mine.draw() already handles altitude projection via SurfaceUtils
                 mine.draw();
             }
