@@ -2282,9 +2282,11 @@ class SurfaceMode {
 
             objectsDrawn++;
 
-            // Calculate LOD level for flora/fauna (buildings always render at full detail)
-            const isFloraFauna = obj instanceof SurfaceFlora || obj instanceof SurfaceFauna;
-            const lodLevel = isFloraFauna ? this._calculateLODLevel(objSize) : 3;
+            objectsDrawn++;
+
+            // Calculate LOD level for all surface objects (flora, fauna, buildings)
+            // Uses unified system: LOD 3 (full) or LOD 2 (simplified) based on altitude/size
+            const lodLevel = this._calculateLODLevel(objSize);
 
             // Local coordinates and altitude for surface objects
             const worldX = obj.pos.x;
@@ -2292,13 +2294,9 @@ class SurfaceMode {
             // objAlt already declared above
 
             // Objects now handle their internal visual projection using world coords and altitude
-            // Pass LOD level for flora/fauna optimization
+            // Pass LOD level for optimization
             if (obj.draw) {
-                if (isFloraFauna) {
-                    obj.draw(worldX, worldY, sunAngle, objAlt, lodLevel);
-                } else {
-                    obj.draw(worldX, worldY, sunAngle, objAlt);
-                }
+                obj.draw(worldX, worldY, sunAngle, objAlt, lodLevel);
             }
 
             // Target reticle drawing moved to centralized UIHUD.drawTargetReticle() called via drawHUD()
