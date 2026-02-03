@@ -254,6 +254,20 @@ class MiningRobot {
             this.destroyed = true;
             this.health = 0;
 
+            // Decrement robot count on homeBase and sync to descriptor
+            if (this.homeBase) {
+                if (typeof this.homeBase.robotCount === 'number' && this.homeBase.robotCount > 0) {
+                    this.homeBase.robotCount--;
+                }
+                // Sync to descriptor for persistence
+                if (surfaceMode && surfaceMode.playerBuiltMap && this.homeBase.cellKey) {
+                    const desc = surfaceMode.playerBuiltMap.get(this.homeBase.cellKey);
+                    if (desc && typeof desc.robotCount === 'number' && desc.robotCount > 0) {
+                        desc.robotCount--;
+                    }
+                }
+            }
+
             // Create small explosion effect if possible
             if (surfaceMode && surfaceMode._createSurfaceExplosion) {
                 surfaceMode._createSurfaceExplosion(

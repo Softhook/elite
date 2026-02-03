@@ -383,6 +383,10 @@ class SurfaceMode {
         this.destroyedCells.clear();
         this.playerBuiltMap.clear();
 
+        // Clear mining robots and ore seams to prevent respawn bugs on planet re-entry
+        this.miningRobots = [];
+        this.oreSeams.clear();
+
         // Restore destroyed state from planet
         if (this.planet.destroyedSurfaceObjects) {
             for (const key of this.planet.destroyedSurfaceObjects) {
@@ -599,6 +603,8 @@ class SurfaceMode {
 
         // Clear data
         this.projectiles = [];
+        this.miningRobots = [];
+        this.oreSeams.clear();
         this.savedPlayerPos = null;
         this.planet = null;
 
@@ -1913,19 +1919,19 @@ class SurfaceMode {
 
         // Choose flora type based on random value
         if (rand < 0.2 && typeof AlienTree !== 'undefined') {
-            return new AlienTree(x, y, size, planetColors);
+            return new AlienTree(x, y, size, planetColors, seed);
         } else if (rand < 0.4 && typeof CrystalPlant !== 'undefined') {
-            return new CrystalPlant(x, y, size, planetColors);
+            return new CrystalPlant(x, y, size, planetColors, seed);
         } else if (rand < 0.6 && typeof TentaclePlant !== 'undefined') {
-            return new TentaclePlant(x, y, size, planetColors);
+            return new TentaclePlant(x, y, size, planetColors, seed);
         } else if (rand < 0.8 && typeof SporeStalk !== 'undefined') {
-            return new SporeStalk(x, y, size, planetColors);
+            return new SporeStalk(x, y, size, planetColors, seed);
         } else if (typeof BubbleBush !== 'undefined') {
-            return new BubbleBush(x, y, size, planetColors);
+            return new BubbleBush(x, y, size, planetColors, seed);
         }
 
         // Fallback to AlienTree if available
-        return typeof AlienTree !== 'undefined' ? new AlienTree(x, y, size, planetColors) : null;
+        return typeof AlienTree !== 'undefined' ? new AlienTree(x, y, size, planetColors, seed) : null;
     }
 
     /**
@@ -1943,17 +1949,17 @@ class SurfaceMode {
 
         // Choose fauna type based on random value
         if (rand < 0.25 && typeof SlitherCreature !== 'undefined') {
-            return new SlitherCreature(x, y, size, planetColors);
+            return new SlitherCreature(x, y, size, planetColors, seed);
         } else if (rand < 0.5 && typeof FloaterCreature !== 'undefined') {
-            return new FloaterCreature(x, y, size, planetColors);
+            return new FloaterCreature(x, y, size, planetColors, seed);
         } else if (rand < 0.75 && typeof RollerCreature !== 'undefined') {
-            return new RollerCreature(x, y, size, planetColors);
+            return new RollerCreature(x, y, size, planetColors, seed);
         } else if (typeof StalkCreature !== 'undefined') {
-            return new StalkCreature(x, y, size, planetColors);
+            return new StalkCreature(x, y, size, planetColors, seed);
         }
 
         // Fallback to SlitherCreature if available
-        return typeof SlitherCreature !== 'undefined' ? new SlitherCreature(x, y, size, planetColors) : null;
+        return typeof SlitherCreature !== 'undefined' ? new SlitherCreature(x, y, size, planetColors, seed) : null;
     }
 
     /**
@@ -2161,7 +2167,12 @@ class SurfaceMode {
                 const dy = robot.pos.y - playerPos.y;
                 if (dx * dx + dy * dy > cleanupRangeSqVal) {
                     // Force the base to re-initialize robots when player returns
-                    if (robot.homeBase) robot.homeBase.robotsInitialized = false;
+                    if (robot.homeBase) {
+                        robot.homeBase.robotsInitialized = false;
+                        // Sync to descriptor to prevent duplicate spawns
+                        const desc = this.playerBuiltMap.get(robot.homeBase.cellKey);
+                        if (desc) desc.robotsInitialized = false;
+                    }
                     return false;
                 }
             }
