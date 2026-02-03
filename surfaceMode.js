@@ -2012,7 +2012,11 @@ class SurfaceMode {
             }
 
             // Check if robots already spawned for this base
-            if (!obj.robotsInitialized) {
+            // CRITICAL: Check both object AND descriptor flags because cleanup sets descriptor flag
+            const desc = this.playerBuiltMap.get(obj.cellKey);
+            const needsRobots = !obj.robotsInitialized || (desc && !desc.robotsInitialized);
+
+            if (needsRobots) {
                 obj.robotsInitialized = true;
 
                 // Create shared ore seam map for this base (if not exists)
@@ -2027,8 +2031,7 @@ class SurfaceMode {
                 const robotCount = 2 + Math.floor(baseSeed * 2);
                 obj.robotCount = robotCount;
 
-                // Sync to descriptor for persistence
-                const desc = this.playerBuiltMap.get(obj.cellKey);
+                // Sync to descriptor for persistence (desc already declared above)
                 if (desc) {
                     desc.robotCount = robotCount;
                     desc.robotsInitialized = true;

@@ -345,6 +345,13 @@ class SurfaceFauna {
     static PAUSE_DURATION_MIN = 1;
     static PAUSE_DURATION_MAX = 3;
 
+    // Attack behavior constants
+    static ATTACK_SPEED_MULTIPLIER = 1.5;   // Speed multiplier when pursuing base
+    static BASE_DETECTION_RANGE = 500;       // Max distance to detect player bases
+    static BASE_ABANDON_RANGE = 600;        // Distance at which fauna abandons pursuit
+    static ATTACK_DAMAGE = 5;                // Damage per attack
+    static BASE_SEARCH_INTERVAL = 2.0;       // Seconds between base searches
+
     /**
      * @param {number} x - World X coordinate
      * @param {number} y - World Y coordinate
@@ -423,7 +430,8 @@ class SurfaceFauna {
         }
 
         // Periodically look for player bases to attack
-        if (this.moveTimer % 2 < 0.1 && !this.targetBase) {
+        const searchInterval = SurfaceFauna.BASE_SEARCH_INTERVAL;
+        if (Math.floor(this.moveTimer / searchInterval) !== Math.floor((this.moveTimer - dt) / searchInterval) && !this.targetBase) {
             this._findNearestBase();
         }
 
@@ -478,20 +486,20 @@ class SurfaceFauna {
             // Move towards base
             const angleToBase = Math.atan2(this.targetBase.pos.y - this.pos.y, this.targetBase.pos.x - this.pos.x);
             this.moveAngle = angleToBase;
-            this.pos.x += Math.cos(this.moveAngle) * this.moveSpeed * 1.5 * dt; // Aggressive speed
-            this.pos.y += Math.sin(this.moveAngle) * this.moveSpeed * 1.5 * dt;
+            this.pos.x += Math.cos(this.moveAngle) * this.moveSpeed * SurfaceFauna.ATTACK_SPEED_MULTIPLIER * dt;
+            this.pos.y += Math.sin(this.moveAngle) * this.moveSpeed * SurfaceFauna.ATTACK_SPEED_MULTIPLIER * dt;
         } else {
             // At base - attack!
             if (this.attackCooldown <= 0) {
                 this.attackCooldown = this.attackRate;
                 if (typeof this.targetBase.takeDamage === 'function') {
-                    this.targetBase.takeDamage(5); // Fauna damage
+                    this.targetBase.takeDamage(SurfaceFauna.ATTACK_DAMAGE);
                 }
             }
         }
 
         // Lose interest if too far or base destroyed
-        if (dist > 1500) {
+        if (dist > SurfaceFauna.BASE_ABANDON_RANGE) {
             this.targetBase = null;
         }
     }
@@ -502,9 +510,10 @@ class SurfaceFauna {
      */
     _findNearestBase() {
         if (typeof surfaceMode === 'undefined' || !surfaceMode || !surfaceMode.surfaceObjects) return;
+        if (!Array.isArray(surfaceMode.surfaceObjects) || surfaceMode.surfaceObjects.length === 0) return;
 
         let nearest = null;
-        let minDist = 800; // Only target bases within 800 units
+        let minDist = SurfaceFauna.BASE_DETECTION_RANGE;
 
         for (const obj of surfaceMode.surfaceObjects) {
             if (!obj || obj.destroyed || !obj.playerBuilt) continue;

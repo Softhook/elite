@@ -28,6 +28,10 @@ const MINING_CONFIG = {
     // Base Storage
     STORAGE_CAPACITY: 100,        // Base storage capacity
 
+    // Collision
+    COLLISION_RADIUS_FACTOR: 0.7, // Multiplier for collision detection radius
+    CLEANUP_RANGE_MULTIPLIER: 1.5, // Range multiplier for robot cleanup from player
+
     // Visual
     ROBOT_SIZE: 14,               // Base size for rendering
     DRILL_SPEED: 0.35,            // Drill rotation speed when mining
@@ -111,10 +115,12 @@ class MiningRobot {
     constructor(x, y, homeBase, oreSeams) {
         this.pos = createVector(x, y);
         this.vel = createVector(0, 0);
-        this.angle = random(TWO_PI);
+        // Deterministic angle based on position for save/load consistency
+        this.angle = (Math.sin(x * 1.234 + y * 5.678) * 0.5 + 0.5) * TWO_PI;
         this.size = MINING_CONFIG.ROBOT_SIZE;
         this.homeBase = homeBase;
         this.oreSeams = oreSeams; // Reference to shared ore seam map
+        this.yOffset = 0; // Terrain height (set by surface mode)
         this.yOffset = 0; // Terrain height (set by surface mode)
 
         // Health and destruction
@@ -141,7 +147,8 @@ class MiningRobot {
         // Visual properties
         this.drillRotation = 0;
         this.drillSpeed = 0;
-        this.lightTimer = random(TWO_PI);
+        // Deterministic light timer phase for consistent visuals
+        this.lightTimer = (Math.sin(x * 2.345 + y * 6.789) * 0.5 + 0.5) * TWO_PI;
 
         // Patrol properties
         this.idleWaitTime = 0;
@@ -208,7 +215,7 @@ class MiningRobot {
     checkFaunaCollisions(surfaceMode) {
         if (!surfaceMode?.surfaceObjects || !surfaceMode?.player?.pos) return;
 
-        const collisionRadius = this.size * 0.7; // Collision detection radius
+        const collisionRadius = this.size * MINING_CONFIG.COLLISION_RADIUS_FACTOR;
 
         // PERFORMANCE: Only check physical collisions if close to the player
         const distToPlayerSq = p5.Vector.dist(this.pos, surfaceMode.player.pos) ** 2;
@@ -218,8 +225,8 @@ class MiningRobot {
             for (const obj of surfaceMode.surfaceObjects) {
                 if (!obj || obj.destroyed) continue;
 
-                // Fauna identification
-                const isFauna = obj instanceof SurfaceFauna ||
+                // Fauna identification - check class existence for test compatibility
+                const isFauna = (typeof SurfaceFauna !== 'undefined' && obj instanceof SurfaceFauna) ||
                     (obj.constructor && obj.constructor.name &&
                         (obj.constructor.name.includes('Creature') ||
                             obj.constructor.name.includes('Fauna')));
