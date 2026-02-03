@@ -2022,8 +2022,9 @@ class SurfaceMode {
                 }
                 const baseOreSeams = this.oreSeams.get(baseKey);
 
-                // Spawn 2-3 mining robots per base
-                const robotCount = Math.floor(random(2, 4));
+                // Deterministic robot count based on base position (2-3 robots)
+                const baseSeed = Math.abs(Math.sin(obj.pos.x * 1.234 + obj.pos.y * 5.678) * 43758.5453) % 1;
+                const robotCount = 2 + Math.floor(baseSeed * 2);
                 obj.robotCount = robotCount;
 
                 // Sync to descriptor for persistence
@@ -2038,7 +2039,9 @@ class SurfaceMode {
 
                 for (let i = 0; i < robotCount; i++) {
                     const angle = (i / robotCount) * TWO_PI;
-                    const dist = 50 + random(20);
+                    // Deterministic spawn distance based on base position and robot index
+                    const distSeed = Math.abs(Math.sin(obj.pos.x * 2.345 + obj.pos.y * 6.789 + i * 3.14159)) % 1;
+                    const dist = 50 + distSeed * 20;
                     const rx = obj.pos.x + Math.cos(angle) * dist;
                     const ry = obj.pos.y + Math.sin(angle) * dist;
 
@@ -2092,8 +2095,16 @@ class SurfaceMode {
             // 1. Process Mining (Simplified math)
             if (desc.type === 'OffworldBuilding' && desc.variant === 1) { // Player Base
                 // Calculate mining rate based on expected robot performance
-                const robotCount = desc.robotCount || 3;
-                const mineRatePerRobot = 0.5; // minerals/sec
+                // Match actual robot behavior: MINERALS_PER_MINE / MINING_DURATION
+                const robotCount = typeof desc.robotCount === 'number' ? desc.robotCount : 3;
+
+                // If no robots, no mining happens
+                if (robotCount === 0) {
+                    desc.lastBackgroundTick = now;
+                    continue;
+                }
+
+                const mineRatePerRobot = MINING_CONFIG.MINERALS_PER_MINE / MINING_CONFIG.MINING_DURATION;
                 const mineralsEarned = robotCount * mineRatePerRobot * timeElapsed;
 
                 // Ensure storage array exists and contains 'Minerals'
@@ -2151,7 +2162,6 @@ class SurfaceMode {
     _updateMiningRobots(dt) {
         if (!this.miningRobots) return;
 
-        const now = Date.now();
         const cleanupRangeSq = (SURFACE_CONFIG.UPDATE_RANGE || 2000) * 1.5;
         const cleanupRangeSqVal = cleanupRangeSq * cleanupRangeSq;
         const playerPos = (this.controlMode === 'ASTRONAUT' && this.astronaut) ? this.astronaut.pos : this.player.pos;

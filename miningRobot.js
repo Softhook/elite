@@ -206,7 +206,7 @@ class MiningRobot {
      * @param {Object} surfaceMode - Reference to surface mode
      */
     checkFaunaCollisions(surfaceMode) {
-        if (!surfaceMode || !surfaceMode.surfaceObjects) return;
+        if (!surfaceMode?.surfaceObjects || !surfaceMode?.player?.pos) return;
 
         const collisionRadius = this.size * 0.7; // Collision detection radius
 
@@ -695,4 +695,9 @@ class MiningRobot {
                 return color(150, 150, 150, 150);
         }
     }
+}
+
+// Module exports for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { MiningRobot, OreSeam, MINING_CONFIG, ROBOT_STATE };
 }

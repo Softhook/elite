@@ -443,7 +443,9 @@ class SurfaceFauna {
             if (this.moveTimer >= this.pauseDuration) {
                 this.isPaused = false;
                 this.moveTimer = 0;
-                this.moveAngle += (Math.random() - 0.5) * Math.PI;
+                // Use seeded variation instead of Math.random() for determinism
+                const turnVariation = Math.sin(this.seed * 7.3 + this.pos.x * 0.01 + this.pos.y * 0.01) * 0.5;
+                this.moveAngle += turnVariation * Math.PI;
             }
         } else {
             if (this.moveTimer >= this.moveDuration) {
@@ -452,7 +454,9 @@ class SurfaceFauna {
             } else {
                 this.pos.x += Math.cos(this.moveAngle) * this.moveSpeed * dt;
                 this.pos.y += Math.sin(this.moveAngle) * this.moveSpeed * dt;
-                this.moveAngle += (Math.random() - 0.5) * this.turnSpeed * dt;
+                // Use seeded variation for gradual direction changes
+                const wanderVariation = Math.sin(this.seed * 11.7 + this.animTime * 0.5) * 0.5;
+                this.moveAngle += wanderVariation * this.turnSpeed * dt;
             }
         }
     }
@@ -732,7 +736,6 @@ class StalkCreature extends SurfaceFauna {
         const cosE = Math.cos(extrusionAngle);
 
         // Legs with walking animation
-        const walkCycle = Math.sin(this.animTime * 2);
         for (let i = 0; i < this.legs; i++) {
             const angle = (i / this.legs) * Math.PI * 2;
             const legPhase = (i % 2) * Math.PI; // Alternate leg movement
@@ -792,4 +795,13 @@ class StalkCreature extends SurfaceFauna {
         );
         Draw3D.drawPrism(hTopX, hTopY, this.size * 0.5, 6, headH, headColor, extrusionAngle, sunAngle);
     }
+}
+
+// Module exports for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        SurfaceFlora, SurfaceFauna,
+        AlienTree, CrystalPlant, TentaclePlant, SporeStalk, BubbleBush,
+        SlitherCreature, FloaterCreature, RollerCreature, StalkCreature
+    };
 }
