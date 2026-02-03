@@ -1,18 +1,104 @@
 // ****** miningRobot.js ******
 
 /**
- * Mining Robot - Small autonomous vehicles that mine surface resources near player bases
- * These robots patrol around surface bases, find mineable rocks, extract resources, and return them
+ * Mining Robot - Autonomous vehicles that mine surface resources near player bases
+ * Robots patrol around bases, mine random locations with ore seams, and return resources
  */
+
+// ===== CONFIGURATION =====
+// Easy tuning for mining speed, capacity, and behavior
+const MINING_CONFIG = {
+    // Robot Movement
+    PATROL_RADIUS: 600,           // Maximum distance from base to mine
+    MAX_SPEED: 80,                // Units per second
+    ACCELERATION: 40,             // Acceleration rate
+    ARRIVAL_RADIUS: 30,           // Distance to consider "arrived"
+    
+    // Mining Performance
+    MINING_DURATION: 2.5,         // Seconds to mine one location
+    CARGO_CAPACITY: 12,           // Maximum minerals per robot
+    MINERALS_PER_MINE: 3,         // Minerals extracted per mining cycle
+    
+    // Ore Seam System
+    ORE_SEAM_INITIAL: 50,         // Starting ore amount at location
+    ORE_SEAM_VARIANCE: 20,        // Random variance in ore amount
+    ORE_SEAM_REGEN_RATE: 0.1,     // Ore regeneration per second (slow)
+    ORE_SEAM_MAX: 80,             // Maximum ore at any location
+    
+    // Base Storage
+    STORAGE_CAPACITY: 100,        // Base storage capacity
+    
+    // Visual
+    ROBOT_SIZE: 14,               // Base size for rendering
+    DRILL_SPEED: 0.35,            // Drill rotation speed when mining
+    LIGHT_BLINK_SPEED: 0.05       // Status light animation speed
+};
 
 // Robot states
 const ROBOT_STATE = {
     IDLE: 'idle',
     SEEKING: 'seeking',
-    MOVING_TO_RESOURCE: 'moving_to_resource',
+    MOVING_TO_LOCATION: 'moving_to_location',
     MINING: 'mining',
     RETURNING: 'returning'
 };
+
+/**
+ * OreSeam - Represents a mineable location with depleting resources
+ * Simulates underground ore deposits that regenerate slowly over time
+ */
+class OreSeam {
+    constructor(x, y, homeBase) {
+        this.pos = createVector(x, y);
+        this.homeBase = homeBase;
+        this.oreAmount = MINING_CONFIG.ORE_SEAM_INITIAL + 
+                        random(-MINING_CONFIG.ORE_SEAM_VARIANCE, MINING_CONFIG.ORE_SEAM_VARIANCE);
+        this.maxOre = MINING_CONFIG.ORE_SEAM_MAX;
+        this.lastMineTime = 0;
+        this.depleted = false;
+    }
+    
+    /**
+     * Check if seam has mineable ore
+     */
+    hasOre() {
+        return this.oreAmount > 0 && !this.depleted;
+    }
+    
+    /**
+     * Extract ore from this seam
+     * @param {number} amount - Amount to extract
+     * @returns {number} Actual amount extracted
+     */
+    extract(amount) {
+        if (!this.hasOre()) return 0;
+        
+        const extracted = Math.min(amount, this.oreAmount);
+        this.oreAmount -= extracted;
+        this.lastMineTime = Date.now();
+        
+        if (this.oreAmount <= 0) {
+            this.depleted = true;
+        }
+        
+        return extracted;
+    }
+    
+    /**
+     * Slowly regenerate ore over time
+     * @param {number} dt - Delta time in seconds
+     */
+    regenerate(dt) {
+        if (this.oreAmount < this.maxOre && !this.depleted) {
+            this.oreAmount = Math.min(this.maxOre, this.oreAmount + MINING_CONFIG.ORE_SEAM_REGEN_RATE * dt);
+        }
+        
+        // Reactivate depleted seams after some regeneration
+        if (this.depleted && this.oreAmount > MINING_CONFIG.MINERALS_PER_MINE) {
+            this.depleted = false;
+        }
+    }
+}
 
 class MiningRobot {
     /**
@@ -20,33 +106,33 @@ class MiningRobot {
      * @param {number} x - X position (world coordinates)
      * @param {number} y - Y position (world coordinates)
      * @param {Object} homeBase - The surface base this robot belongs to (OffworldBuilding)
+     * @param {Map<string, OreSeam>} oreSeams - Shared map of ore seams for this base
      */
-    constructor(x, y, homeBase) {
+    constructor(x, y, homeBase, oreSeams) {
         this.pos = createVector(x, y);
         this.vel = createVector(0, 0);
         this.angle = random(TWO_PI);
-        this.size = 12; // Small size
+        this.size = MINING_CONFIG.ROBOT_SIZE;
         this.homeBase = homeBase;
+        this.oreSeams = oreSeams; // Reference to shared ore seam map
         this.yOffset = 0; // Terrain height (set by surface mode)
         
-        // Movement properties
-        this.maxSpeed = 80; // Surface units per second
-        this.acceleration = 40;
-        this.rotationSpeed = 0.04;
-        this.arrivalRadius = 30; // How close to get to target
+        // Movement properties (from config)
+        this.maxSpeed = MINING_CONFIG.MAX_SPEED;
+        this.acceleration = MINING_CONFIG.ACCELERATION;
+        this.arrivalRadius = MINING_CONFIG.ARRIVAL_RADIUS;
         
         // State machine
         this.state = ROBOT_STATE.IDLE;
         this.stateTimer = 0;
-        this.targetResource = null;
+        this.targetSeam = null;
         this.targetPos = null;
         
-        // Mining properties
+        // Mining properties (from config)
         this.miningTime = 0;
-        this.miningDuration = 3.0; // 3 seconds of mining
-        this.cargoCapacity = 10;
-        this.cargo = 0; // Current cargo count (minerals)
-        this.miningRange = 500; // How far from base to look for resources
+        this.miningDuration = MINING_CONFIG.MINING_DURATION;
+        this.cargoCapacity = MINING_CONFIG.CARGO_CAPACITY;
+        this.cargo = 0;
         
         // Visual properties
         this.drillRotation = 0;
@@ -54,20 +140,18 @@ class MiningRobot {
         this.lightTimer = random(TWO_PI);
         
         // Patrol properties
-        this.patrolRadius = 400; // Stay within this radius of base
         this.idleWaitTime = 0;
-        this.maxIdleTime = 2.0; // Wait 2 seconds before seeking
+        this.maxIdleTime = 2.0;
     }
     
     /**
      * Updates the robot's behavior and movement
-     * @param {Array} mineableRocks - List of mineable rocks in the area
      * @param {number} dt - Time elapsed since last frame (seconds)
      * @param {Object} surfaceMode - Reference to surface mode for terrain queries
      */
-    update(mineableRocks, dt, surfaceMode) {
+    update(dt, surfaceMode) {
         this.stateTimer += dt;
-        this.lightTimer += 0.05;
+        this.lightTimer += MINING_CONFIG.LIGHT_BLINK_SPEED;
         
         // Update terrain height
         if (surfaceMode && typeof surfaceMode._getTerrainHeightAt === 'function') {
@@ -80,10 +164,10 @@ class MiningRobot {
                 this.updateIdle(dt);
                 break;
             case ROBOT_STATE.SEEKING:
-                this.updateSeeking(mineableRocks);
+                this.updateSeeking();
                 break;
-            case ROBOT_STATE.MOVING_TO_RESOURCE:
-                this.updateMovingToResource(dt);
+            case ROBOT_STATE.MOVING_TO_LOCATION:
+                this.updateMovingToLocation(dt);
                 break;
             case ROBOT_STATE.MINING:
                 this.updateMining(dt);
@@ -121,55 +205,71 @@ class MiningRobot {
     }
     
     /**
-     * Seeking state - look for nearby mineable rocks
-     * @param {Array} mineableRocks - List of rocks to search
+     * Seeking state - find or create a mining location
      */
-    updateSeeking(mineableRocks) {
-        // Find nearest rock within range
-        let closestRock = null;
-        let closestDist = this.miningRange;
+    updateSeeking() {
+        // Try to find existing ore seam with ore
+        let bestSeam = null;
+        let bestDist = MINING_CONFIG.PATROL_RADIUS;
         
-        for (const rock of mineableRocks) {
-            if (!rock || rock.destroyed || rock.depleted) continue;
+        for (const [key, seam] of this.oreSeams) {
+            if (!seam.hasOre()) continue;
             
-            const dist = p5.Vector.dist(this.pos, rock.pos);
+            const dist = p5.Vector.dist(this.pos, seam.pos);
+            const distFromBase = p5.Vector.dist(seam.pos, this.homeBase.pos);
             
-            // Check if rock is within patrol range of base
-            const distFromBase = p5.Vector.dist(rock.pos, this.homeBase.pos);
-            if (distFromBase > this.patrolRadius) continue;
-            
-            if (dist < closestDist) {
-                closestDist = dist;
-                closestRock = rock;
+            // Must be within patrol radius of base and closer than current best
+            if (distFromBase <= MINING_CONFIG.PATROL_RADIUS && dist < bestDist) {
+                bestDist = dist;
+                bestSeam = seam;
             }
         }
         
-        if (closestRock && this.cargo < this.cargoCapacity) {
-            this.targetResource = closestRock;
-            this.state = ROBOT_STATE.MOVING_TO_RESOURCE;
-        } else if (this.cargo > 0) {
-            // Return to base if we have cargo
+        // If found a good seam, go mine it
+        if (bestSeam && this.cargo < this.cargoCapacity) {
+            this.targetSeam = bestSeam;
+            this.state = ROBOT_STATE.MOVING_TO_LOCATION;
+        }
+        // If have cargo, return to base
+        else if (this.cargo > 0) {
             this.state = ROBOT_STATE.RETURNING;
-        } else {
-            // No rocks found, idle for a bit
+        }
+        // Otherwise, find a new random location to mine
+        else if (this.cargo < this.cargoCapacity) {
+            // Pick a random location within patrol radius
+            const angle = random(TWO_PI);
+            const dist = random(200, MINING_CONFIG.PATROL_RADIUS);
+            const mineX = this.homeBase.pos.x + Math.cos(angle) * dist;
+            const mineY = this.homeBase.pos.y + Math.sin(angle) * dist;
+            
+            // Create new ore seam at this location
+            const seam = new OreSeam(mineX, mineY, this.homeBase);
+            const key = `${Math.floor(mineX / 50)}_${Math.floor(mineY / 50)}`;
+            this.oreSeams.set(key, seam);
+            
+            this.targetSeam = seam;
+            this.state = ROBOT_STATE.MOVING_TO_LOCATION;
+        }
+        else {
+            // No options, go idle
             this.state = ROBOT_STATE.IDLE;
         }
     }
     
     /**
-     * Moving to resource state
+     * Moving to mining location state
      * @param {number} dt - Delta time in seconds
      */
-    updateMovingToResource(dt) {
+    updateMovingToLocation(dt) {
         // Check if target still valid
-        if (!this.targetResource || this.targetResource.destroyed || this.targetResource.depleted) {
-            this.targetResource = null;
+        if (!this.targetSeam || !this.targetSeam.hasOre()) {
+            this.targetSeam = null;
             this.state = ROBOT_STATE.SEEKING;
             return;
         }
         
-        // Move towards resource
-        const target = this.targetResource.pos;
+        // Move towards location
+        const target = this.targetSeam.pos;
         this.moveTowards(target, dt);
         
         // Check if arrived
@@ -182,44 +282,34 @@ class MiningRobot {
     }
     
     /**
-     * Mining state - extract resources from rock
+     * Mining state - extract resources from ore seam
      * @param {number} dt - Delta time in seconds
      */
     updateMining(dt) {
         // Check if target still valid
-        if (!this.targetResource || this.targetResource.destroyed || this.targetResource.depleted) {
-            this.targetResource = null;
+        if (!this.targetSeam || !this.targetSeam.hasOre()) {
+            this.targetSeam = null;
             this.state = ROBOT_STATE.SEEKING;
             return;
         }
         
         this.vel.mult(0.9); // Stay mostly still
         this.miningTime += dt;
-        this.drillSpeed = 0.3; // Spin the drill
+        this.drillSpeed = MINING_CONFIG.DRILL_SPEED; // Spin the drill
         
-        // Face the resource
-        const target = this.targetResource.pos;
+        // Face the mining location
+        const target = this.targetSeam.pos;
         const desired = p5.Vector.sub(target, this.pos);
         const targetAngle = desired.heading();
         this.angle = this.lerpAngle(this.angle, targetAngle, 0.1);
         
         // Mining complete
         if (this.miningTime >= this.miningDuration) {
-            // Extract minerals from rock
-            if (this.targetResource.resourceAmount > 0) {
-                const extracted = Math.min(3, this.targetResource.resourceAmount);
-                this.targetResource.resourceAmount -= extracted;
-                
-                // Check if resource is depleted
-                if (this.targetResource.resourceAmount <= 0) {
-                    this.targetResource.depleted = true;
-                }
-                
-                // Add to cargo
-                this.cargo = Math.min(this.cargoCapacity, this.cargo + extracted);
-            }
+            // Extract from ore seam
+            const extracted = this.targetSeam.extract(MINING_CONFIG.MINERALS_PER_MINE);
+            this.cargo = Math.min(this.cargoCapacity, this.cargo + extracted);
             
-            this.targetResource = null;
+            this.targetSeam = null;
             
             // Decide next action
             if (this.cargo >= this.cargoCapacity) {
@@ -293,7 +383,7 @@ class MiningRobot {
             this.homeBase.miningStorage = [];
         }
         if (!this.homeBase.miningStorageCapacity) {
-            this.homeBase.miningStorageCapacity = 100;
+            this.homeBase.miningStorageCapacity = MINING_CONFIG.STORAGE_CAPACITY;
         }
         
         // Add minerals to base storage
@@ -335,13 +425,14 @@ class MiningRobot {
     
     /**
      * Renders the mining robot on the surface using 3D primitives
+     * Enhanced design with more detail and character
      * @param {Object} surfaceMode - Reference to surface mode for projection
      */
     draw(surfaceMode) {
         if (!surfaceMode) return;
         
         // Use surface projection helpers
-        const alt = this.yOffset + 5; // Slightly above terrain
+        const alt = this.yOffset + 4; // Slightly above terrain
         const { extrusionAngle, baseX, baseY } = 
             typeof getProjectionHelpers === 'function' 
             ? getProjectionHelpers(this.pos.x, this.pos.y, alt)
@@ -355,68 +446,110 @@ class MiningRobot {
         
         const s = this.size;
         
-        // Body colors
-        const bodyColor = color(140, 120, 100);
-        const darkColor = color(80, 70, 60);
-        const accentColor = color(200, 180, 50);
+        // Color scheme - industrial mining equipment
+        const bodyColor = color(140, 130, 110);      // Dark tan body
+        const chassisColor = color(100, 90, 75);     // Darker chassis
+        const accentColor = color(200, 160, 40);     // Yellow/gold accents
+        const drillColor = color(100, 100, 110);     // Metallic drill
         
-        // Main body - rover chassis (rectangular)
-        Draw3D.drawBox3D(0, 0, s * 1.4, s * 0.9, s * 0.4, bodyColor, extrusionAngle, sunAngle);
+        // ===== CHASSIS (Base Frame) =====
+        // Main lower chassis - wider, more stable look
+        Draw3D.drawBox3D(0, 0, s * 1.6, s * 1.0, s * 0.3, chassisColor, extrusionAngle, sunAngle);
         
-        // Cabin/cockpit on top
-        Draw3D.drawBox3D(0, -s * 0.15, s * 0.7, s * 0.6, s * 0.5, darkColor, extrusionAngle, sunAngle);
+        // Chassis support beams (industrial look)
+        Draw3D.drawBox3D(-s * 0.6, 0, s * 0.15, s * 0.9, s * 0.25, bodyColor, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(s * 0.6, 0, s * 0.15, s * 0.9, s * 0.25, bodyColor, extrusionAngle, sunAngle);
         
-        // Window/viewport (glowing)
-        const glowAmount = abs(sin(this.lightTimer)) * 0.5 + 0.5;
-        const windowColor = color(100, 200, 255, 150 + glowAmount * 100);
-        Draw3D.drawBox3D(0, -s * 0.15, s * 0.4, s * 0.3, s * 0.02, windowColor, extrusionAngle, sunAngle);
+        // ===== BODY/CABIN =====
+        // Main body compartment (offset back)
+        Draw3D.drawBox3D(-s * 0.2, 0, s * 0.9, s * 0.8, s * 0.6, bodyColor, extrusionAngle, sunAngle);
         
-        // Wheels/treads (4 small cylinders)
-        const wheelColor = color(50, 50, 50);
-        const wheelRadius = s * 0.25;
-        const wheelHeight = s * 0.2;
+        // Control cabin/sensor housing on top
+        Draw3D.drawBox3D(-s * 0.25, -s * 0.1, s * 0.6, s * 0.5, s * 0.4, chassisColor, extrusionAngle, sunAngle);
         
-        // Front left wheel
-        Draw3D.drawCylinder(-s * 0.5, s * 0.4, wheelRadius, wheelHeight, 8, wheelColor, extrusionAngle, sunAngle);
-        // Front right wheel
-        Draw3D.drawCylinder(s * 0.5, s * 0.4, wheelRadius, wheelHeight, 8, wheelColor, extrusionAngle, sunAngle);
-        // Back left wheel
-        Draw3D.drawCylinder(-s * 0.5, -s * 0.4, wheelRadius, wheelHeight, 8, wheelColor, extrusionAngle, sunAngle);
-        // Back right wheel
-        Draw3D.drawCylinder(s * 0.5, -s * 0.4, wheelRadius, wheelHeight, 8, wheelColor, extrusionAngle, sunAngle);
+        // Viewport/sensor window (animated glow)
+        const glowAmount = abs(sin(this.lightTimer)) * 0.4 + 0.6;
+        const windowColor = color(80, 180, 255, 120 + glowAmount * 135);
+        Draw3D.drawBox3D(-s * 0.25, -s * 0.15, s * 0.35, s * 0.25, s * 0.05, windowColor, extrusionAngle, sunAngle);
         
-        // Mining drill assembly
+        // ===== WHEELS/TREADS (4 wheels) =====
+        const wheelColor = color(40, 40, 40);
+        const wheelRadius = s * 0.3;
+        const wheelHeight = s * 0.25;
+        const wheelOffset = s * 0.55;
+        
+        // Front wheels
+        Draw3D.drawCylinder(-wheelOffset, s * 0.45, wheelRadius, wheelHeight, 8, wheelColor, extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(wheelOffset, s * 0.45, wheelRadius, wheelHeight, 8, wheelColor, extrusionAngle, sunAngle);
+        // Rear wheels
+        Draw3D.drawCylinder(-wheelOffset, -s * 0.45, wheelRadius, wheelHeight, 8, wheelColor, extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(wheelOffset, -s * 0.45, wheelRadius, wheelHeight, 8, wheelColor, extrusionAngle, sunAngle);
+        
+        // Wheel hubs (yellow accents)
+        const hubSize = s * 0.12;
+        Draw3D.drawCylinder(-wheelOffset, s * 0.45, hubSize, s * 0.08, 6, accentColor, extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(wheelOffset, s * 0.45, hubSize, s * 0.08, 6, accentColor, extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(-wheelOffset, -s * 0.45, hubSize, s * 0.08, 6, accentColor, extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(wheelOffset, -s * 0.45, hubSize, s * 0.08, 6, accentColor, extrusionAngle, sunAngle);
+        
+        // ===== MINING ARM & DRILL =====
         push();
-        translate(s * 0.9, 0); // Mount point at front
+        translate(s * 1.0, 0); // Front mount point
         
-        // Drill mount
-        Draw3D.drawBox3D(0, 0, s * 0.3, s * 0.3, s * 0.2, darkColor, extrusionAngle, sunAngle);
+        // Arm base/mount
+        Draw3D.drawBox3D(0, 0, s * 0.35, s * 0.35, s * 0.3, bodyColor, extrusionAngle, sunAngle);
         
-        // Drill bit (spinning cylinder)
+        // Hydraulic arm sections
+        Draw3D.drawBox3D(s * 0.2, 0, s * 0.3, s * 0.15, s * 0.15, accentColor, extrusionAngle, sunAngle);
+        
+        // Drill housing
+        Draw3D.drawBox3D(s * 0.4, 0, s * 0.25, s * 0.25, s * 0.2, drillColor, extrusionAngle, sunAngle);
+        
+        // Rotating drill bit
         push();
+        translate(s * 0.55, 0);
         rotate(this.drillRotation);
-        const drillColor = color(120, 120, 130);
-        Draw3D.drawCylinder(s * 0.3, 0, s * 0.15, s * 0.5, 6, drillColor, extrusionAngle, sunAngle);
         
-        // Drill tip
-        const tipColor = color(80, 80, 90);
-        Draw3D.drawCylinder(s * 0.55, 0, s * 0.1, s * 0.1, 6, tipColor, extrusionAngle, sunAngle);
-        pop();
+        // Main drill shaft
+        Draw3D.drawCylinder(0, 0, s * 0.18, s * 0.5, 8, drillColor, extrusionAngle, sunAngle);
         
-        pop();
+        // Drill tip (darker)
+        const tipColor = color(70, 70, 80);
+        Draw3D.drawCylinder(s * 0.25, 0, s * 0.12, s * 0.15, 6, tipColor, extrusionAngle, sunAngle);
         
-        // Status light on top
-        const statusColor = this.getStatusColor();
-        Draw3D.drawBox3D(0, -s * 0.6, s * 0.15, s * 0.15, s * 0.1, statusColor, extrusionAngle, sunAngle);
+        // Drill flutes/cutting edges
+        for (let i = 0; i < 3; i++) {
+            push();
+            rotate((i * TWO_PI / 3));
+            Draw3D.drawBox3D(s * 0.15, s * 0.12, s * 0.05, s * 0.2, s * 0.02, tipColor, extrusionAngle, sunAngle);
+            pop();
+        }
         
-        // Cargo indicator (small boxes on back if carrying)
+        pop(); // End drill rotation
+        pop(); // End arm
+        
+        // ===== CARGO CONTAINERS (if carrying) =====
         if (this.cargo > 0) {
-            const cargoBoxes = Math.min(3, Math.ceil(this.cargo / 4));
-            for (let i = 0; i < cargoBoxes; i++) {
-                const cargoColor = color(180, 140, 90);
-                Draw3D.drawBox3D(-s * 0.6, -s * 0.2 + i * s * 0.2, s * 0.25, s * 0.25, s * 0.25, cargoColor, extrusionAngle, sunAngle);
+            const containerCount = Math.min(3, Math.ceil(this.cargo / 4));
+            const containerColor = color(160, 120, 80);
+            for (let i = 0; i < containerCount; i++) {
+                const cy = -s * 0.5 - i * s * 0.22;
+                Draw3D.drawBox3D(-s * 0.65, cy, s * 0.3, s * 0.3, s * 0.28, containerColor, extrusionAngle, sunAngle);
+                // Container straps
+                Draw3D.drawBox3D(-s * 0.65, cy, s * 0.32, s * 0.05, s * 0.3, accentColor, extrusionAngle, sunAngle);
             }
         }
+        
+        // ===== STATUS LIGHTS =====
+        // Main status light on top
+        const statusColor = this.getStatusColor();
+        Draw3D.drawCylinder(-s * 0.25, -s * 0.45, s * 0.12, s * 0.08, 6, statusColor, extrusionAngle, sunAngle);
+        
+        // Side marker lights (small)
+        const markerBrightness = abs(sin(this.lightTimer * 0.7)) * 0.3 + 0.7;
+        const markerColor = color(255, 200, 0, 150 * markerBrightness);
+        Draw3D.drawBox3D(-s * 0.75, 0, s * 0.08, s * 0.08, s * 0.06, markerColor, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(s * 0.35, 0, s * 0.08, s * 0.08, s * 0.06, markerColor, extrusionAngle, sunAngle);
         
         pop();
     }
@@ -433,7 +566,7 @@ class MiningRobot {
                 return color(100, 100, 255, 150 + brightness * 100); // Blue
             case ROBOT_STATE.SEEKING:
                 return color(255, 255, 100, 150 + brightness * 100); // Yellow
-            case ROBOT_STATE.MOVING_TO_RESOURCE:
+            case ROBOT_STATE.MOVING_TO_LOCATION:
                 return color(255, 200, 100, 150 + brightness * 100); // Orange
             case ROBOT_STATE.MINING:
                 return color(255, 100, 100, 200 + brightness * 50); // Red (active)
@@ -442,59 +575,5 @@ class MiningRobot {
             default:
                 return color(150, 150, 150, 150);
         }
-    }
-}
-
-/**
- * MineableRock - Surface rocks that can be mined for resources
- */
-class MineableRock {
-    constructor(x, y, size = 20, seed = 0) {
-        this.pos = createVector(x, y);
-        this.size = size;
-        this.seed = seed;
-        this.yOffset = 0; // Terrain height
-        this.resourceAmount = Math.floor(random(10, 30)); // Amount of minerals
-        this.depleted = false;
-        this.destroyed = false;
-        this.color = color(120 + random(-20, 20), 100 + random(-20, 20), 80 + random(-20, 20));
-    }
-    
-    /**
-     * Draw the mineable rock
-     * @param {Object} surfaceMode - Reference to surface mode for projection
-     */
-    draw(surfaceMode) {
-        if (!surfaceMode || this.destroyed || this.depleted) return;
-        
-        const alt = this.yOffset;
-        const { extrusionAngle, baseX, baseY} = 
-            typeof getProjectionHelpers === 'function' 
-            ? getProjectionHelpers(this.pos.x, this.pos.y, alt)
-            : { extrusionAngle: 0.5, baseX: this.pos.x, baseY: this.pos.y };
-        
-        const sunAngle = surfaceMode._getSunAngle ? surfaceMode._getSunAngle() : -Math.PI / 4;
-        
-        push();
-        translate(baseX, baseY);
-        
-        // Draw as irregular rock
-        const s = this.size;
-        const h = s * 0.6;
-        
-        // Main rock body
-        Draw3D.drawBox3D(0, 0, s, s * 0.8, h, this.color, extrusionAngle, sunAngle);
-        
-        // Additional irregular chunks
-        Draw3D.drawBox3D(s * 0.2, s * 0.2, s * 0.5, s * 0.5, h * 0.7, this.color, extrusionAngle, sunAngle);
-        Draw3D.drawBox3D(-s * 0.2, -s * 0.1, s * 0.4, s * 0.6, h * 0.5, this.color, extrusionAngle, sunAngle);
-        
-        // Mineral vein indicator (if rich in resources)
-        if (this.resourceAmount > 20) {
-            const veinColor = color(180, 160, 100, 180);
-            Draw3D.drawBox3D(s * 0.1, 0, s * 0.2, s * 0.3, h * 0.8, veinColor, extrusionAngle, sunAngle);
-        }
-        
-        pop();
     }
 }

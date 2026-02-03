@@ -725,11 +725,13 @@ class UIStationMenus {
         });
         
         const mineralCount = hasMiningStorage ? (baseObj.miningStorage.find(i => i.name === 'Minerals')?.quantity || 0) : 0;
-        const storageCapacity = baseObj?.miningStorageCapacity || 100;
+        // Use MINING_CONFIG if available, fallback to baseObj property, then default
+        const storageCapacity = (typeof MINING_CONFIG !== 'undefined') ? MINING_CONFIG.STORAGE_CAPACITY : 
+                                (baseObj?.miningStorageCapacity || 100);
         
         UIComponents.drawListRowText({
             leftText: 'Mining Storage',
-            subText: hasMiningStorage ? `${mineralCount}/${storageCapacity} Minerals available` : 'No mined resources available',
+            subText: hasMiningStorage ? `${mineralCount}/${storageCapacity} Minerals mined` : 'Robots mining ore seams...',
             rightText: hasMiningStorage ? `${mineralCount}t` : '—',
             rowX: storageRow.x,
             rowY: storageRow.y,
@@ -752,7 +754,7 @@ class UIStationMenus {
         // Additional quick services suggestions (display only for now)
         const suggestY = storageRow.y + rowH + L.BTN_SPACING;
         UIComponents.setTextStyle({ fill: [220], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
-        text('Mining Robots:', pX + L.CONTENT_PADDING, suggestY);
+        text('Autonomous Mining Operations:', pX + L.CONTENT_PADDING, suggestY);
         UIComponents.setTextStyle({ fill: [180, 200, 180], size: STATION_TEXT_SIZE.SMALL, align: [LEFT, TOP] });
         
         // Count active robots for this base
@@ -760,7 +762,12 @@ class UIStationMenus {
         if (typeof surfaceMode !== 'undefined' && surfaceMode.miningRobots) {
             robotCount = surfaceMode.miningRobots.filter(r => r && r.homeBase === baseObj).length;
         }
-        text(`- ${robotCount} autonomous mining robot${robotCount !== 1 ? 's' : ''} deployed\n- Robots mine nearby surface rocks automatically\n- Collected minerals stored at base`, pX + L.CONTENT_PADDING + 10, suggestY + 20);
+        
+        // Get mining config values if available
+        const miningSpeed = (typeof MINING_CONFIG !== 'undefined') ? MINING_CONFIG.MINING_DURATION.toFixed(1) : '2.5';
+        const cargoCapacity = (typeof MINING_CONFIG !== 'undefined') ? MINING_CONFIG.CARGO_CAPACITY : 12;
+        
+        text(`- ${robotCount} mining robot${robotCount !== 1 ? 's' : ''} deployed\n- Robots mine ore seams at random locations (${miningSpeed}s per cycle)\n- Each robot carries up to ${cargoCapacity} units before returning`, pX + L.CONTENT_PADDING + 10, suggestY + 20);
 
         // Back button
         const backBtn = UIComponents.drawCenteredBackButton(pX, pY, pW, pH, { action: 'BACK' });

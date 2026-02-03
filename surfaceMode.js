@@ -145,9 +145,9 @@ class SurfaceMode {
         this.controlMode = 'SHIP'; // 'SHIP' or 'ASTRONAUT'
         this.astronaut = null;
         
-        // Mining robots and mineable resources
+        // Mining robots and ore seam system
         this.miningRobots = []; // All mining robots on the surface
-        this.mineableRocks = []; // Mineable resource rocks
+        this.oreSeams = new Map(); // Map of ore seam locations (shared across robots per base)
         this.robotSpawnCooldown = 0; // Cooldown to prevent continuous spawning
 
         // Player physics
@@ -1934,11 +1934,11 @@ class SurfaceMode {
     }
 
     /**
-     * Initialize mining robots and mineable rocks for player bases
+     * Initialize mining robots for player bases
      * @private
      */
     _initializeMiningRobotsForBases() {
-        if (typeof MiningRobot === 'undefined' || typeof MineableRock === 'undefined') return;
+        if (typeof MiningRobot === 'undefined' || typeof OreSeam === 'undefined') return;
         
         // Find all player-built Hab Units (variant 1 of OffworldBuilding)
         for (const obj of this.surfaceObjects) {
@@ -1955,12 +1955,19 @@ class SurfaceMode {
             // Initialize storage if needed
             if (!obj.miningStorage) {
                 obj.miningStorage = [];
-                obj.miningStorageCapacity = 100;
+                obj.miningStorageCapacity = MINING_CONFIG.STORAGE_CAPACITY;
             }
             
             // Check if robots already spawned for this base
             if (!obj.robotsInitialized) {
                 obj.robotsInitialized = true;
+                
+                // Create shared ore seam map for this base (if not exists)
+                const baseKey = `base_${obj.pos.x}_${obj.pos.y}`;
+                if (!this.oreSeams.has(baseKey)) {
+                    this.oreSeams.set(baseKey, new Map());
+                }
+                const baseOreSeams = this.oreSeams.get(baseKey);
                 
                 // Spawn 2-3 mining robots per base
                 const robotCount = Math.floor(random(2, 4));
@@ -1970,56 +1977,44 @@ class SurfaceMode {
                     const rx = obj.pos.x + Math.cos(angle) * dist;
                     const ry = obj.pos.y + Math.sin(angle) * dist;
                     
-                    const robot = new MiningRobot(rx, ry, obj);
+                    const robot = new MiningRobot(rx, ry, obj, baseOreSeams);
                     robot.yOffset = this._getTerrainHeightAt(rx, ry);
                     this.miningRobots.push(robot);
-                }
-                
-                // Spawn mineable rocks around the base
-                const rockCount = Math.floor(random(8, 15));
-                for (let i = 0; i < rockCount; i++) {
-                    const angle = random(TWO_PI);
-                    const dist = random(150, 400);
-                    const rockX = obj.pos.x + Math.cos(angle) * dist;
-                    const rockY = obj.pos.y + Math.sin(angle) * dist;
-                    
-                    const rockSize = random(15, 30);
-                    const rock = new MineableRock(rockX, rockY, rockSize, Math.floor(random(100000)));
-                    rock.yOffset = this._getTerrainHeightAt(rockX, rockY);
-                    this.mineableRocks.push(rock);
                 }
             }
         }
     }
 
     /**
-     * Update mining robots
+     * Update mining robots and regenerate ore seams
      * @param {number} dt - Delta time in seconds
      * @private
      */
     _updateMiningRobots(dt) {
         if (!this.miningRobots || this.miningRobots.length === 0) return;
         
+        // Update robots
         for (let robot of this.miningRobots) {
             if (!robot) continue;
-            robot.update(this.mineableRocks, dt, this);
+            robot.update(dt, this);
+        }
+        
+        // Regenerate ore seams slowly over time
+        for (const [baseKey, baseSeams] of this.oreSeams) {
+            for (const [seamKey, seam] of baseSeams) {
+                seam.regenerate(dt);
+            }
         }
     }
 
     /**
-     * Draw mining robots and mineable rocks
+     * Draw mining robots (ore seams are invisible - mined at random locations)
      * @private
      */
     _drawMiningRobots() {
         if (!this.miningRobots || this.miningRobots.length === 0) return;
         
-        // Draw mineable rocks first (they're static)
-        for (let rock of this.mineableRocks) {
-            if (!rock || rock.destroyed || rock.depleted) continue;
-            rock.draw(this);
-        }
-        
-        // Draw robots
+        // Only draw robots - ore seams are not visible
         for (let robot of this.miningRobots) {
             if (!robot) continue;
             robot.draw(this);
