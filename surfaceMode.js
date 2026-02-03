@@ -80,6 +80,14 @@ const SURFACE_CONFIG = {
     // This makes stealth visually intuitive: stay below enemies to hide
     STEALTH: {
         // No configuration needed - pure altitude comparison
+    },
+
+    // Level of Detail (LOD) Configuration for flora/fauna rendering
+    // Reduces geometry complexity at higher altitudes to improve performance
+    // Simple 2-level system: full detail below threshold, simplified above
+    LOD: {
+        DETAIL_THRESHOLD: 1000,   // Below 1000: full detail (LOD 3), above: simplified (LOD 2)
+        MIN_SCREEN_SIZE: 3        // Don't draw if apparent size < 3 pixels
     }
 };
 
@@ -257,6 +265,26 @@ class SurfaceMode {
      */
     _isProjectileValid(proj) {
         return proj && !proj.destroyed && proj.isSurface && proj.pos;
+    }
+
+    /**
+     * Calculate LOD (Level of Detail) level based on altitude and apparent size
+     * Used to reduce rendering complexity for distant flora/fauna
+     * Simple 2-level system: LOD 3 (full detail) or LOD 2 (simplified)
+     * @param {number} objSize - Object's world size
+     * @returns {number} LOD level: 3=full detail, 2=simplified
+     * @private
+     */
+    _calculateLODLevel(objSize) {
+        const lod = SURFACE_CONFIG.LOD;
+
+        // Check screen-size based culling (returns simplified as minimum)
+        const perspectiveScale = this._getPerspectiveScale();
+        const apparentSize = objSize * perspectiveScale;
+        if (apparentSize < lod.MIN_SCREEN_SIZE) return 2;
+
+        // Simple threshold: full detail below, simplified above
+        return this.altitude < lod.DETAIL_THRESHOLD ? 3 : 2;
     }
 
     /**
@@ -2254,14 +2282,23 @@ class SurfaceMode {
 
             objectsDrawn++;
 
+            // Calculate LOD level for flora/fauna (buildings always render at full detail)
+            const isFloraFauna = obj instanceof SurfaceFlora || obj instanceof SurfaceFauna;
+            const lodLevel = isFloraFauna ? this._calculateLODLevel(objSize) : 3;
+
             // Local coordinates and altitude for surface objects
             const worldX = obj.pos.x;
             const worldY = obj.pos.y;
             // objAlt already declared above
 
             // Objects now handle their internal visual projection using world coords and altitude
+            // Pass LOD level for flora/fauna optimization
             if (obj.draw) {
-                obj.draw(worldX, worldY, sunAngle, objAlt);
+                if (isFloraFauna) {
+                    obj.draw(worldX, worldY, sunAngle, objAlt, lodLevel);
+                } else {
+                    obj.draw(worldX, worldY, sunAngle, objAlt);
+                }
             }
 
             // Target reticle drawing moved to centralized UIHUD.drawTargetReticle() called via drawHUD()
