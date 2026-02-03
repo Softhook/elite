@@ -267,7 +267,7 @@ class Grenade {
         // Track previous position for trail rendering and maintain history
         this.prevPos = this.pos.copy();
         this.trail = [];
-        this.trailMax = 12;
+        this.trailMax = 100;
 
         this.isSurface = true;
         this.owner = { isPlayer: true }; // Acts as player for damage
