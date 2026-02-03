@@ -278,13 +278,14 @@ class SurfaceMode {
     _calculateLODLevel(objSize) {
         const lod = SURFACE_CONFIG.LOD;
 
-        // Check screen-size based culling (returns simplified as minimum)
-        const perspectiveScale = this._getPerspectiveScale();
-        const apparentSize = objSize * perspectiveScale;
+        // Early return for very small apparent size (screen-size culling)
+        // Use cached perspective scale to avoid recalculation per object
+        const apparentSize = objSize * this._cachedPerspectiveScale;
         if (apparentSize < lod.MIN_SCREEN_SIZE) return 2;
 
-        // Simple threshold: full detail below, simplified above
-        return this.altitude < lod.DETAIL_THRESHOLD ? 3 : 2;
+        // Distance-based LOD: Use cached LOD level for consistency across frame
+        // Full detail below threshold, simplified above
+        return this._cachedBaseLODLevel;
     }
 
     /**
@@ -778,9 +779,8 @@ class SurfaceMode {
                         const distSq = dx * dx + dy * dy;
 
                         // More aggressive culling for fauna (they just wander when not targeting bases)
-                        // Check if object is fauna (SurfaceFauna class instances)
-                        const isFauna = obj.constructor && obj.constructor.name && 
-                                       obj.constructor.name.includes('Creature');
+                        // Use pre-set flag instead of expensive constructor.name check
+                        const isFauna = obj.isFauna === true;
                         const effectiveRangeSq = isFauna ? faunaReducedRangeSq : updateRangeSq;
 
                         // Skip update for very distant objects (but still render them if visible)
@@ -1521,18 +1521,25 @@ class SurfaceMode {
 
         if (!this.planet) return;
 
+        // Cache frequently-used values for the frame to avoid recalculation
+        // These are used by multiple draw methods and LOD calculations
+        this._cachedPerspectiveScale = this._getPerspectiveScale();
+        this._cachedBaseLODLevel = this.altitude < SURFACE_CONFIG.LOD.DETAIL_THRESHOLD ? 3 : 2;
+        this._cachedExtrusionAngle = this._getExtrusionAngle();
+        this._cachedExtrusionSin = Math.sin(this._cachedExtrusionAngle);
+        this._cachedExtrusionCos = Math.cos(this._cachedExtrusionAngle);
+        this._cachedCounterScale = this._getCounterScale();
+
         push();
         // 1. Center camera on screen
         translate(width / 2, height / 2);
 
         // 2. Perspective scaling (everything world-side scales together)
-        const perspectiveScale = this._getPerspectiveScale();
-        scale(perspectiveScale);
+        scale(this._cachedPerspectiveScale);
 
         // 3. World translation (camera follows player's visual top position)
-        const extrusionAngle = this._getExtrusionAngle();
-        const visualXOffset = this.altitude * Math.sin(extrusionAngle);
-        const visualYOffset = this.altitude * Math.cos(extrusionAngle);
+        const visualXOffset = this.altitude * this._cachedExtrusionSin;
+        const visualYOffset = this.altitude * this._cachedExtrusionCos;
 
         // Translate by logic position + altitude shift to center on the projected "top"
         translate(-this.surfaceX + visualXOffset, -(this.surfaceY - visualYOffset));
@@ -1985,19 +1992,27 @@ class SurfaceMode {
         const rand = (seed * 13.579) % 1;
         const size = 10 + (seed % 15);
 
+        let fauna = null;
         // Choose fauna type based on random value
         if (rand < 0.25 && typeof SlitherCreature !== 'undefined') {
-            return new SlitherCreature(x, y, size, planetColors, seed);
+            fauna = new SlitherCreature(x, y, size, planetColors, seed);
         } else if (rand < 0.5 && typeof FloaterCreature !== 'undefined') {
-            return new FloaterCreature(x, y, size, planetColors, seed);
+            fauna = new FloaterCreature(x, y, size, planetColors, seed);
         } else if (rand < 0.75 && typeof RollerCreature !== 'undefined') {
-            return new RollerCreature(x, y, size, planetColors, seed);
+            fauna = new RollerCreature(x, y, size, planetColors, seed);
         } else if (typeof StalkCreature !== 'undefined') {
-            return new StalkCreature(x, y, size, planetColors, seed);
+            fauna = new StalkCreature(x, y, size, planetColors, seed);
+        } else if (typeof SlitherCreature !== 'undefined') {
+            // Fallback to SlitherCreature if available
+            fauna = new SlitherCreature(x, y, size, planetColors, seed);
         }
 
-        // Fallback to SlitherCreature if available
-        return typeof SlitherCreature !== 'undefined' ? new SlitherCreature(x, y, size, planetColors, seed) : null;
+        // Mark as fauna to avoid expensive constructor.name checks in update loop
+        if (fauna) {
+            fauna.isFauna = true;
+        }
+
+        return fauna;
     }
 
     /**
@@ -2271,9 +2286,9 @@ class SurfaceMode {
 
         // Viewport culling for mining robots
         const viewport = this._getViewportBounds(200);
-        const extrusionAngle = this._getExtrusionAngle();
-        const sin = Math.sin(extrusionAngle);
-        const cos = Math.cos(extrusionAngle);
+        // Use cached values instead of recalculating
+        const sin = this._cachedExtrusionSin;
+        const cos = this._cachedExtrusionCos;
 
         let robotsDrawn = 0;
         let robotsCulled = 0;
@@ -2314,9 +2329,9 @@ class SurfaceMode {
         // Use adequate padding for visual projection culling to prevent pop-in
         // Flora/fauna need more padding due to varied sizes and movement
         const viewport = this._getViewportBounds(300);
-        const extrusionAngle = this._getExtrusionAngle();
-        const sin = Math.sin(extrusionAngle);
-        const cos = Math.cos(extrusionAngle);
+        // Use cached values instead of recalculating
+        const sin = this._cachedExtrusionSin;
+        const cos = this._cachedExtrusionCos;
 
         let objectsDrawn = 0;
         let objectsCulled = 0;
@@ -2381,12 +2396,12 @@ class SurfaceMode {
         if (!this.starSystem || !this.starSystem.projectiles) return;
 
         const projectiles = this.starSystem.projectiles;
-        const counterScale = this._getCounterScale();
+        // Use cached values instead of recalculating
+        const counterScale = this._cachedCounterScale;
         const sunAngle = this._getSunAngle();
 
-        const extrusionAngle = this._getExtrusionAngle();
-        const sin = Math.sin(extrusionAngle);
-        const cos = Math.cos(extrusionAngle);
+        const sin = this._cachedExtrusionSin;
+        const cos = this._cachedExtrusionCos;
 
         // Viewport culling padding
         const viewport = this._getViewportBounds(100);
@@ -2425,9 +2440,9 @@ class SurfaceMode {
 
         // Viewport culling for mines
         const viewport = this._getViewportBounds(150);
-        const extrusionAngle = this._getExtrusionAngle();
-        const sin = Math.sin(extrusionAngle);
-        const cos = Math.cos(extrusionAngle);
+        // Use cached values instead of recalculating
+        const sin = this._cachedExtrusionSin;
+        const cos = this._cachedExtrusionCos;
 
         push();
         this._clearShadow();
@@ -2460,9 +2475,9 @@ class SurfaceMode {
         const explosions = this.starSystem.explosions;
         if (!explosions) return;
 
-        const extrusionAngle = this._getExtrusionAngle();
-        const sin = Math.sin(extrusionAngle);
-        const cos = Math.cos(extrusionAngle);
+        // Use cached values instead of recalculating
+        const sin = this._cachedExtrusionSin;
+        const cos = this._cachedExtrusionCos;
 
         // Viewport culling padding
         const viewport = this._getViewportBounds(100);
