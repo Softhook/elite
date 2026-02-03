@@ -9,15 +9,15 @@
 // Easy tuning for mining speed, capacity, and behavior
 const MINING_CONFIG = {
     // Robot Movement
-    PATROL_RADIUS: 600,           // Maximum distance from base to mine
-    MAX_SPEED: 40,                // Units per second (reduced from 80)
+    PATROL_RADIUS: 900,           // Maximum distance from base to mine
+    MAX_SPEED: 30,                // Units per second (reduced from 80)
     ACCELERATION: 20,             // Acceleration rate (reduced from 40)
     ARRIVAL_RADIUS: 30,           // Distance to consider "arrived"
     
     // Mining Performance
-    MINING_DURATION: 5.0,         // Seconds to mine one location (increased from 2.5)
-    CARGO_CAPACITY: 12,           // Maximum minerals per robot
-    MINERALS_PER_MINE: 3,         // Minerals extracted per mining cycle
+    MINING_DURATION: 10.0,         // Seconds to mine one location (increased from 2.5)
+    CARGO_CAPACITY: 6,           // Maximum minerals per robot
+    MINERALS_PER_MINE: 2,         // Minerals extracted per mining cycle
     
     // Ore Seam System
     ORE_SEAM_INITIAL: 50,         // Starting ore amount at location
