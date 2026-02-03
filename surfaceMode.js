@@ -797,7 +797,7 @@ class SurfaceMode {
                         
                         // CRITICAL: Validate distance calculation didn't overflow
                         // Large coordinate differences can exceed safe integer limits
-                        if (!isFinite(distSq) || distSq < 0) {
+                        if (!isFinite(distSq)) {
                             // Overflow detected - treat as very far away and cull
                             objectsCulled++;
                             obj._wasCulledLastFrame = true;
@@ -809,12 +809,12 @@ class SurfaceMode {
                         const isFauna = obj.isFauna === true;
                         
                         // Use hysteresis to prevent boundary jitter:
-                        // - If object was culled last frame, use larger range to bring it back in
-                        // - If object was updated last frame, use normal range
+                        // - If object was updated last frame, use larger range before culling (hysteresis)
+                        // - If object was culled last frame, use normal range before un-culling
                         const wasCulled = obj._wasCulledLastFrame === true;
                         const effectiveRangeSq = isFauna ? 
-                            (wasCulled ? faunaReducedHysteresisSq : faunaReducedRangeSq) :
-                            (wasCulled ? updateRangeHysteresisSq : updateRangeSq);
+                            (wasCulled ? faunaReducedRangeSq : faunaReducedHysteresisSq) :
+                            (wasCulled ? updateRangeSq : updateRangeHysteresisSq);
 
                         // Skip update for very distant objects (but still render them if visible)
                         // Exceptions: Always update mission-critical objects (isTarget) or fauna attacking bases
@@ -1908,7 +1908,6 @@ class SurfaceMode {
                             else if (cellHash > wildFaunaMin && cellHash < wildFaunaMax && planetDensityFactor > 0.4) {
                                 obj = this._createFauna(planetColors, wx, wy, objSeed);
                                 if (obj) {
-                                    obj.cellKey = cellKey;
                                     console.log(`[Spawn] Spawned fauna ${obj.constructor.name} at ${cellKey} (Hash: ${cellHash.toFixed(4)}, Factor: ${planetDensityFactor.toFixed(2)})`);
                                 }
                             }
@@ -2288,15 +2287,13 @@ class SurfaceMode {
                 const dy = robot.pos.y - playerPos.y;
                 const distSq = dx * dx + dy * dy;
                 
-                // CRITICAL: Validate distance calculation didn't overflow
-                if (!isFinite(distSq) || distSq < 0) {
+                // CRITICAL: Validate distance calculation didn't overflow or become NaN
+                if (!isFinite(distSq)) {
                     // Overflow detected - remove robot and mark for respawn
                     if (robot.homeBase && !robot.homeBase.destroyed) {
                         robot.homeBase.robotsInitialized = false;
-                        if (robot.homeBase.cellKey) {
-                            const desc = this.playerBuiltMap.get(robot.homeBase.cellKey);
-                            if (desc) desc.robotsInitialized = false;
-                        }
+                        const desc = this.playerBuiltMap.get(robot.homeBase?.cellKey);
+                        if (desc) desc.robotsInitialized = false;
                     }
                     return false;
                 }
@@ -2309,11 +2306,8 @@ class SurfaceMode {
                     if (robot.homeBase && !robot.homeBase.destroyed) {
                         robot.homeBase.robotsInitialized = false;
                         // Sync to descriptor to prevent duplicate spawns
-                        // Use optional chaining in case homeBase.cellKey is undefined
-                        if (robot.homeBase.cellKey) {
-                            const desc = this.playerBuiltMap.get(robot.homeBase.cellKey);
-                            if (desc) desc.robotsInitialized = false;
-                        }
+                        const desc = this.playerBuiltMap.get(robot.homeBase?.cellKey);
+                        if (desc) desc.robotsInitialized = false;
                     }
                     return false;
                 }
