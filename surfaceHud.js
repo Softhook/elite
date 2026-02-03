@@ -67,7 +67,7 @@ class SurfaceHUD {
             const cullPercent = total > 0 ? ((surfaceMode._lastObjectCullStats.culled / total) * 100).toFixed(1) : 0;
             text(`Render: ${surfaceMode._lastObjectCullStats.drawn}/${total} (${cullPercent}% culled)`, 15, 45);
         }
-        
+
         if (surfaceMode._lastUpdateCullStats) {
             const total = surfaceMode._lastUpdateCullStats.updated + surfaceMode._lastUpdateCullStats.culled;
             const cullPercent = total > 0 ? ((surfaceMode._lastUpdateCullStats.culled / total) * 100).toFixed(1) : 0;
@@ -321,6 +321,22 @@ class SurfaceHUD {
      */
     _drawTacticalMarkers(surfaceMode, maxRadius) {
         if (!surfaceMode.surfaceObjects) return;
+
+        // Draw ship marker when controlling astronaut
+        if (surfaceMode.controlMode === 'ASTRONAUT' && surfaceMode.player) {
+            const dx = surfaceMode.player.pos.x - surfaceMode.surfaceX;
+            const dy = surfaceMode.player.pos.y - surfaceMode.surfaceY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+            const mDist = map(dist, 0, 3000, 0, maxRadius, true);
+
+            push();
+            rotate(angle);
+            noStroke();
+            fill(0, 255, 255, 230); // Bright cyan for visibility
+            ellipse(mDist, 0, 9, 9); // Slightly larger for easy identification
+            pop();
+        }
 
         const player = surfaceMode.player;
         for (const obj of surfaceMode.surfaceObjects) {
