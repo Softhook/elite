@@ -86,8 +86,10 @@ const SURFACE_CONFIG = {
     // Reduces geometry complexity at higher altitudes to improve performance
     // Simple 2-level system: full detail below threshold, simplified above
     LOD: {
-        DETAIL_THRESHOLD: 1000,   // Below 1000: full detail (LOD 3), above: simplified (LOD 2)
-        MIN_SCREEN_SIZE: 3        // Don't draw if apparent size < 3 pixels
+        DETAIL_THRESHOLD: 1000,   // Below 1000: full detail, above: simplified
+        MIN_SCREEN_SIZE: 3,       // Don't draw if apparent size < 3 pixels
+        FULL_DETAIL: 3,           // LOD level for full detail rendering
+        SIMPLIFIED: 2             // LOD level for simplified rendering
     }
 };
 
@@ -281,7 +283,7 @@ class SurfaceMode {
         // Early return for very small apparent size (screen-size culling)
         // Use cached perspective scale to avoid recalculation per object
         const apparentSize = objSize * this._cachedPerspectiveScale;
-        if (apparentSize < lod.MIN_SCREEN_SIZE) return 2;
+        if (apparentSize < lod.MIN_SCREEN_SIZE) return lod.SIMPLIFIED;
 
         // Distance-based LOD: Use cached LOD level for consistency across frame
         // Full detail below threshold, simplified above
@@ -1524,7 +1526,8 @@ class SurfaceMode {
         // Cache frequently-used values for the frame to avoid recalculation
         // These are used by multiple draw methods and LOD calculations
         this._cachedPerspectiveScale = this._getPerspectiveScale();
-        this._cachedBaseLODLevel = this.altitude < SURFACE_CONFIG.LOD.DETAIL_THRESHOLD ? 3 : 2;
+        this._cachedBaseLODLevel = this.altitude < SURFACE_CONFIG.LOD.DETAIL_THRESHOLD ? 
+                                    SURFACE_CONFIG.LOD.FULL_DETAIL : SURFACE_CONFIG.LOD.SIMPLIFIED;
         this._cachedExtrusionAngle = this._getExtrusionAngle();
         this._cachedExtrusionSin = Math.sin(this._cachedExtrusionAngle);
         this._cachedExtrusionCos = Math.cos(this._cachedExtrusionAngle);
@@ -2002,9 +2005,9 @@ class SurfaceMode {
             fauna = new RollerCreature(x, y, size, planetColors, seed);
         } else if (typeof StalkCreature !== 'undefined') {
             fauna = new StalkCreature(x, y, size, planetColors, seed);
-        } else if (typeof SlitherCreature !== 'undefined') {
-            // Fallback to SlitherCreature if available
-            fauna = new SlitherCreature(x, y, size, planetColors, seed);
+        } else {
+            // Fallback to SlitherCreature if StalkCreature is undefined
+            fauna = typeof SlitherCreature !== 'undefined' ? new SlitherCreature(x, y, size, planetColors, seed) : null;
         }
 
         // Mark as fauna to avoid expensive constructor.name checks in update loop
