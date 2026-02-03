@@ -794,6 +794,15 @@ class SurfaceMode {
                         const dx = obj.pos.x - target.pos.x;
                         const dy = obj.pos.y - target.pos.y;
                         const distSq = dx * dx + dy * dy;
+                        
+                        // CRITICAL: Validate distance calculation didn't overflow
+                        // Large coordinate differences can exceed safe integer limits
+                        if (!isFinite(distSq) || distSq < 0) {
+                            // Overflow detected - treat as very far away and cull
+                            objectsCulled++;
+                            obj._wasCulledLastFrame = true;
+                            continue;
+                        }
 
                         // More aggressive culling for fauna (they just wander when not targeting bases)
                         // Use pre-set flag instead of expensive constructor.name check
@@ -1347,7 +1356,8 @@ class SurfaceMode {
      * @private
      */
     _getViewportBounds(padding = 200) {
-        if (!this.player || !this.player.pos) {
+        // Use optional chaining for safer null access
+        if (!this.player?.pos) {
             return { minX: 0, maxX: width, minY: 0, maxY: height };
         }
 
@@ -1355,7 +1365,8 @@ class SurfaceMode {
         const safePadding = Math.max(0, padding || 0);
 
         // Validate altitude is within reasonable bounds to prevent NaN propagation
-        const safeAltitude = isNaN(this.altitude) ? SURFACE_CONFIG.DEFAULT_ALTITUDE : 
+        // Use Number.isNaN for reliable NaN detection
+        const safeAltitude = Number.isNaN(this.altitude) ? SURFACE_CONFIG.DEFAULT_ALTITUDE : 
                            Math.max(0, Math.min(this.altitude, SURFACE_CONFIG.MAX_ALTITUDE * 2));
 
         return SurfaceUtils.getViewportBounds(
@@ -1909,6 +1920,8 @@ class SurfaceMode {
                 if (obj) {
                     obj.yOffset = h;
                     obj.cellKey = cellKey; // Store the key for persistence when destroyed
+                    // Initialize culling state flag for hysteresis logic
+                    obj._wasCulledLastFrame = false;
                     this.surfaceObjects.push(obj);
                     this.objectCache.set(cellKey, obj);
                 } else {
@@ -2274,6 +2287,19 @@ class SurfaceMode {
                 const dx = robot.pos.x - playerPos.x;
                 const dy = robot.pos.y - playerPos.y;
                 const distSq = dx * dx + dy * dy;
+                
+                // CRITICAL: Validate distance calculation didn't overflow
+                if (!isFinite(distSq) || distSq < 0) {
+                    // Overflow detected - remove robot and mark for respawn
+                    if (robot.homeBase && !robot.homeBase.destroyed) {
+                        robot.homeBase.robotsInitialized = false;
+                        if (robot.homeBase.cellKey) {
+                            const desc = this.playerBuiltMap.get(robot.homeBase.cellKey);
+                            if (desc) desc.robotsInitialized = false;
+                        }
+                    }
+                    return false;
+                }
 
                 // Distance-based cleanup: if robot is too far from player, remove it.
                 // It will be re-instantiated when the player returns and base initialization runs.
