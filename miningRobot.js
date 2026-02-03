@@ -121,7 +121,6 @@ class MiningRobot {
         this.homeBase = homeBase;
         this.oreSeams = oreSeams; // Reference to shared ore seam map
         this.yOffset = 0; // Terrain height (set by surface mode)
-        this.yOffset = 0; // Terrain height (set by surface mode)
 
         // Health and destruction
         this.destroyed = false;

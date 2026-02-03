@@ -365,8 +365,8 @@ class SurfaceFauna {
 
     // Attack behavior constants
     static ATTACK_SPEED_MULTIPLIER = 1.5;   // Speed multiplier when pursuing base
-    static BASE_DETECTION_RANGE = 500;       // Max distance to detect player bases
-    static BASE_ABANDON_RANGE = 600;        // Distance at which fauna abandons pursuit
+    static BASE_DETECTION_RANGE = 800;       // Max distance to detect player bases
+    static BASE_ABANDON_RANGE = 1500;        // Distance at which fauna abandons pursuit
     static ATTACK_DAMAGE = 5;                // Damage per attack
     static BASE_SEARCH_INTERVAL = 2.0;       // Seconds between base searches
 

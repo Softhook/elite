@@ -2282,8 +2282,6 @@ class SurfaceMode {
 
             objectsDrawn++;
 
-            objectsDrawn++;
-
             // Calculate LOD level for all surface objects (flora, fauna, buildings)
             // Uses unified system: LOD 3 (full) or LOD 2 (simplified) based on altitude/size
             const lodLevel = this._calculateLODLevel(objSize);
