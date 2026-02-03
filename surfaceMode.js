@@ -86,8 +86,10 @@ const SURFACE_CONFIG = {
     // Reduces geometry complexity at higher altitudes to improve performance
     // Simple 2-level system: full detail below threshold, simplified above
     LOD: {
-        DETAIL_THRESHOLD: 1000,   // Below 1000: full detail (LOD 3), above: simplified (LOD 2)
-        MIN_SCREEN_SIZE: 3        // Don't draw if apparent size < 3 pixels
+        DETAIL_THRESHOLD: 1000,   // Below 1000: full detail, above: simplified
+        MIN_SCREEN_SIZE: 3,       // Don't draw if apparent size < 3 pixels
+        FULL_DETAIL: 3,           // LOD level for full detail rendering
+        SIMPLIFIED: 2             // LOD level for simplified rendering
     }
 };
 
@@ -176,6 +178,16 @@ class SurfaceMode {
         this._keyPressed = false;
         // Build key state (prevents repeat while held)
         this._buildKeyPressed = false;
+
+        // Frame-level cached values (initialized with safe defaults)
+        // These are recalculated at the start of each draw() call
+        // CRITICAL: Must be initialized to prevent undefined access during ENTERING state
+        this._cachedPerspectiveScale = 1.0;
+        this._cachedBaseLODLevel = SURFACE_CONFIG.LOD.SIMPLIFIED;
+        this._cachedExtrusionAngle = SURFACE_CONFIG.EXTRUSION_ANGLE;
+        this._cachedExtrusionSin = Math.sin(SURFACE_CONFIG.EXTRUSION_ANGLE);
+        this._cachedExtrusionCos = Math.cos(SURFACE_CONFIG.EXTRUSION_ANGLE);
+        this._cachedCounterScale = 1.0;
 
         // Saved player position for return
         this.savedPlayerPos = null;
@@ -278,13 +290,14 @@ class SurfaceMode {
     _calculateLODLevel(objSize) {
         const lod = SURFACE_CONFIG.LOD;
 
-        // Check screen-size based culling (returns simplified as minimum)
-        const perspectiveScale = this._getPerspectiveScale();
-        const apparentSize = objSize * perspectiveScale;
-        if (apparentSize < lod.MIN_SCREEN_SIZE) return 2;
+        // Early return for very small apparent size (screen-size culling)
+        // Use cached perspective scale to avoid recalculation per object
+        const apparentSize = objSize * this._cachedPerspectiveScale;
+        if (apparentSize < lod.MIN_SCREEN_SIZE) return lod.SIMPLIFIED;
 
-        // Simple threshold: full detail below, simplified above
-        return this.altitude < lod.DETAIL_THRESHOLD ? 3 : 2;
+        // Distance-based LOD: Use cached LOD level for consistency across frame
+        // Full detail below threshold, simplified above
+        return this._cachedBaseLODLevel;
     }
 
     /**
@@ -752,13 +765,21 @@ class SurfaceMode {
             }
 
             // Update surface objects (single pass, dt-corrected)
-            // Apply viewport culling for distant objects to improve performance
+            // Apply distance-based culling for distant objects to improve performance
             if (this.surfaceObjects) {
                 const target = this.controlMode === 'ASTRONAUT' ? this.astronaut : this.player;
 
                 // Get viewport for culling (use constant from config)
                 const updateRange = SURFACE_CONFIG.UPDATE_RANGE || 2000;
                 const updateRangeSq = updateRange * updateRange;
+                // Tighter culling for fauna wandering behavior (reduced to 70% of normal range)
+                // Fauna can skip movement updates when far away since they just wander randomly
+                const faunaReducedRangeSq = (updateRange * 0.7) ** 2;
+                
+                // Add hysteresis margin to prevent jitter at boundary (5% buffer)
+                const HYSTERESIS_FACTOR = 1.05;
+                const updateRangeHysteresisSq = updateRangeSq * HYSTERESIS_FACTOR;
+                const faunaReducedHysteresisSq = faunaReducedRangeSq * HYSTERESIS_FACTOR;
 
                 let objectsUpdated = 0;
                 let objectsCulled = 0;
@@ -773,16 +794,40 @@ class SurfaceMode {
                         const dx = obj.pos.x - target.pos.x;
                         const dy = obj.pos.y - target.pos.y;
                         const distSq = dx * dx + dy * dy;
+                        
+                        // CRITICAL: Validate distance calculation didn't overflow
+                        // Large coordinate differences can exceed safe integer limits
+                        if (!isFinite(distSq)) {
+                            // Overflow detected - treat as very far away and cull
+                            objectsCulled++;
+                            obj._wasCulledLastFrame = true;
+                            continue;
+                        }
+
+                        // More aggressive culling for fauna (they just wander when not targeting bases)
+                        // Use pre-set flag instead of expensive constructor.name check
+                        const isFauna = obj.isFauna === true;
+                        
+                        // Use hysteresis to prevent boundary jitter:
+                        // - If object was updated last frame, use larger range before culling (hysteresis)
+                        // - If object was culled last frame, use normal range before un-culling
+                        const wasCulled = obj._wasCulledLastFrame === true;
+                        const effectiveRangeSq = isFauna ? 
+                            (wasCulled ? faunaReducedRangeSq : faunaReducedHysteresisSq) :
+                            (wasCulled ? updateRangeSq : updateRangeHysteresisSq);
 
                         // Skip update for very distant objects (but still render them if visible)
-                        // Exceptions: Always update mission-critical objects (isTarget)
-                        if (distSq > updateRangeSq && !obj.isTarget) {
+                        // Exceptions: Always update mission-critical objects (isTarget) or fauna attacking bases
+                        const shouldAlwaysUpdate = obj.isTarget || (isFauna && obj.targetBase);
+                        if (distSq > effectiveRangeSq && !shouldAlwaysUpdate) {
                             objectsCulled++;
+                            obj._wasCulledLastFrame = true;  // Mark as culled for next frame
                             continue;
                         }
                     }
 
                     objectsUpdated++;
+                    obj._wasCulledLastFrame = false;  // Mark as updated for next frame
                     if (obj.update) obj.update(dt, target, this.starSystem);
                 }
 
@@ -1311,17 +1356,26 @@ class SurfaceMode {
      * @private
      */
     _getViewportBounds(padding = 200) {
-        if (!this.player || !this.player.pos) {
+        // Use optional chaining for safer null access
+        if (!this.player?.pos) {
             return { minX: 0, maxX: width, minY: 0, maxY: height };
         }
+
+        // Validate padding is non-negative to prevent invalid bounds
+        const safePadding = Math.max(0, padding || 0);
+
+        // Validate altitude is within reasonable bounds to prevent NaN propagation
+        // Use Number.isNaN for reliable NaN detection
+        const safeAltitude = Number.isNaN(this.altitude) ? SURFACE_CONFIG.DEFAULT_ALTITUDE : 
+                           Math.max(0, Math.min(this.altitude, SURFACE_CONFIG.MAX_ALTITUDE * 2));
 
         return SurfaceUtils.getViewportBounds(
             this.surfaceX,
             this.surfaceY,
-            this.altitude,
+            safeAltitude,
             width,
             height,
-            padding
+            safePadding
         );
     }
 
@@ -1511,18 +1565,31 @@ class SurfaceMode {
 
         if (!this.planet) return;
 
+        // CRITICAL: Only update cache values when in active rendering states
+        // During EXITING, continue using last valid cached values for smooth transition
+        // This prevents cache corruption during state transitions
+        if (this.state !== SURFACE_STATE.EXITING) {
+            // Cache frequently-used values for the frame to avoid recalculation
+            // These are used by multiple draw methods and LOD calculations
+            this._cachedPerspectiveScale = this._getPerspectiveScale();
+            this._cachedBaseLODLevel = this.altitude < SURFACE_CONFIG.LOD.DETAIL_THRESHOLD ? 
+                                        SURFACE_CONFIG.LOD.FULL_DETAIL : SURFACE_CONFIG.LOD.SIMPLIFIED;
+            this._cachedExtrusionAngle = this._getExtrusionAngle();
+            this._cachedExtrusionSin = Math.sin(this._cachedExtrusionAngle);
+            this._cachedExtrusionCos = Math.cos(this._cachedExtrusionAngle);
+            this._cachedCounterScale = this._getCounterScale();
+        }
+
         push();
         // 1. Center camera on screen
         translate(width / 2, height / 2);
 
         // 2. Perspective scaling (everything world-side scales together)
-        const perspectiveScale = this._getPerspectiveScale();
-        scale(perspectiveScale);
+        scale(this._cachedPerspectiveScale);
 
         // 3. World translation (camera follows player's visual top position)
-        const extrusionAngle = this._getExtrusionAngle();
-        const visualXOffset = this.altitude * Math.sin(extrusionAngle);
-        const visualYOffset = this.altitude * Math.cos(extrusionAngle);
+        const visualXOffset = this.altitude * this._cachedExtrusionSin;
+        const visualYOffset = this.altitude * this._cachedExtrusionCos;
 
         // Translate by logic position + altitude shift to center on the projected "top"
         translate(-this.surfaceX + visualXOffset, -(this.surfaceY - visualYOffset));
@@ -1841,7 +1908,6 @@ class SurfaceMode {
                             else if (cellHash > wildFaunaMin && cellHash < wildFaunaMax && planetDensityFactor > 0.4) {
                                 obj = this._createFauna(planetColors, wx, wy, objSeed);
                                 if (obj) {
-                                    obj.cellKey = cellKey;
                                     console.log(`[Spawn] Spawned fauna ${obj.constructor.name} at ${cellKey} (Hash: ${cellHash.toFixed(4)}, Factor: ${planetDensityFactor.toFixed(2)})`);
                                 }
                             }
@@ -1853,6 +1919,8 @@ class SurfaceMode {
                 if (obj) {
                     obj.yOffset = h;
                     obj.cellKey = cellKey; // Store the key for persistence when destroyed
+                    // Initialize culling state flag for hysteresis logic
+                    obj._wasCulledLastFrame = false;
                     this.surfaceObjects.push(obj);
                     this.objectCache.set(cellKey, obj);
                 } else {
@@ -1975,19 +2043,27 @@ class SurfaceMode {
         const rand = (seed * 13.579) % 1;
         const size = 10 + (seed % 15);
 
+        let fauna = null;
         // Choose fauna type based on random value
         if (rand < 0.25 && typeof SlitherCreature !== 'undefined') {
-            return new SlitherCreature(x, y, size, planetColors, seed);
+            fauna = new SlitherCreature(x, y, size, planetColors, seed);
         } else if (rand < 0.5 && typeof FloaterCreature !== 'undefined') {
-            return new FloaterCreature(x, y, size, planetColors, seed);
+            fauna = new FloaterCreature(x, y, size, planetColors, seed);
         } else if (rand < 0.75 && typeof RollerCreature !== 'undefined') {
-            return new RollerCreature(x, y, size, planetColors, seed);
+            fauna = new RollerCreature(x, y, size, planetColors, seed);
         } else if (typeof StalkCreature !== 'undefined') {
-            return new StalkCreature(x, y, size, planetColors, seed);
+            fauna = new StalkCreature(x, y, size, planetColors, seed);
+        } else {
+            // Fallback to SlitherCreature if StalkCreature is undefined
+            fauna = typeof SlitherCreature !== 'undefined' ? new SlitherCreature(x, y, size, planetColors, seed) : null;
         }
 
-        // Fallback to SlitherCreature if available
-        return typeof SlitherCreature !== 'undefined' ? new SlitherCreature(x, y, size, planetColors, seed) : null;
+        // Mark as fauna to avoid expensive constructor.name checks in update loop
+        if (fauna) {
+            fauna.isFauna = true;
+        }
+
+        return fauna;
     }
 
     /**
@@ -2193,34 +2269,68 @@ class SurfaceMode {
     _updateMiningRobots(dt) {
         if (!this.miningRobots) return;
 
-        const cleanupRangeSq = (SURFACE_CONFIG.UPDATE_RANGE || 2000) * 1.5;
-        const cleanupRangeSqVal = cleanupRangeSq * cleanupRangeSq;
+        const updateRange = SURFACE_CONFIG.UPDATE_RANGE || 2000;
+        const updateRangeSq = updateRange * updateRange;
+        const cleanupDist = updateRange * 1.5;
+        const cleanupDistSq = cleanupDist * cleanupDist;
         const playerPos = (this.controlMode === 'ASTRONAUT' && this.astronaut) ? this.astronaut.pos : this.player.pos;
+
+        let robotsUpdated = 0;
+        let robotsCulled = 0;
 
         // Update robots and filter out destroyed ones or those far away
         this.miningRobots = this.miningRobots.filter(robot => {
             if (!robot || robot.destroyed) return false;
 
-            // Distance-based cleanup: if robot is too far from player, remove it.
-            // It will be re-instantiated when the player returns and base initialization runs.
             if (playerPos) {
                 const dx = robot.pos.x - playerPos.x;
                 const dy = robot.pos.y - playerPos.y;
-                if (dx * dx + dy * dy > cleanupRangeSqVal) {
-                    // Force the base to re-initialize robots when player returns
-                    if (robot.homeBase) {
+                const distSq = dx * dx + dy * dy;
+                
+                // CRITICAL: Validate distance calculation didn't overflow or become NaN
+                if (!isFinite(distSq)) {
+                    // Overflow detected - remove robot and mark for respawn
+                    if (robot.homeBase && !robot.homeBase.destroyed) {
                         robot.homeBase.robotsInitialized = false;
-                        // Sync to descriptor to prevent duplicate spawns
-                        const desc = this.playerBuiltMap.get(robot.homeBase.cellKey);
+                        const desc = this.playerBuiltMap.get(robot.homeBase?.cellKey);
                         if (desc) desc.robotsInitialized = false;
                     }
                     return false;
                 }
+
+                // Distance-based cleanup: if robot is too far from player, remove it.
+                // It will be re-instantiated when the player returns and base initialization runs.
+                if (distSq > cleanupDistSq) {
+                    // Force the base to re-initialize robots when player returns
+                    // CRITICAL: Check homeBase exists and is not destroyed before accessing
+                    if (robot.homeBase && !robot.homeBase.destroyed) {
+                        robot.homeBase.robotsInitialized = false;
+                        // Sync to descriptor to prevent duplicate spawns
+                        const desc = this.playerBuiltMap.get(robot.homeBase?.cellKey);
+                        if (desc) desc.robotsInitialized = false;
+                    }
+                    return false;
+                }
+
+                // Update culling: Only update robots within UPDATE_RANGE
+                // Robots beyond this range stay frozen until player approaches
+                if (distSq <= updateRangeSq) {
+                    robot.update(dt, this);
+                    robotsUpdated++;
+                } else {
+                    robotsCulled++;
+                }
+            } else {
+                // No player pos, always update
+                robot.update(dt, this);
+                robotsUpdated++;
             }
 
-            robot.update(dt, this);
             return true;
         });
+
+        // Store culling stats for debug overlay
+        this._lastRobotUpdateStats = { updated: robotsUpdated, culled: robotsCulled };
 
         // Regenerate ore seams slowly over time
         for (const [baseKey, baseSeams] of this.oreSeams) {
@@ -2231,17 +2341,43 @@ class SurfaceMode {
     }
 
     /**
-     * Draw mining robots (ore seams are invisible - mined at random locations)
+     * Draw mining robots with viewport culling (ore seams are invisible - mined at random locations)
      * @private
      */
     _drawMiningRobots() {
         if (!this.miningRobots || this.miningRobots.length === 0) return;
 
-        // Only draw robots - ore seams are not visible
+        // Viewport culling for mining robots
+        const viewport = this._getViewportBounds(200);
+        // Use cached values instead of recalculating
+        const sin = this._cachedExtrusionSin;
+        const cos = this._cachedExtrusionCos;
+
+        let robotsDrawn = 0;
+        let robotsCulled = 0;
+
+        // Only draw robots that are visible
         for (let robot of this.miningRobots) {
             if (!robot) continue;
+
+            // Viewport culling: Check if robot is visible
+            const objAlt = robot.yOffset || 0;
+            const objSize = robot.size || 20;
+            const visX = robot.pos.x - objAlt * sin;
+            const visY = robot.pos.y - objAlt * cos;
+
+            if (visX + objSize < viewport.minX || visX - objSize > viewport.maxX ||
+                visY + objSize < viewport.minY || visY - objSize > viewport.maxY) {
+                robotsCulled++;
+                continue;
+            }
+
+            robotsDrawn++;
             robot.draw(this);
         }
+
+        // Store culling stats for debug overlay
+        this._lastRobotDrawStats = { drawn: robotsDrawn, culled: robotsCulled };
     }
 
     /**
@@ -2256,9 +2392,9 @@ class SurfaceMode {
         // Use adequate padding for visual projection culling to prevent pop-in
         // Flora/fauna need more padding due to varied sizes and movement
         const viewport = this._getViewportBounds(300);
-        const extrusionAngle = this._getExtrusionAngle();
-        const sin = Math.sin(extrusionAngle);
-        const cos = Math.cos(extrusionAngle);
+        // Use cached values instead of recalculating
+        const sin = this._cachedExtrusionSin;
+        const cos = this._cachedExtrusionCos;
 
         let objectsDrawn = 0;
         let objectsCulled = 0;
@@ -2323,12 +2459,12 @@ class SurfaceMode {
         if (!this.starSystem || !this.starSystem.projectiles) return;
 
         const projectiles = this.starSystem.projectiles;
-        const counterScale = this._getCounterScale();
+        // Use cached values instead of recalculating
+        const counterScale = this._cachedCounterScale;
         const sunAngle = this._getSunAngle();
 
-        const extrusionAngle = this._getExtrusionAngle();
-        const sin = Math.sin(extrusionAngle);
-        const cos = Math.cos(extrusionAngle);
+        const sin = this._cachedExtrusionSin;
+        const cos = this._cachedExtrusionCos;
 
         // Viewport culling padding
         const viewport = this._getViewportBounds(100);
@@ -2356,7 +2492,7 @@ class SurfaceMode {
     }
 
     /**
-     * Draw mines at their world positions
+     * Draw mines at their world positions with viewport culling
      * @private
      */
     _drawMines() {
@@ -2365,11 +2501,28 @@ class SurfaceMode {
         const mines = this.starSystem.mines;
         if (mines.length === 0) return;
 
+        // Viewport culling for mines
+        const viewport = this._getViewportBounds(150);
+        // Use cached values instead of recalculating
+        const sin = this._cachedExtrusionSin;
+        const cos = this._cachedExtrusionCos;
+
         push();
         this._clearShadow();
 
         for (const mine of mines) {
             if (mine && !mine.destroyed && typeof mine.draw === 'function') {
+                // Viewport culling: Check if mine is visible
+                const alt = mine.altitude || 0;
+                const mineSize = mine.size || 20;
+                const visX = mine.pos.x - alt * sin;
+                const visY = mine.pos.y - alt * cos;
+
+                if (visX + mineSize < viewport.minX || visX - mineSize > viewport.maxX ||
+                    visY + mineSize < viewport.minY || visY - mineSize > viewport.maxY) {
+                    continue;
+                }
+
                 // Mine.draw() already handles altitude projection via SurfaceUtils
                 mine.draw();
             }
@@ -2385,9 +2538,9 @@ class SurfaceMode {
         const explosions = this.starSystem.explosions;
         if (!explosions) return;
 
-        const extrusionAngle = this._getExtrusionAngle();
-        const sin = Math.sin(extrusionAngle);
-        const cos = Math.cos(extrusionAngle);
+        // Use cached values instead of recalculating
+        const sin = this._cachedExtrusionSin;
+        const cos = this._cachedExtrusionCos;
 
         // Viewport culling padding
         const viewport = this._getViewportBounds(100);
