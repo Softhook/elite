@@ -2172,15 +2172,35 @@ class SurfaceMode {
                 console.log(`[Mining Robots] Spawning ${robotCount} robots for base at (${Math.round(obj.pos.x)}, ${Math.round(obj.pos.y)}) - cellKey: ${obj.cellKey}`);
 
                 for (let i = 0; i < robotCount; i++) {
+                    // Use deterministic positioning based on base location and robot index
                     const angle = (i / robotCount) * TWO_PI;
-                    // Deterministic spawn distance based on base position and robot index
                     const distSeed = Math.abs(Math.sin(obj.pos.x * 2.345 + obj.pos.y * 6.789 + i * 3.14159)) % 1;
                     const dist = 50 + distSeed * 20;
-                    const rx = obj.pos.x + Math.cos(angle) * dist;
-                    const ry = obj.pos.y + Math.sin(angle) * dist;
+                    
+                    // Spawn robots at patrol positions (not at base) to look "already working"
+                    const patrolAngle = angle + (Math.sin(obj.pos.x + i) * 0.5); // Add some variation
+                    const patrolDist = MINING_CONFIG.PATROL_RADIUS * 0.3 + (distSeed * MINING_CONFIG.PATROL_RADIUS * 0.4);
+                    const rx = obj.pos.x + Math.cos(patrolAngle) * patrolDist;
+                    const ry = obj.pos.y + Math.sin(patrolAngle) * patrolDist;
 
                     const robot = new MiningRobot(rx, ry, obj, baseOreSeams);
                     robot.yOffset = this._getTerrainHeightAt(rx, ry);
+                    
+                    // Give robots varied starting states to look like they're already working
+                    const stateSeed = Math.abs(Math.sin(obj.pos.x * 1.111 + obj.pos.y * 2.222 + i * 4.444)) % 1;
+                    if (stateSeed < 0.3) {
+                        // 30% chance: already mining
+                        robot.state = ROBOT_STATE.MINING;
+                        robot.stateTimer = stateSeed * MINING_CONFIG.MINING_DURATION;
+                    } else if (stateSeed < 0.6) {
+                        // 30% chance: returning with partial cargo
+                        robot.state = ROBOT_STATE.RETURNING;
+                        robot.cargo = Math.floor(stateSeed * MINING_CONFIG.CARGO_CAPACITY);
+                    } else {
+                        // 40% chance: seeking or moving to location
+                        robot.state = stateSeed < 0.8 ? ROBOT_STATE.SEEKING : ROBOT_STATE.MOVING_TO_LOCATION;
+                    }
+                    
                     this.miningRobots.push(robot);
                     robotsSpawned++;
                 }
@@ -2255,7 +2275,13 @@ class SurfaceMode {
                 }
 
                 const capacity = desc.miningStorageCapacity || 100;
+                const oldQuantity = mineralStack.quantity;
                 mineralStack.quantity = Math.min(capacity, mineralStack.quantity + mineralsEarned);
+
+                // Notify player if storage is full (with cooldown)
+                if (mineralStack.quantity >= capacity && oldQuantity < capacity) {
+                    this._notifyBaseEvent(cellKey, 'storage_full', `Mining base storage full (${Math.round(capacity)} minerals)`);
+                }
 
                 // 2. Process Hazards (Simplified damage)
                 // Fauna density factor (0 to 1 based on planet)
@@ -2263,20 +2289,35 @@ class SurfaceMode {
                 const damagePerSec = hazardLevel * 0.5;
                 const damageTaken = damagePerSec * timeElapsed;
 
-                desc.health = (desc.health !== undefined ? desc.health : 1000) - damageTaken;
+                const oldHealth = desc.health !== undefined ? desc.health : 1000;
+                desc.health = oldHealth - damageTaken;
+
+                // Notify player if base is taking significant damage (< 50% health)
+                if (desc.health < 500 && oldHealth >= 500) {
+                    this._notifyBaseEvent(cellKey, 'low_health', `Mining base under attack! (${Math.round(desc.health)} HP remaining)`);
+                }
 
                 // 3. Robot Attrition (Random chance based on hazard and time)
                 // Approx 5% chance per hour per hazard level
                 const attritionChance = hazardLevel * (timeElapsed / 3600) * 0.05;
                 if (Math.random() < attritionChance && desc.robotCount > 0) {
+                    const oldCount = desc.robotCount;
                     desc.robotCount--;
-                    console.log(`Lost a mining robot to hazards at ${cellKey}. Remaining: ${desc.robotCount}`);
+                    console.log(`[Background] Lost a mining robot to hazards at ${cellKey}. Remaining: ${desc.robotCount}`);
+                    
+                    // Notify player about robot loss
+                    if (desc.robotCount === 0) {
+                        this._notifyBaseEvent(cellKey, 'robots_lost', `All mining robots destroyed at base!`, [255, 100, 100]);
+                    } else if (oldCount > 0) {
+                        this._notifyBaseEvent(cellKey, 'robot_lost', `Mining robot destroyed (${desc.robotCount} remaining)`);
+                    }
                 }
 
                 if (desc.health <= 0) {
                     desc.destroyed = true;
                     this.destroyedCells.add(cellKey);
-                    console.log(`Base at ${cellKey} destroyed in background!`);
+                    console.log(`[Background] Base at ${cellKey} destroyed!`);
+                    this._notifyBaseEvent(cellKey, 'base_destroyed', `Mining base destroyed!`, [255, 50, 50]);
                 }
 
                 // Sync properties back to cached object if it exists
@@ -2291,6 +2332,41 @@ class SurfaceMode {
 
             desc.lastBackgroundTick = now;
         }
+    }
+
+    /**
+     * Send notification to player about base events
+     * @param {string} cellKey - Cell key of the base
+     * @param {string} eventType - Type of event (storage_full, low_health, robots_lost, etc)
+     * @param {string} message - Message to display
+     * @param {Array} color - Optional RGB color array
+     * @private
+     */
+    _notifyBaseEvent(cellKey, eventType, message, color = [255, 200, 100]) {
+        // Throttle notifications to avoid spam (once per minute per event type per base)
+        if (!this.baseNotifications) {
+            this.baseNotifications = new Map();
+        }
+
+        const notificationKey = `${cellKey}_${eventType}`;
+        const now = Date.now();
+        const lastNotification = this.baseNotifications.get(notificationKey);
+        
+        // Cooldown: 60 seconds for most events, 30 seconds for critical events
+        const cooldown = (eventType === 'base_destroyed' || eventType === 'robots_lost') ? 30000 : 60000;
+        
+        if (lastNotification && (now - lastNotification) < cooldown) {
+            return; // Skip notification, too soon
+        }
+
+        this.baseNotifications.set(notificationKey, now);
+
+        // Send notification if uiManager is available
+        if (typeof uiManager !== 'undefined' && uiManager.addMessage) {
+            uiManager.addMessage(message, color);
+        }
+        
+        console.log(`[Base Event] ${message} (${cellKey})`);
     }
 
     /**
