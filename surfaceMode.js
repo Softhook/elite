@@ -2118,10 +2118,18 @@ class SurfaceMode {
                 }
                 const baseOreSeams = this.oreSeams.get(baseKey);
 
-                // Deterministic robot count based on base position (2-3 robots)
-                const baseSeed = Math.abs(Math.sin(obj.pos.x * 1.234 + obj.pos.y * 5.678) * 43758.5453) % 1;
-                const robotCount = 2 + Math.floor(baseSeed * 2);
-                obj.robotCount = robotCount;
+                // Use persisted robot count if available, otherwise calculate deterministic count
+                // This preserves robot losses from fauna attacks across save/load cycles
+                let robotCount;
+                if (typeof obj.robotCount === 'number' && obj.robotCount >= 0) {
+                    // Use the persisted count (may be reduced from original if robots were destroyed)
+                    robotCount = obj.robotCount;
+                } else {
+                    // Calculate initial deterministic robot count based on base position (2-3 robots)
+                    const baseSeed = Math.abs(Math.sin(obj.pos.x * 1.234 + obj.pos.y * 5.678) * 43758.5453) % 1;
+                    robotCount = 2 + Math.floor(baseSeed * 2);
+                    obj.robotCount = robotCount;
+                }
 
                 // Sync to descriptor for persistence (desc already declared above)
                 if (desc) {
