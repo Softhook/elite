@@ -8,8 +8,8 @@
 const SURFACE_CONFIG = {
     // Flight mechanics
     MIN_ALTITUDE: 10,
-    MAX_ALTITUDE: 2000,
-    DEFAULT_ALTITUDE: 500, // Default starting altitude above terrain
+    MAX_ALTITUDE: 1800,
+    DEFAULT_ALTITUDE: 800, // Default starting altitude above terrain
     TURN_SPEED: 2.5,           // Radians per second
     // Movement (now uses SHIP_DEFINITIONS and SharedPhysics)
     CLIMB_SPEED: 200,
