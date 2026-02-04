@@ -2272,7 +2272,7 @@ class SurfaceMode {
             basesUpdated++;
 
             // 1. Process Mining (Simplified math)
-            if (desc.type === 'OffworldBuilding' && desc.variant === 1) { // Player Base
+            if (desc.type === 'Offworld Colony' && desc.variant === 1) { // Player Base
                 // Calculate mining rate based on expected robot performance
                 // Match actual robot behavior: MINERALS_PER_MINE / MINING_DURATION
                 const robotCount = typeof desc.robotCount === 'number' ? desc.robotCount : 3;
