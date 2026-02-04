@@ -763,14 +763,14 @@ class WeaponSystem {
 
         // Check if we're in surface mode
         const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
-        
+
         // In surface mode, convert coordinates to visual space for consistent rendering
         // The hit detection already works in visual space, so we need start to match
         let beamStartX = start.x;
         let beamStartY = start.y;
         let beamEndX = end.x;
         let beamEndY = end.y;
-        
+
         if (inSurfaceMode && owner) {
             const ownerAlt = owner.altitude || 0;
             if (typeof SurfaceUtils !== 'undefined') {
@@ -794,7 +794,7 @@ class WeaponSystem {
                 }
             }
         }
-        
+
         // Store beam info for drawing - reuse lastBeam if possible
         if (!owner.lastBeam) {
             owner.lastBeam = {
@@ -856,7 +856,7 @@ class WeaponSystem {
         let startY = start.y;
         const dirX = dir.x;
         const dirY = dir.y;
-        
+
         // In surface mode, convert beam start to visual coordinates
         const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
         if (inSurfaceMode && owner) {
@@ -881,7 +881,7 @@ class WeaponSystem {
             // Get target position (convert to visual coordinates in surface mode)
             let targetX = target.pos.x;
             let targetY = target.pos.y;
-            
+
             if (inSurfaceMode) {
                 const targetAlt = target.altitude || target.yOffset || 0;
                 if (typeof SurfaceUtils !== 'undefined') {
@@ -1086,7 +1086,7 @@ class WeaponSystem {
                 for (let i = 0, len = surfaceObjects.length; i < len; i++) {
                     const obj = surfaceObjects[i];
                     if (!obj?.pos || obj.destroyed) continue;
-                    
+
                     // Only target hostile objects (turrets and drones)
                     const isHostile = (obj.type === 'Turret' || obj.type === 'Defense Drone');
                     if (!isHostile) continue;
@@ -1430,12 +1430,12 @@ class WeaponSystem {
         // Calculate angle to target
         // In surface mode, use visual coordinates to account for altitude projection
         let dx, dy;
-        
+
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
             // Get altitudes
             const ownerAlt = owner.altitude || 0;
             const targetAlt = target.altitude || target.yOffset || 0;
-            
+
             // Convert to visual coordinates
             let ownerVisualX, ownerVisualY, targetVisualX, targetVisualY;
             if (typeof SurfaceUtils !== 'undefined') {
@@ -1450,7 +1450,7 @@ class WeaponSystem {
                 targetVisualX = target.pos.x - targetAlt * Math.sin(extrusionAngle);
                 targetVisualY = target.pos.y - targetAlt * Math.cos(extrusionAngle);
             }
-            
+
             dx = targetVisualX - ownerVisualX;
             dy = targetVisualY - ownerVisualY;
         } else {
@@ -1458,7 +1458,7 @@ class WeaponSystem {
             dx = target.pos.x - owner.pos.x;
             dy = target.pos.y - owner.pos.y;
         }
-        
+
         const angleToTarget = atan2(dy, dx);
 
         // Update turret firing angle for visual sync
@@ -1507,12 +1507,12 @@ class WeaponSystem {
 
         // Determine if we're in surface mode
         const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
-        
+
         // In surface mode, hit point from beam detection is in visual coordinates
         // We need to convert back to world coordinates for explosions and sounds
         let worldHitX = hitPoint.x;
         let worldHitY = hitPoint.y;
-        
+
         if (inSurfaceMode && target) {
             const targetAlt = (target.altitude !== undefined) ? target.altitude : (target.yOffset ? target.yOffset : 0);
             // Visual to world: add back the altitude offset
@@ -1671,16 +1671,16 @@ class WeaponSystem {
         hab.yOffset = groundH;
         hab.size = HAB_SIZE;
         hab.playerBuilt = true;
-        
+
         // Calculate cellKey for this base (needed for robot initialization)
         const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || DEFAULT_SPAWN_CELL_SIZE;
         const cellX = Math.floor(bx / cellSize);
         const cellY = Math.floor(by / cellSize);
         const cellKey = `${cellX},${cellY}`;
-        
+
         // CRITICAL: Set cellKey on the hab object (needed for robot initialization lookup)
         hab.cellKey = cellKey;
-        
+
         // Add to surface objects
         if (surfaceMode.surfaceObjects) {
             surfaceMode.surfaceObjects.push(hab);
@@ -1709,7 +1709,7 @@ class WeaponSystem {
                 surfaceMode.planet.playerBuiltSurfaceObjects = [];
             }
             surfaceMode.planet.playerBuiltSurfaceObjects.push(descriptor);
-            
+
             // DEBUG: Confirm base was added
             console.log(`[Base Builder] Added base to planet "${surfaceMode.planet.name || 'Unknown'}"`);
             console.log(`[Base Builder] Planet now has ${surfaceMode.planet.playerBuiltSurfaceObjects.length} base(s)`);
@@ -1728,6 +1728,7 @@ class WeaponSystem {
             surfaceMode.objectCache.set(cellKey, hab);
 
             // CRITICAL: Also add to the runtime map so _spawnObjects can find it when grid shifts
+            // Must include mining fields so _updateBackgroundActivity() works for newly built bases
             const mapDesc = {
                 type: hab.type || 'Offworld Colony',
                 x: hab.pos ? hab.pos.x : hab.x || bx,
@@ -1737,7 +1738,13 @@ class WeaponSystem {
                 variant: (typeof hab.variant !== 'undefined') ? hab.variant : null,
                 yOffset: (typeof hab.yOffset !== 'undefined') ? hab.yOffset : 0,
                 displayName: hab.displayName || null,
-                destroyed: !!hab.destroyed
+                destroyed: !!hab.destroyed,
+                // Mining fields - must match planet descriptor for background updates
+                robotCount: undefined,  // Will be set by _initializeMiningRobotsForBases
+                miningStorage: [],
+                miningStorageCapacity: 100,
+                health: 1000,
+                lastBackgroundTick: null
             };
             surfaceMode.playerBuiltMap.set(cellKey, mapDesc);
 

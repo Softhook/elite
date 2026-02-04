@@ -786,7 +786,7 @@ class SurfaceMode {
                 // Tighter culling for fauna wandering behavior (reduced to 70% of normal range)
                 // Fauna can skip movement updates when far away since they just wander randomly
                 const faunaReducedRangeSq = (updateRange * 0.7) ** 2;
-                
+
                 // Add hysteresis margin to prevent jitter at boundary (5% buffer)
                 const HYSTERESIS_FACTOR = 1.05;
                 const updateRangeHysteresisSq = updateRangeSq * HYSTERESIS_FACTOR;
@@ -805,7 +805,7 @@ class SurfaceMode {
                         const dx = obj.pos.x - target.pos.x;
                         const dy = obj.pos.y - target.pos.y;
                         const distSq = dx * dx + dy * dy;
-                        
+
                         // CRITICAL: Validate distance calculation didn't overflow
                         // Large coordinate differences can exceed safe integer limits
                         if (!isFinite(distSq)) {
@@ -818,12 +818,12 @@ class SurfaceMode {
                         // More aggressive culling for fauna (they just wander when not targeting bases)
                         // Use pre-set flag instead of expensive constructor.name check
                         const isFauna = obj.isFauna === true;
-                        
+
                         // Use hysteresis to prevent boundary jitter:
                         // - If object was updated last frame, use larger range before culling (hysteresis)
                         // - If object was culled last frame, use normal range before un-culling
                         const wasCulled = obj._wasCulledLastFrame === true;
-                        const effectiveRangeSq = isFauna ? 
+                        const effectiveRangeSq = isFauna ?
                             (wasCulled ? faunaReducedRangeSq : faunaReducedHysteresisSq) :
                             (wasCulled ? updateRangeSq : updateRangeHysteresisSq);
 
@@ -1365,8 +1365,8 @@ class SurfaceMode {
 
         // Validate altitude is within reasonable bounds to prevent NaN propagation
         // Use Number.isNaN for reliable NaN detection
-        const safeAltitude = Number.isNaN(this.altitude) ? SURFACE_CONFIG.DEFAULT_ALTITUDE : 
-                           Math.max(0, Math.min(this.altitude, SURFACE_CONFIG.MAX_ALTITUDE * 2));
+        const safeAltitude = Number.isNaN(this.altitude) ? SURFACE_CONFIG.DEFAULT_ALTITUDE :
+            Math.max(0, Math.min(this.altitude, SURFACE_CONFIG.MAX_ALTITUDE * 2));
 
         return SurfaceUtils.getViewportBounds(
             this.surfaceX,
@@ -1571,8 +1571,8 @@ class SurfaceMode {
             // Cache frequently-used values for the frame to avoid recalculation
             // These are used by multiple draw methods and LOD calculations
             this._cachedPerspectiveScale = this._getPerspectiveScale();
-            this._cachedBaseLODLevel = this.altitude < SURFACE_CONFIG.LOD.DETAIL_THRESHOLD ? 
-                                        SURFACE_CONFIG.LOD.FULL_DETAIL : SURFACE_CONFIG.LOD.SIMPLIFIED;
+            this._cachedBaseLODLevel = this.altitude < SURFACE_CONFIG.LOD.DETAIL_THRESHOLD ?
+                SURFACE_CONFIG.LOD.FULL_DETAIL : SURFACE_CONFIG.LOD.SIMPLIFIED;
             this._cachedExtrusionAngle = this._getExtrusionAngle();
             this._cachedExtrusionSin = Math.sin(this._cachedExtrusionAngle);
             this._cachedExtrusionCos = Math.cos(this._cachedExtrusionAngle);
@@ -1763,7 +1763,7 @@ class SurfaceMode {
 
                         // Flag instances spawned from saved player descriptors
                         obj.playerBuilt = true;
-                        
+
                         // CRITICAL: Set cellKey for player-built objects (needed for robot initialization)
                         obj.cellKey = cellKey;
                     } else if (typeof SurfaceObject !== 'undefined') {
@@ -2180,7 +2180,7 @@ class SurfaceMode {
                     const angle = (i / robotCount) * TWO_PI;
                     const distSeed = Math.abs(Math.sin(obj.pos.x * 2.345 + obj.pos.y * 6.789 + i * 3.14159)) % 1;
                     const dist = 50 + distSeed * 20;
-                    
+
                     // Spawn robots at patrol positions (not at base) to look "already working"
                     const patrolAngle = angle + (Math.sin(obj.pos.x + i) * 0.5); // Add some variation
                     const patrolDist = MINING_CONFIG.PATROL_RADIUS * 0.3 + (distSeed * MINING_CONFIG.PATROL_RADIUS * 0.4);
@@ -2189,7 +2189,7 @@ class SurfaceMode {
 
                     const robot = new MiningRobot(rx, ry, obj, baseOreSeams);
                     robot.yOffset = this._getTerrainHeightAt(rx, ry);
-                    
+
                     // Give robots varied starting states to look like they're already working
                     const stateSeed = Math.abs(Math.sin(obj.pos.x * 1.111 + obj.pos.y * 2.222 + i * 4.444)) % 1;
                     if (stateSeed < 0.3) {
@@ -2204,7 +2204,7 @@ class SurfaceMode {
                         // 40% chance: seeking or moving to location
                         robot.state = stateSeed < 0.8 ? ROBOT_STATE.SEEKING : ROBOT_STATE.MOVING_TO_LOCATION;
                     }
-                    
+
                     this.miningRobots.push(robot);
                     robotsSpawned++;
                 }
@@ -2256,6 +2256,7 @@ class SurfaceMode {
                 const dSq = (obj.pos.x - playerPos.x) ** 2 + (obj.pos.y - playerPos.y) ** 2;
                 if (dSq < updateRangeSq) {
                     obj.lastBackgroundTick = now; // Keep tick updated so catch-up starts from here when it leaves range
+                    desc.lastBackgroundTick = now; // Also update descriptor for persistence and catch-up calculation
                     basesSkippedInRange++;
                     continue;
                 }
@@ -2348,7 +2349,7 @@ class SurfaceMode {
                     const oldCount = desc.robotCount;
                     desc.robotCount--;
                     console.log(`[Background] Lost a mining robot to hazards at ${cellKey}. Remaining: ${desc.robotCount}`);
-                    
+
                     // Notify player about robot loss
                     if (desc.robotCount === 0) {
                         this._notifyBaseEvent(cellKey, 'robots_lost', `All mining robots destroyed at base!`, [255, 100, 100]);
@@ -2401,10 +2402,10 @@ class SurfaceMode {
         const notificationKey = `${cellKey}_${eventType}`;
         const now = Date.now();
         const lastNotification = this.baseNotifications.get(notificationKey);
-        
+
         // Cooldown: 60 seconds for most events, 30 seconds for critical events
         const cooldown = (eventType === 'base_destroyed' || eventType === 'robots_lost') ? 30000 : 60000;
-        
+
         if (lastNotification && (now - lastNotification) < cooldown) {
             return; // Skip notification, too soon
         }
@@ -2415,7 +2416,7 @@ class SurfaceMode {
         if (typeof uiManager !== 'undefined' && uiManager.addMessage) {
             uiManager.addMessage(message, color);
         }
-        
+
         console.log(`[Base Event] ${message} (${cellKey})`);
     }
 
@@ -2444,7 +2445,7 @@ class SurfaceMode {
                 const dx = robot.pos.x - playerPos.x;
                 const dy = robot.pos.y - playerPos.y;
                 const distSq = dx * dx + dy * dy;
-                
+
                 // CRITICAL: Validate distance calculation didn't overflow or become NaN
                 if (!isFinite(distSq)) {
                     // Overflow detected - remove robot and mark for respawn
@@ -3111,15 +3112,15 @@ class SurfaceMode {
 
             baseCount++;
             const cellKey = this._getCellKeyForPosition(desc.x, desc.y);
-            
+
             console.log(`─────────────────────────────────────────`);
             console.log(`BASE #${baseCount}`);
             console.log(`─────────────────────────────────────────`);
-            
+
             // Basic info
             console.log(`📍 Position: (${Math.round(desc.x)}, ${Math.round(desc.y)})`);
             console.log(`🔑 Cell Key: ${cellKey}`);
-            
+
             // Status
             if (desc.destroyed) {
                 console.log(`💥 Status: DESTROYED`);
@@ -3128,7 +3129,7 @@ class SurfaceMode {
                 console.log(`✅ Status: ACTIVE`);
                 activeCount++;
             }
-            
+
             // Distance from player
             if (playerPos) {
                 const distSq = (desc.x - playerPos.x) ** 2 + (desc.y - playerPos.y) ** 2;
@@ -3136,18 +3137,18 @@ class SurfaceMode {
                 const inRange = distSq < updateRangeSq;
                 console.log(`📏 Distance from Player: ${Math.round(dist)} units ${inRange ? '(IN RANGE - HIGH FIDELITY)' : '(OUT OF RANGE - BACKGROUND)'}`);
             }
-            
+
             // Robots
             const robotCount = typeof desc.robotCount === 'number' ? desc.robotCount : 'Unknown';
             console.log(`🤖 Robots: ${robotCount}`);
-            
+
             // Health
             const health = desc.health !== undefined ? desc.health : 1000;
             const maxHealth = 1000;
             const healthPercent = ((health / maxHealth) * 100).toFixed(1);
             const healthBar = this._getHealthBar(health, maxHealth);
             console.log(`❤️  Health: ${Math.round(health)}/${maxHealth} (${healthPercent}%) ${healthBar}`);
-            
+
             // Mining storage
             if (desc.miningStorage && desc.miningStorage.length > 0) {
                 const mineralStack = desc.miningStorage.find(item => item.name === 'Minerals');
@@ -3163,27 +3164,27 @@ class SurfaceMode {
             } else {
                 console.log(`⛏️  Mining Storage: No storage initialized`);
             }
-            
+
             // Background activity timing
             if (desc.lastBackgroundTick) {
                 const timeSinceUpdate = (now - desc.lastBackgroundTick) / 1000;
                 const minutes = Math.floor(timeSinceUpdate / 60);
                 const seconds = Math.floor(timeSinceUpdate % 60);
                 console.log(`⏱️  Last Background Update: ${minutes}m ${seconds}s ago`);
-                
+
                 if (timeSinceUpdate > 120) {
                     console.log(`⚠️  WARNING: Long time since update! Check if background activity is running.`);
                 }
             } else {
                 console.log(`⏱️  Last Background Update: Never (freshly built)`);
             }
-            
+
             // Mining rate estimation
             if (!desc.destroyed && robotCount > 0) {
                 const mineRate = robotCount * (MINING_CONFIG.MINERALS_PER_MINE / MINING_CONFIG.MINING_DURATION);
                 console.log(`📊 Mining Rate: ${mineRate.toFixed(2)} minerals/sec (${(mineRate * 60).toFixed(1)} minerals/min)`);
             }
-            
+
             console.log('');
         }
 
@@ -3194,13 +3195,13 @@ class SurfaceMode {
         console.log(`Total Bases: ${baseCount}`);
         console.log(`Active: ${activeCount}`);
         console.log(`Destroyed: ${destroyedCount}`);
-        
+
         if (baseCount === 0) {
             console.log(`\nℹ️  No mining bases found. Use the Base Builder weapon to create one!`);
         } else if (activeCount === 0) {
             console.log(`\n⚠️  All bases are destroyed!`);
         }
-        
+
         console.log(`\n💡 TIP: Background mining only works when you're >2000 units away or off-planet`);
         console.log(`========================================\n`);
     }
@@ -3223,7 +3224,7 @@ class SurfaceMode {
         const barLength = 20;
         const filled = Math.round(percent * barLength);
         const empty = barLength - filled;
-        
+
         let bar = '[';
         if (percent > 0.7) {
             bar += '█'.repeat(filled) + '░'.repeat(empty);
@@ -3233,7 +3234,7 @@ class SurfaceMode {
             bar += '▒'.repeat(filled) + '░'.repeat(empty);
         }
         bar += ']';
-        
+
         return bar;
     }
 
@@ -3245,7 +3246,7 @@ class SurfaceMode {
         const barLength = 20;
         const filled = Math.round(percent * barLength);
         const empty = barLength - filled;
-        
+
         let bar = '[';
         if (percent >= 1.0) {
             bar += '█'.repeat(barLength);
@@ -3253,7 +3254,7 @@ class SurfaceMode {
             bar += '▓'.repeat(filled) + '░'.repeat(empty);
         }
         bar += ']';
-        
+
         return bar;
     }
 }
@@ -3292,7 +3293,7 @@ function debugBases(planetName) {
     // Try to get context from either surface mode or space
     let planetsToCheck = [];
     let contextInfo = '';
-    
+
     // Case 1: On planet surface
     if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.planet) {
         planetsToCheck = [surfaceMode.planet];
@@ -3302,7 +3303,7 @@ function debugBases(planetName) {
     else if (typeof player !== 'undefined' && player && player.currentSystem) {
         if (planetName) {
             // Specific planet requested
-            const planet = player.currentSystem.planets.find(p => 
+            const planet = player.currentSystem.planets.find(p =>
                 p.name && p.name.toLowerCase() === planetName.toLowerCase()
             );
             if (planet) {
@@ -3325,32 +3326,32 @@ function debugBases(planetName) {
         console.log('💡 Must be on a planet surface or in space with a current system');
         return;
     }
-    
+
     // Display header
     console.log('\n========================================');
     console.log('MINING BASE STATUS REPORT');
     console.log('========================================\n');
     console.log(`Context: ${contextInfo}`);
     console.log(`Checking ${planetsToCheck.length} planet(s)\n`);
-    
+
     let totalBases = 0;
     let totalActive = 0;
     let totalDestroyed = 0;
-    
+
     // Check each planet
     for (const planet of planetsToCheck) {
         if (!planet) continue;
-        
+
         const bases = planet.playerBuiltSurfaceObjects || [];
-        
+
         // DEBUG: Show what we're finding
         console.log(`[Debug] Planet "${planet.name}": playerBuiltSurfaceObjects exists: ${!!planet.playerBuiltSurfaceObjects}, is array: ${Array.isArray(planet.playerBuiltSurfaceObjects)}, length: ${bases.length}`);
         if (bases.length > 0) {
             console.log(`[Debug] Base types found:`, bases.map(b => `${b.type} variant:${b.variant}`));
         }
-        
+
         const habBases = bases.filter(b => (b.type === 'Offworld Colony' || b.type === 'OffworldBuilding') && b.variant === 1);
-        
+
         if (habBases.length === 0) {
             if (planetsToCheck.length === 1) {
                 console.log(`ℹ️  No mining bases found on ${planet.name || 'this planet'}`);
@@ -3360,37 +3361,37 @@ function debugBases(planetName) {
             }
             continue;
         }
-        
+
         // Planet header (only if checking multiple planets)
         if (planetsToCheck.length > 1) {
             console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
             console.log(`🌍 ${planet.name || 'Unknown Planet'}`);
             console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
         }
-        
+
         console.log(`Planet: ${planet.name || 'Unknown'}`);
         console.log(`Hazard Level: ${(planet.hazardLevel || 0.2).toFixed(2)}`);
         console.log(`Total Bases: ${habBases.length}\n`);
-        
+
         // Show each base
         let baseNum = 0;
         for (const desc of habBases) {
             baseNum++;
             totalBases++;
-            
+
             const cellSize = 35; // SURFACE_CONFIG.SPAWN_CELL_SIZE
             const cellX = Math.floor(desc.x / cellSize);
             const cellY = Math.floor(desc.y / cellSize);
             const cellKey = `${cellX},${cellY}`;
-            
+
             console.log(`─────────────────────────────────────────`);
             console.log(`BASE #${baseNum} on ${planet.name || 'planet'}`);
             console.log(`─────────────────────────────────────────`);
-            
+
             // Basic info
             console.log(`📍 Position: (${Math.round(desc.x)}, ${Math.round(desc.y)})`);
             console.log(`🔑 Cell Key: ${cellKey}`);
-            
+
             // Status
             if (desc.destroyed) {
                 console.log(`💥 Status: DESTROYED`);
@@ -3399,18 +3400,18 @@ function debugBases(planetName) {
                 console.log(`✅ Status: ACTIVE`);
                 totalActive++;
             }
-            
+
             // Robots
             const robotCount = typeof desc.robotCount === 'number' ? desc.robotCount : 'Unknown';
             console.log(`🤖 Robots: ${robotCount}`);
-            
+
             // Health
             const health = desc.health !== undefined ? desc.health : 1000;
             const maxHealth = 1000;
             const healthPercent = ((health / maxHealth) * 100).toFixed(1);
             const healthBar = _getDebugHealthBar(health, maxHealth);
             console.log(`❤️  Health: ${Math.round(health)}/${maxHealth} (${healthPercent}%) ${healthBar}`);
-            
+
             // Mining storage
             if (desc.miningStorage && desc.miningStorage.length > 0) {
                 const mineralStack = desc.miningStorage.find(item => item.name === 'Minerals');
@@ -3426,7 +3427,7 @@ function debugBases(planetName) {
             } else {
                 console.log(`⛏️  Mining Storage: ${desc.miningStorage ? '0' : 'Not initialized'}/100 minerals`);
             }
-            
+
             // Background activity timing
             if (desc.lastBackgroundTick) {
                 const now = Date.now();
@@ -3434,14 +3435,14 @@ function debugBases(planetName) {
                 const minutes = Math.floor(timeSinceUpdate / 60);
                 const seconds = Math.floor(timeSinceUpdate % 60);
                 console.log(`⏱️  Last Background Update: ${minutes}m ${seconds}s ago`);
-                
+
                 if (timeSinceUpdate > 120) {
                     console.log(`⚠️  WARNING: Long time since update! Check if background activity is running.`);
                 }
             } else {
                 console.log(`⏱️  Last Background Update: Never (freshly built or not yet updated)`);
             }
-            
+
             // Mining rate estimation
             if (!desc.destroyed && typeof desc.robotCount === 'number' && desc.robotCount > 0) {
                 const MINERALS_PER_MINE = 2;
@@ -3449,11 +3450,11 @@ function debugBases(planetName) {
                 const mineRate = desc.robotCount * (MINERALS_PER_MINE / MINING_DURATION);
                 console.log(`📊 Mining Rate: ${mineRate.toFixed(2)} minerals/sec (${(mineRate * 60).toFixed(1)} minerals/min)`);
             }
-            
+
             console.log('');
         }
     }
-    
+
     // Final summary
     console.log(`========================================`);
     console.log(`SUMMARY`);
@@ -3461,7 +3462,7 @@ function debugBases(planetName) {
     console.log(`Total Bases Found: ${totalBases}`);
     console.log(`Active: ${totalActive}`);
     console.log(`Destroyed: ${totalDestroyed}`);
-    
+
     if (totalBases === 0) {
         console.log(`\nℹ️  No mining bases found.`);
         if (planetsToCheck.length > 1) {
@@ -3471,7 +3472,7 @@ function debugBases(planetName) {
     } else if (totalActive === 0) {
         console.log(`\n⚠️  All bases are destroyed!`);
     }
-    
+
     console.log(`\n💡 TIPS:`);
     console.log(`   - Background mining works when >2000 units away or off-planet`);
     console.log(`   - From space: debugBases() shows all system planets`);
@@ -3486,7 +3487,7 @@ function _getDebugHealthBar(health, maxHealth) {
     const barLength = 20;
     const filled = Math.round(percent * barLength);
     const empty = barLength - filled;
-    
+
     let bar = '[';
     if (percent > 0.7) {
         bar += '█'.repeat(filled) + '░'.repeat(empty);
@@ -3496,7 +3497,7 @@ function _getDebugHealthBar(health, maxHealth) {
         bar += '▒'.repeat(filled) + '░'.repeat(empty);
     }
     bar += ']';
-    
+
     return bar;
 }
 
@@ -3505,7 +3506,7 @@ function _getDebugStorageBar(quantity, capacity) {
     const barLength = 20;
     const filled = Math.round(percent * barLength);
     const empty = barLength - filled;
-    
+
     let bar = '[';
     if (percent >= 1.0) {
         bar += '█'.repeat(barLength);
@@ -3513,7 +3514,7 @@ function _getDebugStorageBar(quantity, capacity) {
         bar += '▓'.repeat(filled) + '░'.repeat(empty);
     }
     bar += ']';
-    
+
     return bar;
 }
 

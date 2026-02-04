@@ -2864,7 +2864,88 @@ class StarSystem {
                 }
             }
         }
+
+        // Run background activity for player bases when surfaceMode is not active
+        this._updatePlanetBackgroundActivity();
     }
+
+    /**
+     * Updates background activity for player bases on all planets in the system.
+     * This runs ONLY when surfaceMode is NOT active, to avoid double-updating.
+     * Simulates mining, hazard damage, and base destruction for bases on all planets.
+     * @private
+     */
+    _updatePlanetBackgroundActivity() {
+        // Skip if surfaceMode is active - it handles its own background updates
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+            return;
+        }
+
+        const now = Date.now();
+        const dt = (typeof deltaTime === 'number' && Number.isFinite(deltaTime))
+            ? (deltaTime / 1000) : 0.016;
+
+        for (const planet of this.planets) {
+            if (!planet || planet.isSun) continue;
+            if (!Array.isArray(planet.playerBuiltSurfaceObjects)) continue;
+            if (planet.playerBuiltSurfaceObjects.length === 0) continue;
+
+            // Process each player-built base on this planet
+            for (const desc of planet.playerBuiltSurfaceObjects) {
+                if (!desc || desc.destroyed) continue;
+
+                // Only process Hab Units (Offworld Colony variant 1)
+                if (desc.type !== 'Offworld Colony' || desc.variant !== 1) continue;
+
+                // Initialize tick if missing
+                if (!desc.lastBackgroundTick) {
+                    desc.lastBackgroundTick = now - (dt * 1000);
+                }
+
+                const timeElapsed = (now - desc.lastBackgroundTick) / 1000;
+                if (timeElapsed < 2.0) continue; // Min 2-second update frequency
+
+                // Calculate robot count
+                const robotCount = typeof desc.robotCount === 'number' ? desc.robotCount : 2;
+                if (robotCount === 0) {
+                    desc.lastBackgroundTick = now;
+                    continue;
+                }
+
+                // Mining simulation using same rates as surfaceMode
+                const MINERALS_PER_MINE = 2;
+                const MINING_DURATION = 10;
+                const mineRatePerRobot = MINERALS_PER_MINE / MINING_DURATION;
+                const mineralsEarned = robotCount * mineRatePerRobot * timeElapsed;
+
+                if (!desc.miningStorage) desc.miningStorage = [];
+                let mineralStack = desc.miningStorage.find(item => item.name === 'Minerals');
+                if (!mineralStack) {
+                    mineralStack = { name: 'Minerals', quantity: 0 };
+                    desc.miningStorage.push(mineralStack);
+                }
+
+                const capacity = desc.miningStorageCapacity || 100;
+                mineralStack.quantity = Math.min(capacity, mineralStack.quantity + mineralsEarned);
+
+                // Hazard damage (reduced for background simulation)
+                const hazardLevel = planet.hazardLevel || 0.2;
+                const damagePerSec = hazardLevel * 0.5;
+                const damageTaken = damagePerSec * timeElapsed;
+
+                if (desc.health === undefined) desc.health = 1000;
+                desc.health -= damageTaken;
+
+                if (desc.health <= 0) {
+                    desc.destroyed = true;
+                    console.log(`[Background] Base on ${planet.name} destroyed by hazards`);
+                }
+
+                desc.lastBackgroundTick = now;
+            }
+        }
+    }
+
 
     /**
      * Updates decorative space objects.
