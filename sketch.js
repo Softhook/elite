@@ -539,8 +539,6 @@ function handleSingleKeyActions() {
             return handleMapToggle();
         case 'n':
             return handleMissionOverlayToggle();
-        case 'b':
-            return handleSecretBaseNavigation();
         case 'l':
             return handleWantedToggle();
         case 'h':

@@ -3597,6 +3597,53 @@ const SHIP_DEFINITIONS = {
         aiRoles: ["MISSIONARY"],
         faction: "POSTHUMAN",
         techLevel: 5 // Advanced posthuman tech
+    },
+    "ColonistConstructor": {
+        name: "Colonist Constructor", role: "Industrial/Base Builder", upgrades: [], sizeCategory: "Small", size: 35,
+        baseMaxSpeed: 3.8, baseThrust: 0.06, baseTurnRate: 0.04363,
+        baseHull: 110, baseShield: 85, shieldRecharge: 0.9, cargoCapacity: 45,
+        armament: ["Pulse Laser", "Base Builder"],
+        costCategory: "Medium", description: "Purpose-built frontier colonization vessel equipped with industrial construction modules. Sturdy hull and decent cargo space for transporting building materials. The integrated base builder weapon deploys prefabricated surface structures. Popular with independent colonists and corporate survey teams.",
+        vertexLayers: [
+            {
+                vertexData: [{ x: 0.9000, y: 0.0000 }, { x: 0.1000, y: 0.6000 }, { x: -0.7000, y: 0.6500 }, { x: -0.9000, y: 0.2000 }, { x: -0.9000, y: -0.2000 }, { x: -0.7000, y: -0.6500 }, { x: 0.1000, y: -0.6000 }],
+                fillColor: [180, 160, 100],
+            },
+            {
+                vertexData: [{ x: 0.2000, y: 0.0000 }, { x: -0.1000, y: 0.2598 }, { x: -0.1000, y: -0.2598 }],
+                fillColor: [101, 171, 236],
+            },
+            // Industrial cargo markings - port side
+            {
+                vertexData: [{ x: -0.4000, y: 0.4500 }, { x: -0.6000, y: 0.5000 }, { x: -0.6000, y: 0.3500 }, { x: -0.4000, y: 0.4000 }],
+                fillColor: [255, 180, 0]
+            },
+            // Industrial cargo markings - starboard side
+            {
+                vertexData: [{ x: -0.4000, y: -0.4500 }, { x: -0.6000, y: -0.5000 }, { x: -0.6000, y: -0.3500 }, { x: -0.4000, y: -0.4000 }],
+                fillColor: [255, 180, 0]
+            },
+            // Construction beam emitter (cyan accent)
+            {
+                vertexData: [{ x: 0.7000, y: 0.1000 }, { x: 0.8500, y: 0.0500 }, { x: 0.8500, y: -0.0500 }, { x: 0.7000, y: -0.1000 }],
+                fillColor: [100, 255, 255]
+            },
+            // Navigation light port
+            {
+                vertexData: [{ x: -0.6500, y: 0.6000 }, { x: -0.7200, y: 0.5700 }, { x: -0.6700, y: 0.5300 }],
+                fillColor: [255, 50, 50]
+            },
+            // Navigation light starboard
+            {
+                vertexData: [{ x: -0.6500, y: -0.6000 }, { x: -0.7200, y: -0.5700 }, { x: -0.6700, y: -0.5300 }],
+                fillColor: [50, 255, 50]
+            }
+        ],
+        typicalCargo: ["Machinery", "Alloys", "Metals"],
+        price: 18500,
+        aiRoles: ["HAULER"],
+        faction: "",
+        techLevel: 1 // Starter/Tech 1
     }
 };
 

@@ -1230,6 +1230,55 @@ class UIComponents {
             ellipse(0, 0, barrierRadius * 2.3, barrierRadius * 2.3);
             pop();
         }
+        // Base Builder: Show construction beam and materialized base
+        else if (type === 'base_build') {
+            const beamLength = size * 0.35;
+            const beamEndX = gunBarrelX + beamLength;
+            
+            // Animated construction beam
+            const beamPulse = 0.5 + 0.5 * Math.sin(time * 3);
+            push();
+            strokeWeight(3 + beamPulse * 2);
+            stroke(weaponColor[0], weaponColor[1], weaponColor[2], 200);
+            line(gunBarrelX, 0, beamEndX, 0);
+            
+            // Beam glow
+            strokeWeight(8);
+            stroke(weaponColor[0], weaponColor[1], weaponColor[2], 60 + beamPulse * 40);
+            line(gunBarrelX, 0, beamEndX, 0);
+            noStroke();
+            
+            // Materializing base structure at beam end (zap effect + base)
+            const baseSize = 30;
+            const zapAlpha = 150 * beamPulse;
+            
+            // Zap effect - electric arcs
+            for (let i = 0; i < 3; i++) {
+                const angle = (time * 2 + i * TWO_PI / 3) % TWO_PI;
+                const zapDist = baseSize * (0.6 + beamPulse * 0.2);
+                const zapX = beamEndX + Math.cos(angle) * zapDist;
+                const zapY = Math.sin(angle) * zapDist;
+                strokeWeight(2);
+                stroke(100, 255, 255, zapAlpha);
+                line(beamEndX, 0, zapX, zapY);
+            }
+            noStroke();
+            
+            // Appearing base structure (simple building representation)
+            const buildAlpha = 100 + beamPulse * 100;
+            fill(180, 160, 100, buildAlpha);
+            stroke(255, 200, 100, buildAlpha);
+            strokeWeight(2);
+            rect(beamEndX - baseSize/2, -baseSize/2, baseSize, baseSize * 0.8);
+            
+            // Construction highlights
+            fill(100, 255, 255, zapAlpha);
+            noStroke();
+            rect(beamEndX - baseSize/3, -baseSize/3, baseSize * 0.15, baseSize * 0.15);
+            rect(beamEndX + baseSize/6, -baseSize/3, baseSize * 0.15, baseSize * 0.15);
+            
+            pop();
+        }
         // Projectile-based weapons - use actual Projectile.draw()
         else if (typeof Projectile !== 'undefined') {
             // Determine number of projectiles

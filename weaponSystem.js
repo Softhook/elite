@@ -13,7 +13,8 @@ const WEAPON_TYPE = {
     BARRIER: 'barrier', // Added Barrier type
     MINE: 'mine', // Added Mine type
     HARPOON: 'harpoon', // Harpoon tether
-    STORM: 'storm' // Storm weapons - alien specialty area-denial
+    STORM: 'storm', // Storm weapons - alien specialty area-denial
+    BASE_BUILD: 'base_build' // Base builder weapon for surface construction
 };
 
 class WeaponSystem {
@@ -465,6 +466,10 @@ class WeaponSystem {
                 break;
             case WEAPON_TYPE.STORM: // Storm weapons - alien specialty
                 this.fireStorm(owner, system, angle, target);
+                fired = true;
+                break;
+            case WEAPON_TYPE.BASE_BUILD: // Base builder weapon
+                this.fireBaseBuilder(owner, system);
                 fired = true;
                 break;
             default:
@@ -1598,6 +1603,111 @@ class WeaponSystem {
      */
     static getPoolStats() {
         return this.projectilePool ? this.projectilePool.getStats() : null;
+    }
+
+    /**
+     * Fire base builder weapon - constructs a surface base
+     * Only works in surface mode
+     * @param {Object} owner - Entity firing the weapon (typically the player)
+     * @param {Object} system - Current star system
+     */
+    static fireBaseBuilder(owner, system) {
+        if (!owner || !system) return;
+
+        // Check if we're in surface mode
+        if (typeof surfaceMode === 'undefined' || !surfaceMode || !surfaceMode.isActive()) {
+            if (owner === player && typeof uiManager !== 'undefined') {
+                uiManager.addMessage('Base builder only works on planetary surfaces', [255, 160, 100]);
+            }
+            return;
+        }
+
+        // Get the position in front of the ship
+        const distance = 120; // Distance in front of ship
+        const angle = owner.angle || 0;
+        const bx = owner.pos.x + Math.cos(angle) * distance;
+        const by = owner.pos.y + Math.sin(angle) * distance;
+
+        // Get terrain height at target location
+        const groundH = surfaceMode._getTerrainHeightAt ? surfaceMode._getTerrainHeightAt(bx, by) : 0;
+
+        // Check for collisions with nearby surface objects
+        const minClearance = SURFACE_CONFIG.HAB_UNIT_SIZE || 60;
+        if (surfaceMode.surfaceObjects && Array.isArray(surfaceMode.surfaceObjects)) {
+            for (const obj of surfaceMode.surfaceObjects) {
+                if (!obj || obj.destroyed || !obj.pos) continue;
+                const dx = obj.pos.x - bx;
+                const dy = obj.pos.y - by;
+                const distSq = dx * dx + dy * dy;
+                const safeDist = ((obj.size || 40) / 2 + minClearance) ** 2;
+                if (distSq < safeDist) {
+                    if (owner === player && typeof uiManager !== 'undefined') {
+                        uiManager.addMessage('Not enough space to build here', [255, 160, 100]);
+                    }
+                    return;
+                }
+            }
+        }
+
+        // Check if OffworldBuilding class exists
+        if (typeof OffworldBuilding === 'undefined') {
+            if (owner === player && typeof uiManager !== 'undefined') {
+                uiManager.addMessage('Build failed: building module missing', [255, 80, 80]);
+            }
+            return;
+        }
+
+        // Create the building with visual effects
+        const building = new OffworldBuilding(bx, by, groundH);
+        building.playerBuilt = true;
+        
+        // Add to surface objects
+        if (surfaceMode.surfaceObjects) {
+            surfaceMode.surfaceObjects.push(building);
+        }
+
+        // Track in player-built map for persistence
+        if (surfaceMode.playerBuiltMap) {
+            const cellX = Math.floor(bx / (SURFACE_CONFIG.SPAWN_CELL_SIZE || 35));
+            const cellY = Math.floor(by / (SURFACE_CONFIG.SPAWN_CELL_SIZE || 35));
+            const key = `${cellX},${cellY}`;
+            const desc = {
+                type: 'OffworldBuilding',
+                x: bx,
+                y: by,
+                yOffset: groundH,
+                playerBuilt: true
+            };
+            surfaceMode.playerBuiltMap.set(key, desc);
+        }
+
+        // Visual effect - create a zap animation
+        if (typeof surfaceMode.baseBuilderEffect === 'undefined') {
+            surfaceMode.baseBuilderEffect = [];
+        }
+        surfaceMode.baseBuilderEffect.push({
+            x: bx,
+            y: by,
+            startTime: millis(),
+            duration: 500 // Half second animation
+        });
+
+        // Success message and sound
+        if (owner === player && typeof uiManager !== 'undefined') {
+            uiManager.addMessage('Base constructed', [100, 255, 100]);
+        }
+        if (soundManager && player?.pos) {
+            soundManager.playWorldSound('upgrade', bx, by, player.pos, owner);
+        }
+
+        // Save game to persist the new base
+        if (typeof saveGame === 'function') {
+            try {
+                saveGame();
+            } catch (e) {
+                console.error('Error saving game after base construction:', e);
+            }
+        }
     }
 }
 

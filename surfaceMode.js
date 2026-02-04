@@ -1155,18 +1155,6 @@ class SurfaceMode {
         this.radarAltitude = 0; // Astronaut is on the ground
         this.altitude = groundH + 30; // Camera height above astronaut (closer than ship)
 
-        // Build base: Press 'B' (keyCode 66) to build a hab unit in front of the astronaut
-        if (keyIsDown && typeof keyIsDown === 'function') {
-            if (keyIsDown(66)) { // 'B'
-                if (!this._buildKeyPressed) {
-                    this._buildKeyPressed = true;
-                    this._attemptBuildHabUnit();
-                }
-            } else {
-                this._buildKeyPressed = false;
-            }
-        }
-
         // Check for Boarding (proximity to ship)
         // Only board if not moving (to avoid accidental trigger while walking past)
         if (!isMoving) {

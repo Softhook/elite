@@ -480,6 +480,19 @@ const WEAPON_UPGRADES = [
         projectileSize: 6,
         price: 999999,
         desc: "Generates an ion field that completely disables enemy shields."
+    },
+
+    // -----------------------------
+    // Industrial/Construction Weapons
+    // -----------------------------
+    {
+        name: "Base Builder",
+        type: "base_build",
+        damage: 0,
+        color: [100, 255, 255], // Cyan construction beam
+        fireRate: 5.0,         // 5 second cooldown
+        price: 8500,
+        desc: "Industrial construction module for building surface bases. Projects a focused energy beam that materializes prefabricated structures on planetary surfaces. Essential for frontier colonization."
     }
 
 ];
