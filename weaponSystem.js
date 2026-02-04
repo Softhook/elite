@@ -469,7 +469,7 @@ class WeaponSystem {
                 fired = true;
                 break;
             case WEAPON_TYPE.BASE_BUILD: // Base builder weapon
-                this.fireBaseBuilder(owner, system);
+                this.fireBaseBuilder(owner);
                 fired = true;
                 break;
             default:
@@ -1609,10 +1609,9 @@ class WeaponSystem {
      * Fire base builder weapon - constructs a surface base
      * Only works in surface mode
      * @param {Object} owner - Entity firing the weapon (typically the player)
-     * @param {Object} system - Current star system
      */
-    static fireBaseBuilder(owner, system) {
-        if (!owner || !system) return;
+    static fireBaseBuilder(owner) {
+        if (!owner) return;
 
         // Check if we're in surface mode
         if (typeof surfaceMode === 'undefined' || !surfaceMode || !surfaceMode.isActive()) {
@@ -1622,17 +1621,21 @@ class WeaponSystem {
             return;
         }
 
+        // Constants for base building
+        const BUILD_DISTANCE = 120; // Distance in front of ship
+        const DEFAULT_BUILD_CLEARANCE = 60; // Minimum clearance around structures
+        const DEFAULT_SPAWN_CELL_SIZE = 35; // Default cell size for grid calculations
+
         // Get the position in front of the ship
-        const distance = 120; // Distance in front of ship
         const angle = owner.angle || 0;
-        const bx = owner.pos.x + Math.cos(angle) * distance;
-        const by = owner.pos.y + Math.sin(angle) * distance;
+        const bx = owner.pos.x + Math.cos(angle) * BUILD_DISTANCE;
+        const by = owner.pos.y + Math.sin(angle) * BUILD_DISTANCE;
 
         // Get terrain height at target location
         const groundH = surfaceMode._getTerrainHeightAt ? surfaceMode._getTerrainHeightAt(bx, by) : 0;
 
         // Check for collisions with nearby surface objects
-        const minClearance = SURFACE_CONFIG.HAB_UNIT_SIZE || 60;
+        const minClearance = SURFACE_CONFIG.HAB_UNIT_SIZE || DEFAULT_BUILD_CLEARANCE;
         if (surfaceMode.surfaceObjects && Array.isArray(surfaceMode.surfaceObjects)) {
             for (const obj of surfaceMode.surfaceObjects) {
                 if (!obj || obj.destroyed || !obj.pos) continue;
@@ -1668,8 +1671,9 @@ class WeaponSystem {
 
         // Track in player-built map for persistence
         if (surfaceMode.playerBuiltMap) {
-            const cellX = Math.floor(bx / (SURFACE_CONFIG.SPAWN_CELL_SIZE || 35));
-            const cellY = Math.floor(by / (SURFACE_CONFIG.SPAWN_CELL_SIZE || 35));
+            const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || DEFAULT_SPAWN_CELL_SIZE;
+            const cellX = Math.floor(bx / cellSize);
+            const cellY = Math.floor(by / cellSize);
             const key = `${cellX},${cellY}`;
             const desc = {
                 type: 'OffworldBuilding',
