@@ -3323,7 +3323,7 @@ function debugBases(planetName) {
             console.log(`[Debug] Base types found:`, bases.map(b => `${b.type} variant:${b.variant}`));
         }
         
-        const habBases = bases.filter(b => b.type === 'OffworldBuilding' && b.variant === 1);
+        const habBases = bases.filter(b => b.type === 'Offworld Colony' && b.variant === 1);
         
         if (habBases.length === 0) {
             if (planetsToCheck.length === 1) {
