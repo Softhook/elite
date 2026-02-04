@@ -1745,13 +1745,19 @@ class SurfaceMode {
                             obj.miningStorageCapacity = desc.miningStorageCapacity || 100;
                             obj.robotCount = desc.robotCount || 0;
                             if (typeof desc.health === 'number') obj.health = desc.health;
+                            // CRITICAL: Ensure isPlayerBase is set (for health bar rendering and other logic)
+                            obj.isPlayerBase = true;
                         }
 
                         // Flag instances spawned from saved player descriptors
                         obj.playerBuilt = true;
+                        
+                        // CRITICAL: Set cellKey for player-built objects (needed for robot initialization)
+                        obj.cellKey = cellKey;
                     } else if (typeof SurfaceObject !== 'undefined') {
                         obj = new SurfaceObject(desc.x, desc.y, desc.size || 40);
                         obj.yOffset = (typeof desc.yOffset !== 'undefined') ? desc.yOffset : this._getTerrainHeightAt(desc.x, desc.y);
+                        obj.cellKey = cellKey;
                     }
                 }
 
@@ -2085,6 +2091,9 @@ class SurfaceMode {
     _initializeMiningRobotsForBases() {
         if (typeof MiningRobot === 'undefined' || typeof OreSeam === 'undefined') return;
 
+        let basesChecked = 0;
+        let robotsSpawned = 0;
+
         // Find all player-built Hab Units (variant 1 of OffworldBuilding)
         for (const obj of this.surfaceObjects) {
             if (!obj || obj.destroyed) continue;
@@ -2096,6 +2105,8 @@ class SurfaceMode {
                 obj.variant === 1;
 
             if (!isHabUnit) continue;
+
+            basesChecked++;
 
             // Initialize storage if needed
             if (!obj.miningStorage) {
@@ -2140,6 +2151,9 @@ class SurfaceMode {
                     else obj.miningStorage = desc.miningStorage;
                 }
 
+                // Debug logging
+                console.log(`[Mining Robots] Spawning ${robotCount} robots for base at (${Math.round(obj.pos.x)}, ${Math.round(obj.pos.y)}) - cellKey: ${obj.cellKey}`);
+
                 for (let i = 0; i < robotCount; i++) {
                     const angle = (i / robotCount) * TWO_PI;
                     // Deterministic spawn distance based on base position and robot index
@@ -2151,8 +2165,13 @@ class SurfaceMode {
                     const robot = new MiningRobot(rx, ry, obj, baseOreSeams);
                     robot.yOffset = this._getTerrainHeightAt(rx, ry);
                     this.miningRobots.push(robot);
+                    robotsSpawned++;
                 }
             }
+        }
+
+        if (basesChecked > 0) {
+            console.log(`[Mining Robots] Checked ${basesChecked} bases, spawned ${robotsSpawned} robots, total active: ${this.miningRobots.length}`);
         }
     }
 

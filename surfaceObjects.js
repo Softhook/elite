@@ -2248,7 +2248,9 @@ class Turret extends SurfaceObject {
         }
 
         // --- Health Bar ---
-        if (this.health < this.maxHealth && this.maxHealth > 0) {
+        // Show health bar for player bases (always visible) or damaged non-player bases
+        const shouldShowHealthBar = (this.isPlayerBase || this.health < this.maxHealth) && this.maxHealth > 0;
+        if (shouldShowHealthBar) {
             push();
             rectMode(CORNER);
             let healthPercent = this.health / this.maxHealth;
@@ -2259,10 +2261,20 @@ class Turret extends SurfaceObject {
             let barY = visualY + 15;
 
             noStroke();
-            fill(HEALTH_BAR_COLORS.BG);
-            rect(barX, barY, barW, barH);
-            fill(HEALTH_BAR_COLORS.FILL);
-            rect(barX, barY, barW * healthPercent, barH);
+            // Use different color for full health vs damaged
+            if (healthPercent >= 1.0) {
+                // Full health - show green bar
+                fill(40, 40, 40, 180);  // Dark background
+                rect(barX, barY, barW, barH);
+                fill(80, 200, 80);  // Green for full health
+                rect(barX, barY, barW * healthPercent, barH);
+            } else {
+                // Damaged - show red/yellow bar
+                fill(HEALTH_BAR_COLORS.BG);
+                rect(barX, barY, barW, barH);
+                fill(HEALTH_BAR_COLORS.FILL);
+                rect(barX, barY, barW * healthPercent, barH);
+            }
             pop();
         }
     }
