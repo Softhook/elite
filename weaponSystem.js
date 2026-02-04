@@ -1643,7 +1643,10 @@ class WeaponSystem {
                 const dx = obj.pos.x - bx;
                 const dy = obj.pos.y - by;
                 const distSq = dx * dx + dy * dy;
-                const safeDist = ((obj.size || 40) / 2 + minClearance) ** 2;
+                // Require enough distance to cover both object radii plus the desired edge-to-edge clearance
+                const objRadius = (obj.size || HAB_SIZE) / 2;
+                const newBaseRadius = (SURFACE_CONFIG.HAB_UNIT_SIZE || HAB_SIZE) / 2;
+                const safeDist = (objRadius + newBaseRadius + minClearance) ** 2;
                 if (distSq < safeDist) {
                     if (owner === player && typeof uiManager !== 'undefined') {
                         uiManager.addMessage('Not enough space to build here', [255, 160, 100]);
@@ -1686,7 +1689,7 @@ class WeaponSystem {
         // Add to planet persistent descriptors so it survives saves and grid regeneration
         if (surfaceMode.planet) {
             const descriptor = {
-                type: hab.type || 'OffworldBuilding',
+                type: hab.type || 'Offworld Colony',
                 x: hab.pos ? hab.pos.x : hab.x || bx,
                 y: hab.pos ? hab.pos.y : hab.y || by,
                 size: hab.size || HAB_SIZE,
@@ -1726,7 +1729,7 @@ class WeaponSystem {
 
             // CRITICAL: Also add to the runtime map so _spawnObjects can find it when grid shifts
             const mapDesc = {
-                type: hab.type || 'OffworldBuilding',
+                type: hab.type || 'Offworld Colony',
                 x: hab.pos ? hab.pos.x : hab.x || bx,
                 y: hab.pos ? hab.pos.y : hab.y || by,
                 size: hab.size || HAB_SIZE,
@@ -1775,22 +1778,20 @@ class WeaponSystem {
 
         // CRITICAL: Initialize robots immediately for the new base
         // This ensures robots are spawned BEFORE the game saves
-        if (surfaceMode && typeof surfaceMode._initializeMiningRobotsForBases === 'function') {
-            try {
+        let robotsInitSucceeded = false;
+        try {
+            if (surfaceMode && typeof surfaceMode._initializeMiningRobotsForBases === 'function') {
                 console.log('[Base Builder] Initializing robots for newly built base immediately');
                 surfaceMode._initializeMiningRobotsForBases();
-            } catch (e) {
-                console.error('Error initializing robots after base construction:', e);
+                robotsInitSucceeded = true;
             }
-        }
 
-        // Save game to persist the new base (AFTER robot initialization)
-        if (typeof saveGame === 'function') {
-            try {
+            // Save game to persist the new base (AFTER robot initialization)
+            if (typeof saveGame === 'function') {
                 saveGame();
-            } catch (e) {
-                console.error('Error saving game after base construction:', e);
             }
+        } catch (e) {
+            console.error('Error during base construction post-processing (robots/save):', e);
         }
     }
 }

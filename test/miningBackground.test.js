@@ -125,7 +125,7 @@ describe('Background Mining Activity', () => {
 
                     if (timeElapsed < 2.0) continue;
 
-                    if (desc.type === 'OffworldBuilding' && desc.variant === 1) {
+                    if (desc.type === 'Offworld Colony' && desc.variant === 1) {
                         const robotCount = typeof desc.robotCount === 'number' ? desc.robotCount : 3;
 
                         if (robotCount === 0) {
@@ -208,7 +208,7 @@ describe('Background Mining Activity', () => {
 
     test('Background mining accumulates minerals over time', () => {
         const desc = {
-            type: 'OffworldBuilding',
+            type: 'Offworld Colony',
             variant: 1,
             robotCount: 3,
             miningStorage: [],
@@ -231,7 +231,7 @@ describe('Background Mining Activity', () => {
 
     test('Storage full notification triggers when capacity reached', () => {
         const desc = {
-            type: 'OffworldBuilding',
+            type: 'Offworld Colony',
             variant: 1,
             robotCount: 3,
             miningStorage: [{ name: 'Minerals', quantity: 95 }],
@@ -255,7 +255,7 @@ describe('Background Mining Activity', () => {
 
     test('Low health notification triggers at 50% health', () => {
         const desc = {
-            type: 'OffworldBuilding',
+            type: 'Offworld Colony',
             variant: 1,
             robotCount: 3,
             health: 600, // Start above 500
@@ -279,7 +279,7 @@ describe('Background Mining Activity', () => {
 
     test('Robot attrition reduces robot count over time', () => {
         const desc = {
-            type: 'OffworldBuilding',
+            type: 'Offworld Colony',
             variant: 1,
             robotCount: 3,
             health: 1000,
@@ -302,7 +302,7 @@ describe('Background Mining Activity', () => {
 
     test('Base destruction notification when health reaches zero', () => {
         const desc = {
-            type: 'OffworldBuilding',
+            type: 'Offworld Colony',
             variant: 1,
             robotCount: 3,
             health: 10, // Very low health
@@ -326,7 +326,7 @@ describe('Background Mining Activity', () => {
 
     test('No mining happens when robot count is zero', () => {
         const desc = {
-            type: 'OffworldBuilding',
+            type: 'Offworld Colony',
             variant: 1,
             robotCount: 0,
             miningStorage: [],
@@ -345,7 +345,7 @@ describe('Background Mining Activity', () => {
 
     test('Notification cooldown prevents spam', () => {
         const desc = {
-            type: 'OffworldBuilding',
+            type: 'Offworld Colony',
             variant: 1,
             robotCount: 3,
             miningStorage: [{ name: 'Minerals', quantity: 95 }],
@@ -372,7 +372,7 @@ describe('Background Mining Activity', () => {
 
     test('Mining rate scales with robot count', () => {
         const desc1 = {
-            type: 'OffworldBuilding',
+            type: 'Offworld Colony',
             variant: 1,
             robotCount: 1,
             miningStorage: [],
@@ -381,7 +381,7 @@ describe('Background Mining Activity', () => {
         };
 
         const desc2 = {
-            type: 'OffworldBuilding',
+            type: 'Offworld Colony',
             variant: 1,
             robotCount: 3,
             miningStorage: [],
@@ -404,7 +404,7 @@ describe('Background Mining Activity', () => {
 
     test('Hazard level affects damage rate', () => {
         const desc1 = {
-            type: 'OffworldBuilding',
+            type: 'Offworld Colony',
             variant: 1,
             robotCount: 3,
             health: 1000,
@@ -412,7 +412,7 @@ describe('Background Mining Activity', () => {
         };
 
         const desc2 = {
-            type: 'OffworldBuilding',
+            type: 'Offworld Colony',
             variant: 1,
             robotCount: 3,
             health: 1000,

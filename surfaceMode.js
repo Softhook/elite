@@ -2132,9 +2132,11 @@ class SurfaceMode {
             const needsRobots = !obj.robotsInitialized || (desc && !desc.robotsInitialized);
 
             // Debug logging for troubleshooting
-            console.log(`[Mining Robots] Base at (${Math.round(obj.pos.x)}, ${Math.round(obj.pos.y)}) - cellKey: ${obj.cellKey}`);
-            console.log(`  obj.robotsInitialized: ${obj.robotsInitialized}, desc.robotsInitialized: ${desc?.robotsInitialized}`);
-            console.log(`  obj.robotCount: ${obj.robotCount}, needsRobots: ${needsRobots}`);
+            if (typeof DEBUG_MINING !== 'undefined' && DEBUG_MINING) {
+                console.log(`[Mining Robots] Base at (${Math.round(obj.pos.x)}, ${Math.round(obj.pos.y)}) - cellKey: ${obj.cellKey}`);
+                console.log(`  obj.robotsInitialized: ${obj.robotsInitialized}, desc.robotsInitialized: ${desc?.robotsInitialized}`);
+                console.log(`  obj.robotCount: ${obj.robotCount}, needsRobots: ${needsRobots}`);
+            }
 
             if (needsRobots) {
                 obj.robotsInitialized = true;
@@ -2169,7 +2171,9 @@ class SurfaceMode {
                 }
 
                 // Debug logging
-                console.log(`[Mining Robots] Spawning ${robotCount} robots for base at (${Math.round(obj.pos.x)}, ${Math.round(obj.pos.y)}) - cellKey: ${obj.cellKey}`);
+                if (typeof DEBUG_MINING !== 'undefined' && DEBUG_MINING) {
+                    console.log(`[Mining Robots] Spawning ${robotCount} robots for base at (${Math.round(obj.pos.x)}, ${Math.round(obj.pos.y)}) - cellKey: ${obj.cellKey}`);
+                }
 
                 for (let i = 0; i < robotCount; i++) {
                     // Use deterministic positioning based on base location and robot index
@@ -2207,7 +2211,7 @@ class SurfaceMode {
             }
         }
 
-        if (basesChecked > 0) {
+        if (DEBUG_MINING && basesChecked > 0) {
             console.log(`[Mining Robots] Checked ${basesChecked} bases, spawned ${robotsSpawned} robots, total active: ${this.miningRobots.length}`);
         }
     }
@@ -2275,7 +2279,23 @@ class SurfaceMode {
             if (desc.type === 'Offworld Colony' && desc.variant === 1) { // Player Base
                 // Calculate mining rate based on expected robot performance
                 // Match actual robot behavior: MINERALS_PER_MINE / MINING_DURATION
-                const robotCount = typeof desc.robotCount === 'number' ? desc.robotCount : 3;
+                let robotCount;
+                if (typeof desc.robotCount === 'number') {
+                    robotCount = desc.robotCount;
+                } else {
+                    // Legacy bases: derive a deterministic 2–3 robot count from base position.
+                    // Prefer desc.x/y for position-based seeding.
+                    let seed = 0;
+                    if (typeof desc.x === 'number' && typeof desc.y === 'number') {
+                        const px = Math.floor(desc.x);
+                        const py = Math.floor(desc.y);
+                        seed = (px * 73856093) ^ (py * 19349663);
+                    } else {
+                        // No usable position; fall back to default.
+                        seed = 1;
+                    }
+                    robotCount = 2 + (Math.abs(seed) % 2); // 2 or 3, deterministic per position
+                }
 
                 // If no robots, no mining happens
                 if (robotCount === 0) {
@@ -2312,14 +2332,17 @@ class SurfaceMode {
                 const oldHealth = desc.health !== undefined ? desc.health : 1000;
                 desc.health = oldHealth - damageTaken;
 
-                // Notify player if base is taking significant damage (< 50% health)
+                // Notify player when base health crosses below 50% of default max (1000 HP → threshold 500 HP)
                 if (desc.health < 500 && oldHealth >= 500) {
                     this._notifyBaseEvent(cellKey, 'low_health', `Mining base under attack! (${Math.round(desc.health)} HP remaining)`);
                 }
 
                 // 3. Robot Attrition (Random chance based on hazard and time)
-                // Approx 5% chance per hour per hazard level
-                const attritionChance = hazardLevel * (timeElapsed / 3600) * 0.05;
+                // Approx 5% chance per hour per hazard level.
+                // Clamp per-tick probability so very large timeElapsed values don't exceed a sane maximum.
+                const rawAttritionChance = hazardLevel * (timeElapsed / 3600) * 0.05;
+                const MAX_ATTRITION_CHANCE_PER_TICK = 0.5;
+                const attritionChance = Math.min(MAX_ATTRITION_CHANCE_PER_TICK, Math.max(0, rawAttritionChance));
                 if (Math.random() < attritionChance && desc.robotCount > 0) {
                     const oldCount = desc.robotCount;
                     desc.robotCount--;
@@ -2328,7 +2351,7 @@ class SurfaceMode {
                     // Notify player about robot loss
                     if (desc.robotCount === 0) {
                         this._notifyBaseEvent(cellKey, 'robots_lost', `All mining robots destroyed at base!`, [255, 100, 100]);
-                    } else if (oldCount > 0) {
+                    } else {
                         this._notifyBaseEvent(cellKey, 'robot_lost', `Mining robot destroyed (${desc.robotCount} remaining)`);
                     }
                 }
@@ -3081,7 +3104,8 @@ class SurfaceMode {
         let destroyedCount = 0;
 
         for (const desc of this.planet.playerBuiltSurfaceObjects) {
-            if (desc.type !== 'OffworldBuilding' || desc.variant !== 1) continue;
+            const typeStr = String(desc.type || '').toLowerCase();
+            if (typeStr.indexOf('offworld') === -1 || desc.variant !== 1) continue;
 
             baseCount++;
             const cellKey = this._getCellKeyForPosition(desc.x, desc.y);
@@ -3323,7 +3347,7 @@ function debugBases(planetName) {
             console.log(`[Debug] Base types found:`, bases.map(b => `${b.type} variant:${b.variant}`));
         }
         
-        const habBases = bases.filter(b => b.type === 'Offworld Colony' && b.variant === 1);
+        const habBases = bases.filter(b => (b.type === 'Offworld Colony' || b.type === 'OffworldBuilding') && b.variant === 1);
         
         if (habBases.length === 0) {
             if (planetsToCheck.length === 1) {
@@ -3496,10 +3520,12 @@ if (typeof window !== 'undefined') {
     window.debugBases = debugBases;
 }
 
-console.log("surfaceMode.js loaded");
-console.log("💡 Debug commands available:");
-console.log("   debugBases() - Show all bases in current system");
-console.log("   debugBases('PlanetName') - Show bases on specific planet");
+if (typeof DEBUG_MINING !== 'undefined' && DEBUG_MINING) {
+    console.log("surfaceMode.js loaded");
+    console.log("💡 Debug commands available:");
+    console.log("   debugBases() - Show all bases in current system");
+    console.log("   debugBases('PlanetName') - Show bases on specific planet");
+}
 
 // Export for Node.js/Jest testing while maintaining browser compatibility
 if (typeof module !== 'undefined' && module.exports) {
