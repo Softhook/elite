@@ -2579,6 +2579,7 @@ class DefenseDrone extends SurfaceObject {
         // AI state
         this.patrolTarget = createVector(x + Math.random() * 1000 - 500, y + Math.random() * 1000 - 500);
         this.chasePlayer = false;
+        this.currentTarget = null; // Current attack target (player, base, or robot)
 
         // Visual
         this.color = color(180, 50, 50); // Pirate red
@@ -2626,39 +2627,111 @@ class DefenseDrone extends SurfaceObject {
 
         const isDetected = !playerCloaked && distSq < this.rangeSq && playerAltitude >= droneAltitude;
 
-        if (isDetected) {
-            this.chasePlayer = true;
+        // Multi-target selection: player, bases, and robots
+        this.currentTarget = null;
+        let targetPos = null;
+        let minDistSq = Infinity;
 
-            // Aim at player's VISUAL position (to match visual collision detection)
-            // Use surfaceMode helper if available to get exact visual coordinates
+        if (isDetected) {
+            // Player has highest priority when detected
+            this.chasePlayer = true;
+            this.currentTarget = player;
+            targetPos = player.pos;
+            minDistSq = distSq;
+        } else {
+            // Player not detected - check for alternative targets (bases and robots)
+            this.chasePlayer = false;
+
+            // Check for player bases (OffworldBuilding variant 1)
+            if (typeof surfaceMode !== 'undefined' && surfaceMode.surfaceObjects) {
+                for (const obj of surfaceMode.surfaceObjects) {
+                    if (!obj || obj.destroyed) continue;
+
+                    // Check if it's a player base (Hab Unit)
+                    const isPlayerBase = (
+                        (obj.constructor && obj.constructor.name === 'OffworldBuilding') &&
+                        obj.variant === 1 &&
+                        obj.isPlayerBase === true
+                    );
+
+                    if (!isPlayerBase) continue;
+
+                    // Check distance
+                    const baseDx = obj.pos.x - this.pos.x;
+                    const baseDy = obj.pos.y - this.pos.y;
+                    const baseDistSq = baseDx * baseDx + baseDy * baseDy;
+
+                    if (baseDistSq >= this.rangeSq) continue;
+
+                    // Check altitude (base must be at or above drone altitude)
+                    const baseAltitude = obj.altitude || obj.yOffset || 0;
+                    if (baseAltitude < droneAltitude) continue;
+
+                    // Found valid target - check if closest
+                    if (baseDistSq < minDistSq) {
+                        minDistSq = baseDistSq;
+                        this.currentTarget = obj;
+                        targetPos = obj.pos;
+                    }
+                }
+            }
+
+            // Check for mining robots
+            if (typeof surfaceMode !== 'undefined' && surfaceMode.miningRobots) {
+                for (const robot of surfaceMode.miningRobots) {
+                    if (!robot || robot.destroyed) continue;
+
+                    // Check distance
+                    const robotDx = robot.pos.x - this.pos.x;
+                    const robotDy = robot.pos.y - this.pos.y;
+                    const robotDistSq = robotDx * robotDx + robotDy * robotDy;
+
+                    if (robotDistSq >= this.rangeSq) continue;
+
+                    // Check altitude (robot must be at or above drone altitude)
+                    const robotAltitude = robot.altitude || robot.yOffset || 0;
+                    if (robotAltitude < droneAltitude) continue;
+
+                    // Found valid target - check if closest
+                    if (robotDistSq < minDistSq) {
+                        minDistSq = robotDistSq;
+                        this.currentTarget = robot;
+                        targetPos = robot.pos;
+                    }
+                }
+            }
+        }
+
+        // If we have a target (player, base, or robot), engage it
+        if (this.currentTarget && targetPos) {
+            // Aim at target's VISUAL position (to match visual collision detection)
             let droneVisualX = this.pos.x;
             let droneVisualY = this.pos.y;
-            let playerVisualX = player.pos.x;
-            let playerVisualY = player.pos.y;
+            let targetVisualX = targetPos.x;
+            let targetVisualY = targetPos.y;
 
             if (typeof surfaceMode !== 'undefined') {
                 const droneAlt = this.altitude || (this.yOffset || 0);
-                const playerAlt = player.altitude || 0;
+                const targetAlt = this.currentTarget.altitude || this.currentTarget.yOffset || 0;
 
                 // Use the centralized projection methods
                 if (surfaceMode._toVisualX && surfaceMode._toVisualY) {
                     droneVisualX = surfaceMode._toVisualX(this.pos.x, droneAlt);
                     droneVisualY = surfaceMode._toVisualY(this.pos.y, droneAlt);
-                    playerVisualX = surfaceMode._toVisualX(player.pos.x, playerAlt);
-                    playerVisualY = surfaceMode._toVisualY(player.pos.y, playerAlt);
+                    targetVisualX = surfaceMode._toVisualX(targetPos.x, targetAlt);
+                    targetVisualY = surfaceMode._toVisualY(targetPos.y, targetAlt);
                 } else {
-                    // Fallback manual projection using centralized getExtrusionAngle() if available
+                    // Fallback manual projection
                     const extrusionAngle = (typeof getExtrusionAngle === 'function') ? getExtrusionAngle() : 0.5;
                     droneVisualX = this.pos.x - (droneAlt * Math.sin(extrusionAngle));
                     droneVisualY = this.pos.y - (droneAlt * Math.cos(extrusionAngle));
-                    playerVisualX = player.pos.x - (playerAlt * Math.sin(extrusionAngle));
-                    playerVisualY = player.pos.y - (playerAlt * Math.cos(extrusionAngle));
+                    targetVisualX = targetPos.x - (targetAlt * Math.sin(extrusionAngle));
+                    targetVisualY = targetPos.y - (targetAlt * Math.cos(extrusionAngle));
                 }
             }
 
-            const visualDX = playerVisualX - droneVisualX;
-            const visualDY = playerVisualY - droneVisualY;
-
+            const visualDX = targetVisualX - droneVisualX;
+            const visualDY = targetVisualY - droneVisualY;
             const targetAngle = Math.atan2(visualDY, visualDX);
 
             // Use utility function for smooth rotation
@@ -2666,9 +2739,8 @@ class DefenseDrone extends SurfaceObject {
             if (typeof smoothRotateTowards === 'function') {
                 this.angle = smoothRotateTowards(this.angle, targetAngle, turnSpeed, dt);
             } else {
-                // Fallback to manual implementation with inline angle normalization
+                // Fallback to manual implementation
                 let angleDiff = targetAngle - this.angle;
-                // Normalize angleDiff to the range [-PI, PI] to ensure shortest rotation direction
                 const TWO_PI = Math.PI * 2;
                 while (angleDiff < -Math.PI) angleDiff += TWO_PI;
                 while (angleDiff > Math.PI) angleDiff -= TWO_PI;
@@ -2681,16 +2753,15 @@ class DefenseDrone extends SurfaceObject {
                 }
             }
 
-            // Accelerate towards player
+            // Accelerate towards target
             this.speed = Math.min(this.maxSpeed, this.speed + this.acceleration * dt);
 
-            // Fire at player if ready and close enough
-            if (this.cooldown <= 0 && distSq < this.rangeSq) {
-                this.fire(starSystem, player);
+            // Fire at target if ready and close enough
+            if (this.cooldown <= 0 && minDistSq < this.rangeSq) {
+                this.fire(starSystem, this.currentTarget);
                 this.cooldown = this.fireRate;
             }
         } else {
-            this.chasePlayer = false;
 
             // Patrol behavior - move to patrol target
             const pdx = this.patrolTarget.x - this.pos.x;
@@ -2787,9 +2858,10 @@ class DefenseDrone extends SurfaceObject {
         this.speed *= Math.exp(dragConstant * dt);
     }
 
-    fire(starSystem, player) {
+    fire(starSystem, target) {
         if (typeof Projectile === 'undefined') return;
         if (!starSystem || !starSystem.projectiles) return;
+        if (!target) return;
 
         // World base position (logical center)
         const muzzleX = this.pos.x + Math.cos(this.angle) * (this.size * 0.5);
@@ -2818,13 +2890,13 @@ class DefenseDrone extends SurfaceObject {
         proj.altitude = this.altitude; // Pirate's flying altitude (Absolute)
 
         // Set target altitude for terrain-aware trajectory
-        // Projectile will descend/ascend toward player's altitude
+        // Projectile will descend/ascend toward target's altitude
         proj.startAltitude = this.altitude;
-        proj.targetAltitude = player.altitude || 0;
+        proj.targetAltitude = target.altitude || target.yOffset || 0;
 
         // Play laser sound with proper visual world positioning via SoundManager
-        if (typeof soundManager !== 'undefined' && typeof player !== 'undefined' && player && player.pos) {
-            soundManager.playWorldSound('laser', muzzleX, muzzleY, player.pos, this, proj.altitude);
+        if (typeof soundManager !== 'undefined' && typeof surfaceMode !== 'undefined' && surfaceMode.player && surfaceMode.player.pos) {
+            soundManager.playWorldSound('laser', muzzleX, muzzleY, surfaceMode.player.pos, this, proj.altitude);
         }
     }
 

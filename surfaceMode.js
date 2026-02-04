@@ -1388,6 +1388,7 @@ class SurfaceMode {
         this._checkProjectileTerrainCollisions();
         this._checkPlayerProjectileCollisions();
         this._checkEnemyProjectileCollisions();
+        this._checkEnemyProjectileCollisionsVsStructures(); // Check drone/turret hits on bases and robots
         // Fauna-robot and fauna-building collisions are handled within their respective update() methods
         // to maintain performance and localized behavior.
     }
@@ -1519,6 +1520,98 @@ class SurfaceMode {
                 target.takeDamage(proj.damage || 5);
                 this._createSurfaceExplosion(proj.pos.x, proj.pos.y, proj.altitude, target === this.astronaut ? 10 : 15, [255, 50, 50]);
                 proj.destroyed = true;
+            }
+        }
+    }
+
+    /**
+     * Check enemy projectile hits on player bases and mining robots
+     * @private
+     */
+    _checkEnemyProjectileCollisionsVsStructures() {
+        if (!this.starSystem || !this.starSystem.projectiles) return;
+
+        for (let proj of this.starSystem.projectiles) {
+            if (!this._isProjectileValid(proj)) continue;
+            // Only check enemy projectiles (pirate/turret/drone)
+            if (proj.ownerType !== 'pirate' && proj.ownerType !== 'turret') continue;
+
+            const projPos = proj.pos;
+            const projAlt = proj.altitude || 0;
+            const projVisualX = this._toVisualX(projPos.x, projAlt);
+            const projVisualY = this._toVisualY(projPos.y, projAlt);
+
+            let hitSomething = false;
+
+            // Check against player bases
+            if (this.surfaceObjects) {
+                for (let obj of this.surfaceObjects) {
+                    if (!obj || obj.destroyed || !obj.pos) continue;
+
+                    // Check if it's a player base (Hab Unit)
+                    const isPlayerBase = (
+                        (obj.constructor && obj.constructor.name === 'OffworldBuilding') &&
+                        obj.variant === 1 &&
+                        obj.isPlayerBase === true
+                    );
+
+                    if (!isPlayerBase) continue;
+
+                    // Calculate visual position for the base
+                    const baseAlt = obj.altitude || obj.yOffset || 0;
+                    const baseVisualX = this._toVisualX(obj.pos.x, baseAlt);
+                    const baseVisualY = this._toVisualY(obj.pos.y, baseAlt);
+
+                    // Distance check
+                    const dx = projVisualX - baseVisualX;
+                    const dy = projVisualY - baseVisualY;
+                    const distSq = dx * dx + dy * dy;
+
+                    const hitRadius = Math.max((obj.size || 40) * 0.6, 20);
+                    const hitRadiusSq = hitRadius * hitRadius;
+
+                    if (distSq < hitRadiusSq) {
+                        obj.takeDamage(proj.damage || 8);
+                        hitSomething = true;
+                        break;
+                    }
+                }
+            }
+
+            // Check against mining robots
+            if (!hitSomething && this.miningRobots) {
+                for (let robot of this.miningRobots) {
+                    if (!robot || robot.destroyed) continue;
+
+                    // Calculate visual position for the robot
+                    const robotAlt = robot.altitude || robot.yOffset || 0;
+                    const robotVisualX = this._toVisualX(robot.pos.x, robotAlt);
+                    const robotVisualY = this._toVisualY(robot.pos.y, robotAlt);
+
+                    // Distance check
+                    const dx = projVisualX - robotVisualX;
+                    const dy = projVisualY - robotVisualY;
+                    const distSq = dx * dx + dy * dy;
+
+                    const hitRadius = (robot.size || 20) * 0.6;
+                    const hitRadiusSq = hitRadius * hitRadius;
+
+                    if (distSq < hitRadiusSq) {
+                        robot.takeDamage(proj.damage || 8, this);
+                        hitSomething = true;
+                        break;
+                    }
+                }
+            }
+
+            // If we hit something, destroy the projectile and create explosion
+            if (hitSomething) {
+                proj.destroyed = true;
+                this._createSurfaceExplosion(projPos.x, projPos.y, projAlt, 10, [255, 100, 50]);
+
+                if (typeof soundManager !== 'undefined' && this.player) {
+                    soundManager.playWorldSound('hit', projPos.x, projPos.y, this.player.pos);
+                }
             }
         }
     }
