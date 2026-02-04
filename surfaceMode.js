@@ -639,6 +639,17 @@ class SurfaceMode {
             this.player.lastAttackTime = 0;
         }
 
+        // CRITICAL: Reset robot initialization flags before leaving
+        // This ensures robots respawn when player returns to planet
+        if (this.planet && Array.isArray(this.planet.playerBuiltSurfaceObjects)) {
+            for (const desc of this.planet.playerBuiltSurfaceObjects) {
+                if (desc && desc.variant === 1 && !desc.destroyed) {  // Hab Unit, not destroyed
+                    desc.robotsInitialized = false;
+                }
+            }
+            console.log('[Surface Exit] Reset robotsInitialized flags for planet bases');
+        }
+
         // Cleanup terrain
         this.terrain.cleanup();
 
