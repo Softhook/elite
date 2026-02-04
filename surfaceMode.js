@@ -22,7 +22,8 @@ const SURFACE_CONFIG = {
     HIGH_TERRAIN_THRESHOLD: 350, // Height (0-500) treated as high ground for defenses
 
     // Transition
-    TRANSITION_DURATION: 2000, // ms for enter/exit transitions
+    TRANSITION_ENTER_DURATION: 2000, // ms for entering (terrain loads during fade)
+    TRANSITION_EXIT_DURATION: 250,   // ms for exiting (very fast - just a flash)
     TRIGGER_KEY: 71,           // 'G' key for surface descent
 
     // Visual
@@ -86,10 +87,21 @@ const SURFACE_CONFIG = {
     // Reduces geometry complexity at higher altitudes to improve performance
     // Simple 2-level system: full detail below threshold, simplified above
     LOD: {
-        DETAIL_THRESHOLD: 1000,   // Below 1000: full detail, above: simplified
+        DETAIL_THRESHOLD: 1200,   // Below 1200: full detail, above: simplified
         MIN_SCREEN_SIZE: 3,       // Don't draw if apparent size < 3 pixels
         FULL_DETAIL: 3,           // LOD level for full detail rendering
         SIMPLIFIED: 2             // LOD level for simplified rendering
+    },
+
+    // Cloud Layer Configuration - fades surface to white at high altitudes
+    // This hides LOD reduction and creates the effect of entering a cloud layer
+    // The overlay is drawn AFTER surface objects but BEFORE the player ship,
+    // so the ship remains visible while the surface fades out
+    CLOUD_LAYER: {
+        START_ALTITUDE: 1300,     // Altitude where clouds begin to appear
+        FULL_ALTITUDE: 1800,      // Altitude where clouds reach maximum opacity
+        MAX_OPACITY: 0.75,        // Maximum cloud opacity (0-1), 0.75 = 75% white
+        COLOR: [255, 255, 255]    // Cloud color (white)
     }
 };
 
@@ -195,6 +207,9 @@ class SurfaceMode {
 
         // Reboard cooldown to prevent loop
         this.reboardCooldown = 0;
+
+        // Exit fade overlay opacity (persists after exit for smooth fade-in to space)
+        this.exitFadeOpacity = 0;
     }
 
     /**
@@ -202,6 +217,38 @@ class SurfaceMode {
      */
     isActive() {
         return this.state !== SURFACE_STATE.INACTIVE;
+    }
+
+    /**
+     * Update and draw the exit fade overlay (called from space view after surface exit)
+     * This creates a smooth transition from white back to the space view
+     * @returns {boolean} True if fade is still active
+     */
+    updateAndDrawExitFade() {
+        if (this.exitFadeOpacity <= 0) return false;
+
+        // Gradually decrease opacity for smooth fade-in to space
+        // Use deltaTime for consistent speed regardless of framerate
+        // Increased speed to 0.05 (~20 frames / 0.3s) for snappier transition
+        const fadeSpeed = 0.05;
+        this.exitFadeOpacity -= fadeSpeed * (deltaTime / 16);
+
+        if (this.exitFadeOpacity <= 0) {
+            this.exitFadeOpacity = 0;
+            return false;
+        }
+
+        // Draw white overlay covering the entire screen
+        const cloudColor = SURFACE_CONFIG.CLOUD_LAYER.COLOR;
+        push();
+        noStroke();
+        // Clamp opacity to 1.0 for drawing (in case it started > 1.0)
+        const drawOpacity = Math.min(1, this.exitFadeOpacity);
+        fill(cloudColor[0], cloudColor[1], cloudColor[2], drawOpacity * 255);
+        rect(0, 0, width, height);
+        pop();
+
+        return true;
     }
 
     // ============================================
@@ -623,6 +670,10 @@ class SurfaceMode {
     _completeExit() {
         this.state = SURFACE_STATE.INACTIVE;
 
+        // Start exit fade strictly at full opacity - space view will fade in from white
+        // Set slightly above 1.0 to ensure first frame is solid white even after decrement
+        this.exitFadeOpacity = 1.1;
+
         // Restore player position near planet where they entered
         if (this.player && this.planet && this.savedPlayerPos) {
             // Return player to their saved position near the planet
@@ -723,10 +774,11 @@ class SurfaceMode {
             this._updateTransition();
         }
 
-        // Start gameplay input handling as soon as terrain is ready (even during fade)
-        // This eliminates input lag at the end of the transition
+        // Allow input processing during ACTIVE, ENTERING (when ready), and EXITING
+        // During EXITING, ship needs to keep moving/responding to look alive
         const canProcessInput = this.state === SURFACE_STATE.ACTIVE ||
-            (this.state === SURFACE_STATE.ENTERING && this._terrainReady);
+            (this.state === SURFACE_STATE.ENTERING && this._terrainReady) ||
+            this.state === SURFACE_STATE.EXITING;
 
         if (canProcessInput) {
             // Player is NOT invulnerable on surface - they can take damage from turrets/drones
@@ -909,7 +961,11 @@ class SurfaceMode {
      */
     _updateTransition() {
         const elapsed = millis() - this.transitionStartTime;
-        this.transitionProgress = Math.min(1, elapsed / SURFACE_CONFIG.TRANSITION_DURATION);
+        // Use different durations for enter vs exit
+        const duration = this.state === SURFACE_STATE.ENTERING
+            ? SURFACE_CONFIG.TRANSITION_ENTER_DURATION
+            : SURFACE_CONFIG.TRANSITION_EXIT_DURATION;
+        this.transitionProgress = Math.min(1, elapsed / duration);
 
         // During ENTERING phase, perform deferred terrain initialization immediately
         // This runs during the fade so the user sees the transition animation
@@ -965,9 +1021,13 @@ class SurfaceMode {
                 this.state = SURFACE_STATE.ACTIVE;
                 console.log("Surface mode now active");
             }
-            // Fade stays at 100% opacity until terrain is ready - user sees black screen
-        } else if (this.state === SURFACE_STATE.EXITING && this.transitionProgress >= 1) {
-            this._completeExit();
+            // Fade stays at 100% opacity until terrain is ready - user sees white screen
+        } else if (this.state === SURFACE_STATE.EXITING) {
+            // Ship continues to respond to controls during exit (canProcessInput includes EXITING)
+            // Fast fade to white (500ms) then complete exit
+            if (this.transitionProgress >= 1) {
+                this._completeExit();
+            }
         }
     }
 
@@ -1701,6 +1761,17 @@ class SurfaceMode {
         this._drawBeams();
         this._drawForceWaves();
 
+        // Draw cloud layer overlay (altitude-based fog that hides LOD reduction)
+        // Placed here so terrain/objects/effects are obscured but player remains visible
+        this._drawCloudLayer();
+
+        // Transition overlay (white fade) - drawn BEFORE player ship so ship remains visible
+        // This creates smooth enter/exit transitions through the cloud layer
+        if (this.state === SURFACE_STATE.ENTERING ||
+            this.state === SURFACE_STATE.EXITING) {
+            this._drawTransitionOverlay();
+        }
+
         // Draw Astronaut (if active)
         this._drawAstronaut();
 
@@ -1715,12 +1786,6 @@ class SurfaceMode {
         // Draw surface-specific HUD (altitude bar, compass)
         if (typeof surfaceHud !== 'undefined' && surfaceHud) {
             surfaceHud.draw(this);
-        }
-
-        // Transition overlay
-        if (this.state === SURFACE_STATE.ENTERING ||
-            this.state === SURFACE_STATE.EXITING) {
-            this._drawTransitionOverlay();
         }
     }
 
@@ -2930,6 +2995,52 @@ class SurfaceMode {
     }
 
     /**
+     * Draw cloud layer overlay - fades surface to white at high altitudes
+     * This creates the effect of entering a cloud layer and hides LOD reduction
+     * PERFORMANCE: Single rectangle fill is extremely cheap (1 draw call)
+     * @private
+     */
+    _drawCloudLayer() {
+        const cloud = SURFACE_CONFIG.CLOUD_LAYER;
+
+        // No clouds below start altitude
+        if (this.altitude < cloud.START_ALTITUDE) return;
+
+        // Calculate opacity based on altitude (linear interpolation)
+        const t = (this.altitude - cloud.START_ALTITUDE) /
+            (cloud.FULL_ALTITUDE - cloud.START_ALTITUDE);
+        const opacity = Math.min(1, t) * cloud.MAX_OPACITY * 255;
+
+        // Skip if nearly invisible
+        if (opacity < 1) return;
+
+        // Draw fullscreen overlay in world space
+        // We need to cover the visible viewport, which is centered on the player
+        // The current transform is: translate(width/2, height/2) -> scale(perspectiveScale) -> translate(-playerPos)
+        // So we need to draw a rect that covers the viewport in world coordinates
+
+        // Calculate viewport bounds in world space
+        const invScale = 1 / this._cachedPerspectiveScale;
+        const halfW = (width / 2) * invScale;
+        const halfH = (height / 2) * invScale;
+
+        // Center of viewport in world coords (where camera is)
+        const extrusionAngle = this._cachedExtrusionAngle;
+        const visualXOffset = this.altitude * this._cachedExtrusionSin;
+        const visualYOffset = this.altitude * this._cachedExtrusionCos;
+        const centerX = this.surfaceX - visualXOffset;
+        const centerY = this.surfaceY - visualYOffset;
+
+        // Draw cloud overlay
+        push();
+        noStroke();
+        fill(cloud.COLOR[0], cloud.COLOR[1], cloud.COLOR[2], opacity);
+        rectMode(CENTER);
+        rect(centerX, centerY, halfW * 2 + 100, halfH * 2 + 100); // +100 for safety margin
+        pop();
+    }
+
+    /**
      * Draw astronaut if active
      */
     _drawAstronaut() {
@@ -3119,9 +3230,27 @@ class SurfaceMode {
             ? 255 * (1 - this.transitionProgress)
             : 255 * this.transitionProgress;
 
+        // Use cloud color (white) for seamless cloud layer transition
+        const cloudColor = SURFACE_CONFIG.CLOUD_LAYER.COLOR;
+
+        // Draw overlay in world space (same technique as cloud layer)
+        // This ensures it covers the terrain/objects but is behind the player ship
+        const invScale = 1 / this._cachedPerspectiveScale;
+        const halfW = (width / 2) * invScale;
+        const halfH = (height / 2) * invScale;
+
+        // Center of viewport in world coords
+        const visualXOffset = this.altitude * this._cachedExtrusionSin;
+        const visualYOffset = this.altitude * this._cachedExtrusionCos;
+        const centerX = this.surfaceX - visualXOffset;
+        const centerY = this.surfaceY - visualYOffset;
+
+        push();
         noStroke();
-        fill(0, 0, 0, alpha);
-        rect(0, 0, width, height);
+        fill(cloudColor[0], cloudColor[1], cloudColor[2], alpha);
+        rectMode(CENTER);
+        rect(centerX, centerY, halfW * 2 + 100, halfH * 2 + 100);
+        pop();
     }
 
     /**

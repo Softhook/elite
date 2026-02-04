@@ -772,7 +772,7 @@ class RollerCreature extends SurfaceFauna {
         Draw3D.drawPrism(topX, topY, this.size, bodySides, height, this.color, extrusionAngle, sunAngle);
 
         // LOD 2: 4 spikes, LOD 3: All spikes
-        const spikeCount = lodLevel === 2 ? 4 : this.spikes;
+        const spikeCount = lodLevel === 2 ? 0 : this.spikes;
         const rotation = this.animTime;
 
         // Position spikes around the sphere's visual center (topX, topY)

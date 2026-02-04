@@ -1507,6 +1507,12 @@ class GameStateManager {
             rect(0, 0, width, height);
             pop();
         }
+
+        // Draw surface mode exit fade overlay if active
+        // This creates a smooth white fade-in when returning from planet surface
+        if (typeof surfaceMode !== 'undefined' && surfaceMode) {
+            surfaceMode.updateAndDrawExitFade();
+        }
     }
 
     /**
