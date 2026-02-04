@@ -1706,6 +1706,18 @@ class WeaponSystem {
                 surfaceMode.planet.playerBuiltSurfaceObjects = [];
             }
             surfaceMode.planet.playerBuiltSurfaceObjects.push(descriptor);
+            
+            // DEBUG: Confirm base was added
+            console.log(`[Base Builder] Added base to planet "${surfaceMode.planet.name || 'Unknown'}"`);
+            console.log(`[Base Builder] Planet now has ${surfaceMode.planet.playerBuiltSurfaceObjects.length} base(s)`);
+            console.log(`[Base Builder] Descriptor:`, {
+                type: descriptor.type,
+                variant: descriptor.variant,
+                position: `(${Math.round(descriptor.x)}, ${Math.round(descriptor.y)})`,
+                displayName: descriptor.displayName
+            });
+        } else {
+            console.warn('[Base Builder] WARNING: surfaceMode.planet is null/undefined - base will NOT persist!');
         }
 
         // Also cache into the objectCache for the current grid cell so it persists while moving around

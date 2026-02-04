@@ -3316,11 +3316,21 @@ function debugBases(planetName) {
         if (!planet) continue;
         
         const bases = planet.playerBuiltSurfaceObjects || [];
+        
+        // DEBUG: Show what we're finding
+        console.log(`[Debug] Planet "${planet.name}": playerBuiltSurfaceObjects exists: ${!!planet.playerBuiltSurfaceObjects}, is array: ${Array.isArray(planet.playerBuiltSurfaceObjects)}, length: ${bases.length}`);
+        if (bases.length > 0) {
+            console.log(`[Debug] Base types found:`, bases.map(b => `${b.type} variant:${b.variant}`));
+        }
+        
         const habBases = bases.filter(b => b.type === 'OffworldBuilding' && b.variant === 1);
         
         if (habBases.length === 0) {
             if (planetsToCheck.length === 1) {
                 console.log(`ℹ️  No mining bases found on ${planet.name || 'this planet'}`);
+                if (bases.length > 0) {
+                    console.log(`   (Found ${bases.length} other object(s) but no Hab Units with variant=1)`);
+                }
             }
             continue;
         }
