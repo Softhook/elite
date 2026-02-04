@@ -1606,7 +1606,7 @@ class WeaponSystem {
     }
 
     /**
-     * Fire base builder weapon - constructs a surface base
+     * Fire base builder weapon - constructs a surface base (Hab Unit)
      * Only works in surface mode
      * @param {Object} owner - Entity firing the weapon (typically the player)
      */
@@ -1625,6 +1625,7 @@ class WeaponSystem {
         const BUILD_DISTANCE = 120; // Distance in front of ship
         const DEFAULT_BUILD_CLEARANCE = 60; // Minimum clearance around structures
         const DEFAULT_SPAWN_CELL_SIZE = 35; // Default cell size for grid calculations
+        const HAB_SIZE = 60; // Default Hab Unit size
 
         // Get the position in front of the ship
         const angle = owner.angle || 0;
@@ -1660,29 +1661,75 @@ class WeaponSystem {
             return;
         }
 
-        // Create the building with visual effects
-        const building = new OffworldBuilding(bx, by, groundH);
-        building.playerBuilt = true;
+        // Create the Hab Unit with proper configuration (matching original _attemptBuildHabUnit)
+        const hab = new OffworldBuilding(bx, by, HAB_SIZE, Math.floor(Math.random() * 100000));
+        hab.variant = 1; // HAB UNIT variant in OffworldBuilding
+        hab.displayName = 'Hab Unit (Player Built)';
+        hab.yOffset = groundH;
+        hab.size = HAB_SIZE;
+        hab.playerBuilt = true;
         
         // Add to surface objects
         if (surfaceMode.surfaceObjects) {
-            surfaceMode.surfaceObjects.push(building);
+            surfaceMode.surfaceObjects.push(hab);
         }
 
-        // Track in player-built map for persistence
-        if (surfaceMode.playerBuiltMap) {
+        // Add to planet persistent descriptors so it survives saves and grid regeneration
+        if (surfaceMode.planet) {
+            const descriptor = {
+                type: hab.type || 'OffworldBuilding',
+                x: hab.pos ? hab.pos.x : hab.x || bx,
+                y: hab.pos ? hab.pos.y : hab.y || by,
+                size: hab.size || HAB_SIZE,
+                seed: hab.seed || null,
+                variant: (typeof hab.variant !== 'undefined') ? hab.variant : null,
+                yOffset: (typeof hab.yOffset !== 'undefined') ? hab.yOffset : 0,
+                displayName: hab.displayName || null,
+                destroyed: !!hab.destroyed
+            };
+            if (!Array.isArray(surfaceMode.planet.playerBuiltSurfaceObjects)) {
+                surfaceMode.planet.playerBuiltSurfaceObjects = [];
+            }
+            surfaceMode.planet.playerBuiltSurfaceObjects.push(descriptor);
+        }
+
+        // Also cache into the objectCache for the current grid cell so it persists while moving around
+        try {
             const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || DEFAULT_SPAWN_CELL_SIZE;
             const cellX = Math.floor(bx / cellSize);
             const cellY = Math.floor(by / cellSize);
-            const key = `${cellX},${cellY}`;
-            const desc = {
-                type: 'OffworldBuilding',
-                x: bx,
-                y: by,
-                yOffset: groundH,
-                playerBuilt: true
+            const cellKey = `${cellX},${cellY}`;
+
+            surfaceMode.objectCache.set(cellKey, hab);
+
+            // CRITICAL: Also add to the runtime map so _spawnObjects can find it when grid shifts
+            const mapDesc = {
+                type: hab.type || 'OffworldBuilding',
+                x: hab.pos ? hab.pos.x : hab.x || bx,
+                y: hab.pos ? hab.pos.y : hab.y || by,
+                size: hab.size || HAB_SIZE,
+                seed: hab.seed || null,
+                variant: (typeof hab.variant !== 'undefined') ? hab.variant : null,
+                yOffset: (typeof hab.yOffset !== 'undefined') ? hab.yOffset : 0,
+                displayName: hab.displayName || null,
+                destroyed: !!hab.destroyed
             };
-            surfaceMode.playerBuiltMap.set(key, desc);
+            surfaceMode.playerBuiltMap.set(cellKey, mapDesc);
+
+            // CRITICAL: If this cell was previously marked as destroyed (e.g. we built over a pirate base),
+            // we MUST clear that flag so the new building doesn't get skipped during load/respawn.
+            if (surfaceMode.destroyedCells.has(cellKey)) {
+                surfaceMode.destroyedCells.delete(cellKey);
+                // Also remove from planet list to persist the "un-destroyed" state
+                if (surfaceMode.planet && Array.isArray(surfaceMode.planet.destroyedSurfaceObjects)) {
+                    const idx = surfaceMode.planet.destroyedSurfaceObjects.indexOf(cellKey);
+                    if (idx !== -1) {
+                        surfaceMode.planet.destroyedSurfaceObjects.splice(idx, 1);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Error caching player-built hab:', e);
         }
 
         // Visual effect - create a zap animation
@@ -1698,7 +1745,7 @@ class WeaponSystem {
 
         // Success message and sound
         if (owner === player && typeof uiManager !== 'undefined') {
-            uiManager.addMessage('Base constructed', [100, 255, 100]);
+            uiManager.addMessage('Hab Unit constructed', [100, 255, 100]);
         }
         if (soundManager && player?.pos) {
             soundManager.playWorldSound('upgrade', bx, by, player.pos, owner);
