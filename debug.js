@@ -22,7 +22,8 @@
     DEBUG_WEAPONS: false,      // Weapon selection/mode switches
     DEBUG_EVENTS: false,       // EventManager warnings/spawns
     DEBUG_HAULER: false,       // Hauler/transport state logs
-    DEBUG_CARGO: false         // Cargo spawn/collect/detect
+    DEBUG_CARGO: false,        // Cargo spawn/collect/detect
+    DEBUG_MINING: false        // Mining robots and background activity
   };
 
   // Load persisted flags if any
@@ -50,6 +51,7 @@
   global.DEBUG_EVENTS = !!flags.DEBUG_EVENTS;
   global.DEBUG_HAULER = !!flags.DEBUG_HAULER;
   global.DEBUG_CARGO = !!flags.DEBUG_CARGO;
+  global.DEBUG_MINING = !!flags.DEBUG_MINING;
 
   // Helpers (idempotent: don't overwrite if already defined)
   if (typeof global.AI_LOG !== 'function') {

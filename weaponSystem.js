@@ -13,7 +13,8 @@ const WEAPON_TYPE = {
     BARRIER: 'barrier', // Added Barrier type
     MINE: 'mine', // Added Mine type
     HARPOON: 'harpoon', // Harpoon tether
-    STORM: 'storm' // Storm weapons - alien specialty area-denial
+    STORM: 'storm', // Storm weapons - alien specialty area-denial
+    BASE_BUILD: 'base_build' // Base builder weapon for surface construction
 };
 
 class WeaponSystem {
@@ -465,6 +466,10 @@ class WeaponSystem {
                 break;
             case WEAPON_TYPE.STORM: // Storm weapons - alien specialty
                 this.fireStorm(owner, system, angle, target);
+                fired = true;
+                break;
+            case WEAPON_TYPE.BASE_BUILD: // Base builder weapon
+                this.fireBaseBuilder(owner);
                 fired = true;
                 break;
             default:
@@ -1598,6 +1603,196 @@ class WeaponSystem {
      */
     static getPoolStats() {
         return this.projectilePool ? this.projectilePool.getStats() : null;
+    }
+
+    /**
+     * Fire base builder weapon - constructs a surface base (Hab Unit)
+     * Only works in surface mode
+     * @param {Object} owner - Entity firing the weapon (typically the player)
+     */
+    static fireBaseBuilder(owner) {
+        if (!owner) return;
+
+        // Check if we're in surface mode
+        if (typeof surfaceMode === 'undefined' || !surfaceMode || !surfaceMode.isActive()) {
+            if (owner === player && typeof uiManager !== 'undefined') {
+                uiManager.addMessage('Base builder only works on planetary surfaces', [255, 160, 100]);
+            }
+            return;
+        }
+
+        // Constants for base building
+        const BUILD_DISTANCE = 120; // Distance in front of ship
+        const DEFAULT_BUILD_CLEARANCE = 60; // Minimum clearance around structures
+        const DEFAULT_SPAWN_CELL_SIZE = 35; // Default cell size for grid calculations
+        const HAB_SIZE = 60; // Default Hab Unit size
+
+        // Get the position in front of the ship
+        const angle = owner.angle || 0;
+        const bx = owner.pos.x + Math.cos(angle) * BUILD_DISTANCE;
+        const by = owner.pos.y + Math.sin(angle) * BUILD_DISTANCE;
+
+        // Get terrain height at target location
+        const groundH = surfaceMode._getTerrainHeightAt ? surfaceMode._getTerrainHeightAt(bx, by) : 0;
+
+        // Check for collisions with nearby surface objects
+        const minClearance = SURFACE_CONFIG.HAB_UNIT_SIZE || DEFAULT_BUILD_CLEARANCE;
+        if (surfaceMode.surfaceObjects && Array.isArray(surfaceMode.surfaceObjects)) {
+            for (const obj of surfaceMode.surfaceObjects) {
+                if (!obj || obj.destroyed || !obj.pos) continue;
+                const dx = obj.pos.x - bx;
+                const dy = obj.pos.y - by;
+                const distSq = dx * dx + dy * dy;
+                // Require enough distance to cover both object radii plus the desired edge-to-edge clearance
+                const objRadius = (obj.size || HAB_SIZE) / 2;
+                const newBaseRadius = (SURFACE_CONFIG.HAB_UNIT_SIZE || HAB_SIZE) / 2;
+                const safeDist = (objRadius + newBaseRadius + minClearance) ** 2;
+                if (distSq < safeDist) {
+                    if (owner === player && typeof uiManager !== 'undefined') {
+                        uiManager.addMessage('Not enough space to build here', [255, 160, 100]);
+                    }
+                    return;
+                }
+            }
+        }
+
+        // Check if OffworldBuilding class exists
+        if (typeof OffworldBuilding === 'undefined') {
+            if (owner === player && typeof uiManager !== 'undefined') {
+                uiManager.addMessage('Build failed: building module missing', [255, 80, 80]);
+            }
+            return;
+        }
+
+        // Create the Hab Unit with proper configuration (matching original _attemptBuildHabUnit)
+        const hab = new OffworldBuilding(bx, by, HAB_SIZE, Math.floor(Math.random() * 100000));
+        hab.variant = 1; // HAB UNIT variant in OffworldBuilding
+        hab.displayName = 'Hab Unit (Player Built)';
+        hab.yOffset = groundH;
+        hab.size = HAB_SIZE;
+        hab.playerBuilt = true;
+        
+        // Calculate cellKey for this base (needed for robot initialization)
+        const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || DEFAULT_SPAWN_CELL_SIZE;
+        const cellX = Math.floor(bx / cellSize);
+        const cellY = Math.floor(by / cellSize);
+        const cellKey = `${cellX},${cellY}`;
+        
+        // CRITICAL: Set cellKey on the hab object (needed for robot initialization lookup)
+        hab.cellKey = cellKey;
+        
+        // Add to surface objects
+        if (surfaceMode.surfaceObjects) {
+            surfaceMode.surfaceObjects.push(hab);
+        }
+
+        // Add to planet persistent descriptors so it survives saves and grid regeneration
+        if (surfaceMode.planet) {
+            const descriptor = {
+                type: hab.type || 'Offworld Colony',
+                x: hab.pos ? hab.pos.x : hab.x || bx,
+                y: hab.pos ? hab.pos.y : hab.y || by,
+                size: hab.size || HAB_SIZE,
+                seed: hab.seed || null,
+                variant: (typeof hab.variant !== 'undefined') ? hab.variant : null,
+                yOffset: (typeof hab.yOffset !== 'undefined') ? hab.yOffset : 0,
+                displayName: hab.displayName || null,
+                destroyed: !!hab.destroyed,
+                // Initialize mining fields (will be populated by robot initialization)
+                robotCount: undefined,  // Will be set by _initializeMiningRobotsForBases
+                miningStorage: [],
+                miningStorageCapacity: 100,
+                health: 1000,
+                lastBackgroundTick: null
+            };
+            if (!Array.isArray(surfaceMode.planet.playerBuiltSurfaceObjects)) {
+                surfaceMode.planet.playerBuiltSurfaceObjects = [];
+            }
+            surfaceMode.planet.playerBuiltSurfaceObjects.push(descriptor);
+            
+            // DEBUG: Confirm base was added
+            console.log(`[Base Builder] Added base to planet "${surfaceMode.planet.name || 'Unknown'}"`);
+            console.log(`[Base Builder] Planet now has ${surfaceMode.planet.playerBuiltSurfaceObjects.length} base(s)`);
+            console.log(`[Base Builder] Descriptor:`, {
+                type: descriptor.type,
+                variant: descriptor.variant,
+                position: `(${Math.round(descriptor.x)}, ${Math.round(descriptor.y)})`,
+                displayName: descriptor.displayName
+            });
+        } else {
+            console.warn('[Base Builder] WARNING: surfaceMode.planet is null/undefined - base will NOT persist!');
+        }
+
+        // Also cache into the objectCache for the current grid cell so it persists while moving around
+        try {
+            surfaceMode.objectCache.set(cellKey, hab);
+
+            // CRITICAL: Also add to the runtime map so _spawnObjects can find it when grid shifts
+            const mapDesc = {
+                type: hab.type || 'Offworld Colony',
+                x: hab.pos ? hab.pos.x : hab.x || bx,
+                y: hab.pos ? hab.pos.y : hab.y || by,
+                size: hab.size || HAB_SIZE,
+                seed: hab.seed || null,
+                variant: (typeof hab.variant !== 'undefined') ? hab.variant : null,
+                yOffset: (typeof hab.yOffset !== 'undefined') ? hab.yOffset : 0,
+                displayName: hab.displayName || null,
+                destroyed: !!hab.destroyed
+            };
+            surfaceMode.playerBuiltMap.set(cellKey, mapDesc);
+
+            // CRITICAL: If this cell was previously marked as destroyed (e.g. we built over a pirate base),
+            // we MUST clear that flag so the new building doesn't get skipped during load/respawn.
+            if (surfaceMode.destroyedCells.has(cellKey)) {
+                surfaceMode.destroyedCells.delete(cellKey);
+                // Also remove from planet list to persist the "un-destroyed" state
+                if (surfaceMode.planet && Array.isArray(surfaceMode.planet.destroyedSurfaceObjects)) {
+                    const idx = surfaceMode.planet.destroyedSurfaceObjects.indexOf(cellKey);
+                    if (idx !== -1) {
+                        surfaceMode.planet.destroyedSurfaceObjects.splice(idx, 1);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Error caching player-built hab:', e);
+        }
+
+        // Visual effect - create a zap animation
+        if (typeof surfaceMode.baseBuilderEffect === 'undefined') {
+            surfaceMode.baseBuilderEffect = [];
+        }
+        surfaceMode.baseBuilderEffect.push({
+            x: bx,
+            y: by,
+            startTime: millis(),
+            duration: 500 // Half second animation
+        });
+
+        // Success message and sound
+        if (owner === player && typeof uiManager !== 'undefined') {
+            uiManager.addMessage('Hab Unit constructed', [100, 255, 100]);
+        }
+        if (soundManager && player?.pos) {
+            soundManager.playWorldSound('upgrade', bx, by, player.pos, owner);
+        }
+
+        // CRITICAL: Initialize robots immediately for the new base
+        // This ensures robots are spawned BEFORE the game saves
+        let robotsInitSucceeded = false;
+        try {
+            if (surfaceMode && typeof surfaceMode._initializeMiningRobotsForBases === 'function') {
+                console.log('[Base Builder] Initializing robots for newly built base immediately');
+                surfaceMode._initializeMiningRobotsForBases();
+                robotsInitSucceeded = true;
+            }
+
+            // Save game to persist the new base (AFTER robot initialization)
+            if (typeof saveGame === 'function') {
+                saveGame();
+            }
+        } catch (e) {
+            console.error('Error during base construction post-processing (robots/save):', e);
+        }
     }
 }
 
