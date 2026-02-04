@@ -1669,6 +1669,15 @@ class WeaponSystem {
         hab.size = HAB_SIZE;
         hab.playerBuilt = true;
         
+        // Calculate cellKey for this base (needed for robot initialization)
+        const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || DEFAULT_SPAWN_CELL_SIZE;
+        const cellX = Math.floor(bx / cellSize);
+        const cellY = Math.floor(by / cellSize);
+        const cellKey = `${cellX},${cellY}`;
+        
+        // CRITICAL: Set cellKey on the hab object (needed for robot initialization lookup)
+        hab.cellKey = cellKey;
+        
         // Add to surface objects
         if (surfaceMode.surfaceObjects) {
             surfaceMode.surfaceObjects.push(hab);
@@ -1695,11 +1704,6 @@ class WeaponSystem {
 
         // Also cache into the objectCache for the current grid cell so it persists while moving around
         try {
-            const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || DEFAULT_SPAWN_CELL_SIZE;
-            const cellX = Math.floor(bx / cellSize);
-            const cellY = Math.floor(by / cellSize);
-            const cellKey = `${cellX},${cellY}`;
-
             surfaceMode.objectCache.set(cellKey, hab);
 
             // CRITICAL: Also add to the runtime map so _spawnObjects can find it when grid shifts
@@ -1751,7 +1755,18 @@ class WeaponSystem {
             soundManager.playWorldSound('upgrade', bx, by, player.pos, owner);
         }
 
-        // Save game to persist the new base
+        // CRITICAL: Initialize robots immediately for the new base
+        // This ensures robots are spawned BEFORE the game saves
+        if (surfaceMode && typeof surfaceMode._initializeMiningRobotsForBases === 'function') {
+            try {
+                console.log('[Base Builder] Initializing robots for newly built base immediately');
+                surfaceMode._initializeMiningRobotsForBases();
+            } catch (e) {
+                console.error('Error initializing robots after base construction:', e);
+            }
+        }
+
+        // Save game to persist the new base (AFTER robot initialization)
         if (typeof saveGame === 'function') {
             try {
                 saveGame();
