@@ -2284,11 +2284,12 @@ class SurfaceMode {
                     robotCount = desc.robotCount;
                 } else {
                     // Legacy bases: derive a deterministic 2–3 robot count from base position.
-                    // Prefer desc.x/y for position-based seeding.
+                    // Use large primes for spatial hashing to ensure good distribution.
                     let seed = 0;
                     if (typeof desc.x === 'number' && typeof desc.y === 'number') {
                         const px = Math.floor(desc.x);
                         const py = Math.floor(desc.y);
+                        // Hash constants: 73856093 and 19349663 are large primes commonly used for spatial hashing
                         seed = (px * 73856093) ^ (py * 19349663);
                     } else {
                         // No usable position; fall back to default.
@@ -2352,6 +2353,7 @@ class SurfaceMode {
                     if (desc.robotCount === 0) {
                         this._notifyBaseEvent(cellKey, 'robots_lost', `All mining robots destroyed at base!`, [255, 100, 100]);
                     } else {
+                        // oldCount was > 0 (checked in parent if), so this branch handles 1+ robots remaining
                         this._notifyBaseEvent(cellKey, 'robot_lost', `Mining robot destroyed (${desc.robotCount} remaining)`);
                     }
                 }
