@@ -2119,6 +2119,11 @@ class SurfaceMode {
             const desc = this.playerBuiltMap.get(obj.cellKey);
             const needsRobots = !obj.robotsInitialized || (desc && !desc.robotsInitialized);
 
+            // Debug logging for troubleshooting
+            console.log(`[Mining Robots] Base at (${Math.round(obj.pos.x)}, ${Math.round(obj.pos.y)}) - cellKey: ${obj.cellKey}`);
+            console.log(`  obj.robotsInitialized: ${obj.robotsInitialized}, desc.robotsInitialized: ${desc?.robotsInitialized}`);
+            console.log(`  obj.robotCount: ${obj.robotCount}, needsRobots: ${needsRobots}`);
+
             if (needsRobots) {
                 obj.robotsInitialized = true;
 

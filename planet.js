@@ -1253,9 +1253,13 @@ class Planet {
                         displayName: o.displayName || o.name || null,
                         destroyed: !!o.destroyed,
                         health: (typeof o.health !== 'undefined') ? o.health : null,
-                        storage: (typeof o.storage !== 'undefined') ? o.storage : null,
+                        miningStorage: o.miningStorage || o.storage || null,  // Save as miningStorage (was storage)
+                        miningStorageCapacity: o.miningStorageCapacity || null,
                         lastBackgroundTick: o.lastBackgroundTick || null,
                         robotCount: (typeof o.robotCount !== 'undefined') ? o.robotCount : null
+                        // NOTE: robotsInitialized is INTENTIONALLY EXCLUDED
+                        // It's a runtime session flag, not persistent state
+                        // Robots must respawn from robotCount when loading saves
                     };
                 })
                 : [],
