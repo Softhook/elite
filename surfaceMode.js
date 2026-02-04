@@ -2219,15 +2219,29 @@ class SurfaceMode {
      * @private
      */
     _updateBackgroundActivity(dt) {
-        if (!this.playerBuiltMap) return;
+        if (!this.playerBuiltMap) {
+            if (DEBUG_MINING) console.log('[Background] No playerBuiltMap');
+            return;
+        }
 
         const now = Date.now();
         const updateRangeSq = (SURFACE_CONFIG.UPDATE_RANGE || 2000) ** 2;
         const playerPos = (this.controlMode === 'ASTRONAUT' && this.astronaut) ? this.astronaut.pos : this.player.pos;
 
+        let basesProcessed = 0;
+        let basesSkippedInRange = 0;
+        let basesSkippedDestroyed = 0;
+        let basesSkippedTooSoon = 0;
+        let basesUpdated = 0;
+
         // Iterate over all player built objects (even those not currently spawned)
         for (const [cellKey, desc] of this.playerBuiltMap) {
-            if (desc.destroyed) continue;
+            if (desc.destroyed) {
+                basesSkippedDestroyed++;
+                continue;
+            }
+
+            basesProcessed++;
 
             // Find active object instance if it exists (in cache or surfaceObjects)
             let obj = this.objectCache.get(cellKey);
@@ -2238,6 +2252,7 @@ class SurfaceMode {
                 const dSq = (obj.pos.x - playerPos.x) ** 2 + (obj.pos.y - playerPos.y) ** 2;
                 if (dSq < updateRangeSq) {
                     obj.lastBackgroundTick = now; // Keep tick updated so catch-up starts from here when it leaves range
+                    basesSkippedInRange++;
                     continue;
                 }
             }
@@ -2249,7 +2264,12 @@ class SurfaceMode {
             const timeElapsed = (now - desc.lastBackgroundTick) / 1000; // Seconds
 
             // Minimum update frequency of 2 seconds for background logic to save processing
-            if (timeElapsed < 2.0) continue;
+            if (timeElapsed < 2.0) {
+                basesSkippedTooSoon++;
+                continue;
+            }
+
+            basesUpdated++;
 
             // 1. Process Mining (Simplified math)
             if (desc.type === 'OffworldBuilding' && desc.variant === 1) { // Player Base
@@ -2331,6 +2351,11 @@ class SurfaceMode {
             }
 
             desc.lastBackgroundTick = now;
+        }
+
+        // Debug logging (only if DEBUG_MINING is enabled)
+        if (typeof DEBUG_MINING !== 'undefined' && DEBUG_MINING && (basesProcessed > 0 || basesUpdated > 0)) {
+            console.log(`[Background Activity] Processed: ${basesProcessed}, Updated: ${basesUpdated}, Skipped (in-range: ${basesSkippedInRange}, destroyed: ${basesSkippedDestroyed}, too-soon: ${basesSkippedTooSoon})`);
         }
     }
 
@@ -3022,6 +3047,189 @@ class SurfaceMode {
 
         return false;
     }
+
+    /**
+     * Debug command: Display status of all player-built bases
+     * Call from console: debugBases()
+     */
+    debugBases() {
+        console.log('\n========================================');
+        console.log('MINING BASE STATUS REPORT');
+        console.log('========================================\n');
+
+        if (!this.planet) {
+            console.log('❌ Not on a planet surface');
+            return;
+        }
+
+        if (!this.planet.playerBuiltSurfaceObjects || this.planet.playerBuiltSurfaceObjects.length === 0) {
+            console.log('ℹ️  No player-built bases found on this planet');
+            return;
+        }
+
+        const now = Date.now();
+        const playerPos = (this.controlMode === 'ASTRONAUT' && this.astronaut) ? this.astronaut.pos : this.player?.pos;
+        const updateRangeSq = (SURFACE_CONFIG.UPDATE_RANGE || 2000) ** 2;
+
+        console.log(`Planet: ${this.planet.name || 'Unknown'}`);
+        console.log(`Hazard Level: ${(this.planet.hazardLevel || 0.2).toFixed(2)}`);
+        console.log(`Player Position: ${playerPos ? `(${Math.round(playerPos.x)}, ${Math.round(playerPos.y)})` : 'Unknown'}`);
+        console.log(`Background Update Range: ${Math.sqrt(updateRangeSq)} units\n`);
+
+        let baseCount = 0;
+        let activeCount = 0;
+        let destroyedCount = 0;
+
+        for (const desc of this.planet.playerBuiltSurfaceObjects) {
+            if (desc.type !== 'OffworldBuilding' || desc.variant !== 1) continue;
+
+            baseCount++;
+            const cellKey = this._getCellKeyForPosition(desc.x, desc.y);
+            
+            console.log(`─────────────────────────────────────────`);
+            console.log(`BASE #${baseCount}`);
+            console.log(`─────────────────────────────────────────`);
+            
+            // Basic info
+            console.log(`📍 Position: (${Math.round(desc.x)}, ${Math.round(desc.y)})`);
+            console.log(`🔑 Cell Key: ${cellKey}`);
+            
+            // Status
+            if (desc.destroyed) {
+                console.log(`💥 Status: DESTROYED`);
+                destroyedCount++;
+            } else {
+                console.log(`✅ Status: ACTIVE`);
+                activeCount++;
+            }
+            
+            // Distance from player
+            if (playerPos) {
+                const distSq = (desc.x - playerPos.x) ** 2 + (desc.y - playerPos.y) ** 2;
+                const dist = Math.sqrt(distSq);
+                const inRange = distSq < updateRangeSq;
+                console.log(`📏 Distance from Player: ${Math.round(dist)} units ${inRange ? '(IN RANGE - HIGH FIDELITY)' : '(OUT OF RANGE - BACKGROUND)'}`);
+            }
+            
+            // Robots
+            const robotCount = typeof desc.robotCount === 'number' ? desc.robotCount : 'Unknown';
+            console.log(`🤖 Robots: ${robotCount}`);
+            
+            // Health
+            const health = desc.health !== undefined ? desc.health : 1000;
+            const maxHealth = 1000;
+            const healthPercent = ((health / maxHealth) * 100).toFixed(1);
+            const healthBar = this._getHealthBar(health, maxHealth);
+            console.log(`❤️  Health: ${Math.round(health)}/${maxHealth} (${healthPercent}%) ${healthBar}`);
+            
+            // Mining storage
+            if (desc.miningStorage && desc.miningStorage.length > 0) {
+                const mineralStack = desc.miningStorage.find(item => item.name === 'Minerals');
+                if (mineralStack) {
+                    const capacity = desc.miningStorageCapacity || 100;
+                    const quantity = mineralStack.quantity || 0;
+                    const storagePercent = ((quantity / capacity) * 100).toFixed(1);
+                    const storageBar = this._getStorageBar(quantity, capacity);
+                    console.log(`⛏️  Mining Storage: ${Math.round(quantity)}/${capacity} minerals (${storagePercent}%) ${storageBar}`);
+                } else {
+                    console.log(`⛏️  Mining Storage: 0/100 minerals (empty)`);
+                }
+            } else {
+                console.log(`⛏️  Mining Storage: No storage initialized`);
+            }
+            
+            // Background activity timing
+            if (desc.lastBackgroundTick) {
+                const timeSinceUpdate = (now - desc.lastBackgroundTick) / 1000;
+                const minutes = Math.floor(timeSinceUpdate / 60);
+                const seconds = Math.floor(timeSinceUpdate % 60);
+                console.log(`⏱️  Last Background Update: ${minutes}m ${seconds}s ago`);
+                
+                if (timeSinceUpdate > 120) {
+                    console.log(`⚠️  WARNING: Long time since update! Check if background activity is running.`);
+                }
+            } else {
+                console.log(`⏱️  Last Background Update: Never (freshly built)`);
+            }
+            
+            // Mining rate estimation
+            if (!desc.destroyed && robotCount > 0) {
+                const mineRate = robotCount * (MINING_CONFIG.MINERALS_PER_MINE / MINING_CONFIG.MINING_DURATION);
+                console.log(`📊 Mining Rate: ${mineRate.toFixed(2)} minerals/sec (${(mineRate * 60).toFixed(1)} minerals/min)`);
+            }
+            
+            console.log('');
+        }
+
+        // Summary
+        console.log(`========================================`);
+        console.log(`SUMMARY`);
+        console.log(`========================================`);
+        console.log(`Total Bases: ${baseCount}`);
+        console.log(`Active: ${activeCount}`);
+        console.log(`Destroyed: ${destroyedCount}`);
+        
+        if (baseCount === 0) {
+            console.log(`\nℹ️  No mining bases found. Use the Base Builder weapon to create one!`);
+        } else if (activeCount === 0) {
+            console.log(`\n⚠️  All bases are destroyed!`);
+        }
+        
+        console.log(`\n💡 TIP: Background mining only works when you're >2000 units away or off-planet`);
+        console.log(`========================================\n`);
+    }
+
+    /**
+     * Helper to get cell key for a position
+     */
+    _getCellKeyForPosition(x, y) {
+        const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || 35;
+        const cellX = Math.floor(x / cellSize);
+        const cellY = Math.floor(y / cellSize);
+        return `${cellX},${cellY}`;
+    }
+
+    /**
+     * Helper to create a visual health bar
+     */
+    _getHealthBar(health, maxHealth) {
+        const percent = health / maxHealth;
+        const barLength = 20;
+        const filled = Math.round(percent * barLength);
+        const empty = barLength - filled;
+        
+        let bar = '[';
+        if (percent > 0.7) {
+            bar += '█'.repeat(filled) + '░'.repeat(empty);
+        } else if (percent > 0.3) {
+            bar += '▓'.repeat(filled) + '░'.repeat(empty);
+        } else {
+            bar += '▒'.repeat(filled) + '░'.repeat(empty);
+        }
+        bar += ']';
+        
+        return bar;
+    }
+
+    /**
+     * Helper to create a visual storage bar
+     */
+    _getStorageBar(quantity, capacity) {
+        const percent = quantity / capacity;
+        const barLength = 20;
+        const filled = Math.round(percent * barLength);
+        const empty = barLength - filled;
+        
+        let bar = '[';
+        if (percent >= 1.0) {
+            bar += '█'.repeat(barLength);
+        } else {
+            bar += '▓'.repeat(filled) + '░'.repeat(empty);
+        }
+        bar += ']';
+        
+        return bar;
+    }
 }
 
 
@@ -3045,7 +3253,36 @@ if (typeof window !== 'undefined') {
     });
 }
 
+// ============================================
+// GLOBAL DEBUG COMMANDS
+// ============================================
+
+/**
+ * Debug command: Show status of all mining bases
+ * Usage: Type `debugBases()` in browser console
+ */
+function debugBases() {
+    if (typeof surfaceMode === 'undefined' || !surfaceMode) {
+        console.log('❌ SurfaceMode not initialized');
+        return;
+    }
+    
+    if (!surfaceMode.planet) {
+        console.log('❌ Not on a planet surface. You must be on a planet to view base status.');
+        console.log('💡 TIP: Land on a planet first, then run this command.');
+        return;
+    }
+    
+    surfaceMode.debugBases();
+}
+
+// Expose debug command globally
+if (typeof window !== 'undefined') {
+    window.debugBases = debugBases;
+}
+
 console.log("surfaceMode.js loaded");
+console.log("💡 Debug command available: debugBases()");
 
 // Export for Node.js/Jest testing while maintaining browser compatibility
 if (typeof module !== 'undefined' && module.exports) {
