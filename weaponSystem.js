@@ -1694,7 +1694,13 @@ class WeaponSystem {
                 variant: (typeof hab.variant !== 'undefined') ? hab.variant : null,
                 yOffset: (typeof hab.yOffset !== 'undefined') ? hab.yOffset : 0,
                 displayName: hab.displayName || null,
-                destroyed: !!hab.destroyed
+                destroyed: !!hab.destroyed,
+                // Initialize mining fields (will be populated by robot initialization)
+                robotCount: undefined,  // Will be set by _initializeMiningRobotsForBases
+                miningStorage: [],
+                miningStorageCapacity: 100,
+                health: 1000,
+                lastBackgroundTick: null
             };
             if (!Array.isArray(surfaceMode.planet.playerBuiltSurfaceObjects)) {
                 surfaceMode.planet.playerBuiltSurfaceObjects = [];

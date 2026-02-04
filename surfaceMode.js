@@ -3259,21 +3259,226 @@ if (typeof window !== 'undefined') {
 
 /**
  * Debug command: Show status of all mining bases
- * Usage: Type `debugBases()` in browser console
+ * Usage: Type `debugBases()` or `debugBases(planetName)` in browser console
+ * Works from space or planet surface
  */
-function debugBases() {
-    if (typeof surfaceMode === 'undefined' || !surfaceMode) {
-        console.log('❌ SurfaceMode not initialized');
+function debugBases(planetName) {
+    // Try to get context from either surface mode or space
+    let planetsToCheck = [];
+    let contextInfo = '';
+    
+    // Case 1: On planet surface
+    if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.planet) {
+        planetsToCheck = [surfaceMode.planet];
+        contextInfo = `on surface of ${surfaceMode.planet.name || 'Unknown Planet'}`;
+    }
+    // Case 2: In space - check current system
+    else if (typeof player !== 'undefined' && player && player.currentSystem) {
+        if (planetName) {
+            // Specific planet requested
+            const planet = player.currentSystem.planets.find(p => 
+                p.name && p.name.toLowerCase() === planetName.toLowerCase()
+            );
+            if (planet) {
+                planetsToCheck = [planet];
+                contextInfo = `checking planet: ${planet.name}`;
+            } else {
+                console.log(`❌ Planet "${planetName}" not found in current system`);
+                console.log(`Available planets: ${player.currentSystem.planets.map(p => p.name).join(', ')}`);
+                return;
+            }
+        } else {
+            // Check all planets in system
+            planetsToCheck = player.currentSystem.planets || [];
+            contextInfo = `in space (${player.currentSystem.name || 'Unknown System'})`;
+        }
+    }
+    // Case 3: No valid context
+    else {
+        console.log('❌ Cannot access base data');
+        console.log('💡 Must be on a planet surface or in space with a current system');
         return;
     }
     
-    if (!surfaceMode.planet) {
-        console.log('❌ Not on a planet surface. You must be on a planet to view base status.');
-        console.log('💡 TIP: Land on a planet first, then run this command.');
-        return;
+    // Display header
+    console.log('\n========================================');
+    console.log('MINING BASE STATUS REPORT');
+    console.log('========================================\n');
+    console.log(`Context: ${contextInfo}`);
+    console.log(`Checking ${planetsToCheck.length} planet(s)\n`);
+    
+    let totalBases = 0;
+    let totalActive = 0;
+    let totalDestroyed = 0;
+    
+    // Check each planet
+    for (const planet of planetsToCheck) {
+        if (!planet) continue;
+        
+        const bases = planet.playerBuiltSurfaceObjects || [];
+        const habBases = bases.filter(b => b.type === 'OffworldBuilding' && b.variant === 1);
+        
+        if (habBases.length === 0) {
+            if (planetsToCheck.length === 1) {
+                console.log(`ℹ️  No mining bases found on ${planet.name || 'this planet'}`);
+            }
+            continue;
+        }
+        
+        // Planet header (only if checking multiple planets)
+        if (planetsToCheck.length > 1) {
+            console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.log(`🌍 ${planet.name || 'Unknown Planet'}`);
+            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        }
+        
+        console.log(`Planet: ${planet.name || 'Unknown'}`);
+        console.log(`Hazard Level: ${(planet.hazardLevel || 0.2).toFixed(2)}`);
+        console.log(`Total Bases: ${habBases.length}\n`);
+        
+        // Show each base
+        let baseNum = 0;
+        for (const desc of habBases) {
+            baseNum++;
+            totalBases++;
+            
+            const cellSize = 35; // SURFACE_CONFIG.SPAWN_CELL_SIZE
+            const cellX = Math.floor(desc.x / cellSize);
+            const cellY = Math.floor(desc.y / cellSize);
+            const cellKey = `${cellX},${cellY}`;
+            
+            console.log(`─────────────────────────────────────────`);
+            console.log(`BASE #${baseNum} on ${planet.name || 'planet'}`);
+            console.log(`─────────────────────────────────────────`);
+            
+            // Basic info
+            console.log(`📍 Position: (${Math.round(desc.x)}, ${Math.round(desc.y)})`);
+            console.log(`🔑 Cell Key: ${cellKey}`);
+            
+            // Status
+            if (desc.destroyed) {
+                console.log(`💥 Status: DESTROYED`);
+                totalDestroyed++;
+            } else {
+                console.log(`✅ Status: ACTIVE`);
+                totalActive++;
+            }
+            
+            // Robots
+            const robotCount = typeof desc.robotCount === 'number' ? desc.robotCount : 'Unknown';
+            console.log(`🤖 Robots: ${robotCount}`);
+            
+            // Health
+            const health = desc.health !== undefined ? desc.health : 1000;
+            const maxHealth = 1000;
+            const healthPercent = ((health / maxHealth) * 100).toFixed(1);
+            const healthBar = _getDebugHealthBar(health, maxHealth);
+            console.log(`❤️  Health: ${Math.round(health)}/${maxHealth} (${healthPercent}%) ${healthBar}`);
+            
+            // Mining storage
+            if (desc.miningStorage && desc.miningStorage.length > 0) {
+                const mineralStack = desc.miningStorage.find(item => item.name === 'Minerals');
+                if (mineralStack) {
+                    const capacity = desc.miningStorageCapacity || 100;
+                    const quantity = mineralStack.quantity || 0;
+                    const storagePercent = ((quantity / capacity) * 100).toFixed(1);
+                    const storageBar = _getDebugStorageBar(quantity, capacity);
+                    console.log(`⛏️  Mining Storage: ${Math.round(quantity)}/${capacity} minerals (${storagePercent}%) ${storageBar}`);
+                } else {
+                    console.log(`⛏️  Mining Storage: 0/${desc.miningStorageCapacity || 100} minerals (empty)`);
+                }
+            } else {
+                console.log(`⛏️  Mining Storage: ${desc.miningStorage ? '0' : 'Not initialized'}/100 minerals`);
+            }
+            
+            // Background activity timing
+            if (desc.lastBackgroundTick) {
+                const now = Date.now();
+                const timeSinceUpdate = (now - desc.lastBackgroundTick) / 1000;
+                const minutes = Math.floor(timeSinceUpdate / 60);
+                const seconds = Math.floor(timeSinceUpdate % 60);
+                console.log(`⏱️  Last Background Update: ${minutes}m ${seconds}s ago`);
+                
+                if (timeSinceUpdate > 120) {
+                    console.log(`⚠️  WARNING: Long time since update! Check if background activity is running.`);
+                }
+            } else {
+                console.log(`⏱️  Last Background Update: Never (freshly built or not yet updated)`);
+            }
+            
+            // Mining rate estimation
+            if (!desc.destroyed && typeof desc.robotCount === 'number' && desc.robotCount > 0) {
+                const MINERALS_PER_MINE = 2;
+                const MINING_DURATION = 10;
+                const mineRate = desc.robotCount * (MINERALS_PER_MINE / MINING_DURATION);
+                console.log(`📊 Mining Rate: ${mineRate.toFixed(2)} minerals/sec (${(mineRate * 60).toFixed(1)} minerals/min)`);
+            }
+            
+            console.log('');
+        }
     }
     
-    surfaceMode.debugBases();
+    // Final summary
+    console.log(`========================================`);
+    console.log(`SUMMARY`);
+    console.log(`========================================`);
+    console.log(`Total Bases Found: ${totalBases}`);
+    console.log(`Active: ${totalActive}`);
+    console.log(`Destroyed: ${totalDestroyed}`);
+    
+    if (totalBases === 0) {
+        console.log(`\nℹ️  No mining bases found.`);
+        if (planetsToCheck.length > 1) {
+            console.log(`   No bases on any planet in this system.`);
+        }
+        console.log(`   Use the Base Builder weapon to create one!`);
+    } else if (totalActive === 0) {
+        console.log(`\n⚠️  All bases are destroyed!`);
+    }
+    
+    console.log(`\n💡 TIPS:`);
+    console.log(`   - Background mining works when >2000 units away or off-planet`);
+    console.log(`   - From space: debugBases() shows all system planets`);
+    console.log(`   - From space: debugBases("PlanetName") shows specific planet`);
+    console.log(`   - From surface: debugBases() shows current planet`);
+    console.log(`========================================\n`);
+}
+
+// Helper functions for visual bars
+function _getDebugHealthBar(health, maxHealth) {
+    const percent = health / maxHealth;
+    const barLength = 20;
+    const filled = Math.round(percent * barLength);
+    const empty = barLength - filled;
+    
+    let bar = '[';
+    if (percent > 0.7) {
+        bar += '█'.repeat(filled) + '░'.repeat(empty);
+    } else if (percent > 0.3) {
+        bar += '▓'.repeat(filled) + '░'.repeat(empty);
+    } else {
+        bar += '▒'.repeat(filled) + '░'.repeat(empty);
+    }
+    bar += ']';
+    
+    return bar;
+}
+
+function _getDebugStorageBar(quantity, capacity) {
+    const percent = quantity / capacity;
+    const barLength = 20;
+    const filled = Math.round(percent * barLength);
+    const empty = barLength - filled;
+    
+    let bar = '[';
+    if (percent >= 1.0) {
+        bar += '█'.repeat(barLength);
+    } else {
+        bar += '▓'.repeat(filled) + '░'.repeat(empty);
+    }
+    bar += ']';
+    
+    return bar;
 }
 
 // Expose debug command globally
@@ -3282,7 +3487,9 @@ if (typeof window !== 'undefined') {
 }
 
 console.log("surfaceMode.js loaded");
-console.log("💡 Debug command available: debugBases()");
+console.log("💡 Debug commands available:");
+console.log("   debugBases() - Show all bases in current system");
+console.log("   debugBases('PlanetName') - Show bases on specific planet");
 
 // Export for Node.js/Jest testing while maintaining browser compatibility
 if (typeof module !== 'undefined' && module.exports) {
