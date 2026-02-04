@@ -1743,7 +1743,8 @@ class SurfaceMode {
                             obj.robotsInitialized = !!desc.robotsInitialized;
                             obj.miningStorage = Array.isArray(desc.miningStorage) ? desc.miningStorage : [];
                             obj.miningStorageCapacity = desc.miningStorageCapacity || 100;
-                            obj.robotCount = desc.robotCount || 0;
+                            // CRITICAL: Don't default to 0! Keep undefined if not set so initialization calculates it
+                            obj.robotCount = desc.robotCount;  // May be undefined, 0, or a positive number
                             if (typeof desc.health === 'number') obj.health = desc.health;
                             // CRITICAL: Ensure isPlayerBase is set (for health bar rendering and other logic)
                             obj.isPlayerBase = true;
