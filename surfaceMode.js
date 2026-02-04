@@ -2211,7 +2211,7 @@ class SurfaceMode {
             }
         }
 
-        if (DEBUG_MINING && basesChecked > 0) {
+        if (typeof DEBUG_MINING !== 'undefined' && DEBUG_MINING && basesChecked > 0) {
             console.log(`[Mining Robots] Checked ${basesChecked} bases, spawned ${robotsSpawned} robots, total active: ${this.miningRobots.length}`);
         }
     }
@@ -3104,8 +3104,8 @@ class SurfaceMode {
         let destroyedCount = 0;
 
         for (const desc of this.planet.playerBuiltSurfaceObjects) {
-            const typeStr = String(desc.type || '').toLowerCase();
-            if (typeStr.indexOf('offworld') === -1 || desc.variant !== 1) continue;
+            // Check for both type strings for backward compatibility
+            if ((desc.type !== 'Offworld Colony' && desc.type !== 'OffworldBuilding') || desc.variant !== 1) continue;
 
             baseCount++;
             const cellKey = this._getCellKeyForPosition(desc.x, desc.y);
