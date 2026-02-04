@@ -159,6 +159,7 @@ class SurfaceMode {
         this.miningRobots = []; // All mining robots on the surface
         this.oreSeams = new Map(); // Map of ore seam locations (shared across robots per base)
         this.robotSpawnCooldown = 0; // Cooldown to prevent continuous spawning
+        this._depthSortBuffer = []; // Reusable array for depth sorting (avoids GC)
 
         // Player physics
         this.playerAngle = -Math.PI / 2; // Start facing UP
@@ -2633,23 +2634,19 @@ class SurfaceMode {
     }
 
     /**
-     * Draw surface objects with viewport culling
+     * Draw surface objects with viewport culling and depth sorting
      */
     _drawSurfaceObjects() {
         if (!this.surfaceObjects) return;
 
-        // Use dynamic sun angle from planet position
         const sunAngle = this._getSunAngle();
-
-        // Use adequate padding for visual projection culling to prevent pop-in
-        // Flora/fauna need more padding due to varied sizes and movement
         const viewport = this._getViewportBounds(300);
-        // Use cached values instead of recalculating
         const sin = this._cachedExtrusionSin;
         const cos = this._cachedExtrusionCos;
 
-        let objectsDrawn = 0;
-        let objectsCulled = 0;
+        // Reuse buffer array to avoid GC pressure
+        const buffer = this._depthSortBuffer;
+        buffer.length = 0;
 
         for (let obj of this.surfaceObjects) {
             if (!obj || obj.destroyed) continue;
@@ -2658,36 +2655,34 @@ class SurfaceMode {
             const objSize = obj.size || 50;
             const objHeight = obj.height || (objSize * 2);
 
-            // Visual Projection Culling: Project logical position to visual on-screen position
-            const visX = obj.pos.x - objAlt * sin;
+            // Visual position for culling and depth
             const visY = obj.pos.y - objAlt * cos;
+            const visX = obj.pos.x - objAlt * sin;
 
             if (visX + objSize < viewport.minX || visX - objSize > viewport.maxX ||
                 visY + objSize < viewport.minY || visY - objHeight > viewport.maxY) {
-                objectsCulled++;
                 continue;
             }
 
-            objectsDrawn++;
+            // Store depth key directly on object (temporary, per-frame)
+            obj._depthY = visY;
+            buffer.push(obj);
+        }
 
-            // Calculate LOD level for all surface objects (flora, fauna, buildings)
-            // Uses unified system: LOD 3 (full) or LOD 2 (simplified) based on altitude/size
+        // Depth sort: smaller visY drawn first (back to front)
+        buffer.sort((a, b) => a._depthY - b._depthY);
+
+        // Draw in sorted order
+        for (let i = 0; i < buffer.length; i++) {
+            const obj = buffer[i];
+            const objAlt = (typeof obj.altitude !== 'undefined') ? obj.altitude : (obj.yOffset || 0);
+            const objSize = obj.size || 50;
             const lodLevel = this._calculateLODLevel(objSize);
 
-            // Local coordinates and altitude for surface objects
-            const worldX = obj.pos.x;
-            const worldY = obj.pos.y;
-            // objAlt already declared above
-
-            // Objects now handle their internal visual projection using world coords and altitude
-            // Pass LOD level for optimization
             if (obj.draw) {
-                obj.draw(worldX, worldY, sunAngle, objAlt, lodLevel);
+                obj.draw(obj.pos.x, obj.pos.y, sunAngle, objAlt, lodLevel);
             }
 
-            // Target reticle drawing moved to centralized UIHUD.drawTargetReticle() called via drawHUD()
-
-            // Debug visualization (only if debugMode is enabled)
             if (this.debugMode) {
                 push();
                 const bounds = this._getVisualBounds(obj);
@@ -2699,8 +2694,7 @@ class SurfaceMode {
             }
         }
 
-        // Store culling stats for debug overlay
-        this._lastObjectCullStats = { drawn: objectsDrawn, culled: objectsCulled };
+        this._lastObjectCullStats = { drawn: buffer.length, culled: this.surfaceObjects.length - buffer.length };
     }
 
     /**
