@@ -2069,39 +2069,57 @@ class SurfaceMode {
                         const DENSITY_WAVE_FREQUENCY = 0.01;  // How fast density varies across planets
                         const DENSITY_AMPLITUDE = 0.5;        // Half range of variation
                         const DENSITY_BASELINE = 0.5;         // Center point (0.5 = 50%)
-                        const planetDensityFactor = this.planet.featureRand ?
+                        const densityFactor = this.planet.featureRand ?
                             (Math.sin(this.planet.featureRand * DENSITY_WAVE_FREQUENCY) * DENSITY_AMPLITUDE + DENSITY_BASELINE) : DENSITY_BASELINE;
 
                         // Log density once per spawn cycle
                         if (gx === 0 && gy === 0) {
-                            console.log(`[Spawn] Planet ${this.planet.name} Density Factor: ${planetDensityFactor.toFixed(3)} (Fauna Threshold: 0.4, Flora Threshold: 0.2)`);
+                            console.log(`[Spawn] Planet ${this.planet.name} Global Density Factor: ${densityFactor.toFixed(3)}`);
                         }
 
                         // Inhabited vs Uninhabited spawning rules
                         if (this.planet.isInhabited) {
                             // INHABITED: Only flora, no fauna (civilization has displaced wildlife)
-                            // Much sparser flora (0.3% base * planet factor)
-                            const inhabitedFloraMin = 0.990;
-                            const inhabitedFloraMax = 0.993;
-                            if (cellHash > inhabitedFloraMin && cellHash < inhabitedFloraMax && planetDensityFactor > 0.3) {
-                                obj = this._createFlora(planetColors, wx, wy, objSeed);
+                            // Urban areas have very sparse flora, outskirts slightly more
+                            const settlementNoise = noise(activeGridX * 0.015 + 500, activeGridY * 0.015 + 500);
+                            const isSettlementZone = settlementNoise > 0.60;
+                            const inhabitedFloraProb = isSettlementZone ? 0.001 : 0.005;
+                            const densityThreshold = isSettlementZone ? 0.7 : 0.4;
+
+                            if (cellHash < inhabitedFloraProb && densityFactor > densityThreshold) {
+                                // Sample species noise for clustering
+                                const speciesNoise = noise(activeGridX * 0.1 + 1000, activeGridY * 0.1 + 1000);
+                                obj = this._createFlora(planetColors, wx, wy, objSeed, speciesNoise);
                             }
                         } else {
-                            // UNINHABITED: Both flora and fauna thrive
-                            // Flora spawning - moderate (2% base * planet factor)
-                            const wildFloraMin = 0.940;
-                            const wildFloraMax = 0.970;
-                            const wildFaunaMin = 0.970;
-                            const wildFaunaMax = 0.999;
+                            // UNINHABITED: Both flora and fauna thrive in organic patterns
+                            // Scale density noise for variety (barren vs lush)
+                            const organicDensity = noise(activeGridX * 0.04 + 2000, activeGridY * 0.04 + 2000);
 
-                            if (cellHash > wildFloraMin && cellHash < wildFloraMax && planetDensityFactor > 0.2) {
-                                obj = this._createFlora(planetColors, wx, wy, objSeed);
+                            // Dynamic thresholds: Lush planets (densityFactor=1) have low thresholds (0.3)
+                            // Barren planets (densityFactor=0) have high thresholds (0.8), creating rare pockets
+                            const floraThreshold = 0.8 - (0.5 * densityFactor);
+                            const faunaThreshold = 0.85 - (0.4 * densityFactor);
+
+                            // Flora spawning
+                            if (organicDensity > floraThreshold) {
+                                const floraProb = 0.02 + (0.15 * densityFactor);
+                                if (cellHash < floraProb) {
+                                    const speciesNoise = noise(activeGridX * 0.1 + 1000, activeGridY * 0.1 + 1000);
+                                    obj = this._createFlora(planetColors, wx, wy, objSeed, speciesNoise);
+                                }
                             }
-                            // Fauna spawning - moderate (roughly 2.9% probability)
-                            else if (cellHash > wildFaunaMin && cellHash < wildFaunaMax && planetDensityFactor > 0.4) {
-                                obj = this._createFauna(planetColors, wx, wy, objSeed);
-                                if (obj) {
-                                    console.log(`[Spawn] Spawned fauna ${obj.constructor.name} at ${cellKey} (Hash: ${cellHash.toFixed(4)}, Factor: ${planetDensityFactor.toFixed(2)})`);
+
+                            // Fauna spawning (can now happen in its own zones or alongside flora)
+                            if (!obj && organicDensity > faunaThreshold) {
+                                const faunaProb = 0.02 + (0.08 * densityFactor);
+                                // Use subHash for independent luck roll vs flora
+                                if (subHash < faunaProb) {
+                                    const speciesNoise = noise(activeGridX * 0.12 + 3000, activeGridY * 0.12 + 3000);
+                                    obj = this._createFauna(planetColors, wx, wy, objSeed, speciesNoise);
+                                    if (obj) {
+                                        console.log(`[Spawn] Spawned organic fauna ${obj.constructor.name} at ${cellKey} (Density Factor: ${densityFactor.toFixed(2)})`);
+                                    }
                                 }
                             }
                         }
@@ -2199,28 +2217,32 @@ class SurfaceMode {
      * @param {number} x - World X coordinate
      * @param {number} y - World Y coordinate
      * @param {number} seed - Random seed for variation
+     * @param {number} speciesNoise - Noise value (0-1) for species clustering
      * @returns {SurfaceFlora} The created flora
      * @private
      */
-    _createFlora(planetColors, x, y, seed) {
-        const rand = (seed * 7.919) % 1;
+    _createFlora(planetColors, x, y, seed, speciesNoise = 0.5) {
         const size = 15 + (seed % 20);
 
-        // Choose flora type based on random value
-        if (rand < 0.2 && typeof AlienTree !== 'undefined') {
-            return new AlienTree(x, y, size, planetColors, seed);
-        } else if (rand < 0.4 && typeof CrystalPlant !== 'undefined') {
-            return new CrystalPlant(x, y, size, planetColors, seed);
-        } else if (rand < 0.6 && typeof TentaclePlant !== 'undefined') {
-            return new TentaclePlant(x, y, size, planetColors, seed);
-        } else if (rand < 0.8 && typeof SporeStalk !== 'undefined') {
-            return new SporeStalk(x, y, size, planetColors, seed);
+        // Species clustering: use speciesNoise to select the dominant type
+        // This creates "groves" or "patches" of same-species flora
+        let flora = null;
+
+        if (speciesNoise < 0.2 && typeof AlienTree !== 'undefined') {
+            flora = new AlienTree(x, y, size, planetColors, seed);
+        } else if (speciesNoise < 0.4 && typeof CrystalPlant !== 'undefined') {
+            flora = new CrystalPlant(x, y, size, planetColors, seed);
+        } else if (speciesNoise < 0.6 && typeof TentaclePlant !== 'undefined') {
+            flora = new TentaclePlant(x, y, size, planetColors, seed);
+        } else if (speciesNoise < 0.8 && typeof SporeStalk !== 'undefined') {
+            flora = new SporeStalk(x, y, size, planetColors, seed);
         } else if (typeof BubbleBush !== 'undefined') {
-            return new BubbleBush(x, y, size, planetColors, seed);
+            flora = new BubbleBush(x, y, size, planetColors, seed);
+        } else {
+            flora = typeof AlienTree !== 'undefined' ? new AlienTree(x, y, size, planetColors, seed) : null;
         }
 
-        // Fallback to AlienTree if available
-        return typeof AlienTree !== 'undefined' ? new AlienTree(x, y, size, planetColors, seed) : null;
+        return flora;
     }
 
     /**
@@ -2229,20 +2251,20 @@ class SurfaceMode {
      * @param {number} x - World X coordinate
      * @param {number} y - World Y coordinate
      * @param {number} seed - Random seed for variation
+     * @param {number} speciesNoise - Noise value (0-1) for species clustering
      * @returns {SurfaceFauna} The created fauna
      * @private
      */
-    _createFauna(planetColors, x, y, seed) {
-        const rand = (seed * 13.579) % 1;
+    _createFauna(planetColors, x, y, seed, speciesNoise = 0.5) {
         const size = 10 + (seed % 15);
 
         let fauna = null;
-        // Choose fauna type based on random value
-        if (rand < 0.25 && typeof SlitherCreature !== 'undefined') {
+        // Species clustering for fauna groups
+        if (speciesNoise < 0.25 && typeof SlitherCreature !== 'undefined') {
             fauna = new SlitherCreature(x, y, size, planetColors, seed);
-        } else if (rand < 0.5 && typeof FloaterCreature !== 'undefined') {
+        } else if (speciesNoise < 0.5 && typeof FloaterCreature !== 'undefined') {
             fauna = new FloaterCreature(x, y, size, planetColors, seed);
-        } else if (rand < 0.75 && typeof RollerCreature !== 'undefined') {
+        } else if (speciesNoise < 0.75 && typeof RollerCreature !== 'undefined') {
             fauna = new RollerCreature(x, y, size, planetColors, seed);
         } else if (typeof StalkCreature !== 'undefined') {
             fauna = new StalkCreature(x, y, size, planetColors, seed);
