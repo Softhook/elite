@@ -159,14 +159,15 @@ const Draw3D = {
 
     /**
      * Draw an extruded regular prism (polygon with depth)
+     * @param {boolean} skipBottom - If true, skip drawing bottom cap (optimization for fixed-view surface mode)
      */
-    drawPrism: function (x, y, r, sides, depth, col, angle, sunAngle) {
+    drawPrism: function (x, y, r, sides, depth, col, angle, sunAngle, skipBottom = false) {
         // If deferred rendering is active, queue this call
         if (_renderQueue !== null) {
             const primitiveDepth = calculatePrimitiveDepth(x, y, depth, angle);
             _renderQueue.push({
                 depth: primitiveDepth,
-                fn: () => this.drawPrism(x, y, r, sides, depth, col, angle, sunAngle)
+                fn: () => this.drawPrism(x, y, r, sides, depth, col, angle, sunAngle, skipBottom)
             });
             return;
         }
@@ -178,14 +179,16 @@ const Draw3D = {
 
         strokeWeight(1);
 
-        // Draw Bottom Cap
-        fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
-        stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
-        beginShape();
-        for (let i = 0; i < sides; i++) {
-            vertex(x + trig.cos[i] * r + dv.x, y + trig.sin[i] * r + dv.y);
+        // Draw Bottom Cap (skipped in fixed-view surface mode - never visible)
+        if (!skipBottom) {
+            fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
+            stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
+            beginShape();
+            for (let i = 0; i < sides; i++) {
+                vertex(x + trig.cos[i] * r + dv.x, y + trig.sin[i] * r + dv.y);
+            }
+            endShape(CLOSE);
         }
-        endShape(CLOSE);
 
         // Draw sides with backface culling
         for (let i = 0; i < sides; i++) {
@@ -291,14 +294,15 @@ const Draw3D = {
 
     /**
      * Draw a 3D extruded box
+     * @param {boolean} skipBottom - If true, skip drawing bottom cap (optimization for fixed-view surface mode)
      */
-    drawBox3D: function (x, y, w, h, depth, col, angle, sunAngle) {
+    drawBox3D: function (x, y, w, h, depth, col, angle, sunAngle, skipBottom = false) {
         // If deferred rendering is active, queue this call instead of executing
         if (_renderQueue !== null) {
             const primitiveDepth = calculatePrimitiveDepth(x, y, depth, angle);
             _renderQueue.push({
                 depth: primitiveDepth,
-                fn: () => this.drawBox3D(x, y, w, h, depth, col, angle, sunAngle)
+                fn: () => this.drawBox3D(x, y, w, h, depth, col, angle, sunAngle, skipBottom)
             });
             return;
         }
@@ -313,15 +317,17 @@ const Draw3D = {
 
         strokeWeight(1);
 
-        // Bottom Cap
-        fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
-        stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
-        beginShape();
-        vertex(x - hw + dv.x, y - hh + dv.y);
-        vertex(x + hw + dv.x, y - hh + dv.y);
-        vertex(x + hw + dv.x, y + hh + dv.y);
-        vertex(x - hw + dv.x, y + hh + dv.y);
-        endShape(CLOSE);
+        // Bottom Cap (skipped in fixed-view surface mode - never visible)
+        if (!skipBottom) {
+            fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
+            stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
+            beginShape();
+            vertex(x - hw + dv.x, y - hh + dv.y);
+            vertex(x + hw + dv.x, y - hh + dv.y);
+            vertex(x + hw + dv.x, y + hh + dv.y);
+            vertex(x - hw + dv.x, y + hh + dv.y);
+            endShape(CLOSE);
+        }
 
         // Sides with backface culling
         for (let i = 0; i < 4; i++) {

@@ -139,7 +139,7 @@ class AlienTree extends SurfaceFlora {
             typeof getProjectionHelpers === 'function' ? getProjectionHelpers(worldX, worldY, alt + trunkH) : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
 
         // Draw trunk
-        Draw3D.drawBox3D(baseX, baseY, trunkW, trunkW, trunkH, this.trunkColor, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(baseX, baseY, trunkW, trunkW, trunkH, this.trunkColor, extrusionAngle, sunAngle, true);
 
         // Canopy - sits on top of trunk
         const canopyR = this.size * 0.8;
@@ -161,7 +161,8 @@ class AlienTree extends SurfaceFlora {
                 this.size * 0.4,
                 this.color,
                 extrusionAngle,
-                sunAngle
+                sunAngle,
+                true
             );
         }
     }
@@ -207,13 +208,13 @@ class CrystalPlant extends SurfaceFlora {
             const cTopX = cx - cHeight * sinE;
             const cTopY = cy - cHeight * cosE;
 
-            Draw3D.drawBox3D(cTopX, cTopY, cWidth, cWidth, cHeight, this.crystalColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(cTopX, cTopY, cWidth, cWidth, cHeight, this.crystalColor, extrusionAngle, sunAngle, true);
         }
 
         // Central crystal (always drawn at LOD 2+)
         const centralTopX = baseX - this.height * sinE;
         const centralTopY = baseY - this.height * cosE;
-        Draw3D.drawBox3D(centralTopX, centralTopY, this.size * 0.3, this.size * 0.3, this.height, this.color, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(centralTopX, centralTopY, this.size * 0.3, this.size * 0.3, this.height, this.color, extrusionAngle, sunAngle, true);
     }
 }
 
@@ -240,7 +241,7 @@ class TentaclePlant extends SurfaceFlora {
             typeof getProjectionHelpers === 'function' ? getProjectionHelpers(worldX, worldY, alt + baseH) : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
 
         // Base bulb - baseX/baseY is top of bulb
-        Draw3D.drawPrism(baseX, baseY, this.size * 0.5, lodLevel === 2 ? 6 : 8, baseH, this.baseColor, extrusionAngle, sunAngle);
+        Draw3D.drawPrism(baseX, baseY, this.size * 0.5, lodLevel === 2 ? 6 : 8, baseH, this.baseColor, extrusionAngle, sunAngle, true);
 
         // LOD 2: Reduced tentacles (max 3) with 1 segment, LOD 3: Full tentacles with 3 segments
         const tentacleCount = lodLevel === 2 ? Math.min(3, this.tentacles) : this.tentacles;
@@ -257,7 +258,7 @@ class TentaclePlant extends SurfaceFlora {
                 const tWidth = this.size * 0.15 * (1 - progress * 0.5);
                 const tHeight = this.height * 0.3;
 
-                Draw3D.drawBox3D(tx, ty, tWidth, tWidth, tHeight, this.color, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(tx, ty, tWidth, tWidth, tHeight, this.color, extrusionAngle, sunAngle, true);
             }
         }
     }
@@ -286,11 +287,11 @@ class SporeStalk extends SurfaceFlora {
 
         // Thin stalk - baseX/baseY is top of stalk
         const stalkW = this.size * 0.2;
-        Draw3D.drawBox3D(baseX, baseY, stalkW, stalkW, this.height, this.color, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(baseX, baseY, stalkW, stalkW, this.height, this.color, extrusionAngle, sunAngle, true);
 
         // Spore cap at top (reduced polygon sides at LOD 2)
         const capH = this.size * 0.4;
-        Draw3D.drawPrism(baseX, baseY, this.size * 0.6, lodLevel === 2 ? 6 : 12, capH, this.sporeColor, extrusionAngle, sunAngle);
+        Draw3D.drawPrism(baseX, baseY, this.size * 0.6, lodLevel === 2 ? 6 : 12, capH, this.sporeColor, extrusionAngle, sunAngle, true);
 
         // LOD 3 only: Small spore clusters floating around cap
         if (lodLevel === 3) {
@@ -301,7 +302,7 @@ class SporeStalk extends SurfaceFlora {
                 const sy = baseY + Math.sin(angle) * dist * 0.5;
                 const sporeSize = this.size * 0.1;
 
-                Draw3D.drawPrism(sx, sy, sporeSize, 6, sporeSize * 0.5, this.sporeColor, extrusionAngle, sunAngle);
+                Draw3D.drawPrism(sx, sy, sporeSize, 6, sporeSize * 0.5, this.sporeColor, extrusionAngle, sunAngle, true);
             }
         }
     }
@@ -343,7 +344,7 @@ class BubbleBush extends SurfaceFlora {
                 200 - layer * 30
             );
 
-            Draw3D.drawPrism(bx, by, bSize, sidesPerBubble, bHeight, bubbleColor, extrusionAngle, sunAngle);
+            Draw3D.drawPrism(bx, by, bSize, sidesPerBubble, bHeight, bubbleColor, extrusionAngle, sunAngle, true);
         }
     }
 }
@@ -670,12 +671,12 @@ class SlitherCreature extends SurfaceFauna {
                 blue(this.color) * (1 - progress * 0.2)
             );
 
-            Draw3D.drawPrism(sx, sy, segSize, polygonSides, this.height, segColor, extrusionAngle, sunAngle);
+            Draw3D.drawPrism(sx, sy, segSize, polygonSides, this.height, segColor, extrusionAngle, sunAngle, true);
         }
 
         // Head (drawn last for depth)
         const headSize = this.size * 1.2;
-        Draw3D.drawPrism(baseX, baseY, headSize, 6, this.height * 1.5, this.color, extrusionAngle, sunAngle);
+        Draw3D.drawPrism(baseX, baseY, headSize, 6, this.height * 1.5, this.color, extrusionAngle, sunAngle, true);
     }
 }
 
@@ -708,7 +709,7 @@ class FloaterCreature extends SurfaceFauna {
             200
         );
         const bellSides = lodLevel === 2 ? 8 : 12;
-        Draw3D.drawPrism(baseX, baseY, this.size, bellSides, this.size * 0.8, bellColor, extrusionAngle, sunAngle);
+        Draw3D.drawPrism(baseX, baseY, this.size, bellSides, this.size * 0.8, bellColor, extrusionAngle, sunAngle, true);
 
         // LOD 2: 2 tentacles with 1 segment each, LOD 3: Full tentacles with 3 segments
         const tentacleCount = lodLevel === 2 ? 2 : this.tentacles;
@@ -732,7 +733,8 @@ class FloaterCreature extends SurfaceFauna {
                     this.size * 0.5,
                     this.color,
                     extrusionAngle,
-                    sunAngle
+                    sunAngle,
+                    true
                 );
             }
         }
@@ -769,7 +771,7 @@ class RollerCreature extends SurfaceFauna {
 
         // Main body sphere (as prism)
         const bodySides = lodLevel === 2 ? 8 : 12;
-        Draw3D.drawPrism(topX, topY, this.size, bodySides, height, this.color, extrusionAngle, sunAngle);
+        Draw3D.drawPrism(topX, topY, this.size, bodySides, height, this.color, extrusionAngle, sunAngle, true);
 
         // LOD 2: 4 spikes, LOD 3: All spikes
         const spikeCount = lodLevel === 2 ? 0 : this.spikes;
@@ -789,7 +791,7 @@ class RollerCreature extends SurfaceFauna {
                 blue(this.color) * 0.7
             );
 
-            Draw3D.drawBox3D(sx, sy, spikeSize, spikeSize, this.size * 0.4, spikeColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(sx, sy, spikeSize, spikeSize, this.size * 0.4, spikeColor, extrusionAngle, sunAngle, true);
         }
     }
 }
@@ -842,7 +844,8 @@ class StalkCreature extends SurfaceFauna {
                 this.legLength * 0.6,
                 this.color,
                 extrusionAngle,
-                sunAngle
+                sunAngle,
+                true
             );
 
             // Lower leg (LOD 3 only)
@@ -855,7 +858,8 @@ class StalkCreature extends SurfaceFauna {
                     this.legLength * 0.4,
                     this.color,
                     extrusionAngle,
-                    sunAngle
+                    sunAngle,
+                    true
                 );
             }
         }
@@ -867,7 +871,7 @@ class StalkCreature extends SurfaceFauna {
         const bTopY = baseY - totalHeight * cosE;
 
         const bodySides = lodLevel === 2 ? 6 : 8;
-        Draw3D.drawPrism(bTopX, bTopY, this.size * 0.8, bodySides, bodyH, this.color, extrusionAngle, sunAngle);
+        Draw3D.drawPrism(bTopX, bTopY, this.size * 0.8, bodySides, bodyH, this.color, extrusionAngle, sunAngle, true);
 
         // Head/sensory organ (LOD 3 only)
         if (lodLevel === 3) {
@@ -880,7 +884,7 @@ class StalkCreature extends SurfaceFauna {
                 green(this.color) + 40,
                 blue(this.color) + 40
             );
-            Draw3D.drawPrism(hTopX, hTopY, this.size * 0.5, 6, headH, headColor, extrusionAngle, sunAngle);
+            Draw3D.drawPrism(hTopX, hTopY, this.size * 0.5, 6, headH, headColor, extrusionAngle, sunAngle, true);
         }
     }
 }
