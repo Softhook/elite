@@ -1592,6 +1592,12 @@ function loadGame(slotIndex) {
                                             surfaceMode.astronaut = new Astronaut(createVector(savedSurface.astronautPos.x, savedSurface.astronautPos.y), { skipSpawnOffset: true });
                                             try { surfaceMode.astronaut.altitude = surfaceMode._getTerrainHeightAt(surfaceMode.astronaut.pos.x, surfaceMode.astronaut.pos.y); } catch (e) { /* ignore */ }
                                             surfaceMode.controlMode = 'ASTRONAUT';
+
+                                            // Immediately set zoom for restored astronaut mode (no lerp on first frame)
+                                            if (typeof SURFACE_CONFIG !== 'undefined' && SURFACE_CONFIG.EVA_ZOOM) {
+                                                surfaceMode.viewZoom = SURFACE_CONFIG.EVA_ZOOM;
+                                                surfaceMode.targetViewZoom = SURFACE_CONFIG.EVA_ZOOM;
+                                            }
                                         } else {
                                             // Missing astronaut position in save — fallback to ship control
                                             surfaceMode.controlMode = 'SHIP';

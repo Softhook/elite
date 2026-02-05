@@ -39,6 +39,7 @@ const SURFACE_CONFIG = {
     BOARDING_RANGE: 40,         // Distance within which player can board ship
     REEBOARD_COOLDOWN: 2.0,     // Seconds before allowing re-boarding after disembark
     HAB_UNIT_SIZE: 60,          // Standard size for hab units
+    EVA_ZOOM: 1.5,              // Automatic zoom factor when disembarking as astronaut
 
     // Terrain detection
     CANYON_DETECTION_DISTANCE: 400, // Distance to check for canyon edges
@@ -213,6 +214,10 @@ class SurfaceMode {
 
         // Transition color (defaults to cloud layer white, updated on entry)
         this.transitionColor = SURFACE_CONFIG.CLOUD_LAYER.COLOR;
+
+        // View Zoom (for astronaut EVA mode)
+        this.viewZoom = 1.0;
+        this.targetViewZoom = 1.0;
     }
 
     /**
@@ -786,6 +791,14 @@ class SurfaceMode {
             this._updateTransition();
         }
 
+        // Interpolate view zoom smoothly
+        const ZOOM_LERP_SPEED = 5.0; // Speed of zoom transition
+        if (Math.abs(this.viewZoom - this.targetViewZoom) > 0.001) {
+            this.viewZoom = lerp(this.viewZoom, this.targetViewZoom, 1 - Math.exp(-ZOOM_LERP_SPEED * dt));
+        } else {
+            this.viewZoom = this.targetViewZoom;
+        }
+
         // Allow input processing during ACTIVE, ENTERING (when ready), and EXITING
         // During EXITING, ship needs to keep moving/responding to look alive
         const canProcessInput = this.state === SURFACE_STATE.ACTIVE ||
@@ -1149,6 +1162,7 @@ class SurfaceMode {
         if (this.controlMode === 'ASTRONAUT') return;
 
         this.controlMode = 'ASTRONAUT';
+        this.targetViewZoom = SURFACE_CONFIG.EVA_ZOOM; // Zoom in for EVA immersion
 
         // Create astronaut at player position
         // Ensure astronaut.js is loaded
@@ -1177,6 +1191,7 @@ class SurfaceMode {
         if (this.controlMode !== 'ASTRONAUT') return;
 
         this.controlMode = 'SHIP';
+        this.targetViewZoom = 1.0; // Zoom out to normal ship view
         this.astronaut = null;
 
         // Reset player inputs to prevent instant re-deploy or launch
@@ -1750,7 +1765,8 @@ class SurfaceMode {
         translate(width / 2, height / 2);
 
         // 2. Perspective scaling (everything world-side scales together)
-        scale(this._cachedPerspectiveScale);
+        // Apply view zoom multiplier (for automatic EVA zoom)
+        scale(this._cachedPerspectiveScale * this.viewZoom);
 
         // 3. World translation (camera follows player's visual top position)
         const visualXOffset = this.altitude * this._cachedExtrusionSin;
