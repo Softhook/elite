@@ -163,6 +163,15 @@ class MiningRobot {
         // Skip update if destroyed
         if (this.destroyed) return;
 
+        // Self-destruct if home base is gone
+        if (this.homeBase && this.homeBase.destroyed) {
+            this.destroyed = true;
+            if (surfaceMode && typeof surfaceMode._createExplosion === 'function') {
+                surfaceMode._createExplosion(this.pos.x, this.pos.y, this.size * 0.5);
+            }
+            return;
+        }
+
         this.stateTimer += dt;
         this.lightTimer += MINING_CONFIG.LIGHT_BLINK_SPEED;
 

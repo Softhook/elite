@@ -43,6 +43,7 @@ class SurfaceFlora {
         // Health system (compatible with SurfaceObject)
         this.health = 50; // Flora has moderate durability
         this.maxHealth = 50;
+        this.isSurface = true; // Mark as surface entity for HUD
     }
 
     /**
@@ -408,6 +409,7 @@ class SurfaceFauna {
         this.targetBase = null;
         this.attackCooldown = 0;
         this.attackRate = 2.0; // Seconds between attacks
+        this.isSurface = true; // Mark as surface entity for HUD
     }
 
     /**

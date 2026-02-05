@@ -19,10 +19,12 @@ class SurfaceHUD {
         this._drawDebugStats(surfaceMode);
 
         // 2. Surface Controls Hint (Top Center)
-        this._drawControlHints();
+        this._drawControlHints(surfaceMode.controlMode);
 
         // 3. Altitude bar (Right side)
-        this._drawAltitudeBar(surfaceMode);
+        if (surfaceMode.controlMode !== 'ASTRONAUT') {
+            this._drawAltitudeBar(surfaceMode);
+        }
 
         // 4. Compass (Bottom Right)
         this._drawCompass(surfaceMode);
@@ -90,7 +92,9 @@ class SurfaceHUD {
      * Draw control reminders
      * @private
      */
-    _drawControlHints() {
+    _drawControlHints(controlMode) {
+        if (controlMode === 'ASTRONAUT') return;
+
         const hintY = 45 + 24 + 5;
         fill(40, 80, 120, 200);
         noStroke();

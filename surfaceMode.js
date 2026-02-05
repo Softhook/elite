@@ -22,7 +22,7 @@ const SURFACE_CONFIG = {
     HIGH_TERRAIN_THRESHOLD: 350, // Height (0-500) treated as high ground for defenses
 
     // Transition
-    TRANSITION_ENTER_DURATION: 2000, // ms for entering (terrain loads during fade)
+    TRANSITION_ENTER_DURATION: 3000, // ms for entering (terrain loads during fade)
     TRANSITION_EXIT_DURATION: 250,   // ms for exiting (very fast - just a flash)
     TRIGGER_KEY: 71,           // 'G' key for surface descent
 
@@ -39,7 +39,7 @@ const SURFACE_CONFIG = {
     BOARDING_RANGE: 40,         // Distance within which player can board ship
     REEBOARD_COOLDOWN: 2.0,     // Seconds before allowing re-boarding after disembark
     HAB_UNIT_SIZE: 60,          // Standard size for hab units
-    EVA_ZOOM: 1.5,              // Automatic zoom factor when disembarking as astronaut
+    EVA_ZOOM: 1.3,              // Automatic zoom factor when disembarking as astronaut
 
     // Terrain detection
     CANYON_DETECTION_DISTANCE: 400, // Distance to check for canyon edges
@@ -654,12 +654,15 @@ class SurfaceMode {
                 desc.destroyed = true;
 
                 // If it was a base, clean up associated mining systems
-                if (desc.variant === 1 && desc.type === 'OffworldBuilding') {
+                if (desc.variant === 1 && (desc.type === 'OffworldBuilding' || desc.type === 'Offworld Colony')) {
                     // Destroy mining robots associated with this base
                     if (this.miningRobots) {
                         for (let robot of this.miningRobots) {
-                            if (robot.homeBase && robot.homeBase.cellKey === cellKey) {
+                            if (robot.homeBase && (robot.homeBase.cellKey === cellKey || (robot.homeBase.pos && robot.homeBase.pos.x === desc.x && robot.homeBase.pos.y === desc.y))) {
                                 robot.destroyed = true;
+                                if (typeof this._createExplosion === 'function') {
+                                    this._createExplosion(robot.pos.x, robot.pos.y, robot.size * 0.5);
+                                }
                             }
                         }
                     }
@@ -668,6 +671,15 @@ class SurfaceMode {
                     const baseKey = `base_${desc.x}_${desc.y}`;
                     this.oreSeams.delete(baseKey);
                     console.log(`[Persistence] Mining system for base at ${cellKey} cleaned up.`);
+                }
+
+                // Sync destruction status to the planet's persistent list of built objects
+                // This ensures compass markers (green dots) are removed
+                if (this.planet.playerBuiltSurfaceObjects) {
+                    const persistentObj = this.planet.playerBuiltSurfaceObjects.find(o => o.x === desc.x && o.y === desc.y);
+                    if (persistentObj) {
+                        persistentObj.destroyed = true;
+                    }
                 }
             }
 
@@ -1808,13 +1820,14 @@ class SurfaceMode {
 
         pop();
 
-        // Draw game HUD (shields, hull, speed, etc. - NOT scaled)
-        this._drawGameHUD();
-
         // Draw surface-specific HUD (altitude bar, compass)
         if (typeof surfaceHud !== 'undefined' && surfaceHud) {
             surfaceHud.draw(this);
         }
+
+        // Draw game HUD (shields, hull, speed, etc. - NOT scaled)
+        // This includes the target overlay, which should be on top
+        this._drawGameHUD();
     }
 
     /**

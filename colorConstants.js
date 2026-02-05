@@ -91,6 +91,11 @@ const SHIELD_BAR_COLORS = {
     BG: [0, 50, 100]       // Dark Blue
 };
 
+const STORAGE_BAR_COLORS = {
+    FILL: [100, 200, 255], // Light Blue
+    BG: [20, 40, 60]       // Dark Slate Blue
+};
+
 /**
  * Helper function to get faction color
  * @param {string} factionName - Name of the faction (e.g., 'IMPERIAL', 'SEPARATIST')

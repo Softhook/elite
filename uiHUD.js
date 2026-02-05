@@ -446,7 +446,9 @@ class UIHUD {
         const barX = width - 150;
         const barMiddleY = 20;
 
-        if (player.maxShield > 0) {
+        const isAstronaut = player.controlMode === 'ASTRONAUT' || (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.controlMode === 'ASTRONAUT');
+
+        if (player.maxShield > 0 && !isAstronaut) {
             // Shield bar
             fill(SHIELD_BAR_COLORS.BG);
             rect(barX, barMiddleY - barHeight - 2, barWidth, barHeight);
@@ -477,7 +479,8 @@ class UIHUD {
         noStroke();
         textAlign(RIGHT, CENTER);
         textSize(STATION_TEXT_SIZE.BODY);
-        text(`Hull: ${Math.floor(player.hull)}/${player.maxHull}`, barX - 10, barMiddleY + barHeight / 2 + 2);
+        const hullLabel = isAstronaut ? "Health" : "Hull";
+        text(`${hullLabel}: ${Math.floor(player.hull)}/${player.maxHull}`, barX - 10, barMiddleY + barHeight / 2 + 2);
 
         this.drawWeaponSelector(player);
 
@@ -833,6 +836,7 @@ class UIHUD {
     drawTargetOverlay(player) {
         const target = player?.target;
         if (!target || target === player) return;
+        if (target.destroyed) return; // Immediate check for destroyed flag
         if (typeof target.isDestroyed === 'function' && target.isDestroyed()) return;
 
         const hasShipIdentity = typeof target.shipTypeName === 'string' || typeof target.shipDefinition === 'object';
@@ -842,7 +846,10 @@ class UIHUD {
         // Surface object detection
         const isSurfaceObject = target && (
             (target.isSurface === true) || // Explicit flag
-            (target.constructor && ['Turret', 'DefenseDrone', 'ShieldGenerator', 'Building', 'SurfaceStation'].includes(target.constructor.name))
+            (target.constructor && [
+                'Turret', 'DefenseDrone', 'ShieldGenerator', 'Building', 'SurfaceStation',
+                'OffworldBuilding', 'MiningRobot', 'SurfaceFauna', 'FaunaCreature'
+            ].includes(target.constructor.name))
         );
 
         if (!hasShipIdentity && !isAsteroid && !isSpaceObject && !isSurfaceObject) return;
@@ -1026,7 +1033,9 @@ class UIHUD {
             }
         }
 
-        const statBarsHeight = (lineHeight + 4) * 2;
+        const isPlayerBase = isSurfaceObject && target.isPlayerBase === true;
+        const statBarsCount = (hasShipIdentity || isPlayerBase) ? 2 : 1;
+        const statBarsHeight = (lineHeight + 4) * statBarsCount;
         const weaponsHeight = (weaponsList && weaponsList.length > 0)
             ? (sectionSpacing + lineHeight + weaponsList.length * lineHeight + sectionSpacing)
             : 0;
@@ -1114,8 +1123,25 @@ class UIHUD {
             const hp = (typeof target.health === 'number') ? target.health : (typeof target.hull === 'number' ? target.hull : 0);
             const hpMax = (typeof target.maxHealth === 'number') ? target.maxHealth : (typeof target.maxHull === 'number' ? target.maxHull : 0);
             const hpPercent = this._getStatPercent(hp, hpMax);
-            UIComponents.drawStatBar(cursorX, cursorY, panelWidth - padding * 2, 'Health', hp, hpMax, hpPercent);
-            cursorY += lineHeight;
+
+            // Use "Hull" for player bases and surface objects as requested
+            const hpLabel = isSurfaceObject ? 'Hull' : 'Health';
+            UIComponents.drawStatBar(cursorX, cursorY, panelWidth - padding * 2, hpLabel, hp, hpMax, hpPercent);
+            cursorY += lineHeight + 4;
+
+            // Add Storage bar for player bases in surface mode
+            if (isPlayerBase) {
+                // Correctly sum quantities of all items in storage
+                const storageCount = target.miningStorage ? target.miningStorage.reduce((sum, item) => sum + (item.quantity || 0), 0) : 0;
+                const storageCap = target.miningStorageCapacity || 100;
+                const storagePercent = this._getStatPercent(storageCount, storageCap);
+                UIComponents.drawStatBar(cursorX, cursorY, panelWidth - padding * 2, 'Storage', storageCount, storageCap, storagePercent, STORAGE_BAR_COLORS);
+                cursorY += lineHeight;
+            } else {
+                // If not a player base, we just step back the cursorY adjustment from the label above 
+                // to maintain consistent spacing with the weapons/info sections
+                cursorY -= 4;
+            }
         }
 
         cursorY += sectionSpacing;

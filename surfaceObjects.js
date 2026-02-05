@@ -40,11 +40,13 @@ class SurfaceObject {
         this.destroyed = false;
         this.color = color(150, 150, 150);
         this.yOffset = 0; // Height offset matching terrain (altitude semantics)
+        this.isSurface = true; // Mark as surface entity for HUD and filtering
     }
 
     // Aliases for HUD compatibility
     get hull() { return this.health; }
     get maxHull() { return this.maxHealth; }
+    isDestroyed() { return this.destroyed; }
 
     /**
      * Get friendly display name for UI
@@ -95,6 +97,13 @@ class SurfaceObject {
         this.health -= amount;
         if (this.health <= 0 && !this.destroyed) {
             this.destroyed = true;
+
+            // Create explosion at object position
+            if (typeof surfaceMode !== 'undefined' && surfaceMode && typeof surfaceMode._createSurfaceExplosion === 'function') {
+                const alt = this.altitude || (this.yOffset || 0);
+                surfaceMode._createSurfaceExplosion(this.pos.x, this.pos.y, alt, this.size * 1.5);
+            }
+
             if (typeof surfaceMode !== 'undefined' && this.cellKey) {
                 surfaceMode.registerDestruction(this.cellKey);
             }
@@ -2106,6 +2115,13 @@ class Turret extends SurfaceObject {
         console.log(`Turret [${this.id}] took ${amount} damage, health now: ${this.health}/${this.maxHealth}`);
         if (this.health <= 0 && !this.destroyed) {
             this.destroyed = true;
+
+            // Create explosion using centralized surface API
+            if (typeof surfaceMode !== 'undefined' && surfaceMode && typeof surfaceMode._createSurfaceExplosion === 'function') {
+                const alt = this.altitude || (this.yOffset || 0);
+                surfaceMode._createSurfaceExplosion(this.pos.x, this.pos.y, alt, this.size * 2);
+            }
+
             if (typeof surfaceMode !== 'undefined' && this.cellKey) {
                 surfaceMode.registerDestruction(this.cellKey);
             }
@@ -2439,6 +2455,8 @@ class ShieldGenerator extends SurfaceObject {
         console.log(`Shield Generator took ${amount} damage, health: ${this.health}/${this.maxHealth}`);
         if (this.health <= 0 && !this.destroyed) {
             this.destroyed = true;
+
+            // Destruction handled by onDestroy in this class
             if (typeof surfaceMode !== 'undefined' && this.cellKey) {
                 surfaceMode.registerDestruction(this.cellKey);
             }
@@ -2906,6 +2924,8 @@ class DefenseDrone extends SurfaceObject {
         console.log(`Defense Drone took ${amount} damage, health: ${this.health}/${this.maxHealth}`);
         if (this.health <= 0 && !this.destroyed) {
             this.destroyed = true;
+
+            // Destruction handled by onDestroy in this class
             if (typeof surfaceMode !== 'undefined' && this.cellKey) {
                 surfaceMode.registerDestruction(this.cellKey);
             }
