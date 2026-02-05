@@ -210,6 +210,9 @@ class SurfaceMode {
 
         // Exit fade overlay opacity (persists after exit for smooth fade-in to space)
         this.exitFadeOpacity = 0;
+
+        // Transition color (defaults to cloud layer white, updated on entry)
+        this.transitionColor = SURFACE_CONFIG.CLOUD_LAYER.COLOR;
     }
 
     /**
@@ -238,8 +241,8 @@ class SurfaceMode {
             return false;
         }
 
-        // Draw white overlay covering the entire screen
-        const cloudColor = SURFACE_CONFIG.CLOUD_LAYER.COLOR;
+        // Draw colored overlay covering the entire screen
+        const cloudColor = this.transitionColor || SURFACE_CONFIG.CLOUD_LAYER.COLOR;
         push();
         noStroke();
         // Clamp opacity to 1.0 for drawing (in case it started > 1.0)
@@ -466,6 +469,15 @@ class SurfaceMode {
         this.player = player;
         this.planet = planet;
         this.starSystem = starSystem;
+
+        // Set transition color to planet's base color for immersive fade
+        if (this.planet && this.planet.baseColor) {
+            const c = this.planet.baseColor;
+            // Ensure we have RGB values
+            this.transitionColor = [red(c), green(c), blue(c)];
+        } else {
+            this.transitionColor = SURFACE_CONFIG.CLOUD_LAYER.COLOR;
+        }
 
         // Reset cached surface objects so new terrain/building logic can repopulate cleanly
         this.objectCache.clear();
@@ -3032,9 +3044,10 @@ class SurfaceMode {
         const centerY = this.surfaceY - visualYOffset;
 
         // Draw cloud overlay
+        const cloudColor = this.transitionColor || cloud.COLOR;
         push();
         noStroke();
-        fill(cloud.COLOR[0], cloud.COLOR[1], cloud.COLOR[2], opacity);
+        fill(cloudColor[0], cloudColor[1], cloudColor[2], opacity);
         rectMode(CENTER);
         rect(centerX, centerY, halfW * 2 + 100, halfH * 2 + 100); // +100 for safety margin
         pop();
@@ -3231,7 +3244,7 @@ class SurfaceMode {
             : 255 * this.transitionProgress;
 
         // Use cloud color (white) for seamless cloud layer transition
-        const cloudColor = SURFACE_CONFIG.CLOUD_LAYER.COLOR;
+        const cloudColor = this.transitionColor || SURFACE_CONFIG.CLOUD_LAYER.COLOR;
 
         // Draw overlay in world space (same technique as cloud layer)
         // This ensures it covers the terrain/objects but is behind the player ship

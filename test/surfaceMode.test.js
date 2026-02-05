@@ -23,6 +23,12 @@ global.mouseX = 0;
 global.mouseY = 0;
 global.pixelDensity = jest.fn(() => 1);
 global.loadSound = jest.fn();
+// Mock p5 color helper functions
+global.color = (r, g, b, a) => ({ levels: [r, g, b, a || 255], toString: () => `rgba(${r},${g},${b},${a || 255})` });
+global.red = (c) => c && c.levels ? c.levels[0] : 0;
+global.green = (c) => c && c.levels ? c.levels[1] : 0;
+global.blue = (c) => c && c.levels ? c.levels[2] : 0;
+global.alpha = (c) => c && c.levels ? c.levels[3] : 255;
 
 // Mock SurfaceTerrain before requiring surfaceMode
 global.SurfaceTerrain = class SurfaceTerrain {
@@ -933,7 +939,7 @@ describe('SurfaceMode Transitions', () => {
 
     test('_updateTransition updates progress based on elapsed time', () => {
         sm.enter(player, planet, starSystem);
-        sm.transitionStartTime = millis() - SURFACE_CONFIG.TRANSITION_DURATION / 2;
+        sm.transitionStartTime = millis() - SURFACE_CONFIG.TRANSITION_ENTER_DURATION / 2;
 
         sm._updateTransition();
 
@@ -942,7 +948,7 @@ describe('SurfaceMode Transitions', () => {
 
     test('_updateTransition caps progress at 1', () => {
         sm.enter(player, planet, starSystem);
-        sm.transitionStartTime = millis() - SURFACE_CONFIG.TRANSITION_DURATION * 2;
+        sm.transitionStartTime = millis() - SURFACE_CONFIG.TRANSITION_ENTER_DURATION * 2;
 
         sm._updateTransition();
 
@@ -951,7 +957,7 @@ describe('SurfaceMode Transitions', () => {
 
     test('ENTERING transitions to ACTIVE when complete', () => {
         sm.enter(player, planet, starSystem);
-        sm.transitionStartTime = millis() - SURFACE_CONFIG.TRANSITION_DURATION * 2;
+        sm.transitionStartTime = millis() - SURFACE_CONFIG.TRANSITION_ENTER_DURATION * 2;
         sm._terrainRequested = true; // Ensure logic doesn't reset _terrainReady
         sm._terrainReady = true;
 
@@ -963,7 +969,7 @@ describe('SurfaceMode Transitions', () => {
     test('EXITING calls _completeExit when complete', () => {
         sm.enter(player, planet, starSystem);
         sm.state = SURFACE_STATE.EXITING;
-        sm.transitionStartTime = millis() - SURFACE_CONFIG.TRANSITION_DURATION * 2;
+        sm.transitionStartTime = millis() - SURFACE_CONFIG.TRANSITION_EXIT_DURATION * 2;
 
         sm._updateTransition();
 
@@ -1104,17 +1110,17 @@ describe('SurfaceMode Shield Generator Spawning', () => {
 
     test('only one shield generator spawns at target position', () => {
         sm.enter(player, planet, starSystem);
-        
+
         // Set a specific target position
         sm.targetPos = createVector(100, 200);
-        
+
         // Spawn objects multiple times (simulating terrain updates)
         sm._spawnObjects(0, 0);
         const firstCount = sm.surfaceObjects.filter(obj => obj.type === 'ShieldGenerator').length;
-        
+
         sm._spawnObjects(0, 0);
         const secondCount = sm.surfaceObjects.filter(obj => obj.type === 'ShieldGenerator').length;
-        
+
         // Should be exactly 1 shield generator both times
         expect(firstCount).toBe(1);
         expect(secondCount).toBe(1);
@@ -1122,14 +1128,14 @@ describe('SurfaceMode Shield Generator Spawning', () => {
 
     test('shield generator spawns at exact target position', () => {
         sm.enter(player, planet, starSystem);
-        
+
         // Set a specific target position
         const targetX = 100;
         const targetY = 200;
         sm.targetPos = createVector(targetX, targetY);
-        
+
         sm._spawnObjects(0, 0);
-        
+
         const generators = sm.surfaceObjects.filter(obj => obj.type === 'ShieldGenerator');
         expect(generators.length).toBe(1);
         expect(generators[0].pos.x).toBe(targetX);
@@ -1149,7 +1155,8 @@ describe('SURFACE_CONFIG', () => {
     });
 
     test('has valid transition duration', () => {
-        expect(SURFACE_CONFIG.TRANSITION_DURATION).toBeGreaterThan(0);
+        expect(SURFACE_CONFIG.TRANSITION_ENTER_DURATION).toBeGreaterThan(0);
+        expect(SURFACE_CONFIG.TRANSITION_EXIT_DURATION).toBeGreaterThan(0);
     });
 
     test('has drone configuration', () => {
