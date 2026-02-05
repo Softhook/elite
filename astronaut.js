@@ -200,13 +200,13 @@ class Astronaut {
         const torsoH = this.height * 0.6;
         const torsoTopX = visualX - torsoH * Math.sin(extrusionAngle);
         const torsoTopY = baseY - torsoH * Math.cos(extrusionAngle);
-        Draw3D.drawBox3D(torsoTopX, torsoTopY, sz * 0.9, sz * 0.6, torsoH, suitBase, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(torsoTopX, torsoTopY, sz * 0.9, sz * 0.6, torsoH, suitBase, extrusionAngle, sunAngle, true);
 
         // Backpack - behind torso
         const backOffsetX = -Math.cos(this.facingAngle) * sz * 0.35;
         const backX = visualX + backOffsetX - (torsoH * 0.15) * Math.sin(extrusionAngle); // Adjust for backpack height
         const backTopY = torsoTopY - (torsoH * 0.15) * Math.cos(extrusionAngle);
-        Draw3D.drawBox3D(backX, backTopY, sz * 0.45, sz * 0.5, torsoH * 0.6, suitShade, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(backX, backTopY, sz * 0.45, sz * 0.5, torsoH * 0.6, suitShade, extrusionAngle, sunAngle, true);
 
         // Legs - positioned relative to the projected base
         const legH = this.height * 0.5;
@@ -220,8 +220,8 @@ class Astronaut {
         const legTopX_R = rightLegBaseX - legH * Math.sin(extrusionAngle);
         const legTopY_R = baseY - legH * Math.cos(extrusionAngle);
 
-        Draw3D.drawBox3D(legTopX_L, legTopY_L, sz * 0.25, sz * 0.45, legH, suitBase, extrusionAngle, sunAngle);
-        Draw3D.drawBox3D(legTopX_R, legTopY_R, sz * 0.25, sz * 0.45, legH, suitBase, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(legTopX_L, legTopY_L, sz * 0.25, sz * 0.45, legH, suitBase, extrusionAngle, sunAngle, true);
+        Draw3D.drawBox3D(legTopX_R, legTopY_R, sz * 0.25, sz * 0.45, legH, suitBase, extrusionAngle, sunAngle, true);
 
         // Arms - small boxes rotated slightly by facing angle
         const armLen = sz * 0.7;
@@ -230,20 +230,20 @@ class Astronaut {
         push();
         translate(torsoTopX - sz * 0.45, torsoTopY + sz * 0.05);
         rotate(this.facingAngle * 0.2);
-        Draw3D.drawBox3D(0, 0 - (armLen * Math.cos(extrusionAngle) * 0.5), armW, armLen, armW, suitBase, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(0, 0 - (armLen * Math.cos(extrusionAngle) * 0.5), armW, armLen, armW, suitBase, extrusionAngle, sunAngle, true);
         pop();
         // Right arm
         push();
         translate(torsoTopX + sz * 0.45, torsoTopY + sz * 0.05);
         rotate(-this.facingAngle * 0.2);
-        Draw3D.drawBox3D(0, 0 - (armLen * Math.cos(extrusionAngle) * 0.5), armW, armLen, armW, suitBase, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(0, 0 - (armLen * Math.cos(extrusionAngle) * 0.5), armW, armLen, armW, suitBase, extrusionAngle, sunAngle, true);
         pop();
 
         // Helmet - dome on top of torso
         const helmetRadius = sz * 0.45;
         const helmetY = torsoTopY - helmetRadius * Math.cos(extrusionAngle) - sz * 0.05;
         // Use torsoTopX to ensure head aligns with the top of the slanted body
-        Draw3D.drawDome(torsoTopX, helmetY, helmetRadius, 8, visor, extrusionAngle, sunAngle);
+        Draw3D.drawDome(torsoTopX, helmetY, helmetRadius, 8, visor, extrusionAngle, sunAngle, false, true);
 
         // SurfaceMode already draws the ground shadow; avoid duplicate shadow here.
     }

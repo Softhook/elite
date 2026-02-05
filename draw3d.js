@@ -365,8 +365,9 @@ const Draw3D = {
 
     /**
      * Draw an extruded arbitrary shape from vertices
+     * @param {boolean} skipBottom - If true, skip drawing bottom cap
      */
-    drawExtrudedShape: function (vertices, depth, col, angle, sunAngle, cull = true) {
+    drawExtrudedShape: function (vertices, depth, col, angle, sunAngle, cull = true, skipBottom = false) {
         // If deferred rendering is active, queue this call
         if (_renderQueue !== null) {
             // Calculate centroid for depth sorting
@@ -377,7 +378,7 @@ const Draw3D = {
             const primitiveDepth = calculatePrimitiveDepth(cx, cy, depth, angle);
             _renderQueue.push({
                 depth: primitiveDepth,
-                fn: () => this.drawExtrudedShape(vertices, depth, col, angle, sunAngle, cull)
+                fn: () => this.drawExtrudedShape(vertices, depth, col, angle, sunAngle, cull, skipBottom)
             });
             return;
         }
@@ -387,14 +388,16 @@ const Draw3D = {
         strokeWeight(1);
         const len = vertices.length;
 
-        // Bottom Cap
-        fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5, alpha(col));
-        stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4, alpha(col));
-        beginShape();
-        for (let i = 0; i < len; i++) {
-            vertex(vertices[i].x + dv.x, vertices[i].y + dv.y);
+        // Bottom Cap (skipped in fixed-view surface mode - never visible)
+        if (!skipBottom) {
+            fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5, alpha(col));
+            stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4, alpha(col));
+            beginShape();
+            for (let i = 0; i < len; i++) {
+                vertex(vertices[i].x + dv.x, vertices[i].y + dv.y);
+            }
+            endShape(CLOSE);
         }
-        endShape(CLOSE);
 
         // Sides
         for (let i = 0; i < len; i++) {
@@ -437,14 +440,15 @@ const Draw3D = {
 
     /**
      * Draw a 3D ring (torus cross-section)
+     * @param {boolean} skipBottom - If true, skip drawing bottom cap
      */
-    drawRing3D: function (x, y, rOuter, rInner, sides, depth, col, angle, sunAngle, shapeRotation = 0) {
+    drawRing3D: function (x, y, rOuter, rInner, sides, depth, col, angle, sunAngle, shapeRotation = 0, skipBottom = false) {
         // If deferred rendering is active, queue this call
         if (_renderQueue !== null) {
             const primitiveDepth = calculatePrimitiveDepth(x, y, depth, angle);
             _renderQueue.push({
                 depth: primitiveDepth,
-                fn: () => this.drawRing3D(x, y, rOuter, rInner, sides, depth, col, angle, sunAngle, shapeRotation)
+                fn: () => this.drawRing3D(x, y, rOuter, rInner, sides, depth, col, angle, sunAngle, shapeRotation, skipBottom)
             });
             return;
         }
@@ -457,28 +461,30 @@ const Draw3D = {
         // Bottom cap with contour for hole
         const hasContour = typeof beginContour === 'function' && typeof endContour === 'function';
 
-        fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5, alpha(col));
-        stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4, alpha(col));
+        if (!skipBottom) {
+            fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5, alpha(col));
+            stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4, alpha(col));
 
-        if (hasContour) {
-            try {
-                beginShape();
-                for (let i = 0; i < sides; i++) {
-                    const ang = i * angleStep + shapeRotation;
-                    vertex(x + Math.cos(ang) * rOuter + dv.x, y + Math.sin(ang) * rOuter + dv.y);
+            if (hasContour) {
+                try {
+                    beginShape();
+                    for (let i = 0; i < sides; i++) {
+                        const ang = i * angleStep + shapeRotation;
+                        vertex(x + Math.cos(ang) * rOuter + dv.x, y + Math.sin(ang) * rOuter + dv.y);
+                    }
+                    beginContour();
+                    for (let i = sides - 1; i >= 0; i--) {
+                        const ang = i * angleStep + shapeRotation;
+                        vertex(x + Math.cos(ang) * rInner + dv.x, y + Math.sin(ang) * rInner + dv.y);
+                    }
+                    endContour();
+                    endShape(CLOSE);
+                } catch (e) {
+                    this._drawRingFallback(x, y, rOuter, rInner, sides, dv, col, shapeRotation, 'bottom');
                 }
-                beginContour();
-                for (let i = sides - 1; i >= 0; i--) {
-                    const ang = i * angleStep + shapeRotation;
-                    vertex(x + Math.cos(ang) * rInner + dv.x, y + Math.sin(ang) * rInner + dv.y);
-                }
-                endContour();
-                endShape(CLOSE);
-            } catch (e) {
+            } else {
                 this._drawRingFallback(x, y, rOuter, rInner, sides, dv, col, shapeRotation, 'bottom');
             }
-        } else {
-            this._drawRingFallback(x, y, rOuter, rInner, sides, dv, col, shapeRotation, 'bottom');
         }
 
         // Draw outer and inner faces
@@ -579,21 +585,14 @@ const Draw3D = {
 
     /**
      * Draw a hemisphere/dome (half sphere) with angle-based extrusion
-     * @param {number} x - Center X
-     * @param {number} y - Center Y
-     * @param {number} radius - Dome radius
-     * @param {number} segments - Number of segments (quality)
-     * @param {color} col - Base color
-     * @param {number} angle - Extrusion angle (direction the dome rises toward)
-     * @param {number} sunAngle - Sun angle for shading
-     * @param {boolean} inverted - If true, dome is concave (dish) instead of convex
+     * @param {boolean} skipBottom - If true, skip drawing base cap
      */
-    drawDome: function (x, y, radius, segments, col, angle, sunAngle, inverted = false) {
+    drawDome: function (x, y, radius, segments, col, angle, sunAngle, inverted = false, skipBottom = false) {
         if (_renderQueue !== null) {
             const primitiveDepth = calculatePrimitiveDepth(x, y, radius, angle);
             _renderQueue.push({
                 depth: primitiveDepth,
-                fn: () => this.drawDome(x, y, radius, segments, col, angle, sunAngle, inverted)
+                fn: () => this.drawDome(x, y, radius, segments, col, angle, sunAngle, inverted, skipBottom)
             });
             return;
         }
@@ -611,17 +610,17 @@ const Draw3D = {
 
         strokeWeight(0.5);
 
-        // Draw base/rim circle at specified position (top of dome, no offset)
-        // For inverted dome, this is the outer rim; for normal dome, this is the base
-        fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
-        stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
-        beginShape();
-        for (let i = 0; i < radialSegments; i++) {
-            const theta = i * angleStep;
-            // Rim stays at (x, y) - no dv offset for rim
-            vertex(x + Math.cos(theta) * radius, y + Math.sin(theta) * radius);
+        // Draw base/rim circle (skipped in fixed-view surface mode - never visible)
+        if (!skipBottom) {
+            fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
+            stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
+            beginShape();
+            for (let i = 0; i < radialSegments; i++) {
+                const theta = i * angleStep;
+                vertex(x + Math.cos(theta) * radius, y + Math.sin(theta) * radius);
+            }
+            endShape(CLOSE);
         }
-        endShape(CLOSE);
 
         // Draw dome segments from rim toward center/tip
         for (let h = 0; h < heightSegments; h++) {
@@ -686,37 +685,23 @@ const Draw3D = {
 
     /**
      * Draw a 3D cylinder (like prism but with smooth circular cross-section)
-     * @param {number} x - Center X
-     * @param {number} y - Center Y
-     * @param {number} radius - Cylinder radius
-     * @param {number} height - Cylinder height
-     * @param {number} segments - Number of segments around circumference
-     * @param {color} col - Base color
-     * @param {number} angle - Rotation angle
-     * @param {number} sunAngle - Sun angle for shading
+     * @param {boolean} skipBottom - If true, skip drawing bottom cap
      */
-    drawCylinder: function (x, y, radius, height, segments, col, angle, sunAngle) {
+    drawCylinder: function (x, y, radius, height, segments, col, angle, sunAngle, skipBottom = false) {
         // This is essentially a prism with many sides, but optimized
-        this.drawPrism(x, y, radius, Math.max(8, segments), height, col, angle, sunAngle);
+        this.drawPrism(x, y, radius, Math.max(8, segments), height, col, angle, sunAngle, skipBottom);
     },
 
     /**
      * Draw a 3D cone/pyramid
-     * @param {number} x - Base center X
-     * @param {number} y - Base center Y
-     * @param {number} baseRadius - Base radius
-     * @param {number} height - Cone height
-     * @param {number} segments - Number of segments
-     * @param {color} col - Base color
-     * @param {number} angle - Extrusion angle
-     * @param {number} sunAngle - Sun angle for shading
+     * @param {boolean} skipBottom - If true, skip drawing base cap
      */
-    drawCone: function (x, y, baseRadius, height, segments, col, angle, sunAngle) {
+    drawCone: function (x, y, baseRadius, height, segments, col, angle, sunAngle, skipBottom = false) {
         if (_renderQueue !== null) {
             const primitiveDepth = calculatePrimitiveDepth(x, y, height, angle);
             _renderQueue.push({
                 depth: primitiveDepth,
-                fn: () => this.drawCone(x, y, baseRadius, height, segments, col, angle, sunAngle)
+                fn: () => this.drawCone(x, y, baseRadius, height, segments, col, angle, sunAngle, skipBottom)
             });
             return;
         }
@@ -731,15 +716,17 @@ const Draw3D = {
 
         strokeWeight(1);
 
-        // Draw base at (x, y) - top face, no offset
-        fill(col);
-        stroke(cc.r * 0.8, cc.g * 0.8, cc.b * 0.8, cc.a);
-        beginShape();
-        for (let i = 0; i < segments; i++) {
-            const ang = i * angleStep - PI / 2;
-            vertex(x + Math.cos(ang) * baseRadius, y + Math.sin(ang) * baseRadius);
+        // Draw base circle (skipped in fixed-view surface mode - never visible)
+        if (!skipBottom) {
+            fill(col);
+            stroke(cc.r * 0.8, cc.g * 0.8, cc.b * 0.8, cc.a);
+            beginShape();
+            for (let i = 0; i < segments; i++) {
+                const ang = i * angleStep - PI / 2;
+                vertex(x + Math.cos(ang) * baseRadius, y + Math.sin(ang) * baseRadius);
+            }
+            endShape(CLOSE);
         }
-        endShape(CLOSE);
 
         // Draw sides with backface culling
         for (let i = 0; i < segments; i++) {
@@ -1069,26 +1056,38 @@ const Draw3D = {
 
     /**
      * Draw extruded ring from vertex arrays
+     * @param {boolean} skipBottom - If true, skip drawing bottom cap
      */
-    drawExtrudedRing: function (outerVerts, innerVerts, depth, col, angle, sunAngle) {
+    drawExtrudedRing: function (outerVerts, innerVerts, depth, col, angle, sunAngle, skipBottom = false) {
         const dv = this.getDepthVector(depth, angle);
         strokeWeight(1);
         const len = outerVerts.length;
 
-        // Bottom cap
-        fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5);
-        stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4);
+        // Bottom cap (skipped in fixed-view surface mode - never visible)
+        if (!skipBottom) {
+            fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5);
+            stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4);
 
-        const hasContour = typeof beginContour === 'function' && typeof endContour === 'function';
-        if (hasContour) {
-            try {
-                beginShape();
-                for (let v of outerVerts) vertex(v.x + dv.x, v.y + dv.y);
-                beginContour();
-                for (let i = len - 1; i >= 0; i--) vertex(innerVerts[i].x + dv.x, innerVerts[i].y + dv.y);
-                endContour();
-                endShape(CLOSE);
-            } catch (e) {
+            const hasContour = typeof beginContour === 'function' && typeof endContour === 'function';
+            if (hasContour) {
+                try {
+                    beginShape();
+                    for (let v of outerVerts) vertex(v.x + dv.x, v.y + dv.y);
+                    beginContour();
+                    for (let i = len - 1; i >= 0; i--) vertex(innerVerts[i].x + dv.x, innerVerts[i].y + dv.y);
+                    endContour();
+                    endShape(CLOSE);
+                } catch (e) {
+                    beginShape();
+                    for (let v of outerVerts) vertex(v.x + dv.x, v.y + dv.y);
+                    endShape(CLOSE);
+                    noStroke(); fill(0, 0, 0, 220);
+                    beginShape();
+                    for (let i = len - 1; i >= 0; i--) vertex(innerVerts[i].x + dv.x, innerVerts[i].y + dv.y);
+                    endShape(CLOSE);
+                    stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4);
+                }
+            } else {
                 beginShape();
                 for (let v of outerVerts) vertex(v.x + dv.x, v.y + dv.y);
                 endShape(CLOSE);
@@ -1098,15 +1097,6 @@ const Draw3D = {
                 endShape(CLOSE);
                 stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4);
             }
-        } else {
-            beginShape();
-            for (let v of outerVerts) vertex(v.x + dv.x, v.y + dv.y);
-            endShape(CLOSE);
-            noStroke(); fill(0, 0, 0, 220);
-            beginShape();
-            for (let i = len - 1; i >= 0; i--) vertex(innerVerts[i].x + dv.x, innerVerts[i].y + dv.y);
-            endShape(CLOSE);
-            stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4);
         }
 
         // Sides

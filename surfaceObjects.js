@@ -173,7 +173,7 @@ class SecretCache extends SurfaceObject {
         const topX = baseX - boxDvX;
         const topY = baseY - boxDvY;
 
-        Draw3D.drawBox3D(topX, topY, sz, sz * 0.8, boxH, this.color, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(topX, topY, sz, sz * 0.8, boxH, this.color, extrusionAngle, sunAngle, true);
 
         // Cross on top - vertical beam
         const crossH = sz * 0.5;
@@ -183,7 +183,7 @@ class SecretCache extends SurfaceObject {
         const crossBaseX = topX - crossDvX;
         const crossBaseY = topY - crossDvY;
 
-        Draw3D.drawBox3D(crossBaseX, crossBaseY, crossW, crossW, crossH, this.crossColor, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(crossBaseX, crossBaseY, crossW, crossW, crossH, this.crossColor, extrusionAngle, sunAngle, true);
 
         // LOD 3 only: Detailed cross horizontal beam
         // LOD 2: Skip purely decorative horizontal arm if performance needed, 
@@ -197,7 +197,7 @@ class SecretCache extends SurfaceObject {
         const armX = crossBaseX - armDvX;
         const armY = crossBaseY - armDvY;
 
-        Draw3D.drawBox3D(armX, armY, armW, crossW, armH, this.crossColor, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(armX, armY, armW, crossW, armH, this.crossColor, extrusionAngle, sunAngle, true);
     }
 
     onDestroy() {
@@ -313,7 +313,7 @@ class Building extends SurfaceObject {
         const ry = baseY - dvY;
 
         // Base Structure - always drawn
-        Draw3D.drawBox3D(rx, ry, sz, sz, this.height, this.color, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(rx, ry, sz, sz, this.height, this.color, extrusionAngle, sunAngle, true);
 
         // LOD 3 only: Detailed decorations
         if (lodLevel === 3) {
@@ -324,7 +324,7 @@ class Building extends SurfaceObject {
                     const wh = this.height * i;
                     const wrx = baseX - (wh * Math.sin(extrusionAngle));
                     const wry = baseY - (wh * Math.cos(extrusionAngle));
-                    Draw3D.drawBox3D(wrx, wry, sz * 1.05, sz * 0.1, 5, neonColor, extrusionAngle, sunAngle);
+                    Draw3D.drawBox3D(wrx, wry, sz * 1.05, sz * 0.1, 5, neonColor, extrusionAngle, sunAngle, true);
                 }
             }
 
@@ -335,22 +335,22 @@ class Building extends SurfaceObject {
                 const tierDvY = tierH * Math.cos(extrusionAngle);
                 const trx = rx - tierDvX;
                 const try_ = ry - tierDvY;
-                Draw3D.drawBox3D(trx, try_, sz * 0.6, sz * 0.6, tierH, lerpColor(this.color, color(255), 0.1), extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(trx, try_, sz * 0.6, sz * 0.6, tierH, lerpColor(this.color, color(255), 0.1), extrusionAngle, sunAngle, true);
 
                 // Antennas on top tier (start from tier roof)
                 const antH = 30;
                 const arx = trx - tierDvX;
                 const ary = try_ - tierDvY;
-                Draw3D.drawCylinder(arx, ary, 2, antH, 6, color(200), extrusionAngle, sunAngle);
+                Draw3D.drawCylinder(arx, ary, 2, antH, 6, color(200), extrusionAngle, sunAngle, true);
             }
 
             if (this.type === 'silo') {
-                Draw3D.drawCylinder(rx, ry, sz / 2, this.height, 12, this.color, extrusionAngle, sunAngle);
+                Draw3D.drawCylinder(rx, ry, sz / 2, this.height, 12, this.color, extrusionAngle, sunAngle, true);
                 // Red warning light
                 const lightH = 10;
                 const lrx = rx - (lightH * Math.sin(extrusionAngle));
                 const lry = ry - (lightH * Math.cos(extrusionAngle));
-                Draw3D.drawDome(lrx, lry, 10, 4, color(255, 0, 0), extrusionAngle, sunAngle);
+                Draw3D.drawDome(lrx, lry, 10, 4, color(255, 0, 0), extrusionAngle, sunAngle, false, true);
             }
         }
     }
@@ -417,14 +417,14 @@ class ImperialBuilding extends SurfaceObject {
             const baseDv = baseH * Math.cos(extrusionAngle);
 
             // Main marble column
-            Draw3D.drawBox3D(baseX, baseY - baseDv, sz * 0.4, sz * 0.4, baseH, this.stoneColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(baseX, baseY - baseDv, sz * 0.4, sz * 0.4, baseH, this.stoneColor, extrusionAngle, sunAngle, true);
             // Gold pyramid cap
             const capY = baseY - baseDv - capH * Math.cos(extrusionAngle);
-            Draw3D.drawCone(baseX, capY, sz * 0.35, capH, 4, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawCone(baseX, capY, sz * 0.35, capH, 4, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Crimson banner
             if (lodLevel === 3) {
-                Draw3D.drawBox3D(baseX, baseY - baseDv * 0.5, sz * 0.5, sz * 0.05, baseH * 0.3, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(baseX, baseY - baseDv * 0.5, sz * 0.5, sz * 0.05, baseH * 0.3, this.accentColor, extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 1) {
@@ -434,16 +434,16 @@ class ImperialBuilding extends SurfaceObject {
             const baseDv = baseH * Math.cos(extrusionAngle);
 
             // Wide marble base
-            Draw3D.drawBox3D(baseX, baseY - baseDv, sz * 1.2, sz * 0.8, baseH, this.stoneColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(baseX, baseY - baseDv, sz * 1.2, sz * 0.8, baseH, this.stoneColor, extrusionAngle, sunAngle, true);
             // Central gold dome
             const domeY = baseY - baseDv;
             const domeAngle = extrusionAngle + Math.PI;
-            Draw3D.drawDome(baseX, domeY, domeR, lodLevel === 2 ? 6 : 8, this.primaryColor, domeAngle, sunAngle);
+            Draw3D.drawDome(baseX, domeY, domeR, lodLevel === 2 ? 6 : 8, this.primaryColor, domeAngle, sunAngle, false, true);
 
             // LOD 3 only: Corner columns
             if (lodLevel === 3) {
                 for (let i = -1; i <= 1; i += 2) {
-                    Draw3D.drawCylinder(baseX + i * sz * 0.5, baseY - baseDv + sz * 0.3, sz * 0.08, baseH * 0.8, 8, this.stoneColor, extrusionAngle, sunAngle);
+                    Draw3D.drawCylinder(baseX + i * sz * 0.5, baseY - baseDv + sz * 0.3, sz * 0.08, baseH * 0.8, 8, this.stoneColor, extrusionAngle, sunAngle, true);
                 }
             }
 
@@ -469,14 +469,14 @@ class ImperialBuilding extends SurfaceObject {
             const archDv = archH * Math.cos(extrusionAngle);
 
             // Pillars
-            Draw3D.drawBox3D(baseX - sz * 0.4, baseY - archDv, sz * 0.3, sz * 0.3, archH, this.stoneColor, extrusionAngle, sunAngle);
-            Draw3D.drawBox3D(baseX + sz * 0.4, baseY - archDv, sz * 0.3, sz * 0.3, archH, this.stoneColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(baseX - sz * 0.4, baseY - archDv, sz * 0.3, sz * 0.3, archH, this.stoneColor, extrusionAngle, sunAngle, true);
+            Draw3D.drawBox3D(baseX + sz * 0.4, baseY - archDv, sz * 0.3, sz * 0.3, archH, this.stoneColor, extrusionAngle, sunAngle, true);
             // Top beam
-            Draw3D.drawBox3D(baseX, baseY - archDv - sz * 0.15, sz * 1.1, sz * 0.35, sz * 0.2, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(baseX, baseY - archDv - sz * 0.15, sz * 1.1, sz * 0.35, sz * 0.2, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Eagle decoration
             if (lodLevel === 3) {
-                Draw3D.drawCone(baseX, baseY - archDv - sz * 0.4, sz * 0.15, sz * 0.25, 4, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawCone(baseX, baseY - archDv - sz * 0.4, sz * 0.15, sz * 0.25, 4, this.accentColor, extrusionAngle, sunAngle, true);
             }
 
         } else {
@@ -485,16 +485,16 @@ class ImperialBuilding extends SurfaceObject {
             const hallDv = hallH * Math.cos(extrusionAngle);
 
             // Main hall body
-            Draw3D.drawBox3D(baseX, baseY - hallDv, sz * 1.5, sz * 0.6, hallH, this.stoneColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(baseX, baseY - hallDv, sz * 1.5, sz * 0.6, hallH, this.stoneColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Row of columns
             if (lodLevel === 3) {
                 for (let i = -2; i <= 2; i++) {
-                    Draw3D.drawCylinder(baseX + i * sz * 0.3, baseY - hallDv + sz * 0.35, sz * 0.06, hallH * 0.9, 8, this.stoneColor, extrusionAngle, sunAngle);
+                    Draw3D.drawCylinder(baseX + i * sz * 0.3, baseY - hallDv + sz * 0.35, sz * 0.06, hallH * 0.9, 8, this.stoneColor, extrusionAngle, sunAngle, true);
                 }
             }
             // Triangular pediment - sits flush on hall top
-            Draw3D.drawCone(baseX, baseY - hallDv, sz * 0.7, sz * 0.3, 3, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawCone(baseX, baseY - hallDv, sz * 0.7, sz * 0.3, 3, this.primaryColor, extrusionAngle, sunAngle, true);
         }
     }
 
@@ -556,15 +556,15 @@ class SeparatistBuilding extends SurfaceObject {
             const topY = baseY - baseDvY;
 
             // Main bunker structure
-            Draw3D.drawBox3D(topX, topY, sz * 1.3, sz * 0.9, baseH, this.metalColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(topX, topY, sz * 1.3, sz * 0.9, baseH, this.metalColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Firing slits and periscope
             if (lodLevel === 3) {
                 // Firing slits
-                Draw3D.drawBox3D(baseX + sz * 0.3 - (baseDvX * 0.5), baseY - (baseDvY * 0.5), sz * 0.4, sz * 0.1, baseH * 0.4, this.primaryColor, extrusionAngle, sunAngle);
-                Draw3D.drawBox3D(baseX - sz * 0.3 - (baseDvX * 0.5), baseY - (baseDvY * 0.5), sz * 0.4, sz * 0.1, baseH * 0.4, this.primaryColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(baseX + sz * 0.3 - (baseDvX * 0.5), baseY - (baseDvY * 0.5), sz * 0.4, sz * 0.1, baseH * 0.4, this.primaryColor, extrusionAngle, sunAngle, true);
+                Draw3D.drawBox3D(baseX - sz * 0.3 - (baseDvX * 0.5), baseY - (baseDvY * 0.5), sz * 0.4, sz * 0.1, baseH * 0.4, this.primaryColor, extrusionAngle, sunAngle, true);
                 // Periscope slit
-                Draw3D.drawBox3D(topX, topY, sz * 0.6, sz * 0.08, sz * 0.1, color(20), extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(topX, topY, sz * 0.6, sz * 0.08, sz * 0.1, color(20), extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 1) {
@@ -587,16 +587,16 @@ class SeparatistBuilding extends SurfaceObject {
             const legHeight = towerH * 0.8;
             for (let i = -1; i <= 1; i += 2) {
                 for (let j = -1; j <= 1; j += 2) {
-                    Draw3D.drawBox3D(platformUndersideX + i * sz * 0.25, platformUndersideY + j * sz * 0.25, legW, legW, legHeight, this.metalColor, extrusionAngle, sunAngle);
+                    Draw3D.drawBox3D(platformUndersideX + i * sz * 0.25, platformUndersideY + j * sz * 0.25, legW, legW, legHeight, this.metalColor, extrusionAngle, sunAngle, true);
                 }
             }
 
             // Observation platform
-            Draw3D.drawBox3D(platformTopX, platformTopY, sz * 0.8, sz * 0.8, platformH, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(platformTopX, platformTopY, sz * 0.8, sz * 0.8, platformH, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Searchlight
             if (lodLevel === 3) {
-                Draw3D.drawCylinder(platformTopX - (sz * 0.05) * Math.sin(extrusionAngle), platformTopY - (sz * 0.05) * Math.cos(extrusionAngle), sz * 0.1, sz * 0.15, 6, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawCylinder(platformTopX - (sz * 0.05) * Math.sin(extrusionAngle), platformTopY - (sz * 0.05) * Math.cos(extrusionAngle), sz * 0.1, sz * 0.15, 6, this.accentColor, extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 2) {
@@ -608,12 +608,12 @@ class SeparatistBuilding extends SurfaceObject {
             const topY = baseY - wallDvY;
 
             // Main wall
-            Draw3D.drawBox3D(topX, topY, sz * 1.5, sz * 0.3, wallH, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(topX, topY, sz * 1.5, sz * 0.3, wallH, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Defensive spikes
             if (lodLevel === 3) {
                 for (let i = -1; i <= 1; i++) {
-                    Draw3D.drawCone(topX + i * sz * 0.4, topY, sz * 0.08, sz * 0.4, 4, this.metalColor, extrusionAngle, sunAngle);
+                    Draw3D.drawCone(topX + i * sz * 0.4, topY, sz * 0.08, sz * 0.4, 4, this.metalColor, extrusionAngle, sunAngle, true);
                 }
             }
 
@@ -626,17 +626,17 @@ class SeparatistBuilding extends SurfaceObject {
             const topY = baseY - shelterDvY;
 
             // Walls
-            Draw3D.drawBox3D(topX - sz * 0.4, topY, sz * 0.15, sz * 0.6, shelterH, this.metalColor, extrusionAngle, sunAngle);
-            Draw3D.drawBox3D(topX + sz * 0.4, topY, sz * 0.15, sz * 0.6, shelterH, this.metalColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(topX - sz * 0.4, topY, sz * 0.15, sz * 0.6, shelterH, this.metalColor, extrusionAngle, sunAngle, true);
+            Draw3D.drawBox3D(topX + sz * 0.4, topY, sz * 0.15, sz * 0.6, shelterH, this.metalColor, extrusionAngle, sunAngle, true);
 
             // Corrugated roof
             const roofDvX = (sz * 0.1) * Math.sin(extrusionAngle);
             const roofDvY = (sz * 0.1) * Math.cos(extrusionAngle);
-            Draw3D.drawBox3D(topX - roofDvX, topY - roofDvY, sz * 1.0, sz * 0.7, sz * 0.1, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(topX - roofDvX, topY - roofDvY, sz * 1.0, sz * 0.7, sz * 0.1, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Tarp patch
             if (lodLevel === 3) {
-                Draw3D.drawBox3D(topX - roofDvX * 1.2 + sz * 0.2, topY - roofDvY * 1.2, sz * 0.3, sz * 0.3, sz * 0.02, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(topX - roofDvX * 1.2 + sz * 0.2, topY - roofDvY * 1.2, sz * 0.3, sz * 0.3, sz * 0.02, this.accentColor, extrusionAngle, sunAngle, true);
             }
 
         } else {
@@ -649,11 +649,11 @@ class SeparatistBuilding extends SurfaceObject {
 
             // Fuel drums
             for (let i = -1; i <= 1; i++) {
-                Draw3D.drawCylinder(topX + i * sz * 0.35, topY, sz * 0.18, depotH, lodLevel === 2 ? 6 : 8, this.primaryColor, extrusionAngle, sunAngle);
+                Draw3D.drawCylinder(topX + i * sz * 0.35, topY, sz * 0.18, depotH, lodLevel === 2 ? 6 : 8, this.primaryColor, extrusionAngle, sunAngle, true);
             }
             // LOD 3 only: Warning stripe
             if (lodLevel === 3) {
-                Draw3D.drawBox3D(baseX - (depotDvX * 0.5), baseY - (depotDvY * 0.5), sz * 1.2, sz * 0.08, sz * 0.05, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(baseX - (depotDvX * 0.5), baseY - (depotDvY * 0.5), sz * 1.2, sz * 0.08, sz * 0.05, this.accentColor, extrusionAngle, sunAngle, true);
             }
         }
     }
@@ -716,13 +716,13 @@ class MilitaryBuilding extends SurfaceObject {
             const topY = baseY - hangarDvY;
 
             // Main hangar body (drawBox3D takes top center)
-            Draw3D.drawBox3D(topX, topY, sz * 1.8, sz * 1.2, hangarH, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(topX, topY, sz * 1.8, sz * 1.2, hangarH, this.primaryColor, extrusionAngle, sunAngle, true);
             // Arched roof section
-            Draw3D.drawDome(topX, topY, sz * 0.8, lodLevel === 2 ? 4 : 6, this.accentColor, extrusionAngle + Math.PI, sunAngle);
+            Draw3D.drawDome(topX, topY, sz * 0.8, lodLevel === 2 ? 4 : 6, this.accentColor, extrusionAngle + Math.PI, sunAngle, false, true);
 
             // LOD 3 only: Door markings
             if (lodLevel === 3) {
-                Draw3D.drawBox3D(baseX, baseY - hangarDvY * 0.4, sz * 0.8, sz * 0.05, hangarH * 0.5, color(180, 180, 40), extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(baseX, baseY - hangarDvY * 0.4, sz * 0.8, sz * 0.05, hangarH * 0.5, color(180, 180, 40), extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 1) {
@@ -735,11 +735,11 @@ class MilitaryBuilding extends SurfaceObject {
 
             // Multiple barracks blocks
             for (let i = -1; i <= 1; i++) {
-                Draw3D.drawBox3D(topX + i * sz * 0.5, topY, sz * 0.45, sz * 0.7, blockH, this.primaryColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(topX + i * sz * 0.5, topY, sz * 0.45, sz * 0.7, blockH, this.primaryColor, extrusionAngle, sunAngle, true);
             }
             // LOD 3 only: Command antenna
             if (lodLevel === 3) {
-                Draw3D.drawCylinder(topX, topY, sz * 0.05, sz * 0.5, 6, this.metalColor, extrusionAngle, sunAngle);
+                Draw3D.drawCylinder(topX, topY, sz * 0.05, sz * 0.5, 6, this.metalColor, extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 2) {
@@ -751,13 +751,13 @@ class MilitaryBuilding extends SurfaceObject {
             const topY = baseY - towerDvY;
 
             // Support tower
-            Draw3D.drawBox3D(topX, topY, sz * 0.4, sz * 0.4, towerH, this.accentColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(topX, topY, sz * 0.4, sz * 0.4, towerH, this.accentColor, extrusionAngle, sunAngle, true);
             // Rotating dish
-            Draw3D.drawDome(topX, topY, sz * 0.6, lodLevel === 2 ? 6 : 8, this.metalColor, extrusionAngle, sunAngle, true);
+            Draw3D.drawDome(topX, topY, sz * 0.6, lodLevel === 2 ? 6 : 8, this.metalColor, extrusionAngle, sunAngle, true, true);
 
             // LOD 3 only: Central receiver
             if (lodLevel === 3) {
-                Draw3D.drawCylinder(topX, topY, sz * 0.08, sz * 0.3, 6, color(255, 50, 50), extrusionAngle, sunAngle);
+                Draw3D.drawCylinder(topX, topY, sz * 0.08, sz * 0.3, 6, color(255, 50, 50), extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 3) {
@@ -769,14 +769,14 @@ class MilitaryBuilding extends SurfaceObject {
             const topY = baseY - bunkerDvY;
 
             // Heavy sloped entrance
-            Draw3D.drawBox3D(topX, topY, sz * 1.2, sz * 0.8, bunkerH, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(topX, topY, sz * 1.2, sz * 0.8, bunkerH, this.primaryColor, extrusionAngle, sunAngle, true);
             // Blast door
-            Draw3D.drawBox3D(baseX - (bunkerDvX * 0.5), baseY - (bunkerDvY * 0.5), sz * 0.5, sz * 0.6, bunkerH * 0.7, this.metalColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(baseX - (bunkerDvX * 0.5), baseY - (bunkerDvY * 0.5), sz * 0.5, sz * 0.6, bunkerH * 0.7, this.metalColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Perimeter walls
             if (lodLevel === 3) {
-                Draw3D.drawBox3D(baseX - sz * 0.8 - (bunkerDvX * 0.3), baseY - (bunkerDvY * 0.3), sz * 0.1, sz * 0.6, bunkerH * 0.5, this.accentColor, extrusionAngle, sunAngle);
-                Draw3D.drawBox3D(baseX + sz * 0.8 - (bunkerDvX * 0.3), baseY - (bunkerDvY * 0.3), sz * 0.1, sz * 0.6, bunkerH * 0.5, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(baseX - sz * 0.8 - (bunkerDvX * 0.3), baseY - (bunkerDvY * 0.3), sz * 0.1, sz * 0.6, bunkerH * 0.5, this.accentColor, extrusionAngle, sunAngle, true);
+                Draw3D.drawBox3D(baseX + sz * 0.8 - (bunkerDvX * 0.3), baseY - (bunkerDvY * 0.3), sz * 0.1, sz * 0.6, bunkerH * 0.5, this.accentColor, extrusionAngle, sunAngle, true);
             }
 
         } else {
@@ -788,14 +788,14 @@ class MilitaryBuilding extends SurfaceObject {
             const topY = baseY - depotDvY;
 
             // Main depot building
-            Draw3D.drawBox3D(topX, topY, sz * 1.5, sz * 1.0, depotH, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(topX, topY, sz * 1.5, sz * 1.0, depotH, this.primaryColor, extrusionAngle, sunAngle, true);
             // Fuel tanks
-            Draw3D.drawCylinder(baseX - sz * 0.5 - (depotDvX * 0.5), baseY - (depotDvY * 0.5), sz * 0.15, depotH * 0.6, lodLevel === 2 ? 6 : 8, this.accentColor, extrusionAngle, sunAngle);
-            Draw3D.drawCylinder(baseX + sz * 0.5 - (depotDvX * 0.5), baseY - (depotDvY * 0.5), sz * 0.15, depotH * 0.6, lodLevel === 2 ? 6 : 8, this.accentColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(baseX - sz * 0.5 - (depotDvX * 0.5), baseY - (depotDvY * 0.5), sz * 0.15, depotH * 0.6, lodLevel === 2 ? 6 : 8, this.accentColor, extrusionAngle, sunAngle, true);
+            Draw3D.drawCylinder(baseX + sz * 0.5 - (depotDvX * 0.5), baseY - (depotDvY * 0.5), sz * 0.15, depotH * 0.6, lodLevel === 2 ? 6 : 8, this.accentColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Ramp
             if (lodLevel === 3) {
-                Draw3D.drawBox3D(baseX - (depotDvX * 0.2), baseY - (depotDvY * 0.2) + sz * 0.4, sz * 0.6, sz * 0.8, depotH * 0.2, this.metalColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(baseX - (depotDvX * 0.2), baseY - (depotDvY * 0.2) + sz * 0.4, sz * 0.6, sz * 0.8, depotH * 0.2, this.metalColor, extrusionAngle, sunAngle, true);
             }
         }
     }
@@ -864,12 +864,12 @@ class PostHumanBuilding extends SurfaceObject {
             const topY = baseY - monolithDvY;
 
             // Main dark slab
-            Draw3D.drawBox3D(topX, topY, sz * 0.4, sz * 0.15, monolithH, this.darkColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(topX, topY, sz * 0.4, sz * 0.15, monolithH, this.darkColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Glowing edge lines
             if (lodLevel === 3) {
                 const glowColor = lerpColor(this.primaryColor, this.accentColor, pulse);
-                Draw3D.drawBox3D(topX, topY, sz * 0.42, sz * 0.02, monolithH, glowColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(topX, topY, sz * 0.42, sz * 0.02, monolithH, glowColor, extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 1) {
@@ -886,13 +886,13 @@ class PostHumanBuilding extends SurfaceObject {
             if (lodLevel === 3) {
                 rotate(this.pulsePhase * 0.1);
             }
-            Draw3D.drawBox3D(0, 0, sz * 0.6, sz * 0.6, cubeH, this.darkColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(0, 0, sz * 0.6, sz * 0.6, cubeH, this.darkColor, extrusionAngle, sunAngle, true);
             pop();
 
             // LOD 3 only: Energy ring below
             if (lodLevel === 3) {
                 const ringColor = lerpColor(this.primaryColor, color(255), pulse * 0.3);
-                Draw3D.drawCylinder(baseX, baseY, sz * 0.5, sz * 0.05, 12, ringColor, extrusionAngle, sunAngle);
+                Draw3D.drawCylinder(baseX, baseY, sz * 0.5, sz * 0.05, 12, ringColor, extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 2) {
@@ -904,12 +904,12 @@ class PostHumanBuilding extends SurfaceObject {
             const topY = baseY - spireDvY;
 
             // Main crystal shard
-            Draw3D.drawCone(topX, topY, sz * 0.25, spireH, 5, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawCone(topX, topY, sz * 0.25, spireH, 5, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Secondary/Tertiary crystals
             if (lodLevel === 3) {
-                Draw3D.drawCone(baseX - spireDvX * 0.7 + sz * 0.15, baseY - spireDvY * 0.7, sz * 0.15, spireH * 0.6, 5, this.accentColor, extrusionAngle, sunAngle);
-                Draw3D.drawCone(baseX - spireDvX * 0.8 - sz * 0.12, baseY - spireDvY * 0.8, sz * 0.12, spireH * 0.5, 5, this.primaryColor, extrusionAngle, sunAngle);
+                Draw3D.drawCone(baseX - spireDvX * 0.7 + sz * 0.15, baseY - spireDvY * 0.7, sz * 0.15, spireH * 0.6, 5, this.accentColor, extrusionAngle, sunAngle, true);
+                Draw3D.drawCone(baseX - spireDvX * 0.8 - sz * 0.12, baseY - spireDvY * 0.8, sz * 0.12, spireH * 0.5, 5, this.primaryColor, extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 3) {
@@ -921,7 +921,7 @@ class PostHumanBuilding extends SurfaceObject {
             const topY = baseY - pylonDvY;
 
             // Main hexagonal pylon
-            Draw3D.drawCylinder(topX, topY, sz * 0.3, pylonH, 6, this.darkColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(topX, topY, sz * 0.3, pylonH, 6, this.darkColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Animated data rings
             if (lodLevel === 3) {
@@ -930,7 +930,7 @@ class PostHumanBuilding extends SurfaceObject {
                     const ringX = baseX - ringAlt * Math.sin(extrusionAngle);
                     const ringY = baseY - ringAlt * Math.cos(extrusionAngle);
                     const ringPulse = (Math.sin(this.pulsePhase + i * 2) * 0.5 + 0.5);
-                    Draw3D.drawCylinder(ringX, ringY, sz * 0.35, sz * 0.03, 6, lerpColor(this.primaryColor, this.accentColor, ringPulse), extrusionAngle, sunAngle);
+                    Draw3D.drawCylinder(ringX, ringY, sz * 0.35, sz * 0.03, 6, lerpColor(this.primaryColor, this.accentColor, ringPulse), extrusionAngle, sunAngle, true);
                 }
             }
 
@@ -943,10 +943,10 @@ class PostHumanBuilding extends SurfaceObject {
             const topY = baseY - wellDvY;
 
             // Outer containment ring
-            Draw3D.drawCylinder(topX, topY, sz * 0.7, wellH, 12, this.darkColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(topX, topY, sz * 0.7, wellH, 12, this.darkColor, extrusionAngle, sunAngle, true);
             // Inner event horizon (inverted dome)
             const holeColor = lerpColor(this.accentColor, color(0), pulse * 0.5);
-            Draw3D.drawDome(topX, topY, sz * 0.4, lodLevel === 2 ? 6 : 8, holeColor, extrusionAngle, sunAngle, true);
+            Draw3D.drawDome(topX, topY, sz * 0.4, lodLevel === 2 ? 6 : 8, holeColor, extrusionAngle, sunAngle, true, true);
 
             // LOD 3 only: Central energy beam
             if (lodLevel === 3) {
@@ -1030,14 +1030,14 @@ class OffworldBuilding extends SurfaceObject {
             const topY = baseY - baseDvY;
 
             // Base ring
-            Draw3D.drawCylinder(baseX, baseY, domeR * 1.1, baseH, 12, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(baseX, baseY, domeR * 1.1, baseH, 12, this.primaryColor, extrusionAngle, sunAngle, true);
             // Main glass dome
             const domeAngle = extrusionAngle + Math.PI;
-            Draw3D.drawDome(topX, topY, domeR, lodLevel === 2 ? 8 : 10, this.glassColor, domeAngle, sunAngle);
+            Draw3D.drawDome(topX, topY, domeR, lodLevel === 2 ? 8 : 10, this.glassColor, domeAngle, sunAngle, false, true);
 
             // LOD 3 only: Airlock entrance
             if (lodLevel === 3) {
-                Draw3D.drawBox3D(baseX + sz * 0.6, baseY, sz * 0.25, sz * 0.3, sz * 0.4, this.primaryColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(baseX + sz * 0.6, baseY, sz * 0.25, sz * 0.3, sz * 0.4, this.primaryColor, extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 1) {
@@ -1049,12 +1049,12 @@ class OffworldBuilding extends SurfaceObject {
             const topY = baseY - podDvY;
 
             // Main hab cylinder
-            Draw3D.drawCylinder(topX, topY, sz * 0.4, podH, 10, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(topX, topY, sz * 0.4, podH, 10, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Connected side pod and window ring
             if (lodLevel === 3) {
-                Draw3D.drawCylinder(baseX - (podDvX * 0.5) + sz * 0.5, baseY - (podDvY * 0.5), sz * 0.25, podH * 0.6, 10, this.primaryColor, extrusionAngle, sunAngle);
-                Draw3D.drawCylinder(topX, topY, sz * 0.42, sz * 0.08, 10, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawCylinder(baseX - (podDvX * 0.5) + sz * 0.5, baseY - (podDvY * 0.5), sz * 0.25, podH * 0.6, 10, this.primaryColor, extrusionAngle, sunAngle, true);
+                Draw3D.drawCylinder(topX, topY, sz * 0.42, sz * 0.08, 10, this.accentColor, extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 2) {
@@ -1066,17 +1066,17 @@ class OffworldBuilding extends SurfaceObject {
             const topY = baseY - padDvY;
 
             // Main platform
-            Draw3D.drawCylinder(topX, topY, sz * 0.9, padH, 8, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(topX, topY, sz * 0.9, padH, 8, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Markings and lights
             if (lodLevel === 3) {
-                Draw3D.drawCylinder(baseX - (padDvX * 1.2), baseY - (padDvY * 1.2), sz * 0.5, sz * 0.02, 12, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawCylinder(baseX - (padDvX * 1.2), baseY - (padDvY * 1.2), sz * 0.5, sz * 0.02, 12, this.accentColor, extrusionAngle, sunAngle, true);
                 // Corner lights
                 for (let i = 0; i < 4; i++) {
                     const ang = i * Math.PI / 2;
                     const lx = baseX + Math.cos(ang) * sz * 0.7 - padDvX;
                     const ly = baseY + Math.sin(ang) * sz * 0.7 - padDvY;
-                    Draw3D.drawCylinder(lx, ly, sz * 0.05, sz * 0.3, 6, color(255, 200, 50), extrusionAngle, sunAngle);
+                    Draw3D.drawCylinder(lx, ly, sz * 0.05, sz * 0.3, 6, color(255, 200, 50), extrusionAngle, sunAngle, true);
                 }
             }
 
@@ -1089,13 +1089,13 @@ class OffworldBuilding extends SurfaceObject {
             const topY = baseY - baseDvY;
 
             // Base building
-            Draw3D.drawBox3D(topX, topY, sz * 0.8, sz * 0.6, baseH, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(topX, topY, sz * 0.8, sz * 0.6, baseH, this.primaryColor, extrusionAngle, sunAngle, true);
             // Large dish
-            Draw3D.drawDome(topX + sz * 0.25, topY, sz * 0.3, 8, this.accentColor, extrusionAngle, sunAngle, true);
+            Draw3D.drawDome(topX + sz * 0.25, topY, sz * 0.3, 8, this.accentColor, extrusionAngle, sunAngle, true, true);
 
             // LOD 3 only: Small dish
             if (lodLevel === 3) {
-                Draw3D.drawDome(topX - sz * 0.25, topY, sz * 0.25, 8, this.accentColor, extrusionAngle, sunAngle, true);
+                Draw3D.drawDome(topX - sz * 0.25, topY, sz * 0.25, 8, this.accentColor, extrusionAngle, sunAngle, true, true);
             }
 
         } else {
@@ -1107,14 +1107,14 @@ class OffworldBuilding extends SurfaceObject {
             const topY = baseY - panelDvY;
 
             // Support structure
-            Draw3D.drawBox3D(topX, topY, sz * 1.2, sz * 0.8, panelH, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(topX, topY, sz * 1.2, sz * 0.8, panelH, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // Solar panels
             // LOD 2: Only center panel, LOD 3: All 3
             const startI = lodLevel === 2 ? 0 : -1;
             const endI = lodLevel === 2 ? 0 : 1;
             for (let i = startI; i <= endI; i++) {
-                Draw3D.drawBox3D(topX - (sz * 0.08) * Math.sin(extrusionAngle) + i * sz * 0.35, topY - (sz * 0.08) * Math.cos(extrusionAngle), sz * 0.3, sz * 0.5, sz * 0.02, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(topX - (sz * 0.08) * Math.sin(extrusionAngle) + i * sz * 0.35, topY - (sz * 0.08) * Math.cos(extrusionAngle), sz * 0.3, sz * 0.5, sz * 0.02, this.accentColor, extrusionAngle, sunAngle, true);
             }
         }
 
@@ -1227,20 +1227,20 @@ class MiningBuilding extends SurfaceObject {
                 const legW = sz * 0.1;
                 for (let i = -1; i <= 1; i += 2) {
                     for (let j = -1; j <= 1; j += 2) {
-                        Draw3D.drawBox3D(topX + i * sz * 0.2 + (towerDvX * 0.5), topY + j * sz * 0.2 + (towerDvY * 0.5), legW, legW, towerH, this.structureColor, extrusionAngle, sunAngle);
+                        Draw3D.drawBox3D(topX + i * sz * 0.2 + (towerDvX * 0.5), topY + j * sz * 0.2 + (towerDvY * 0.5), legW, legW, towerH, this.structureColor, extrusionAngle, sunAngle, true);
                     }
                 }
             } else {
                 // Simplified block tower
-                Draw3D.drawBox3D(topX, topY, sz * 0.5, sz * 0.5, towerH, this.structureColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(topX, topY, sz * 0.5, sz * 0.5, towerH, this.structureColor, extrusionAngle, sunAngle, true);
             }
 
             // Drill head
-            Draw3D.drawCone(baseX, baseY, sz * 0.2, sz * 0.4, 6, this.primaryColor, extrusionAngle + Math.PI, sunAngle);
+            Draw3D.drawCone(baseX, baseY, sz * 0.2, sz * 0.4, 6, this.primaryColor, extrusionAngle + Math.PI, sunAngle, true);
 
             // LOD 3 only: Top platform
             if (lodLevel === 3) {
-                Draw3D.drawBox3D(topX, topY, sz * 0.6, sz * 0.6, sz * 0.1, this.primaryColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(topX, topY, sz * 0.6, sz * 0.6, sz * 0.1, this.primaryColor, extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 1) {
@@ -1252,14 +1252,14 @@ class MiningBuilding extends SurfaceObject {
             const topY = baseY - siloDvY;
 
             // Main silo cylinder
-            Draw3D.drawCylinder(topX, topY, sz * 0.5, siloH, 12, this.structureColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(topX, topY, sz * 0.5, siloH, 12, this.structureColor, extrusionAngle, sunAngle, true);
             // Conical top
-            Draw3D.drawCone(topX, topY, sz * 0.55, sz * 0.4, lodLevel === 2 ? 6 : 12, this.accentColor, extrusionAngle, sunAngle);
+            Draw3D.drawCone(topX, topY, sz * 0.55, sz * 0.4, lodLevel === 2 ? 6 : 12, this.accentColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Warning stripes
             if (lodLevel === 3) {
                 const stripeAlt = siloH * 0.5;
-                Draw3D.drawCylinder(baseX - stripeAlt * Math.sin(extrusionAngle), baseY - stripeAlt * Math.cos(extrusionAngle), sz * 0.52, sz * 0.1, 12, this.primaryColor, extrusionAngle, sunAngle);
+                Draw3D.drawCylinder(baseX - stripeAlt * Math.sin(extrusionAngle), baseY - stripeAlt * Math.cos(extrusionAngle), sz * 0.52, sz * 0.1, 12, this.primaryColor, extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 2) {
@@ -1271,15 +1271,15 @@ class MiningBuilding extends SurfaceObject {
             // LOD 3 only: Support columns
             if (lodLevel === 3) {
                 const lowerAlt = convH * 0.3;
-                Draw3D.drawBox3D(baseX - lowerAlt * Math.sin(extrusionAngle) - sz * 0.3, baseY - lowerAlt * Math.cos(extrusionAngle), sz * 0.15, sz * 0.15, convH * 0.5, this.structureColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(baseX - lowerAlt * Math.sin(extrusionAngle) - sz * 0.3, baseY - lowerAlt * Math.cos(extrusionAngle), sz * 0.15, sz * 0.15, convH * 0.5, this.structureColor, extrusionAngle, sunAngle, true);
 
                 const upperAlt = convH;
-                Draw3D.drawBox3D(baseX - upperAlt * Math.sin(extrusionAngle) + sz * 0.3, baseY - upperAlt * Math.cos(extrusionAngle), sz * 0.15, sz * 0.15, convH, this.structureColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(baseX - upperAlt * Math.sin(extrusionAngle) + sz * 0.3, baseY - upperAlt * Math.cos(extrusionAngle), sz * 0.15, sz * 0.15, convH, this.structureColor, extrusionAngle, sunAngle, true);
             }
 
             // Conveyor belt
             const midAlt = convH * 0.6;
-            Draw3D.drawBox3D(baseX - midAlt * Math.sin(extrusionAngle), baseY - midAlt * Math.cos(extrusionAngle), sz * 0.9, sz * 0.25, sz * 0.08, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(baseX - midAlt * Math.sin(extrusionAngle), baseY - midAlt * Math.cos(extrusionAngle), sz * 0.9, sz * 0.25, sz * 0.08, this.primaryColor, extrusionAngle, sunAngle, true);
 
         } else if (this.variant === 3) {
             // EXCAVATOR - Crane with bucket
@@ -1290,17 +1290,17 @@ class MiningBuilding extends SurfaceObject {
             const topY = baseY - baseDvY;
 
             // Base platform
-            Draw3D.drawBox3D(topX, topY, sz * 0.8, sz * 0.6, baseH, this.structureColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(topX, topY, sz * 0.8, sz * 0.6, baseH, this.structureColor, extrusionAngle, sunAngle, true);
             // Crane arm
             const armDvX = (sz * 0.3) * Math.sin(extrusionAngle);
             const armDvY = (sz * 0.3) * Math.cos(extrusionAngle);
-            Draw3D.drawBox3D(topX - armDvX + sz * 0.3, topY - armDvY, sz * 0.15, sz * 0.8, sz * 0.12, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(topX - armDvX + sz * 0.3, topY - armDvY, sz * 0.15, sz * 0.8, sz * 0.12, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Bucket details
             if (lodLevel === 3) {
                 const bucketDvX = (sz * 0.15) * Math.sin(extrusionAngle);
                 const bucketDvY = (sz * 0.15) * Math.cos(extrusionAngle);
-                Draw3D.drawBox3D(topX - bucketDvX + sz * 0.6, topY - bucketDvY, sz * 0.25, sz * 0.2, sz * 0.2, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(topX - bucketDvX + sz * 0.6, topY - bucketDvY, sz * 0.25, sz * 0.2, sz * 0.2, this.accentColor, extrusionAngle, sunAngle, true);
             }
 
         } else {
@@ -1312,15 +1312,15 @@ class MiningBuilding extends SurfaceObject {
             const topY = baseY - crushDvY;
 
             // Main hopper
-            Draw3D.drawBox3D(topX, topY, sz * 0.8, sz * 0.6, crushH, this.structureColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(topX, topY, sz * 0.8, sz * 0.6, crushH, this.structureColor, extrusionAngle, sunAngle, true);
             // Input chute - sits flush on hopper top
-            Draw3D.drawCone(topX, topY, sz * 0.35, sz * 0.3, 4, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawCone(topX, topY, sz * 0.35, sz * 0.3, 4, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Output pipes
             if (lodLevel === 3) {
                 const pipeAlt = crushH * 0.3;
-                Draw3D.drawCylinder(baseX - pipeAlt * Math.sin(extrusionAngle) - sz * 0.5, baseY - pipeAlt * Math.cos(extrusionAngle), sz * 0.1, sz * 0.4, 8, this.accentColor, extrusionAngle, sunAngle);
-                Draw3D.drawCylinder(baseX - pipeAlt * Math.sin(extrusionAngle) + sz * 0.5, baseY - pipeAlt * Math.cos(extrusionAngle), sz * 0.1, sz * 0.4, 8, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawCylinder(baseX - pipeAlt * Math.sin(extrusionAngle) - sz * 0.5, baseY - pipeAlt * Math.cos(extrusionAngle), sz * 0.1, sz * 0.4, 8, this.accentColor, extrusionAngle, sunAngle, true);
+                Draw3D.drawCylinder(baseX - pipeAlt * Math.sin(extrusionAngle) + sz * 0.5, baseY - pipeAlt * Math.cos(extrusionAngle), sz * 0.1, sz * 0.4, 8, this.accentColor, extrusionAngle, sunAngle, true);
             }
         }
     }
@@ -1382,20 +1382,20 @@ class IndustrialBuilding extends SurfaceObject {
             const factTopY = baseY - factDvY;
 
             // Main factory building
-            Draw3D.drawBox3D(factTopX, factTopY, sz * 1.4, sz * 0.8, factH, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(factTopX, factTopY, sz * 1.4, sz * 0.8, factH, this.primaryColor, extrusionAngle, sunAngle, true);
             // Tall smokestack
             const stackH = this.height * 0.8;
             const stackDvX = stackH * Math.sin(extrusionAngle);
             const stackDvY = stackH * Math.cos(extrusionAngle);
             const stackTopX = baseX + sz * 0.4 - stackDvX;
             const stackTopY = baseY - stackDvY;
-            Draw3D.drawCylinder(stackTopX, stackTopY, sz * 0.15, stackH, 8, this.metalColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(stackTopX, stackTopY, sz * 0.15, stackH, 8, this.metalColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Red warning tip
             if (lodLevel === 3) {
                 const tipDvX = (sz * 0.1) * Math.sin(extrusionAngle);
                 const tipDvY = (sz * 0.1) * Math.cos(extrusionAngle);
-                Draw3D.drawCylinder(stackTopX - tipDvX, stackTopY - tipDvY, sz * 0.17, sz * 0.1, 8, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawCylinder(stackTopX - tipDvX, stackTopY - tipDvY, sz * 0.17, sz * 0.1, 8, this.accentColor, extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 1) {
@@ -1407,9 +1407,9 @@ class IndustrialBuilding extends SurfaceObject {
             const tankTopY = baseY - tankDvY;
 
             // Left storage tank
-            Draw3D.drawCylinder(tankTopX - sz * 0.25, tankTopY, sz * 0.35, tankH, 10, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(tankTopX - sz * 0.25, tankTopY, sz * 0.35, tankH, 10, this.primaryColor, extrusionAngle, sunAngle, true);
             // Right storage tank
-            Draw3D.drawCylinder(tankTopX + sz * 0.25, tankTopY, sz * 0.35, tankH, 10, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(tankTopX + sz * 0.25, tankTopY, sz * 0.35, tankH, 10, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Connecting pipe
             if (lodLevel === 3) {
@@ -1426,11 +1426,11 @@ class IndustrialBuilding extends SurfaceObject {
             const pipeTopY = baseY - pipeDvY;
 
             // Pipes
-            Draw3D.drawCylinder(pipeTopX - sz * 0.2, pipeTopY, sz * 0.1, pipeH, 8, this.metalColor, extrusionAngle, sunAngle);
-            Draw3D.drawCylinder(pipeTopX + sz * 0.2, pipeTopY, sz * 0.1, pipeH, 8, this.metalColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(pipeTopX - sz * 0.2, pipeTopY, sz * 0.1, pipeH, 8, this.metalColor, extrusionAngle, sunAngle, true);
+            Draw3D.drawCylinder(pipeTopX + sz * 0.2, pipeTopY, sz * 0.1, pipeH, 8, this.metalColor, extrusionAngle, sunAngle, true);
             // Junction box
             const junctionAlt = pipeH * 0.6;
-            Draw3D.drawBox3D(baseX - junctionAlt * Math.sin(extrusionAngle), baseY - junctionAlt * Math.cos(extrusionAngle), sz * 0.5, sz * 0.3, sz * 0.25, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(baseX - junctionAlt * Math.sin(extrusionAngle), baseY - junctionAlt * Math.cos(extrusionAngle), sz * 0.5, sz * 0.3, sz * 0.25, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Valve wheel
             if (lodLevel === 3) {
@@ -1447,7 +1447,7 @@ class IndustrialBuilding extends SurfaceObject {
             const hallTopY = baseY - hallDvY;
 
             // Main hall structure
-            Draw3D.drawBox3D(hallTopX, hallTopY, sz * 1.6, sz * 0.6, hallH, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(hallTopX, hallTopY, sz * 1.6, sz * 0.6, hallH, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Modular roof sections
             if (lodLevel === 3) {
@@ -1457,7 +1457,7 @@ class IndustrialBuilding extends SurfaceObject {
             }
             // Loading dock
             const dockAlt = hallH * 0.3;
-            Draw3D.drawBox3D(baseX - dockAlt * Math.sin(extrusionAngle) + sz * 0.7, baseY - dockAlt * Math.cos(extrusionAngle), sz * 0.3, sz * 0.4, hallH * 0.5, this.accentColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(baseX - dockAlt * Math.sin(extrusionAngle) + sz * 0.7, baseY - dockAlt * Math.cos(extrusionAngle), sz * 0.3, sz * 0.4, hallH * 0.5, this.accentColor, extrusionAngle, sunAngle, true);
 
         } else {
             // POWER PLANT - Cooling towers
@@ -1469,16 +1469,16 @@ class IndustrialBuilding extends SurfaceObject {
 
             // Main building
             const buildAlt = towerH * 0.3;
-            Draw3D.drawBox3D(baseX - buildAlt * Math.sin(extrusionAngle), baseY - buildAlt * Math.cos(extrusionAngle), sz * 0.8, sz * 0.6, towerH * 0.4, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(baseX - buildAlt * Math.sin(extrusionAngle), baseY - buildAlt * Math.cos(extrusionAngle), sz * 0.8, sz * 0.6, towerH * 0.4, this.primaryColor, extrusionAngle, sunAngle, true);
             // Left cooling tower
-            Draw3D.drawCylinder(towerTopX - sz * 0.4, towerTopY, sz * 0.3, towerH, 8, this.metalColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(towerTopX - sz * 0.4, towerTopY, sz * 0.3, towerH, 8, this.metalColor, extrusionAngle, sunAngle, true);
             // Right cooling tower
-            Draw3D.drawCylinder(towerTopX + sz * 0.4, towerTopY, sz * 0.3, towerH, 8, this.metalColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(towerTopX + sz * 0.4, towerTopY, sz * 0.3, towerH, 8, this.metalColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Steam vents
             if (lodLevel === 3) {
-                Draw3D.drawCylinder(towerTopX - sz * 0.4, towerTopY, sz * 0.35, sz * 0.08, 8, color(200, 200, 200, 150), extrusionAngle, sunAngle);
-                Draw3D.drawCylinder(towerTopX + sz * 0.4, towerTopY, sz * 0.35, sz * 0.08, 8, color(200, 200, 200, 150), extrusionAngle, sunAngle);
+                Draw3D.drawCylinder(towerTopX - sz * 0.4, towerTopY, sz * 0.35, sz * 0.08, 8, color(200, 200, 200, 150), extrusionAngle, sunAngle, true);
+                Draw3D.drawCylinder(towerTopX + sz * 0.4, towerTopY, sz * 0.35, sz * 0.08, 8, color(200, 200, 200, 150), extrusionAngle, sunAngle, true);
             }
         }
     }
@@ -1540,13 +1540,13 @@ class RefineryBuilding extends SurfaceObject {
             const towerTopY = baseY - towerDvY;
 
             // Main column
-            Draw3D.drawCylinder(towerTopX, towerTopY, sz * 0.3, towerH, 10, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(towerTopX, towerTopY, sz * 0.3, towerH, 10, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Segment rings
             if (lodLevel === 3) {
                 for (let i = 0.2; i < 0.9; i += 0.2) {
                     const ringAlt = towerH * i;
-                    Draw3D.drawCylinder(baseX - ringAlt * Math.sin(extrusionAngle), baseY - ringAlt * Math.cos(extrusionAngle), sz * 0.35, sz * 0.08, 10, this.accentColor, extrusionAngle, sunAngle);
+                    Draw3D.drawCylinder(baseX - ringAlt * Math.sin(extrusionAngle), baseY - ringAlt * Math.cos(extrusionAngle), sz * 0.35, sz * 0.08, 10, this.accentColor, extrusionAngle, sunAngle, true);
                 }
             }
 
@@ -1560,7 +1560,7 @@ class RefineryBuilding extends SurfaceObject {
                     const ang = i * Math.PI / 2 + Math.PI / 4;
                     const legX = baseX + Math.cos(ang) * sz * 0.35;
                     const legY = baseY + Math.sin(ang) * sz * 0.35;
-                    Draw3D.drawCylinder(legX, legY, sz * 0.06, sz * 0.4, 6, this.pipeColor, extrusionAngle, sunAngle);
+                    Draw3D.drawCylinder(legX, legY, sz * 0.06, sz * 0.4, 6, this.pipeColor, extrusionAngle, sunAngle, true);
                 }
             }
             // Sphere center altitude
@@ -1568,9 +1568,9 @@ class RefineryBuilding extends SurfaceObject {
             const sphereX = baseX - sphereAlt * Math.sin(extrusionAngle);
             const sphereY = baseY - sphereAlt * Math.cos(extrusionAngle);
             // Upper hemisphere
-            Draw3D.drawDome(sphereX, sphereY, tankR, lodLevel === 2 ? 6 : 8, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawDome(sphereX, sphereY, tankR, lodLevel === 2 ? 6 : 8, this.primaryColor, extrusionAngle, sunAngle, false, true);
             // Lower hemisphere (inverted)
-            Draw3D.drawDome(sphereX, sphereY, tankR * 0.95, lodLevel === 2 ? 6 : 8, this.primaryColor, extrusionAngle, sunAngle, true);
+            Draw3D.drawDome(sphereX, sphereY, tankR * 0.95, lodLevel === 2 ? 6 : 8, this.primaryColor, extrusionAngle, sunAngle, true, true);
 
         } else if (this.variant === 2) {
             // CRACKING UNIT - Box with pipes
@@ -1581,19 +1581,19 @@ class RefineryBuilding extends SurfaceObject {
             const unitTopY = baseY - unitDvY;
 
             // Main processing box
-            Draw3D.drawBox3D(unitTopX, unitTopY, sz * 0.8, sz * 0.6, unitH, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(unitTopX, unitTopY, sz * 0.8, sz * 0.6, unitH, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Exhaust stacks
             if (lodLevel === 3) {
                 // Left exhaust stack
-                Draw3D.drawCylinder(unitTopX - sz * 0.25, unitTopY, sz * 0.08, sz * 0.4, 8, this.pipeColor, extrusionAngle, sunAngle);
+                Draw3D.drawCylinder(unitTopX - sz * 0.25, unitTopY, sz * 0.08, sz * 0.4, 8, this.pipeColor, extrusionAngle, sunAngle, true);
                 // Right exhaust stack
-                Draw3D.drawCylinder(unitTopX + sz * 0.25, unitTopY, sz * 0.08, sz * 0.4, 8, this.pipeColor, extrusionAngle, sunAngle);
+                Draw3D.drawCylinder(unitTopX + sz * 0.25, unitTopY, sz * 0.08, sz * 0.4, 8, this.pipeColor, extrusionAngle, sunAngle, true);
                 // Flame tip on left stack
                 const stackH = sz * 0.4;
                 const stackDvX = stackH * Math.sin(extrusionAngle);
                 const stackDvY = stackH * Math.cos(extrusionAngle);
-                Draw3D.drawCone(unitTopX - sz * 0.25 - stackDvX, unitTopY - stackDvY, sz * 0.06, sz * 0.15, 6, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawCone(unitTopX - sz * 0.25 - stackDvX, unitTopY - stackDvY, sz * 0.06, sz * 0.15, 6, this.accentColor, extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 3) {
@@ -1607,12 +1607,12 @@ class RefineryBuilding extends SurfaceObject {
             // LOD 3 only: Base platform
             if (lodLevel === 3) {
                 const platAlt = flareH * 0.1;
-                Draw3D.drawBox3D(baseX - platAlt * Math.sin(extrusionAngle), baseY - platAlt * Math.cos(extrusionAngle), sz * 0.5, sz * 0.5, sz * 0.15, this.primaryColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(baseX - platAlt * Math.sin(extrusionAngle), baseY - platAlt * Math.cos(extrusionAngle), sz * 0.5, sz * 0.5, sz * 0.15, this.primaryColor, extrusionAngle, sunAngle, true);
             }
             // Tall stack
-            Draw3D.drawCylinder(flareTopX, flareTopY, sz * 0.1, flareH, 8, this.pipeColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(flareTopX, flareTopY, sz * 0.1, flareH, 8, this.pipeColor, extrusionAngle, sunAngle, true);
             // Burning flare (orange cone) - sits flush on stack top
-            Draw3D.drawCone(flareTopX, flareTopY, sz * 0.2, sz * 0.4, 6, this.accentColor, extrusionAngle, sunAngle);
+            Draw3D.drawCone(flareTopX, flareTopY, sz * 0.2, sz * 0.4, 6, this.accentColor, extrusionAngle, sunAngle, true);
 
         } else {
             // PUMP STATION - Low building with valves
@@ -1623,17 +1623,17 @@ class RefineryBuilding extends SurfaceObject {
             const pumpTopY = baseY - pumpDvY;
 
             // Main building
-            Draw3D.drawBox3D(pumpTopX, pumpTopY, sz * 1.0, sz * 0.6, pumpH, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(pumpTopX, pumpTopY, sz * 1.0, sz * 0.6, pumpH, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Valves and Pipes
             if (lodLevel === 3) {
                 // Valve wheels
                 for (let i = -1; i <= 1; i++) {
-                    Draw3D.drawCylinder(pumpTopX + i * sz * 0.3, pumpTopY, sz * 0.12, sz * 0.06, 8, this.accentColor, extrusionAngle, sunAngle);
+                    Draw3D.drawCylinder(pumpTopX + i * sz * 0.3, pumpTopY, sz * 0.12, sz * 0.06, 8, this.accentColor, extrusionAngle, sunAngle, true);
                 }
                 // Horizontal pipes
                 const hPipeAlt = pumpH * 0.5;
-                Draw3D.drawCylinder(baseX - hPipeAlt * Math.sin(extrusionAngle), baseY - hPipeAlt * Math.cos(extrusionAngle) + sz * 0.3, sz * 0.12, sz * 0.8, 8, this.pipeColor, extrusionAngle + Math.PI / 2, sunAngle);
+                Draw3D.drawCylinder(baseX - hPipeAlt * Math.sin(extrusionAngle), baseY - hPipeAlt * Math.cos(extrusionAngle) + sz * 0.3, sz * 0.12, sz * 0.8, 8, this.pipeColor, extrusionAngle + Math.PI / 2, sunAngle, true);
             }
         }
     }
@@ -1692,10 +1692,10 @@ class AgriculturalBuilding extends SurfaceObject {
             const baseDv = baseH * Math.cos(extrusionAngle);
 
             // Foundation
-            Draw3D.drawBox3D(baseX, baseY - baseDv, sz * 1.2, sz * 0.8, baseH, this.accentColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(baseX, baseY - baseDv, sz * 1.2, sz * 0.8, baseH, this.accentColor, extrusionAngle, sunAngle, true);
             // Glass dome - sits flush on foundation
             const domeAngle = extrusionAngle + Math.PI;
-            Draw3D.drawDome(baseX, baseY - baseDv, sz * 0.55, lodLevel === 2 ? 6 : 8, this.glassColor, domeAngle, sunAngle);
+            Draw3D.drawDome(baseX, baseY - baseDv, sz * 0.55, lodLevel === 2 ? 6 : 8, this.glassColor, domeAngle, sunAngle, false, true);
 
         } else if (this.variant === 1) {
             // GRAIN SILO - Tall cylindrical storage
@@ -1703,10 +1703,10 @@ class AgriculturalBuilding extends SurfaceObject {
             const siloDv = siloH * Math.cos(extrusionAngle);
 
             // Main silo cylinder
-            Draw3D.drawCylinder(baseX, baseY - siloDv, sz * 0.35, siloH, 10, this.accentColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(baseX, baseY - siloDv, sz * 0.35, siloH, 10, this.accentColor, extrusionAngle, sunAngle, true);
             // Domed top - sits flush on silo cylinder
             const siloDomeAngle = extrusionAngle + Math.PI;
-            Draw3D.drawDome(baseX, baseY - siloDv, sz * 0.38, lodLevel === 2 ? 6 : 8, this.primaryColor, siloDomeAngle, sunAngle);
+            Draw3D.drawDome(baseX, baseY - siloDv, sz * 0.38, lodLevel === 2 ? 6 : 8, this.primaryColor, siloDomeAngle, sunAngle, false, true);
 
         } else if (this.variant === 2) {
             // WATER TOWER - Elevated tank
@@ -1716,13 +1716,13 @@ class AgriculturalBuilding extends SurfaceObject {
             const tankDv = tankH * Math.cos(extrusionAngle);
 
             // Support column
-            Draw3D.drawCylinder(baseX, baseY - towerDv * 0.5, sz * 0.12, towerH * 0.7, 8, this.accentColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(baseX, baseY - towerDv * 0.5, sz * 0.12, towerH * 0.7, 8, this.accentColor, extrusionAngle, sunAngle, true);
             // Water tank
-            Draw3D.drawCylinder(baseX, baseY - towerDv, sz * 0.4, tankH, 10, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(baseX, baseY - towerDv, sz * 0.4, tankH, 10, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Conical roof
             if (lodLevel === 3) {
-                Draw3D.drawCone(baseX, baseY - towerDv - tankDv, sz * 0.45, sz * 0.25, 8, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawCone(baseX, baseY - towerDv - tankDv, sz * 0.45, sz * 0.25, 8, this.accentColor, extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 3) {
@@ -1731,13 +1731,13 @@ class AgriculturalBuilding extends SurfaceObject {
             const barnDv = barnH * Math.cos(extrusionAngle);
 
             // Main structure
-            Draw3D.drawBox3D(baseX, baseY - barnDv, sz * 1.0, sz * 0.7, barnH, this.accentColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(baseX, baseY - barnDv, sz * 1.0, sz * 0.7, barnH, this.accentColor, extrusionAngle, sunAngle, true);
             // Peaked roof - sits flush on barn top
-            Draw3D.drawCone(baseX, baseY - barnDv, sz * 0.55, sz * 0.35, 4, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawCone(baseX, baseY - barnDv, sz * 0.55, sz * 0.35, 4, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Barn door
             if (lodLevel === 3) {
-                Draw3D.drawBox3D(baseX, baseY - barnDv * 0.3, sz * 0.25, sz * 0.02, barnH * 0.6, color(80, 60, 40), extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(baseX, baseY - barnDv * 0.3, sz * 0.25, sz * 0.02, barnH * 0.6, color(80, 60, 40), extrusionAngle, sunAngle, true);
             }
 
         } else {
@@ -1746,13 +1746,13 @@ class AgriculturalBuilding extends SurfaceObject {
             const millDv = millH * Math.cos(extrusionAngle);
 
             // Tower
-            Draw3D.drawCylinder(baseX, baseY - millDv, sz * 0.2, millH, 8, this.accentColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(baseX, baseY - millDv, sz * 0.2, millH, 8, this.accentColor, extrusionAngle, sunAngle, true);
             // Hub
-            Draw3D.drawCylinder(baseX, baseY - millDv - sz * 0.15, sz * 0.15, sz * 0.2, 8, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(baseX, baseY - millDv - sz * 0.15, sz * 0.15, sz * 0.2, 8, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Blades
             if (lodLevel === 3) {
-                Draw3D.drawBox3D(baseX, baseY - millDv - sz * 0.25, sz * 0.08, sz * 0.6, sz * 0.05, color(220, 220, 220), extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(baseX, baseY - millDv - sz * 0.25, sz * 0.08, sz * 0.6, sz * 0.05, color(220, 220, 220), extrusionAngle, sunAngle, true);
             }
         }
     }
@@ -1815,17 +1815,17 @@ class ServiceBuilding extends SurfaceObject {
 
             // Base building
             const baseAlt = sz * 0.2;
-            Draw3D.drawBox3D(baseX - baseAlt * Math.sin(extrusionAngle), baseY - baseAlt * Math.cos(extrusionAngle), sz * 0.4, sz * 0.4, sz * 0.4, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(baseX - baseAlt * Math.sin(extrusionAngle), baseY - baseAlt * Math.cos(extrusionAngle), sz * 0.4, sz * 0.4, sz * 0.4, this.primaryColor, extrusionAngle, sunAngle, true);
             // Antenna mast
-            Draw3D.drawCylinder(towerTopX, towerTopY, sz * 0.04, towerH, 6, this.accentColor, extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(towerTopX, towerTopY, sz * 0.04, towerH, 6, this.accentColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Satellite dish and light
             if (lodLevel === 3) {
                 // Satellite dish (midway up tower)
                 const dishAlt = towerH * 0.5;
-                Draw3D.drawDome(baseX - dishAlt * Math.sin(extrusionAngle), baseY - dishAlt * Math.cos(extrusionAngle), sz * 0.25, 6, this.accentColor, extrusionAngle, sunAngle, true);
+                Draw3D.drawDome(baseX - dishAlt * Math.sin(extrusionAngle), baseY - dishAlt * Math.cos(extrusionAngle), sz * 0.25, 6, this.accentColor, extrusionAngle, sunAngle, true, true);
                 // Red warning light - sits flush on tower top
-                Draw3D.drawDome(towerTopX, towerTopY, sz * 0.08, 6, color(255, 50, 50), extrusionAngle, sunAngle);
+                Draw3D.drawDome(towerTopX, towerTopY, sz * 0.08, 6, color(255, 50, 50), extrusionAngle, sunAngle, false, true);
             }
 
         } else if (this.variant === 1) {
@@ -1837,15 +1837,15 @@ class ServiceBuilding extends SurfaceObject {
             const shopTopY = baseY - shopDvY;
 
             // Main building
-            Draw3D.drawBox3D(shopTopX, shopTopY, sz * 1.0, sz * 0.7, shopH, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(shopTopX, shopTopY, sz * 1.0, sz * 0.7, shopH, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Sign and Awning
             if (lodLevel === 3) {
                 // Sign on front
-                Draw3D.drawBox3D(shopTopX, shopTopY, sz * 0.8, sz * 0.02, sz * 0.2, this.lightColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(shopTopX, shopTopY, sz * 0.8, sz * 0.02, sz * 0.2, this.lightColor, extrusionAngle, sunAngle, true);
                 // Awning
                 const awnAlt = shopH * 0.3;
-                Draw3D.drawBox3D(baseX - awnAlt * Math.sin(extrusionAngle), baseY - awnAlt * Math.cos(extrusionAngle), sz * 1.1, sz * 0.25, sz * 0.05, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(baseX - awnAlt * Math.sin(extrusionAngle), baseY - awnAlt * Math.cos(extrusionAngle), sz * 1.1, sz * 0.25, sz * 0.05, this.accentColor, extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 2) {
@@ -1855,13 +1855,13 @@ class ServiceBuilding extends SurfaceObject {
             // Parking levels
             for (let i = 0; i < 3; i++) {
                 const levelAlt = levelH * (i + 0.5);
-                Draw3D.drawBox3D(baseX - levelAlt * Math.sin(extrusionAngle), baseY - levelAlt * Math.cos(extrusionAngle), sz * 1.2, sz * 0.8, levelH, this.primaryColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(baseX - levelAlt * Math.sin(extrusionAngle), baseY - levelAlt * Math.cos(extrusionAngle), sz * 1.2, sz * 0.8, levelH, this.primaryColor, extrusionAngle, sunAngle, true);
             }
 
             // LOD 3 only: Stairwell tower
             if (lodLevel === 3) {
                 const towerAlt = levelH * 1.5;
-                Draw3D.drawBox3D(baseX - towerAlt * Math.sin(extrusionAngle) + sz * 0.5, baseY - towerAlt * Math.cos(extrusionAngle), sz * 0.2, sz * 0.3, levelH * 3, this.accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(baseX - towerAlt * Math.sin(extrusionAngle) + sz * 0.5, baseY - towerAlt * Math.cos(extrusionAngle), sz * 0.2, sz * 0.3, levelH * 3, this.accentColor, extrusionAngle, sunAngle, true);
             }
 
         } else if (this.variant === 3) {
@@ -1873,17 +1873,17 @@ class ServiceBuilding extends SurfaceObject {
             const hotelTopY = baseY - hotelDvY;
 
             // Main tower
-            Draw3D.drawBox3D(hotelTopX, hotelTopY, sz * 0.7, sz * 0.5, hotelH, this.primaryColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(hotelTopX, hotelTopY, sz * 0.7, sz * 0.5, hotelH, this.primaryColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Balconies and Sign
             if (lodLevel === 3) {
                 // Balconies
                 for (let i = 0; i < 4; i++) {
                     const balAlt = hotelH * (0.3 + i * 0.2);
-                    Draw3D.drawBox3D(baseX - balAlt * Math.sin(extrusionAngle) + sz * 0.35, baseY - balAlt * Math.cos(extrusionAngle), sz * 0.15, sz * 0.4, sz * 0.03, this.accentColor, extrusionAngle, sunAngle);
+                    Draw3D.drawBox3D(baseX - balAlt * Math.sin(extrusionAngle) + sz * 0.35, baseY - balAlt * Math.cos(extrusionAngle), sz * 0.15, sz * 0.4, sz * 0.03, this.accentColor, extrusionAngle, sunAngle, true);
                 }
                 // Rooftop sign
-                Draw3D.drawBox3D(hotelTopX, hotelTopY, sz * 0.5, sz * 0.05, sz * 0.15, this.lightColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(hotelTopX, hotelTopY, sz * 0.5, sz * 0.05, sz * 0.15, this.lightColor, extrusionAngle, sunAngle, true);
             }
 
         } else {
@@ -1895,17 +1895,17 @@ class ServiceBuilding extends SurfaceObject {
             const medTopY = baseY - medDvY;
 
             // Main building
-            Draw3D.drawBox3D(medTopX, medTopY, sz * 1.2, sz * 0.8, medH, this.accentColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(medTopX, medTopY, sz * 1.2, sz * 0.8, medH, this.accentColor, extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Cross symbols and Canopy
             if (lodLevel === 3) {
                 // Red cross horizontal
-                Draw3D.drawBox3D(medTopX, medTopY, sz * 0.3, sz * 0.1, sz * 0.05, color(200, 50, 50), extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(medTopX, medTopY, sz * 0.3, sz * 0.1, sz * 0.05, color(200, 50, 50), extrusionAngle, sunAngle, true);
                 // Red cross vertical
-                Draw3D.drawBox3D(medTopX, medTopY, sz * 0.1, sz * 0.3, sz * 0.05, color(200, 50, 50), extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(medTopX, medTopY, sz * 0.1, sz * 0.3, sz * 0.05, color(200, 50, 50), extrusionAngle, sunAngle, true);
                 // Entrance canopy
                 const canAlt = medH * 0.2;
-                Draw3D.drawBox3D(baseX - canAlt * Math.sin(extrusionAngle), baseY - canAlt * Math.cos(extrusionAngle) + sz * 0.3, sz * 0.4, sz * 0.3, sz * 0.1, this.primaryColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(baseX - canAlt * Math.sin(extrusionAngle), baseY - canAlt * Math.cos(extrusionAngle) + sz * 0.3, sz * 0.4, sz * 0.3, sz * 0.1, this.primaryColor, extrusionAngle, sunAngle, true);
             }
         }
     }
@@ -2157,7 +2157,7 @@ class Turret extends SurfaceObject {
         const baseRx = visualX - baseDvX;
         const baseRy = visualY - baseDvY;
 
-        Draw3D.drawCylinder(baseRx, baseRy, sz / 2, baseH, lodLevel === 2 ? 8 : 12, damageFlash ? color(255) : color(60), extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(baseRx, baseRy, sz / 2, baseH, lodLevel === 2 ? 8 : 12, damageFlash ? color(255) : color(60), extrusionAngle, sunAngle, true);
 
         // --- HEAD ---
         // Head sits on Base Roof
@@ -2191,14 +2191,14 @@ class Turret extends SurfaceObject {
                 corners.push({ x: rx, y: ry });
             }
 
-            Draw3D.drawExtrudedShape(corners, headH, damageFlash ? color(255) : damageColor, extrusionAngle, sunAngle);
+            Draw3D.drawExtrudedShape(corners, headH, damageFlash ? color(255) : damageColor, extrusionAngle, sunAngle, true, true);
         } else {
             // Simplified Box Head for LOD 2
             // Just draw a rotated box at the center position
             push();
             translate(headRx + headDvX * 0.5, headRy + headDvY * 0.5); // move to center of head volume
             rotate(this.angle);
-            Draw3D.drawBox3D(0, 0, sz * 0.8, sz * 0.8, headH, damageFlash ? color(255) : damageColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(0, 0, sz * 0.8, sz * 0.8, headH, damageFlash ? color(255) : damageColor, extrusionAngle, sunAngle, true);
             pop();
         }
 
@@ -2227,7 +2227,7 @@ class Turret extends SurfaceObject {
             const lry = ly - ldvY;
 
             const barrelCol = color(40);
-            Draw3D.drawBox3D(lrx, lry, barrelLen, barrelW, 10, barrelCol, compAngle, sunAngle);
+            Draw3D.drawBox3D(lrx, lry, barrelLen, barrelW, 10, barrelCol, compAngle, sunAngle, true);
             pop();
         };
 
@@ -2243,7 +2243,7 @@ class Turret extends SurfaceObject {
             const lx = (sz * 0.4) + barrelLen / 2;
             const ldvX = 10 * Math.sin(compAngle);
             const ldvY = 10 * Math.cos(compAngle);
-            Draw3D.drawBox3D(lx - ldvX, 0 - ldvY, barrelLen, barrelW * 2.5, 10, color(40), compAngle, sunAngle);
+            Draw3D.drawBox3D(lx - ldvX, 0 - ldvY, barrelLen, barrelW * 2.5, 10, color(40), compAngle, sunAngle, true);
             pop();
         }
 
@@ -2320,7 +2320,7 @@ class SurfaceStation extends SurfaceObject {
         const baseTopX = baseX - baseDvX;
         const baseTopY = baseY - baseDvY;
         const baseRadius = 110;
-        Draw3D.drawCylinder(baseTopX, baseTopY, baseRadius, baseH, lodLevel === 2 ? 8 : 12, lerpColor(this.color, color(30), 0.1), extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(baseTopX, baseTopY, baseRadius, baseH, lodLevel === 2 ? 8 : 12, lerpColor(this.color, color(30), 0.1), extrusionAngle, sunAngle, true);
 
         // Attach four rectangular hangars/platforms at ground level around the base
         const padW = 60;
@@ -2338,7 +2338,7 @@ class SurfaceStation extends SurfaceObject {
             const padVisualY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
                 ? surfaceMode._toVisualY(padWorldY, alt) : padWorldY - alt * Math.cos(extrusionAngle);
 
-            Draw3D.drawBox3D(padVisualX, padVisualY, padW, padL, padH, color(70, 75, 80), extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(padVisualX, padVisualY, padW, padL, padH, color(70, 75, 80), extrusionAngle, sunAngle, true);
 
             // LOD 3 only: Small approach lights on outer edge of each pad
             if (lodLevel === 3 && (now % 2000) < 1000) {
@@ -2355,7 +2355,7 @@ class SurfaceStation extends SurfaceObject {
         const coreDvY = coreH * Math.cos(extrusionAngle);
         const coreTopX = baseTopX - coreDvX;
         const coreTopY = baseTopY - coreDvY;
-        Draw3D.drawCylinder(coreTopX, coreTopY, 60, coreH, lodLevel === 2 ? 6 : 8, this.color, extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(coreTopX, coreTopY, 60, coreH, lodLevel === 2 ? 6 : 8, this.color, extrusionAngle, sunAngle, true);
 
         // --- Command Center (Head) ---
         const headH = 40;
@@ -2363,7 +2363,7 @@ class SurfaceStation extends SurfaceObject {
         const headDvY = headH * Math.cos(extrusionAngle);
         const headTopX = coreTopX - headDvX;
         const headTopY = coreTopY - headDvY;
-        Draw3D.drawCylinder(headTopX, headTopY, 90, headH, lodLevel === 2 ? 8 : 16, headColor, extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(headTopX, headTopY, 90, headH, lodLevel === 2 ? 8 : 16, headColor, extrusionAngle, sunAngle, true);
 
         // --- Radar Dish (on head roof) ---
         const radarBaseX = headTopX;
@@ -2377,7 +2377,7 @@ class SurfaceStation extends SurfaceObject {
             const sweep = now * 0.0007; // slower rotation speed
 
             // Central mast
-            Draw3D.drawCylinder(0, 0, 4, 20, 8, lerpColor(this.color, color(40), 0.15), extrusionAngle, sunAngle);
+            Draw3D.drawCylinder(0, 0, 4, 20, 8, lerpColor(this.color, color(40), 0.15), extrusionAngle, sunAngle, true);
 
             // Rotating panels (3 panels evenly spaced)
             for (let i = 0; i < 3; i++) {
@@ -2387,7 +2387,7 @@ class SurfaceStation extends SurfaceObject {
                 translate(0, -32);
                 // Tilt panel slightly toward viewer for readability
                 rotate(-Math.PI / 6);
-                Draw3D.drawBox3D(0, 0, 10, 48, 6, color(120, 140, 160), extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(0, 0, 10, 48, 6, color(120, 140, 160), extrusionAngle, sunAngle, true);
                 // Small support strut to mast
                 Draw3D.drawRod(0, 6, 0, 32, 3, color(90), extrusionAngle, sunAngle, false);
                 pop();
@@ -2401,7 +2401,7 @@ class SurfaceStation extends SurfaceObject {
             ellipse(-mastDvX, -mastDvY, 6, 4);
         } else {
             // LOD 2: Simple Static Dome
-            Draw3D.drawDome(0, 0, 30, 6, color(120, 140, 160), extrusionAngle, sunAngle, true);
+            Draw3D.drawDome(0, 0, 30, 6, color(120, 140, 160), extrusionAngle, sunAngle, true, true);
         }
         pop();
     }
@@ -2489,7 +2489,7 @@ class ShieldGenerator extends SurfaceObject {
         const baseDvY = baseH * Math.cos(extrusionAngle);
         const baseTopX = baseX - baseDvX;
         const baseTopY = baseY - baseDvY;
-        Draw3D.drawCylinder(baseTopX, baseTopY, sz * 0.8, baseH, lodLevel === 2 ? 6 : 8, flashColor || color(60, 70, 80), extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(baseTopX, baseTopY, sz * 0.8, baseH, lodLevel === 2 ? 6 : 8, flashColor || color(60, 70, 80), extrusionAngle, sunAngle, true);
 
         // Central pillar
         const pillarH = sz * 0.6;
@@ -2497,7 +2497,7 @@ class ShieldGenerator extends SurfaceObject {
         const pillarDvY = pillarH * Math.cos(extrusionAngle);
         const pillarTopX = baseTopX - pillarDvX;
         const pillarTopY = baseTopY - pillarDvY;
-        Draw3D.drawCylinder(pillarTopX, pillarTopY, sz * 0.25, pillarH, lodLevel === 2 ? 4 : 6, flashColor || color(40, 50, 60), extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(pillarTopX, pillarTopY, sz * 0.25, pillarH, lodLevel === 2 ? 4 : 6, flashColor || color(40, 50, 60), extrusionAngle, sunAngle, true);
 
         // Energy dome (pulsing)
         const pulseScale = 1 + Math.sin(this.pulsePhase) * 0.1;
@@ -2518,11 +2518,11 @@ class ShieldGenerator extends SurfaceObject {
             const pedestalTopX = domeX - pedestalDvX;
             const pedestalTopY = domeY - pedestalDvY;
             const pedestalColor = lerpColor(baseColor, color(30, 30, 40), 0.6);
-            Draw3D.drawCylinder(domeX, domeY, pedestalRadius, pedestalHeight, 12, pedestalColor, extrusionAngle, sunAngle);
-            Draw3D.drawDome(pedestalTopX, pedestalTopY, domeR, 8, domeColor, domeAngle, sunAngle);
+            Draw3D.drawCylinder(domeX, domeY, pedestalRadius, pedestalHeight, 12, pedestalColor, extrusionAngle, sunAngle, true);
+            Draw3D.drawDome(pedestalTopX, pedestalTopY, domeR, 8, domeColor, domeAngle, sunAngle, false, true);
         } else {
             // Simplified dome direct on pillar, less polys
-            Draw3D.drawDome(domeX, domeY, domeR, 6, domeColor, domeAngle, sunAngle);
+            Draw3D.drawDome(domeX, domeY, domeR, 6, domeColor, domeAngle, sunAngle, false, true);
         }        // --- Health Bar ---
         if (this.health < this.maxHealth && this.maxHealth > 0) {
             push();
@@ -2995,7 +2995,7 @@ class DefenseDrone extends SurfaceObject {
         if (area < 0) worldVerts.reverse();
 
         // Draw extruded drone body
-        Draw3D.drawExtrudedShape(worldVerts, bodyH, shipColor, extrusionAngle, sunAngle);
+        Draw3D.drawExtrudedShape(worldVerts, bodyH, shipColor, extrusionAngle, sunAngle, true, true);
 
         // Engine glow - Only at LOD 3
         if (lodLevel === 3 && this.speed > 10) {

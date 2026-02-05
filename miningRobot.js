@@ -579,23 +579,23 @@ class MiningRobot {
 
         // ===== CHASSIS (Base Frame) =====
         // Main lower chassis - wider, more stable look
-        Draw3D.drawBox3D(0, 0, s * 1.6, s * 1.0, s * 0.3, chassisColor, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(0, 0, s * 1.6, s * 1.0, s * 0.3, chassisColor, extrusionAngle, sunAngle, true);
 
         // Chassis support beams (industrial look)
-        Draw3D.drawBox3D(-s * 0.6, 0, s * 0.15, s * 0.9, s * 0.25, bodyColor, extrusionAngle, sunAngle);
-        Draw3D.drawBox3D(s * 0.6, 0, s * 0.15, s * 0.9, s * 0.25, bodyColor, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(-s * 0.6, 0, s * 0.15, s * 0.9, s * 0.25, bodyColor, extrusionAngle, sunAngle, true);
+        Draw3D.drawBox3D(s * 0.6, 0, s * 0.15, s * 0.9, s * 0.25, bodyColor, extrusionAngle, sunAngle, true);
 
         // ===== BODY/CABIN =====
         // Main body compartment (offset back)
-        Draw3D.drawBox3D(-s * 0.2, 0, s * 0.9, s * 0.8, s * 0.6, bodyColor, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(-s * 0.2, 0, s * 0.9, s * 0.8, s * 0.6, bodyColor, extrusionAngle, sunAngle, true);
 
         // Control cabin/sensor housing on top
-        Draw3D.drawBox3D(-s * 0.25, -s * 0.1, s * 0.6, s * 0.5, s * 0.4, chassisColor, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(-s * 0.25, -s * 0.1, s * 0.6, s * 0.5, s * 0.4, chassisColor, extrusionAngle, sunAngle, true);
 
         // Viewport/sensor window (animated glow)
         const glowAmount = abs(sin(this.lightTimer)) * 0.4 + 0.6;
         const windowColor = color(80, 180, 255, 120 + glowAmount * 135);
-        Draw3D.drawBox3D(-s * 0.25, -s * 0.15, s * 0.35, s * 0.25, s * 0.05, windowColor, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(-s * 0.25, -s * 0.15, s * 0.35, s * 0.25, s * 0.05, windowColor, extrusionAngle, sunAngle, true);
 
         // ===== WHEELS/TREADS (4 wheels) =====
         const wheelColor = color(40, 40, 40);
@@ -604,31 +604,31 @@ class MiningRobot {
         const wheelOffset = s * 0.55;
 
         // Front wheels
-        Draw3D.drawCylinder(-wheelOffset, s * 0.45, wheelRadius, wheelHeight, 8, wheelColor, extrusionAngle, sunAngle);
-        Draw3D.drawCylinder(wheelOffset, s * 0.45, wheelRadius, wheelHeight, 8, wheelColor, extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(-wheelOffset, s * 0.45, wheelRadius, wheelHeight, 8, wheelColor, extrusionAngle, sunAngle, true);
+        Draw3D.drawCylinder(wheelOffset, s * 0.45, wheelRadius, wheelHeight, 8, wheelColor, extrusionAngle, sunAngle, true);
         // Rear wheels
-        Draw3D.drawCylinder(-wheelOffset, -s * 0.45, wheelRadius, wheelHeight, 8, wheelColor, extrusionAngle, sunAngle);
-        Draw3D.drawCylinder(wheelOffset, -s * 0.45, wheelRadius, wheelHeight, 8, wheelColor, extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(-wheelOffset, -s * 0.45, wheelRadius, wheelHeight, 8, wheelColor, extrusionAngle, sunAngle, true);
+        Draw3D.drawCylinder(wheelOffset, -s * 0.45, wheelRadius, wheelHeight, 8, wheelColor, extrusionAngle, sunAngle, true);
 
         // Wheel hubs (yellow accents)
         const hubSize = s * 0.12;
-        Draw3D.drawCylinder(-wheelOffset, s * 0.45, hubSize, s * 0.08, 6, accentColor, extrusionAngle, sunAngle);
-        Draw3D.drawCylinder(wheelOffset, s * 0.45, hubSize, s * 0.08, 6, accentColor, extrusionAngle, sunAngle);
-        Draw3D.drawCylinder(-wheelOffset, -s * 0.45, hubSize, s * 0.08, 6, accentColor, extrusionAngle, sunAngle);
-        Draw3D.drawCylinder(wheelOffset, -s * 0.45, hubSize, s * 0.08, 6, accentColor, extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(-wheelOffset, s * 0.45, hubSize, s * 0.08, 6, accentColor, extrusionAngle, sunAngle, true);
+        Draw3D.drawCylinder(wheelOffset, s * 0.45, hubSize, s * 0.08, 6, accentColor, extrusionAngle, sunAngle, true);
+        Draw3D.drawCylinder(-wheelOffset, -s * 0.45, hubSize, s * 0.08, 6, accentColor, extrusionAngle, sunAngle, true);
+        Draw3D.drawCylinder(wheelOffset, -s * 0.45, hubSize, s * 0.08, 6, accentColor, extrusionAngle, sunAngle, true);
 
         // ===== MINING ARM & DRILL =====
         push();
         translate(s * 1.0, 0); // Front mount point
 
         // Arm base/mount
-        Draw3D.drawBox3D(0, 0, s * 0.35, s * 0.35, s * 0.3, bodyColor, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(0, 0, s * 0.35, s * 0.35, s * 0.3, bodyColor, extrusionAngle, sunAngle, true);
 
         // Hydraulic arm sections
-        Draw3D.drawBox3D(s * 0.2, 0, s * 0.3, s * 0.15, s * 0.15, accentColor, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(s * 0.2, 0, s * 0.3, s * 0.15, s * 0.15, accentColor, extrusionAngle, sunAngle, true);
 
         // Drill housing
-        Draw3D.drawBox3D(s * 0.4, 0, s * 0.25, s * 0.25, s * 0.2, drillColor, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(s * 0.4, 0, s * 0.25, s * 0.25, s * 0.2, drillColor, extrusionAngle, sunAngle, true);
 
         // Rotating drill bit
         push();
@@ -636,17 +636,17 @@ class MiningRobot {
         rotate(this.drillRotation);
 
         // Main drill shaft
-        Draw3D.drawCylinder(0, 0, s * 0.18, s * 0.5, 8, drillColor, extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(0, 0, s * 0.18, s * 0.5, 8, drillColor, extrusionAngle, sunAngle, true);
 
         // Drill tip (darker)
         const tipColor = color(70, 70, 80);
-        Draw3D.drawCylinder(s * 0.25, 0, s * 0.12, s * 0.15, 6, tipColor, extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(s * 0.25, 0, s * 0.12, s * 0.15, 6, tipColor, extrusionAngle, sunAngle, true);
 
         // Drill flutes/cutting edges
         for (let i = 0; i < 3; i++) {
             push();
             rotate((i * TWO_PI / 3));
-            Draw3D.drawBox3D(s * 0.15, s * 0.12, s * 0.05, s * 0.2, s * 0.02, tipColor, extrusionAngle, sunAngle);
+            Draw3D.drawBox3D(s * 0.15, s * 0.12, s * 0.05, s * 0.2, s * 0.02, tipColor, extrusionAngle, sunAngle, true);
             pop();
         }
 
@@ -659,22 +659,22 @@ class MiningRobot {
             const containerColor = color(160, 120, 80);
             for (let i = 0; i < containerCount; i++) {
                 const cy = -s * 0.5 - i * s * 0.22;
-                Draw3D.drawBox3D(-s * 0.65, cy, s * 0.3, s * 0.3, s * 0.28, containerColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(-s * 0.65, cy, s * 0.3, s * 0.3, s * 0.28, containerColor, extrusionAngle, sunAngle, true);
                 // Container straps
-                Draw3D.drawBox3D(-s * 0.65, cy, s * 0.32, s * 0.05, s * 0.3, accentColor, extrusionAngle, sunAngle);
+                Draw3D.drawBox3D(-s * 0.65, cy, s * 0.32, s * 0.05, s * 0.3, accentColor, extrusionAngle, sunAngle, true);
             }
         }
 
         // ===== STATUS LIGHTS =====
         // Main status light on top
         const statusColor = this.getStatusColor();
-        Draw3D.drawCylinder(-s * 0.25, -s * 0.45, s * 0.12, s * 0.08, 6, statusColor, extrusionAngle, sunAngle);
+        Draw3D.drawCylinder(-s * 0.25, -s * 0.45, s * 0.12, s * 0.08, 6, statusColor, extrusionAngle, sunAngle, true);
 
         // Side marker lights (small)
         const markerBrightness = abs(sin(this.lightTimer * 0.7)) * 0.3 + 0.7;
         const markerColor = color(255, 200, 0, 150 * markerBrightness);
-        Draw3D.drawBox3D(-s * 0.75, 0, s * 0.08, s * 0.08, s * 0.06, markerColor, extrusionAngle, sunAngle);
-        Draw3D.drawBox3D(s * 0.35, 0, s * 0.08, s * 0.08, s * 0.06, markerColor, extrusionAngle, sunAngle);
+        Draw3D.drawBox3D(-s * 0.75, 0, s * 0.08, s * 0.08, s * 0.06, markerColor, extrusionAngle, sunAngle, true);
+        Draw3D.drawBox3D(s * 0.35, 0, s * 0.08, s * 0.08, s * 0.06, markerColor, extrusionAngle, sunAngle, true);
 
         pop();
     }
