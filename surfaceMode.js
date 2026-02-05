@@ -8,7 +8,7 @@
 const SURFACE_CONFIG = {
     // Flight mechanics
     MIN_ALTITUDE: 10,
-    MAX_ALTITUDE: 1800,
+    MAX_ALTITUDE: 1500,
     DEFAULT_ALTITUDE: 800, // Default starting altitude above terrain
     TURN_SPEED: 2.5,           // Radians per second
     // Movement (now uses SHIP_DEFINITIONS and SharedPhysics)
@@ -23,7 +23,7 @@ const SURFACE_CONFIG = {
 
     // Transition
     TRANSITION_ENTER_DURATION: 3000, // ms for entering (terrain loads during fade)
-    TRANSITION_EXIT_DURATION: 250,   // ms for exiting (very fast - just a flash)
+    TRANSITION_EXIT_DURATION: 800,   // Increased from 250ms for smoother wash-out
     TRIGGER_KEY: 71,           // 'G' key for surface descent
 
     // Visual
@@ -99,9 +99,9 @@ const SURFACE_CONFIG = {
     // The overlay is drawn AFTER surface objects but BEFORE the player ship,
     // so the ship remains visible while the surface fades out
     CLOUD_LAYER: {
-        START_ALTITUDE: 1300,     // Altitude where clouds begin to appear
-        FULL_ALTITUDE: 1800,      // Altitude where clouds reach maximum opacity
-        MAX_OPACITY: 0.75,        // Maximum cloud opacity (0-1), 0.75 = 75% white
+        START_ALTITUDE: 1000,     // Altitude where clouds begin to appear
+        FULL_ALTITUDE: 1500,      // Altitude where clouds reach maximum opacity
+        MAX_OPACITY: 1.0,         // Increased from 0.75 for full white-out at MAX_ALTITUDE
         COLOR: [255, 255, 255]    // Cloud color (white)
     }
 };
@@ -1778,7 +1778,10 @@ class SurfaceMode {
 
         // 2. Perspective scaling (everything world-side scales together)
         // Apply view zoom multiplier (for automatic EVA zoom)
-        scale(this._cachedPerspectiveScale * this.viewZoom);
+        // [ZOOM FIX] Disable zoom during transitions for a cleaner visual hand-off
+        const isTransitioning = this.state === SURFACE_STATE.ENTERING || this.state === SURFACE_STATE.EXITING;
+        const currentZoom = isTransitioning ? 1.0 : this.viewZoom;
+        scale(this._cachedPerspectiveScale * currentZoom);
 
         // 3. World translation (camera follows player's visual top position)
         const visualXOffset = this.altitude * this._cachedExtrusionSin;
@@ -3072,7 +3075,15 @@ class SurfaceMode {
         // Calculate opacity based on altitude (linear interpolation)
         const t = (this.altitude - cloud.START_ALTITUDE) /
             (cloud.FULL_ALTITUDE - cloud.START_ALTITUDE);
-        const opacity = Math.min(1, t) * cloud.MAX_OPACITY * 255;
+
+        // [SMOOTH TRANSITION] If exiting, treat the transition progress as additional opacity
+        // This ensures the screen reaches 100% white even if the player was slightly below FULL_ALTITUDE
+        let opacityVal = Math.min(1, t);
+        if (this.state === SURFACE_STATE.EXITING) {
+            opacityVal = Math.max(opacityVal, this.transitionProgress);
+        }
+
+        const opacity = opacityVal * cloud.MAX_OPACITY * 255;
 
         // Skip if nearly invisible
         if (opacity < 1) return;

@@ -1486,19 +1486,6 @@ class GameStateManager {
             }
         }
 
-        // Draw HUD outside of zoom transform so it stays at normal size
-        // Hide HUD only during death zoom (not intro zoom)
-        if (uiManager && player) {
-            try {
-                if (!isDeathZooming) {
-                    uiManager.drawHUD(player);
-                    if (currentSystem) {
-                        uiManager.drawMinimap(player, currentSystem);
-                    }
-                }
-            } catch (e) { }
-        }
-
         // Draw quantum gate fade overlay if active
         if (this.jumpFadeState !== "NONE" && this.jumpFadeOpacity > 0) {
             push();
@@ -1511,7 +1498,35 @@ class GameStateManager {
         // Draw surface mode exit fade overlay if active
         // This creates a smooth white fade-in when returning from planet surface
         if (typeof surfaceMode !== 'undefined' && surfaceMode) {
-            surfaceMode.updateAndDrawExitFade();
+            const isFading = surfaceMode.updateAndDrawExitFade();
+
+            // If exiting surface mode, the above call draws a white overlay over everything.
+            // We must re-draw the player ship on top of this overlay so it stays visible 
+            // during the transition back to space view.
+            if (isFading && player && typeof player.draw === 'function') {
+                push();
+                // Apply the same camera transform used in currentSystem.draw()
+                translate(width / 2 - player.pos.x, height / 2 - player.pos.y);
+
+                // [ZOOM REMOVED] Do not apply death/intro zoom during exit transition
+                // to maintain visual consistency with the surface mode scale.
+
+                player.draw();
+                pop();
+            }
+        }
+
+        // [HUD FIX] Draw HUD LAST so it stays on top of even the transition/fade overlays
+        // Hide HUD only during death zoom (not intro zoom)
+        if (uiManager && player) {
+            try {
+                if (!isDeathZooming) {
+                    uiManager.drawHUD(player);
+                    if (currentSystem) {
+                        uiManager.drawMinimap(player, currentSystem);
+                    }
+                }
+            } catch (e) { }
         }
     }
 
