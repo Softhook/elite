@@ -305,8 +305,9 @@ class UIHUD {
         let hasTopBar = player?.autopilotEnabled;
 
         if (!hasTopBar && typeof surfaceMode !== 'undefined' && surfaceMode) {
-            // 1. Check if Surface Mode is ACTIVE (Controls Hint Bar)
-            if (surfaceMode.state === 'active') {
+            // 1. Check if Surface Mode is ACTIVE or Transitioning (Controls Hint Bar)
+            // The bar is drawn by surfaceHud as long as it's not in ASTRONAUT mode
+            if (surfaceMode.state !== 'inactive' && surfaceMode.controlMode !== 'ASTRONAUT') {
                 hasTopBar = true;
             }
             // 2. Check if Orbiting/Descent is possible (Descent Hint Bar)
