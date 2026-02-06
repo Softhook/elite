@@ -557,6 +557,11 @@ class SurfaceMode {
         this.altitudeInput = 0;
         this.fireInput = false;
 
+        // Clear player target on entry to prevent space targets from ghosting on surface
+        if (this.player) {
+            this.player.target = null;
+        }
+
         // Start transition
         this.transitionStartTime = millis();
         this.transitionProgress = 0;
@@ -735,10 +740,15 @@ class SurfaceMode {
         this.terrain.cleanup();
 
         // Clear data
-        this.projectiles = [];
         this.miningRobots = [];
         this.oreSeams.clear();
         this.savedPlayerPos = null;
+
+        // Clear player target on exit to prevent surface targets from ghosting in space
+        if (this.player) {
+            this.player.target = null;
+        }
+
         this.planet = null;
 
         // Restore game state

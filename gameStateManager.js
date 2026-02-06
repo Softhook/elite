@@ -1226,8 +1226,12 @@ class GameStateManager {
                     player.currentSystem = galaxy?.getCurrentSystem();
                     player.vel.mult(0.3);
                     this.jumpChargeTimer = 0;
-                    this.jumpChargeTimer = 0;
                     this.isJumpCharging = false;
+                }
+
+                // Clear player target on jump transition
+                if (player) {
+                    player.target = null;
                 }
 
                 // Change music chords during the white-out transition (mid-jump)
