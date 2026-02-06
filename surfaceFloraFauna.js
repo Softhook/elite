@@ -216,9 +216,14 @@ class AlienTree extends SurfaceFlora {
         // Pre-calculate colors
         this.trunkColor = this._getDarkenedColor(this.color, 0.5);
 
-        // Pre-calculate branch angles
+        // Pre-calculate branch angles and blob sizes
         this.branches = Math.floor(3 + (this.seed % 4));
         this.branchAngles = this._generateAngles(this.branches);
+        this.blobSizes = [];
+        const canopyR = this.size * 0.8;
+        for (let i = 0; i < this.branches; i++) {
+            this.blobSizes[i] = canopyR * (0.6 + Math.sin(this.seed + i) * 0.2);
+        }
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
@@ -241,12 +246,11 @@ class AlienTree extends SurfaceFlora {
             const { cos, sin } = this.branchAngles[i];
             const offsetX = cos * canopyR * 0.3;
             const offsetY = sin * canopyR * 0.3;
-            const blobSize = canopyR * (0.6 + Math.sin(this.seed + i) * 0.2);
 
             Draw3D.drawPrism(
                 baseX + offsetX,
                 baseY + offsetY,
-                blobSize,
+                this.blobSizes[i],
                 polygonSides,
                 this.size * 0.4,
                 this.color,
@@ -270,6 +274,12 @@ class CrystalPlant extends SurfaceFlora {
         this.crystals = Math.floor(4 + (this.seed % 5));
         this.crystalColor = this._getBrightenedColor(this.color, 60, 200);
         this.crystalAngles = this._generateAngles(this.crystals, this.seed);
+
+        // Pre-calculate crystal heights
+        this.crystalHeights = [];
+        for (let i = 0; i < this.crystals; i++) {
+            this.crystalHeights[i] = this.height * (0.7 + Math.sin(this.seed + i * 2) * 0.3);
+        }
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
@@ -280,11 +290,11 @@ class CrystalPlant extends SurfaceFlora {
         const cosE = Math.cos(extrusionAngle);
         const crystalCount = this._getLODCount(this.crystals, 2, lodLevel);
         const radius = this.size * 0.4;
+        const cWidth = this.size * 0.2;
 
         for (let i = 0; i < crystalCount; i++) {
             const { cos, sin } = this.crystalAngles[i];
-            const cHeight = this.height * (0.7 + Math.sin(this.seed + i * 2) * 0.3);
-            const cWidth = this.size * 0.2;
+            const cHeight = this.crystalHeights[i];
 
             const cx = baseX + cos * radius;
             const cy = baseY + sin * radius;
@@ -474,18 +484,16 @@ class SurfaceFauna {
         this.maxHealth = 30;
 
         // Movement - use seed for deterministic variation
-        const getVariation = (multiplier) => Math.sin(this.seed * multiplier) * 0.5 + 0.5;
-
-        this.moveSpeed = SurfaceFauna.MOVE_SPEED_MIN + getVariation(1.1) * (SurfaceFauna.MOVE_SPEED_MAX - SurfaceFauna.MOVE_SPEED_MIN);
-        this.moveAngle = getVariation(2.3) * Math.PI * 2;
-        this.turnSpeed = SurfaceFauna.TURN_SPEED_MIN + getVariation(3.7) * (SurfaceFauna.TURN_SPEED_MAX - SurfaceFauna.TURN_SPEED_MIN);
+        this.moveSpeed = SurfaceFauna.MOVE_SPEED_MIN + this._getSeededVariation(1.1) * (SurfaceFauna.MOVE_SPEED_MAX - SurfaceFauna.MOVE_SPEED_MIN);
+        this.moveAngle = this._getSeededVariation(2.3) * Math.PI * 2;
+        this.turnSpeed = SurfaceFauna.TURN_SPEED_MIN + this._getSeededVariation(3.7) * (SurfaceFauna.TURN_SPEED_MAX - SurfaceFauna.TURN_SPEED_MIN);
         this.moveTimer = 0;
-        this.moveDuration = SurfaceFauna.MOVE_DURATION_MIN + getVariation(4.1) * (SurfaceFauna.MOVE_DURATION_MAX - SurfaceFauna.MOVE_DURATION_MIN);
-        this.pauseDuration = SurfaceFauna.PAUSE_DURATION_MIN + getVariation(5.3) * (SurfaceFauna.PAUSE_DURATION_MAX - SurfaceFauna.PAUSE_DURATION_MIN);
+        this.moveDuration = SurfaceFauna.MOVE_DURATION_MIN + this._getSeededVariation(4.1) * (SurfaceFauna.MOVE_DURATION_MAX - SurfaceFauna.MOVE_DURATION_MIN);
+        this.pauseDuration = SurfaceFauna.PAUSE_DURATION_MIN + this._getSeededVariation(5.3) * (SurfaceFauna.PAUSE_DURATION_MAX - SurfaceFauna.PAUSE_DURATION_MIN);
         this.isPaused = false;
 
         // Animation
-        this.animTime = getVariation(6.7) * Math.PI * 2;
+        this.animTime = this._getSeededVariation(6.7) * Math.PI * 2;
 
         // Combat/Targeting
         this.targetBase = null;
