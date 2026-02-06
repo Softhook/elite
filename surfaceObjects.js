@@ -49,6 +49,14 @@ class SurfaceObject {
     isDestroyed() { return this.destroyed; }
 
     /**
+     * Get the vertical height of the object for HUD/targeting
+     * @returns {number} Height in world units
+     */
+    getHeight() {
+        return this.height || 0;
+    }
+
+    /**
      * Get friendly display name for UI
      * @returns {string} Human-readable object name
      */
@@ -154,6 +162,7 @@ class SecretCache extends SurfaceObject {
         const variation = (Math.sin(seed) * 0.5 + 0.5) * 30;
         this.color = color(60 + variation, 80 + variation, 50);
         this.crossColor = color(180, 160, 100); // Gold/brass cross
+        this.height = 30 * 0.6; // Box height
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
@@ -1947,6 +1956,13 @@ class Turret extends SurfaceObject {
         this.lastHitTime = 0; // For damage flash effect
         this.isSurface = true; // Mark as surface entity for sound filtering
         this.altitude = 0; // Updated each frame to head/muzzle height for collisions/aiming
+    }
+
+    /**
+     * @override
+     */
+    getHeight() {
+        return this.size * 0.8; // Turret head height
     }
 
     update(dt, player, starSystem) {

@@ -47,6 +47,14 @@ class SurfaceFlora {
     }
 
     /**
+     * Get the vertical height of the flora for HUD/targeting
+     * @returns {number} Height in world units
+     */
+    getHeight() {
+        return this.height || 0;
+    }
+
+    /**
      * Get color based on planet palette colors with slight variation
      * @returns {p5.Color} Color for this flora
      */
@@ -413,6 +421,14 @@ class SurfaceFauna {
     }
 
     /**
+     * Get the vertical height of the fauna for HUD/targeting
+     * @returns {number} Height in world units
+     */
+    getHeight() {
+        return this.height || this.size;
+    }
+
+    /**
      * Get color based on planet palette colors with slight variation
      * @returns {p5.Color} Color for this fauna
      */
@@ -692,6 +708,13 @@ class FloaterCreature extends SurfaceFauna {
         this.tentacles = 4;
     }
 
+    /**
+     * @override
+     */
+    getHeight() {
+        return this.floatHeight + this.size;
+    }
+
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
         if (this.destroyed) return;
 
@@ -807,6 +830,13 @@ class StalkCreature extends SurfaceFauna {
         this.bodyHeight = size * 2;
         this.legs = 4;
         this.legLength = size * 1.5;
+    }
+
+    /**
+     * @override
+     */
+    getHeight() {
+        return this.legLength + this.bodyHeight;
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {

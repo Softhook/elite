@@ -152,6 +152,15 @@ class MiningRobot {
         // Patrol properties
         this.idleWaitTime = 0;
         this.maxIdleTime = 2.0;
+        this.isSurface = true;
+    }
+
+    /**
+     * Get the vertical height of the robot for HUD/targeting
+     * @returns {number} Height in world units
+     */
+    getHeight() {
+        return this.size * 0.9; // Combined height of chassis and cabin
     }
 
     /**

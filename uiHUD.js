@@ -1833,13 +1833,14 @@ class UIHUD {
         const target = player.target;
         if (target.destroyed || !target.pos) return;
 
-        let screenX, screenY;
+        let screenX, screenY, modifiedTargetSize;
         const targetSize = target.size || target.collisionRadius || (target.maxRadius * 0.8) || 50;
 
         // Use global surfaceMode check to determine projection
         if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
             // --- Surface Mode Projection ---
             const objAlt = (typeof target.altitude !== 'undefined') ? target.altitude : (target.yOffset || 0);
+            const targetHeight = (typeof target.getHeight === 'function') ? target.getHeight() : 0;
 
             // Match surfaceMode's internal projection for targeting
             const extrusionAngle = (typeof surfaceMode._getExtrusionAngle === 'function')
@@ -1861,23 +1862,41 @@ class UIHUD {
             const camFocusX = surfaceMode.surfaceX - (surfaceMode.altitude * sinE);
             const camFocusY = surfaceMode.surfaceY - (surfaceMode.altitude * cosE);
 
-            // Object visual position
-            const reticleAlt = objAlt + (target.type === 'Turret' ? targetSize * 0.8 : targetSize * 0.2);
-            const objVisualWorldX = target.pos.x - (reticleAlt * sinE);
-            const objVisualWorldY = target.pos.y - (reticleAlt * cosE);
+            // Object visual position - center reticle on the object's volume
+            const reticleCenterAlt = objAlt + (targetHeight * 0.5);
+            const objVisualWorldX = target.pos.x - (reticleCenterAlt * sinE);
+            const objVisualWorldY = target.pos.y - (reticleCenterAlt * cosE);
 
             // Final screen pixels
             screenX = (objVisualWorldX - camFocusX) * totalScale + (width / 2);
             screenY = (objVisualWorldY - camFocusY) * totalScale + (height / 2);
+
+            // Adjust target size based on height to encompass the whole object
+            // Use 0.8 as a scaling factor for the boxDesign brackets
+            const visualHeight = targetHeight * totalScale;
+            const visualWidth = targetSize * totalScale;
+            // Ensure reticle is large enough for both width and height on screen with padding
+            // Use 1.5x factor to provide some "breathing room" around the object
+            let drawSize = Math.max(visualWidth * 1.5, visualHeight * 0.8);
+
+            // Apply a minimum visual size in pixels so it's always easily visible
+            const minReticleSize = 60; // Minimum diameter in pixels
+            drawSize = Math.max(drawSize, minReticleSize);
+
+            // Re-assign targetSize for the drawing section below
+            // Note: drawing code uses ellipse(0, 0, s * 1.6, s * 1.6)
+            modifiedTargetSize = drawSize / 1.6;
         } else {
             // --- Space Mode Projection ---
             // Assumes player is the camera focus at the center of screen
             screenX = width / 2 + (target.pos.x - player.pos.x);
             screenY = height / 2 + (target.pos.y - player.pos.y);
+            // Space mode uses world units for targetSize with fixed screen scaling in space
+            modifiedTargetSize = targetSize;
         }
 
         // Visibility Check: Only draw if the center is within a reasonable distance from the viewport
-        const margin = targetSize * 2;
+        const margin = (modifiedTargetSize * 1.6) * 2;
         if (screenX < -margin || screenX > width + margin ||
             screenY < -margin || screenY > height + margin) {
             return;
@@ -1893,11 +1912,12 @@ class UIHUD {
         strokeWeight(2);
 
         // Box with circle design
-        ellipse(0, 0, targetSize * 1.6, targetSize * 1.6);
+        const s = modifiedTargetSize;
+        ellipse(0, 0, s * 1.6, s * 1.6);
 
         // Corner brackets
-        const bracketSize = targetSize * 0.3;
-        const offset = targetSize * 0.7;
+        const bracketSize = s * 0.3;
+        const offset = s * 0.7;
 
         // Top-left
         line(-offset, -offset, -offset + bracketSize, -offset);
