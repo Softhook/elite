@@ -75,6 +75,88 @@ class SurfaceFlora {
         return color(r, g, b);
     }
 
+    /**
+     * Get projection helpers with fallback
+     * @param {number} worldX - World X coordinate
+     * @param {number} worldY - World Y coordinate
+     * @param {number} alt - Base altitude
+     * @param {number} height - Additional height offset
+     * @returns {Object} Projection data {extrusionAngle, baseX, baseY}
+     */
+    _getProjection(worldX, worldY, alt, height = 0) {
+        return typeof getProjectionHelpers === 'function'
+            ? getProjectionHelpers(worldX, worldY, alt + height)
+            : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
+    }
+
+    /**
+     * Get deterministic variation based on seed
+     * @param {number} multiplier - Seed multiplier for variation
+     * @returns {number} Value between 0 and 1
+     */
+    _getSeededVariation(multiplier) {
+        return Math.sin(this.seed * multiplier) * 0.5 + 0.5;
+    }
+
+    /**
+     * Generate array of angles with pre-calculated sin/cos
+     * @param {number} count - Number of angles to generate
+     * @param {number} offset - Angle offset in radians
+     * @returns {Array} Array of {cos, sin} objects
+     */
+    _generateAngles(count, offset = 0) {
+        const angles = [];
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2 + offset;
+            angles.push({
+                cos: Math.cos(angle),
+                sin: Math.sin(angle)
+            });
+        }
+        return angles;
+    }
+
+    /**
+     * Get LOD-adjusted count
+     * @param {number} fullCount - Full detail count
+     * @param {number} lod2Count - LOD 2 count
+     * @param {number} lodLevel - Current LOD level
+     * @returns {number} Adjusted count
+     */
+    _getLODCount(fullCount, lod2Count, lodLevel) {
+        return lodLevel === 2 ? Math.min(lod2Count, fullCount) : fullCount;
+    }
+
+    /**
+     * Create darkened version of color
+     * @param {p5.Color} baseColor - Base color
+     * @param {number} factor - Darkening factor (0-1)
+     * @returns {p5.Color} Darkened color
+     */
+    _getDarkenedColor(baseColor, factor = 0.5) {
+        return color(
+            red(baseColor) * factor,
+            green(baseColor) * factor,
+            blue(baseColor) * factor
+        );
+    }
+
+    /**
+     * Create brightened version of color
+     * @param {p5.Color} baseColor - Base color
+     * @param {number} amount - Amount to add to each channel
+     * @param {number} alpha - Alpha value (0-255)
+     * @returns {p5.Color} Brightened color
+     */
+    _getBrightenedColor(baseColor, amount, alpha = 255) {
+        return color(
+            red(baseColor) + amount,
+            green(baseColor) + amount,
+            blue(baseColor) + amount,
+            alpha
+        );
+    }
+
     update(dt, player) {
         // Flora is static
     }
@@ -130,12 +212,13 @@ class AlienTree extends SurfaceFlora {
     constructor(x, y, size, planetColors, seed) {
         super(x, y, size, planetColors, seed);
         this.height = size * (2.5 + Math.sin(this.seed) * 0.5);
-        this.trunkColor = color(
-            red(this.color) * 0.5,
-            green(this.color) * 0.5,
-            blue(this.color) * 0.5
-        );
+
+        // Pre-calculate colors
+        this.trunkColor = this._getDarkenedColor(this.color, 0.5);
+
+        // Pre-calculate branch angles
         this.branches = Math.floor(3 + (this.seed % 4));
+        this.branchAngles = this._generateAngles(this.branches);
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
@@ -144,29 +227,27 @@ class AlienTree extends SurfaceFlora {
         const trunkW = this.size * 0.3;
         const trunkH = this.height * 0.6;
 
-        const { extrusionAngle, baseX, baseY } =
-            typeof getProjectionHelpers === 'function' ? getProjectionHelpers(worldX, worldY, alt + trunkH) : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
+        const { extrusionAngle, baseX, baseY } = this._getProjection(worldX, worldY, alt, trunkH);
 
         // Draw trunk
         Draw3D.drawBox3D(baseX, baseY, trunkW, trunkW, trunkH, this.trunkColor, extrusionAngle, sunAngle, true);
 
         // Canopy - sits on top of trunk
         const canopyR = this.size * 0.8;
-
-        // LOD 2: Reduced branches (max 2), LOD 3: Full branches
-        const branchCount = lodLevel === 2 ? Math.min(2, this.branches) : this.branches;
+        const branchCount = this._getLODCount(this.branches, 2, lodLevel);
+        const polygonSides = lodLevel === 2 ? 4 : 6;
 
         for (let i = 0; i < branchCount; i++) {
-            const angle = (i / this.branches) * Math.PI * 2;
-            const offsetX = Math.cos(angle) * canopyR * 0.3;
-            const offsetY = Math.sin(angle) * canopyR * 0.3;
+            const { cos, sin } = this.branchAngles[i];
+            const offsetX = cos * canopyR * 0.3;
+            const offsetY = sin * canopyR * 0.3;
             const blobSize = canopyR * (0.6 + Math.sin(this.seed + i) * 0.2);
 
             Draw3D.drawPrism(
                 baseX + offsetX,
                 baseY + offsetY,
                 blobSize,
-                lodLevel === 2 ? 4 : 6, // Reduce polygon sides at LOD 2
+                polygonSides,
                 this.size * 0.4,
                 this.color,
                 extrusionAngle,
@@ -184,36 +265,29 @@ class CrystalPlant extends SurfaceFlora {
     constructor(x, y, size, planetColors, seed) {
         super(x, y, size, planetColors, seed);
         this.height = size * (1.5 + Math.sin(this.seed) * 0.3);
+
+        // Pre-calculate colors and angles
         this.crystals = Math.floor(4 + (this.seed % 5));
-        this.crystalColor = color(
-            red(this.color) + 60,
-            green(this.color) + 60,
-            blue(this.color) + 60,
-            200
-        );
+        this.crystalColor = this._getBrightenedColor(this.color, 60, 200);
+        this.crystalAngles = this._generateAngles(this.crystals, this.seed);
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
         if (this.destroyed) return;
 
-        // Use altitude-corrected projection (baseX/baseY is the visual top)
-        const { extrusionAngle, baseX, baseY } =
-            typeof getProjectionHelpers === 'function' ? getProjectionHelpers(worldX, worldY, alt + this.height) : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
-
+        const { extrusionAngle, baseX, baseY } = this._getProjection(worldX, worldY, alt, this.height);
         const sinE = Math.sin(extrusionAngle);
         const cosE = Math.cos(extrusionAngle);
-
-        // LOD 2: Central + 2 side crystals, LOD 3: Full crystals
-        const crystalCount = lodLevel === 2 ? Math.min(2, this.crystals) : this.crystals;
+        const crystalCount = this._getLODCount(this.crystals, 2, lodLevel);
+        const radius = this.size * 0.4;
 
         for (let i = 0; i < crystalCount; i++) {
-            const angle = (i / this.crystals) * Math.PI * 2 + this.seed;
-            const radius = this.size * 0.4;
+            const { cos, sin } = this.crystalAngles[i];
             const cHeight = this.height * (0.7 + Math.sin(this.seed + i * 2) * 0.3);
             const cWidth = this.size * 0.2;
 
-            const cx = baseX + Math.cos(angle) * radius;
-            const cy = baseY + Math.sin(angle) * radius;
+            const cx = baseX + cos * radius;
+            const cy = baseY + sin * radius;
             const cTopX = cx - cHeight * sinE;
             const cTopY = cy - cHeight * cosE;
 
@@ -234,36 +308,34 @@ class TentaclePlant extends SurfaceFlora {
     constructor(x, y, size, planetColors, seed) {
         super(x, y, size, planetColors, seed);
         this.height = size * (1.2 + Math.sin(this.seed) * 0.2);
+
+        // Pre-calculate colors and angles
         this.tentacles = Math.floor(5 + (this.seed % 4));
-        this.baseColor = color(
-            red(this.color) * 0.7,
-            green(this.color) * 0.7,
-            blue(this.color) * 0.7
-        );
+        this.baseColor = this._getDarkenedColor(this.color, 0.7);
+        this.tentacleAngles = this._generateAngles(this.tentacles, this.seed);
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
         if (this.destroyed) return;
 
         const baseH = this.size * 0.3;
-        const { extrusionAngle, baseX, baseY } =
-            typeof getProjectionHelpers === 'function' ? getProjectionHelpers(worldX, worldY, alt + baseH) : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
+        const { extrusionAngle, baseX, baseY } = this._getProjection(worldX, worldY, alt, baseH);
+        const polygonSides = lodLevel === 2 ? 6 : 8;
 
-        // Base bulb - baseX/baseY is top of bulb
-        Draw3D.drawPrism(baseX, baseY, this.size * 0.5, lodLevel === 2 ? 6 : 8, baseH, this.baseColor, extrusionAngle, sunAngle, true);
+        // Base bulb
+        Draw3D.drawPrism(baseX, baseY, this.size * 0.5, polygonSides, baseH, this.baseColor, extrusionAngle, sunAngle, true);
 
-        // LOD 2: Reduced tentacles (max 3) with 1 segment, LOD 3: Full tentacles with 3 segments
-        const tentacleCount = lodLevel === 2 ? Math.min(3, this.tentacles) : this.tentacles;
+        const tentacleCount = this._getLODCount(this.tentacles, 3, lodLevel);
         const segmentCount = lodLevel === 2 ? 1 : 3;
 
         for (let i = 0; i < tentacleCount; i++) {
-            const angle = (i / this.tentacles) * Math.PI * 2 + this.seed;
+            const { cos, sin } = this.tentacleAngles[i];
 
             for (let s = 0; s < segmentCount; s++) {
-                const progress = s / 3; // Always use 3 for consistent positioning
+                const progress = s / 3;
                 const radius = this.size * (0.3 + progress * 0.6);
-                const tx = baseX + Math.cos(angle) * radius;
-                const ty = baseY + Math.sin(angle) * radius - progress * this.height * 0.3;
+                const tx = baseX + cos * radius;
+                const ty = baseY + sin * radius - progress * this.height * 0.3;
                 const tWidth = this.size * 0.15 * (1 - progress * 0.5);
                 const tHeight = this.height * 0.3;
 
@@ -280,36 +352,35 @@ class SporeStalk extends SurfaceFlora {
     constructor(x, y, size, planetColors, seed) {
         super(x, y, size, planetColors, seed);
         this.height = size * (2 + Math.sin(this.seed) * 0.4);
-        this.sporeColor = color(
-            red(this.color) + 80,
-            green(this.color) + 80,
-            blue(this.color) + 80,
-            180
-        );
+
+        // Pre-calculate colors and angles
+        this.sporeColor = this._getBrightenedColor(this.color, 80, 180);
+        this.sporeAngles = this._generateAngles(4, this.seed);
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
         if (this.destroyed) return;
 
-        const { extrusionAngle, baseX, baseY } =
-            typeof getProjectionHelpers === 'function' ? getProjectionHelpers(worldX, worldY, alt + this.height) : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
-
-        // Thin stalk - baseX/baseY is top of stalk
+        const { extrusionAngle, baseX, baseY } = this._getProjection(worldX, worldY, alt, this.height);
         const stalkW = this.size * 0.2;
+        const capH = this.size * 0.4;
+        const capSides = lodLevel === 2 ? 6 : 12;
+
+        // Thin stalk
         Draw3D.drawBox3D(baseX, baseY, stalkW, stalkW, this.height, this.color, extrusionAngle, sunAngle, true);
 
-        // Spore cap at top (reduced polygon sides at LOD 2)
-        const capH = this.size * 0.4;
-        Draw3D.drawPrism(baseX, baseY, this.size * 0.6, lodLevel === 2 ? 6 : 12, capH, this.sporeColor, extrusionAngle, sunAngle, true);
+        // Spore cap at top
+        Draw3D.drawPrism(baseX, baseY, this.size * 0.6, capSides, capH, this.sporeColor, extrusionAngle, sunAngle, true);
 
-        // LOD 3 only: Small spore clusters floating around cap
+        // LOD 3 only: Small spore clusters
         if (lodLevel === 3) {
+            const dist = this.size * 0.8;
+            const sporeSize = this.size * 0.1;
+
             for (let i = 0; i < 4; i++) {
-                const angle = (i / 4) * Math.PI * 2 + this.seed;
-                const dist = this.size * 0.8;
-                const sx = baseX + Math.cos(angle) * dist;
-                const sy = baseY + Math.sin(angle) * dist * 0.5;
-                const sporeSize = this.size * 0.1;
+                const { cos, sin } = this.sporeAngles[i];
+                const sx = baseX + cos * dist;
+                const sy = baseY + sin * dist * 0.5;
 
                 Draw3D.drawPrism(sx, sy, sporeSize, 6, sporeSize * 0.5, this.sporeColor, extrusionAngle, sunAngle, true);
             }
@@ -325,35 +396,38 @@ class BubbleBush extends SurfaceFlora {
         super(x, y, size, planetColors, seed);
         this.height = size * (0.8 + Math.sin(this.seed) * 0.2);
         this.bubbles = Math.floor(6 + (this.seed % 5));
+
+        // Pre-calculate bubble colors for each layer (0, 1, 2)
+        this.bubbleColors = [0, 1, 2].map(layer =>
+            color(
+                red(this.color) + (layer * 20),
+                green(this.color) + (layer * 20),
+                blue(this.color) + (layer * 20),
+                200 - layer * 30
+            )
+        );
+
+        // Pre-calculate bubble angles
+        this.bubbleAngles = this._generateAngles(this.bubbles, this.seed);
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
         if (this.destroyed) return;
 
-        const { extrusionAngle, baseX, baseY } =
-            typeof getProjectionHelpers === 'function' ? getProjectionHelpers(worldX, worldY, alt + this.height) : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
-
-        // LOD 2: Max 3 bubbles, LOD 3: Full bubbles
-        const bubbleCount = lodLevel === 2 ? Math.min(3, this.bubbles) : this.bubbles;
+        const { extrusionAngle, baseX, baseY } = this._getProjection(worldX, worldY, alt, this.height);
+        const bubbleCount = this._getLODCount(this.bubbles, 3, lodLevel);
         const sidesPerBubble = lodLevel === 2 ? 6 : 12;
 
         for (let i = 0; i < bubbleCount; i++) {
-            const angle = (i / this.bubbles) * Math.PI * 2 + this.seed;
-            const layer = Math.floor(i / 3);
+            const { cos, sin } = this.bubbleAngles[i];
+            const layer = Math.min(Math.floor(i / 3), 2); // Clamp to 0-2
             const radius = this.size * (0.3 - layer * 0.1);
-            const bx = baseX + Math.cos(angle) * radius;
-            const by = baseY + Math.sin(angle) * radius;
+            const bx = baseX + cos * radius;
+            const by = baseY + sin * radius;
             const bSize = this.size * (0.4 - layer * 0.1);
             const bHeight = this.height * (0.8 - layer * 0.2);
 
-            const bubbleColor = color(
-                red(this.color) + (layer * 20),
-                green(this.color) + (layer * 20),
-                blue(this.color) + (layer * 20),
-                200 - layer * 30
-            );
-
-            Draw3D.drawPrism(bx, by, bSize, sidesPerBubble, bHeight, bubbleColor, extrusionAngle, sunAngle, true);
+            Draw3D.drawPrism(bx, by, bSize, sidesPerBubble, bHeight, this.bubbleColors[layer], extrusionAngle, sunAngle, true);
         }
     }
 }
@@ -448,6 +522,88 @@ class SurfaceFauna {
         const b = constrain(blue(baseCol) + bShift, 0, 255);
 
         return color(r, g, b);
+    }
+
+    /**
+     * Get projection helpers with fallback
+     * @param {number} worldX - World X coordinate
+     * @param {number} worldY - World Y coordinate
+     * @param {number} alt - Base altitude
+     * @param {number} height - Additional height offset
+     * @returns {Object} Projection data {extrusionAngle, baseX, baseY}
+     */
+    _getProjection(worldX, worldY, alt, height = 0) {
+        return typeof getProjectionHelpers === 'function'
+            ? getProjectionHelpers(worldX, worldY, alt + height)
+            : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
+    }
+
+    /**
+     * Get deterministic variation based on seed
+     * @param {number} multiplier - Seed multiplier for variation
+     * @returns {number} Value between 0 and 1
+     */
+    _getSeededVariation(multiplier) {
+        return Math.sin(this.seed * multiplier) * 0.5 + 0.5;
+    }
+
+    /**
+     * Generate array of angles with pre-calculated sin/cos
+     * @param {number} count - Number of angles to generate
+     * @param {number} offset - Angle offset in radians
+     * @returns {Array} Array of {cos, sin} objects
+     */
+    _generateAngles(count, offset = 0) {
+        const angles = [];
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2 + offset;
+            angles.push({
+                cos: Math.cos(angle),
+                sin: Math.sin(angle)
+            });
+        }
+        return angles;
+    }
+
+    /**
+     * Get LOD-adjusted count
+     * @param {number} fullCount - Full detail count
+     * @param {number} lod2Count - LOD 2 count
+     * @param {number} lodLevel - Current LOD level
+     * @returns {number} Adjusted count
+     */
+    _getLODCount(fullCount, lod2Count, lodLevel) {
+        return lodLevel === 2 ? Math.min(lod2Count, fullCount) : fullCount;
+    }
+
+    /**
+     * Create darkened version of color
+     * @param {p5.Color} baseColor - Base color
+     * @param {number} factor - Darkening factor (0-1)
+     * @returns {p5.Color} Darkened color
+     */
+    _getDarkenedColor(baseColor, factor = 0.5) {
+        return color(
+            red(baseColor) * factor,
+            green(baseColor) * factor,
+            blue(baseColor) * factor
+        );
+    }
+
+    /**
+     * Create brightened version of color
+     * @param {p5.Color} baseColor - Base color
+     * @param {number} amount - Amount to add to each channel
+     * @param {number} alpha - Alpha value (0-255)
+     * @returns {p5.Color} Brightened color
+     */
+    _getBrightenedColor(baseColor, amount, alpha = 255) {
+        return color(
+            red(baseColor) + amount,
+            green(baseColor) + amount,
+            blue(baseColor) + amount,
+            alpha
+        );
     }
 
     /**
@@ -619,6 +775,13 @@ class SlitherCreature extends SurfaceFauna {
         this.height = size * 0.3;
         // Track each segment's angle for smooth following
         this.segmentAngles = new Array(this.segments).fill(this.moveAngle);
+
+        // Pre-calculate segment colors
+        this.segmentColors = [];
+        for (let i = 0; i < this.segments; i++) {
+            const progress = i / this.segments;
+            this.segmentColors[i] = this._getDarkenedColor(this.color, 1 - progress * 0.2);
+        }
     }
 
     /**
@@ -631,8 +794,7 @@ class SlitherCreature extends SurfaceFauna {
         if (this.destroyed) return;
 
         // Smoothly interpolate each segment's angle towards the one in front
-        // The head follows moveAngle, each segment follows the previous segment
-        const smoothness = 5.0; // Higher = faster following
+        const smoothness = 5.0;
 
         for (let i = this.segments - 1; i >= 0; i--) {
             const targetAngle = i === 0 ? this.moveAngle : this.segmentAngles[i - 1];
@@ -651,45 +813,25 @@ class SlitherCreature extends SurfaceFauna {
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
         if (this.destroyed) return;
 
-        // Use altitude-corrected projection (baseX/baseY is the visual top)
-        const { extrusionAngle, baseX, baseY } =
-            typeof getProjectionHelpers === 'function'
-                ? getProjectionHelpers(worldX, worldY, alt + this.height)
-                : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
-
-        const sinE = Math.sin(extrusionAngle);
-        const cosE = Math.cos(extrusionAngle);
-
-        // LOD 2: Head + 2 segments, LOD 3: All segments
-        const segmentCount = lodLevel === 2 ? Math.min(3, this.segments) : this.segments;
+        const { extrusionAngle, baseX, baseY } = this._getProjection(worldX, worldY, alt, this.height);
+        const segmentCount = this._getLODCount(this.segments, 3, lodLevel);
         const polygonSides = lodLevel === 2 ? 6 : 8;
 
         // Draw segmented body with sine wave motion
         for (let i = 1; i < segmentCount; i++) {
             const progress = i / this.segments;
             const waveOffset = Math.sin(this.animTime + progress * Math.PI * 2) * this.size * 0.2;
-
-            // Use the smoothed angle for this segment
             const segmentAngle = this.segmentAngles[i] || this.moveAngle;
 
-            // Calculate world-space position for this segment using its smooth angle
+            // Calculate world-space position for this segment
             const segmentWorldX = worldX - Math.cos(segmentAngle) * i * this.size * 0.3 + Math.sin(segmentAngle) * waveOffset;
             const segmentWorldY = worldY - Math.sin(segmentAngle) * i * this.size * 0.3 - Math.cos(segmentAngle) * waveOffset;
 
-            // Project each segment individually with proper altitude for smooth movement
-            const { baseX: sx, baseY: sy } =
-                typeof getProjectionHelpers === 'function'
-                    ? getProjectionHelpers(segmentWorldX, segmentWorldY, alt + this.height)
-                    : { baseX: segmentWorldX, baseY: segmentWorldY };
-
+            // Project each segment individually
+            const { baseX: sx, baseY: sy } = this._getProjection(segmentWorldX, segmentWorldY, alt, this.height);
             const segSize = this.size * (1 - progress * 0.3);
-            const segColor = color(
-                red(this.color) * (1 - progress * 0.2),
-                green(this.color) * (1 - progress * 0.2),
-                blue(this.color) * (1 - progress * 0.2)
-            );
 
-            Draw3D.drawPrism(sx, sy, segSize, polygonSides, this.height, segColor, extrusionAngle, sunAngle, true);
+            Draw3D.drawPrism(sx, sy, segSize, polygonSides, this.height, this.segmentColors[i], extrusionAngle, sunAngle, true);
         }
 
         // Head (drawn last for depth)
@@ -706,6 +848,14 @@ class FloaterCreature extends SurfaceFauna {
         super(x, y, size, planetColors, seed);
         this.floatHeight = size * 2;
         this.tentacles = 4;
+
+        // Pre-calculate bell color
+        this.bellColor = color(
+            red(this.color),
+            green(this.color),
+            blue(this.color),
+            200
+        );
     }
 
     /**
@@ -720,23 +870,12 @@ class FloaterCreature extends SurfaceFauna {
 
         const floatOffset = Math.sin(this.animTime) * this.size * 0.3;
         const totalAlt = alt + this.floatHeight + floatOffset;
-
-        const { extrusionAngle, baseX, baseY } =
-            typeof getProjectionHelpers === 'function'
-                ? getProjectionHelpers(worldX, worldY, totalAlt)
-                : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
-
-        // Bell/dome body - baseX/baseY is already at totalAlt
-        const bellColor = color(
-            red(this.color),
-            green(this.color),
-            blue(this.color),
-            200
-        );
+        const { extrusionAngle, baseX, baseY } = this._getProjection(worldX, worldY, totalAlt, 0);
         const bellSides = lodLevel === 2 ? 8 : 12;
-        Draw3D.drawPrism(baseX, baseY, this.size, bellSides, this.size * 0.8, bellColor, extrusionAngle, sunAngle, true);
 
-        // LOD 2: 2 tentacles with 1 segment each, LOD 3: Full tentacles with 3 segments
+        // Bell/dome body
+        Draw3D.drawPrism(baseX, baseY, this.size, bellSides, this.size * 0.8, this.bellColor, extrusionAngle, sunAngle, true);
+
         const tentacleCount = lodLevel === 2 ? 2 : this.tentacles;
         const segmentCount = lodLevel === 2 ? 1 : 3;
 
@@ -773,50 +912,40 @@ class RollerCreature extends SurfaceFauna {
     constructor(x, y, size, planetColors, seed) {
         super(x, y, size, planetColors, seed);
         this.spikes = 8;
+
+        // Pre-calculate spike color and angles
+        this.spikeColor = this._getDarkenedColor(this.color, 0.7);
+        this.spikeAngles = this._generateAngles(this.spikes);
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
         if (this.destroyed) return;
 
-        // Ball sits on ground, its height is basically its size
         const radius = this.size;
-        const height = radius * 1.8; // Almost a full sphere projection
-
-        const { extrusionAngle, baseX, baseY } =
-            typeof getProjectionHelpers === 'function'
-                ? getProjectionHelpers(worldX, worldY, alt)
-                : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
-
+        const height = radius * 1.8;
+        const { extrusionAngle, baseX, baseY } = this._getProjection(worldX, worldY, alt, 0);
         const sinE = Math.sin(extrusionAngle);
         const cosE = Math.cos(extrusionAngle);
+        const bodySides = lodLevel === 2 ? 8 : 12;
 
         // Sphere center/top
         const topX = baseX - height * sinE;
         const topY = baseY - height * cosE;
 
-        // Main body sphere (as prism)
-        const bodySides = lodLevel === 2 ? 8 : 12;
+        // Main body sphere
         Draw3D.drawPrism(topX, topY, this.size, bodySides, height, this.color, extrusionAngle, sunAngle, true);
 
-        // LOD 2: 4 spikes, LOD 3: All spikes
-        const spikeCount = lodLevel === 2 ? 0 : this.spikes;
-        const rotation = this.animTime;
-
-        // Position spikes around the sphere's visual center (topX, topY)
-        // The topX, topY is already the correct visual center of the sphere
-        for (let i = 0; i < spikeCount; i++) {
-            const angle = (i / this.spikes) * Math.PI * 2 + rotation;
-            const sx = topX - 2 + Math.cos(angle) * this.size * 0.8;
-            const sy = topY - 6 + Math.sin(angle) * this.size * 0.8;
+        // LOD 3 only: Spikes
+        if (lodLevel === 3) {
             const spikeSize = this.size * 0.2;
 
-            const spikeColor = color(
-                red(this.color) * 0.7,
-                green(this.color) * 0.7,
-                blue(this.color) * 0.7
-            );
+            for (let i = 0; i < this.spikes; i++) {
+                const { cos, sin } = this.spikeAngles[i];
+                const sx = topX - 2 + cos * this.size * 0.8;
+                const sy = topY - 6 + sin * this.size * 0.8;
 
-            Draw3D.drawBox3D(sx, sy, spikeSize, spikeSize, this.size * 0.4, spikeColor, extrusionAngle, sunAngle, true);
+                Draw3D.drawBox3D(sx, sy, spikeSize, spikeSize, this.size * 0.4, this.spikeColor, extrusionAngle, sunAngle, true);
+            }
         }
     }
 }
@@ -830,6 +959,10 @@ class StalkCreature extends SurfaceFauna {
         this.bodyHeight = size * 2;
         this.legs = 4;
         this.legLength = size * 1.5;
+
+        // Pre-calculate head color and leg angles
+        this.headColor = this._getBrightenedColor(this.color, 40);
+        this.legAngles = this._generateAngles(this.legs);
     }
 
     /**
@@ -842,35 +975,28 @@ class StalkCreature extends SurfaceFauna {
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
         if (this.destroyed) return;
 
-        const { extrusionAngle, baseX, baseY } =
-            typeof getProjectionHelpers === 'function'
-                ? getProjectionHelpers(worldX, worldY, alt)
-                : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
-
+        const { extrusionAngle, baseX, baseY } = this._getProjection(worldX, worldY, alt, 0);
         const sinE = Math.sin(extrusionAngle);
         const cosE = Math.cos(extrusionAngle);
-
-        // LOD 2: 2 legs with single segment, LOD 3: All legs with 2 segments
-        const legCount = lodLevel === 2 ? 2 : this.legs;
+        const legCount = this._getLODCount(this.legs, 2, lodLevel);
         const drawLowerLeg = lodLevel === 3;
+        const legW = this.size * 0.15;
 
         for (let i = 0; i < legCount; i++) {
-            const angle = (i / this.legs) * Math.PI * 2;
-            const legPhase = (i % 2) * Math.PI; // Alternate leg movement
+            const { cos, sin } = this.legAngles[i];
+            const legPhase = (i % 2) * Math.PI;
             const legBend = Math.sin(this.animTime * 2 + legPhase) * this.size * 0.2;
 
-            const lx = baseX + Math.cos(angle) * this.size * 0.4;
-            const ly = baseY + Math.sin(angle) * this.size * 0.4;
-            const legW = this.size * 0.15;
-
+            const lx = baseX + cos * this.size * 0.4;
+            const ly = baseY + sin * this.size * 0.4;
             const legH = this.legLength;
             const lTopX = lx - legH * sinE;
             const lTopY = ly - legH * cosE;
 
-            // Upper leg (always drawn at LOD 2+)
+            // Upper leg
             Draw3D.drawBox3D(
-                lTopX + Math.cos(angle) * legBend * 0.5,
-                lTopY + Math.sin(angle) * legBend * 0.5,
+                lTopX + cos * legBend * 0.5,
+                lTopY + sin * legBend * 0.5,
                 legW,
                 legW,
                 this.legLength * 0.6,
@@ -883,8 +1009,8 @@ class StalkCreature extends SurfaceFauna {
             // Lower leg (LOD 3 only)
             if (drawLowerLeg) {
                 Draw3D.drawBox3D(
-                    lTopX + Math.cos(angle) * legBend,
-                    lTopY + Math.sin(angle) * legBend,
+                    lTopX + cos * legBend,
+                    lTopY + sin * legBend,
                     legW * 0.8,
                     legW * 0.8,
                     this.legLength * 0.4,
@@ -901,8 +1027,8 @@ class StalkCreature extends SurfaceFauna {
         const totalHeight = this.legLength + bodyH;
         const bTopX = baseX - totalHeight * sinE;
         const bTopY = baseY - totalHeight * cosE;
-
         const bodySides = lodLevel === 2 ? 6 : 8;
+
         Draw3D.drawPrism(bTopX, bTopY, this.size * 0.8, bodySides, bodyH, this.color, extrusionAngle, sunAngle, true);
 
         // Head/sensory organ (LOD 3 only)
@@ -911,12 +1037,7 @@ class StalkCreature extends SurfaceFauna {
             const hTopX = bTopX - headH * 0.5 * sinE;
             const hTopY = bTopY - headH * 0.5 * cosE;
 
-            const headColor = color(
-                red(this.color) + 40,
-                green(this.color) + 40,
-                blue(this.color) + 40
-            );
-            Draw3D.drawPrism(hTopX, hTopY, this.size * 0.5, 6, headH, headColor, extrusionAngle, sunAngle, true);
+            Draw3D.drawPrism(hTopX, hTopY, this.size * 0.5, 6, headH, this.headColor, extrusionAngle, sunAngle, true);
         }
     }
 }
