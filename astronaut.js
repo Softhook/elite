@@ -20,8 +20,8 @@ class Astronaut {
         this.height = 15; // Visual height
 
         // State
-        this.health = 100;
-        this.maxHealth = 100;
+        this.health = 50;
+        this.maxHealth = 50;
         this.isAstronaut = true;
         this.destroyed = false;
 
@@ -133,6 +133,15 @@ class Astronaut {
     }
 
     /**
+     * Heal the astronaut
+     * @param {number} amount - Amount to heal
+     */
+    heal(amount) {
+        this.health = Math.min(this.maxHealth, this.health + amount);
+        this.destroyed = false; // Allow recovery if somehow marked destroyed (e.g. debugging)
+    }
+
+    /**
      * Handle taking damage from projectiles or explosions
      */
     takeDamage(amount) {
@@ -140,24 +149,20 @@ class Astronaut {
 
         this.health -= amount;
 
-        // Proxy damage to the ship's hull so the main UI reflects player health
-        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.player) {
-            const player = surfaceMode.player;
-            // Astronauts on foot are not protected by ship shields
-            const oldShield = player.shield;
-            player.shield = 0;
-            player.takeDamage(amount);
-
-            // Only restore shield if player is still alive 
-            // (avoids re-enabling shields on a dead ship)
-            if (!player.destroyed) {
-                player.shield = oldShield;
-            }
-        }
-
         if (this.health <= 0) {
             this.health = 0;
             this.destroyed = true;
+
+            // Trigger Game Over if astronaut dies
+            if (typeof gameStateManager !== 'undefined') {
+                // Short delay for the "death" feel, then trigger Game Over
+                setTimeout(() => {
+                    if (typeof soundManager !== 'undefined' && typeof soundManager.stopAllSounds === 'function') {
+                        soundManager.stopAllSounds();
+                    }
+                    gameStateManager.setState("GAME_OVER");
+                }, 1500);
+            }
         }
     }
 

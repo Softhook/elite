@@ -712,7 +712,7 @@ class UIStationMenus {
         );
 
         this.baseRepairButtonArea = { ...repairBtn, action: 'BASE_REPAIR' };
-        
+
         // Mining Storage button (if base has mining robots)
         const hasMiningStorage = baseObj && baseObj.miningStorage && baseObj.miningStorage.length > 0;
         const storageRow = UIComponents.drawListRow({
@@ -723,12 +723,12 @@ class UIStationMenus {
             index: 1,
             isHighlighted: hasMiningStorage
         });
-        
+
         const mineralCount = hasMiningStorage ? (baseObj.miningStorage.find(i => i.name === 'Minerals')?.quantity || 0) : 0;
         // Use MINING_CONFIG if available, fallback to baseObj property, then default
-        const storageCapacity = (typeof MINING_CONFIG !== 'undefined') ? MINING_CONFIG.STORAGE_CAPACITY : 
-                                (baseObj?.miningStorageCapacity || 100);
-        
+        const storageCapacity = (typeof MINING_CONFIG !== 'undefined') ? MINING_CONFIG.STORAGE_CAPACITY :
+            (baseObj?.miningStorageCapacity || 100);
+
         UIComponents.drawListRowText({
             leftText: 'Mining Storage',
             subText: hasMiningStorage ? `${mineralCount}/${storageCapacity} Minerals mined` : 'Robots mining ore seams...',
@@ -756,17 +756,17 @@ class UIStationMenus {
         UIComponents.setTextStyle({ fill: [220], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
         text('Autonomous Mining Operations:', pX + L.CONTENT_PADDING, suggestY);
         UIComponents.setTextStyle({ fill: [180, 200, 180], size: STATION_TEXT_SIZE.SMALL, align: [LEFT, TOP] });
-        
+
         // Count active robots for this base
         let robotCount = 0;
         if (typeof surfaceMode !== 'undefined' && surfaceMode.miningRobots) {
             robotCount = surfaceMode.miningRobots.filter(r => r && r.homeBase === baseObj).length;
         }
-        
+
         // Get mining config values if available
         const miningSpeed = (typeof MINING_CONFIG !== 'undefined') ? MINING_CONFIG.MINING_DURATION.toFixed(1) : '2.5';
         const cargoCapacity = (typeof MINING_CONFIG !== 'undefined') ? MINING_CONFIG.CARGO_CAPACITY : 12;
-        
+
         text(`- ${robotCount} mining robot${robotCount !== 1 ? 's' : ''} deployed\n- Robots mine ore seams at random locations (${miningSpeed}s per cycle)\n- Each robot carries up to ${cargoCapacity} units before returning`, pX + L.CONTENT_PADDING + 10, suggestY + 20);
 
         // Back button
@@ -792,13 +792,19 @@ class UIStationMenus {
                 if (typeof soundManager !== 'undefined') soundManager.playSound('error');
             } else {
                 player.hull = player.maxHull;
+
+                // Heal astronaut if present
+                if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.astronaut) {
+                    surfaceMode.astronaut.heal(surfaceMode.astronaut.maxHealth);
+                }
+
                 addMessageFn('Ship fully repaired at your base (no charge).');
                 if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
                 if (typeof saveGame === 'function') saveGame();
             }
             return true;
         }
-        
+
         // Mining storage button
         if (this.baseMiningStorageButtonArea && UIComponents.isClickInArea(mx, my, this.baseMiningStorageButtonArea)) {
             const baseObj = (typeof uiManager !== 'undefined') ? uiManager.currentBaseObject : null;
@@ -810,12 +816,12 @@ class UIStationMenus {
                     if (result && result.added > 0) {
                         const collected = result.added;
                         mineralsEntry.quantity -= collected;
-                        
+
                         // Remove entry if depleted
                         if (mineralsEntry.quantity <= 0) {
                             baseObj.miningStorage = baseObj.miningStorage.filter(i => i.name !== 'Minerals');
                         }
-                        
+
                         addMessageFn(`Collected ${collected}t of Minerals from mining storage.`);
                         if (typeof soundManager !== 'undefined') soundManager.playSound('cargo');
                         if (typeof saveGame === 'function') saveGame();
@@ -827,7 +833,7 @@ class UIStationMenus {
             }
             return true;
         }
-        
+
         if (backButtonArea && UIComponents.isClickInArea(mx, my, backButtonArea)) {
             if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
             return 'BACK';
@@ -2100,6 +2106,12 @@ class UIStationMenus {
             } else if (player.credits >= cost) {
                 player.spendCredits(cost);
                 player.hull = player.maxHull;
+
+                // Heal astronaut if present
+                if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.astronaut) {
+                    surfaceMode.astronaut.heal(surfaceMode.astronaut.maxHealth);
+                }
+
                 addMessageFn(`Ship fully repaired for ${cost} credits.`);
                 if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
                 if (typeof saveGame === 'function') saveGame();
@@ -2121,6 +2133,12 @@ class UIStationMenus {
                 player.spendCredits(cost);
                 player.hull += repairAmt;
                 if (player.hull > player.maxHull) player.hull = player.maxHull;
+
+                // Heal astronaut if present
+                if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.astronaut) {
+                    surfaceMode.astronaut.heal(surfaceMode.astronaut.maxHealth);
+                }
+
                 addMessageFn(`Ship repaired by ${repairAmt} hull for ${cost} credits.`);
                 if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
                 if (typeof saveGame === 'function') saveGame();

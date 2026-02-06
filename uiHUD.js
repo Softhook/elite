@@ -471,17 +471,24 @@ class UIHUD {
         fill(HEALTH_BAR_COLORS.BG);
         rect(barX, barMiddleY + 2, barWidth, barHeight);
 
-        const hullPercent = player.hull / player.maxHull;
-        fill(HEALTH_BAR_COLORS.FILL);
-        rect(barX, barMiddleY + 2, barWidth * hullPercent, barHeight);
+        let hVal = player.hull;
+        let mVal = player.maxHull;
 
+        if (isAstronaut && typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.astronaut) {
+            hVal = surfaceMode.astronaut.health;
+            mVal = surfaceMode.astronaut.maxHealth;
+        }
+
+        const healthPercent = hVal / mVal;
+        fill(HEALTH_BAR_COLORS.FILL);
+        rect(barX, barMiddleY + 2, barWidth * healthPercent, barHeight);
 
         fill(255);
         noStroke();
         textAlign(RIGHT, CENTER);
         textSize(STATION_TEXT_SIZE.BODY);
         const hullLabel = isAstronaut ? "Health" : "Hull";
-        text(`${hullLabel}: ${Math.floor(player.hull)}/${player.maxHull}`, barX - 10, barMiddleY + barHeight / 2 + 2);
+        text(`${hullLabel}: ${Math.floor(hVal)}/${mVal}`, barX - 10, barMiddleY + barHeight / 2 + 2);
 
         this.drawWeaponSelector(player);
 
