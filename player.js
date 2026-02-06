@@ -3153,9 +3153,10 @@ class Player {
         if (!this.autopilotEnabled) {
             this.autopilotEnabled = true;
             this.autopilotTarget = target;
-            // Start a fresh cycle tracking set with this initial target
-            this.autopilotVisitedTargets = new Set([target]);
-            this._autopilotWillDisableOnNextToggle = false;
+            // Reset system-specific cycle trackers when enabling a specific target manually
+            this._autopilotServiceSeenTargets = new Set([target]);
+            this._autopilotServiceCycleComplete = false;
+            this._autopilotPlanetCycleComplete = false;
 
             // Make sure current system is defined
             if (!this.currentSystem) {
@@ -3181,7 +3182,8 @@ class Player {
         // Otherwise, switch target and record it as visited in the cycle
         this.autopilotTarget = target;
         try {
-            this.autopilotVisitedTargets.add(target);
+            this._autopilotServiceSeenTargets = this._autopilotServiceSeenTargets || new Set();
+            this._autopilotServiceSeenTargets.add(target);
         } catch (e) {
             this.autopilotVisitedTargets = new Set([this.autopilotTarget, target]);
         }
@@ -3201,8 +3203,45 @@ class Player {
             case 'station': return 'Station';
             case 'jumpzone': return 'Jump Zone';
             case 'secretbase': return 'Secret Base';
-            default: return target;
+            default: return (typeof target === 'object' && target.type === 'planet') ? 'Planet' : target;
         }
+    }
+
+    /**
+     * Checks if the player is already "at" an autopilot target location.
+     * @param {string} target - 'station', 'jumpzone', or 'secretbase'
+     * @returns {boolean} True if already within interaction/arrival range
+     */
+    _isAtAutopilotTarget(target) {
+        if (!this.currentSystem) return false;
+
+        if (target === 'station') {
+            if (!this.currentSystem.station?.pos) return false;
+            const dist = p5.Vector.dist(this.pos, this.currentSystem.station.pos);
+            const r = this.currentSystem.station.dockingRadius ?? (this.currentSystem.station.size * 0.5);
+            return dist < r + 20;
+        }
+
+        if (target === 'jumpzone') {
+            if (!this.currentSystem.jumpZoneCenter) return false;
+            const dist = p5.Vector.dist(this.pos, this.currentSystem.jumpZoneCenter);
+            return dist < this.currentSystem.jumpZoneRadius * 0.9;
+        }
+
+        if (target === 'secretbase') {
+            const secretStations = this.currentSystem.secretStations || [];
+            const discoveredSecrets = secretStations.filter(s => s.discovered && s.pos);
+            if (discoveredSecrets.length === 0) return false;
+
+            // Check if at ANY of the discovered secret bases
+            return discoveredSecrets.some(station => {
+                const dist = p5.Vector.dist(this.pos, station.pos);
+                const r = station.dockingRadius ?? (station.size * 0.5);
+                return dist < r + 20;
+            });
+        }
+
+        return false;
     }
 
     /** Disables autopilot - Ensures NO lingering effects */
@@ -3211,7 +3250,10 @@ class Player {
             PLAYER_LOG("Autopilot disabled");
             this.autopilotEnabled = false;
             this.autopilotTarget = null;
-            this.autopilotPlanetIndex = -1;
+            // Preserve autopilotPlanetIndex for smarter cycling when re-enabled
+            // Reset cycle completion flags so re-enabling starts a fresh cycle check
+            this._autopilotPlanetCycleComplete = false;
+            this._autopilotServiceCycleComplete = false;
 
             // Reset critical flags when disabling autopilot
             this.isThrusting = false;        // Ensure thrusting is stopped
@@ -3242,17 +3284,36 @@ class Player {
         }
 
         // Determine next index
-        let next = 1; // Default to first non-sun planet
+        let next = 1;
 
         // If autopilot is currently disabled: enable and start a new cycle
         if (!this.autopilotEnabled) {
-            next = 1; // start at first non-sun planet
+            // If we have a stored index, use it as a starting point, otherwise start at 1
+            let startBase = (typeof this.autopilotPlanetIndex === 'number' && this.autopilotPlanetIndex >= 1)
+                ? this.autopilotPlanetIndex
+                : 0; // index 0 is sun, so (0 % length-1) + 1 = 1
+
+            next = (startBase % (planets.length - 1)) + 1;
+
+            // SAFETY: If we are ALREADY at the selected 'next' planet, cycle again
+            // to find a planet the user actually wants to go to.
+            let attempts = 0;
+            while (attempts < planets.length) {
+                const p = planets[next];
+                const dist = p5.Vector.dist(this.pos, p.pos);
+                const approachRadius = (p.size || 200) * 0.9; // Using slightly larger radius for disengagement buffer
+                if (dist > approachRadius) break; // Found a destination we aren't at yet
+
+                next = (next % (planets.length - 1)) + 1;
+                attempts++;
+            }
+
             this.autopilotEnabled = true;
             this.autopilotVisitedTargets = this.autopilotVisitedTargets || new Set();
             // reset planet-cycle tracking
             this._autopilotPlanetSeenIndices = new Set([next]);
             this._autopilotPlanetStartIndex = next;
-            this._autopilotWillDisableOnNextToggle = false;
+            this._autopilotPlanetCycleComplete = false;
 
             this.autopilotTarget = { type: 'planet', index: next };
             this.autopilotPlanetIndex = next;
@@ -3265,7 +3326,7 @@ class Player {
         }
 
         // If we've already completed a full cycle, the next press should disable autopilot
-        if (this._autopilotWillDisableOnNextToggle) {
+        if (this._autopilotPlanetCycleComplete) {
             this.disableAutopilot();
             return;
         }
@@ -3273,8 +3334,20 @@ class Player {
         // Otherwise compute the next index in the cycle
         if (this.autopilotTarget && typeof this.autopilotTarget === 'object' && this.autopilotTarget.type === 'planet') {
             const cur = Number.isFinite(this.autopilotTarget.index) ? this.autopilotTarget.index : this.autopilotPlanetIndex;
-            // Cycle through planets 1 to length-1
+
+            // Cycle through planets 1 to length-1, skipping current location if possible
+            let attempts = 0;
             next = (typeof cur === 'number' && cur >= 1) ? 1 + (cur % (planets.length - 1)) : 1;
+
+            while (attempts < planets.length) {
+                const p = planets[next];
+                const dist = p5.Vector.dist(this.pos, p.pos);
+                const approachRadius = (p.size || 200) * 0.9;
+                if (dist > approachRadius) break;
+
+                next = (next % (planets.length - 1)) + 1;
+                attempts++;
+            }
         } else {
             next = 1;
         }
@@ -3292,9 +3365,80 @@ class Player {
 
         // If we've now visited every non-sun planet once, mark that the next autopilot press will disable
         if (this._autopilotPlanetSeenIndices.size >= planets.length - 1) {
-            this._autopilotWillDisableOnNextToggle = true;
+            this._autopilotPlanetCycleComplete = true;
             if (uiManager) uiManager.addMessage('Autopilot: completed one planet cycle — next autopilot press will disable.');
         }
+    }
+
+    /**
+     * Cycle autopilot to the next system service (Station -> Jump Zone -> Secret Base).
+     * Includes "smart skipping" of targets the player is already close to.
+     */
+    cycleAutopilotService() {
+        if (!this.currentSystem) {
+            if (uiManager) uiManager.addMessage('Autopilot error: System data unavailable');
+            return;
+        }
+
+        // Determine the available cycle order
+        const hasDiscoveredSecretBase = this.currentSystem.secretStations?.some(s => s.discovered) || false;
+        const cycleOrder = hasDiscoveredSecretBase
+            ? ['station', 'jumpzone', 'secretbase']
+            : ['station', 'jumpzone'];
+
+        // Determine next target index
+        let nextIdx = 0;
+
+        if (!this.autopilotEnabled || typeof this.autopilotTarget !== 'string') {
+            // First press or switching from planet autopilot: start from beginning of cycle
+            this.autopilotEnabled = true;
+            this._autopilotServiceSeenTargets = new Set();
+            this._autopilotServiceCycleComplete = false;
+            nextIdx = 0;
+        } else if (this._autopilotServiceCycleComplete) {
+            // Full cycle completed, disable
+            this.disableAutopilot();
+            return;
+        } else {
+            // Increment index
+            const curIdx = cycleOrder.indexOf(this.autopilotTarget);
+            nextIdx = (curIdx === -1) ? 0 : (curIdx + 1);
+        }
+
+        // SMART SKIPPING: Skip targets the player is already at
+        let attempts = 0;
+        while (attempts < cycleOrder.length) {
+            const target = cycleOrder[nextIdx];
+            if (!this._isAtAutopilotTarget(target)) {
+                // Found a valid target we aren't at
+                break;
+            }
+            // Already there, move to next
+            nextIdx++;
+            attempts++;
+
+            if (nextIdx >= cycleOrder.length) {
+                // Reached end of cycle while skipping
+                this.disableAutopilot();
+                if (uiManager) uiManager.addMessage("Autopilot: all targets currently reached.");
+                return;
+            }
+        }
+
+        // Set the target
+        const finalTarget = cycleOrder[nextIdx];
+        this.autopilotTarget = finalTarget;
+        this._autopilotServiceSeenTargets.add(finalTarget);
+
+        // Update cycle completion state
+        if (nextIdx === cycleOrder.length - 1) {
+            this._autopilotServiceCycleComplete = true;
+        }
+
+        const name = this._getAutopilotTargetName(finalTarget);
+        if (uiManager) uiManager.addMessage(`Autopilot: Heading to ${name}`);
+        soundManager?.playSound('click');
+        PLAYER_LOG(`Autopilot service target set to ${finalTarget}`);
     }
 
     /**
