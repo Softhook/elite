@@ -330,8 +330,12 @@ class Building extends SurfaceObject {
         const rx = baseX - dvX;
         const ry = baseY - dvY;
 
-        // Base Structure - always drawn
-        Draw3D.drawBox3D(rx, ry, sz, sz, this.height, this.color, extrusionAngle, sunAngle);
+        // Base Structure - type dependent
+        if (this.type === 'silo') {
+            Draw3D.drawCylinder(rx, ry, sz / 2, this.height, 12, this.color, extrusionAngle, sunAngle);
+        } else {
+            Draw3D.drawBox3D(rx, ry, sz, sz, this.height, this.color, extrusionAngle, sunAngle);
+        }
 
         // LOD 3 only: Detailed decorations
         if (lodLevel === 3) {
@@ -363,7 +367,7 @@ class Building extends SurfaceObject {
             }
 
             if (this.type === 'silo') {
-                Draw3D.drawCylinder(rx, ry, sz / 2, this.height, 12, this.color, extrusionAngle, sunAngle);
+                // Only draw the top decoration dome (base is now drawn above)
                 const lightH = 10;
                 const lightAngle = extrusionAngle + Math.PI;
                 Draw3D.drawDome(rx, ry, 10, 4, color(255, 0, 0), lightAngle, sunAngle);
