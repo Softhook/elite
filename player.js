@@ -3235,33 +3235,18 @@ class Player {
         }
 
         const planets = this.currentSystem.planets;
-        if (!planets || planets.length === 0) {
-            console.error(`Autopilot error: No planets in ${this.currentSystem.name}. staticElementsInitialized: ${this.currentSystem.staticElementsInitialized}`);
-            if (uiManager) uiManager.addMessage('No planets in this system');
-
-            // Attempt to reinitialize static elements if they're missing
-            if (this.currentSystem && typeof this.currentSystem.initStaticElements === 'function') {
-                PLAYER_LOG('Attempting to reinitialize system static elements...');
-                try {
-                    this.currentSystem.initStaticElements();
-                    if (this.currentSystem.planets && this.currentSystem.planets.length > 0) {
-                        PLAYER_LOG(`Successfully reinitialized ${this.currentSystem.planets.length} planets`);
-                        // Retry the autopilot command
-                        return this.cycleAutopilotPlanet();
-                    }
-                } catch (e) {
-                    console.error('Failed to reinitialize system:', e);
-                }
-            }
+        if (!planets || planets.length <= 1) { // Skip if only sun exists
+            console.error(`Autopilot error: No non-sun planets in ${this.currentSystem.name}.`);
+            if (uiManager) uiManager.addMessage('No other planets in this system');
             return;
         }
 
         // Determine next index
-        let next = 0;
+        let next = 1; // Default to first non-sun planet
 
         // If autopilot is currently disabled: enable and start a new cycle
         if (!this.autopilotEnabled) {
-            next = 0; // start at first planet
+            next = 1; // start at first non-sun planet
             this.autopilotEnabled = true;
             this.autopilotVisitedTargets = this.autopilotVisitedTargets || new Set();
             // reset planet-cycle tracking
@@ -3273,8 +3258,8 @@ class Player {
             this.autopilotPlanetIndex = next;
 
             const p0 = planets[next];
-            const name0 = (p0 && p0.name) ? p0.name : `Planet ${next + 1}`;
-            if (uiManager) uiManager.addMessage(`Autopilot: Heading to ${name0} (${next + 1}/${planets.length})`);
+            const name0 = (p0 && p0.name) ? p0.name : `Planet ${next}`;
+            if (uiManager) uiManager.addMessage(`Autopilot: Heading to ${name0} (${next}/${planets.length - 1})`);
             PLAYER_LOG(`Autopilot planet target set to index ${next} (${name0})`);
             return;
         }
@@ -3288,9 +3273,10 @@ class Player {
         // Otherwise compute the next index in the cycle
         if (this.autopilotTarget && typeof this.autopilotTarget === 'object' && this.autopilotTarget.type === 'planet') {
             const cur = Number.isFinite(this.autopilotTarget.index) ? this.autopilotTarget.index : this.autopilotPlanetIndex;
-            next = (typeof cur === 'number' && cur >= 0) ? (cur + 1) % planets.length : 0;
+            // Cycle through planets 1 to length-1
+            next = (typeof cur === 'number' && cur >= 1) ? 1 + (cur % (planets.length - 1)) : 1;
         } else {
-            next = 0;
+            next = 1;
         }
 
         // Set new planet target and record visit
@@ -3300,12 +3286,12 @@ class Player {
         this._autopilotPlanetSeenIndices.add(next);
 
         const p = planets[next];
-        const name = (p && p.name) ? p.name : `Planet ${next + 1}`;
-        if (uiManager) uiManager.addMessage(`Autopilot: Heading to ${name} (${next + 1}/${planets.length})`);
+        const name = (p && p.name) ? p.name : `Planet ${next}`;
+        if (uiManager) uiManager.addMessage(`Autopilot: Heading to ${name} (${this._autopilotPlanetSeenIndices.size}/${planets.length - 1})`);
         PLAYER_LOG(`Autopilot planet target set to index ${next} (${name})`);
 
-        // If we've now visited every planet once, mark that the next autopilot press will disable
-        if (this._autopilotPlanetSeenIndices.size >= planets.length) {
+        // If we've now visited every non-sun planet once, mark that the next autopilot press will disable
+        if (this._autopilotPlanetSeenIndices.size >= planets.length - 1) {
             this._autopilotWillDisableOnNextToggle = true;
             if (uiManager) uiManager.addMessage('Autopilot: completed one planet cycle — next autopilot press will disable.');
         }
