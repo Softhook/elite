@@ -22,9 +22,7 @@ class SurfaceHUD {
         this._drawControlHints(surfaceMode.controlMode);
 
         // 3. Altitude bar (Right side)
-        if (surfaceMode.controlMode !== 'ASTRONAUT') {
-            this._drawAltitudeBar(surfaceMode);
-        }
+        this._drawAltitudeBar(surfaceMode);
 
         // 4. Compass (Bottom Right)
         this._drawCompass(surfaceMode);
