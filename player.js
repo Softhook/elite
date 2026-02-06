@@ -287,7 +287,7 @@ class Player {
         // Hull warning tracking: prevent repeated spamming of warning sounds
         // Keys are thresholds in percent: 100,90,80,...10
         this._hullWarningTriggered = {};
-        [100,90,80,70,60,50,40,30,20,10].forEach(t => this._hullWarningTriggered[t] = false);
+        [100, 90, 80, 70, 60, 50, 40, 30, 20, 10].forEach(t => this._hullWarningTriggered[t] = false);
         // Margin (percent) above threshold required to reset the triggered flag
         this._hullWarningResetMargin = 6; // percent
         // Track scheduled timeout IDs so they can be cleared on death/state change
@@ -1548,7 +1548,7 @@ class Player {
             if (typeof this._hullWarningTriggered === 'object' && this.maxHull > 0) {
                 const hullPercentNow = (this.hull / this.maxHull) * 100;
                 const resetMargin = Number(this._hullWarningResetMargin) || 6;
-                const thresholdsToCheck = [100,90,80,70,60,50,40,30,20,10];
+                const thresholdsToCheck = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10];
                 for (const tt of thresholdsToCheck) {
                     if (this._hullWarningTriggered[tt] && hullPercentNow > (tt + resetMargin)) {
                         this._hullWarningTriggered[tt] = false;
@@ -2096,7 +2096,7 @@ class Player {
             this.lastDamageTime = millis();
 
             // Check threshold crossings (multiple thresholds may be crossed in one hit)
-            const thresholds = [100,90,80,70,60,50,40,30,20,10];
+            const thresholds = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10];
             const playSpacingMs = 150; // spacing between consecutive threshold plays
             let playIndex = 0;
             for (const t of thresholds) {
@@ -2134,7 +2134,7 @@ class Player {
             try {
                 if (Array.isArray(this._hullWarningTimeouts)) {
                     for (const id of this._hullWarningTimeouts) {
-                        try { clearTimeout(id); } catch (_) {}
+                        try { clearTimeout(id); } catch (_) { }
                     }
                     this._hullWarningTimeouts = [];
                 }
@@ -3091,6 +3091,11 @@ class Player {
         const sinE = Math.sin(extrusionAngle);
         const cosE = Math.cos(extrusionAngle);
 
+        // [ZOOM FIX] Account for view zoom in astronaut mode
+        const isTransitioning = surfaceMode.state === 'entering' || surfaceMode.state === 'exiting';
+        const currentZoom = isTransitioning ? 1.0 : (surfaceMode.viewZoom || 1.0);
+        const totalScale = perspectiveScale * currentZoom;
+
         // 2. Identify the camera's focus point in world coordinates
         // This matches the translation logic in surfaceMode.draw()
         const camFocusX = surfaceMode.surfaceX - (surfaceMode.altitude * sinE);
@@ -3110,17 +3115,17 @@ class Player {
             const objVisualWorldY = obj.pos.y - (objAlt * cosE);
 
             // Convert that visual world position to final screen coordinates
-            const screenX = (objVisualWorldX - camFocusX) * perspectiveScale + (width / 2);
-            const screenY = (objVisualWorldY - camFocusY) * perspectiveScale + (height / 2);
+            const screenX = (objVisualWorldX - camFocusX) * totalScale + (width / 2);
+            const screenY = (objVisualWorldY - camFocusY) * totalScale + (height / 2);
 
             // Distance check in screen space (pixels)
             const dx = mouseX - screenX;
             const dy = mouseY - screenY;
             const distSq = dx * dx + dy * dy;
 
-            // Use the object's visual radius multiplied by perspective scale
+            // Use the object's visual radius multiplied by total scale
             // Add a static pixel buffer (20px) to make clicking targets easier on high-alt views
-            const clickRadius = ((obj.size || 40) / 2 * perspectiveScale) + 20;
+            const clickRadius = ((obj.size || 40) / 2 * totalScale) + 20;
             const clickRadiusSq = clickRadius * clickRadius;
 
             if (distSq < clickRadiusSq && distSq < closestDist) {

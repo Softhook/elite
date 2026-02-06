@@ -1852,6 +1852,11 @@ class UIHUD {
                 ? surfaceMode._getPerspectiveScale()
                 : 1.0;
 
+            // [ZOOM FIX] Account for view zoom in astronaut mode
+            const isTransitioning = surfaceMode.state === 'entering' || surfaceMode.state === 'exiting';
+            const currentZoom = isTransitioning ? 1.0 : (surfaceMode.viewZoom || 1.0);
+            const totalScale = perspectiveScale * currentZoom;
+
             // Camera focus (matches surfaceMode.draw)
             const camFocusX = surfaceMode.surfaceX - (surfaceMode.altitude * sinE);
             const camFocusY = surfaceMode.surfaceY - (surfaceMode.altitude * cosE);
@@ -1862,8 +1867,8 @@ class UIHUD {
             const objVisualWorldY = target.pos.y - (reticleAlt * cosE);
 
             // Final screen pixels
-            screenX = (objVisualWorldX - camFocusX) * perspectiveScale + (width / 2);
-            screenY = (objVisualWorldY - camFocusY) * perspectiveScale + (height / 2);
+            screenX = (objVisualWorldX - camFocusX) * totalScale + (width / 2);
+            screenY = (objVisualWorldY - camFocusY) * totalScale + (height / 2);
         } else {
             // --- Space Mode Projection ---
             // Assumes player is the camera focus at the center of screen
