@@ -58,14 +58,17 @@ function getTrigCache(sides) {
 // Color component cache to avoid repeated p5 color() calls
 const _colorCache = new WeakMap();
 function getColorComponents(col) {
-    if (_colorCache.has(col)) return _colorCache.get(col);
+    const isObject = typeof col === 'object' && col !== null;
+    if (isObject && _colorCache.has(col)) return _colorCache.get(col);
+
     const components = {
         r: red(col),
         g: green(col),
         b: blue(col),
         a: alpha(col)
     };
-    _colorCache.set(col, components);
+
+    if (isObject) _colorCache.set(col, components);
     return components;
 }
 
@@ -160,10 +163,13 @@ const Draw3D = {
     /**
      * Draw an extruded regular prism (polygon with depth)
      * @param {boolean} skipBottom - If true, skip drawing bottom cap (optimization for fixed-view surface mode)
+     * @param {Object} ctx - Optional p5.Graphics context for offscreen rendering
+     * @param {boolean} noShading - If true, skip shading/lighting calculations (for analysis)
      */
-    drawPrism: function (x, y, r, sides, depth, col, angle, sunAngle, skipBottom = false) {
+    drawPrism: function (x, y, r, sides, depth, col, angle, sunAngle, skipBottom = false, ctx = null, noShading = false) {
+        const p = ctx || window;
         // If deferred rendering is active, queue this call
-        if (_renderQueue !== null) {
+        if (_renderQueue !== null && !ctx) {
             const primitiveDepth = calculatePrimitiveDepth(x, y, depth, angle);
             _renderQueue.push({
                 depth: primitiveDepth,
@@ -177,17 +183,17 @@ const Draw3D = {
         const cc = getColorComponents(col);
         const angleStep = (Math.PI * 2) / sides;
 
-        strokeWeight(1);
+        p.strokeWeight(1);
 
         // Draw Bottom Cap (skipped in fixed-view surface mode - never visible)
         if (!skipBottom) {
-            fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
-            stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
-            beginShape();
+            p.fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
+            p.stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
+            p.beginShape();
             for (let i = 0; i < sides; i++) {
-                vertex(x + trig.cos[i] * r + dv.x, y + trig.sin[i] * r + dv.y);
+                p.vertex(x + trig.cos[i] * r + dv.x, y + trig.sin[i] * r + dv.y);
             }
-            endShape(CLOSE);
+            p.endShape(CLOSE);
         }
 
         // Draw sides with backface culling
@@ -205,28 +211,28 @@ const Draw3D = {
                 const nvx = x + trig.cos[next] * r;
                 const nvy = y + trig.sin[next] * r;
 
-                const b = getShading(faceAngle - sunAngle);
+                const b = noShading ? 1.0 : getShading(faceAngle - sunAngle);
 
-                fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
-                stroke(cc.r * b * 0.8, cc.g * b * 0.8, cc.b * b * 0.8, cc.a);
+                p.fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
+                p.stroke(noShading ? [cc.r * b, cc.g * b, cc.b * b, cc.a] : [cc.r * b * 0.8, cc.g * b * 0.8, cc.b * b * 0.8, cc.a]);
 
-                beginShape();
-                vertex(vx + dv.x, vy + dv.y);
-                vertex(nvx + dv.x, nvy + dv.y);
-                vertex(nvx, nvy);
-                vertex(vx, vy);
-                endShape(CLOSE);
+                p.beginShape();
+                p.vertex(vx + dv.x, vy + dv.y);
+                p.vertex(nvx + dv.x, nvy + dv.y);
+                p.vertex(nvx, nvy);
+                p.vertex(vx, vy);
+                p.endShape(CLOSE);
             }
         }
 
         // Draw Top Cap
-        fill(col);
-        stroke(cc.r * 0.8, cc.g * 0.8, cc.b * 0.8, cc.a);
-        beginShape();
+        p.fill(col);
+        p.stroke(noShading ? col : [cc.r * 0.8, cc.g * 0.8, cc.b * 0.8, cc.a]);
+        p.beginShape();
         for (let i = 0; i < sides; i++) {
-            vertex(x + trig.cos[i] * r, y + trig.sin[i] * r);
+            p.vertex(x + trig.cos[i] * r, y + trig.sin[i] * r);
         }
-        endShape(CLOSE);
+        p.endShape(CLOSE);
     },
 
     /**
@@ -295,10 +301,13 @@ const Draw3D = {
     /**
      * Draw a 3D extruded box
      * @param {boolean} skipBottom - If true, skip drawing bottom cap (optimization for fixed-view surface mode)
+     * @param {Object} ctx - Optional p5.Graphics context for offscreen rendering
+     * @param {boolean} noShading - If true, skip shading/lighting calculations (for analysis)
      */
-    drawBox3D: function (x, y, w, h, depth, col, angle, sunAngle, skipBottom = false) {
+    drawBox3D: function (x, y, w, h, depth, col, angle, sunAngle, skipBottom = false, ctx = null, noShading = false) {
+        const p = ctx || window;
         // If deferred rendering is active, queue this call instead of executing
-        if (_renderQueue !== null) {
+        if (_renderQueue !== null && !ctx) {
             const primitiveDepth = calculatePrimitiveDepth(x, y, depth, angle);
             _renderQueue.push({
                 depth: primitiveDepth,
@@ -315,18 +324,18 @@ const Draw3D = {
         // Pre-computed face angles and normals for box
         const faceAngles = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
 
-        strokeWeight(1);
+        p.strokeWeight(1);
 
         // Bottom Cap (skipped in fixed-view surface mode - never visible)
         if (!skipBottom) {
-            fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
-            stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
-            beginShape();
-            vertex(x - hw + dv.x, y - hh + dv.y);
-            vertex(x + hw + dv.x, y - hh + dv.y);
-            vertex(x + hw + dv.x, y + hh + dv.y);
-            vertex(x - hw + dv.x, y + hh + dv.y);
-            endShape(CLOSE);
+            p.fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
+            p.stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
+            p.beginShape();
+            p.vertex(x - hw + dv.x, y - hh + dv.y);
+            p.vertex(x + hw + dv.x, y - hh + dv.y);
+            p.vertex(x + hw + dv.x, y + hh + dv.y);
+            p.vertex(x - hw + dv.x, y + hh + dv.y);
+            p.endShape(CLOSE);
         }
 
         // Sides with backface culling
@@ -336,31 +345,31 @@ const Draw3D = {
             const dot = nx * dv.x + ny * dv.y;
 
             if (dot > 0.001) {
-                const b = getShading(faceAngles[i] - sunAngle);
+                const b = noShading ? 1.0 : getShading(faceAngles[i] - sunAngle);
 
-                fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
-                stroke(cc.r * b * 0.8, cc.g * b * 0.8, cc.b * b * 0.8, cc.a);
+                p.fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
+                p.stroke(noShading ? [cc.r * b, cc.g * b, cc.b * b, cc.a] : [cc.r * b * 0.8, cc.g * b * 0.8, cc.b * b * 0.8, cc.a]);
 
-                beginShape();
+                p.beginShape();
                 let x1, y1, x2, y2;
                 if (i === 0) { x1 = x - hw; y1 = y - hh; x2 = x + hw; y2 = y - hh; }
                 else if (i === 1) { x1 = x + hw; y1 = y - hh; x2 = x + hw; y2 = y + hh; }
                 else if (i === 2) { x1 = x + hw; y1 = y + hh; x2 = x - hw; y2 = y + hh; }
                 else { x1 = x - hw; y1 = y + hh; x2 = x - hw; y2 = y - hh; }
 
-                vertex(x1 + dv.x, y1 + dv.y);
-                vertex(x2 + dv.x, y2 + dv.y);
-                vertex(x2, y2);
-                vertex(x1, y1);
-                endShape(CLOSE);
+                p.vertex(x1 + dv.x, y1 + dv.y);
+                p.vertex(x2 + dv.x, y2 + dv.y);
+                p.vertex(x2, y2);
+                p.vertex(x1, y1);
+                p.endShape(CLOSE);
             }
         }
 
         // Top
-        fill(col);
-        stroke(cc.r * 0.8, cc.g * 0.8, cc.b * 0.8, cc.a);
-        rectMode(CENTER);
-        rect(x, y, w, h);
+        p.fill(col);
+        p.stroke(noShading ? col : [cc.r * 0.8, cc.g * 0.8, cc.b * 0.8, cc.a]);
+        p.rectMode(CENTER);
+        p.rect(x, y, w, h);
     },
 
     /**
