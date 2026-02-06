@@ -3181,12 +3181,8 @@ class Player {
 
         // Otherwise, switch target and record it as visited in the cycle
         this.autopilotTarget = target;
-        try {
-            this._autopilotServiceSeenTargets = this._autopilotServiceSeenTargets || new Set();
-            this._autopilotServiceSeenTargets.add(target);
-        } catch (e) {
-            this.autopilotVisitedTargets = new Set([this.autopilotTarget, target]);
-        }
+        this._autopilotServiceSeenTargets = this._autopilotServiceSeenTargets || new Set();
+        this._autopilotServiceSeenTargets.add(target);
 
         // Display target-specific message
         const targetName = this._getAutopilotTargetName(target);
@@ -3309,7 +3305,6 @@ class Player {
             }
 
             this.autopilotEnabled = true;
-            this.autopilotVisitedTargets = this.autopilotVisitedTargets || new Set();
             // reset planet-cycle tracking
             this._autopilotPlanetSeenIndices = new Set([next]);
             this._autopilotPlanetStartIndex = next;
@@ -3320,7 +3315,7 @@ class Player {
 
             const p0 = planets[next];
             const name0 = (p0 && p0.name) ? p0.name : `Planet ${next}`;
-            if (uiManager) uiManager.addMessage(`Autopilot: Heading to ${name0} (${next}/${planets.length - 1})`);
+            if (uiManager) uiManager.addMessage(`Autopilot: Heading to ${name0} (1/${planets.length - 1})`);
             PLAYER_LOG(`Autopilot planet target set to index ${next} (${name0})`);
             return;
         }
