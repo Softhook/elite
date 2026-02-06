@@ -1869,8 +1869,9 @@ class UIHUD {
             const camFocusX = surfaceMode.surfaceX - (surfaceMode.altitude * sinE);
             const camFocusY = surfaceMode.surfaceY - (surfaceMode.altitude * cosE);
 
-            // Object visual position - center reticle on the object's volume
-            const reticleCenterAlt = objAlt + (targetHeight * 0.5);
+            // Object visual position - center reticle on the object's ground footprint
+            // Using objAlt (ground level) instead of vertical center ensures alignment with footprints
+            const reticleCenterAlt = objAlt;
             const objVisualWorldX = target.pos.x - (reticleCenterAlt * sinE);
             const objVisualWorldY = target.pos.y - (reticleCenterAlt * cosE);
 
@@ -1879,15 +1880,17 @@ class UIHUD {
             screenY = (objVisualWorldY - camFocusY) * totalScale + (height / 2);
 
             // Adjust target size based on height to encompass the whole object
-            // Use 0.8 as a scaling factor for the boxDesign brackets
+            // Use visual height and width with appropriate padding
             const visualHeight = targetHeight * totalScale;
             const visualWidth = targetSize * totalScale;
-            // Ensure reticle is large enough for both width and height on screen with padding
-            // Use 1.5x factor to provide some "breathing room" around the object
-            let drawSize = Math.max(visualWidth * 1.5, visualHeight * 0.8);
+
+            // For surface objects, we want the reticle to encompass the ground footprint 
+            // but also be large enough to "frame" the structure height if possible.
+            // Using a more generous multiplier for width and a balanced factor for height.
+            let drawSize = Math.max(visualWidth * 1.6, visualHeight * 0.5);
 
             // Apply a minimum visual size in pixels so it's always easily visible
-            const minReticleSize = 60; // Minimum diameter in pixels
+            const minReticleSize = 65; // Slightly larger minimum diameter for better visibility
             drawSize = Math.max(drawSize, minReticleSize);
 
             // Re-assign targetSize for the drawing section below

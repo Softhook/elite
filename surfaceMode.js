@@ -740,6 +740,7 @@ class SurfaceMode {
         this.terrain.cleanup();
 
         // Clear data
+        this.projectiles = [];
         this.miningRobots = [];
         this.oreSeams.clear();
         this.savedPlayerPos = null;
