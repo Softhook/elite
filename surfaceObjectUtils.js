@@ -10,9 +10,9 @@ const SURFACE_RENDER_CONSTANTS = {
     EXTRUSION_ANGLE: 0.5,
     DEFAULT_SUN_ANGLE: -Math.PI / 4,
     TWO_PI: Math.PI * 2,
-    DAMAGE_FLASH_DURATION: 150, // ms
-    VISIBILITY_RESOLUTION: 128
+    DAMAGE_FLASH_DURATION: 150 // ms
 };
+
 /**
  * Calculate building variant from seed
  * @param {number} seed - Random seed
@@ -74,9 +74,9 @@ function toVisualCoordinates(worldX, worldY, altitude, extrusionAngle = null) {
     if (extrusionAngle === null) {
         extrusionAngle = getExtrusionAngle();
     }
-
+    
     let visualX, visualY;
-
+    
     if (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX && surfaceMode._toVisualY) {
         visualX = surfaceMode._toVisualX(worldX, altitude);
         visualY = surfaceMode._toVisualY(worldY, altitude);
@@ -84,7 +84,7 @@ function toVisualCoordinates(worldX, worldY, altitude, extrusionAngle = null) {
         visualX = worldX - altitude * Math.sin(extrusionAngle);
         visualY = worldY - altitude * Math.cos(extrusionAngle);
     }
-
+    
     return { x: visualX, y: visualY };
 }
 
@@ -99,7 +99,7 @@ function toVisualCoordinates(worldX, worldY, altitude, extrusionAngle = null) {
 function getProjectionHelpers(worldX, worldY, altitude) {
     const extrusionAngle = getExtrusionAngle();
     const visual = toVisualCoordinates(worldX, worldY, altitude, extrusionAngle);
-
+    
     return {
         extrusionAngle,
         baseX: visual.x,
@@ -186,17 +186,17 @@ function shouldShowDamageFlash(lastHitTime, duration = SURFACE_RENDER_CONSTANTS.
 function smoothRotateTowards(currentAngle, targetAngle, turnSpeed, dt) {
     const diff = normalizeAngleDifference(targetAngle, currentAngle);
     const maxTurn = turnSpeed * dt;
-
+    
     if (Math.abs(diff) <= maxTurn) {
         return targetAngle;
     }
-
+    
     return currentAngle + Math.sign(diff) * maxTurn;
 }
 
 // Make available globally
 if (typeof window !== 'undefined') {
-    window.TWO_PI = SURFACE_RENDER_CONSTANTS.TWO_PI;
+    window.SURFACE_RENDER_CONSTANTS = SURFACE_RENDER_CONSTANTS;
     window.calculateVariant = calculateVariant;
     window.calculateHeight = calculateHeight;
     window.calculateVerticalOffset = calculateVerticalOffset;

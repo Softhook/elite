@@ -121,13 +121,6 @@ class SurfaceFlora {
     checkCollision(projectile) {
         return false; // Use default radius-based collision in surfaceMode
     }
-
-    /**
-     * @deprecated Use VisibilityAnalyzer for pixel-perfect culling instead.
-     */
-    _isVisible(angle, extrusionAngle) {
-        return true;
-    }
 }
 
 /**
@@ -143,45 +136,6 @@ class AlienTree extends SurfaceFlora {
             blue(this.color) * 0.5
         );
         this.branches = Math.floor(3 + (this.seed % 4));
-
-        // Pixel-perfect pre-render check: run once per species configuration
-        this.visibleBranches = VisibilityAnalyzer.getVisibleIndices(
-            'AlienTree',
-            this.branches,
-            (g) => this._drawForAnalysis(g)
-        );
-    }
-
-    _drawForAnalysis(g) {
-        const extrusionAngle = 0.5;
-        const trunkW = this.size * 0.3;
-        const trunkH = this.height * 0.6;
-        const canopyR = this.size * 0.8;
-
-        const parts = [];
-
-        // Trunk (Body) at Y=0
-        parts.push({
-            y: 0,
-            draw: () => Draw3D.drawBox3D(0, 0, trunkW, trunkW, trunkH, 0, extrusionAngle, 0, true, g, true)
-        });
-
-        // Branches (Sub-elements)
-        for (let i = 0; i < this.branches; i++) {
-            const angle = (i / this.branches) * Math.PI * 2;
-            const offsetX = Math.cos(angle) * canopyR * 0.3;
-            const offsetY = Math.sin(angle) * canopyR * 0.3;
-            const blobSize = canopyR * (0.6 + Math.sin(this.seed + i) * 0.2);
-
-            parts.push({
-                y: offsetY,
-                draw: () => Draw3D.drawPrism(offsetX, offsetY, blobSize, 6, this.size * 0.4, [i + 1, 0, 0], extrusionAngle, 0, true, g, true)
-            });
-        }
-
-        // Sort back-to-front (smaller Y is further away)
-        parts.sort((a, b) => a.y - b.y);
-        parts.forEach(p => p.draw());
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
@@ -199,15 +153,11 @@ class AlienTree extends SurfaceFlora {
         // Canopy - sits on top of trunk
         const canopyR = this.size * 0.8;
 
-        // Use pre-calculated visible branches
-        for (let idx = 0; idx < this.visibleBranches.length; idx++) {
-            const i = this.visibleBranches[idx];
+        // LOD 2: Reduced branches (max 2), LOD 3: Full branches
+        const branchCount = lodLevel === 2 ? Math.min(2, this.branches) : this.branches;
 
-            // LOD 2 check: limit total branches drawn
-            if (lodLevel === 2 && idx >= 2) break;
-
+        for (let i = 0; i < branchCount; i++) {
             const angle = (i / this.branches) * Math.PI * 2;
-
             const offsetX = Math.cos(angle) * canopyR * 0.3;
             const offsetY = Math.sin(angle) * canopyR * 0.3;
             const blobSize = canopyR * (0.6 + Math.sin(this.seed + i) * 0.2);
@@ -241,53 +191,6 @@ class CrystalPlant extends SurfaceFlora {
             blue(this.color) + 60,
             200
         );
-
-        // Pixel-perfect pre-render check
-        this.visibleCrystals = VisibilityAnalyzer.getVisibleIndices(
-            'CrystalPlant',
-            this.crystals,
-            (g) => this._drawForAnalysis(g)
-        );
-    }
-
-    _drawForAnalysis(g) {
-        const extrusionAngle = 0.5;
-        const sinE = Math.sin(extrusionAngle);
-        const cosE = Math.cos(extrusionAngle);
-
-        const parts = [];
-
-        // Body (central crystal)
-        const centralTopX = -this.height * sinE;
-        const centralTopY = -this.height * cosE;
-        // Depth is baseY (topY + depth * cosE)
-        const centralBaseY = centralTopY + this.height * cosE; // which is 0
-
-        parts.push({
-            y: centralBaseY,
-            draw: () => Draw3D.drawBox3D(centralTopX, centralTopY, this.size * 0.3, this.size * 0.3, this.height, 0, extrusionAngle, 0, true, g, true)
-        });
-
-        for (let i = 0; i < this.crystals; i++) {
-            const angle = (i / this.crystals) * Math.PI * 2 + this.seed;
-            const radius = this.size * 0.4;
-            const cHeight = this.height * (0.7 + Math.sin(this.seed + i * 2) * 0.3);
-            const cWidth = this.size * 0.2;
-
-            const cx = Math.cos(angle) * radius;
-            const cy = Math.sin(angle) * radius;
-            const cTopX = cx - cHeight * sinE;
-            const cTopY = cy - cHeight * cosE;
-            const cBaseY = cTopY + cHeight * cosE; // which is cy
-
-            parts.push({
-                y: cBaseY,
-                draw: () => Draw3D.drawBox3D(cTopX, cTopY, cWidth, cWidth, cHeight, [i + 1, 0, 0], extrusionAngle, 0, true, g, true)
-            });
-        }
-
-        parts.sort((a, b) => a.y - b.y);
-        parts.forEach(p => p.draw());
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
@@ -300,13 +203,10 @@ class CrystalPlant extends SurfaceFlora {
         const sinE = Math.sin(extrusionAngle);
         const cosE = Math.cos(extrusionAngle);
 
-        // Use pre-calculated visible crystals
-        for (let idx = 0; idx < this.visibleCrystals.length; idx++) {
-            const i = this.visibleCrystals[idx];
+        // LOD 2: Central + 2 side crystals, LOD 3: Full crystals
+        const crystalCount = lodLevel === 2 ? Math.min(2, this.crystals) : this.crystals;
 
-            // LOD 2: Central + 2 side crystals
-            if (lodLevel === 2 && idx >= 2) break;
-
+        for (let i = 0; i < crystalCount; i++) {
             const angle = (i / this.crystals) * Math.PI * 2 + this.seed;
             const radius = this.size * 0.4;
             const cHeight = this.height * (0.7 + Math.sin(this.seed + i * 2) * 0.3);
@@ -340,48 +240,6 @@ class TentaclePlant extends SurfaceFlora {
             green(this.color) * 0.7,
             blue(this.color) * 0.7
         );
-
-        // Pixel-perfect pre-render check
-        this.visibleTentacles = VisibilityAnalyzer.getVisibleIndices(
-            'TentaclePlant',
-            this.tentacles,
-            (g) => this._drawForAnalysis(g)
-        );
-    }
-
-    _drawForAnalysis(g) {
-        const extrusionAngle = 0.5;
-        const baseH = this.size * 0.3;
-        const cosE = Math.cos(extrusionAngle);
-
-        const parts = [];
-
-        // Body (base bulb)
-        parts.push({
-            y: baseH * cosE, // Base Y of bulb
-            draw: () => Draw3D.drawPrism(0, 0, this.size * 0.5, 8, baseH, 0, extrusionAngle, 0, true, g, true)
-        });
-
-        for (let i = 0; i < this.tentacles; i++) {
-            const angle = (i / this.tentacles) * Math.PI * 2 + this.seed;
-
-            for (let s = 0; s < 3; s++) {
-                const progress = s / 3;
-                const radius = this.size * (0.3 + progress * 0.6);
-                const tx = Math.cos(angle) * radius;
-                const ty = Math.sin(angle) * radius - progress * this.height * 0.3;
-                const tWidth = this.size * 0.15 * (1 - progress * 0.5);
-                const tHeight = this.height * 0.3;
-
-                parts.push({
-                    y: ty + tHeight * cosE, // Base Y of this segment
-                    draw: () => Draw3D.drawBox3D(tx, ty, tWidth, tWidth, tHeight, [i + 1, 0, 0], extrusionAngle, 0, true, g, true)
-                });
-            }
-        }
-
-        parts.sort((a, b) => a.y - b.y);
-        parts.forEach(p => p.draw());
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
@@ -395,15 +253,10 @@ class TentaclePlant extends SurfaceFlora {
         Draw3D.drawPrism(baseX, baseY, this.size * 0.5, lodLevel === 2 ? 6 : 8, baseH, this.baseColor, extrusionAngle, sunAngle, true);
 
         // LOD 2: Reduced tentacles (max 3) with 1 segment, LOD 3: Full tentacles with 3 segments
+        const tentacleCount = lodLevel === 2 ? Math.min(3, this.tentacles) : this.tentacles;
         const segmentCount = lodLevel === 2 ? 1 : 3;
 
-        // Use pre-calculated visible tentacles
-        for (let idx = 0; idx < this.visibleTentacles.length; idx++) {
-            const i = this.visibleTentacles[idx];
-
-            // LOD 2: limit total tentacles drawn
-            if (lodLevel === 2 && idx >= 3) break;
-
+        for (let i = 0; i < tentacleCount; i++) {
             const angle = (i / this.tentacles) * Math.PI * 2 + this.seed;
 
             for (let s = 0; s < segmentCount; s++) {
@@ -433,49 +286,6 @@ class SporeStalk extends SurfaceFlora {
             blue(this.color) + 80,
             180
         );
-
-        // Pixel-perfect pre-render check
-        this.visibleSpores = VisibilityAnalyzer.getVisibleIndices(
-            'SporeStalk',
-            4,
-            (g) => this._drawForAnalysis(g)
-        );
-    }
-
-    _drawForAnalysis(g) {
-        const extrusionAngle = 0.5;
-        const cosE = Math.cos(extrusionAngle);
-        const parts = [];
-
-        // Body (stalk + cap)
-        // Stalk baseY
-        parts.push({
-            y: this.height * cosE,
-            draw: () => Draw3D.drawBox3D(0, 0, this.size * 0.2, this.size * 0.2, this.height, 0, extrusionAngle, 0, true, g, true)
-        });
-        // Cap baseY (0.4 height)
-        const capH = this.size * 0.4;
-        parts.push({
-            y: capH * cosE,
-            draw: () => Draw3D.drawPrism(0, 0, this.size * 0.6, 12, capH, 0, extrusionAngle, 0, true, g, true)
-        });
-
-        for (let i = 0; i < 4; i++) {
-            const angle = (i / 4) * Math.PI * 2 + this.seed;
-            const dist = this.size * 0.8;
-            const sx = Math.cos(angle) * dist;
-            const sy = Math.sin(angle) * dist * 0.5;
-            const sporeSize = this.size * 0.1;
-            const sporeH = sporeSize * 0.5;
-
-            parts.push({
-                y: sy + sporeH * cosE,
-                draw: () => Draw3D.drawPrism(sx, sy, sporeSize, 6, sporeH, [i + 1, 0, 0], extrusionAngle, 0, true, g, true)
-            });
-        }
-
-        parts.sort((a, b) => a.y - b.y);
-        parts.forEach(p => p.draw());
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
@@ -494,7 +304,7 @@ class SporeStalk extends SurfaceFlora {
 
         // LOD 3 only: Small spore clusters floating around cap
         if (lodLevel === 3) {
-            for (let i of this.visibleSpores) {
+            for (let i = 0; i < 4; i++) {
                 const angle = (i / 4) * Math.PI * 2 + this.seed;
                 const dist = this.size * 0.8;
                 const sx = baseX + Math.cos(angle) * dist;
@@ -515,37 +325,6 @@ class BubbleBush extends SurfaceFlora {
         super(x, y, size, planetColors, seed);
         this.height = size * (0.8 + Math.sin(this.seed) * 0.2);
         this.bubbles = Math.floor(6 + (this.seed % 5));
-
-        // Pixel-perfect pre-render check
-        this.visibleBubbles = VisibilityAnalyzer.getVisibleIndices(
-            'BubbleBush',
-            this.bubbles,
-            (g) => this._drawForAnalysis(g)
-        );
-    }
-
-    _drawForAnalysis(g) {
-        const extrusionAngle = 0.5;
-        const cosE = Math.cos(extrusionAngle);
-        const parts = [];
-
-        for (let i = 0; i < this.bubbles; i++) {
-            const angle = (i / this.bubbles) * Math.PI * 2 + this.seed;
-            const layer = Math.floor(i / 3);
-            const radius = this.size * (0.3 - layer * 0.1);
-            const bx = Math.cos(angle) * radius;
-            const by = Math.sin(angle) * radius;
-            const bSize = this.size * (0.4 - layer * 0.1);
-            const bHeight = this.height * (0.8 - layer * 0.2);
-
-            parts.push({
-                y: by + bHeight * cosE,
-                draw: () => Draw3D.drawPrism(bx, by, bSize, 12, bHeight, [i + 1, 0, 0], extrusionAngle, 0, true, g, true)
-            });
-        }
-
-        parts.sort((a, b) => a.y - b.y);
-        parts.forEach(p => p.draw());
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
@@ -554,15 +333,11 @@ class BubbleBush extends SurfaceFlora {
         const { extrusionAngle, baseX, baseY } =
             typeof getProjectionHelpers === 'function' ? getProjectionHelpers(worldX, worldY, alt + this.height) : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
 
+        // LOD 2: Max 3 bubbles, LOD 3: Full bubbles
+        const bubbleCount = lodLevel === 2 ? Math.min(3, this.bubbles) : this.bubbles;
         const sidesPerBubble = lodLevel === 2 ? 6 : 12;
 
-        // Use pre-calculated visible bubbles
-        for (let idx = 0; idx < this.visibleBubbles.length; idx++) {
-            const i = this.visibleBubbles[idx];
-
-            // LOD 2: Max 3 bubbles
-            if (lodLevel === 2 && idx >= 3) break;
-
+        for (let i = 0; i < bubbleCount; i++) {
             const angle = (i / this.bubbles) * Math.PI * 2 + this.seed;
             const layer = Math.floor(i / 3);
             const radius = this.size * (0.3 - layer * 0.1);
@@ -831,13 +606,6 @@ class SurfaceFauna {
      */
     checkCollision(projectile) {
         return false; // Use default radius-based collision in surfaceMode
-    }
-
-    /**
-     * @deprecated Use VisibilityAnalyzer for pixel-perfect culling instead.
-     */
-    _isVisible(angle, extrusionAngle) {
-        return true;
     }
 }
 
