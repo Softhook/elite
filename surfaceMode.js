@@ -2157,7 +2157,8 @@ class SurfaceMode {
 
                             if (cellHash < inhabitedFloraProb && densityFactor > densityThreshold) {
                                 // Sample species noise for clustering
-                                const speciesNoise = noise(activeGridX * 0.1 + 1000, activeGridY * 0.1 + 1000);
+                                // Lower frequency (0.03) creates larger, more coherent biomes
+                                const speciesNoise = noise(activeGridX * 0.03 + 1000, activeGridY * 0.03 + 1000);
                                 obj = this._createFlora(planetColors, wx, wy, objSeed, speciesNoise);
                             }
                         } else {
@@ -2174,7 +2175,8 @@ class SurfaceMode {
                             if (organicDensity > floraThreshold) {
                                 const floraProb = 0.01 + (0.09 * densityFactor);
                                 if (cellHash < floraProb) {
-                                    const speciesNoise = noise(activeGridX * 0.1 + 1000, activeGridY * 0.1 + 1000);
+                                    // Lower frequency (0.03) creates larger, more coherent biomes
+                                    const speciesNoise = noise(activeGridX * 0.03 + 1000, activeGridY * 0.03 + 1000);
                                     obj = this._createFlora(planetColors, wx, wy, objSeed, speciesNoise);
                                 }
                             }
@@ -2297,23 +2299,57 @@ class SurfaceMode {
         // This creates "groves" or "patches" of same-species flora
         let flora = null;
 
-        if (speciesNoise < 0.125 && typeof AlienTree !== 'undefined') {
+        // Palette-based species selection (Restricted Palette)
+        // Instead of all 8 species appearing on every planet, we pick a palette of 4
+        // based on the planet seed. This allows each species to occupy larger chunks of the
+        // noise map (0.25 range instead of 0.125), creating much better clustering.
+        const planetSeed = this._getPlanetSeed();
+
+        // Deterministically shuffle indices [0..7] using planet seed
+        const indices = [0, 1, 2, 3, 4, 5, 6, 7];
+        // Fisher-Yates-ish shuffle seeded by planetSeed
+        let s = planetSeed;
+        for (let i = indices.length - 1; i > 0; i--) {
+            s = (s * 1664525 + 1013904223) >>> 0;
+            const j = s % (i + 1);
+            [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+
+        // Pick top 4 as the palette for this planet
+        const palette = indices.slice(0, 4);
+
+        // Ensure "LuminescentFungi" (index 7) isn't too rare across the galaxy
+        // If it was shuffled out, give it a small chance to force its way back in
+        // on some planets (simple hack: if planetSeed % 10 == 0, force index 7 into slot 3)
+        if (planetSeed % 8 === 0) {
+            palette[3] = 7;
+        }
+
+        // Map noise (0-1) to 4 buckets (0-3)
+        // No complex curves needed, just 4 large buckets
+        let bucket = Math.floor(speciesNoise * 4);
+        if (bucket > 3) bucket = 3;
+
+        const finalIndex = palette[bucket];
+
+        if (finalIndex === 0 && typeof AlienTree !== 'undefined') {
             flora = new AlienTree(x, y, size, planetColors, seed);
-        } else if (speciesNoise < 0.25 && typeof CrystalPlant !== 'undefined') {
+        } else if (finalIndex === 1 && typeof CrystalPlant !== 'undefined') {
             flora = new CrystalPlant(x, y, size, planetColors, seed);
-        } else if (speciesNoise < 0.375 && typeof TentaclePlant !== 'undefined') {
+        } else if (finalIndex === 2 && typeof TentaclePlant !== 'undefined') {
             flora = new TentaclePlant(x, y, size, planetColors, seed);
-        } else if (speciesNoise < 0.5 && typeof SporeStalk !== 'undefined') {
+        } else if (finalIndex === 3 && typeof SporeStalk !== 'undefined') {
             flora = new SporeStalk(x, y, size, planetColors, seed);
-        } else if (speciesNoise < 0.625 && typeof BubbleBush !== 'undefined') {
+        } else if (finalIndex === 4 && typeof BubbleBush !== 'undefined') {
             flora = new BubbleBush(x, y, size, planetColors, seed);
-        } else if (speciesNoise < 0.75 && typeof HexPalm !== 'undefined') {
+        } else if (finalIndex === 5 && typeof HexPalm !== 'undefined') {
             flora = new HexPalm(x, y, size, planetColors, seed);
-        } else if (speciesNoise < 0.875 && typeof PyramidCactus !== 'undefined') {
+        } else if (finalIndex === 6 && typeof PyramidCactus !== 'undefined') {
             flora = new PyramidCactus(x, y, size, planetColors, seed);
-        } else if (typeof LuminescentFungi !== 'undefined') {
+        } else if (finalIndex === 7 && typeof LuminescentFungi !== 'undefined') {
             flora = new LuminescentFungi(x, y, size, planetColors, seed);
         } else {
+            // Fallback
             flora = typeof AlienTree !== 'undefined' ? new AlienTree(x, y, size, planetColors, seed) : null;
         }
 
