@@ -471,7 +471,20 @@ class SurfaceMode {
             return false;
         }
 
-        console.log(`Entering surface mode on ${planet.name}`);
+        // 1. Dynamic Mesh Calculation: Optimize size/resolution for the current screen
+        // Account for logical resolution, perspective, and extrusion shift
+        const dynamicMeshSize = SurfaceUtils.calculateRequiredMeshSize(
+            SURFACE_CONFIG.CLOUD_LAYER.START_ALTITUDE,
+            width,
+            height
+        );
+
+        // Update config for this session (prevents black gaps on ultra-wide / saves memory on small screens)
+        SURFACE_CONFIG.MESH_SIZE = dynamicMeshSize;
+        // Maintain consistent Level of Detail (LOD) regardless of screen size
+        SURFACE_CONFIG.MESH_RESOLUTION = Math.ceil(dynamicMeshSize / SurfaceUtils.DETAIL_RATIO);
+
+        console.log(`Entering surface mode on ${planet.name} [Dynamic Mesh: ${width}x${height} -> ${SURFACE_CONFIG.MESH_SIZE}x${SURFACE_CONFIG.MESH_RESOLUTION}]`);
 
         this.state = SURFACE_STATE.ENTERING;
         this.player = player;

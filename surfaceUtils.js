@@ -86,20 +86,41 @@ const SurfaceUtils = {
     },
 
     /**
-     * Calculate required mesh size to avoid edge visibility at given altitude
-     * @param {number} altitude - Maximum altitude to support
-     * @param {number} screenWidth - Screen width in pixels (default 1920)
-     * @param {number} screenHeight - Screen height in pixels (default 1080)
-     * @param {number} padding - Extra padding for safety margin (default 400)
-     * @returns {number} Required mesh size in world units
+     * Desired world-units per terrain quad (Level of Detail)
+     * Lower = more detailed mountains, higher = better performance
      */
-    calculateRequiredMeshSize(altitude, screenWidth = 1920, screenHeight = 1080, padding = 400) {
+    DETAIL_RATIO: 38,
+
+    /**
+     * Calculate required mesh size to avoid edge visibility at given altitude
+     * Accounts for diagonal viewport reach and perspective scale
+     * @param {number} altitude - Maximum altitude to support (e.g. 1000)
+     * @param {number} screenWidth - Current logical width (p5.js 'width')
+     * @param {number} screenHeight - Current logical height (p5.js 'height')
+     * @param {number} padding - Extra safety padding in world units (default 200)
+     * @returns {number} Required MESH_SIZE in world units
+     */
+    calculateRequiredMeshSize(altitude, screenWidth, screenHeight, padding = 200) {
         const perspectiveScale = this.getPerspectiveScale(altitude);
-        const viewportWidth = (screenWidth / perspectiveScale) + padding * 2;
-        const viewportHeight = (screenHeight / perspectiveScale) + padding * 2;
-        
-        // Return the larger dimension with safety margin
-        return Math.max(viewportWidth, viewportHeight) * 1.1;
+
+        // 1. Calculate how many world units the viewport covers from center to the furthest corner
+        // Note: p5.js width/height are logical pixels, making this DPI-independent in code space.
+        const worldRadiusX = (screenWidth / perspectiveScale) / 2;
+        const worldRadiusY = (screenHeight / perspectiveScale) / 2;
+        const worldReach = Math.sqrt(worldRadiusX * worldRadiusX + worldRadiusY * worldRadiusY);
+
+        // 2. Calculate the "Extrusion Shift" (parallax displacement)
+        // CRITICAL: The camera centers on the player's "Visual Top" (extruded position),
+        // but the terrain mesh is generated around the player's "Physical Bottom" (surfaceX).
+        // This offset means we need extra mesh coverage in the direction of the extrusion.
+        const extrusionAngle = this.getExtrusionAngle();
+        const displacement = altitude * Math.sin(extrusionAngle);
+
+        // 3. Mathematical Floor: The mesh must cover (Reach + Displacement) in every direction
+        // We use 2x this radius so the mesh remains centered on the focus point safely
+        const minSafeRadius = worldReach + displacement + padding;
+
+        return Math.ceil(minSafeRadius * 2);
     },
 
     /**
@@ -145,11 +166,11 @@ const SurfaceUtils = {
      */
     isInViewport(worldX, worldY, altitude, viewport, margin = 0) {
         const visual = this.projectToVisual(worldX, worldY, altitude);
-        
-        return !(visual.x + margin < viewport.minX || 
-                 visual.x - margin > viewport.maxX ||
-                 visual.y + margin < viewport.minY || 
-                 visual.y - margin > viewport.maxY);
+
+        return !(visual.x + margin < viewport.minX ||
+            visual.x - margin > viewport.maxX ||
+            visual.y + margin < viewport.minY ||
+            visual.y - margin > viewport.maxY);
     }
 };
 
