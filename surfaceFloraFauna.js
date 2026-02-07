@@ -570,8 +570,13 @@ class SurfaceFauna {
         this.targetBase = null;
         this.attackCooldown = 0;
         this.attackRate = 2.0; // Seconds between attacks
+        this.attackRate = 2.0; // Seconds between attacks
         this.isSurface = true; // Mark as surface entity for HUD
         this.isFauna = true;   // Mark as fauna for aggressive culling
+
+        // Friend/Tame State
+        this.isFriend = false;
+        this.friendTarget = null; // The entity to follow (usually astronaut)
     }
 
     /**
@@ -619,6 +624,12 @@ class SurfaceFauna {
 
         this.animTime += dt * 2;
         this.moveTimer += dt;
+
+        // Friend Behavior: Follow target
+        if (this.isFriend && this.friendTarget && !this.friendTarget.destroyed) {
+            this._updateFriendBehavior(dt);
+            return; // Skip normal wander/attack logic
+        }
 
         // Reduce attack cooldown
         if (this.attackCooldown > 0) {
@@ -697,6 +708,44 @@ class SurfaceFauna {
         // Lose interest if too far or base destroyed
         if (dist > SurfaceFauna.BASE_ABANDON_RANGE) {
             this.targetBase = null;
+        }
+    }
+
+    /**
+     * Follow friend target
+     * @private
+     */
+    _updateFriendBehavior(dt) {
+        if (!this.friendTarget) return;
+
+        const dist = p5.Vector.dist(this.pos, this.friendTarget.pos);
+        const followDist = 60; // Distance to stop at
+        const runDist = 200;   // Distance to start running to catch up
+
+        // Face the target
+        const angleToTarget = Math.atan2(this.friendTarget.pos.y - this.pos.y, this.friendTarget.pos.x - this.pos.x);
+
+        // Smoothly turn towards target
+        let angleDiff = angleToTarget - this.moveAngle;
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+        this.moveAngle += angleDiff * 5.0 * dt;
+
+        if (dist > followDist) {
+            // Move towards target
+            let speed = this.moveSpeed;
+
+            // Run to catch up if far behind
+            if (dist > runDist) speed *= 1.5;
+
+            this.pos.x += Math.cos(this.moveAngle) * speed * dt;
+            this.pos.y += Math.sin(this.moveAngle) * speed * dt;
+
+            // Animate movement
+            this.isPaused = false;
+        } else {
+            // Idle near target
+            this.isPaused = true;
         }
     }
 

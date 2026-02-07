@@ -784,10 +784,22 @@ class SurfaceMode {
     /**
      * Handle key press for surface mode
      */
-    handleKeyPress(keyCode) {
+    handleKeyDown(keyCode) {
         if (keyCode === SURFACE_CONFIG.TRIGGER_KEY) {
             this._keyPressed = true;
             return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Handle mouse press for surface mode
+     */
+    handleMousePressed() {
+        // Delegate to HUD for button clicks
+        if (typeof surfaceHud !== 'undefined' && surfaceHud && surfaceHud.handleMousePressed) {
+            if (surfaceHud.handleMousePressed(this)) return true;
         }
         return false;
     }
@@ -956,8 +968,8 @@ class SurfaceMode {
                             (wasCulled ? updateRangeSq : updateRangeHysteresisSq);
 
                         // Skip update for very distant objects (but still render them if visible)
-                        // Exceptions: Always update mission-critical objects (isTarget) or fauna attacking bases
-                        const shouldAlwaysUpdate = obj.isTarget || (isFauna && obj.targetBase);
+                        // Exceptions: Always update mission-critical objects (isTarget), fauna attacking bases, or friends
+                        const shouldAlwaysUpdate = obj.isTarget || (isFauna && (obj.targetBase || obj.isFriend));
                         if (distSq > effectiveRangeSq && !shouldAlwaysUpdate) {
                             objectsCulled++;
                             obj._wasCulledLastFrame = true;  // Mark as culled for next frame
@@ -1255,6 +1267,27 @@ class SurfaceMode {
         if (typeof uiManager !== 'undefined') {
             uiManager.addMessage("Boarding Ship", [100, 255, 100]);
         }
+
+        // Check for friends to board with you
+        if (this.surfaceObjects) {
+            // Find friends near the ship (or near astronaut when they boarded)
+            // We use a simple loop backward so we can remove safely
+            for (let i = this.surfaceObjects.length - 1; i >= 0; i--) {
+                const obj = this.surfaceObjects[i];
+                if (obj && obj.isFauna && obj.isFriend && !obj.destroyed) {
+                    // Check dist to ship (player)
+                    const d = p5.Vector.dist(obj.pos, this.player.pos);
+                    if (d < SURFACE_CONFIG.BOARDING_RANGE * 2) { // Generous range for followers
+                        // "Board" the creature (remove from surface)
+                        // In a full implementation, we'd add it to a cargo/crew manifest
+                        this.surfaceObjects.splice(i, 1);
+                        if (typeof uiManager !== 'undefined') {
+                            uiManager.addMessage("Your alien friend boards the ship with you!", [150, 255, 150]);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -1340,6 +1373,46 @@ class SurfaceMode {
                     return; // stop further astronaut processing this frame
                 }
             }
+        }
+    }
+
+    /**
+     * Attempt to befriend nearby fauna
+     * Triggered by 'F' key
+     */
+    /**
+     * Attempt to befriend nearby fauna
+     * @param {SurfaceFauna} [specificTarget] - Optional specific target to befriend
+     */
+    _attemptBefriend(specificTarget) {
+        if (!this.astronaut || !this.surfaceObjects) return;
+
+        let nearest = specificTarget || null;
+
+        if (!nearest) {
+            let minDist = 60; // Interaction range
+            for (const obj of this.surfaceObjects) {
+                if (!obj || obj.destroyed || !obj.isFauna) continue;
+
+                const d = p5.Vector.dist(this.astronaut.pos, obj.pos);
+                if (d < minDist) {
+                    minDist = d;
+                    nearest = obj;
+                }
+            }
+        }
+
+        if (nearest) {
+            if (nearest.isFriend) {
+                if (typeof uiManager !== 'undefined') uiManager.addMessage("This creature is already your friend!", [100, 255, 200]);
+            } else {
+                nearest.isFriend = true;
+                nearest.friendTarget = this.astronaut;
+                nearest.targetBase = null; // Forget any hostility
+                if (typeof uiManager !== 'undefined') uiManager.addMessage("You befriend the alien creature!", [100, 255, 150]);
+            }
+        } else {
+            if (typeof uiManager !== 'undefined') uiManager.addMessage("No creatures nearby to befriend.", [200, 200, 200]);
         }
     }
 

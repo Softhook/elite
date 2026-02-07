@@ -27,6 +27,9 @@ class SurfaceHUD {
         // 4. Compass (Bottom Right)
         this._drawCompass(surfaceMode);
 
+        // 5. Target Overlays (Befriend Button)
+        this.drawTargetOverlay(surfaceMode);
+
         pop();
     }
 
@@ -381,6 +384,93 @@ class SurfaceHUD {
             }
             pop();
         }
+    }
+
+    /**
+     * Draw overlay for current target (e.g., Befriend button)
+     * @param {SurfaceMode} surfaceMode
+     */
+    drawTargetOverlay(surfaceMode) {
+        if (surfaceMode.controlMode !== 'ASTRONAUT') {
+            this._befriendButtonBounds = null;
+            return;
+        }
+
+        // Check if we have a valid fauna target
+        // For this simple implementation, we'll use the "nearest fauna" logic from _attemptBefriend
+        // but ideally we should have a "locked target" concept.
+        // Let's assume user hovers mouse or is close to one.
+        // Actually, let's use the explicit target logic if available, or find nearest.
+
+        // Find nearest friendable fauna
+        let nearest = null;
+        let minDist = 60; // Interaction range matches _attemptBefriend
+        if (surfaceMode.surfaceObjects && surfaceMode.astronaut) {
+            for (const obj of surfaceMode.surfaceObjects) {
+                if (!obj || obj.destroyed || !obj.isFauna || obj.isFriend) continue;
+                const d = p5.Vector.dist(surfaceMode.astronaut.pos, obj.pos);
+                if (d < minDist) {
+                    minDist = d;
+                    nearest = obj;
+                }
+            }
+        }
+
+        if (nearest) {
+            // Draw "Befriend" button above the creature
+            // Project world pos to screen
+            // Simple projection since we don't have a full camera transform matrix exposed easily here,
+            // but we can approximate relative to screen center if we assume center is player.
+            // Wait, surfaceMode.surfaceX/Y is center of screen.
+            const screenX = width / 2 + (nearest.pos.x - surfaceMode.surfaceX) * surfaceMode.viewZoom;
+            const screenY = height / 2 + (nearest.pos.y - surfaceMode.surfaceY) * surfaceMode.viewZoom;
+
+            // Button dims
+            const bw = 100;
+            const bh = 30;
+            const bx = screenX - bw / 2;
+            const by = screenY - 50; // Above creature
+
+            // Store bounds for click
+            this._befriendButtonBounds = { x: bx, y: by, w: bw, h: bh, target: nearest };
+
+            // Draw Button
+            push();
+            fill(0, 200, 100, 200);
+            stroke(255);
+            strokeWeight(1);
+            rect(bx, by, bw, bh, 5);
+
+            fill(255);
+            noStroke();
+            textAlign(CENTER, CENTER);
+            textSize(12);
+            text("BEFRIEND", bx + bw / 2, by + bh / 2);
+            pop();
+        } else {
+            this._befriendButtonBounds = null;
+        }
+    }
+
+    /**
+     * Handle mouse press events
+     * @returns {boolean} True if handled
+     */
+    handleMousePressed(surfaceMode) {
+        if (this._befriendButtonBounds) {
+            const b = this._befriendButtonBounds;
+            if (mouseX >= b.x && mouseX <= b.x + b.w &&
+                mouseY >= b.y && mouseY <= b.y + b.h) {
+
+                // Clicked!
+                if (surfaceMode && typeof surfaceMode._attemptBefriend === 'function') {
+                    surfaceMode._attemptBefriend(b.target);
+                    this._befriendButtonBounds = null; // Clear immediately
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }
 

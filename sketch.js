@@ -916,8 +916,26 @@ function mousePressed() {
     if (handleSaveSelectionClick()) return;
     if (handleMarketButtonPress()) return;
     if (handleInventoryClick()) return;
+    if (handleInventoryClick()) return;
     if (handleGeneralUIClick()) return;
+
+    // Handle surface mode UI clicks (e.g. Befriend button)
+    if (handleSurfaceModeClick()) return;
+
     if (handleInFlightTargeting()) return;
+}
+
+/**
+ * Handle surface mode UI interactions
+ * @returns {boolean} True if handled
+ */
+function handleSurfaceModeClick() {
+    if (gameStateManager && gameStateManager.currentState === "SURFACE_MODE") {
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.handleMousePressed) {
+            if (surfaceMode.handleMousePressed()) return true;
+        }
+    }
+    return false;
 }
 
 /**
