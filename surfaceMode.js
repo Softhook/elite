@@ -2285,18 +2285,24 @@ class SurfaceMode {
     _createFauna(planetColors, x, y, seed, speciesNoise = 0.5) {
         const size = 10 + (seed % 15);
 
+        // Use wrapped noise to keep clusters while fixing distribution bias.
+        // Multiplier of 4.0 wraps the noise across the range 4 times, 
+        // ensuring all species (0-0.25, 0.25-0.5, etc.) appear even with 
+        // normally distributed Perlin noise.
+        const balancedNoise = (speciesNoise * 4.0) % 1.0;
+
         let fauna = null;
         // Species clustering for fauna groups
-        if (speciesNoise < 0.25 && typeof SlitherCreature !== 'undefined') {
+        if (balancedNoise < 0.25 && typeof SlitherCreature !== 'undefined') {
             fauna = new SlitherCreature(x, y, size, planetColors, seed);
-        } else if (speciesNoise < 0.5 && typeof FloaterCreature !== 'undefined') {
+        } else if (balancedNoise < 0.5 && typeof FloaterCreature !== 'undefined') {
             fauna = new FloaterCreature(x, y, size, planetColors, seed);
-        } else if (speciesNoise < 0.75 && typeof RollerCreature !== 'undefined') {
+        } else if (balancedNoise < 0.75 && typeof RollerCreature !== 'undefined') {
             fauna = new RollerCreature(x, y, size, planetColors, seed);
         } else if (typeof StalkCreature !== 'undefined') {
             fauna = new StalkCreature(x, y, size, planetColors, seed);
         } else {
-            // Fallback to SlitherCreature if StalkCreature is undefined
+            // Fallback
             fauna = typeof SlitherCreature !== 'undefined' ? new SlitherCreature(x, y, size, planetColors, seed) : null;
         }
 
