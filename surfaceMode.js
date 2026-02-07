@@ -2159,7 +2159,16 @@ class SurfaceMode {
                                 // Sample species noise for clustering
                                 // Lower frequency (0.03) creates larger, more coherent biomes
                                 const speciesNoise = noise(activeGridX * 0.03 + 1000, activeGridY * 0.03 + 1000);
-                                obj = this._createFlora(planetColors, wx, wy, objSeed, speciesNoise);
+
+                                // Spatial Color Noise: "Evolutionary Patterns"
+                                // Generate a separate low-frequency noise for color traits
+                                const colorNoise = noise(activeGridX * 0.03 + 5000, activeGridY * 0.03 + 5000);
+
+                                // Pass color context without modifying the original array
+                                const colorContext = [...planetColors];
+                                colorContext.spatialNoise = colorNoise;
+
+                                obj = this._createFlora(colorContext, wx, wy, objSeed, speciesNoise);
                             }
                         } else {
                             // UNINHABITED: Both flora and fauna thrive in organic patterns
@@ -2177,7 +2186,13 @@ class SurfaceMode {
                                 if (cellHash < floraProb) {
                                     // Lower frequency (0.03) creates larger, more coherent biomes
                                     const speciesNoise = noise(activeGridX * 0.03 + 1000, activeGridY * 0.03 + 1000);
-                                    obj = this._createFlora(planetColors, wx, wy, objSeed, speciesNoise);
+
+                                    // Spatial Color Noise
+                                    const colorNoise = noise(activeGridX * 0.03 + 5000, activeGridY * 0.03 + 5000);
+                                    const colorContext = [...planetColors];
+                                    colorContext.spatialNoise = colorNoise;
+
+                                    obj = this._createFlora(colorContext, wx, wy, objSeed, speciesNoise);
                                 }
                             }
 

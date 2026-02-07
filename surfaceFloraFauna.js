@@ -59,6 +59,51 @@ class SurfaceFlora {
      * @returns {p5.Color} Color for this flora
      */
     _getPlanetBasedColor() {
+        // Spatial Pattern Logic (Evolutionary Patterns)
+        // If spatial noise is provided, use it to determine color index and variation
+        // This creates large biomes of consistent color that fade into each other
+        if (typeof this.planetColors.spatialNoise === 'number') {
+            const noiseVal = this.planetColors.spatialNoise;
+            const paletteSize = this.planetColors.length;
+
+            // Map noise (0-1) to palette index
+            // Smooth transition between indices
+            const scaledNoise = noiseVal * paletteSize;
+            let colorIndex = Math.floor(scaledNoise) % paletteSize;
+
+            // Mutation Logic: Occasional "sport" or variant that breaks the pattern
+            // 5% chance to pick a color from the opposite side of the palette
+            // This adds necessary variety to large uniform biomes
+            if (this.seed - Math.floor(this.seed) < 0.05) {
+                colorIndex = (colorIndex + Math.floor(paletteSize / 2)) % paletteSize;
+            }
+
+            // Get base color
+            const baseCol = this.planetColors[colorIndex] || this.planetColors[0] || color(100, 150, 100);
+
+            // Hue shift: Use the fractional part of the scaled noise to shift hue towards the next color
+            // This creates a smooth gradient/evolution between the color biomes
+            const mixFactor = scaledNoise - Math.floor(scaledNoise);
+            const nextColorIndex = (colorIndex + 1) % paletteSize;
+            const nextCol = this.planetColors[nextColorIndex] || baseCol;
+
+            // Blend between current and next color based on noise
+            // This creates the "evolutionary" drift visual
+            const r = lerp(red(baseCol), red(nextCol), mixFactor);
+            const g = lerp(green(baseCol), green(nextCol), mixFactor);
+            const b = lerp(blue(baseCol), blue(nextCol), mixFactor);
+
+            // Increased individual variation (was 15, now 40)
+            // This ensures nature looks "messy" and organic, not like a tiled texture
+            const varAmount = 40;
+            const rVar = (Math.sin(this.seed * 2.3) * 0.5 + 0.5) * varAmount - (varAmount / 2);
+            const gVar = (Math.sin(this.seed * 3.7) * 0.5 + 0.5) * varAmount - (varAmount / 2);
+            const bVar = (Math.sin(this.seed * 4.1) * 0.5 + 0.5) * varAmount - (varAmount / 2);
+
+            return color(constrain(r + rVar, 0, 255), constrain(g + gVar, 0, 255), constrain(b + bVar, 0, 255));
+        }
+
+        // Fallback to original random logic if no spatial noise
         // Use seed for deterministic selection and variation
         const colorIndex = Math.floor((Math.sin(this.seed * 1.1) * 0.5 + 0.5) * this.planetColors.length);
         const baseCol = this.planetColors[colorIndex] || this.planetColors[0] || color(100, 150, 100);
