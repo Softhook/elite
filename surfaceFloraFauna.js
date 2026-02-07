@@ -460,7 +460,7 @@ class LuminescentFungi extends SurfaceFlora {
         // Glowing Cap (Dome)
         const capSize = this.size * 0.8;
         // Dome draws from center, so we can just place it at top (baseX, baseY)
-        Draw3D.drawDome(baseX, baseY, capSize, 8, this.glowColor, extrusionAngle, sunAngle);
+        Draw3D.drawDome(baseX, baseY, capSize, 8, this.glowColor, extrusionAngle, sunAngle, true);
     }
 }
 
