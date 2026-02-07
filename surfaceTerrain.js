@@ -142,7 +142,7 @@ class SurfaceTerrain {
         }
 
         // Use integer grid key for cache (reduces cache misses from floating point)
-        const key = `${Math.floor(worldX / 10)},${Math.floor(worldY / 10)}`;
+        const key = `${Math.floor(worldX)},${Math.floor(worldY)}`;
         if (this.heightCache.has(key)) {
             return this.heightCache.get(key);
         }
@@ -174,7 +174,7 @@ class SurfaceTerrain {
         const cellSize = this.config.MESH_SIZE / this.config.MESH_RESOLUTION;
         const targetGridX = Math.round(playerX / cellSize);
         const targetGridY = Math.round(playerY / cellSize);
-        
+
         const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
 
         // 1. Check if pending buffer is ready to be swapped
@@ -248,7 +248,7 @@ class SurfaceTerrain {
 
         if (typeof drawingContext !== 'undefined') {
             const ctx = drawingContext;
-            
+
             // Draw current buffer at full opacity (no alpha blending)
             const bufferWorldCX = this.currentGridX * cellSize;
             const bufferWorldCY = this.currentGridY * cellSize;
@@ -256,7 +256,7 @@ class SurfaceTerrain {
             const h = this.currentBuffer.height;
             const bx = bufferWorldCX - w / 2;
             const by = bufferWorldCY - h / 2;
-            
+
             ctx.drawImage(this.currentBuffer, bx, by, w, h);
         }
     }

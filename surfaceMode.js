@@ -15,8 +15,8 @@ const SURFACE_CONFIG = {
     CLIMB_SPEED: 200,
 
     // Terrain mesh
-    MESH_RESOLUTION: 120,      // Grid resolution (balanced for detail and performance)
-    MESH_SIZE: 5000,           // World units covered (smaller mesh with earlier buffer requests to ensure seamless swaps)
+    MESH_RESOLUTION: 100,      // Grid resolution (balanced for detail and performance)
+    MESH_SIZE: 3800,           // World units covered (safe balance of sharpness and view distance)
     SPAWN_CELL_SIZE: 35,       // Fixed spawn density (independent of resolution)
     DEFAULT_FEATURE_SEED: 12345, // Fallback seed for terrain generation
     HIGH_TERRAIN_THRESHOLD: 350, // Height (0-500) treated as high ground for defenses
@@ -218,6 +218,9 @@ class SurfaceMode {
         // View Zoom (for astronaut EVA mode)
         this.viewZoom = 1.0;
         this.targetViewZoom = 1.0;
+
+        // Display Stability: EMA smoothed deltaTime to prevent position judder
+        this._smoothDt = 1 / 60; // Start with standard 60fps assumption
     }
 
     /**
@@ -801,7 +804,11 @@ class SurfaceMode {
     update(deltaTime) {
         if (this.state === SURFACE_STATE.INACTIVE) return;
 
-        const dt = deltaTime / 1000; // Convert to seconds
+        // Display Stability: Smooth deltaTime to prevent background stutter/judder
+        // Exponential Moving Average (EMA) with 20% weight per frame
+        const alpha = 0.2;
+        this._smoothDt = this._smoothDt * (1 - alpha) + (deltaTime / 1000) * alpha;
+        const dt = this._smoothDt;
 
         // Update reboard cooldown
         if (this.reboardCooldown > 0) {

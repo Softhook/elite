@@ -256,6 +256,13 @@ self.onmessage = function (e) {
         const baseOffsetX = -halfRes * cellSize;
         const baseOffsetY = -halfRes * cellSize;
 
+        // Display Stability: Fill background with a base terrain color before drawing quads.
+        // This ensures sub-pixel gaps (seams) bleed ground color instead of dark space,
+        // solving the shimmering issue at virtually zero cost compared to strokes.
+        const baseCol = threeRGB[1] || threeRGB[0]; // Use median palette color
+        ctx.fillStyle = `rgb(${baseCol.r},${baseCol.g},${baseCol.b})`;
+        ctx.fillRect(0, 0, bufferSide, bufferSide);
+
         // Iterate quads
         for (let gy = 0; gy < resolution; gy++) {
             // Row shared Y calc
@@ -293,7 +300,7 @@ self.onmessage = function (e) {
                 const colX0 = baseOffsetX + gx * cellSize;
                 const colX1 = baseOffsetX + (gx + 1) * cellSize;
 
-                // Render quad without stroke for better performance
+                // Render quad (solid fill only - backing handles the seams)
                 ctx.fillStyle = `rgb(${r},${g},${b})`;
                 ctx.beginPath();
                 ctx.moveTo(cx + colX0 - h00 * sinA, cy + rowY0 - h00 * cosA);
