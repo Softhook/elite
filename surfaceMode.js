@@ -2123,14 +2123,14 @@ class SurfaceMode {
                             // Scale density noise for variety (barren vs lush)
                             const organicDensity = noise(activeGridX * 0.04 + 2000, activeGridY * 0.04 + 2000);
 
-                            // Dynamic thresholds: Lush planets (densityFactor=1) have low thresholds (0.3)
-                            // Barren planets (densityFactor=0) have high thresholds (0.8), creating rare pockets
-                            const floraThreshold = 0.8 - (0.5 * densityFactor);
-                            const faunaThreshold = 0.85 - (0.4 * densityFactor);
+                            // Dynamic thresholds: Lush planets (densityFactor=1) have moderate thresholds
+                            // Barren planets (densityFactor=0) have high thresholds, creating rare pockets
+                            const floraThreshold = 0.85 - (0.45 * densityFactor);
+                            const faunaThreshold = 0.9 - (0.35 * densityFactor);
 
                             // Flora spawning
                             if (organicDensity > floraThreshold) {
-                                const floraProb = 0.02 + (0.15 * densityFactor);
+                                const floraProb = 0.01 + (0.09 * densityFactor);
                                 if (cellHash < floraProb) {
                                     const speciesNoise = noise(activeGridX * 0.1 + 1000, activeGridY * 0.1 + 1000);
                                     obj = this._createFlora(planetColors, wx, wy, objSeed, speciesNoise);
@@ -2139,7 +2139,7 @@ class SurfaceMode {
 
                             // Fauna spawning (can now happen in its own zones or alongside flora)
                             if (!obj && organicDensity > faunaThreshold) {
-                                const faunaProb = 0.02 + (0.08 * densityFactor);
+                                const faunaProb = 0.01 + (0.05 * densityFactor);
                                 // Use subHash for independent luck roll vs flora
                                 if (subHash < faunaProb) {
                                     const speciesNoise = noise(activeGridX * 0.12 + 3000, activeGridY * 0.12 + 3000);
