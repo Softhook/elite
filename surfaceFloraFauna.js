@@ -409,7 +409,8 @@ class BubbleBush extends SurfaceFlora {
 class HexPalm extends SurfaceFlora {
     constructor(x, y, size, planetColors, seed) {
         super(x, y, size, planetColors, seed);
-        this.height = size * (3 + Math.sin(this.seed) * 0.5);
+        // Reduced height (was 3)
+        this.height = size * (2 + Math.sin(this.seed) * 0.5);
         this.trunkColor = color(
             red(this.color) * 0.6,
             green(this.color) * 0.5,
@@ -425,12 +426,13 @@ class HexPalm extends SurfaceFlora {
             typeof getProjectionHelpers === 'function' ? getProjectionHelpers(worldX, worldY, alt + this.height) : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
 
         // Hexagonal Trunk
-        const trunkW = this.size * 0.4;
+        // Reduced width (was 0.4)
+        const trunkW = this.size * 0.2;
         Draw3D.drawPrism(baseX, baseY, trunkW, 6, this.height, this.trunkColor, extrusionAngle, sunAngle, true);
 
         // Leaves at top
-        const leafLen = this.size * 1.5;
-        const leafW = this.size * 0.4;
+        const leafLen = this.size * 1.1;
+        const leafW = this.size * 0.3;
 
         for (let i = 0; i < this.leaves; i++) {
             const angle = (i / this.leaves) * Math.PI * 2 + this.seed;
