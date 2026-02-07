@@ -2795,7 +2795,7 @@ class SurfaceMode {
 
             const objAlt = (typeof obj.altitude !== 'undefined') ? obj.altitude : (obj.yOffset || 0);
             const objSize = obj.size || 50;
-            const objHeight = obj.height || (objSize * 2);
+            const objHeight = (typeof obj.getHeight === 'function') ? obj.getHeight() : (obj.height || (objSize * 2));
 
             // Visual position for culling and depth
             const visY = obj.pos.y - objAlt * cos;

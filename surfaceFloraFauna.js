@@ -418,6 +418,7 @@ class SurfaceFauna {
         this.attackCooldown = 0;
         this.attackRate = 2.0; // Seconds between attacks
         this.isSurface = true; // Mark as surface entity for HUD
+        this.isFauna = true;   // Mark as fauna for aggressive culling
     }
 
     /**
@@ -457,6 +458,11 @@ class SurfaceFauna {
      */
     update(dt, player) {
         if (this.destroyed) return;
+
+        // Update height based on terrain
+        if (typeof surfaceMode !== 'undefined' && typeof surfaceMode._getTerrainHeightAt === 'function') {
+            this.yOffset = surfaceMode._getTerrainHeightAt(this.pos.x, this.pos.y);
+        }
 
         this.animTime += dt * 2;
         this.moveTimer += dt;
@@ -706,6 +712,7 @@ class FloaterCreature extends SurfaceFauna {
         super(x, y, size, planetColors, seed);
         this.floatHeight = size * 2;
         this.tentacles = 4;
+        this.height = this.floatHeight + this.size;
     }
 
     /**
@@ -773,6 +780,7 @@ class RollerCreature extends SurfaceFauna {
     constructor(x, y, size, planetColors, seed) {
         super(x, y, size, planetColors, seed);
         this.spikes = 8;
+        this.height = size * 1.8; // Match the projection height in draw()
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
@@ -830,6 +838,7 @@ class StalkCreature extends SurfaceFauna {
         this.bodyHeight = size * 2;
         this.legs = 4;
         this.legLength = size * 1.5;
+        this.height = this.legLength + this.bodyHeight;
     }
 
     /**
