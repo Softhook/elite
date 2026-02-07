@@ -817,6 +817,13 @@ class SurfaceMode {
     update(deltaTime) {
         if (this.state === SURFACE_STATE.INACTIVE) return;
 
+        // [FIX] Clear target if it is destroyed to remove persistent HUD/Radar indicators
+        if (this.player && this.player.target) {
+            if (this.player.target.destroyed || (typeof this.player.target.isDestroyed === 'function' && this.player.target.isDestroyed())) {
+                this.player.target = null;
+            }
+        }
+
         // Display Stability: Smooth deltaTime to prevent background stutter/judder
         // Exponential Moving Average (EMA) with 20% weight per frame
         const alpha = 0.2;
@@ -2017,7 +2024,16 @@ class SurfaceMode {
                     activeGridX === targetCellX &&
                     activeGridY === targetCellY;
 
-                if (isTargetCell && typeof ShieldGenerator !== 'undefined') {
+                // [NEW] 25% chance to spawn Shield Generator on uninhabited planets.
+                // Use the planet's seed to make it deterministic.
+                const planetSeedVal = (this.planet && this.planet.seed) ? this.planet.seed : 0;
+                // Use a large prime multiplier to decorrelate from other RNG
+                const genSpawnChance = (Math.abs(Math.sin(planetSeedVal * 99.123)) * 10000) % 1;
+                const isUninhabited = this.planet && !this.planet.isInhabited;
+                // Allow spawn if inhabited OR (uninhabited AND chance < 0.25)
+                const allowGeneratorSpawn = !isUninhabited || (genSpawnChance < 0.25);
+
+                if (isTargetCell && typeof ShieldGenerator !== 'undefined' && allowGeneratorSpawn) {
                     // Create generator at the actual target position, not the cell center
                     obj = new ShieldGenerator(this.targetPos.x, this.targetPos.y);
                     obj.yOffset = h;
@@ -2038,6 +2054,12 @@ class SurfaceMode {
                     }
                 }
 
+                // If we disallowed the generator spawn (due to 25% chance), we should also disable
+                // the "near target" flag so we don't spawn a defense grid around nothing.
+                if (!allowGeneratorSpawn) {
+                    isNearTarget = false;
+                }
+
                 if (!obj) {
                     // 0. Habitation Check - Uninhabited planets spawn secret caches instead
                     // [DEBUG FIX] If near target, we ignore the habitability check to spawn the boss base
@@ -2046,7 +2068,7 @@ class SurfaceMode {
                         if (cellHash < 0.00005 && typeof SecretCache !== 'undefined') {
                             obj = new SecretCache(wx, wy, objSeed);
                         }
-                    } else if (this.planet && this.planet.isInhabited) {
+                    } else if (this.planet && (this.planet.isInhabited || isNearTarget)) {
                         // INHABITED PLANETS: Buildings and urban development
                         // Settlement Zones: Large areas where buildings cluster
                         const settlementNoise = noise(activeGridX * 0.015 + 500, activeGridY * 0.015 + 500);
