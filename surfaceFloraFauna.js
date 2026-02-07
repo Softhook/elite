@@ -921,6 +921,21 @@ class StalkCreature extends SurfaceFauna {
     }
 }
 
+// Make available globally
+if (typeof window !== 'undefined') {
+    window.SurfaceFlora = SurfaceFlora;
+    window.SurfaceFauna = SurfaceFauna;
+    window.AlienTree = AlienTree;
+    window.CrystalPlant = CrystalPlant;
+    window.TentaclePlant = TentaclePlant;
+    window.SporeStalk = SporeStalk;
+    window.BubbleBush = BubbleBush;
+    window.SlitherCreature = SlitherCreature;
+    window.FloaterCreature = FloaterCreature;
+    window.RollerCreature = RollerCreature;
+    window.StalkCreature = StalkCreature;
+}
+
 // Module exports for testing
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {

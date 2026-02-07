@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Flora & Fauna Viewer</title>
+    <script src="../libraries/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background: #070d16;
+            color: #d1d9e6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        #ui {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            background: rgba(13, 25, 41, 0.85);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            width: 280px;
+        }
+
+        h2 { margin: 0 0 15px 0; font-size: 18px; color: #4facfe; letter-spacing: 1px; text-transform: uppercase; }
+        h3 { margin: 15px 0 8px 0; font-size: 14px; color: #9fb8d6; }
+
+        .control-group { margin-bottom: 12px; }
+        
+        button, select {
+            width: 100%;
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            background: #1a2c42;
+            color: #e6eef8;
+            border: 1px solid #2a4658;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        button:hover { background: #243b55; border-color: #4facfe; }
+        button:active { background: #142030; }
+
+        .stats {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #7a8ba3;
+            line-height: 1.6;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 10px;
+        }
+
+        .hint {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 12px;
+            color: rgba(159, 184, 214, 0.5);
+            pointer-events: none;
+        }
+
+        .palette-preview {
+            display: flex;
+            gap: 4px;
+            margin-top: 4px;
+        }
+        .color-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="ui">
+        <h2>Eco-Viewer</h2>
+        
+        <div class="control-group">
+            <button id="toggle-view">Switch View (G)</button>
+            <button id="randomize-seed">Randomize Seed (R)</button>
+        </div>
+
+        <div class="control-group">
+            <h3>LOD Level</h3>
+            <select id="lod-select">
+                <option value="3" selected>LOD 3 (High)</option>
+                <option value="2">LOD 2 (Medium)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <h3>Planet Economy</h3>
+            <select id="economy-select">
+                <option value="AGRI">Agricultural</option>
+                <option value="IND">Industrial</option>
+                <option value="TECH">High Tech</option>
+                <option value="MINING">Mining</option>
+            </select>
+            <div id="palette-preview" class="palette-preview"></div>
+        </div>
+
+        <div class="stats" id="info-panel">
+            Loading biological data...
+        </div>
+    </div>
+
+    <div class="hint">
+        Drag to rotate • Scroll to zoom • Arrows to navigate • Esc to exit focus
+    </div>
+
+    <script src="../surfaceObjectUtils.js"></script>
+    <script src="../draw3d.js"></script>
+    <script src="../surfaceFloraFauna.js"></script>
+
+    <script>
+        let floraTypes = ['AlienTree', 'CrystalPlant', 'TentaclePlant', 'SporeStalk', 'BubbleBush'];
+        let faunaTypes = ['SlitherCreature', 'FloaterCreature', 'RollerCreature', 'StalkCreature'];
+        let allSpecies = [];
+        
+        let instances = [];
+        let focusedIndex = -1;
+        let scaleFactor = 1;
+        let sunAngle = -Math.PI / 4;
+        let rotationAngle = 0.5;
+        let isDragging = false;
+        let lastMouseX = 0;
+        let currentSeed = 12345;
+        let currentLOD = 3;
+        let viewZoom = 1;
+
+        // Mock palettes for different economies
+        const PALETTES = {
+            AGRI: [[76, 175, 80], [139, 195, 74], [255, 235, 59], [205, 220, 57]],
+            IND: [[121, 85, 72], [158, 158, 158], [96, 125, 139], [63, 81, 181]],
+            TECH: [[33, 150, 243], [0, 188, 212], [103, 58, 183], [233, 30, 99]],
+            MINING: [[255, 152, 0], [255, 87, 34], [121, 85, 72], [158, 158, 158]]
+        };
+        let activePalette = PALETTES.AGRI;
+
+        function setup() {
+            createCanvas(window.innerWidth, window.innerHeight);
+            angleMode(RADIANS);
+            
+            allSpecies = [...floraTypes, ...faunaTypes];
+            createInstances();
+
+            document.getElementById('toggle-view').onclick = () => {
+                if (focusedIndex === -1) focusSpecies(0);
+                else clearFocus();
+            };
+            
+            document.getElementById('randomize-seed').onclick = randomizeSeed;
+            
+            document.getElementById('lod-select').onchange = (e) => {
+                currentLOD = parseInt(e.target.value);
+                updateUI();
+            };
+
+            document.getElementById('economy-select').onchange = (e) => {
+                const econ = e.target.value;
+                activePalette = PALETTES[econ];
+                updatePalettePreview();
+                createInstances();
+            };
+
+            updatePalettePreview();
+            updateUI();
+        }
+
+        function updatePalettePreview() {
+            const container = document.getElementById('palette-preview');
+            container.innerHTML = '';
+            activePalette.forEach(rgb => {
+                const box = document.createElement('div');
+                box.className = 'color-box';
+                box.style.background = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+                container.appendChild(box);
+            });
+        }
+
+        function createInstances() {
+            instances = [];
+            const pColors = activePalette.map(rgb => color(rgb[0], rgb[1], rgb[2]));
+            
+            allSpecies.forEach(type => {
+                let inst;
+                if (floraTypes.includes(type)) {
+                    inst = new window[type](0, 0, 40, pColors, currentSeed);
+                } else {
+                    inst = new window[type](0, 0, 30, pColors, currentSeed);
+                }
+                inst._typeLabel = type;
+                instances.push(inst);
+            });
+            arrangeGrid();
+        }
+
+        function randomizeSeed() {
+            currentSeed = Math.floor(Math.random() * 10000);
+            createInstances();
+            updateUI();
+        }
+
+        function arrangeGrid() {
+            if (focusedIndex !== -1) return;
+            
+            const padding = 200;
+            const cols = Math.floor((width - 320) / padding) || 1;
+            const marginX = 320 + (width - 320 - (cols-1)*padding)/2;
+            const startY = height/2 - (Math.ceil(instances.length/cols)-1)*padding/2;
+
+            instances.forEach((inst, i) => {
+                const r = Math.floor(i / cols);
+                const c = i % cols;
+                inst.pos.x = marginX + c * padding;
+                inst.pos.y = startY + r * padding;
+            });
+        }
+
+        function updateUI() {
+            const info = document.getElementById('info-panel');
+            if (focusedIndex === -1) {
+                info.innerHTML = `Showing ${instances.length} species<br>Seed: ${currentSeed}<br>Mode: Grid View`;
+            } else {
+                const inst = instances[focusedIndex];
+                info.innerHTML = `Species: <b>${inst._typeLabel}</b><br>Seed: ${currentSeed}<br>Height: ${inst.getHeight().toFixed(1)}<br>LOD: ${currentLOD}`;
+            }
+        }
+
+        function focusSpecies(index) {
+            focusedIndex = (index + instances.length) % instances.length;
+            rotationAngle = 0.5;
+            viewZoom = 1;
+            updateUI();
+        }
+
+        function clearFocus() {
+            focusedIndex = -1;
+            updateUI();
+        }
+
+        function mousePressed() {
+            if (mouseX > 300) { // Don't drag if interacting with UI
+                isDragging = true;
+                lastMouseX = mouseX;
+            }
+        }
+
+        function mouseDragged() {
+            if (isDragging && focusedIndex !== -1) {
+                const sensitivity = 0.01;
+                rotationAngle += (mouseX - lastMouseX) * sensitivity;
+                lastMouseX = mouseX;
+            }
+        }
+
+        function mouseReleased() {
+            isDragging = false;
+        }
+
+        function mouseWheel(event) {
+            if (focusedIndex !== -1) {
+                viewZoom = constrain(viewZoom - event.delta * 0.001, 0.5, 3.0);
+                return false;
+            }
+        }
+
+        function keyPressed() {
+            if (key === 'r' || key === 'R') randomizeSeed();
+            if (key === 'g' || key === 'G') {
+                if (focusedIndex === -1) focusSpecies(0);
+                else clearFocus();
+            }
+            if (focusedIndex !== -1) {
+                if (keyCode === ESCAPE) clearFocus();
+                if (keyCode === RIGHT_ARROW) focusSpecies(focusedIndex + 1);
+                if (keyCode === LEFT_ARROW) focusSpecies(focusedIndex - 1);
+            }
+        }
+
+        function windowResized() {
+            resizeCanvas(window.innerWidth, window.innerHeight);
+            arrangeGrid();
+        }
+
+        function draw() {
+            background(7, 13, 22);
+            
+            const dt = deltaTime / 1000;
+
+            // Override projection helpers globally for these classes to use
+            window.getProjectionHelpers = (x, y, alt) => {
+                const ang = (focusedIndex === -1) ? 0.5 : rotationAngle;
+                const zoom = (focusedIndex === -1) ? 1.0 : viewZoom * 2.0;
+                return {
+                    extrusionAngle: ang,
+                    baseX: x - alt * Math.sin(ang) * zoom,
+                    baseY: y - alt * Math.cos(ang) * zoom
+                };
+            };
+
+            if (focusedIndex === -1) {
+                // Grid View
+                instances.forEach(inst => {
+                    inst.update(dt);
+                    inst.draw(inst.pos.x, inst.pos.y, sunAngle, 0, currentLOD);
+                    
+                    // Label
+                    noStroke();
+                    fill(159, 184, 214, 150);
+                    textAlign(CENTER);
+                    textSize(11);
+                    text(inst._typeLabel, inst.pos.x, inst.pos.y + 60);
+                });
+            } else {
+                // Focused View
+                const inst = instances[focusedIndex];
+                inst.update(dt);
+                
+                const centerX = width/2 + 100; // Offset from UI
+                const centerY = height/2 + 100;
+                
+                // Scale instance temporarily for focus
+                const oldSize = inst.size;
+                inst.size *= 2.0 * viewZoom;
+                
+                inst.draw(centerX, centerY, sunAngle, 0, currentLOD);
+                
+                inst.size = oldSize;
+
+                // Instruction overlay
+                fill(79, 172, 254);
+                textAlign(CENTER);
+                textSize(24);
+                text(inst._typeLabel, width/2 + 100, 80);
+            }
+        }
+    </script>
+</body>
+
+</html>
