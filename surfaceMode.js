@@ -2297,16 +2297,22 @@ class SurfaceMode {
         // This creates "groves" or "patches" of same-species flora
         let flora = null;
 
-        if (speciesNoise < 0.2 && typeof AlienTree !== 'undefined') {
+        if (speciesNoise < 0.125 && typeof AlienTree !== 'undefined') {
             flora = new AlienTree(x, y, size, planetColors, seed);
-        } else if (speciesNoise < 0.4 && typeof CrystalPlant !== 'undefined') {
+        } else if (speciesNoise < 0.25 && typeof CrystalPlant !== 'undefined') {
             flora = new CrystalPlant(x, y, size, planetColors, seed);
-        } else if (speciesNoise < 0.6 && typeof TentaclePlant !== 'undefined') {
+        } else if (speciesNoise < 0.375 && typeof TentaclePlant !== 'undefined') {
             flora = new TentaclePlant(x, y, size, planetColors, seed);
-        } else if (speciesNoise < 0.8 && typeof SporeStalk !== 'undefined') {
+        } else if (speciesNoise < 0.5 && typeof SporeStalk !== 'undefined') {
             flora = new SporeStalk(x, y, size, planetColors, seed);
-        } else if (typeof BubbleBush !== 'undefined') {
+        } else if (speciesNoise < 0.625 && typeof BubbleBush !== 'undefined') {
             flora = new BubbleBush(x, y, size, planetColors, seed);
+        } else if (speciesNoise < 0.75 && typeof HexPalm !== 'undefined') {
+            flora = new HexPalm(x, y, size, planetColors, seed);
+        } else if (speciesNoise < 0.875 && typeof PyramidCactus !== 'undefined') {
+            flora = new PyramidCactus(x, y, size, planetColors, seed);
+        } else if (typeof LuminescentFungi !== 'undefined') {
+            flora = new LuminescentFungi(x, y, size, planetColors, seed);
         } else {
             flora = typeof AlienTree !== 'undefined' ? new AlienTree(x, y, size, planetColors, seed) : null;
         }
@@ -2328,21 +2334,26 @@ class SurfaceMode {
         const size = 10 + (seed % 15);
 
         // Use wrapped noise to keep clusters while fixing distribution bias.
-        // Multiplier of 4.0 wraps the noise across the range 4 times, 
-        // ensuring all species (0-0.25, 0.25-0.5, etc.) appear even with 
-        // normally distributed Perlin noise.
-        const balancedNoise = (speciesNoise * 4.0) % 1.0;
+        // Multiplier of 7.0 wraps the noise across the range 7 times, 
+        // ensuring all species appear even with normally distributed Perlin noise.
+        const balancedNoise = (speciesNoise * 7.0) % 1.0;
 
         let fauna = null;
         // Species clustering for fauna groups
-        if (balancedNoise < 0.25 && typeof SlitherCreature !== 'undefined') {
+        if (balancedNoise < 0.14 && typeof SlitherCreature !== 'undefined') {
             fauna = new SlitherCreature(x, y, size, planetColors, seed);
-        } else if (balancedNoise < 0.5 && typeof FloaterCreature !== 'undefined') {
+        } else if (balancedNoise < 0.28 && typeof FloaterCreature !== 'undefined') {
             fauna = new FloaterCreature(x, y, size, planetColors, seed);
-        } else if (balancedNoise < 0.75 && typeof RollerCreature !== 'undefined') {
+        } else if (balancedNoise < 0.42 && typeof RollerCreature !== 'undefined') {
             fauna = new RollerCreature(x, y, size, planetColors, seed);
-        } else if (typeof StalkCreature !== 'undefined') {
+        } else if (balancedNoise < 0.56 && typeof StalkCreature !== 'undefined') {
             fauna = new StalkCreature(x, y, size, planetColors, seed);
+        } else if (balancedNoise < 0.70 && typeof HopperCreature !== 'undefined') {
+            fauna = new HopperCreature(x, y, size, planetColors, seed);
+        } else if (balancedNoise < 0.84 && typeof GliderCreature !== 'undefined') {
+            fauna = new GliderCreature(x, y, size, planetColors, seed);
+        } else if (typeof HexapodCreature !== 'undefined') {
+            fauna = new HexapodCreature(x, y, size, planetColors, seed);
         } else {
             // Fallback
             fauna = typeof SlitherCreature !== 'undefined' ? new SlitherCreature(x, y, size, planetColors, seed) : null;

@@ -359,6 +359,112 @@ class BubbleBush extends SurfaceFlora {
 }
 
 /**
+ * Hexagonal palm tree
+ */
+class HexPalm extends SurfaceFlora {
+    constructor(x, y, size, planetColors, seed) {
+        super(x, y, size, planetColors, seed);
+        this.height = size * (3 + Math.sin(this.seed) * 0.5);
+        this.trunkColor = color(
+            red(this.color) * 0.6,
+            green(this.color) * 0.5,
+            blue(this.color) * 0.4
+        );
+        this.leaves = 6;
+    }
+
+    draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
+        if (this.destroyed) return;
+
+        const { extrusionAngle, baseX, baseY } =
+            typeof getProjectionHelpers === 'function' ? getProjectionHelpers(worldX, worldY, alt + this.height) : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
+
+        // Hexagonal Trunk
+        const trunkW = this.size * 0.4;
+        Draw3D.drawPrism(baseX, baseY, trunkW, 6, this.height, this.trunkColor, extrusionAngle, sunAngle, true);
+
+        // Leaves at top
+        const leafLen = this.size * 1.5;
+        const leafW = this.size * 0.4;
+
+        for (let i = 0; i < this.leaves; i++) {
+            const angle = (i / this.leaves) * Math.PI * 2 + this.seed;
+            // Project leaf end based on angle
+            const endDist = leafLen;
+            const lx = baseX + Math.cos(angle) * endDist * 0.6;
+            const ly = baseY + Math.sin(angle) * endDist * 0.6;
+
+            // Simple leaf representation
+            Draw3D.drawBox3D(lx, ly, leafW, leafW, this.size * 0.2, this.color, extrusionAngle, sunAngle, true);
+        }
+    }
+}
+
+/**
+ * Stacked Pyramid Cactus
+ */
+class PyramidCactus extends SurfaceFlora {
+    constructor(x, y, size, planetColors, seed) {
+        super(x, y, size, planetColors, seed);
+        this.segments = Math.floor(3 + (this.seed % 3));
+        this.height = size * this.segments * 0.8;
+    }
+
+    draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
+        if (this.destroyed) return;
+
+        let currentAlt = alt;
+        const { extrusionAngle } =
+            typeof getProjectionHelpers === 'function' ? getProjectionHelpers(worldX, worldY, alt) : { extrusionAngle: 0.5 };
+
+        for (let i = 0; i < this.segments; i++) {
+            const segSize = this.size * (1 - i * 0.2);
+            const segHeight = this.size * 0.8;
+
+            // Draw from top of segment down
+            const { baseX, baseY } =
+                typeof getProjectionHelpers === 'function' ? getProjectionHelpers(worldX, worldY, currentAlt + segHeight) : { baseX: worldX, baseY: worldY };
+
+            // 4-sided prism (pyramid-like blocks)
+            Draw3D.drawPrism(baseX, baseY, segSize, 4, segHeight, this.color, extrusionAngle, sunAngle, true);
+            currentAlt += segHeight;
+        }
+    }
+}
+
+/**
+ * Luminescent Fungi
+ */
+class LuminescentFungi extends SurfaceFlora {
+    constructor(x, y, size, planetColors, seed) {
+        super(x, y, size, planetColors, seed);
+        this.height = size * (1.5 + Math.sin(this.seed) * 0.5);
+        this.glowColor = color(
+            Math.min(255, red(this.color) + 120),
+            Math.min(255, green(this.color) + 120),
+            Math.min(255, blue(this.color) + 120),
+            240
+        );
+    }
+
+    draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
+        if (this.destroyed) return;
+
+        const { extrusionAngle, baseX, baseY } =
+            typeof getProjectionHelpers === 'function' ? getProjectionHelpers(worldX, worldY, alt + this.height) : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
+
+        // Stalk
+        const stalkW = this.size * 0.2;
+        Draw3D.drawPrism(baseX, baseY, stalkW, 5, this.height, this.color, extrusionAngle, sunAngle, true);
+
+        // Glowing Cap (Dome)
+        const capSize = this.size * 0.8;
+        // Dome draws from center, so we can just place it at top (baseX, baseY)
+        Draw3D.drawDome(baseX, baseY, capSize, 8, this.glowColor, extrusionAngle, sunAngle);
+    }
+}
+
+/**
  * Base class for all surface fauna (creatures)
  * Provides common properties and movement behavior
  */
@@ -930,6 +1036,128 @@ class StalkCreature extends SurfaceFauna {
     }
 }
 
+/**
+ * Hopping creature
+ */
+class HopperCreature extends SurfaceFauna {
+    constructor(x, y, size, planetColors, seed) {
+        super(x, y, size, planetColors, seed);
+        this.height = size * 1.5;
+        this.jumpPhase = 0;
+    }
+
+    update(dt, player) {
+        super.update(dt, player);
+        if (!this.isPaused) {
+            this.jumpPhase += dt * 10.0;
+        } else {
+            this.jumpPhase = 0;
+        }
+    }
+
+    getHeight() {
+        const jumpH = !this.isPaused ? Math.abs(Math.sin(this.jumpPhase)) * this.size : 0;
+        return this.height + jumpH;
+    }
+
+    draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
+        if (this.destroyed) return;
+
+        const jumpH = !this.isPaused ? Math.abs(Math.sin(this.jumpPhase)) * this.size : 0;
+        const totalAlt = alt + jumpH;
+
+        const { extrusionAngle, baseX, baseY } =
+            typeof getProjectionHelpers === 'function' ? getProjectionHelpers(worldX, worldY, totalAlt + this.height) : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
+
+        // Body (egg shape)
+        Draw3D.drawPrism(baseX, baseY, this.size * 0.8, 8, this.height * 0.8, this.color, extrusionAngle, sunAngle, true);
+
+        // Simple legs
+        if (lodLevel >= 2) {
+            const legLen = this.size * 1.0;
+            const angleOff = Math.PI / 4;
+            for (let i = 0; i < 2; i++) {
+                // Left and Right legs
+                const angle = (i === 0 ? -angleOff : angleOff) + this.moveAngle;
+                const lx = baseX + Math.cos(angle) * legLen * 0.8;
+                const ly = baseY + Math.sin(angle) * legLen * 0.8;
+
+                Draw3D.drawBox3D(lx, ly, this.size * 0.3, this.size * 0.3, this.size * 0.8, this.color, extrusionAngle, sunAngle, true);
+            }
+        }
+    }
+}
+
+/**
+ * Gliding/Flying creature
+ */
+class GliderCreature extends SurfaceFauna {
+    constructor(x, y, size, planetColors, seed) {
+        super(x, y, size, planetColors, seed);
+        this.moveSpeed *= 1.5;
+        this.height = size * 5;
+    }
+
+    getHeight() {
+        return this.height;
+    }
+
+    update(dt, player) {
+        super.update(dt, player);
+        this.height = this.size * 5 + Math.sin(this.animTime) * this.size * 2;
+    }
+
+    draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
+        if (this.destroyed) return;
+
+        const totalAlt = alt + this.height;
+
+        const { extrusionAngle, baseX, baseY } =
+            typeof getProjectionHelpers === 'function' ? getProjectionHelpers(worldX, worldY, totalAlt) : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
+
+        // Flat wide body (Triangle wings)
+        const wingSpan = this.size * 3.0;
+        Draw3D.drawPrism(baseX, baseY, wingSpan * 0.5, 3, this.size * 0.2, this.color, extrusionAngle, sunAngle, true);
+
+        // Tail
+        Draw3D.drawBox3D(baseX - Math.cos(this.moveAngle) * this.size, baseY - Math.sin(this.moveAngle) * this.size, this.size * 0.2, this.size * 0.2, this.size, this.color, extrusionAngle, sunAngle, true);
+    }
+}
+
+/**
+ * Hexapod Beetle
+ */
+class HexapodCreature extends SurfaceFauna {
+    constructor(x, y, size, planetColors, seed) {
+        super(x, y, size, planetColors, seed);
+        this.height = size * 0.6;
+    }
+
+    draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
+        if (this.destroyed) return;
+
+        const { extrusionAngle, baseX, baseY } =
+            typeof getProjectionHelpers === 'function' ? getProjectionHelpers(worldX, worldY, alt + this.height) : { extrusionAngle: 0.5, baseX: worldX, baseY: worldY };
+
+        // Carapace
+        Draw3D.drawPrism(baseX, baseY, this.size, 6, this.height, this.color, extrusionAngle, sunAngle, true);
+
+        // Legs
+        if (lodLevel >= 2) {
+            const legLen = this.size * 1.5;
+            const rotation = this.animTime * 10;
+            for (let i = 0; i < 6; i++) {
+                const angle = (i / 6) * Math.PI * 2;
+                const legMove = Math.sin(rotation + i) * 0.2;
+                const lx = baseX + Math.cos(angle + legMove) * legLen * 0.8;
+                const ly = baseY + Math.sin(angle + legMove) * legLen * 0.8;
+
+                Draw3D.drawBox3D(lx, ly, this.size * 0.2, this.size * 0.2, this.size * 0.3, this.color, extrusionAngle, sunAngle, true);
+            }
+        }
+    }
+}
+
 // Make available globally
 if (typeof window !== 'undefined') {
     window.SurfaceFlora = SurfaceFlora;
@@ -943,6 +1171,12 @@ if (typeof window !== 'undefined') {
     window.FloaterCreature = FloaterCreature;
     window.RollerCreature = RollerCreature;
     window.StalkCreature = StalkCreature;
+    window.HexPalm = HexPalm;
+    window.PyramidCactus = PyramidCactus;
+    window.LuminescentFungi = LuminescentFungi;
+    window.HopperCreature = HopperCreature;
+    window.GliderCreature = GliderCreature;
+    window.HexapodCreature = HexapodCreature;
 }
 
 // Module exports for testing
@@ -950,6 +1184,8 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         SurfaceFlora, SurfaceFauna,
         AlienTree, CrystalPlant, TentaclePlant, SporeStalk, BubbleBush,
-        SlitherCreature, FloaterCreature, RollerCreature, StalkCreature
+        SlitherCreature, FloaterCreature, RollerCreature, StalkCreature,
+        HexPalm, PyramidCactus, LuminescentFungi,
+        HopperCreature, GliderCreature, HexapodCreature
     };
 }
