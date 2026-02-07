@@ -887,6 +887,7 @@ class RollerCreature extends SurfaceFauna {
         super(x, y, size, planetColors, seed);
         this.spikes = 8;
         this.height = size * 1.8; // Match the projection height in draw()
+        this.moveSpeed *= 0.5; // Slower rolling
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
@@ -1044,12 +1045,13 @@ class HopperCreature extends SurfaceFauna {
         super(x, y, size, planetColors, seed);
         this.height = size * 1.5;
         this.jumpPhase = 0;
+        this.moveSpeed *= 0.4; // Slower hopping
     }
 
     update(dt, player) {
         super.update(dt, player);
         if (!this.isPaused) {
-            this.jumpPhase += dt * 10.0;
+            this.jumpPhase += dt * 5.0; // Slower jump animation
         } else {
             this.jumpPhase = 0;
         }
@@ -1094,7 +1096,7 @@ class HopperCreature extends SurfaceFauna {
 class GliderCreature extends SurfaceFauna {
     constructor(x, y, size, planetColors, seed) {
         super(x, y, size, planetColors, seed);
-        this.moveSpeed *= 1.5;
+        this.moveSpeed *= 0.5; // Reduced from 1.5
         this.height = size * 5;
     }
 
@@ -1131,6 +1133,7 @@ class HexapodCreature extends SurfaceFauna {
     constructor(x, y, size, planetColors, seed) {
         super(x, y, size, planetColors, seed);
         this.height = size * 0.6;
+        this.moveSpeed *= 0.4; // Slower scuttling
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
@@ -1145,7 +1148,7 @@ class HexapodCreature extends SurfaceFauna {
         // Legs
         if (lodLevel >= 2) {
             const legLen = this.size * 1.5;
-            const rotation = this.animTime * 10;
+            const rotation = this.animTime * 3; // Slower leg animation
             for (let i = 0; i < 6; i++) {
                 const angle = (i / 6) * Math.PI * 2;
                 const legMove = Math.sin(rotation + i) * 0.2;
