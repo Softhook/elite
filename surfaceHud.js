@@ -276,8 +276,8 @@ class SurfaceHUD {
             let targetDestroyed = false;
             if (surfaceMode.destroyedCells) {
                 const cellSize = (typeof SURFACE_CONFIG !== 'undefined') ? (SURFACE_CONFIG.SPAWN_CELL_SIZE || 35) : 35;
-                const tx = Math.round(surfaceMode.targetPos.x / cellSize);
-                const ty = Math.round(surfaceMode.targetPos.y / cellSize);
+                const tx = Math.floor(surfaceMode.targetPos.x / cellSize);
+                const ty = Math.floor(surfaceMode.targetPos.y / cellSize);
                 if (surfaceMode.destroyedCells.has(`${tx},${ty}`)) targetDestroyed = true;
             }
 
