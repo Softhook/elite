@@ -57,10 +57,25 @@ function setup() {
         setInitialGameState();
         setupAudioGestures();
         setupFullscreenBehavior();
+        initializeGamepad();
 
         UI_LOG("--- Setup Complete ---");
     } catch (error) {
         handleCriticalSetupError(error);
+    }
+}
+
+/**
+ * Initialize the gamepad manager for controller support
+ */
+function initializeGamepad() {
+    try {
+        if (typeof initGamepad === 'function') {
+            window._gamepadManager = initGamepad();
+            UI_LOG("Gamepad manager initialized");
+        }
+    } catch (e) {
+        console.warn('Failed to initialize gamepad:', e);
     }
 }
 
@@ -256,6 +271,7 @@ function draw() {
 
     updateTitleScreens(currentState);
     updateGameState();
+    handleGamepadContinuousInput();
     handleContinuousFiring();
     renderGameState();
     renderUI();
@@ -360,15 +376,428 @@ function performPeriodicTasks() {
 }
 
 /**
- * Handle continuous firing when space is held
+ * Handle continuous firing when space is held (keyboard or gamepad)
  */
 function handleContinuousFiring() {
     const isShipControl = gameStateManager.currentState === "IN_FLIGHT" ||
         (gameStateManager.currentState === "SURFACE_MODE" && typeof surfaceMode !== 'undefined' && surfaceMode.controlMode === 'SHIP');
 
-    if (isShipControl && !player.destroyed && keyIsDown(32)) {
+    // Check keyboard OR gamepad fire buttons
+    const gp = window._gamepadManager;
+    const gpFiring = gp && gp.state && (gp.held('a') || gp.held('r1'));
+
+    if (isShipControl && !player.destroyed && (keyIsDown(32) || gpFiring)) {
         player.handleFireInput();
     }
+}
+
+/**
+ * Handle gamepad continuous input (sticks & triggers → movement)
+ * p5.js keyIsDown() doesn't see synthetic KeyboardEvents, so we must
+ * directly inject movement by calling player methods from stick state.
+ */
+function handleGamepadContinuousInput() {
+    const gp = window._gamepadManager;
+    if (!gp || !gp.state || !player || player.destroyed) return;
+
+    const state = gameStateManager.currentState;
+    const s = gp.state;
+
+    // ── Title Screen / Instructions / Save Selection: A button = click ──
+    if (state === 'TITLE_SCREEN' || state === 'INSTRUCTIONS') {
+        if (gp.pressed('a') || gp.pressed('start')) {
+            if (state === 'TITLE_SCREEN') {
+                titleScreen?.handleClick();
+            } else {
+                gameStateManager.setState('SAVE_SELECTION');
+                soundManager?.playSound('click');
+            }
+        }
+        return;
+    }
+
+    if (state === 'SAVE_SELECTION') {
+        if (gp.pressed('dpad.up')) {
+            saveSelectionScreen?.handleKeyPressed(null, UP_ARROW);
+        } else if (gp.pressed('dpad.down')) {
+            saveSelectionScreen?.handleKeyPressed(null, DOWN_ARROW);
+        } else if (gp.pressed('a')) {
+            saveSelectionScreen?.handleKeyPressed('\n', ENTER);
+        }
+        return;
+    }
+
+    // ── Game Over: any button = reset ──
+    if (state === 'GAME_OVER') {
+        if (gp.pressed('a') || gp.pressed('start')) {
+            if (typeof resetGame === 'function') resetGame();
+        }
+        return;
+    }
+
+    // ── Station menus: D-pad/sticks for navigation, A = click, B = back ──
+    const isStationState = STATION_STATES && STATION_STATES.includes(state);
+    if (isStationState) {
+        _handleGamepadStationMenus(gp, state);
+        return;
+    }
+
+    // ── Galaxy Map: sticks for panning, A = confirm, B = back ──
+    if (state === 'GALAXY_MAP') {
+        if (gp.pressed('b')) {
+            const returnState = gameStateManager._previousState || 'IN_FLIGHT';
+            gameStateManager.setState(returnState);
+            gameStateManager._previousState = null;
+            soundManager?.playSound('mapClose');
+        }
+        // Pan the map with left stick (simulate mouse movement for map dragging)
+        if (uiManager?.galaxyMap) {
+            const panSpeed = 5;
+            if (Math.abs(s.ls.x) > 0.1 || Math.abs(s.ls.y) > 0.1) {
+                uiManager.galaxyMap.panOffsetX = (uiManager.galaxyMap.panOffsetX || 0) - s.ls.x * panSpeed;
+                uiManager.galaxyMap.panOffsetY = (uiManager.galaxyMap.panOffsetY || 0) - s.ls.y * panSpeed;
+            }
+        }
+        return;
+    }
+
+    // ── In-flight / Surface ship control: analog sticks → movement ──
+    const isShipControl = state === 'IN_FLIGHT' ||
+        (state === 'SURFACE_MODE' && typeof surfaceMode !== 'undefined' && surfaceMode.controlMode === 'SHIP');
+
+    if (!isShipControl) return;
+
+    // Read analog values
+    const lsX = s.ls.x;   // Left stick X: strafe
+    const lsY = s.ls.y;   // Left stick Y: thrust/reverse
+    const rsX = s.rs.x;   // Right stick X: rotate
+    const r2Val = s.r2;    // R2 trigger: thrust
+    const l2Val = s.l2;    // L2 trigger: reverse
+
+    const rotTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
+    const hasGamepadInput = Math.abs(lsX) > 0.1 || Math.abs(lsY) > 0.1 ||
+                           Math.abs(rsX) > 0.1 || r2Val > 0.1 || l2Val > 0.1;
+
+    // Disable autopilot on gamepad input
+    if (player.autopilotEnabled && hasGamepadInput) {
+        player.disableAutopilot();
+        uiManager?.addMessage('Autopilot disengaged: On manual control');
+    }
+
+    // Rotation from right stick
+    if (Math.abs(rsX) > 0.1) {
+        player.angle += rsX * player.rotationSpeed * rotTimeScale;
+    }
+
+    // Strafe from left stick X
+    if (Math.abs(lsX) > 0.3) {
+        if (lsX < 0) player.kiteLeft();
+        else player.kiteRight();
+        player.isStrafing = true;
+    }
+
+    // Thrust from left stick Y (pushed forward = negative Y)
+    if (!player.isStrafing) {
+        if (lsY < -0.2 || r2Val > 0.1) {
+            player.isThrusting = true;
+            player.thrust();
+        } else if (lsY > 0.2 || l2Val > 0.1) {
+            player.isThrusting = true;
+            player.isReverseThrusting = true;
+            player.reverseThrust();
+        }
+    }
+
+    // Surface mode altitude from bumpers
+    if (state === 'SURFACE_MODE' && typeof surfaceMode !== 'undefined' && surfaceMode) {
+        if (gp.held('l1')) surfaceMode.altitudeInput = 1;    // L1 = climb
+        else if (gp.held('l4')) surfaceMode.altitudeInput = -1; // L4 = descend
+        else if (!keyIsDown(90) && !keyIsDown(88)) { // Only reset if keyboard Z/X not held
+            surfaceMode.altitudeInput = 0;
+        }
+    }
+
+    // Weapon switching with D-pad left/right while in flight
+    if (state === 'IN_FLIGHT') {
+        if (gp.pressed('dpad.right') && player.weapons && player.weapons.length > 1) {
+            const nextIdx = (player.weaponIndex + 1) % player.weapons.length;
+            if (player.switchToWeapon(nextIdx)) {
+                soundManager?.playSound('click');
+            }
+        } else if (gp.pressed('dpad.left') && player.weapons && player.weapons.length > 1) {
+            const prevIdx = (player.weaponIndex - 1 + player.weapons.length) % player.weapons.length;
+            if (player.switchToWeapon(prevIdx)) {
+                soundManager?.playSound('click');
+            }
+        }
+    }
+}
+
+/**
+ * Handle gamepad input for station menus (docked states).
+ * Uses indexed button selection: D-pad navigates, A confirms, B goes back.
+ * The system reads the live button area arrays from uiManager to know what's clickable.
+ */
+
+// Gamepad menu navigation state (persists across frames)
+let _gpMenuIndex = 0;
+let _gpMenuState = '';  // tracks which state the index belongs to
+
+function _handleGamepadStationMenus(gp, state) {
+    // Reset selection index when entering a new menu state
+    if (state !== _gpMenuState) {
+        _gpMenuIndex = 0;
+        _gpMenuState = state;
+    }
+
+    // Get the button areas for the current state
+    const buttons = _getButtonAreasForState(state);
+
+    // ── B button = go back / escape ──
+    if (gp.pressed('b')) {
+        _gpMenuIndex = 0;
+        if (state === 'DOCKED' || state === 'DOCKED_SPACE_OBJECT') {
+            gameStateManager.setState('IN_FLIGHT');
+            soundManager?.playSound('click_off');
+        } else if (state === 'VIEWING_SHIP_DETAIL') {
+            gameStateManager.setState('VIEWING_SHIPYARD');
+            soundManager?.playSound('click');
+        } else if (state === 'VIEWING_WEAPON_DETAIL') {
+            gameStateManager.setState('VIEWING_UPGRADES');
+            soundManager?.playSound('click');
+        } else {
+            const isSpaceObj = state.startsWith('VIEWING_SPACE_OBJECT');
+            gameStateManager.setState(isSpaceObj ? 'DOCKED_SPACE_OBJECT' : 'DOCKED');
+            soundManager?.playSound('click');
+        }
+        return;
+    }
+
+    // ── D-pad up/down = navigate selection ──
+    if (buttons && buttons.length > 0) {
+        if (gp.pressed('dpad.up') || (gp.state.ls.y < -0.7 && gp.prevState && gp.prevState.ls.y >= -0.7)) {
+            _gpMenuIndex = (_gpMenuIndex - 1 + buttons.length) % buttons.length;
+            soundManager?.playSound('click');
+        }
+        if (gp.pressed('dpad.down') || (gp.state.ls.y > 0.7 && gp.prevState && gp.prevState.ls.y <= 0.7)) {
+            _gpMenuIndex = (_gpMenuIndex + 1) % buttons.length;
+            soundManager?.playSound('click');
+        }
+
+        // Clamp index to valid range
+        _gpMenuIndex = constrain(_gpMenuIndex, 0, buttons.length - 1);
+    }
+
+    // ── D-pad left/right = scroll or horizontal nav in lists ──
+    if (gp.pressed('dpad.left') || gp.pressed('dpad.right')) {
+        const dir = gp.pressed('dpad.right') ? 1 : -1;
+        _handleGamepadListScroll(state, dir);
+    }
+
+    // ── A button = click the selected button ──
+    if (gp.pressed('a') && buttons && buttons.length > 0 && _gpMenuIndex < buttons.length) {
+        const selectedBtn = buttons[_gpMenuIndex];
+        if (selectedBtn && selectedBtn.w > 0 && selectedBtn.h > 0) {
+            // Simulate a click at the center of the selected button
+            const cx = selectedBtn.x + selectedBtn.w / 2;
+            const cy = selectedBtn.y + selectedBtn.h / 2;
+
+            if (uiManager) {
+                uiManager.handleMouseClicks(
+                    cx, cy, state, player,
+                    player.currentSystem?.station?.getMarket?.() || galaxy?.getCurrentSystem()?.station?.getMarket?.(),
+                    galaxy
+                );
+            }
+        }
+    }
+}
+
+/**
+ * Get the relevant button area array for the current game state.
+ * Each station screen stores its clickable areas in uiManager/stationMenus.
+ */
+function _getButtonAreasForState(state) {
+    if (!uiManager) return [];
+
+    switch (state) {
+        case 'DOCKED':
+            return uiManager.stationMenuButtonAreas || [];
+        case 'DOCKED_SPACE_OBJECT':
+            return uiManager.spaceObjectMenuButtonAreas || [];
+        case 'VIEWING_MARKET':
+            return uiManager.marketButtonAreas || [];
+        case 'VIEWING_SPACE_OBJECT_MARKET':
+            return uiManager.spaceObjectMarketButtonAreas || [];
+        case 'VIEWING_MISSIONS':
+            return _getMissionButtons();
+        case 'VIEWING_SHIPYARD':
+            return (uiManager.stationMenus?.shipyardListAreas || []).concat(
+                _objectToButtons(uiManager.stationMenus?.shipyardDetailButtons)
+            );
+        case 'VIEWING_SHIP_DETAIL':
+            return _objectToButtons(uiManager.stationMenus?.shipDetailButtons);
+        case 'VIEWING_UPGRADES':
+            return (uiManager.stationMenus?.upgradeListAreas || []).concat(
+                _objectToButtons(uiManager.stationMenus?.upgradeDetailButtons)
+            );
+        case 'VIEWING_WEAPON_DETAIL':
+            return _objectToButtons(uiManager.stationMenus?.weaponDetailButtons);
+        case 'VIEWING_REPAIRS':
+            return [
+                uiManager.repairsFullButtonArea,
+                uiManager.repairsHalfButtonArea,
+                uiManager.repairsBodyguardsButtonArea,
+                uiManager.repairsBackButtonArea
+            ].filter(b => b && b.w > 0);
+        case 'VIEWING_SPACE_OBJECT_REPAIRS':
+            return [
+                uiManager.spaceObjectRepairsFullButtonArea,
+                uiManager.spaceObjectRepairsHalfButtonArea,
+                uiManager.spaceObjectRepairsBodyguardsButtonArea,
+                uiManager.spaceObjectRepairsBackButtonArea
+            ].filter(b => b && b.w > 0);
+        case 'VIEWING_PROTECTION':
+            return uiManager.stationMenus?.protectionServicesButtons || [];
+        case 'VIEWING_POLICE':
+        case 'VIEWING_IMPERIAL_RECRUITMENT':
+        case 'VIEWING_SEPARATIST_RECRUITMENT':
+        case 'VIEWING_MILITARY_RECRUITMENT':
+            return uiManager.factionRecruitmentButtonAreas || [];
+        case 'VIEWING_STORAGE':
+            return uiManager.stationMenus?.storageButtonAreas || uiManager.storageButtonAreas || [];
+        case 'VIEWING_RECORD':
+            return uiManager.stationMenus?.recordButtonAreas || uiManager.recordButtonAreas || [];
+        case 'VIEWING_NEWS':
+            return uiManager.stationMenus?.newsButtonAreas || uiManager.newsButtonAreas || [];
+        case 'VIEWING_SERVICES':
+            return [];
+        case 'VIEWING_BASE':
+            return [
+                uiManager.baseRepairButtonArea,
+                uiManager.stationMenus?.baseMiningStorageButtonArea,
+                uiManager.baseBackButtonArea
+            ].filter(b => b && b.w > 0);
+        default:
+            return [];
+    }
+}
+
+/**
+ * Get mission board buttons (list + detail action buttons)
+ */
+function _getMissionButtons() {
+    const list = uiManager.missionListButtonAreas || [];
+    const detail = uiManager.missionDetailButtonAreas || {};
+    const detailBtns = _objectToButtons(detail);
+    return list.concat(detailBtns);
+}
+
+/**
+ * Convert a button-area object (keyed by action name) to an array
+ */
+function _objectToButtons(obj) {
+    if (!obj || typeof obj !== 'object') return [];
+    return Object.values(obj).filter(b => b && typeof b === 'object' && b.w > 0);
+}
+
+/**
+ * Handle D-pad left/right for scrollable lists (market, shipyard, upgrades, news, record)
+ */
+function _handleGamepadListScroll(state, direction) {
+    if (!uiManager) return;
+    const sm = uiManager.stationMenus;
+
+    switch (state) {
+        case 'VIEWING_MARKET':
+        case 'VIEWING_SPACE_OBJECT_MARKET':
+            // Market scrolling handled by existing keyboard bridge
+            break;
+        case 'VIEWING_SHIPYARD':
+            if (sm) {
+                sm.shipyardScrollOffset = constrain(
+                    (sm.shipyardScrollOffset || 0) + direction * 3,
+                    0, sm.shipyardScrollMax || 0
+                );
+            }
+            break;
+        case 'VIEWING_UPGRADES':
+            if (sm) {
+                sm.upgradeScrollOffset = constrain(
+                    (sm.upgradeScrollOffset || 0) + direction * 3,
+                    0, sm.upgradeScrollMax || 0
+                );
+            }
+            break;
+        case 'VIEWING_NEWS':
+            if (sm) {
+                sm.newsScrollOffset = constrain(
+                    (sm.newsScrollOffset || 0) + direction,
+                    0, sm.newsScrollMax || 0
+                );
+            }
+            break;
+        case 'VIEWING_RECORD':
+            if (sm) {
+                sm.recordScrollOffset = constrain(
+                    (sm.recordScrollOffset || 0) + direction,
+                    0, sm.recordScrollMax || 0
+                );
+            }
+            break;
+        case 'VIEWING_SHIP_DETAIL':
+            // Prev/next ship
+            if (sm && sm.availableShipsList && sm.availableShipsList.length > 1) {
+                const idx = sm.currentShipIndex + direction;
+                if (idx >= 0 && idx < sm.availableShipsList.length) {
+                    sm.currentShipIndex = idx;
+                    sm.selectedShipForDetail = sm.availableShipsList[idx];
+                    soundManager?.playSound('click');
+                }
+            }
+            break;
+        case 'VIEWING_WEAPON_DETAIL':
+            // Prev/next weapon
+            if (sm && sm.availableWeaponsList && sm.availableWeaponsList.length > 1) {
+                const idx = sm.currentWeaponIndex + direction;
+                if (idx >= 0 && idx < sm.availableWeaponsList.length) {
+                    sm.currentWeaponIndex = idx;
+                    sm.selectedWeaponForDetail = sm.availableWeaponsList[idx];
+                    // Also reset the slot picker state so we don't carry it over
+                    sm.showingSlotPicker = false;
+                    sm.selectedSlotForUpgrade = -1;
+                    soundManager?.playSound('click');
+                }
+            }
+            break;
+    }
+}
+
+/**
+ * Draw a highlight rectangle around the gamepad-selected button.
+ * Called at the end of each frame during station states.
+ */
+function _drawGamepadMenuHighlight(btn) {
+    if (!btn || !btn.w || !btn.h) return;
+
+    push();
+    noFill();
+
+    // Animated pulse for visibility
+    const pulse = (Math.sin((typeof millis === 'function' ? millis() : 0) * 0.006) + 1) / 2;
+    const alpha = 180 + pulse * 75;
+
+    // Outer glow
+    stroke(100, 200, 255, alpha * 0.4);
+    strokeWeight(4);
+    rect(btn.x - 3, btn.y - 3, btn.w + 6, btn.h + 6, 6);
+
+    // Inner border
+    stroke(100, 200, 255, alpha);
+    strokeWeight(2);
+    rect(btn.x - 1, btn.y - 1, btn.w + 2, btn.h + 2, 4);
+
+    pop();
 }
 
 /**
@@ -392,6 +821,18 @@ function renderUI() {
 
     uiManager?.drawFramerate();    // fps cap removed for frame-rate independence
     uiManager?.drawMessages();
+
+    // Draw gamepad menu highlight if applicable (must be after game state renders UI)
+    if (window._gamepadManager && window._gamepadManager.connected) {
+        const state = gameStateManager.currentState;
+        const isStationState = STATION_STATES && STATION_STATES.includes(state);
+        if (isStationState) {
+            const buttons = _getButtonAreasForState(state);
+            if (buttons && buttons.length > 0 && _gpMenuIndex < buttons.length) {
+                _drawGamepadMenuHighlight(buttons[_gpMenuIndex]);
+            }
+        }
+    }
 }
 
 /**
