@@ -3073,6 +3073,114 @@ class Player {
     }
 
     /**
+     * Cycle through nearby targets using the D-pad (or keys).
+     * Automatically prioritizes ships/objects based on proximity and hostility.
+     * @param {number} direction - 1 for next, -1 for previous
+     */
+    cycleTarget(direction = 1) {
+        if (!this.currentSystem) return;
+
+        // 1. Gather all potential targets in range
+        const targets = [];
+        const maxDist = 6000; // Match radar/scanning range
+
+        // Enemies
+        if (this.currentSystem.enemies) {
+            for (const enemy of this.currentSystem.enemies) {
+                if (enemy && !enemy.destroyed && enemy.pos) {
+                    const d = dist(this.pos.x, this.pos.y, enemy.pos.x, enemy.pos.y);
+                    if (d < maxDist) targets.push(enemy);
+                }
+            }
+        }
+
+        // Space Objects (Stations, Jump Zones, etc.)
+        if (this.currentSystem.spaceObjects) {
+            for (const so of this.currentSystem.spaceObjects) {
+                if (so && !so.destroyed && so.pos) {
+                    const d = dist(this.pos.x, this.pos.y, so.pos.x, so.pos.y);
+                    if (d < maxDist) targets.push(so);
+                }
+            }
+        }
+
+        // Asteroids
+        if (this.currentSystem.asteroids) {
+            for (const ast of this.currentSystem.asteroids) {
+                if (ast && !ast.destroyed && ast.pos) {
+                    const d = dist(this.pos.x, this.pos.y, ast.pos.x, ast.pos.y);
+                    if (d < maxDist) targets.push(ast);
+                }
+            }
+        }
+
+        // Surface objects if in surface mode
+        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+            if (surfaceMode.surfaceObjects) {
+                for (const obj of surfaceMode.surfaceObjects) {
+                    if (obj && !obj.destroyed && obj.pos) {
+                        // Only target things that are actually interesting (turrets, pirates, fauna, player bases)
+                        const isInteresting = obj.type === 'Turret' || obj.type === 'Defense Drone' || 
+                                              obj.isPirate || obj.isFauna || obj.isPlayerBase || obj.isSurfaceBase;
+                        if (isInteresting) {
+                            const d = dist(this.pos.x, this.pos.y, obj.pos.x, obj.pos.y);
+                            if (d < maxDist) targets.push(obj);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (targets.length === 0) {
+            if (this.target) {
+                this.target = null;
+                if (typeof uiManager !== 'undefined') uiManager.addMessage("No targets in range.", [255, 150, 0]);
+            }
+            return;
+        }
+
+        // 2. Sort by priority and then distance
+        // Priority: Hostiles > Mission Targets > Others
+        targets.sort((a, b) => {
+            const isHostileA = (a.role === AI_ROLE?.PIRATE || a.role === AI_ROLE?.POLICE || a.type === 'Turret' || a.type === 'Defense Drone' || a.isPirate);
+            const isHostileB = (b.role === AI_ROLE?.PIRATE || b.role === AI_ROLE?.POLICE || b.type === 'Turret' || b.type === 'Defense Drone' || b.isPirate);
+            
+            if (isHostileA && !isHostileB) return -1;
+            if (!isHostileA && isHostileB) return 1;
+            
+            const da = dist(this.pos.x, this.pos.y, a.pos.x, a.pos.y);
+            const db = dist(this.pos.x, this.pos.y, b.pos.x, b.pos.y);
+            return da - db;
+        });
+
+        // 3. Determine current index and move to next
+        let currentIndex = targets.indexOf(this.target);
+        
+        // If current target is not in list (e.g. out of range or just assigned), find starting point
+        if (currentIndex === -1) {
+            currentIndex = (direction > 0) ? -1 : targets.length;
+        }
+
+        const nextIndex = (currentIndex + direction + targets.length) % targets.length;
+        const newTarget = targets[nextIndex];
+
+        if (newTarget !== this.target) {
+            this.target = newTarget;
+            if (typeof uiManager !== 'undefined') {
+                let label = 'Target';
+                if (newTarget.shipTypeName) label = newTarget.shipTypeName;
+                else if (typeof newTarget.getDisplayName === 'function') label = newTarget.getDisplayName();
+                else if (newTarget.displayName) label = newTarget.displayName;
+                else if (newTarget.type) label = newTarget.type;
+                else if (newTarget.constructor && newTarget.constructor.name === 'Asteroid') label = 'Asteroid';
+                
+                uiManager.addMessage(`Target locked: ${label}`, [0, 255, 0]);
+            }
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+        }
+    }
+
+    /**
      * Check if a surface object was clicked (for surface mode targeting)
      * @returns {SurfaceObject|null} The clicked surface object, or null if none
      * @private

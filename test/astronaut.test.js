@@ -10,7 +10,8 @@ global.createVector = function (x, y) {
         copy: function () { return global.createVector(this.x, this.y); },
         add: function (v) { this.x += v.x; this.y += v.y; return this; },
         set: function (x, y) { this.x = x; this.y = y; return this; },
-        mult: function (n) { this.x *= n; this.y *= n; return this; }
+        mult: function (n) { this.x *= n; this.y *= n; return this; },
+        mag: function () { return Math.sqrt(this.x * this.x + this.y * this.y); }
     };
 };
 global.p5 = {

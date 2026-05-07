@@ -47,6 +47,29 @@ class Astronaut {
         let dx = 0;
         let dy = 0;
 
+        // --- Gamepad Support ---
+        if (window._gamepadManager && window._gamepadManager.connected) {
+            const gp = window._gamepadManager;
+            const s = gp.state;
+            
+            // Left stick movement
+            if (Math.abs(s.ls.x) > 0.1 || Math.abs(s.ls.y) > 0.1) {
+                dx = s.ls.x;
+                dy = s.ls.y;
+            }
+            
+            // D-pad movement
+            if (s.dpad.left) dx -= 1;
+            if (s.dpad.right) dx += 1;
+            if (s.dpad.up) dy -= 1;
+            if (s.dpad.down) dy += 1;
+            
+            // Grenade (A button or R1)
+            if (gp.pressed('a') || gp.pressed('r1')) {
+                this.throwGrenade(surfaceMode);
+            }
+        }
+
         // Horizontal (A/D or Left/Right)
         if (keyIsDown(65) || keyIsDown(LEFT_ARROW)) dx -= 1; // Left
         if (keyIsDown(68) || keyIsDown(RIGHT_ARROW)) dx += 1; // Right
@@ -59,8 +82,6 @@ class Astronaut {
             isMoving = true;
 
             // Normalize vector to prevent faster diagonal movement
-            // We can use a simple magnitude check or p5 vector normalize if available, 
-            // but simple math avoids object creation overhead
             const mag = Math.sqrt(dx * dx + dy * dy);
             if (mag > 0) {
                 dx /= mag;

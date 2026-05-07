@@ -442,20 +442,103 @@ function handleGamepadContinuousInput() {
         return;
     }
 
-    // ── Galaxy Map: sticks for panning, A = confirm, B = back ──
+    // ── Overlays (Inventory & Mission) ──
+    if (state === 'IN_FLIGHT' || state === 'SURFACE_MODE') {
+        if (gameStateManager.showingMissionOverlay) {
+            if (gp.pressed('b')) {
+                gameStateManager.toggleMissionOverlay();
+                soundManager?.playSound('click');
+            } else if (uiManager && uiManager.missionOverlay) {
+                // Scroll with right stick or d-pad
+                const scrollSpeed = 8;
+                if (Math.abs(s.rs.y) > 0.1) {
+                    uiManager.missionOverlay.scrollOffset += s.rs.y * scrollSpeed;
+                } else if (s.dpad.up) {
+                    uiManager.missionOverlay.scrollOffset -= scrollSpeed;
+                } else if (s.dpad.down) {
+                    uiManager.missionOverlay.scrollOffset += scrollSpeed;
+                }
+                // Clamp scrolling
+                uiManager.missionOverlay.scrollOffset = Math.min(
+                    Math.max(uiManager.missionOverlay.scrollOffset, 0),
+                    uiManager.missionOverlay.maxScroll || 0
+                );
+            }
+            return; // Block background input while overlay is up
+        }
+
+        if (gameStateManager.showingInventory) {
+            if (gp.pressed('b')) {
+                gameStateManager.toggleInventory();
+                soundManager?.playSound('mapClose');
+            }
+            return; // Block background input while overlay is up
+        }
+    }
+
+    // ── Galaxy Map: node-to-node navigation ──
     if (state === 'GALAXY_MAP') {
         if (gp.pressed('b')) {
             const returnState = gameStateManager._previousState || 'IN_FLIGHT';
             gameStateManager.setState(returnState);
             gameStateManager._previousState = null;
+            if (uiManager?.galaxyMap) uiManager.galaxyMap.gamepadSelectedIndex = -1;
             soundManager?.playSound('mapClose');
         }
-        // Pan the map with left stick (simulate mouse movement for map dragging)
-        if (uiManager?.galaxyMap) {
-            const panSpeed = 5;
-            if (Math.abs(s.ls.x) > 0.1 || Math.abs(s.ls.y) > 0.1) {
-                uiManager.galaxyMap.panOffsetX = (uiManager.galaxyMap.panOffsetX || 0) - s.ls.x * panSpeed;
-                uiManager.galaxyMap.panOffsetY = (uiManager.galaxyMap.panOffsetY || 0) - s.ls.y * panSpeed;
+        
+        if (uiManager && uiManager.galaxyMap && galaxy) {
+            if (uiManager.galaxyMap.gamepadSelectedIndex === -1) {
+                uiManager.galaxyMap.gamepadSelectedIndex = galaxy.currentSystemIndex;
+            }
+
+            // A button (gamepad) selects the node
+            if (gp.pressed('a')) {
+                _handleGalaxyMapSelection();
+            }
+
+            // X button (gamepad) toggles market overlay for the selected system
+            if (gp.pressed('x')) {
+                const targetIdx = uiManager.galaxyMap.gamepadSelectedIndex;
+                if (targetIdx !== -1) {
+                    const systems = galaxy.getSystemDataForMap ? galaxy.getSystemDataForMap() : [];
+                    const sysData = systems[targetIdx];
+                    const isCurrent = (targetIdx === galaxy.currentSystemIndex);
+                    
+                    if (sysData && (sysData.visited || isCurrent)) {
+                        if (uiManager.marketOverlaySystemIndex === targetIdx) {
+                            uiManager.marketOverlaySystemIndex = -1;
+                            soundManager?.playSound('click_off');
+                        } else {
+                            uiManager.marketOverlaySystemIndex = targetIdx;
+                            soundManager?.playSound('click');
+                        }
+                    } else {
+                        uiManager.addMessage("Market data unavailable.", [255, 150, 150]);
+                        soundManager?.playSound('error');
+                    }
+                }
+            }
+            
+            // Navigate connected systems with D-pad or sticks
+            let dx = 0, dy = 0;
+            if (gp.pressed('dpad.up')) dy = -1;
+            else if (gp.pressed('dpad.down')) dy = 1;
+            else if (gp.pressed('dpad.left')) dx = -1;
+            else if (gp.pressed('dpad.right')) dx = 1;
+            
+            // Also support left stick as a discrete "tap"
+            if (dx === 0 && dy === 0) {
+                const sPrev = gp.previousState;
+                if (sPrev) {
+                    if (s.ls.y < -0.5 && sPrev.ls.y >= -0.5) dy = -1;
+                    else if (s.ls.y > 0.5 && sPrev.ls.y <= 0.5) dy = 1;
+                    else if (s.ls.x < -0.5 && sPrev.ls.x >= -0.5) dx = -1;
+                    else if (s.ls.x > 0.5 && sPrev.ls.x <= 0.5) dx = 1;
+                }
+            }
+
+            if (dx !== 0 || dy !== 0) {
+                _handleGalaxyMapHopping(dx, dy);
             }
         }
         return;
@@ -518,6 +601,7 @@ function handleGamepadContinuousInput() {
     }
 
     // Weapon switching with D-pad left/right while in flight
+    // Weapon switching and targeting with D-pad while in flight
     if (state === 'IN_FLIGHT') {
         if (gp.pressed('dpad.right') && player.weapons && player.weapons.length > 1) {
             const nextIdx = (player.weaponIndex + 1) % player.weapons.length;
@@ -529,6 +613,13 @@ function handleGamepadContinuousInput() {
             if (player.switchToWeapon(prevIdx)) {
                 soundManager?.playSound('click');
             }
+        }
+        
+        // Target cycling with D-pad up/down
+        if (gp.pressed('dpad.up')) {
+            player.cycleTarget(1);
+        } else if (gp.pressed('dpad.down')) {
+            player.cycleTarget(-1);
         }
     }
 }
@@ -864,6 +955,7 @@ function keyPressed() {
     if (handleSingleKeyActions()) return false;
     if (handleMissionNavigation()) return false;
     if (handleDetailScreenNavigation()) return false;
+    if (handleGalaxyMapInput()) return false;
     if (handleEscapeKey()) return false;
 }
 
@@ -997,6 +1089,126 @@ function handleSingleKeyActions() {
             return handleSurfaceDescent();
     }
     return false;
+}
+
+/**
+ * Handle Galaxy Map input (selection with Space/Enter)
+ * @returns {boolean} True if handled
+ */
+function handleGalaxyMapInput() {
+    if (gameStateManager.currentState !== "GALAXY_MAP") return false;
+
+    if (keyCode === ENTER || keyCode === 32) { // 32 is Space
+        _handleGalaxyMapSelection();
+        return true;
+    }
+
+    if (keyLower === 'm') {
+        const targetIdx = uiManager.galaxyMap.gamepadSelectedIndex;
+        if (targetIdx !== -1) {
+            const systems = galaxy.getSystemDataForMap ? galaxy.getSystemDataForMap() : [];
+            const sysData = systems[targetIdx];
+            const isCurrent = (targetIdx === galaxy.currentSystemIndex);
+            
+            if (sysData && (sysData.visited || isCurrent)) {
+                if (uiManager.marketOverlaySystemIndex === targetIdx) {
+                    uiManager.marketOverlaySystemIndex = -1;
+                    soundManager?.playSound('click_off');
+                } else {
+                    uiManager.marketOverlaySystemIndex = targetIdx;
+                    soundManager?.playSound('click');
+                }
+            } else {
+                uiManager.addMessage("Market data unavailable.", [255, 150, 150]);
+                soundManager?.playSound('error');
+            }
+        }
+        return true;
+    }
+
+    // Keyboard hopping
+    let dx = 0, dy = 0;
+    const keyLower = key.toLowerCase();
+    if (keyCode === UP_ARROW || keyLower === 'w') dy = -1;
+    else if (keyCode === DOWN_ARROW || keyLower === 's') dy = 1;
+    else if (keyCode === LEFT_ARROW || keyLower === 'a') dx = -1;
+    else if (keyCode === RIGHT_ARROW || keyLower === 'd') dx = 1;
+
+    if (dx !== 0 || dy !== 0) {
+        _handleGalaxyMapHopping(dx, dy);
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Common logic for hopping between systems on the galaxy map
+ */
+function _handleGalaxyMapHopping(dx, dy) {
+    if (!uiManager?.galaxyMap || !galaxy?.systems) return;
+
+    const currentIndex = uiManager.galaxyMap.gamepadSelectedIndex;
+    const currentSys = galaxy.systems[currentIndex];
+
+    if (currentSys && currentSys.connectedSystemIndices && currentSys.galaxyPos) {
+        let bestMatch = -1;
+        let bestScore = Infinity;
+
+        for (const connIdx of currentSys.connectedSystemIndices) {
+            const connSys = galaxy.systems[connIdx];
+            if (!connSys || !connSys.galaxyPos) continue;
+
+            const vx = connSys.galaxyPos.x - currentSys.galaxyPos.x;
+            const vy = connSys.galaxyPos.y - currentSys.galaxyPos.y;
+
+            // Dot product tells us if it's in the direction pressed
+            const dot = (vx * dx) + (vy * dy);
+
+            if (dot > 0) {
+                const distSq = vx * vx + vy * vy;
+                const distance = Math.sqrt(distSq);
+                const angle = Math.acos(constrain(dot / distance, -1, 1)); // radians deviation
+
+                // Penalize angles heavily so it prefers straight lines in the pressed direction
+                const score = distance * (1 + angle * 10);
+
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestMatch = connIdx;
+                }
+            }
+        }
+
+        if (bestMatch !== -1) {
+            uiManager.galaxyMap.gamepadSelectedIndex = bestMatch;
+            soundManager?.playSound('click');
+        }
+    }
+}
+
+/**
+ * Common logic for selecting a galaxy map node (gamepad or keyboard)
+ */
+function _handleGalaxyMapSelection() {
+    if (!uiManager?.galaxyMap || !galaxy) return;
+
+    const targetIdx = uiManager.galaxyMap.gamepadSelectedIndex;
+    if (targetIdx === -1) return;
+
+    if (targetIdx === galaxy.currentSystemIndex) {
+        uiManager.lockedDestinationIndex = -1;
+        soundManager?.playSound('click_off');
+    } else {
+        const reachable = galaxy.getReachableSystems ? galaxy.getReachableSystems() : [];
+        if (reachable.includes(targetIdx)) {
+            uiManager.lockedDestinationIndex = targetIdx;
+            soundManager?.playSound('click');
+        } else {
+            uiManager.addMessage("Route unavailable.", [255, 150, 150]);
+            soundManager?.playSound('error');
+        }
+    }
 }
 
 /**

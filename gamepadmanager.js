@@ -139,6 +139,10 @@ class GamepadManager {
     this._bindings = [];
   }
 
+  get state() { return this._state; }
+  get previousState() { return this._prev; }
+  get connected() { return this._connected; }
+
   // ─── Polling Loop ───────────────────────────────────────────────────────────
 
   _tick() {

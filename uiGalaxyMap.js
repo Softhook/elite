@@ -16,6 +16,9 @@ class UIGalaxyMap {
         // Locked destination index for auto-jump
         this.lockedDestinationIndex = -1;
 
+        // Current index selected via gamepad
+        this.gamepadSelectedIndex = -1;
+
         // Market overlay state
         this.marketOverlaySystemIndex = -1;
         this.marketOverlayArea = null;
@@ -218,6 +221,22 @@ class UIGalaxyMap {
             stroke(nodeStrokeColor);
             fill(nodeColor);
             ellipse(drawX, drawY, nodeR * 2, nodeR * 2);
+
+            // Draw gamepad selection highlight
+            if (i === this.gamepadSelectedIndex) {
+                push();
+                noFill();
+                const pulse = (Math.sin((typeof millis === 'function' ? millis() : 0) * 0.01) + 1) / 2;
+                stroke(100, 200, 255, 150 + pulse * 105);
+                strokeWeight(3);
+                ellipse(drawX, drawY, nodeR * 2.8, nodeR * 2.8);
+                
+                // Inner dashed or second ring
+                stroke(255, 255, 255, 200);
+                strokeWeight(1);
+                ellipse(drawX, drawY, nodeR * 3.2, nodeR * 3.2);
+                pop();
+            }
 
             // Store clickable area
             this.galaxyMapNodeAreas.push({ x: drawX, y: drawY, radius: nodeR, index: i });
