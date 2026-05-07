@@ -16,15 +16,15 @@ const GP_MAPS = {
     name: 'X-MODE (Xbox)',
     A: 0, B: 1, X: 2, Y: 3, L1: 4, R1: 5, L2_BTN: 6, R2_BTN: 7,
     L2_AXIS: 2, R2_AXIS: 5, L4: 16, R4: 17, Pl: 14, Pr: 15,
-    LX: 0, LY: 1, RX: 2, RY: 3, L3: 8, R3: 9,
+    LX: 0, LY: 1, RX: 2, RY: 3, L3: 10, R3: 11,
     D_UP: 12, D_DOWN: 13, D_LEFT: 14, D_RIGHT: 15,
-    SELECT: 8, START: 9, HOME: 10
+    SELECT: 8, START: 9, HOME: 16
   },
   D: {
     name: 'D-MODE',
     A: 0, B: 1, X: 3, Y: 4, L1: 6, R1: 7, L2_AXIS: 4, R2_AXIS: 3,
     L4: 16, R4: 17, Pl: 5, Pr: 2, LX: 0, LY: 1, RX: 2, RY: 5,
-    L3: 10, R3: 11, HAT: 9, SELECT: 10, START: 11, HOME: 12, STAR: 13
+    L3: 10, R3: 11, HAT: 9, SELECT: 8, START: 9, HOME: 12, STAR: 13
   },
   S: {
     name: 'S-MODE (Switch)',
