@@ -75,6 +75,8 @@ describe('InputManager', () => {
         expect(input.getKeyboardAction('i', 73, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(exported.INPUT_ACTIONS.TOGGLE_INVENTORY);
         expect(input.getKeyboardAction('i', 73, exported.INPUT_CONTEXTS.GALAXY_MAP)).toBeNull();
         expect(input.getKeyboardAction(' ', 32, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(exported.INPUT_ACTIONS.FIRE_PRIMARY);
+        expect(input.getKeyboardAction('', 27, exported.INPUT_CONTEXTS.SAVE_SELECTION)).toBe(exported.INPUT_ACTIONS.BACK);
+        expect(input.getKeyboardAction('', 27, exported.INPUT_CONTEXTS.INSTRUCTIONS)).toBe(exported.INPUT_ACTIONS.BACK);
     });
 
     test('maps gamepad actions by mode', () => {
@@ -83,6 +85,10 @@ describe('InputManager', () => {
 
         gp._state = { mode: 'S-MODE (Switch)', l4: true };
         expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.TOGGLE_WANTED, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(false);
+
+        gp._prev = { b: false };
+        gp._state = { mode: 'D-MODE', b: true };
+        expect(input.isGamepadActionPressed(exported.INPUT_ACTIONS.BACK, exported.INPUT_CONTEXTS.SAVE_SELECTION)).toBe(true);
     });
 
     test('enters beam targeting context and updates cursor from left stick', () => {
@@ -92,5 +98,13 @@ describe('InputManager', () => {
         expect(target).not.toBeNull();
         expect(target.x).toBeGreaterThan(width / 2);
         expect(target.y).toBeLessThan(height / 2);
+    });
+
+    test('supports contextual surface altitude actions in S and D gamepad modes', () => {
+        gp._state = { mode: 'D-MODE', dpad: { up: true }, l1: false };
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.ALTITUDE_UP, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(true);
+
+        gp._state = { mode: 'S-MODE (Switch)', dpad: { up: false, down: true }, l4: false };
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.ALTITUDE_DOWN, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(true);
     });
 });

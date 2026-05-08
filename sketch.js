@@ -426,6 +426,14 @@ function executeInputAction(action, context) {
             }
             return false;
         case INPUT_ACTIONS.BACK:
+            if (context === INPUT_CONTEXTS.INSTRUCTIONS) {
+                gameStateManager.setState('TITLE_SCREEN');
+                return true;
+            }
+            if (context === INPUT_CONTEXTS.SAVE_SELECTION) {
+                saveSelectionScreen?.handleKeyPressed(null, ESCAPE);
+                return true;
+            }
             if (context === INPUT_CONTEXTS.MISSION_OVERLAY) {
                 gameStateManager.toggleMissionOverlay();
                 soundManager?.playSound('click');
@@ -637,8 +645,8 @@ function handleGamepadContinuousInput() {
 
     // Surface mode altitude from bumpers
     if (state === 'SURFACE_MODE' && typeof surfaceMode !== 'undefined' && surfaceMode) {
-        if (gp.held('l1')) surfaceMode.altitudeInput = 1;
-        else if (gp.held('l4')) surfaceMode.altitudeInput = -1; // L4 = descend
+        if (inputManager.isGamepadActionHeld(INPUT_ACTIONS.ALTITUDE_UP, context)) surfaceMode.altitudeInput = 1;
+        else if (inputManager.isGamepadActionHeld(INPUT_ACTIONS.ALTITUDE_DOWN, context)) surfaceMode.altitudeInput = -1;
         else if (!keyIsDown(90) && !keyIsDown(88)) { // Only reset if keyboard Z/X not held
             surfaceMode.altitudeInput = 0;
         }
@@ -1650,7 +1658,6 @@ function mousePressed() {
     if (handleTitleScreenClick()) return;
     if (handleSaveSelectionClick()) return;
     if (handleMarketButtonPress()) return;
-    if (handleInventoryClick()) return;
     if (handleInventoryClick()) return;
     if (handleGeneralUIClick()) return;
 

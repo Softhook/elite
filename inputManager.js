@@ -36,7 +36,9 @@ const INPUT_ACTIONS = {
     WEAPON_PREV: 'WEAPON_PREV',
     TARGET_NEXT: 'TARGET_NEXT',
     TARGET_PREV: 'TARGET_PREV',
-    MAP_MARKET_TOGGLE: 'MAP_MARKET_TOGGLE'
+    MAP_MARKET_TOGGLE: 'MAP_MARKET_TOGGLE',
+    ALTITUDE_UP: 'ALTITUDE_UP',
+    ALTITUDE_DOWN: 'ALTITUDE_DOWN'
 };
 
 class InputManager {
@@ -51,9 +53,9 @@ class InputManager {
     _buildKeyboardMap() {
         return {
             [INPUT_CONTEXTS.TITLE]: { Enter: INPUT_ACTIONS.CONFIRM, Space: INPUT_ACTIONS.CONFIRM },
-            [INPUT_CONTEXTS.INSTRUCTIONS]: { Enter: INPUT_ACTIONS.CONFIRM, Space: INPUT_ACTIONS.CONFIRM },
+            [INPUT_CONTEXTS.INSTRUCTIONS]: { Enter: INPUT_ACTIONS.CONFIRM, Space: INPUT_ACTIONS.CONFIRM, Escape: INPUT_ACTIONS.BACK },
             [INPUT_CONTEXTS.SAVE_SELECTION]: {
-                ArrowUp: INPUT_ACTIONS.NAV_UP, ArrowDown: INPUT_ACTIONS.NAV_DOWN, Enter: INPUT_ACTIONS.CONFIRM
+                ArrowUp: INPUT_ACTIONS.NAV_UP, ArrowDown: INPUT_ACTIONS.NAV_DOWN, Enter: INPUT_ACTIONS.CONFIRM, Escape: INPUT_ACTIONS.BACK
             },
             [INPUT_CONTEXTS.GAME_OVER]: { Enter: INPUT_ACTIONS.CONFIRM, Space: INPUT_ACTIONS.CONFIRM },
             [INPUT_CONTEXTS.STATION_MENU]: {
@@ -116,8 +118,8 @@ class InputManager {
         return {
             D: {
                 [INPUT_CONTEXTS.TITLE]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
-                [INPUT_CONTEXTS.INSTRUCTIONS]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
-                [INPUT_CONTEXTS.SAVE_SELECTION]: sharedMenu,
+                [INPUT_CONTEXTS.INSTRUCTIONS]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'], [INPUT_ACTIONS.BACK]: ['b'] },
+                [INPUT_CONTEXTS.SAVE_SELECTION]: { ...sharedMenu, [INPUT_ACTIONS.BACK]: ['b'] },
                 [INPUT_CONTEXTS.GAME_OVER]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
                 [INPUT_CONTEXTS.STATION_MENU]: sharedMenu,
                 [INPUT_CONTEXTS.GALAXY_MAP]: {
@@ -156,7 +158,9 @@ class InputManager {
                     [INPUT_ACTIONS.TOGGLE_MISSION]: ['r3'],
                     [INPUT_ACTIONS.MINIMAP_ZOOM_IN]: ['pr'],
                     [INPUT_ACTIONS.MINIMAP_ZOOM_OUT]: ['pl'],
-                    [INPUT_ACTIONS.ACTIVATE_CLOAK]: ['y']
+                    [INPUT_ACTIONS.ACTIVATE_CLOAK]: ['y'],
+                    [INPUT_ACTIONS.ALTITUDE_UP]: ['l1', 'dpad.up'],
+                    [INPUT_ACTIONS.ALTITUDE_DOWN]: ['l4', 'dpad.down']
                 },
                 [INPUT_CONTEXTS.SURFACE_ASTRONAUT]: {
                     [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
@@ -164,8 +168,8 @@ class InputManager {
             },
             S: {
                 [INPUT_CONTEXTS.TITLE]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
-                [INPUT_CONTEXTS.INSTRUCTIONS]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
-                [INPUT_CONTEXTS.SAVE_SELECTION]: sharedMenu,
+                [INPUT_CONTEXTS.INSTRUCTIONS]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'], [INPUT_ACTIONS.BACK]: ['b'] },
+                [INPUT_CONTEXTS.SAVE_SELECTION]: { ...sharedMenu, [INPUT_ACTIONS.BACK]: ['b'] },
                 [INPUT_CONTEXTS.GAME_OVER]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
                 [INPUT_CONTEXTS.STATION_MENU]: sharedMenu,
                 [INPUT_CONTEXTS.GALAXY_MAP]: {
@@ -194,7 +198,9 @@ class InputManager {
                 [INPUT_CONTEXTS.SURFACE_SHIP]: {
                     [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1'],
                     [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
-                    [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel']
+                    [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
+                    [INPUT_ACTIONS.ALTITUDE_UP]: ['l1', 'dpad.up'],
+                    [INPUT_ACTIONS.ALTITUDE_DOWN]: ['l4', 'dpad.down']
                 },
                 [INPUT_CONTEXTS.SURFACE_ASTRONAUT]: {
                     [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
