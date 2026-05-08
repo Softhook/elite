@@ -22,9 +22,9 @@ const GP_MAPS = {
   },
   D: {
     name: 'D-MODE',
-    A: 0, B: 1, X: 3, Y: 4, L1: 6, R1: 7, L2_AXIS: 4, R2_AXIS: 3,
+    A: 0, B: 1, X: 3, Y: 4, L1: 6, R1: 7, L2_AXIS: 4, R2_AXIS: 3, L2_BTN: 8, R2_BTN: 9,
     L4: 16, R4: 17, Pl: 5, Pr: 2, LX: 0, LY: 1, RX: 2, RY: 5,
-    L3: 10, R3: 11, HAT: 9, SELECT: 8, START: 9, HOME: 12, STAR: 13
+    L3: 13, R3: 14, HAT: 9, SELECT: 10, START: 11, HOME: 12, STAR: 15
   },
   S: {
     name: 'S-MODE (Switch)',
