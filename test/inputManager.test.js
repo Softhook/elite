@@ -80,8 +80,8 @@ describe('InputManager', () => {
     });
 
     test('maps gamepad actions by mode', () => {
-        gp._state = { mode: 'D-MODE', l4: true };
-        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.TOGGLE_WANTED, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(true);
+        gp._state = { mode: 'D-MODE', r1: true };
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.FIRE_PRIMARY, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(true);
 
         gp._state = { mode: 'S-MODE (Switch)', l4: true };
         expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.TOGGLE_WANTED, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(false);
@@ -91,13 +91,21 @@ describe('InputManager', () => {
         expect(input.isGamepadActionPressed(exported.INPUT_ACTIONS.BACK, exported.INPUT_CONTEXTS.SAVE_SELECTION)).toBe(true);
     });
 
-    test('enters beam targeting context and updates cursor from left stick', () => {
-        gp._state = { mode: 'D-MODE', ls: { x: 0.5, y: -0.5 } };
-        input.updateBeamTargetCursor(exported.INPUT_CONTEXTS.BEAM_TARGETING);
+    test('anchors beam targeting forward from the ship and swivels with the right stick', () => {
+        gp._state = { mode: 'D-MODE', ls: { x: 0.25, y: -0.75 }, rs: { x: 0.5, y: -0.5 }, r2: 0.8, l2: 0 };
+        input.updateBeamTargetCursor(exported.INPUT_CONTEXTS.BEAM_TARGETING, { angle: 0, size: 40 });
         const target = input.getBeamTargetScreenPoint();
         expect(target).not.toBeNull();
         expect(target.x).toBeGreaterThan(width / 2);
         expect(target.y).toBeLessThan(height / 2);
+
+        const shipControls = input.getGamepadShipControls(exported.INPUT_CONTEXTS.BEAM_TARGETING);
+        expect(shipControls.strafeX).toBeCloseTo(0.25);
+        expect(shipControls.thrustY).toBeCloseTo(-0.75);
+        expect(shipControls.forwardThrottle).toBeCloseTo(0.8);
+        expect(shipControls.rotateX).toBe(0);
+        expect(shipControls.beamAimX).toBeCloseTo(0.5);
+        expect(shipControls.beamAimY).toBeCloseTo(-0.5);
     });
 
     test('supports contextual surface altitude actions in S and D gamepad modes', () => {

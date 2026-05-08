@@ -158,7 +158,7 @@ class InputManager {
                     [INPUT_ACTIONS.TARGET_PREV]: ['dpad.down']
                 },
                 [INPUT_CONTEXTS.BEAM_TARGETING]: {
-                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
+                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['r1']
                 },
                 [INPUT_CONTEXTS.SURFACE_SHIP]: {
                     [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1'],
@@ -295,7 +295,21 @@ class InputManager {
         return inputs.some(i => this._isMappedGamepadInputActive(i, false));
     }
 
-    updateBeamTargetCursor(context) {
+    getGamepadShipControls(context) {
+        const s = this.gamepad?.state;
+        const beamTargeting = context === INPUT_CONTEXTS.BEAM_TARGETING;
+        return {
+            strafeX: s?.ls?.x || 0,
+            thrustY: s?.ls?.y || 0,
+            rotateX: beamTargeting ? 0 : (s?.rs?.x || 0),
+            forwardThrottle: s?.r2 || 0,
+            reverseThrottle: s?.l2 || 0,
+            beamAimX: beamTargeting ? (s?.rs?.x || 0) : 0,
+            beamAimY: beamTargeting ? (s?.rs?.y || 0) : 0
+        };
+    }
+
+    updateBeamTargetCursor(context, playerRef = null) {
         if (context !== INPUT_CONTEXTS.BEAM_TARGETING || !this.gamepad?.state) {
             this._beamModeActive = false;
             return;
@@ -303,14 +317,16 @@ class InputManager {
 
         if (!this._beamModeActive) {
             this._beamModeActive = true;
-            this._beamCursor.x = width * 0.5;
-            this._beamCursor.y = height * 0.5;
+            const anchorDistance = Math.max(120, (playerRef?.size || 0) * 2);
+            const anchorAngle = typeof playerRef?.angle === 'number' ? playerRef.angle : 0;
+            this._beamCursor.x = constrain(width * 0.5 + Math.cos(anchorAngle) * anchorDistance, 0, width);
+            this._beamCursor.y = constrain(height * 0.5 + Math.sin(anchorAngle) * anchorDistance, 0, height);
         }
 
-        const s = this.gamepad.state;
+        const shipControls = this.getGamepadShipControls(context);
         const speed = 14;
-        const mx = s.ls.x * speed;
-        const my = s.ls.y * speed;
+        const mx = shipControls.beamAimX * speed;
+        const my = shipControls.beamAimY * speed;
         this._beamCursor.x = constrain(this._beamCursor.x + mx, 0, width);
         this._beamCursor.y = constrain(this._beamCursor.y + my, 0, height);
     }

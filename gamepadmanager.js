@@ -183,6 +183,12 @@ class GamepadManager {
   _parse(gp) {
     const m = this._map;
     const btn = (idx) => gp.buttons[idx]?.pressed || false;
+    const btnValue = (idx) => {
+      const button = gp.buttons[idx];
+      if (!button) return 0;
+      if (typeof button.value === 'number' && button.value > 0) return button.value;
+      return button.pressed ? 1 : 0;
+    };
     const dpad = { up: false, down: false, left: false, right: false };
     let l2 = 0, r2 = 0;
 
@@ -204,15 +210,17 @@ class GamepadManager {
 
     // Triggers
     if (m.name === 'D-MODE') {
+      const bL = btnValue(m.L2_BTN);
+      const bR = btnValue(m.R2_BTN);
       const aL = gp.axes[m.L2_AXIS] || 0;
       const aR = gp.axes[m.R2_AXIS] || 0;
       const normAL = aL < -0.1 ? (aL + 1) / 2 : aL;
       const normAR = aR < -0.1 ? (aR + 1) / 2 : aR;
-      l2 = this._dz(this._clamp01(normAL));
-      r2 = this._dz(this._clamp01(normAR));
+      l2 = this._dz(this._clamp01(Math.max(bL, normAL)));
+      r2 = this._dz(this._clamp01(Math.max(bR, normAR)));
     } else {
-      const bL = gp.buttons[m.L2_BTN]?.value || 0;
-      const bR = gp.buttons[m.R2_BTN]?.value || 0;
+      const bL = btnValue(m.L2_BTN);
+      const bR = btnValue(m.R2_BTN);
       const aL = gp.axes[m.L2_AXIS] || 0;
       const aR = gp.axes[m.R2_AXIS] || 0;
       const normAL = aL < -0.1 ? (aL + 1) / 2 : aL;
