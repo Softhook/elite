@@ -440,9 +440,7 @@ function executeInputAction(action, context) {
                 return true;
             }
             if (context === INPUT_CONTEXTS.INVENTORY) {
-                gameStateManager.toggleInventory();
-                soundManager?.playSound('mapClose');
-                return true;
+                return handleInventoryToggle();
             }
             if (context === INPUT_CONTEXTS.GALAXY_MAP) {
                 const returnState = gameStateManager._previousState || 'IN_FLIGHT';
@@ -519,9 +517,10 @@ function handleContinuousFiring() {
  */
 function handleGamepadContinuousInput() {
     const gp = window._gamepadManager;
-    if (!gp || !gp.state || !player || player.destroyed || !inputManager) return;
+    if (!gp || !gp.state || !player || !inputManager) return;
 
     const state = gameStateManager.currentState;
+    if (player.destroyed && state !== 'GAME_OVER') return;
     const s = gp.state;
     const context = getActiveInputContext();
 
