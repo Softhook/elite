@@ -229,7 +229,7 @@ class GamepadManager {
       l3: btn(m.L3), r3: btn(m.R3),
       l4: btn(m.L4), r4: btn(m.R4),
       pl: btn(m.Pl), pr: btn(m.Pr),
-      sel: btn(m.SELECT), start: btn(m.START),
+      sel: btn(m.SELECT), start: btn(m.START), home: btn(m.HOME),
       dpad,
       ls: { x: this._dz(gp.axes[m.LX]), y: this._dz(gp.axes[m.LY]) },
       rs: { x: this._dz(gp.axes[m.RX]), y: this._dz(gp.axes[m.RY]) }
