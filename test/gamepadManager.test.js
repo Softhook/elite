@@ -173,6 +173,18 @@ describe('GamepadManager', () => {
         expect(state.r2).toBeGreaterThan(0);
     });
 
+    test('_parse falls back to D-mode trigger buttons when axes are idle', () => {
+        gp._map = GP_MAPS.D;
+        const mockGP = _createMockGamepad();
+        mockGP.buttons[9].pressed = true;
+        mockGP.buttons[9].value = 1;
+        mockGP.axes[3] = 0;
+
+        const state = gp._parse(mockGP);
+
+        expect(state.r2).toBe(1);
+    });
+
     // ─── Edge Detection ───────────────────────────────────────────────────
 
     test('pressed() returns true only on transition frame', () => {

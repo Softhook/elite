@@ -42,6 +42,9 @@ const INPUT_ACTIONS = {
     ACTIVATE_BURST: 'ACTIVATE_BURST'
 };
 
+const DEFAULT_BEAM_ANCHOR_PLAYER_SIZE = 60;
+const MIN_BEAM_ANCHOR_DISTANCE = 120;
+
 class InputManager {
     constructor(gamepadManager) {
         this.gamepad = gamepadManager || null;
@@ -133,7 +136,7 @@ class InputManager {
                 },
                 [INPUT_CONTEXTS.MISSION_OVERLAY]: { 
                     [INPUT_ACTIONS.BACK]: ['b'], 
-                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['r3', 'home'],
+                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['home'],
                     [INPUT_ACTIONS.NAV_UP]: ['dpad.up'], 
                     [INPUT_ACTIONS.NAV_DOWN]: ['dpad.down'] 
                 },
@@ -142,9 +145,8 @@ class InputManager {
                     [INPUT_ACTIONS.FIRE_PRIMARY]: ['r1'],
                     [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
                     [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
-                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['r3', 'home'],
+                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['home'],
                     [INPUT_ACTIONS.TOGGLE_WANTED]: [''],
-                    [INPUT_ACTIONS.TOGGLE_SECRET_NAV]: ['l3'],
                     [INPUT_ACTIONS.ACTIVATE_BURST]: ['x'],
                     [INPUT_ACTIONS.AUTOPILOT_PLANET]: ['l4'],
                     [INPUT_ACTIONS.AUTOPILOT_SERVICE]: ['l1'],
@@ -164,7 +166,7 @@ class InputManager {
                     [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1'],
                     [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
                     [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
-                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['r3', 'home'],
+                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['home'],
                     [INPUT_ACTIONS.MINIMAP_ZOOM_IN]: ['pr'],
                     [INPUT_ACTIONS.MINIMAP_ZOOM_OUT]: ['pl'],
                     [INPUT_ACTIONS.ACTIVATE_CLOAK]: ['y'],
@@ -295,7 +297,21 @@ class InputManager {
         return inputs.some(i => this._isMappedGamepadInputActive(i, false));
     }
 
-    updateBeamTargetCursor(context) {
+    getGamepadShipControls(context) {
+        const s = this.gamepad?.state;
+        const beamTargeting = context === INPUT_CONTEXTS.BEAM_TARGETING;
+        return {
+            strafeX: s?.ls?.x || 0,
+            thrustY: s?.ls?.y || 0,
+            rotateX: beamTargeting ? 0 : (s?.rs?.x || 0),
+            forwardThrottle: s?.r2 || 0,
+            reverseThrottle: s?.l2 || 0,
+            beamAimX: beamTargeting ? (s?.rs?.x || 0) : 0,
+            beamAimY: beamTargeting ? (s?.rs?.y || 0) : 0
+        };
+    }
+
+    updateBeamTargetCursor(context, playerRef = null) {
         if (context !== INPUT_CONTEXTS.BEAM_TARGETING || !this.gamepad?.state) {
             this._beamModeActive = false;
             return;
@@ -303,14 +319,17 @@ class InputManager {
 
         if (!this._beamModeActive) {
             this._beamModeActive = true;
-            this._beamCursor.x = width * 0.5;
-            this._beamCursor.y = height * 0.5;
+            const playerSize = typeof playerRef?.size === 'number' ? playerRef.size : DEFAULT_BEAM_ANCHOR_PLAYER_SIZE;
+            const anchorDistance = Math.max(MIN_BEAM_ANCHOR_DISTANCE, playerSize * 2);
+            const anchorAngle = typeof playerRef?.angle === 'number' ? playerRef.angle : 0;
+            this._beamCursor.x = constrain(width * 0.5 + Math.cos(anchorAngle) * anchorDistance, 0, width);
+            this._beamCursor.y = constrain(height * 0.5 + Math.sin(anchorAngle) * anchorDistance, 0, height);
         }
 
-        const s = this.gamepad.state;
+        const shipControls = this.getGamepadShipControls(context);
         const speed = 14;
-        const mx = s.ls.x * speed;
-        const my = s.ls.y * speed;
+        const mx = shipControls.beamAimX * speed;
+        const my = shipControls.beamAimY * speed;
         this._beamCursor.x = constrain(this._beamCursor.x + mx, 0, width);
         this._beamCursor.y = constrain(this._beamCursor.y + my, 0, height);
     }

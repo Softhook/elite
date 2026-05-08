@@ -384,17 +384,20 @@ function performPeriodicTasks() {
 function getActiveInputContext() {
     if (!inputManager || !gameStateManager) return null;
     const state = gameStateManager.currentState;
+    const isSurfaceShipControl = state === 'SURFACE_MODE' && surfaceMode?.controlMode === 'SHIP';
+    const isSurfaceAstronautControl = state === 'SURFACE_MODE' && surfaceMode?.controlMode === 'ASTRONAUT';
     const beamWeaponActive = !!(player?.currentWeapon?.type === WEAPON_TYPE.BEAM);
+    const shipContext = isSurfaceShipControl ? INPUT_CONTEXTS.SURFACE_SHIP : INPUT_CONTEXTS.IN_FLIGHT;
     const beamTargetingRequested = !!(
-        (window._gamepadManager?.held('a') || window._gamepadManager?.held('r1')) ||
+        inputManager.isGamepadActionHeld(INPUT_ACTIONS.FIRE_PRIMARY, shipContext) ||
         keyIsDown(32)
     );
     return inputManager.resolveContext({
         gameState: state,
         showingMissionOverlay: !!gameStateManager.showingMissionOverlay,
         showingInventory: !!gameStateManager.showingInventory,
-        isSurfaceShipControl: state === 'SURFACE_MODE' && typeof surfaceMode !== 'undefined' && surfaceMode?.controlMode === 'SHIP',
-        isSurfaceAstronautControl: state === 'SURFACE_MODE' && typeof surfaceMode !== 'undefined' && surfaceMode?.controlMode === 'ASTRONAUT',
+        isSurfaceShipControl,
+        isSurfaceAstronautControl,
         beamWeaponActive,
         beamTargetingRequested
     });
@@ -504,7 +507,7 @@ function handleContinuousFiring() {
         (gameStateManager.currentState === "SURFACE_MODE" && typeof surfaceMode !== 'undefined' && surfaceMode.controlMode === 'SHIP');
 
     const context = getActiveInputContext();
-    inputManager?.updateBeamTargetCursor(context);
+    inputManager?.updateBeamTargetCursor(context, player);
     const gpFiring = !!(inputManager && context && inputManager.isGamepadActionHeld(INPUT_ACTIONS.FIRE_PRIMARY, context));
 
     if (isShipControl && !player.destroyed && (keyIsDown(32) || gpFiring)) {
@@ -607,16 +610,17 @@ function handleGamepadContinuousInput() {
     if (!isShipControl) return;
 
     // Read analog values
-    const beamTargeting = context === INPUT_CONTEXTS.BEAM_TARGETING;
-    const lsX = beamTargeting ? 0 : s.ls.x;   // Left stick X: strafe (reassigned in beam mode)
-    const lsY = beamTargeting ? 0 : s.ls.y;   // Left stick Y: thrust/reverse (reassigned in beam mode)
-    const rsX = s.rs.x;   // Right stick X: rotate
-    const r2Val = s.r2;    // R2 trigger: thrust
-    const l2Val = s.l2;    // L2 trigger: reverse
+    const shipControls = inputManager.getGamepadShipControls(context);
+    const lsX = shipControls.strafeX;
+    const lsY = shipControls.thrustY;
+    const rsX = shipControls.rotateX;
+    const r2Val = shipControls.forwardThrottle;
+    const l2Val = shipControls.reverseThrottle;
 
     const rotTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
     const hasGamepadInput = Math.abs(lsX) > 0.1 || Math.abs(lsY) > 0.1 ||
-                           Math.abs(rsX) > 0.1 || r2Val > 0.1 || l2Val > 0.1;
+                           Math.abs(rsX) > 0.1 || r2Val > 0.1 || l2Val > 0.1 ||
+                           Math.abs(shipControls.beamAimX) > 0.1 || Math.abs(shipControls.beamAimY) > 0.1;
 
     // Disable autopilot on gamepad input
     if (player.autopilotEnabled && hasGamepadInput) {

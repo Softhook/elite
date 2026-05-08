@@ -16,7 +16,7 @@ const GP_MAPS = {
     name: 'X-MODE (Xbox)',
     A: 0, B: 1, X: 2, Y: 3, L1: 4, R1: 5, L2_BTN: 6, R2_BTN: 7,
     L2_AXIS: 2, R2_AXIS: 5, L4: 16, R4: 17, Pl: 14, Pr: 15,
-    LX: 0, LY: 1, RX: 2, RY: 3, L3: 10, R3: 11,
+    LX: 0, LY: 1, RX: 2, RY: 3,
     D_UP: 12, D_DOWN: 13, D_LEFT: 14, D_RIGHT: 15,
     SELECT: 8, START: 9, HOME: 16
   },
@@ -24,13 +24,13 @@ const GP_MAPS = {
     name: 'D-MODE',
     A: 0, B: 1, X: 3, Y: 4, L1: 6, R1: 7, L2_AXIS: 4, R2_AXIS: 3, L2_BTN: 8, R2_BTN: 9,
     L4: 16, R4: 17, Pl: 5, Pr: 2, LX: 0, LY: 1, RX: 2, RY: 5,
-    L3: 13, R3: 14, HAT: 9, SELECT: 10, START: 11, HOME: 12, STAR: 15
+    HAT: 9, SELECT: 10, START: 11, HOME: 12, STAR: 15
   },
   S: {
     name: 'S-MODE (Switch)',
     A: 1, B: 0, X: 3, Y: 2, L1: 4, R1: 5, L2_BTN: 6, R2_BTN: 7,
     L4: 16, R4: 17, Pl: 14, Pr: 15, LX: 0, LY: 1, RX: 2, RY: 3,
-    L3: 10, R3: 11, D_UP: 12, D_DOWN: 13, D_LEFT: 14, D_RIGHT: 15,
+    D_UP: 12, D_DOWN: 13, D_LEFT: 14, D_RIGHT: 15,
     SELECT: 8, START: 9, HOME: 12
   }
 };
@@ -183,6 +183,14 @@ class GamepadManager {
   _parse(gp) {
     const m = this._map;
     const btn = (idx) => gp.buttons[idx]?.pressed || false;
+    // Prefer analog trigger values, but fall back to binary pressed state for D-mode layouts
+    // that only expose trigger buttons reliably.
+    const btnValue = (idx) => {
+      const button = gp.buttons[idx];
+      if (!button) return 0;
+      if (typeof button.value === 'number' && button.value > 0) return button.value;
+      return button.pressed ? 1 : 0;
+    };
     const dpad = { up: false, down: false, left: false, right: false };
     let l2 = 0, r2 = 0;
 
@@ -204,15 +212,17 @@ class GamepadManager {
 
     // Triggers
     if (m.name === 'D-MODE') {
+      const bL = btnValue(m.L2_BTN);
+      const bR = btnValue(m.R2_BTN);
       const aL = gp.axes[m.L2_AXIS] || 0;
       const aR = gp.axes[m.R2_AXIS] || 0;
       const normAL = aL < -0.1 ? (aL + 1) / 2 : aL;
       const normAR = aR < -0.1 ? (aR + 1) / 2 : aR;
-      l2 = this._dz(this._clamp01(normAL));
-      r2 = this._dz(this._clamp01(normAR));
+      l2 = this._dz(this._clamp01(Math.max(bL, normAL)));
+      r2 = this._dz(this._clamp01(Math.max(bR, normAR)));
     } else {
-      const bL = gp.buttons[m.L2_BTN]?.value || 0;
-      const bR = gp.buttons[m.R2_BTN]?.value || 0;
+      const bL = btnValue(m.L2_BTN);
+      const bR = btnValue(m.R2_BTN);
       const aL = gp.axes[m.L2_AXIS] || 0;
       const aR = gp.axes[m.R2_AXIS] || 0;
       const normAL = aL < -0.1 ? (aL + 1) / 2 : aL;
@@ -226,7 +236,7 @@ class GamepadManager {
       a: btn(m.A), b: btn(m.B), x: btn(m.X), y: btn(m.Y),
       l1: btn(m.L1), r1: btn(m.R1),
       l2, r2,
-      l3: btn(m.L3), r3: btn(m.R3),
+
       l4: btn(m.L4), r4: btn(m.R4),
       pl: btn(m.Pl), pr: btn(m.Pr),
       sel: btn(m.SELECT), start: btn(m.START), home: btn(m.HOME),
