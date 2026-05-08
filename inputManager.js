@@ -70,10 +70,10 @@ class InputManager {
                 ArrowLeft: INPUT_ACTIONS.NAV_LEFT, KeyA: INPUT_ACTIONS.NAV_LEFT,
                 ArrowRight: INPUT_ACTIONS.NAV_RIGHT, KeyD: INPUT_ACTIONS.NAV_RIGHT,
                 Enter: INPUT_ACTIONS.CONFIRM, Space: INPUT_ACTIONS.CONFIRM,
-                KeyM: INPUT_ACTIONS.MAP_MARKET_TOGGLE, Escape: INPUT_ACTIONS.BACK
+                KeyM: INPUT_ACTIONS.TOGGLE_MAP, KeyX: INPUT_ACTIONS.MAP_MARKET_TOGGLE, Escape: INPUT_ACTIONS.BACK
             },
-            [INPUT_CONTEXTS.MISSION_OVERLAY]: { Escape: INPUT_ACTIONS.BACK },
-            [INPUT_CONTEXTS.INVENTORY]: { Escape: INPUT_ACTIONS.BACK },
+            [INPUT_CONTEXTS.MISSION_OVERLAY]: { KeyN: INPUT_ACTIONS.TOGGLE_MISSION, Escape: INPUT_ACTIONS.BACK },
+            [INPUT_CONTEXTS.INVENTORY]: { KeyI: INPUT_ACTIONS.TOGGLE_INVENTORY, Escape: INPUT_ACTIONS.BACK },
             [INPUT_CONTEXTS.IN_FLIGHT]: {
                 Space: INPUT_ACTIONS.FIRE_PRIMARY,
                 KeyI: INPUT_ACTIONS.TOGGLE_INVENTORY,
@@ -128,10 +128,16 @@ class InputManager {
                     ...sharedMenu,
                     [INPUT_ACTIONS.CONFIRM]: ['a'],
                     [INPUT_ACTIONS.BACK]: ['b'],
+                    [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
                     [INPUT_ACTIONS.MAP_MARKET_TOGGLE]: ['x']
                 },
-                [INPUT_CONTEXTS.MISSION_OVERLAY]: { [INPUT_ACTIONS.BACK]: ['b'], [INPUT_ACTIONS.NAV_UP]: ['dpad.up'], [INPUT_ACTIONS.NAV_DOWN]: ['dpad.down'] },
-                [INPUT_CONTEXTS.INVENTORY]: { [INPUT_ACTIONS.BACK]: ['b'] },
+                [INPUT_CONTEXTS.MISSION_OVERLAY]: { 
+                    [INPUT_ACTIONS.BACK]: ['b'], 
+                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['r3'],
+                    [INPUT_ACTIONS.NAV_UP]: ['dpad.up'], 
+                    [INPUT_ACTIONS.NAV_DOWN]: ['dpad.down'] 
+                },
+                [INPUT_CONTEXTS.INVENTORY]: { [INPUT_ACTIONS.BACK]: ['b'], [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'] },
                 [INPUT_CONTEXTS.IN_FLIGHT]: {
                     [INPUT_ACTIONS.FIRE_PRIMARY]: ['r1'],
                     [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
@@ -180,10 +186,16 @@ class InputManager {
                     ...sharedMenu,
                     [INPUT_ACTIONS.CONFIRM]: ['a'],
                     [INPUT_ACTIONS.BACK]: ['b'],
+                    [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
                     [INPUT_ACTIONS.MAP_MARKET_TOGGLE]: ['x']
                 },
-                [INPUT_CONTEXTS.MISSION_OVERLAY]: { [INPUT_ACTIONS.BACK]: ['b'], [INPUT_ACTIONS.NAV_UP]: ['dpad.up'], [INPUT_ACTIONS.NAV_DOWN]: ['dpad.down'] },
-                [INPUT_CONTEXTS.INVENTORY]: { [INPUT_ACTIONS.BACK]: ['b'] },
+                [INPUT_CONTEXTS.MISSION_OVERLAY]: { 
+                    [INPUT_ACTIONS.BACK]: ['b'], 
+                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['x'],
+                    [INPUT_ACTIONS.NAV_UP]: ['dpad.up'], 
+                    [INPUT_ACTIONS.NAV_DOWN]: ['dpad.down'] 
+                },
+                [INPUT_CONTEXTS.INVENTORY]: { [INPUT_ACTIONS.BACK]: ['b'], [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'] },
                 [INPUT_CONTEXTS.IN_FLIGHT]: {
                     [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1'],
                     [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
