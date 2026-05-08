@@ -325,21 +325,10 @@ describe('GamepadManager', () => {
 });
 
 describe('initGamepad', () => {
-    test('creates a GamepadManager with game-specific bindings', () => {
+    test('creates a GamepadManager without implicit keyboard bridge bindings', () => {
         const gp = initGamepad();
         expect(gp).toBeInstanceOf(GamepadManager);
-        expect(gp._bindings.length).toBeGreaterThan(0);
-
-        // Check key bindings exist
-        const inputNames = gp._bindings.map(b => b.input);
-        expect(inputNames).toContain('a');        // Fire
-        expect(inputNames).toContain('r1');       // Fire alt
-        expect(inputNames).toContain('x');        // Speed boost
-        expect(inputNames).toContain('y');        // Cloak
-        expect(inputNames).toContain('start');    // Map
-        expect(inputNames).toContain('sel');      // Inventory
-        expect(inputNames).toContain('dpad.up');  // Navigation
-        expect(inputNames).toContain('dpad.down');
+        expect(gp._bindings.length).toBe(0);
 
         gp.destroy();
     });

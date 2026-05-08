@@ -1444,8 +1444,13 @@ class Player {
             // If a target is locked (effectiveTarget is valid), the missile will home.
             // No explicit check needed here to prevent firing.
         } else if (this.currentWeapon.type === WEAPON_TYPE.BEAM && this === player) { // Player aims beams with mouse
+            const beamScreenTarget = window._inputManager?.getBeamTargetScreenPoint?.();
+            if (beamScreenTarget) {
+                const worldMx = beamScreenTarget.x + (this.pos.x - width / 2);
+                const worldMy = beamScreenTarget.y + (this.pos.y - height / 2);
+                fireAngle = atan2(worldMy - this.pos.y, worldMx - this.pos.x);
             // In surface mode, beam works in screen space - ship is at screen center, aim at cursor
-            if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+            } else if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
                 // Simple: ship at screen center, aim at mouse position
                 const dx = mouseX - width / 2;
                 const dy = mouseY - height / 2;
