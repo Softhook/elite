@@ -38,7 +38,8 @@ const INPUT_ACTIONS = {
     TARGET_PREV: 'TARGET_PREV',
     MAP_MARKET_TOGGLE: 'MAP_MARKET_TOGGLE',
     ALTITUDE_UP: 'ALTITUDE_UP',
-    ALTITUDE_DOWN: 'ALTITUDE_DOWN'
+    ALTITUDE_DOWN: 'ALTITUDE_DOWN',
+    ACTIVATE_BURST: 'ACTIVATE_BURST'
 };
 
 class InputManager {
@@ -85,7 +86,8 @@ class InputManager {
                 Period: INPUT_ACTIONS.MINIMAP_ZOOM_IN,
                 Comma: INPUT_ACTIONS.MINIMAP_ZOOM_OUT,
                 KeyC: INPUT_ACTIONS.ACTIVATE_CLOAK,
-                KeyX: INPUT_ACTIONS.SURFACE_DESCENT
+                KeyX: INPUT_ACTIONS.SURFACE_DESCENT,
+                KeyR: INPUT_ACTIONS.ACTIVATE_BURST
             },
             [INPUT_CONTEXTS.BEAM_TARGETING]: {
                 Space: INPUT_ACTIONS.FIRE_PRIMARY
@@ -131,12 +133,13 @@ class InputManager {
                 [INPUT_CONTEXTS.MISSION_OVERLAY]: { [INPUT_ACTIONS.BACK]: ['b'], [INPUT_ACTIONS.NAV_UP]: ['dpad.up'], [INPUT_ACTIONS.NAV_DOWN]: ['dpad.down'] },
                 [INPUT_CONTEXTS.INVENTORY]: { [INPUT_ACTIONS.BACK]: ['b'] },
                 [INPUT_CONTEXTS.IN_FLIGHT]: {
-                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1'],
+                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['r1'],
                     [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
                     [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
                     [INPUT_ACTIONS.TOGGLE_MISSION]: ['r3'],
                     [INPUT_ACTIONS.TOGGLE_WANTED]: [''],
-                    [INPUT_ACTIONS.TOGGLE_SECRET_NAV]: ['x'],
+                    [INPUT_ACTIONS.TOGGLE_SECRET_NAV]: ['l3'],
+                    [INPUT_ACTIONS.ACTIVATE_BURST]: ['x'],
                     [INPUT_ACTIONS.AUTOPILOT_PLANET]: ['l4'],
                     [INPUT_ACTIONS.AUTOPILOT_SERVICE]: ['l1'],
                     [INPUT_ACTIONS.MINIMAP_ZOOM_IN]: ['pr'],
@@ -160,7 +163,8 @@ class InputManager {
                     [INPUT_ACTIONS.MINIMAP_ZOOM_OUT]: ['pl'],
                     [INPUT_ACTIONS.ACTIVATE_CLOAK]: ['y'],
                     [INPUT_ACTIONS.ALTITUDE_UP]: ['l1', 'dpad.up'],
-                    [INPUT_ACTIONS.ALTITUDE_DOWN]: ['l4', 'dpad.down']
+                    [INPUT_ACTIONS.ALTITUDE_DOWN]: ['l4', 'dpad.down'],
+                    [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
                 },
                 [INPUT_CONTEXTS.SURFACE_ASTRONAUT]: {
                     [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
@@ -190,7 +194,8 @@ class InputManager {
                     [INPUT_ACTIONS.WEAPON_PREV]: ['dpad.left'],
                     [INPUT_ACTIONS.TARGET_NEXT]: ['dpad.up'],
                     [INPUT_ACTIONS.TARGET_PREV]: ['dpad.down'],
-                    [INPUT_ACTIONS.SURFACE_DESCENT]: ['b']
+                    [INPUT_ACTIONS.SURFACE_DESCENT]: ['b'],
+                    [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
                 },
                 [INPUT_CONTEXTS.BEAM_TARGETING]: {
                     [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
@@ -200,7 +205,8 @@ class InputManager {
                     [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
                     [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
                     [INPUT_ACTIONS.ALTITUDE_UP]: ['l1', 'dpad.up'],
-                    [INPUT_ACTIONS.ALTITUDE_DOWN]: ['l4', 'dpad.down']
+                    [INPUT_ACTIONS.ALTITUDE_DOWN]: ['l4', 'dpad.down'],
+                    [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
                 },
                 [INPUT_CONTEXTS.SURFACE_ASTRONAUT]: {
                     [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']

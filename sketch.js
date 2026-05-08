@@ -489,6 +489,8 @@ function executeInputAction(action, context) {
         case INPUT_ACTIONS.FIRE_PRIMARY:
             player?.handleFireInput?.();
             return true;
+        case INPUT_ACTIONS.ACTIVATE_BURST:
+            return player?.trySpeedBurst();
         default:
             return false;
     }
@@ -657,6 +659,7 @@ function handleGamepadContinuousInput() {
     if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.ACTIVATE_CLOAK, context)) executeInputAction(INPUT_ACTIONS.ACTIVATE_CLOAK, context);
     if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.MINIMAP_ZOOM_IN, context)) executeInputAction(INPUT_ACTIONS.MINIMAP_ZOOM_IN, context);
     if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.MINIMAP_ZOOM_OUT, context)) executeInputAction(INPUT_ACTIONS.MINIMAP_ZOOM_OUT, context);
+    if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.ACTIVATE_BURST, context)) executeInputAction(INPUT_ACTIONS.ACTIVATE_BURST, context);
 
     // Weapon switching/targeting/autopilot actions only in flight
     if (state === 'IN_FLIGHT') {
@@ -1187,6 +1190,8 @@ function handleSingleKeyActions() {
             return handleMinimapZoomOut();
         case 'c':
             return handleCloakActivation();
+        case 'r':
+            return player?.trySpeedBurst();
         case 'x':
             return handleSurfaceDescent();
     }
