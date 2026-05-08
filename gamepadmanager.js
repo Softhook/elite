@@ -155,10 +155,12 @@ class GamepadManager {
     }
 
     if (this._rawGP) {
+      this._connected = true;
       this._detectMode(this._rawGP);
       this._state = this._parse(this._rawGP);
       this._processBindings();
     } else {
+      this._connected = false;
       this._state = null;
     }
 
@@ -168,10 +170,17 @@ class GamepadManager {
   // ─── Mode Detection ─────────────────────────────────────────────────────────
 
   _detectMode(gp) {
-    const id = gp.id.toLowerCase();
-    if (id.includes('pro controller') || id.includes('057e') || id.includes('nintendo')) {
+    const id = (gp?.id || '').toLowerCase();
+    const mapping = (gp?.mapping || '').toLowerCase();
+    const hasStandardMapping = mapping === 'standard' || id.includes('standard gamepad');
+    const isNintendoStyle = id.includes('pro controller') || id.includes('057e') ||
+      id.includes('nintendo') || id.includes('switch') || id.includes('joy-con');
+    const isXboxStyle = id.includes('xbox') || id.includes('xinput');
+    const is8BitDo = id.includes('8bitdo');
+
+    if (isNintendoStyle || (is8BitDo && hasStandardMapping && !isXboxStyle)) {
       this._map = GP_MAPS.S;
-    } else if (id.includes('xbox') || id.includes('xinput') || id.includes('standard gamepad')) {
+    } else if (isXboxStyle || hasStandardMapping) {
       this._map = GP_MAPS.X;
     } else {
       this._map = GP_MAPS.D;

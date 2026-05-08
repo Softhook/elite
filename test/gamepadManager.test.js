@@ -173,6 +173,18 @@ describe('GamepadManager', () => {
         expect(state.r2).toBeGreaterThan(0);
     });
 
+    test('_parse reads R2 trigger pressure in S-mode standard layouts', () => {
+        gp._map = GP_MAPS.S;
+        const mockGP = _createMockGamepad();
+        mockGP.buttons[7].pressed = true;
+        mockGP.buttons[7].value = 0.9;
+
+        const state = gp._parse(mockGP);
+
+        expect(state.mode).toBe('S-MODE (Switch)');
+        expect(state.r2).toBeCloseTo(0.9, 3);
+    });
+
     test('_parse keeps X-mode triggers independent from right-stick axes', () => {
         gp._map = GP_MAPS.X;
         const mockGP = _createMockGamepad();
@@ -335,9 +347,28 @@ describe('GamepadManager', () => {
         expect(gp._map.name).toBe('S-MODE (Switch)');
     });
 
+    test('_detectMode selects Switch mode for 8BitDo standard-mapped controllers in S-mode', () => {
+        gp._detectMode({ id: '8BitDo Ultimate Wireless Controller', mapping: 'standard' });
+        expect(gp._map.name).toBe('S-MODE (Switch)');
+    });
+
+    test('_detectMode falls back to Xbox mode for unknown standard-mapped controllers', () => {
+        gp._detectMode({ id: 'Generic USB Gamepad', mapping: 'standard' });
+        expect(gp._map.name).toBe('X-MODE (Xbox)');
+    });
+
     test('_detectMode selects D-MODE for unknown controllers', () => {
         gp._detectMode({ id: '8BitDo Pro 2 Gamepad' });
         expect(gp._map.name).toBe('D-MODE');
+    });
+
+    test('_tick marks a pre-connected gamepad as connected even before browser events fire', () => {
+        navigator.getGamepads.mockReturnValueOnce([_createMockGamepad(), null, null, null]);
+
+        gp._tick();
+
+        expect(gp.connected).toBe(true);
+        expect(gp.state?.mode).toBe('X-MODE (Xbox)');
     });
 
     // ─── Destroy ──────────────────────────────────────────────────────────
