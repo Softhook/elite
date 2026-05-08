@@ -16,7 +16,7 @@ const GP_MAPS = {
     name: 'X-MODE (Xbox)',
     A: 0, B: 1, X: 2, Y: 3, L1: 4, R1: 5, L2_BTN: 6, R2_BTN: 7,
     L2_AXIS: 2, R2_AXIS: 5, L4: 16, R4: 17, Pl: 14, Pr: 15,
-    LX: 0, LY: 1, RX: 2, RY: 3, L3: 10, R3: 11,
+    LX: 0, LY: 1, RX: 2, RY: 3,
     D_UP: 12, D_DOWN: 13, D_LEFT: 14, D_RIGHT: 15,
     SELECT: 8, START: 9, HOME: 16
   },
@@ -24,13 +24,13 @@ const GP_MAPS = {
     name: 'D-MODE',
     A: 0, B: 1, X: 3, Y: 4, L1: 6, R1: 7, L2_AXIS: 4, R2_AXIS: 3, L2_BTN: 8, R2_BTN: 9,
     L4: 16, R4: 17, Pl: 5, Pr: 2, LX: 0, LY: 1, RX: 2, RY: 5,
-    L3: 13, R3: 14, HAT: 9, SELECT: 10, START: 11, HOME: 12, STAR: 15
+    HAT: 9, SELECT: 10, START: 11, HOME: 12, STAR: 15
   },
   S: {
     name: 'S-MODE (Switch)',
     A: 1, B: 0, X: 3, Y: 2, L1: 4, R1: 5, L2_BTN: 6, R2_BTN: 7,
     L4: 16, R4: 17, Pl: 14, Pr: 15, LX: 0, LY: 1, RX: 2, RY: 3,
-    L3: 10, R3: 11, D_UP: 12, D_DOWN: 13, D_LEFT: 14, D_RIGHT: 15,
+    D_UP: 12, D_DOWN: 13, D_LEFT: 14, D_RIGHT: 15,
     SELECT: 8, START: 9, HOME: 12
   }
 };
@@ -236,7 +236,7 @@ class GamepadManager {
       a: btn(m.A), b: btn(m.B), x: btn(m.X), y: btn(m.Y),
       l1: btn(m.L1), r1: btn(m.R1),
       l2, r2,
-      l3: btn(m.L3), r3: btn(m.R3),
+
       l4: btn(m.L4), r4: btn(m.R4),
       pl: btn(m.Pl), pr: btn(m.Pr),
       sel: btn(m.SELECT), start: btn(m.START), home: btn(m.HOME),

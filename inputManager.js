@@ -136,7 +136,7 @@ class InputManager {
                 },
                 [INPUT_CONTEXTS.MISSION_OVERLAY]: { 
                     [INPUT_ACTIONS.BACK]: ['b'], 
-                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['r3', 'home'],
+                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['home'],
                     [INPUT_ACTIONS.NAV_UP]: ['dpad.up'], 
                     [INPUT_ACTIONS.NAV_DOWN]: ['dpad.down'] 
                 },
@@ -145,9 +145,8 @@ class InputManager {
                     [INPUT_ACTIONS.FIRE_PRIMARY]: ['r1'],
                     [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
                     [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
-                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['r3', 'home'],
+                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['home'],
                     [INPUT_ACTIONS.TOGGLE_WANTED]: [''],
-                    [INPUT_ACTIONS.TOGGLE_SECRET_NAV]: ['l3'],
                     [INPUT_ACTIONS.ACTIVATE_BURST]: ['x'],
                     [INPUT_ACTIONS.AUTOPILOT_PLANET]: ['l4'],
                     [INPUT_ACTIONS.AUTOPILOT_SERVICE]: ['l1'],
@@ -167,7 +166,7 @@ class InputManager {
                     [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1'],
                     [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
                     [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
-                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['r3', 'home'],
+                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['home'],
                     [INPUT_ACTIONS.MINIMAP_ZOOM_IN]: ['pr'],
                     [INPUT_ACTIONS.MINIMAP_ZOOM_OUT]: ['pl'],
                     [INPUT_ACTIONS.ACTIVATE_CLOAK]: ['y'],
