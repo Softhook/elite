@@ -317,7 +317,8 @@ class InputManager {
 
         if (!this._beamModeActive) {
             this._beamModeActive = true;
-            const anchorDistance = Math.max(120, (playerRef?.size || 0) * 2);
+            const playerSize = typeof playerRef?.size === 'number' ? playerRef.size : 60;
+            const anchorDistance = Math.max(120, playerSize * 2);
             const anchorAngle = typeof playerRef?.angle === 'number' ? playerRef.angle : 0;
             this._beamCursor.x = constrain(width * 0.5 + Math.cos(anchorAngle) * anchorDistance, 0, width);
             this._beamCursor.y = constrain(height * 0.5 + Math.sin(anchorAngle) * anchorDistance, 0, height);

@@ -384,8 +384,8 @@ function performPeriodicTasks() {
 function getActiveInputContext() {
     if (!inputManager || !gameStateManager) return null;
     const state = gameStateManager.currentState;
-    const isSurfaceShipControl = state === 'SURFACE_MODE' && typeof surfaceMode !== 'undefined' && surfaceMode?.controlMode === 'SHIP';
-    const isSurfaceAstronautControl = state === 'SURFACE_MODE' && typeof surfaceMode !== 'undefined' && surfaceMode?.controlMode === 'ASTRONAUT';
+    const isSurfaceShipControl = state === 'SURFACE_MODE' && surfaceMode?.controlMode === 'SHIP';
+    const isSurfaceAstronautControl = state === 'SURFACE_MODE' && surfaceMode?.controlMode === 'ASTRONAUT';
     const beamWeaponActive = !!(player?.currentWeapon?.type === WEAPON_TYPE.BEAM);
     const shipContext = isSurfaceShipControl ? INPUT_CONTEXTS.SURFACE_SHIP : INPUT_CONTEXTS.IN_FLIGHT;
     const beamTargetingRequested = !!(
