@@ -1258,17 +1258,17 @@ class Player {
         return true;
     }
 
-    /** Apply a left‐strafe (kite) thrust */
-    kiteLeft() {
+    /** Apply a left-strafe (kite) thrust with optional analog strength. */
+    kiteLeft(multiplier = 0.8) {
         if (typeof SharedPhysics !== 'undefined') {
-            SharedPhysics.thrustStrafe(this, -1, 0.8);
+            SharedPhysics.thrustStrafe(this, -1, multiplier);
         }
     }
 
-    /** Apply a right‐strafe (kite) thrust */
-    kiteRight() {
+    /** Apply a right-strafe (kite) thrust with optional analog strength. */
+    kiteRight(multiplier = 0.8) {
         if (typeof SharedPhysics !== 'undefined') {
-            SharedPhysics.thrustStrafe(this, 1, 0.8);
+            SharedPhysics.thrustStrafe(this, 1, multiplier);
         }
     }
 
@@ -1277,16 +1277,16 @@ class Player {
      * Applies reverse thrust (slower backward movement)
      * Uses opposite direction from current facing angle.
      */
-    reverseThrust() {
+    reverseThrust(multiplier = PLAYER_CONFIG.REVERSE_THRUST_MULTIPLIER) {
         if (typeof SharedPhysics !== 'undefined') {
-            SharedPhysics.thrustReverse(this, PLAYER_CONFIG.REVERSE_THRUST_MULTIPLIER, false);
+            SharedPhysics.thrustReverse(this, multiplier, false);
         } else {
             // Fallback if SharedPhysics missing (though unlikely to happen if setup correct)
             // IMPORTANT: Must apply timeScale for frame-rate independence
             const dt = (typeof deltaTime !== 'undefined' ? deltaTime / 1000 : 1 / 60);
             const timeScale = dt / (1 / 60);
             const reverseAngle = this.angle + PI;
-            const reducedForce = this.thrustForce * PLAYER_CONFIG.REVERSE_THRUST_MULTIPLIER;
+            const reducedForce = this.thrustForce * multiplier;
             this.vel.add(cos(reverseAngle) * reducedForce * timeScale, sin(reverseAngle) * reducedForce * timeScale);
         }
 
@@ -1338,17 +1338,17 @@ class Player {
     }
 
     /** Applies forward thrust force based on current facing angle (radians). */
-    thrust() {
+    thrust(multiplier = 1.0) {
         if (typeof SharedPhysics !== 'undefined') {
             // Enable particles here since we removed them from update() loop
-            SharedPhysics.thrustForward(this, 1.0, true);
+            SharedPhysics.thrustForward(this, multiplier, true);
         } else {
             // Fallback if SharedPhysics missing
             // IMPORTANT: Must apply timeScale for frame-rate independence
             if (isNaN(this.angle)) { this.angle = 0; }
             const dt = (typeof deltaTime !== 'undefined' ? deltaTime / 1000 : 1 / 60);
             const timeScale = dt / (1 / 60);
-            const force = this.thrustForce;
+            const force = this.thrustForce * multiplier;
             this.vel.add(cos(this.angle) * force * timeScale, sin(this.angle) * force * timeScale);
         }
     }

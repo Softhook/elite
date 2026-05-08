@@ -173,6 +173,18 @@ describe('GamepadManager', () => {
         expect(state.r2).toBeGreaterThan(0);
     });
 
+    test('_parse keeps X-mode triggers independent from right-stick axes', () => {
+        gp._map = GP_MAPS.X;
+        const mockGP = _createMockGamepad();
+        mockGP.buttons[7].pressed = true;
+        mockGP.buttons[7].value = 1;
+        mockGP.axes[2] = -1; // Right stick X fully left (must not affect trigger value)
+
+        const state = gp._parse(mockGP);
+
+        expect(state.r2).toBe(1);
+    });
+
     test('_parse falls back to D-mode trigger buttons when axes are idle', () => {
         gp._map = GP_MAPS.D;
         const mockGP = _createMockGamepad();
@@ -183,6 +195,33 @@ describe('GamepadManager', () => {
         const state = gp._parse(mockGP);
 
         expect(state.r2).toBe(1);
+    });
+
+    test('_parse preserves D-mode analog trigger pressure from button values', () => {
+        gp._map = GP_MAPS.D;
+        const mockGP = _createMockGamepad();
+        mockGP.buttons[8].value = 0.42;
+        mockGP.buttons[9].value = 0.67;
+        mockGP.axes[4] = 0;
+        mockGP.axes[3] = 0;
+
+        const state = gp._parse(mockGP);
+
+        expect(state.l2).toBeCloseTo(0.42, 3);
+        expect(state.r2).toBeCloseTo(0.67, 3);
+    });
+
+    test('_parse applies trigger deadzone in D-mode without clamping valid analog values', () => {
+        gp._map = GP_MAPS.D;
+        const mockGP = _createMockGamepad();
+
+        mockGP.buttons[8].value = 0.08; // below trigger deadzone (0.1)
+        mockGP.buttons[9].value = 0.11; // just above trigger deadzone
+
+        const state = gp._parse(mockGP);
+
+        expect(state.l2).toBe(0);
+        expect(state.r2).toBeCloseTo(0.11, 3);
     });
 
     // ─── Edge Detection ───────────────────────────────────────────────────

@@ -178,6 +178,60 @@ class InputManager {
                     [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
                 }
             },
+            X: {
+                [INPUT_CONTEXTS.TITLE]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
+                [INPUT_CONTEXTS.INSTRUCTIONS]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'], [INPUT_ACTIONS.BACK]: ['b'] },
+                [INPUT_CONTEXTS.SAVE_SELECTION]: { ...sharedMenu, [INPUT_ACTIONS.BACK]: ['b'] },
+                [INPUT_CONTEXTS.GAME_OVER]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
+                [INPUT_CONTEXTS.STATION_MENU]: sharedMenu,
+                [INPUT_CONTEXTS.GALAXY_MAP]: {
+                    ...sharedMenu,
+                    [INPUT_ACTIONS.CONFIRM]: ['a'],
+                    [INPUT_ACTIONS.BACK]: ['b'],
+                    [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
+                    [INPUT_ACTIONS.MAP_MARKET_TOGGLE]: ['x']
+                },
+                [INPUT_CONTEXTS.MISSION_OVERLAY]: {
+                    [INPUT_ACTIONS.BACK]: ['b'],
+                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['x'],
+                    [INPUT_ACTIONS.NAV_UP]: ['dpad.up'],
+                    [INPUT_ACTIONS.NAV_DOWN]: ['dpad.down']
+                },
+                [INPUT_CONTEXTS.INVENTORY]: { [INPUT_ACTIONS.BACK]: ['b'], [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'] },
+                [INPUT_CONTEXTS.IN_FLIGHT]: {
+                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['r1'],
+                    [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
+                    [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
+                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['x'],
+                    [INPUT_ACTIONS.ACTIVATE_CLOAK]: ['y'],
+                    [INPUT_ACTIONS.AUTOPILOT_SERVICE]: ['l1'],
+                    [INPUT_ACTIONS.MINIMAP_ZOOM_IN]: ['pr'],
+                    [INPUT_ACTIONS.MINIMAP_ZOOM_OUT]: ['pl'],
+                    [INPUT_ACTIONS.SURFACE_DESCENT]: ['b'],
+                    [INPUT_ACTIONS.WEAPON_NEXT]: ['dpad.right'],
+                    [INPUT_ACTIONS.WEAPON_PREV]: ['dpad.left'],
+                    [INPUT_ACTIONS.TARGET_NEXT]: ['dpad.up'],
+                    [INPUT_ACTIONS.TARGET_PREV]: ['dpad.down'],
+                    [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
+                },
+                [INPUT_CONTEXTS.BEAM_TARGETING]: {
+                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
+                },
+                [INPUT_CONTEXTS.SURFACE_SHIP]: {
+                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1'],
+                    [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
+                    [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
+                    [INPUT_ACTIONS.MINIMAP_ZOOM_IN]: ['pr'],
+                    [INPUT_ACTIONS.MINIMAP_ZOOM_OUT]: ['pl'],
+                    [INPUT_ACTIONS.ACTIVATE_CLOAK]: ['y'],
+                    [INPUT_ACTIONS.ALTITUDE_UP]: ['l1', 'dpad.up'],
+                    [INPUT_ACTIONS.ALTITUDE_DOWN]: ['dpad.down'],
+                    [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
+                },
+                [INPUT_CONTEXTS.SURFACE_ASTRONAUT]: {
+                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
+                }
+            },
             S: {
                 [INPUT_CONTEXTS.TITLE]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
                 [INPUT_CONTEXTS.INSTRUCTIONS]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'], [INPUT_ACTIONS.BACK]: ['b'] },
@@ -251,7 +305,10 @@ class InputManager {
 
     _currentGamepadMode() {
         const mode = this.gamepad?.state?.mode;
-        return mode && mode.startsWith('S-') ? 'S' : 'D';
+        if (!mode) return 'D';
+        if (mode.startsWith('S-')) return 'S';
+        if (mode.startsWith('X-')) return 'X';
+        return 'D';
     }
 
     resolveContext({ gameState, showingMissionOverlay, showingInventory, isSurfaceShipControl, isSurfaceAstronautControl, beamWeaponActive, beamTargetingRequested }) {

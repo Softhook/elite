@@ -15,7 +15,7 @@ const GP_MAPS = {
   X: {
     name: 'X-MODE (Xbox)',
     A: 0, B: 1, X: 2, Y: 3, L1: 4, R1: 5, L2_BTN: 6, R2_BTN: 7,
-    L2_AXIS: 2, R2_AXIS: 5, L4: 16, R4: 17, Pl: 14, Pr: 15,
+    L4: -1, R4: -1, Pl: 14, Pr: 15,
     LX: 0, LY: 1, RX: 2, RY: 3,
     D_UP: 12, D_DOWN: 13, D_LEFT: 14, D_RIGHT: 15,
     SELECT: 8, START: 9, HOME: 16
@@ -182,14 +182,22 @@ class GamepadManager {
 
   _parse(gp) {
     const m = this._map;
-    const btn = (idx) => gp.buttons[idx]?.pressed || false;
+    const btn = (idx) => idx >= 0 && (gp.buttons[idx]?.pressed || false);
     // Prefer analog trigger values, but fall back to binary pressed state for D-mode layouts
     // that only expose trigger buttons reliably.
     const btnValue = (idx) => {
+      if (idx < 0) return 0;
       const button = gp.buttons[idx];
       if (!button) return 0;
-      if (typeof button.value === 'number' && button.value > 0) return button.value;
+      if (typeof button.value === 'number' && button.value > 0) return this._clamp01(button.value);
       return button.pressed ? 1 : 0;
+    };
+    const axisTriggerValue = (idx) => {
+      if (!Number.isInteger(idx) || idx < 0) return 0;
+      const axisVal = gp.axes[idx];
+      if (typeof axisVal !== 'number') return 0;
+      if (axisVal < -0.1) return this._clamp01((axisVal + 1) / 2);
+      return this._clamp01(axisVal);
     };
     const dpad = { up: false, down: false, left: false, right: false };
     let l2 = 0, r2 = 0;
@@ -214,21 +222,19 @@ class GamepadManager {
     if (m.name === 'D-MODE') {
       const bL = btnValue(m.L2_BTN);
       const bR = btnValue(m.R2_BTN);
-      const aL = gp.axes[m.L2_AXIS] || 0;
-      const aR = gp.axes[m.R2_AXIS] || 0;
-      const normAL = aL < -0.1 ? (aL + 1) / 2 : aL;
-      const normAR = aR < -0.1 ? (aR + 1) / 2 : aR;
-      l2 = this._dz(this._clamp01(Math.max(bL, normAL)));
-      r2 = this._dz(this._clamp01(Math.max(bR, normAR)));
+      const aL = axisTriggerValue(m.L2_AXIS);
+      const aR = axisTriggerValue(m.R2_AXIS);
+      l2 = this._dzTrigger(Math.max(bL, aL));
+      r2 = this._dzTrigger(Math.max(bR, aR));
     } else {
       const bL = btnValue(m.L2_BTN);
       const bR = btnValue(m.R2_BTN);
-      const aL = gp.axes[m.L2_AXIS] || 0;
-      const aR = gp.axes[m.R2_AXIS] || 0;
-      const normAL = aL < -0.1 ? (aL + 1) / 2 : aL;
-      const normAR = aR < -0.1 ? (aR + 1) / 2 : aR;
-      l2 = this._dz(this._clamp01((bL > 0 && bL < 1) ? bL : normAL));
-      r2 = this._dz(this._clamp01((bR > 0 && bR < 1) ? bR : normAR));
+      const aL = axisTriggerValue(m.L2_AXIS);
+      const aR = axisTriggerValue(m.R2_AXIS);
+      // Prefer button analog values whenever present (including full press = 1).
+      // Axis fallback is kept for non-standard layouts that only expose trigger axes.
+      l2 = this._dzTrigger(bL > 0 ? bL : aL);
+      r2 = this._dzTrigger(bR > 0 ? bR : aR);
     }
 
     return {
@@ -315,6 +321,7 @@ class GamepadManager {
 
   _clamp01(v) { return Math.max(0, Math.min(1, v)); }
   _dz(v) { return Math.abs(v) < this._deadzone ? 0 : v; }
+  _dzTrigger(v) { return Math.abs(v) < this._triggerThreshold ? 0 : v; }
 
   // ─── Connection Events ──────────────────────────────────────────────────────
 
