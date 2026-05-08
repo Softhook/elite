@@ -727,25 +727,38 @@ function _handleGamepadStationMenus(gp, state) {
         return;
     }
 
+    const isMarket = state === 'VIEWING_MARKET' || state === 'VIEWING_SPACE_OBJECT_MARKET';
+    const rowSize = isMarket ? 4 : 1;
+
     // ── D-pad up/down = navigate selection ──
     if (buttons && buttons.length > 0) {
         if (gp.pressed('dpad.up') || (gp.state.ls.y < -0.7 && gp.prevState && gp.prevState.ls.y >= -0.7)) {
-            _gpMenuIndex = (_gpMenuIndex - 1 + buttons.length) % buttons.length;
+            _gpMenuIndex = (_gpMenuIndex - rowSize + buttons.length) % buttons.length;
             soundManager?.playSound('click');
         }
         if (gp.pressed('dpad.down') || (gp.state.ls.y > 0.7 && gp.prevState && gp.prevState.ls.y <= 0.7)) {
-            _gpMenuIndex = (_gpMenuIndex + 1) % buttons.length;
+            _gpMenuIndex = (_gpMenuIndex + rowSize) % buttons.length;
             soundManager?.playSound('click');
         }
-
-        // Clamp index to valid range
-        _gpMenuIndex = constrain(_gpMenuIndex, 0, buttons.length - 1);
     }
 
     // ── D-pad left/right = scroll or horizontal nav in lists ──
     if (gp.pressed('dpad.left') || gp.pressed('dpad.right')) {
         const dir = gp.pressed('dpad.right') ? 1 : -1;
-        _handleGamepadListScroll(state, dir);
+        if (isMarket && buttons && buttons.length > 0) {
+            const baseRowIdx = Math.floor(_gpMenuIndex / 4) * 4;
+            const subIdx = _gpMenuIndex % 4;
+            const newSubIdx = (subIdx + dir + 4) % 4;
+            _gpMenuIndex = baseRowIdx + newSubIdx;
+            soundManager?.playSound('click');
+        } else {
+            _handleGamepadListScroll(state, dir);
+        }
+    }
+
+    // Clamp index to valid range
+    if (buttons && buttons.length > 0) {
+        _gpMenuIndex = constrain(_gpMenuIndex, 0, buttons.length - 1);
     }
 
     // ── A button = click the selected button ──
