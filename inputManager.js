@@ -160,7 +160,7 @@ class InputManager {
                     [INPUT_ACTIONS.TARGET_PREV]: ['dpad.down']
                 },
                 [INPUT_CONTEXTS.BEAM_TARGETING]: {
-                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['r1']
+                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
                 },
                 [INPUT_CONTEXTS.SURFACE_SHIP]: {
                     [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1'],
