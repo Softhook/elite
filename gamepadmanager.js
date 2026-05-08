@@ -183,6 +183,8 @@ class GamepadManager {
   _parse(gp) {
     const m = this._map;
     const btn = (idx) => gp.buttons[idx]?.pressed || false;
+    // Prefer analog trigger values, but fall back to binary pressed state for D-mode layouts
+    // that only expose trigger buttons reliably.
     const btnValue = (idx) => {
       const button = gp.buttons[idx];
       if (!button) return 0;
