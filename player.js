@@ -40,6 +40,7 @@ class Player {
         this.currentWeapon = WEAPON_UPGRADES[0]; // Default to Pulse Laser
         this.fireRate = this.currentWeapon.fireRate;
         this.isThrusting = false; this.isWanted = false;
+        this.thrustInput = 0;
 
         // Initialize weapons array based on ship definition
         this.weapons = [];
@@ -347,19 +348,45 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
 
     /** Handles continuous key presses for movement. Normalizes angle. */
     handleInput() {
-        if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) { this.angle -= this.rotationSpeed; } // Radians
-        if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) { this.angle += this.rotationSpeed; } // Radians
-        if (keyIsDown(UP_ARROW) || keyIsDown(87)) { this.thrust(); this.isThrusting = true; }
-        else { this.isThrusting = false; }
+        let rotationInput = 0;
+        let thrustInput = 0;
+
+        if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) { rotationInput -= 1; }
+        if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) { rotationInput += 1; }
+        if (keyIsDown(UP_ARROW) || keyIsDown(87)) { thrustInput = 1; }
+
+        if (gamepadManager && gamepadManager.connected) {
+            const s = gamepadManager.state;
+            // Support both Left Stick and D-pad for rotation
+            rotationInput += s.ls.x + (s.dpad.right ? 1 : 0) - (s.dpad.left ? 1 : 0);
+            // Support both RT (standard/Xbox) and Left Stick Up for thrust
+            thrustInput = Math.max(thrustInput, s.r2, -s.ls.y);
+        }
+
+        rotationInput = constrain(rotationInput, -1, 1);
+        thrustInput = constrain(thrustInput, 0, 1);
+
+        if (rotationInput !== 0) { this.angle += this.rotationSpeed * rotationInput; }
+
+        this.thrustInput = thrustInput;
+        if (this.thrustInput > 0) {
+            this.thrust(this.thrustInput);
+            this.isThrusting = true;
+        } else {
+            this.isThrusting = false;
+        }
+
         if (this.fireCooldown > 0) { this.fireCooldown -= deltaTime / 1000; }
         this.angle %= TWO_PI;
         if (this.angle < 0) this.angle += TWO_PI;
     }
 
     /** Applies forward thrust force based on current facing angle (radians). */
-    thrust() {
+    thrust(thrustScale = 1) {
         if (isNaN(this.angle)) { this.angle = 0; } // Safety check
-        let force = p5.Vector.fromAngle(this.angle); force.mult(this.thrustForce); this.vel.add(force);
+        let force = p5.Vector.fromAngle(this.angle);
+        force.mult(this.thrustForce * constrain(thrustScale, 0, 1));
+        this.vel.add(force);
     }
 
     /** Fires a projectile towards the mouse cursor (world coordinates). */
@@ -392,7 +419,7 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         
         // Create thrust particles if thrusting
         if (this.isThrusting) {
-            this.thrustManager.createThrust(this.pos, this.angle, this.size);
+            this.thrustManager.createThrust(this.pos, this.angle, this.size, this.thrustInput);
         }
         
         if (!isNaN(this.vel.x) && !isNaN(this.vel.y)) { this.pos.add(this.vel); }
@@ -487,6 +514,11 @@ completeMission(currentSystem, currentStation) { // Keep params for potential st
         this.hull -= amount;
         console.log("Player took damage:", amount, "Current hull:", this.hull);
         uiManager.addMessage(`Damage: ${amount}`);
+
+        if (gamepadManager && gamepadManager.connected) {
+            const hitStrength = constrain(amount / Math.max(8, this.maxHull * 0.25), 0.2, 1);
+            gamepadManager.rumble(0.35 + hitStrength * 0.65, Math.round(90 + hitStrength * 170));
+        }
 
         if (this.hull <= 0) {
             this.hull = 0;

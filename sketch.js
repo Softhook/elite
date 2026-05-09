@@ -8,11 +8,14 @@ let player;                 // The player object
 let galaxy;                 // The galaxy object containing star systems
 let uiManager;              // Handles drawing UI elements (HUD, menus, map)
 let gameStateManager;       // Controls the overall game state (flight, docked, map etc.)
+let gamepadManager;         // Handles raw gamepad polling and haptics
+let inputManager;           // Maps inputs to game actions
 const SAVE_KEY = 'eliteMVPSaveData'; // Key used for saving/loading game data in localStorage
 let loadGameWasSuccessful = false;     // Flag to track if a saved game was successfully loaded
 let soundManager;
 let titleScreen;            // Handles title screen and instructions screen
 // --- End Global Variables ---
+
 
 // --- p5.js Setup Function ---
 // Runs once at the beginning when the sketch starts.
@@ -44,12 +47,12 @@ function setup() {
     // Create managers and the galaxy first
     // console.log("Creating GameStateManager..."); // Verbose log
     gameStateManager = new GameStateManager();
-    // console.log("Creating Galaxy (empty systems)..."); // Verbose log
+    // Initialize Input Managers
+    gamepadManager = new GamepadManager({ toast: true });
+    inputManager = new InputManager(gamepadManager);
+    
     galaxy = new Galaxy(); // Creates Galaxy object (systems array is initially empty)
-    // Create player (defaults to Sidewinder, constructor stores degrees)
-    // console.log("Creating Player..."); // Verbose log
     player = new Player();
-    // console.log("Creating UIManager..."); // Verbose log
     uiManager = new UIManager();
     titleScreen = new TitleScreen();
 
@@ -148,8 +151,14 @@ function draw() {
             // Update game logic based on current state
             gameStateManager.update(player);
             
-            // Continuous firing logic - using direct keyIsDown check
-            if (gameStateManager.currentState === "IN_FLIGHT" && !player.destroyed && keyIsDown(32)) {
+            // Continuous firing logic
+            const currentContext = inputManager.resolveContext({ 
+                gameState: gameStateManager.currentState 
+            });
+            
+            if (gameStateManager.currentState === "IN_FLIGHT" &&
+                !player.destroyed &&
+                (keyIsDown(32) || inputManager.isGamepadActionHeld(INPUT_ACTIONS.FIRE_PRIMARY, currentContext))) {
                 player.handleFireInput();
             }
             

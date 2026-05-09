@@ -3,32 +3,37 @@
  * Creates a dynamic, responsive exhaust trail that follows ships when thrusting.
  */
 class ThrustParticle {
-    constructor(x, y, angle, shipSize, baseColor = [255, 120, 30]) {
+    constructor(x, y, angle, shipSize, baseColor = [255, 120, 30], thrustStrength = 1) {
         // Position is relative to ship's exhaust point
         this.pos = createVector(x, y);
+        this.thrustStrength = constrain(thrustStrength, 0.2, 1);
         
         // Create velocity vector pointing opposite to ship's direction
         // with some randomization for spread
-        const speed = random(0.5, 2.5);
+        const speed = random(0.4, 1.1 + this.thrustStrength * 2.4);
         // Angle is in radians, add PI to reverse direction and small random spread
-        const spreadAngle = angle + PI + random(-0.2, 0.2);
+        const spreadAngle = angle + PI + random(-0.12 - (1 - this.thrustStrength) * 0.18, 0.12 + (1 - this.thrustStrength) * 0.18);
         // Ensure this is actually radians
         // These are small radian values (~11 degrees) for random spread
         this.vel = p5.Vector.fromAngle(spreadAngle).mult(speed);
         
         // Size based on ship size but with variation
-        this.size = random(shipSize * 0.05, shipSize * 0.15);
+        this.size = random(shipSize * (0.03 + this.thrustStrength * 0.03), shipSize * (0.08 + this.thrustStrength * 0.11));
         
         // Color properties
-        this.baseColor = baseColor;
+        this.baseColor = [
+            Math.min(255, baseColor[0] + this.thrustStrength * 15),
+            Math.min(255, baseColor[1] + this.thrustStrength * 50),
+            Math.min(255, baseColor[2] + this.thrustStrength * 20)
+        ];
         this.currentColor = [...baseColor, 255]; // Add alpha
         
         // Particle lifetime properties
-        this.maxLife = random(15, 30);
+        this.maxLife = random(10 + this.thrustStrength * 5, 18 + this.thrustStrength * 18);
         this.life = this.maxLife;
         
         // Shrink rate
-        this.shrinkRate = random(0.92, 0.97);
+        this.shrinkRate = random(0.9, 0.95 + this.thrustStrength * 0.02);
     }
     
     update() {
@@ -77,7 +82,10 @@ class ThrustManager {
         this.maxParticles = 100; // Adjust based on performance needs
     }
     
-    createThrust(shipPos, shipAngle, shipSize, thrustCount = 2) {
+    createThrust(shipPos, shipAngle, shipSize, thrustStrength = 1) {
+        const strength = constrain(thrustStrength, 0.2, 1);
+        const thrustCount = Math.max(1, Math.round(lerp(1, 4, strength)));
+
         // Create multiple particles per frame when thrusting
         for (let i = 0; i < thrustCount; i++) {
             // Calculate spawn position at ship's rear
@@ -102,7 +110,8 @@ class ThrustManager {
                 shipPos.y + spawnPoint.y,
                 shipAngle,
                 shipSize,
-                baseColor
+                baseColor,
+                strength
             );
             
             this.particles.push(particle);

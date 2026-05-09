@@ -126,6 +126,7 @@ class TitleScreen {
         text("A or LEFT ARROW - Rotate left", textX, textY); textY += lineHeight;
         text("D or RIGHT ARROW - Rotate right", textX, textY); textY += lineHeight;
         text("HOLD SPACEBAR - Fire weapons", textX, textY); textY += lineHeight;
+        text("STANDARD GAMEPAD - Left stick steer, RT/stick up thrust, A/RB fire", textX, textY); textY += lineHeight;
         text("1-9 - Switch weapons", textX, textY); textY += lineHeight;
         text("M - Galaxy map", textX, textY); textY += lineHeight;
         text("Mouse to target beam weapons", textX, textY); textY += lineHeight * 2;
