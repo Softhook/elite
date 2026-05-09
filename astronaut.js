@@ -48,8 +48,8 @@ class Astronaut {
         let dy = 0;
 
         // --- Gamepad Support ---
-        if (window._inputManager && window._gamepadManager?.connected) {
-            const gp = window._gamepadManager;
+        if (globalThis._inputManager && globalThis._gamepadManager?.connected) {
+            const gp = globalThis._gamepadManager;
             const s = gp.state;
             const context = INPUT_CONTEXTS.SURFACE_ASTRONAUT;
             
@@ -66,7 +66,7 @@ class Astronaut {
             if (s.dpad.down) dy += 1;
             
             // Grenade (contextual fire action)
-            if (window._inputManager.isGamepadActionPressed(INPUT_ACTIONS.FIRE_PRIMARY, context)) {
+            if (globalThis._inputManager.isGamepadActionPressed(INPUT_ACTIONS.FIRE_PRIMARY, context)) {
                 this.throwGrenade(surfaceMode);
             }
         }

@@ -1444,7 +1444,8 @@ class Player {
             // If a target is locked (effectiveTarget is valid), the missile will home.
             // No explicit check needed here to prevent firing.
         } else if (this.currentWeapon.type === WEAPON_TYPE.BEAM && this === player) { // Player aims beams with mouse
-            const beamScreenTarget = window._inputManager?.getBeamTargetScreenPoint?.();
+            const inputManager = globalThis._inputManager || globalThis.window?._inputManager;
+            const beamScreenTarget = inputManager?.getBeamTargetScreenPoint?.();
             if (beamScreenTarget) {
                 const worldMx = beamScreenTarget.x + (this.pos.x - width / 2);
                 const worldMy = beamScreenTarget.y + (this.pos.y - height / 2);
@@ -2041,9 +2042,7 @@ class Player {
         let hullDamageFromHit = 0;
         const triggerGamepadHitRumble = (isShieldHit, damageAmount) => {
             if (damageAmount <= 0) return;
-            if (typeof window === 'undefined') return;
-
-            const gp = window._gamepadManager;
+            const gp = globalThis._gamepadManager || globalThis.window?._gamepadManager;
             if (!gp?.connected || typeof gp.rumble !== 'function') return;
             if (gp.state?.mode !== 'S-MODE (Switch)') return;
 
