@@ -249,3 +249,55 @@ describe('GameStateManager Space Object Undocking', () => {
         expect(mockStation.pos.copy).toHaveBeenCalled();
     });
 });
+
+describe('GameStateManager Save Selection Transition', () => {
+    let gameStateManager;
+
+    beforeEach(() => {
+        global.galaxy = {
+            systems: [],
+            getCurrentSystem: jest.fn(() => null),
+            getSystemByIndex: jest.fn(),
+            jumpToSystem: jest.fn(),
+            teleportToRandomSystem: jest.fn(),
+            currentSystemIndex: 0
+        };
+        global.player = {
+            pos: { x: 0, y: 0 },
+            vel: { mult: jest.fn(), set: jest.fn() },
+            currentSystem: null
+        };
+        global.uiManager = { addMessage: jest.fn(), clearEventMarkers: jest.fn() };
+        global.soundManager = { playSound: jest.fn() };
+        global.deltaTime = 16;
+        global.millis = jest.fn(() => 1000);
+        global.width = 1000;
+        global.height = 800;
+        global.STATION_TEXT_SIZE = { BODY: 12 };
+        global.GS_LOG = jest.fn();
+        global.MISSION_LOG = jest.fn();
+        global.saveSelectionScreen = {
+            selectedActionColumn: 1,
+            selectedSlot: 0,
+            savedGameData: {},
+            loadSavedGamePreview: jest.fn(),
+            resetActionSelection: jest.fn()
+        };
+        gameStateManager = new GameStateManager();
+    });
+
+    afterEach(() => {
+        delete global.galaxy;
+        delete global.player;
+        delete global.uiManager;
+        delete global.soundManager;
+        delete global.saveSelectionScreen;
+    });
+
+    test('entering SAVE_SELECTION resets action selection to the safe default', () => {
+        gameStateManager._handleSaveSelectionTransition('SAVE_SELECTION');
+
+        expect(global.saveSelectionScreen.loadSavedGamePreview).toHaveBeenCalled();
+        expect(global.saveSelectionScreen.resetActionSelection).toHaveBeenCalled();
+    });
+});

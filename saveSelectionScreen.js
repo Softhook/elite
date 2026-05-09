@@ -7,6 +7,7 @@ const LAST_ACTIVE_SLOT_KEY = "eliteP5_lastActiveSlot"; // Key for storing the la
 class SaveSelectionScreen {
     constructor() {
         this.selectedOption = 0; // Default selection
+        this.selectedActionColumn = 0; // 0 = load/continue slot, 1 = Start New button
         // Attempt to load and set the last active slot as the selected option
         const lastActiveSlot = localStorage.getItem(LAST_ACTIVE_SLOT_KEY);
         if (lastActiveSlot !== null) {
@@ -443,11 +444,13 @@ class SaveSelectionScreen {
         // Per-slot "Start New" button on the right side (5th column)
         const btn = btnRect; // already computed above
         const isMouseOverBtn = mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h;
+        const isGamepadSelectedBtn = isSelected && this.selectedActionColumn === 1;
+        const isBtnHighlighted = isMouseOverBtn || isGamepadSelectedBtn;
         const hasSave = !!data;
 
         push();
         // Button background
-        if (isMouseOverBtn) {
+        if (isBtnHighlighted) {
             stroke(120, 200, 255, 220);
             strokeWeight(2);
             fill(30, 60, 90, 180);
@@ -461,7 +464,7 @@ class SaveSelectionScreen {
         noStroke();
         textAlign(CENTER, CENTER);
         textSize(STATION_TEXT_SIZE.SMALL);
-        fill(isMouseOverBtn ? color(180, 230, 255) : color(150, 190, 220));
+        fill(isBtnHighlighted ? color(180, 230, 255) : color(150, 190, 220));
         const label = hasSave ? "Start New (Overwrite)" : "Start New";
         text(label, btn.x + btn.w / 2, btn.y + btn.h / 2);
         pop();
@@ -606,25 +609,34 @@ class SaveSelectionScreen {
         textSize(STATION_TEXT_SIZE.SMALL);
         fill(120, 140, 180);
 
-        text("↑↓ Select slot   ENTER Continue   Click 'Start New' to overwrite   ESC Back", width / 2, height * 0.85);
+        text("↑↓ Select slot   ←→ Select action   A/ENTER Confirm   ESC/B Back", width / 2, height * 0.85);
 
         pop();
     }
 
+    resetActionSelection() {
+        this.selectedActionColumn = 0;
+    }
+
     handleKeyPressed(key, keyCode) {
-        if (keyCode === UP_ARROW) {
-            this.selectedOption = (this.selectedOption - 1 + this.totalOptions) % this.totalOptions;
+        if (keyCode === UP_ARROW || keyCode === DOWN_ARROW) {
+            const direction = keyCode === UP_ARROW ? -1 : 1;
+            this.selectedOption = (this.selectedOption + direction + this.totalOptions) % this.totalOptions;
+            this.resetActionSelection();
             this.addHoverEffect();
             if (typeof soundManager !== 'undefined') soundManager.playSound('click');
-        } else if (keyCode === DOWN_ARROW) {
-            this.selectedOption = (this.selectedOption + 1) % this.totalOptions;
-            this.addHoverEffect();
+        } else if (keyCode === LEFT_ARROW) {
+            this.resetActionSelection();
+            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+        } else if (keyCode === RIGHT_ARROW) {
+            this.selectedActionColumn = 1;
             if (typeof soundManager !== 'undefined') soundManager.playSound('click');
         } else if (keyCode === ENTER) {
             if (typeof soundManager !== 'undefined') soundManager.playSound('click');
             this.confirmSelection();
         } else if (keyCode === ESCAPE) {
             // Go back to title screen
+            this.resetActionSelection();
             if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
             if (gameStateManager && typeof gameStateManager.setState === 'function') {
                 gameStateManager.setState("TITLE_SCREEN");
@@ -644,6 +656,7 @@ class SaveSelectionScreen {
             const btn = this.getStartNewButtonRect(xPos + hoverOffset, currentSlotY, slotWidth, slotHeight);
             if (mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h) {
                 this.selectedOption = i; // Focus the slot
+                this.selectedActionColumn = 1;
                 if (typeof soundManager !== 'undefined') soundManager.playSound('click');
                 // Explicitly start a new game in this slot (overwrites if present)
                 this.startNewGame(i);
@@ -653,6 +666,7 @@ class SaveSelectionScreen {
             if (mouseX >= xPos + hoverOffset && mouseX <= xPos + hoverOffset + slotWidth &&
                 mouseY >= currentSlotY && mouseY <= currentSlotY + slotHeight) {
                 this.selectedOption = i;
+                this.selectedActionColumn = 0;
                 if (typeof soundManager !== 'undefined') soundManager.playSound('click');
                 this.confirmSelection();
                 return;
@@ -675,6 +689,10 @@ class SaveSelectionScreen {
     confirmSelection() {
         if (this.selectedOption < NUM_SAVE_SLOTS) {
             const slotIndex = this.selectedOption;
+            if (this.selectedActionColumn === 1) {
+                this.startNewGame(slotIndex);
+                return;
+            }
             if (this.savedGamePreviews[slotIndex]) {
                 // Load saved game
                 console.log(`Loading saved game from slot ${slotIndex}...`);
@@ -779,4 +797,8 @@ class SaveSelectionScreen {
         // Potentially re-calculate slot positions if they depend on width/height directly
         // and are not recalculated in drawSaveSlots.
     }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = SaveSelectionScreen;
 }
