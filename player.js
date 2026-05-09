@@ -2038,6 +2038,19 @@ class Player {
 
         let shieldHit = false;
         let actualDamage = amount;
+        let hullDamageFromHit = 0;
+        const triggerGamepadHitRumble = (isShieldHit, damageAmount) => {
+            if (damageAmount <= 0) return;
+            if (typeof window === 'undefined') return;
+
+            const gp = window._gamepadManager;
+            if (!gp?.connected || typeof gp.rumble !== 'function') return;
+            if (gp.state?.mode !== 'S-MODE (Switch)') return;
+
+            const intensity = isShieldHit ? 0.35 : 0.6;
+            const duration = isShieldHit ? 90 : 140;
+            gp.rumble(intensity, duration);
+        };
 
         // Apply barrier damage reduction if active
         if (this.isBarrierActive && this.barrierDamageReduction > 0) {
@@ -2059,12 +2072,14 @@ class Player {
                 // Shield absorbs all damage
                 this.shield -= actualDamage;
                 //uiManager.addMessage(`Shield damage: ${actualDamage.toFixed(1)}`, [255, 100, 100]);
+                triggerGamepadHitRumble(true, actualDamage);
                 return { damage: actualDamage, shieldHit: true };
             } else {
                 // Shield is depleted, remaining damage goes to hull
                 const remainingDamage = actualDamage - this.shield;
                 this.shield = 0;
                 this.hull -= remainingDamage;
+                hullDamageFromHit = remainingDamage;
 
                 // CRITICAL FIX: This is STILL a shield hit even though it depleted the shield
                 //uiManager.addMessage(`Shield down! Hull damage: ${remainingDamage.toFixed(1)}`, [255, 50, 50]);
@@ -2075,9 +2090,12 @@ class Player {
         } else {
             // No shields, damage hull directly
             this.hull -= actualDamage;
+            hullDamageFromHit = actualDamage;
             //uiManager.addMessage(`Hull damage: ${actualDamage.toFixed(1)}`, [255, 50, 50]);
             shieldHit = false;
         }
+        const isShieldOnlyHit = shieldHit && hullDamageFromHit <= 0;
+        triggerGamepadHitRumble(isShieldOnlyHit, actualDamage);
         // Shield down cue on transition >0 -> 0
         if (prevShield > 0 && this.shield === 0) {
             if (typeof soundManager !== 'undefined') { soundManager.playSound('shieldDown', 1.0, this); }

@@ -28,12 +28,27 @@ const SHARED_PHYSICS_CONFIG = {
     // Particle sizing
     STRAFE_PARTICLE_SIZE_MULT: 0.8,
     REVERSE_PARTICLE_SIZE_MULT: 0.6,
-    RETRO_THRUST_ANGLE_OFFSET: 0.15 // Percent of PI
+    RETRO_THRUST_ANGLE_OFFSET: 0.15, // Percent of PI
+
+    // Analog visual scaling for thrust particles
+    MIN_THRUST_PARTICLES: 1,
+    MAX_THRUST_PARTICLES: 4,
+    THRUST_PARTICLE_SCALE: 2
 };
 
 class SharedPhysics {
     // Static temporary vector for performance (avoid per-frame allocation)
     static _tempVec = null;
+
+    static _getThrustParticleCount(multiplier) {
+        return Math.max(
+            SHARED_PHYSICS_CONFIG.MIN_THRUST_PARTICLES,
+            Math.min(
+                SHARED_PHYSICS_CONFIG.MAX_THRUST_PARTICLES,
+                Math.ceil(multiplier * SHARED_PHYSICS_CONFIG.THRUST_PARTICLE_SCALE)
+            )
+        );
+    }
 
     /**
      * Applies forward thrust to an entity
@@ -77,7 +92,8 @@ class SharedPhysics {
             const isAlien = (typeof entity._isAlienShip === 'function') ? entity._isAlienShip() : false;
 
             if (!isAlien) {
-                entity.thrustManager.createThrust(entity.pos, entity.angle, entity.size);
+                const thrustCount = SharedPhysics._getThrustParticleCount(multiplier);
+                entity.thrustManager.createThrust(entity.pos, entity.angle, entity.size, thrustCount);
             }
         }
     }
@@ -114,23 +130,13 @@ class SharedPhysics {
             const isAlien = (typeof entity._isAlienShip === 'function') ? entity._isAlienShip() : false;
 
             if (!isAlien) {
-                // Particles go opposite to movement?
-                // Player kiteLeft (dir -1): moves Left, particles go Right?
-                // Let's check Player.js: 
-                // kiteLeft: angle - HALF_PI. Particles at angle + HALF_PI? 
-                // In Player.js: createThrust(pos, angle, size).
-                // Wait, Player.js kiteLeft passes `rightThrusterAngle` to createThrust?
-                // Let's assume standard behavior: Particle emitter is usually opposite to force.
-                // But Player.js creates thrust at the "thruster position".
-                // EnemyUtils thrustLeft: createThrust at strafeAngle.
-                // If createThrust visualizes the EXHAUST, it should be opposite.
-                // However, existing code in EnemyUtils uses `strafeAngle` for createThrust too.
-                // We will match EnemyUtils behavior for now.
+                const thrustCount = SharedPhysics._getThrustParticleCount(multiplier);
 
                 entity.thrustManager.createThrust(
                     entity.pos,
                     strafeAngle,
-                    entity.size * SHARED_PHYSICS_CONFIG.STRAFE_PARTICLE_SIZE_MULT
+                    entity.size * SHARED_PHYSICS_CONFIG.STRAFE_PARTICLE_SIZE_MULT,
+                    thrustCount
                 );
             }
         }
@@ -168,10 +174,11 @@ class SharedPhysics {
             if (!isAlien) {
                 const offset = PI * SHARED_PHYSICS_CONFIG.RETRO_THRUST_ANGLE_OFFSET;
                 const size = entity.size * SHARED_PHYSICS_CONFIG.REVERSE_PARTICLE_SIZE_MULT;
+                const thrustCount = SharedPhysics._getThrustParticleCount(multiplier);
 
                 // Front-left and Front-right retro thrusters
-                entity.thrustManager.createThrust(entity.pos, entity.angle + PI - offset, size);
-                entity.thrustManager.createThrust(entity.pos, entity.angle + PI + offset, size);
+                entity.thrustManager.createThrust(entity.pos, entity.angle + PI - offset, size, thrustCount);
+                entity.thrustManager.createThrust(entity.pos, entity.angle + PI + offset, size, thrustCount);
             }
         }
     }
