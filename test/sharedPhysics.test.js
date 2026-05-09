@@ -187,6 +187,40 @@ describe('SharedPhysics Thrust Flags', () => {
     });
 });
 
+describe('SharedPhysics Analog Thrust Visual Scaling', () => {
+
+    test('thrustForward scales particle count with analog multiplier', () => {
+        const entity = createMockEntity({
+            thrustManager: { createThrust: jest.fn() }
+        });
+
+        SharedPhysics.thrustForward(entity, 0.25, true, 1 / 60);
+
+        expect(entity.thrustManager.createThrust).toHaveBeenCalledWith(
+            entity.pos,
+            entity.angle,
+            entity.size,
+            1
+        );
+    });
+
+    test('thrustStrafe keeps full particle count for near-full analog input', () => {
+        const entity = createMockEntity({
+            thrustManager: { createThrust: jest.fn() },
+            size: 20
+        });
+
+        SharedPhysics.thrustStrafe(entity, 1, 0.8, true, 1 / 60);
+
+        expect(entity.thrustManager.createThrust).toHaveBeenCalledWith(
+            entity.pos,
+            entity.angle + HALF_PI,
+            entity.size * 0.8,
+            2
+        );
+    });
+});
+
 // ============================================
 // Speed Capping and Coasting Tests
 // ============================================

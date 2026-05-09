@@ -77,7 +77,8 @@ class SharedPhysics {
             const isAlien = (typeof entity._isAlienShip === 'function') ? entity._isAlienShip() : false;
 
             if (!isAlien) {
-                entity.thrustManager.createThrust(entity.pos, entity.angle, entity.size);
+                const thrustCount = Math.max(1, Math.min(4, Math.ceil(multiplier * 2)));
+                entity.thrustManager.createThrust(entity.pos, entity.angle, entity.size, thrustCount);
             }
         }
     }
@@ -114,6 +115,7 @@ class SharedPhysics {
             const isAlien = (typeof entity._isAlienShip === 'function') ? entity._isAlienShip() : false;
 
             if (!isAlien) {
+                const thrustCount = Math.max(1, Math.min(4, Math.ceil(multiplier * 2)));
                 // Particles go opposite to movement?
                 // Player kiteLeft (dir -1): moves Left, particles go Right?
                 // Let's check Player.js: 
@@ -130,7 +132,8 @@ class SharedPhysics {
                 entity.thrustManager.createThrust(
                     entity.pos,
                     strafeAngle,
-                    entity.size * SHARED_PHYSICS_CONFIG.STRAFE_PARTICLE_SIZE_MULT
+                    entity.size * SHARED_PHYSICS_CONFIG.STRAFE_PARTICLE_SIZE_MULT,
+                    thrustCount
                 );
             }
         }
@@ -168,10 +171,11 @@ class SharedPhysics {
             if (!isAlien) {
                 const offset = PI * SHARED_PHYSICS_CONFIG.RETRO_THRUST_ANGLE_OFFSET;
                 const size = entity.size * SHARED_PHYSICS_CONFIG.REVERSE_PARTICLE_SIZE_MULT;
+                const thrustCount = Math.max(1, Math.min(4, Math.ceil(multiplier * 2)));
 
                 // Front-left and Front-right retro thrusters
-                entity.thrustManager.createThrust(entity.pos, entity.angle + PI - offset, size);
-                entity.thrustManager.createThrust(entity.pos, entity.angle + PI + offset, size);
+                entity.thrustManager.createThrust(entity.pos, entity.angle + PI - offset, size, thrustCount);
+                entity.thrustManager.createThrust(entity.pos, entity.angle + PI + offset, size, thrustCount);
             }
         }
     }

@@ -189,6 +189,7 @@ describe('Player Combat', () => {
 
 describe('Player Damage', () => {
     let player;
+    let previousWindow;
 
     beforeEach(() => {
         player = new Player();
@@ -196,11 +197,43 @@ describe('Player Damage', () => {
         player.maxHull = 100;
         player.shield = 50;
         player.maxShield = 50;
+        previousWindow = global.window;
+        global.window = global.window || {};
+    });
+
+    afterEach(() => {
+        global.window = previousWindow;
     });
 
 
     test('should have initial health', () => {
         expect(player.hull).toBe(100);
+    });
+
+    test('should rumble in S-mode when player is hit', () => {
+        const rumble = jest.fn();
+        global.window._gamepadManager = {
+            connected: true,
+            state: { mode: 'S-MODE (Switch)' },
+            rumble
+        };
+
+        player.takeDamage(10);
+
+        expect(rumble).toHaveBeenCalled();
+    });
+
+    test('should not rumble outside S-mode when player is hit', () => {
+        const rumble = jest.fn();
+        global.window._gamepadManager = {
+            connected: true,
+            state: { mode: 'X-MODE (Xbox)' },
+            rumble
+        };
+
+        player.takeDamage(10);
+
+        expect(rumble).not.toHaveBeenCalled();
     });
 
 });
