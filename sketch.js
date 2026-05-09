@@ -634,20 +634,32 @@ function handleGamepadContinuousInput() {
         player.angle += rotInput * player.rotationSpeed * rotTimeScale;
     }
 
-    // Strafe from left stick X (analog strength)
-    if (Math.abs(lsX) > 0.1) {
-        const strafeStrength = Math.max(0.2, Math.abs(lsX)) * 0.8;
-        if (lsX < 0) player.kiteLeft(strafeStrength);
-        else player.kiteRight(strafeStrength);
-        player.isStrafing = true;
+    // Left stick: world-space (screen-space) omnidirectional movement.
+    // Decompose the stick vector into ship-local axes so that pushing the stick
+    // up always moves the ship toward the top of the screen regardless of heading.
+    //   fwd   = dot((lsX, lsY), ship-facing (cos a, sin a))
+    //   right = dot((lsX, lsY), ship-right  (-sin a, cos a))
+    let stickForwardAmount = 0, stickReverseAmount = 0;
+    if (Math.abs(lsX) > 0.05 || Math.abs(lsY) > 0.05) {
+        const cosA = cos(player.angle), sinA = sin(player.angle);
+        const fwd   =  lsX * cosA + lsY * sinA;
+        const right = -lsX * sinA + lsY * cosA;
+
+        stickForwardAmount = Math.max(0,  fwd);
+        stickReverseAmount = Math.max(0, -fwd);
+
+        // Strafe from the perpendicular (world-right) component
+        if (Math.abs(right) > 0.1) {
+            const strafeStrength = Math.max(0.2, Math.abs(right)) * 0.8;
+            if (right < 0) player.kiteLeft(strafeStrength);
+            else player.kiteRight(strafeStrength);
+            player.isStrafing = true;
+        }
     }
 
-    // Thrust from left stick Y / triggers with analog scaling.
-    // Keep this independent from strafing so gamepad can combine vector movement.
-    const forwardStick = Math.max(0, -lsY);
-    const reverseStick = Math.max(0, lsY);
-    const forwardAmount = Math.max(forwardStick, r2Val);
-    const reverseAmount = Math.max(reverseStick, l2Val);
+    // Combine stick world-forward component with trigger forward/reverse
+    const forwardAmount = Math.max(stickForwardAmount, r2Val);
+    const reverseAmount = Math.max(stickReverseAmount, l2Val);
 
     if (forwardAmount > 0.08) {
         player.isThrusting = true;
