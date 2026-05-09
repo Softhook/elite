@@ -210,7 +210,7 @@ describe('Player Damage', () => {
         expect(player.hull).toBe(100);
     });
 
-    test('should rumble in S-mode when player is hit', () => {
+    test('should use shield rumble profile when shields absorb all damage', () => {
         const rumble = jest.fn();
         global.window._gamepadManager = {
             connected: true,
@@ -220,7 +220,21 @@ describe('Player Damage', () => {
 
         player.takeDamage(10);
 
-        expect(rumble).toHaveBeenCalled();
+        expect(rumble).toHaveBeenCalledWith(0.35, 90);
+    });
+
+    test('should use hull rumble profile when damage breaks shields and hits hull', () => {
+        const rumble = jest.fn();
+        global.window._gamepadManager = {
+            connected: true,
+            state: { mode: 'S-MODE (Switch)' },
+            rumble
+        };
+
+        player.shield = 5;
+        player.takeDamage(10);
+
+        expect(rumble).toHaveBeenCalledWith(0.6, 140);
     });
 
     test('should not rumble outside S-mode when player is hit', () => {
