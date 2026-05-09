@@ -615,13 +615,9 @@ class SaveSelectionScreen {
     }
 
     handleKeyPressed(key, keyCode) {
-        if (keyCode === UP_ARROW) {
-            this.selectedOption = (this.selectedOption - 1 + this.totalOptions) % this.totalOptions;
-            this.selectedActionColumn = 0;
-            this.addHoverEffect();
-            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
-        } else if (keyCode === DOWN_ARROW) {
-            this.selectedOption = (this.selectedOption + 1) % this.totalOptions;
+        if (keyCode === UP_ARROW || keyCode === DOWN_ARROW) {
+            const direction = keyCode === UP_ARROW ? -1 : 1;
+            this.selectedOption = (this.selectedOption + direction + this.totalOptions) % this.totalOptions;
             this.selectedActionColumn = 0;
             this.addHoverEffect();
             if (typeof soundManager !== 'undefined') soundManager.playSound('click');
@@ -796,4 +792,8 @@ class SaveSelectionScreen {
         // Potentially re-calculate slot positions if they depend on width/height directly
         // and are not recalculated in drawSaveSlots.
     }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = SaveSelectionScreen;
 }

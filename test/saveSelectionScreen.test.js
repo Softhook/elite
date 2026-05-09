@@ -1,8 +1,4 @@
-const fs = require('fs');
-const path = require('path');
-
-const code = fs.readFileSync(path.join(__dirname, '..', 'saveSelectionScreen.js'), 'utf-8');
-const { SaveSelectionScreen } = eval(`(function() { ${code}; return { SaveSelectionScreen }; })()`);
+const SaveSelectionScreen = require('../saveSelectionScreen');
 
 describe('SaveSelectionScreen gamepad-style action selection', () => {
     beforeEach(() => {
