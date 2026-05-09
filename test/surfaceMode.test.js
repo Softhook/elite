@@ -856,8 +856,10 @@ describe('SurfaceMode Input Handling', () => {
 
 describe('SurfaceMode Astronaut Integration', () => {
     let sm, player, planet, starSystem;
+    let originalWindow;
 
     beforeEach(() => {
+        originalWindow = global.window;
         sm = new SurfaceMode();
         player = createMockPlayer({ x: 1000, y: 50 });
         planet = createMockPlanet({ x: 1000, y: 0, radius: 200 });
@@ -870,6 +872,14 @@ describe('SurfaceMode Astronaut Integration', () => {
 
         // Mock p5 input functions
         global.keyIsDown = jest.fn(() => false);
+    });
+
+    afterEach(() => {
+        if (typeof originalWindow === 'undefined') {
+            delete global.window;
+        } else {
+            global.window = originalWindow;
+        }
     });
 
     test('deployAstronaut switches control mode', () => {

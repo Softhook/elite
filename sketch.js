@@ -802,7 +802,9 @@ function _handleGamepadStationMenus(gp, state) {
             } else {
                 _gpMenuIndex = (_gpMenuIndex + (pressedDown ? rowSize : -rowSize) + buttons.length) % buttons.length;
             }
-            soundManager?.playSound('click');
+            if (!(isHorizontalDetail && !isWeaponSlotPicker)) {
+                soundManager?.playSound('click');
+            }
         }
     }
 
