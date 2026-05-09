@@ -253,6 +253,139 @@ describe('Player Damage', () => {
 });
 
 // ============================================
+// Player Target Cycling Tests
+// ============================================
+
+describe('Player Target Cycling', () => {
+    let player;
+    let previousUiManager;
+    let previousSoundManager;
+
+    const TEST_SHIP_KEY = '_targetCycleImperialTestShip';
+
+    const createTarget = ({ x, y = 0, role = null, faction = null, shipTypeName = 'Target', isWanted = false }) => ({
+        pos: createVector(x, y),
+        destroyed: false,
+        role,
+        faction,
+        shipTypeName,
+        isWanted
+    });
+
+    beforeEach(() => {
+        player = new Player();
+        player.pos = createVector(0, 0);
+        player.target = null;
+        player.isPolice = false;
+        player.isWanted = false;
+        player.playerFaction = null;
+        player.currentSystem = {
+            enemies: [],
+            asteroids: [],
+            spaceObjects: [],
+            // 200 + 400 buffer = 600 unit dashed-circle targeting radius in these tests.
+            _getDiagonalDistance: () => 200,
+            isPlayerWanted: () => false
+        };
+
+        previousUiManager = global.uiManager;
+        previousSoundManager = global.soundManager;
+        global.uiManager = { addMessage: jest.fn() };
+        global.soundManager = { playSound: jest.fn() };
+
+        SHIP_DEFINITIONS[TEST_SHIP_KEY] = {
+            ...SHIP_DEFINITIONS.Sidewinder,
+            faction: 'IMPERIAL'
+        };
+    });
+
+    afterEach(() => {
+        global.uiManager = previousUiManager;
+        global.soundManager = previousSoundManager;
+        delete SHIP_DEFINITIONS[TEST_SHIP_KEY];
+    });
+
+    test('cycles only nearby hostile targets within the dashed proximity circle', () => {
+        const pirateInRange = createTarget({ x: 450, role: AI_ROLE.PIRATE, shipTypeName: 'Raider' });
+        const pirateOutOfRange = createTarget({ x: 650, role: AI_ROLE.PIRATE, shipTypeName: 'Far Raider' });
+        const previousTarget = { pos: createVector(40, 0), destroyed: false, type: 'Station' };
+
+        player.currentSystem.enemies = [pirateOutOfRange, pirateInRange];
+        player.currentSystem.spaceObjects = [previousTarget];
+        player.target = previousTarget;
+
+        player.cycleTarget(1);
+
+        expect(player.target).toBe(pirateInRange);
+        expect(player.target).not.toBe(pirateOutOfRange);
+        expect(global.uiManager.addMessage).toHaveBeenCalledWith('Target locked: Raider', [0, 255, 0]);
+        expect(global.soundManager.playSound).toHaveBeenCalledWith('click');
+    });
+
+    test('uses joined faction hostility when filtering cycle targets', () => {
+        const imperialAlly = createTarget({ x: 120, role: AI_ROLE.COMBAT, faction: 'IMPERIAL', shipTypeName: 'Imperial Ally' });
+        const separatistHostile = createTarget({ x: 200, role: AI_ROLE.COMBAT, faction: 'SEPARATIST', shipTypeName: 'Separatist Raider' });
+
+        player.playerFaction = 'IMPERIAL';
+        player.currentSystem.enemies = [imperialAlly, separatistHostile];
+
+        player.cycleTarget(1);
+
+        expect(player.target).toBe(separatistHostile);
+    });
+
+    test('uses the minimap fallback radius when no system proximity data is available', () => {
+        player.currentSystem = {
+            enemies: [],
+            asteroids: [],
+            spaceObjects: [],
+            isPlayerWanted: () => false
+        };
+
+        expect(player._getCycleTargetMaxDistance()).toBe(5000);
+    });
+
+    test('falls back to ship faction when choosing hostile rivals', () => {
+        const separatistHostile = createTarget({ x: 180, role: AI_ROLE.COMBAT, faction: 'SEPARATIST', shipTypeName: 'Separatist Wing' });
+        const imperialAlly = createTarget({ x: 90, role: AI_ROLE.COMBAT, faction: 'IMPERIAL', shipTypeName: 'Imperial Wing' });
+
+        player.shipTypeName = TEST_SHIP_KEY;
+        player.currentSystem.enemies = [imperialAlly, separatistHostile];
+
+        player.cycleTarget(1);
+
+        expect(player.target).toBe(separatistHostile);
+    });
+
+    test('uses police status to ignore lawful ships and cycle to nearby criminals', () => {
+        const pirate = createTarget({ x: 160, role: AI_ROLE.PIRATE, shipTypeName: 'Pirate Raider' });
+        const lawfulShip = createTarget({ x: 60, role: AI_ROLE.COMBAT, faction: 'SEPARATIST', shipTypeName: 'Patrol Ship' });
+
+        player.isPolice = true;
+        player.currentSystem.enemies = [lawfulShip, pirate];
+
+        player.cycleTarget(1);
+
+        expect(player.target).toBe(pirate);
+        expect(player.target).not.toBe(lawfulShip);
+    });
+
+    test('includes nearby police and guards when the player is wanted', () => {
+        const police = createTarget({ x: 120, role: AI_ROLE.POLICE, shipTypeName: 'Police Viper' });
+        const guard = createTarget({ x: 180, role: AI_ROLE.GUARD, shipTypeName: 'Station Guard' });
+
+        player.isWanted = true;
+        player.currentSystem.enemies = [guard, police];
+
+        player.cycleTarget(1);
+        expect(player.target).toBe(police);
+
+        player.cycleTarget(1);
+        expect(player.target).toBe(guard);
+    });
+});
+
+// ============================================
 // Player Mission Tests
 // ============================================
 

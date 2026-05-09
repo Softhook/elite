@@ -3096,61 +3096,126 @@ class Player {
     }
 
     /**
+     * Gets the target cycling range used by the nearby-hostile D-pad selector.
+     * Matches the minimap's dashed proximity circle when available.
+     * @returns {number} Maximum target distance in world units
+     * @private
+     */
+    _getCycleTargetMaxDistance() {
+        const TARGET_CYCLE_RADIUS_BUFFER = 400;
+
+        if (!this.currentSystem) return 5000;
+
+        if (typeof this.currentSystem._getDiagonalDistance === 'function') {
+            const diagonalDistance = this.currentSystem._getDiagonalDistance();
+            if (Number.isFinite(diagonalDistance) && diagonalDistance > 0) {
+                // Match the minimap's dashed detection ring radius used for nearby awareness.
+                return diagonalDistance + TARGET_CYCLE_RADIUS_BUFFER;
+            }
+        }
+
+        if (typeof this.currentSystem.despawnRadius === 'number' && this.currentSystem.despawnRadius > 0) {
+            return this.currentSystem.despawnRadius;
+        }
+
+        return 5000;
+    }
+
+    /**
+     * Gets the player's effective targeting faction, preferring joined faction
+     * and falling back to the current ship definition when needed.
+     * @returns {string|null} Effective faction key
+     * @private
+     */
+    _getCycleTargetFaction() {
+        if (this.isPolice) return 'POLICE';
+        if (this.playerFaction) return this.playerFaction;
+
+        const shipDef = (typeof SHIP_DEFINITIONS !== 'undefined' && this.shipTypeName)
+            ? SHIP_DEFINITIONS[this.shipTypeName]
+            : null;
+
+        if (!shipDef) return null;
+        if (shipDef.faction) return shipDef.faction;
+        if (Array.isArray(shipDef.aiRoles) && shipDef.aiRoles.includes('POLICE')) return 'POLICE';
+
+        return null;
+    }
+
+    /**
+     * Determines whether a target should appear in gamepad target cycling.
+     * Restricts cycling to actual nearby hostiles rather than scenery.
+     * @param {Object} target - Candidate target
+     * @returns {boolean} True if target is hostile to the player
+     * @private
+     */
+    _isCycleTargetHostile(target) {
+        if (!target || target.destroyed || !target.pos) return false;
+
+        const role = target.role;
+        const faction = target.faction || null;
+        // Runtime objects do not model pirate hostility consistently yet, so support
+        // the existing flag, faction, and role variants used across the codebase.
+        const isInherentlyHostile = target.isPirate || faction === 'PIRATE' ||
+            role === AI_ROLE?.PIRATE || role === AI_ROLE?.ALIEN;
+
+        if (target.type === 'Turret' || target.type === 'Defense Drone') return true;
+        if (target.target === this || target.lastAttacker === this) return true;
+        if (isInherentlyHostile) return true;
+
+        const playerIsWanted = !!(this.isWanted || this.currentSystem?.isPlayerWanted?.());
+        if (playerIsWanted && (role === AI_ROLE?.POLICE || role === AI_ROLE?.GUARD)) {
+            return true;
+        }
+
+        const playerFaction = this._getCycleTargetFaction();
+        if (!playerFaction) return false;
+
+        if (playerFaction === 'POLICE') {
+            return !!target.isWanted;
+        }
+
+        const hostileFactions = (typeof FACTION_ENEMY_MAP !== 'undefined')
+            ? FACTION_ENEMY_MAP[playerFaction]
+            : null;
+
+        return !!(hostileFactions && faction && hostileFactions.includes(faction));
+    }
+
+    /**
      * Cycle through nearby targets using the D-pad (or keys).
-     * Automatically prioritizes ships/objects based on proximity and hostility.
+     * Automatically cycles through nearby hostile targets only.
      * @param {number} direction - 1 for next, -1 for previous
      */
     cycleTarget(direction = 1) {
         if (!this.currentSystem) return;
 
-        // 1. Gather all potential targets in range
+        const maxDist = this._getCycleTargetMaxDistance();
+        const maxDistSq = maxDist * maxDist;
         const targets = [];
-        const maxDist = 6000; // Match radar/scanning range
 
-        // Enemies
-        if (this.currentSystem.enemies) {
-            for (const enemy of this.currentSystem.enemies) {
-                if (enemy && !enemy.destroyed && enemy.pos) {
-                    const d = dist(this.pos.x, this.pos.y, enemy.pos.x, enemy.pos.y);
-                    if (d < maxDist) targets.push(enemy);
-                }
+        const addTargetIfEligible = (target) => {
+            if (!this._isCycleTargetHostile(target)) return;
+
+            const dx = this.pos.x - target.pos.x;
+            const dy = this.pos.y - target.pos.y;
+            const distSq = dx * dx + dy * dy;
+            if (distSq <= maxDistSq) {
+                targets.push({ target, distSq });
             }
-        }
+        };
 
-        // Space Objects (Stations, Jump Zones, etc.)
-        if (this.currentSystem.spaceObjects) {
-            for (const so of this.currentSystem.spaceObjects) {
-                if (so && !so.destroyed && so.pos) {
-                    const d = dist(this.pos.x, this.pos.y, so.pos.x, so.pos.y);
-                    if (d < maxDist) targets.push(so);
-                }
-            }
-        }
+        const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
 
-        // Asteroids
-        if (this.currentSystem.asteroids) {
-            for (const ast of this.currentSystem.asteroids) {
-                if (ast && !ast.destroyed && ast.pos) {
-                    const d = dist(this.pos.x, this.pos.y, ast.pos.x, ast.pos.y);
-                    if (d < maxDist) targets.push(ast);
-                }
-            }
-        }
-
-        // Surface objects if in surface mode
-        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+        if (inSurfaceMode) {
             if (surfaceMode.surfaceObjects) {
                 for (const obj of surfaceMode.surfaceObjects) {
-                    if (obj && !obj.destroyed && obj.pos) {
-                        // Only target things that are actually interesting (turrets, pirates, fauna, player bases)
-                        const isInteresting = obj.type === 'Turret' || obj.type === 'Defense Drone' || 
-                                              obj.isPirate || obj.isFauna || obj.isPlayerBase || obj.isSurfaceBase;
-                        if (isInteresting) {
-                            const d = dist(this.pos.x, this.pos.y, obj.pos.x, obj.pos.y);
-                            if (d < maxDist) targets.push(obj);
-                        }
-                    }
+                    addTargetIfEligible(obj);
                 }
+            }
+        } else if (this.currentSystem.enemies) {
+            for (const enemy of this.currentSystem.enemies) {
+                addTargetIfEligible(enemy);
             }
         }
 
@@ -3162,30 +3227,19 @@ class Player {
             return;
         }
 
-        // 2. Sort by priority and then distance
-        // Priority: Hostiles > Mission Targets > Others
-        targets.sort((a, b) => {
-            const isHostileA = (a.role === AI_ROLE?.PIRATE || a.role === AI_ROLE?.POLICE || a.type === 'Turret' || a.type === 'Defense Drone' || a.isPirate);
-            const isHostileB = (b.role === AI_ROLE?.PIRATE || b.role === AI_ROLE?.POLICE || b.type === 'Turret' || b.type === 'Defense Drone' || b.isPirate);
-            
-            if (isHostileA && !isHostileB) return -1;
-            if (!isHostileA && isHostileB) return 1;
-            
-            const da = dist(this.pos.x, this.pos.y, a.pos.x, a.pos.y);
-            const db = dist(this.pos.x, this.pos.y, b.pos.x, b.pos.y);
-            return da - db;
-        });
+        targets.sort((a, b) => a.distSq - b.distSq);
+        const targetList = targets.map(entry => entry.target);
 
         // 3. Determine current index and move to next
-        let currentIndex = targets.indexOf(this.target);
+        let currentIndex = targetList.indexOf(this.target);
         
         // If current target is not in list (e.g. out of range or just assigned), find starting point
         if (currentIndex === -1) {
-            currentIndex = (direction > 0) ? -1 : targets.length;
+            currentIndex = (direction > 0) ? -1 : targetList.length;
         }
 
-        const nextIndex = (currentIndex + direction + targets.length) % targets.length;
-        const newTarget = targets[nextIndex];
+        const nextIndex = (currentIndex + direction + targetList.length) % targetList.length;
+        const newTarget = targetList[nextIndex];
 
         if (newTarget !== this.target) {
             this.target = newTarget;
