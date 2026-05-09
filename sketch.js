@@ -614,12 +614,15 @@ function handleGamepadContinuousInput() {
     const lsX = shipControls.strafeX;
     const lsY = shipControls.thrustY;
     const rsX = shipControls.rotateX;
+    const rsY = shipControls.rotateY;
     const r2Val = shipControls.forwardThrottle;
-    const l2Val = shipControls.reverseThrottle;
 
     const rotTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
-    const hasGamepadInput = Math.abs(lsX) > 0.1 || Math.abs(lsY) > 0.1 ||
-                           Math.abs(rsX) > 0.1 || r2Val > 0.1 || l2Val > 0.1 ||
+    // Use the same thresholds as the actual control logic so autopilot disengages
+    // exactly when control input becomes active — no earlier, no later.
+    const rsMag = Math.sqrt(rsX * rsX + rsY * rsY);
+    const lsMag = Math.sqrt(lsX * lsX + lsY * lsY);
+    const hasGamepadInput = rsMag > 0.08 || lsMag > 0.05 || r2Val > 0.08 ||
                            Math.abs(shipControls.beamAimX) > 0.1 || Math.abs(shipControls.beamAimY) > 0.1;
 
     // Disable autopilot on gamepad input
@@ -628,26 +631,47 @@ function handleGamepadContinuousInput() {
         uiManager?.addMessage('Autopilot disengaged: On manual control');
     }
 
-    // Rotation from right stick (response curve for finer center control + full-turn authority)
-    if (Math.abs(rsX) > 0.08) {
-        const rotInput = Math.sign(rsX) * Math.pow(Math.abs(rsX), 1.35);
-        player.angle += rotInput * player.rotationSpeed * rotTimeScale;
+    // Right stick: world-space aim — steer the ship toward the direction the stick points.
+    // Pushing right → ship turns to face right; pushing up → turns to face up.
+    // The angular error drives rotation each frame, capped at rotationSpeed so the ship
+    // never snaps instantly. Stick magnitude scales the maximum turn authority so
+    // gentle deflections give finer steering.
+    if (rsMag > 0.08) {
+        const targetAngle = Math.atan2(rsY, rsX);
+        let err = targetAngle - player.angle;
+        // Normalise to [-PI, PI] for shortest-arc rotation
+        while (err > Math.PI) err -= 2 * Math.PI;
+        while (err < -Math.PI) err += 2 * Math.PI;
+        const maxTurn = player.rotationSpeed * rotTimeScale * rsMag;
+        player.angle += Math.sign(err) * Math.min(Math.abs(err), maxTurn);
     }
 
-    // Strafe from left stick X (analog strength)
-    if (Math.abs(lsX) > 0.1) {
-        const strafeStrength = Math.max(0.2, Math.abs(lsX)) * 0.8;
-        if (lsX < 0) player.kiteLeft(strafeStrength);
-        else player.kiteRight(strafeStrength);
-        player.isStrafing = true;
+    // Left stick: world-space (screen-space) omnidirectional movement.
+    // Decompose the stick vector into ship-local axes so that pushing the stick
+    // up always moves the ship toward the top of the screen regardless of heading.
+    //   fwd   = dot((lsX, lsY), ship-facing (cos a, sin a))
+    //   right = dot((lsX, lsY), ship-right  (-sin a, cos a))
+    let stickForwardAmount = 0, stickReverseAmount = 0;
+    if (Math.abs(lsX) > 0.05 || Math.abs(lsY) > 0.05) {
+        const cosA = cos(player.angle), sinA = sin(player.angle);
+        const fwd   =  lsX * cosA + lsY * sinA;
+        const right = -lsX * sinA + lsY * cosA;
+
+        stickForwardAmount = Math.max(0,  fwd);
+        stickReverseAmount = Math.max(0, -fwd);
+
+        // Strafe from the perpendicular (world-right) component
+        if (Math.abs(right) > 0.1) {
+            const strafeStrength = Math.max(0.2, Math.abs(right)) * 0.8;
+            if (right < 0) player.kiteLeft(strafeStrength);
+            else player.kiteRight(strafeStrength);
+            player.isStrafing = true;
+        }
     }
 
-    // Thrust from left stick Y / triggers with analog scaling.
-    // Keep this independent from strafing so gamepad can combine vector movement.
-    const forwardStick = Math.max(0, -lsY);
-    const reverseStick = Math.max(0, lsY);
-    const forwardAmount = Math.max(forwardStick, r2Val);
-    const reverseAmount = Math.max(reverseStick, l2Val);
+    // Combine stick world-forward component with trigger forward
+    const forwardAmount = Math.max(stickForwardAmount, r2Val);
+    const reverseAmount = stickReverseAmount;
 
     if (forwardAmount > 0.08) {
         player.isThrusting = true;
