@@ -543,11 +543,8 @@ function handleGamepadContinuousInput() {
     if (context === INPUT_CONTEXTS.SAVE_SELECTION) {
         if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.NAV_UP, context)) saveSelectionScreen?.handleKeyPressed(null, UP_ARROW);
         if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.NAV_DOWN, context)) saveSelectionScreen?.handleKeyPressed(null, DOWN_ARROW);
-        if (gp.pressed('x') && saveSelectionScreen) {
-            const selectedOption = saveSelectionScreen.selectedOption;
-            const slotIndex = Number.isInteger(selectedOption) ? selectedOption : 0;
-            saveSelectionScreen.startNewGame(slotIndex);
-        }
+        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.NAV_LEFT, context)) saveSelectionScreen?.handleKeyPressed(null, LEFT_ARROW);
+        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.NAV_RIGHT, context)) saveSelectionScreen?.handleKeyPressed(null, RIGHT_ARROW);
         return;
     }
 
@@ -828,6 +825,15 @@ function _handleGamepadStationMenus(gp, state) {
     // Clamp index to valid range
     if (buttons && buttons.length > 0) {
         _gpMenuIndex = constrain(_gpMenuIndex, 0, buttons.length - 1);
+
+        // Keep mission board details synced with the currently highlighted list mission.
+        if (state === 'VIEWING_MISSIONS') {
+            const selectedMissionButton = buttons[_gpMenuIndex];
+            if (Number.isInteger(selectedMissionButton?.index) &&
+                gameStateManager?.selectedMissionIndex !== selectedMissionButton.index) {
+                gameStateManager.selectedMissionIndex = selectedMissionButton.index;
+            }
+        }
     }
 
     // ── A button = click the selected button ──
