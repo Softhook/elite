@@ -856,8 +856,10 @@ describe('SurfaceMode Input Handling', () => {
 
 describe('SurfaceMode Astronaut Integration', () => {
     let sm, player, planet, starSystem;
+    let originalWindow;
 
     beforeEach(() => {
+        originalWindow = global.window;
         sm = new SurfaceMode();
         player = createMockPlayer({ x: 1000, y: 50 });
         planet = createMockPlanet({ x: 1000, y: 0, radius: 200 });
@@ -870,6 +872,14 @@ describe('SurfaceMode Astronaut Integration', () => {
 
         // Mock p5 input functions
         global.keyIsDown = jest.fn(() => false);
+    });
+
+    afterEach(() => {
+        if (typeof originalWindow === 'undefined') {
+            delete global.window;
+        } else {
+            global.window = originalWindow;
+        }
     });
 
     test('deployAstronaut switches control mode', () => {
@@ -945,6 +955,56 @@ describe('SurfaceMode Astronaut Integration', () => {
 
         // Now it should disembark
         expect(sm.controlMode).toBe('ASTRONAUT');
+    });
+
+    test('gamepad movement can trigger disembark when landed', () => {
+        global.Astronaut = class MockAstronaut {
+            constructor(pos) { this.pos = pos.copy(); this.altitude = 0; }
+            handleInput() { return false; }
+            update() { }
+        };
+        global.keyIsDown.mockReturnValue(false);
+        global.window = {
+            _gamepadManager: {
+                state: {
+                    dpad: { up: true, down: false, left: false, right: false },
+                    ls: { x: 0, y: 0 },
+                    l2: 0,
+                    r2: 0
+                }
+            }
+        };
+
+        sm.playerSpeed = 0;
+        sm.reboardCooldown = 0;
+        sm._checkDisembarkTrigger();
+
+        expect(sm.controlMode).toBe('ASTRONAUT');
+    });
+
+    test('minor gamepad stick drift does not trigger disembark', () => {
+        global.Astronaut = class MockAstronaut {
+            constructor(pos) { this.pos = pos.copy(); this.altitude = 0; }
+            handleInput() { return false; }
+            update() { }
+        };
+        global.keyIsDown.mockReturnValue(false);
+        global.window = {
+            _gamepadManager: {
+                state: {
+                    dpad: { up: false, down: false, left: false, right: false },
+                    ls: { x: 0.1, y: 0.1 },
+                    l2: 0,
+                    r2: 0
+                }
+            }
+        };
+
+        sm.playerSpeed = 0;
+        sm.reboardCooldown = 0;
+        sm._checkDisembarkTrigger();
+
+        expect(sm.controlMode).toBe('SHIP');
     });
 });
 

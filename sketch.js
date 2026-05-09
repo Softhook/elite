@@ -543,6 +543,11 @@ function handleGamepadContinuousInput() {
     if (context === INPUT_CONTEXTS.SAVE_SELECTION) {
         if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.NAV_UP, context)) saveSelectionScreen?.handleKeyPressed(null, UP_ARROW);
         if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.NAV_DOWN, context)) saveSelectionScreen?.handleKeyPressed(null, DOWN_ARROW);
+        if (gp.pressed('x') && saveSelectionScreen) {
+            const selectedOption = saveSelectionScreen.selectedOption;
+            const slotIndex = Number.isInteger(selectedOption) ? selectedOption : 0;
+            saveSelectionScreen.startNewGame(slotIndex);
+        }
         return;
     }
 
@@ -772,24 +777,44 @@ function _handleGamepadStationMenus(gp, state) {
     }
 
     const isMarket = state === 'VIEWING_MARKET' || state === 'VIEWING_SPACE_OBJECT_MARKET';
+    const isHorizontalDetail = state === 'VIEWING_SHIP_DETAIL' || state === 'VIEWING_WEAPON_DETAIL';
+    const isWeaponSlotPicker = state === 'VIEWING_WEAPON_DETAIL' && !!uiManager?.stationMenus?.showingSlotPicker;
+    const slotPickerSlotCount = isWeaponSlotPicker
+        ? Math.max(1, (uiManager?.stationMenus?.slotPickerButtons || []).filter(b => typeof b?.slotIndex === 'number').length)
+        : 1;
     const rowSize = isMarket ? 4 : 1;
 
     // ── D-pad up/down = navigate selection ──
     if (buttons && buttons.length > 0) {
-        if (gp.pressed('dpad.up') || (gp.state.ls.y < -0.7 && gp.prevState && gp.prevState.ls.y >= -0.7)) {
-            _gpMenuIndex = (_gpMenuIndex - rowSize + buttons.length) % buttons.length;
-            soundManager?.playSound('click');
-        }
-        if (gp.pressed('dpad.down') || (gp.state.ls.y > 0.7 && gp.prevState && gp.prevState.ls.y <= 0.7)) {
-            _gpMenuIndex = (_gpMenuIndex + rowSize) % buttons.length;
-            soundManager?.playSound('click');
+        const pressedUp = gp.pressed('dpad.up') || (gp.state.ls.y < -0.7 && gp.prevState && gp.prevState.ls.y >= -0.7);
+        const pressedDown = gp.pressed('dpad.down') || (gp.state.ls.y > 0.7 && gp.prevState && gp.prevState.ls.y <= 0.7);
+
+        if (pressedUp || pressedDown) {
+            if (isHorizontalDetail && !isWeaponSlotPicker) {
+                _handleGamepadListScroll(state, pressedDown ? 1 : -1);
+            } else if (isWeaponSlotPicker && buttons.length > slotPickerSlotCount) {
+                const cancelIndex = buttons.length - 1;
+                if (pressedDown) {
+                    _gpMenuIndex = (_gpMenuIndex < slotPickerSlotCount) ? cancelIndex : 0;
+                } else if (pressedUp) {
+                    _gpMenuIndex = (_gpMenuIndex >= slotPickerSlotCount) ? 0 : cancelIndex;
+                }
+            } else {
+                _gpMenuIndex = (_gpMenuIndex + (pressedDown ? rowSize : -rowSize) + buttons.length) % buttons.length;
+            }
+            if (!(isHorizontalDetail && !isWeaponSlotPicker)) {
+                soundManager?.playSound('click');
+            }
         }
     }
 
     // ── D-pad left/right = scroll or horizontal nav in lists ──
     if (gp.pressed('dpad.left') || gp.pressed('dpad.right')) {
         const dir = gp.pressed('dpad.right') ? 1 : -1;
-        if (isMarket && buttons && buttons.length > 0) {
+        if ((isWeaponSlotPicker || isHorizontalDetail) && buttons && buttons.length > 0) {
+            _gpMenuIndex = (_gpMenuIndex + dir + buttons.length) % buttons.length;
+            soundManager?.playSound('click');
+        } else if (isMarket && buttons && buttons.length > 0) {
             const baseRowIdx = Math.floor(_gpMenuIndex / 4) * 4;
             const subIdx = _gpMenuIndex % 4;
             const newSubIdx = (subIdx + dir + 4) % 4;
@@ -853,6 +878,9 @@ function _getButtonAreasForState(state) {
                 _objectToButtons(uiManager.stationMenus?.upgradeDetailButtons)
             );
         case 'VIEWING_WEAPON_DETAIL':
+            if (uiManager.stationMenus?.showingSlotPicker && Array.isArray(uiManager.stationMenus?.slotPickerButtons)) {
+                return uiManager.stationMenus.slotPickerButtons;
+            }
             return _objectToButtons(uiManager.stationMenus?.weaponDetailButtons);
         case 'VIEWING_REPAIRS':
             return [
