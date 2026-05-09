@@ -757,6 +757,12 @@ function _handleGamepadStationMenus(gp, state) {
         } else if (state === 'VIEWING_WEAPON_DETAIL') {
             gameStateManager.setState('VIEWING_UPGRADES');
             soundManager?.playSound('click');
+        } else if (state === 'VIEWING_RECORD') {
+            // Return to the correct docked state (space object or station)
+            const returnState = gameStateManager?._returnFromRecordState || 'DOCKED';
+            if (gameStateManager) gameStateManager._returnFromRecordState = null;
+            if (gameStateManager) gameStateManager.setState(returnState);
+            soundManager?.playSound('click_off');
         } else {
             const isSpaceObj = state.startsWith('VIEWING_SPACE_OBJECT');
             gameStateManager.setState(isSpaceObj ? 'DOCKED_SPACE_OBJECT' : 'DOCKED');
