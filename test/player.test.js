@@ -333,25 +333,27 @@ describe('Player Target Cycling', () => {
         expect(player.target).toBe(separatistHostile);
     });
 
-    test('falls back to ship faction and police status when choosing hostiles', () => {
+    test('falls back to ship faction when choosing hostile rivals', () => {
         const separatistHostile = createTarget({ x: 180, role: AI_ROLE.COMBAT, faction: 'SEPARATIST', shipTypeName: 'Separatist Wing' });
         const imperialAlly = createTarget({ x: 90, role: AI_ROLE.COMBAT, faction: 'IMPERIAL', shipTypeName: 'Imperial Wing' });
-        const pirate = createTarget({ x: 160, role: AI_ROLE.PIRATE, shipTypeName: 'Pirate Raider' });
-        const lawfulShip = createTarget({ x: 60, role: AI_ROLE.COMBAT, faction: 'SEPARATIST', shipTypeName: 'Patrol Ship' });
 
         player.shipTypeName = TEST_SHIP_KEY;
         player.currentSystem.enemies = [imperialAlly, separatistHostile];
 
         player.cycleTarget(1);
+
         expect(player.target).toBe(separatistHostile);
+    });
+
+    test('uses police status to ignore lawful ships and cycle to nearby criminals', () => {
+        const pirate = createTarget({ x: 160, role: AI_ROLE.PIRATE, shipTypeName: 'Pirate Raider' });
+        const lawfulShip = createTarget({ x: 60, role: AI_ROLE.COMBAT, faction: 'SEPARATIST', shipTypeName: 'Patrol Ship' });
 
         player.isPolice = true;
-        player.playerFaction = null;
-        player.shipTypeName = 'Sidewinder';
-        player.target = null;
         player.currentSystem.enemies = [lawfulShip, pirate];
 
         player.cycleTarget(1);
+
         expect(player.target).toBe(pirate);
         expect(player.target).not.toBe(lawfulShip);
     });
