@@ -357,6 +357,7 @@ describe('SurfaceMode Entry Conditions', () => {
 
 describe('SurfaceMode Enter', () => {
     let sm, player, planet, starSystem;
+    const DEFAULT_DETAIL_RATIO = 38;
 
     beforeEach(() => {
         sm = new SurfaceMode();
@@ -380,20 +381,22 @@ describe('SurfaceMode Enter', () => {
 
     test('enter falls back to default mesh values when SurfaceUtils dynamic helpers are unavailable', () => {
         const originalMeshSize = SURFACE_CONFIG.MESH_SIZE;
-        const originalDetailRatio = SurfaceUtils.DETAIL_RATIO;
-        const originalCalculator = SurfaceUtils.calculateRequiredMeshSize;
+        const expectedResolution = Math.ceil(originalMeshSize / DEFAULT_DETAIL_RATIO);
+        const originalSurfaceUtils = global.SurfaceUtils;
 
         try {
-            SurfaceUtils.DETAIL_RATIO = undefined;
-            SurfaceUtils.calculateRequiredMeshSize = undefined;
+            global.SurfaceUtils = {
+                ...originalSurfaceUtils,
+                DETAIL_RATIO: undefined,
+                calculateRequiredMeshSize: undefined
+            };
 
             sm.enter(player, planet, starSystem);
 
             expect(SURFACE_CONFIG.MESH_SIZE).toBe(originalMeshSize);
-            expect(SURFACE_CONFIG.MESH_RESOLUTION).toBe(Math.ceil(originalMeshSize / 38));
+            expect(SURFACE_CONFIG.MESH_RESOLUTION).toBe(expectedResolution);
         } finally {
-            SurfaceUtils.DETAIL_RATIO = originalDetailRatio;
-            SurfaceUtils.calculateRequiredMeshSize = originalCalculator;
+            global.SurfaceUtils = originalSurfaceUtils;
         }
     });
 

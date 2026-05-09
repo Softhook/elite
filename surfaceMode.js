@@ -117,6 +117,8 @@ const SURFACE_STATE = {
     EXITING: 'exiting'        // Returning to space
 };
 
+const DEFAULT_SURFACE_DETAIL_RATIO = 38;
+
 /**
  * SurfaceMode class - manages planetary surface flight with 3D mesh terrain
  * 
@@ -474,7 +476,7 @@ class SurfaceMode {
         // 1. Dynamic Mesh Calculation: Optimize size/resolution for the current screen
         // Account for logical resolution, perspective, and extrusion shift
         const fallbackMeshSize = SURFACE_CONFIG.MESH_SIZE;
-        const hasMeshSizeCalculator = typeof SurfaceUtils?.calculateRequiredMeshSize === 'function';
+        const hasMeshSizeCalculator = typeof SurfaceUtils.calculateRequiredMeshSize === 'function';
         const calculatedMeshSize = hasMeshSizeCalculator
             ? SurfaceUtils.calculateRequiredMeshSize(
                 SURFACE_CONFIG.CLOUD_LAYER.START_ALTITUDE,
@@ -485,9 +487,10 @@ class SurfaceMode {
         const dynamicMeshSize = (Number.isFinite(calculatedMeshSize) && calculatedMeshSize > 0)
             ? Math.ceil(calculatedMeshSize)
             : fallbackMeshSize;
-        const detailRatio = (Number.isFinite(SurfaceUtils?.DETAIL_RATIO) && SurfaceUtils.DETAIL_RATIO > 0)
-            ? SurfaceUtils.DETAIL_RATIO
-            : 38;
+        const configuredDetailRatio = SurfaceUtils?.DETAIL_RATIO;
+        const detailRatio = (Number.isFinite(configuredDetailRatio) && configuredDetailRatio > 0)
+            ? configuredDetailRatio
+            : DEFAULT_SURFACE_DETAIL_RATIO;
 
         // Update config for this session (prevents black gaps on ultra-wide / saves memory on small screens)
         SURFACE_CONFIG.MESH_SIZE = dynamicMeshSize;
