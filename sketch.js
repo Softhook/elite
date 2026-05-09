@@ -762,7 +762,7 @@ function _handleGamepadStationMenus(gp, state) {
             const returnState = gameStateManager?._returnFromRecordState || 'DOCKED';
             if (gameStateManager) gameStateManager._returnFromRecordState = null;
             if (gameStateManager) gameStateManager.setState(returnState);
-            soundManager?.playSound('click');
+            soundManager?.playSound('click_off');
         } else {
             const isSpaceObj = state.startsWith('VIEWING_SPACE_OBJECT');
             gameStateManager.setState(isSpaceObj ? 'DOCKED_SPACE_OBJECT' : 'DOCKED');

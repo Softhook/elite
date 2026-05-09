@@ -208,31 +208,44 @@ describe('GameStateManager Space Object Undocking', () => {
         expect(mockSpaceObject.pos.copy).not.toHaveBeenCalled();
     });
 
-    test('_returnFromRecordState tracks space object context for VIEWING_RECORD navigation', () => {
-        // Simulate the UIManager setting _returnFromRecordState when navigating to VIEWING_RECORD
-        // from a space object context (as done in uiManager._handleStandardMenuClick)
+    test('back from VIEWING_RECORD with space object context routes undocking to space object', () => {
+        // Set up: player is docked at a space object, navigated to Personal Record
+        gameStateManager.currentDockedSpaceObject = mockSpaceObject;
+        gameStateManager.currentDockedStation = mockStation;
         gameStateManager._returnFromRecordState = 'DOCKED_SPACE_OBJECT';
 
-        // Verify the field is set correctly for the gamepad B-button handler to consume
-        expect(gameStateManager._returnFromRecordState).toBe('DOCKED_SPACE_OBJECT');
-
-        // Simulate the gamepad B-button handler consuming and clearing the field
+        // Simulate what the gamepad B-button handler does: consume _returnFromRecordState
+        // to determine the correct return state
         const returnState = gameStateManager._returnFromRecordState || 'DOCKED';
         gameStateManager._returnFromRecordState = null;
 
-        // Should navigate back to the space object, not the station
+        // _returnFromRecordState must route back to space object, not station
         expect(returnState).toBe('DOCKED_SPACE_OBJECT');
         // Field must be cleared to prevent stale state on subsequent navigation
         expect(gameStateManager._returnFromRecordState).toBeNull();
+
+        // When the player subsequently undocks from DOCKED_SPACE_OBJECT, the space
+        // object position must be used (not the station)
+        gameStateManager._handleUndocking(returnState);
+        expect(mockSpaceObject.pos.copy).toHaveBeenCalled();
+        expect(mockStation.pos.copy).not.toHaveBeenCalled();
     });
 
-    test('_returnFromRecordState is undefined by default, causing fallback to DOCKED', () => {
-        // GameStateManager does not initialize _returnFromRecordState in its constructor,
-        // so it is undefined when no space object context has been set.
-        expect(gameStateManager._returnFromRecordState).toBeUndefined();
+    test('back from VIEWING_RECORD without space object context routes undocking to station', () => {
+        // Set up: player came from a regular station (no _returnFromRecordState set)
+        gameStateManager.currentDockedSpaceObject = null;
+        gameStateManager.currentDockedStation = mockStation;
+        // _returnFromRecordState is undefined - no space object context
 
-        // The gamepad B-button handler uses || 'DOCKED' as a fallback
+        // Simulate the gamepad B-button handler with no space object context
         const returnState = gameStateManager._returnFromRecordState || 'DOCKED';
+        gameStateManager._returnFromRecordState = null;
+
+        // Should fall back to DOCKED (station)
         expect(returnState).toBe('DOCKED');
+
+        // When the player subsequently undocks from DOCKED, the station position must be used
+        gameStateManager._handleUndocking(returnState);
+        expect(mockStation.pos.copy).toHaveBeenCalled();
     });
 });
