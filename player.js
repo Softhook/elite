@@ -3151,12 +3151,12 @@ class Player {
 
         const role = target.role;
         const faction = target.faction || null;
-        const isPirateLike = target.isPirate || faction === 'PIRATE' ||
+        const isInherentlyHostile = target.isPirate || faction === 'PIRATE' ||
             role === AI_ROLE?.PIRATE || role === AI_ROLE?.ALIEN;
 
         if (target.type === 'Turret' || target.type === 'Defense Drone') return true;
         if (target.target === this || target.lastAttacker === this) return true;
-        if (isPirateLike) return true;
+        if (isInherentlyHostile) return true;
 
         const playerIsWanted = !!(this.isWanted || this.currentSystem?.isPlayerWanted?.());
         if (playerIsWanted && (role === AI_ROLE?.POLICE || role === AI_ROLE?.GUARD)) {
@@ -3210,9 +3210,7 @@ class Player {
             }
         } else if (this.currentSystem.enemies) {
             for (const enemy of this.currentSystem.enemies) {
-                if (enemy !== this) {
-                    addTargetIfEligible(enemy);
-                }
+                addTargetIfEligible(enemy);
             }
         }
 

@@ -353,6 +353,7 @@ describe('Player Target Cycling', () => {
 
         player.cycleTarget(1);
         expect(player.target).toBe(pirate);
+        expect(player.target).not.toBe(lawfulShip);
     });
 });
 
