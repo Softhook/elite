@@ -378,6 +378,25 @@ describe('SurfaceMode Enter', () => {
         expect(sm.starSystem).toBe(starSystem);
     });
 
+    test('enter falls back to default mesh values when SurfaceUtils dynamic helpers are unavailable', () => {
+        const originalMeshSize = SURFACE_CONFIG.MESH_SIZE;
+        const originalDetailRatio = SurfaceUtils.DETAIL_RATIO;
+        const originalCalculator = SurfaceUtils.calculateRequiredMeshSize;
+
+        try {
+            SurfaceUtils.DETAIL_RATIO = undefined;
+            SurfaceUtils.calculateRequiredMeshSize = undefined;
+
+            sm.enter(player, planet, starSystem);
+
+            expect(SURFACE_CONFIG.MESH_SIZE).toBe(originalMeshSize);
+            expect(SURFACE_CONFIG.MESH_RESOLUTION).toBe(Math.ceil(originalMeshSize / 38));
+        } finally {
+            SurfaceUtils.DETAIL_RATIO = originalDetailRatio;
+            SurfaceUtils.calculateRequiredMeshSize = originalCalculator;
+        }
+    });
+
     test('enter saves player position for return', () => {
         sm.enter(player, planet, starSystem);
         expect(sm.savedPlayerPos).toBeDefined();

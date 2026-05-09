@@ -473,16 +473,26 @@ class SurfaceMode {
 
         // 1. Dynamic Mesh Calculation: Optimize size/resolution for the current screen
         // Account for logical resolution, perspective, and extrusion shift
-        const dynamicMeshSize = SurfaceUtils.calculateRequiredMeshSize(
-            SURFACE_CONFIG.CLOUD_LAYER.START_ALTITUDE,
-            width,
-            height
-        );
+        const fallbackMeshSize = SURFACE_CONFIG.MESH_SIZE;
+        const hasMeshSizeCalculator = typeof SurfaceUtils?.calculateRequiredMeshSize === 'function';
+        const calculatedMeshSize = hasMeshSizeCalculator
+            ? SurfaceUtils.calculateRequiredMeshSize(
+                SURFACE_CONFIG.CLOUD_LAYER.START_ALTITUDE,
+                width,
+                height
+            )
+            : fallbackMeshSize;
+        const dynamicMeshSize = (Number.isFinite(calculatedMeshSize) && calculatedMeshSize > 0)
+            ? Math.ceil(calculatedMeshSize)
+            : fallbackMeshSize;
+        const detailRatio = (Number.isFinite(SurfaceUtils?.DETAIL_RATIO) && SurfaceUtils.DETAIL_RATIO > 0)
+            ? SurfaceUtils.DETAIL_RATIO
+            : 38;
 
         // Update config for this session (prevents black gaps on ultra-wide / saves memory on small screens)
         SURFACE_CONFIG.MESH_SIZE = dynamicMeshSize;
         // Maintain consistent Level of Detail (LOD) regardless of screen size
-        SURFACE_CONFIG.MESH_RESOLUTION = Math.ceil(dynamicMeshSize / SurfaceUtils.DETAIL_RATIO);
+        SURFACE_CONFIG.MESH_RESOLUTION = Math.ceil(dynamicMeshSize / detailRatio);
 
         console.log(`Entering surface mode on ${planet.name} [Dynamic Mesh: ${width}x${height} -> ${SURFACE_CONFIG.MESH_SIZE}x${SURFACE_CONFIG.MESH_RESOLUTION}]`);
 
