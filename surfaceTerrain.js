@@ -270,8 +270,6 @@ class SurfaceTerrain {
 }
 
 // Make available globally in both browser and test environments
-if (typeof globalThis !== 'undefined') {
-    globalThis.SurfaceTerrain = SurfaceTerrain;
-}
+globalThis.SurfaceTerrain = SurfaceTerrain;
 
 console.log("surfaceTerrain.js loaded");

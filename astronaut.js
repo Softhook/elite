@@ -48,7 +48,7 @@ class Astronaut {
         let dy = 0;
 
         // --- Gamepad Support ---
-        const globalScope = typeof window !== 'undefined' ? window : globalThis;
+        const globalScope = globalThis;
         if (globalScope?._inputManager && globalScope?._gamepadManager?.connected) {
             const gp = globalScope._gamepadManager;
             const s = gp.state;
