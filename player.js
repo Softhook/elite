@@ -2038,8 +2038,8 @@ class Player {
 
         let shieldHit = false;
         let actualDamage = amount;
-        const triggerGamepadHitRumble = (isShieldHit) => {
-            if (actualDamage <= 0) return;
+        const triggerGamepadHitRumble = (isShieldHit, damageAmount) => {
+            if (damageAmount <= 0) return;
             if (typeof window === 'undefined') return;
 
             const gp = window._gamepadManager;
@@ -2071,7 +2071,7 @@ class Player {
                 // Shield absorbs all damage
                 this.shield -= actualDamage;
                 //uiManager.addMessage(`Shield damage: ${actualDamage.toFixed(1)}`, [255, 100, 100]);
-                triggerGamepadHitRumble(true);
+                triggerGamepadHitRumble(true, actualDamage);
                 return { damage: actualDamage, shieldHit: true };
             } else {
                 // Shield is depleted, remaining damage goes to hull
@@ -2091,7 +2091,7 @@ class Player {
             //uiManager.addMessage(`Hull damage: ${actualDamage.toFixed(1)}`, [255, 50, 50]);
             shieldHit = false;
         }
-        triggerGamepadHitRumble(shieldHit);
+        triggerGamepadHitRumble(shieldHit, actualDamage);
         // Shield down cue on transition >0 -> 0
         if (prevShield > 0 && this.shield === 0) {
             if (typeof soundManager !== 'undefined') { soundManager.playSound('shieldDown', 1.0, this); }
