@@ -253,6 +253,110 @@ describe('Player Damage', () => {
 });
 
 // ============================================
+// Player Target Cycling Tests
+// ============================================
+
+describe('Player Target Cycling', () => {
+    let player;
+    let previousUiManager;
+    let previousSoundManager;
+
+    const TEST_SHIP_KEY = '__TargetCycleImperialTestShip';
+
+    const createTarget = ({ x, y = 0, role = null, faction = null, shipTypeName = 'Target', isWanted = false }) => ({
+        pos: createVector(x, y),
+        destroyed: false,
+        role,
+        faction,
+        shipTypeName,
+        isWanted
+    });
+
+    beforeEach(() => {
+        player = new Player();
+        player.pos = createVector(0, 0);
+        player.target = null;
+        player.isPolice = false;
+        player.isWanted = false;
+        player.playerFaction = null;
+        player.currentSystem = {
+            enemies: [],
+            asteroids: [],
+            spaceObjects: [],
+            _getDiagonalDistance: () => 100,
+            isPlayerWanted: () => false
+        };
+
+        previousUiManager = global.uiManager;
+        previousSoundManager = global.soundManager;
+        global.uiManager = { addMessage: jest.fn() };
+        global.soundManager = { playSound: jest.fn() };
+
+        SHIP_DEFINITIONS[TEST_SHIP_KEY] = {
+            ...SHIP_DEFINITIONS.Sidewinder,
+            faction: 'IMPERIAL'
+        };
+    });
+
+    afterEach(() => {
+        global.uiManager = previousUiManager;
+        global.soundManager = previousSoundManager;
+        delete SHIP_DEFINITIONS[TEST_SHIP_KEY];
+    });
+
+    test('cycles only nearby hostile targets within the dashed proximity circle', () => {
+        const pirateInRange = createTarget({ x: 450, role: AI_ROLE.PIRATE, shipTypeName: 'Raider' });
+        const pirateOutOfRange = createTarget({ x: 650, role: AI_ROLE.PIRATE, shipTypeName: 'Far Raider' });
+        const previousTarget = { pos: createVector(40, 0), destroyed: false, type: 'Station' };
+
+        player.currentSystem.enemies = [pirateOutOfRange, pirateInRange];
+        player.currentSystem.spaceObjects = [previousTarget];
+        player.target = previousTarget;
+
+        player.cycleTarget(1);
+
+        expect(player.target).toBe(pirateInRange);
+        expect(player.target).not.toBe(pirateOutOfRange);
+        expect(global.uiManager.addMessage).toHaveBeenCalledWith('Target locked: Raider', [0, 255, 0]);
+        expect(global.soundManager.playSound).toHaveBeenCalledWith('click');
+    });
+
+    test('uses joined faction hostility when filtering cycle targets', () => {
+        const imperialAlly = createTarget({ x: 120, role: AI_ROLE.COMBAT, faction: 'IMPERIAL', shipTypeName: 'Imperial Ally' });
+        const separatistHostile = createTarget({ x: 200, role: AI_ROLE.COMBAT, faction: 'SEPARATIST', shipTypeName: 'Separatist Raider' });
+
+        player.playerFaction = 'IMPERIAL';
+        player.currentSystem.enemies = [imperialAlly, separatistHostile];
+
+        player.cycleTarget(1);
+
+        expect(player.target).toBe(separatistHostile);
+    });
+
+    test('falls back to ship faction and police status when choosing hostiles', () => {
+        const separatistHostile = createTarget({ x: 180, role: AI_ROLE.COMBAT, faction: 'SEPARATIST', shipTypeName: 'Separatist Wing' });
+        const imperialAlly = createTarget({ x: 90, role: AI_ROLE.COMBAT, faction: 'IMPERIAL', shipTypeName: 'Imperial Wing' });
+        const pirate = createTarget({ x: 160, role: AI_ROLE.PIRATE, shipTypeName: 'Pirate Raider' });
+        const lawfulShip = createTarget({ x: 60, role: AI_ROLE.COMBAT, faction: 'SEPARATIST', shipTypeName: 'Patrol Ship' });
+
+        player.shipTypeName = TEST_SHIP_KEY;
+        player.currentSystem.enemies = [imperialAlly, separatistHostile];
+
+        player.cycleTarget(1);
+        expect(player.target).toBe(separatistHostile);
+
+        player.isPolice = true;
+        player.playerFaction = null;
+        player.shipTypeName = 'Sidewinder';
+        player.target = null;
+        player.currentSystem.enemies = [lawfulShip, pirate];
+
+        player.cycleTarget(1);
+        expect(player.target).toBe(pirate);
+    });
+});
+
+// ============================================
 // Player Mission Tests
 // ============================================
 
