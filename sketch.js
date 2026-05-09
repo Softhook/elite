@@ -544,7 +544,8 @@ function handleGamepadContinuousInput() {
         if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.NAV_UP, context)) saveSelectionScreen?.handleKeyPressed(null, UP_ARROW);
         if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.NAV_DOWN, context)) saveSelectionScreen?.handleKeyPressed(null, DOWN_ARROW);
         if (gp.pressed('x') && saveSelectionScreen) {
-            const slotIndex = Math.max(0, saveSelectionScreen.selectedOption || 0);
+            const selectedOption = saveSelectionScreen.selectedOption;
+            const slotIndex = Number.isInteger(selectedOption) ? selectedOption : 0;
             saveSelectionScreen.startNewGame(slotIndex);
         }
         return;
@@ -796,7 +797,7 @@ function _handleGamepadStationMenus(gp, state) {
                 if (pressedDown) {
                     _gpMenuIndex = (_gpMenuIndex < slotPickerSlotCount) ? cancelIndex : 0;
                 } else if (pressedUp) {
-                    _gpMenuIndex = (_gpMenuIndex === cancelIndex) ? 0 : cancelIndex;
+                    _gpMenuIndex = (_gpMenuIndex >= slotPickerSlotCount) ? 0 : cancelIndex;
                 }
             } else {
                 _gpMenuIndex = (_gpMenuIndex + (pressedDown ? rowSize : -rowSize) + buttons.length) % buttons.length;
