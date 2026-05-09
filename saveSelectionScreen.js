@@ -614,15 +614,19 @@ class SaveSelectionScreen {
         pop();
     }
 
+    resetActionSelection() {
+        this.selectedActionColumn = 0;
+    }
+
     handleKeyPressed(key, keyCode) {
         if (keyCode === UP_ARROW || keyCode === DOWN_ARROW) {
             const direction = keyCode === UP_ARROW ? -1 : 1;
             this.selectedOption = (this.selectedOption + direction + this.totalOptions) % this.totalOptions;
-            this.selectedActionColumn = 0;
+            this.resetActionSelection();
             this.addHoverEffect();
             if (typeof soundManager !== 'undefined') soundManager.playSound('click');
         } else if (keyCode === LEFT_ARROW) {
-            this.selectedActionColumn = 0;
+            this.resetActionSelection();
             if (typeof soundManager !== 'undefined') soundManager.playSound('click');
         } else if (keyCode === RIGHT_ARROW) {
             this.selectedActionColumn = 1;
@@ -632,6 +636,7 @@ class SaveSelectionScreen {
             this.confirmSelection();
         } else if (keyCode === ESCAPE) {
             // Go back to title screen
+            this.resetActionSelection();
             if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
             if (gameStateManager && typeof gameStateManager.setState === 'function') {
                 gameStateManager.setState("TITLE_SCREEN");

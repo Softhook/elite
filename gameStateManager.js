@@ -584,6 +584,11 @@ class GameStateManager {
 
         if (saveSelectionScreen && typeof saveSelectionScreen.loadSavedGamePreview === 'function') {
             saveSelectionScreen.loadSavedGamePreview();
+            if (typeof saveSelectionScreen.resetActionSelection === 'function') {
+                saveSelectionScreen.resetActionSelection();
+            } else {
+                saveSelectionScreen.selectedActionColumn = 0;
+            }
             // Reset to "New Game" if save data is gone
             if (saveSelectionScreen.savedGameData === null && saveSelectionScreen.selectedSlot === 1) {
                 saveSelectionScreen.selectedSlot = 0;
