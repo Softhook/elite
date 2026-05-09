@@ -636,11 +636,11 @@ function handleGamepadContinuousInput() {
     // gentle deflections give finer steering.
     const rsMag = Math.sqrt(rsX * rsX + rsY * rsY);
     if (rsMag > 0.08) {
-        const targetAngle = atan2(rsY, rsX);
+        const targetAngle = Math.atan2(rsY, rsX);
         let err = targetAngle - player.angle;
         // Normalise to [-PI, PI] for shortest-arc rotation
-        while (err > PI) err -= TWO_PI;
-        while (err < -PI) err += TWO_PI;
+        while (err > Math.PI) err -= 2 * Math.PI;
+        while (err < -Math.PI) err += 2 * Math.PI;
         const maxTurn = player.rotationSpeed * rotTimeScale * rsMag;
         player.angle += Math.sign(err) * Math.min(Math.abs(err), maxTurn);
     }
