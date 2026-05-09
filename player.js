@@ -3102,12 +3102,15 @@ class Player {
      * @private
      */
     _getCycleTargetMaxDistance() {
+        const TARGET_CYCLE_RADIUS_BUFFER = 400;
+
         if (!this.currentSystem) return 6000;
 
         if (typeof this.currentSystem._getDiagonalDistance === 'function') {
             const diagonalDistance = this.currentSystem._getDiagonalDistance();
             if (Number.isFinite(diagonalDistance) && diagonalDistance > 0) {
-                return diagonalDistance + 400;
+                // Match the minimap's dashed detection ring radius used for nearby awareness.
+                return diagonalDistance + TARGET_CYCLE_RADIUS_BUFFER;
             }
         }
 
@@ -3151,6 +3154,8 @@ class Player {
 
         const role = target.role;
         const faction = target.faction || null;
+        // Runtime objects do not model pirate hostility consistently yet, so support
+        // the existing flag, faction, and role variants used across the codebase.
         const isInherentlyHostile = target.isPirate || faction === 'PIRATE' ||
             role === AI_ROLE?.PIRATE || role === AI_ROLE?.ALIEN;
 

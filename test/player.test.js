@@ -261,7 +261,7 @@ describe('Player Target Cycling', () => {
     let previousUiManager;
     let previousSoundManager;
 
-    const TEST_SHIP_KEY = '__TargetCycleImperialTestShip';
+    const TEST_SHIP_KEY = '_targetCycleImperialTestShip';
 
     const createTarget = ({ x, y = 0, role = null, faction = null, shipTypeName = 'Target', isWanted = false }) => ({
         pos: createVector(x, y),
@@ -283,7 +283,8 @@ describe('Player Target Cycling', () => {
             enemies: [],
             asteroids: [],
             spaceObjects: [],
-            _getDiagonalDistance: () => 100,
+            // 200 + 400 buffer = 600 unit dashed-circle targeting radius in these tests.
+            _getDiagonalDistance: () => 200,
             isPlayerWanted: () => false
         };
 
