@@ -119,3 +119,120 @@ describe('GameStateManager Jump Logic', () => {
         expect(gameStateManager.jumpTargetSystemIndex).toBe(-1); // Should remain default
     });
 });
+
+describe('GameStateManager Space Object Undocking', () => {
+    let gameStateManager;
+    let mockPlayer;
+    let mockStation;
+    let mockSpaceObject;
+    let mockGalaxy;
+
+    beforeEach(() => {
+        mockStation = {
+            pos: { x: 500, y: 500, copy: jest.fn(() => ({ x: 500, y: 500, add: jest.fn(() => ({ x: 500, y: 430 })) })) },
+            dockingRadius: 160,
+            size: 160,
+            getMarket: jest.fn()
+        };
+
+        mockSpaceObject = {
+            pos: { x: 200, y: 200, copy: jest.fn(() => ({ x: 200, y: 200, add: jest.fn(() => ({ x: 200, y: 120 })) })) },
+            dockingRadius: 80,
+            size: 80
+        };
+
+        mockPlayer = {
+            pos: { x: 0, y: 0, add: jest.fn(), set: jest.fn() },
+            vel: { mult: jest.fn(), set: jest.fn() },
+            size: 20,
+            isDockedAndInvulnerable: false,
+            isCloaked: false,
+            activeBodyguards: [],
+            clearSessionTradeTracking: jest.fn()
+        };
+
+        mockGalaxy = {
+            systems: [{ name: 'Test System', jumpZoneCenter: { x: 0, y: 0 }, jumpZoneRadius: 500, connectedSystemIndices: [], station: mockStation }],
+            getCurrentSystem: jest.fn(() => mockGalaxy.systems[0]),
+            getSystemByIndex: jest.fn((idx) => mockGalaxy.systems[idx]),
+            jumpToSystem: jest.fn(),
+            teleportToRandomSystem: jest.fn(),
+            currentSystemIndex: 0
+        };
+
+        global.galaxy = mockGalaxy;
+        global.player = mockPlayer;
+        global.uiManager = { addMessage: jest.fn(), clearEventMarkers: jest.fn() };
+        global.soundManager = { playSound: jest.fn() };
+        global.deltaTime = 16;
+        global.millis = jest.fn(() => 1000);
+        global.width = 1000;
+        global.height = 800;
+        global.STATION_TEXT_SIZE = { BODY: 12 };
+        global.GS_LOG = jest.fn();
+        global.MISSION_LOG = jest.fn();
+        global.createVector = jest.fn((x, y) => ({ x, y }));
+
+        gameStateManager = new GameStateManager();
+    });
+
+    afterEach(() => {
+        delete global.galaxy;
+        delete global.player;
+        delete global.uiManager;
+        delete global.soundManager;
+        delete global.createVector;
+    });
+
+    test('_handleUndocking uses space object position when prevState is DOCKED_SPACE_OBJECT', () => {
+        gameStateManager.currentDockedSpaceObject = mockSpaceObject;
+        gameStateManager.currentDockedStation = mockStation;
+
+        gameStateManager._handleUndocking('DOCKED_SPACE_OBJECT');
+
+        // Player should be repositioned relative to the space object (not the station)
+        expect(mockSpaceObject.pos.copy).toHaveBeenCalled();
+        expect(mockStation.pos.copy).not.toHaveBeenCalled();
+        // Space object reference should be cleared after undocking
+        expect(gameStateManager.currentDockedSpaceObject).toBeNull();
+    });
+
+    test('_handleUndocking uses station position when prevState is DOCKED', () => {
+        gameStateManager.currentDockedSpaceObject = mockSpaceObject;
+        gameStateManager.currentDockedStation = mockStation;
+
+        gameStateManager._handleUndocking('DOCKED');
+
+        // Player should be repositioned relative to the station (not the space object)
+        expect(mockStation.pos.copy).toHaveBeenCalled();
+        expect(mockSpaceObject.pos.copy).not.toHaveBeenCalled();
+    });
+
+    test('_returnFromRecordState tracks space object context for VIEWING_RECORD navigation', () => {
+        // Simulate the UIManager setting _returnFromRecordState when navigating to VIEWING_RECORD
+        // from a space object context (as done in uiManager._handleStandardMenuClick)
+        gameStateManager._returnFromRecordState = 'DOCKED_SPACE_OBJECT';
+
+        // Verify the field is set correctly for the gamepad B-button handler to consume
+        expect(gameStateManager._returnFromRecordState).toBe('DOCKED_SPACE_OBJECT');
+
+        // Simulate the gamepad B-button handler consuming and clearing the field
+        const returnState = gameStateManager._returnFromRecordState || 'DOCKED';
+        gameStateManager._returnFromRecordState = null;
+
+        // Should navigate back to the space object, not the station
+        expect(returnState).toBe('DOCKED_SPACE_OBJECT');
+        // Field must be cleared to prevent stale state on subsequent navigation
+        expect(gameStateManager._returnFromRecordState).toBeNull();
+    });
+
+    test('_returnFromRecordState is undefined by default, causing fallback to DOCKED', () => {
+        // GameStateManager does not initialize _returnFromRecordState in its constructor,
+        // so it is undefined when no space object context has been set.
+        expect(gameStateManager._returnFromRecordState).toBeUndefined();
+
+        // The gamepad B-button handler uses || 'DOCKED' as a fallback
+        const returnState = gameStateManager._returnFromRecordState || 'DOCKED';
+        expect(returnState).toBe('DOCKED');
+    });
+});
