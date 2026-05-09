@@ -381,6 +381,7 @@ describe('SurfaceMode Enter', () => {
 
     test('enter falls back to default mesh values when SurfaceUtils dynamic helpers are unavailable', () => {
         const originalMeshSize = SURFACE_CONFIG.MESH_SIZE;
+        const originalMeshResolution = SURFACE_CONFIG.MESH_RESOLUTION;
         const expectedResolution = Math.ceil(originalMeshSize / DEFAULT_DETAIL_RATIO);
         const originalSurfaceUtils = global.SurfaceUtils;
 
@@ -397,6 +398,8 @@ describe('SurfaceMode Enter', () => {
             expect(SURFACE_CONFIG.MESH_RESOLUTION).toBe(expectedResolution);
         } finally {
             global.SurfaceUtils = originalSurfaceUtils;
+            SURFACE_CONFIG.MESH_SIZE = originalMeshSize;
+            SURFACE_CONFIG.MESH_RESOLUTION = originalMeshResolution;
         }
     });
 
