@@ -364,6 +364,7 @@ class InputManager {
             strafeX: s?.ls?.x || 0,
             thrustY: s?.ls?.y || 0,
             rotateX: beamTargeting ? 0 : (s?.rs?.x || 0),
+            rotateY: beamTargeting ? 0 : (s?.rs?.y || 0),
             forwardThrottle: s?.r2 || 0,
             reverseThrottle: 0,
             beamAimX: beamTargeting ? (s?.rs?.x || 0) : 0,

@@ -614,12 +614,13 @@ function handleGamepadContinuousInput() {
     const lsX = shipControls.strafeX;
     const lsY = shipControls.thrustY;
     const rsX = shipControls.rotateX;
+    const rsY = shipControls.rotateY;
     const r2Val = shipControls.forwardThrottle;
     const l2Val = shipControls.reverseThrottle;
 
     const rotTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
     const hasGamepadInput = Math.abs(lsX) > 0.1 || Math.abs(lsY) > 0.1 ||
-                           Math.abs(rsX) > 0.1 || r2Val > 0.1 || l2Val > 0.1 ||
+                           Math.abs(rsX) > 0.1 || Math.abs(rsY) > 0.1 || r2Val > 0.1 || l2Val > 0.1 ||
                            Math.abs(shipControls.beamAimX) > 0.1 || Math.abs(shipControls.beamAimY) > 0.1;
 
     // Disable autopilot on gamepad input
@@ -628,10 +629,20 @@ function handleGamepadContinuousInput() {
         uiManager?.addMessage('Autopilot disengaged: On manual control');
     }
 
-    // Rotation from right stick (response curve for finer center control + full-turn authority)
-    if (Math.abs(rsX) > 0.08) {
-        const rotInput = Math.sign(rsX) * Math.pow(Math.abs(rsX), 1.35);
-        player.angle += rotInput * player.rotationSpeed * rotTimeScale;
+    // Right stick: world-space aim — steer the ship toward the direction the stick points.
+    // Pushing right → ship turns to face right; pushing up → turns to face up.
+    // The angular error drives rotation each frame, capped at rotationSpeed so the ship
+    // never snaps instantly. Stick magnitude scales the maximum turn authority so
+    // gentle deflections give finer steering.
+    const rsMag = Math.sqrt(rsX * rsX + rsY * rsY);
+    if (rsMag > 0.08) {
+        const targetAngle = atan2(rsY, rsX);
+        let err = targetAngle - player.angle;
+        // Normalise to [-PI, PI] for shortest-arc rotation
+        while (err > PI) err -= TWO_PI;
+        while (err < -PI) err += TWO_PI;
+        const maxTurn = player.rotationSpeed * rotTimeScale * rsMag;
+        player.angle += Math.sign(err) * Math.min(Math.abs(err), maxTurn);
     }
 
     // Left stick: world-space (screen-space) omnidirectional movement.
