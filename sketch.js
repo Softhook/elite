@@ -616,11 +616,13 @@ function handleGamepadContinuousInput() {
     const rsX = shipControls.rotateX;
     const rsY = shipControls.rotateY;
     const r2Val = shipControls.forwardThrottle;
-    const l2Val = shipControls.reverseThrottle;
 
     const rotTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
-    const hasGamepadInput = Math.abs(lsX) > 0.1 || Math.abs(lsY) > 0.1 ||
-                           Math.abs(rsX) > 0.1 || Math.abs(rsY) > 0.1 || r2Val > 0.1 || l2Val > 0.1 ||
+    // Use the same thresholds as the actual control logic so autopilot disengages
+    // exactly when control input becomes active — no earlier, no later.
+    const rsMag = Math.sqrt(rsX * rsX + rsY * rsY);
+    const lsMag = Math.sqrt(lsX * lsX + lsY * lsY);
+    const hasGamepadInput = rsMag > 0.08 || lsMag > 0.05 || r2Val > 0.08 ||
                            Math.abs(shipControls.beamAimX) > 0.1 || Math.abs(shipControls.beamAimY) > 0.1;
 
     // Disable autopilot on gamepad input
@@ -634,7 +636,6 @@ function handleGamepadContinuousInput() {
     // The angular error drives rotation each frame, capped at rotationSpeed so the ship
     // never snaps instantly. Stick magnitude scales the maximum turn authority so
     // gentle deflections give finer steering.
-    const rsMag = Math.sqrt(rsX * rsX + rsY * rsY);
     if (rsMag > 0.08) {
         const targetAngle = Math.atan2(rsY, rsX);
         let err = targetAngle - player.angle;
@@ -668,9 +669,9 @@ function handleGamepadContinuousInput() {
         }
     }
 
-    // Combine stick world-forward component with trigger forward/reverse
+    // Combine stick world-forward component with trigger forward
     const forwardAmount = Math.max(stickForwardAmount, r2Val);
-    const reverseAmount = Math.max(stickReverseAmount, l2Val);
+    const reverseAmount = stickReverseAmount;
 
     if (forwardAmount > 0.08) {
         player.isThrusting = true;
