@@ -334,6 +334,17 @@ describe('Player Target Cycling', () => {
         expect(player.target).toBe(separatistHostile);
     });
 
+    test('uses the minimap fallback radius when no system proximity data is available', () => {
+        player.currentSystem = {
+            enemies: [],
+            asteroids: [],
+            spaceObjects: [],
+            isPlayerWanted: () => false
+        };
+
+        expect(player._getCycleTargetMaxDistance()).toBe(5000);
+    });
+
     test('falls back to ship faction when choosing hostile rivals', () => {
         const separatistHostile = createTarget({ x: 180, role: AI_ROLE.COMBAT, faction: 'SEPARATIST', shipTypeName: 'Separatist Wing' });
         const imperialAlly = createTarget({ x: 90, role: AI_ROLE.COMBAT, faction: 'IMPERIAL', shipTypeName: 'Imperial Wing' });
@@ -357,6 +368,20 @@ describe('Player Target Cycling', () => {
 
         expect(player.target).toBe(pirate);
         expect(player.target).not.toBe(lawfulShip);
+    });
+
+    test('includes nearby police and guards when the player is wanted', () => {
+        const police = createTarget({ x: 120, role: AI_ROLE.POLICE, shipTypeName: 'Police Viper' });
+        const guard = createTarget({ x: 180, role: AI_ROLE.GUARD, shipTypeName: 'Station Guard' });
+
+        player.isWanted = true;
+        player.currentSystem.enemies = [guard, police];
+
+        player.cycleTarget(1);
+        expect(player.target).toBe(police);
+
+        player.cycleTarget(1);
+        expect(player.target).toBe(guard);
     });
 });
 

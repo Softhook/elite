@@ -3104,7 +3104,7 @@ class Player {
     _getCycleTargetMaxDistance() {
         const TARGET_CYCLE_RADIUS_BUFFER = 400;
 
-        if (!this.currentSystem) return 6000;
+        if (!this.currentSystem) return 5000;
 
         if (typeof this.currentSystem._getDiagonalDistance === 'function') {
             const diagonalDistance = this.currentSystem._getDiagonalDistance();
@@ -3118,7 +3118,7 @@ class Player {
             return this.currentSystem.despawnRadius;
         }
 
-        return 6000;
+        return 5000;
     }
 
     /**
