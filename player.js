@@ -2038,6 +2038,7 @@ class Player {
 
         let shieldHit = false;
         let actualDamage = amount;
+        let hitRumbleTriggered = false;
         const triggerGamepadHitRumble = (isShieldHit, damageAmount) => {
             if (damageAmount <= 0) return;
             if (typeof window === 'undefined') return;
@@ -2049,6 +2050,7 @@ class Player {
             const intensity = isShieldHit ? 0.35 : 0.6;
             const duration = isShieldHit ? 90 : 140;
             gp.rumble(intensity, duration);
+            hitRumbleTriggered = true;
         };
 
         // Apply barrier damage reduction if active
@@ -2091,7 +2093,9 @@ class Player {
             //uiManager.addMessage(`Hull damage: ${actualDamage.toFixed(1)}`, [255, 50, 50]);
             shieldHit = false;
         }
-        triggerGamepadHitRumble(shieldHit, actualDamage);
+        if (!hitRumbleTriggered) {
+            triggerGamepadHitRumble(shieldHit, actualDamage);
+        }
         // Shield down cue on transition >0 -> 0
         if (prevShield > 0 && this.shield === 0) {
             if (typeof soundManager !== 'undefined') { soundManager.playSound('shieldDown', 1.0, this); }

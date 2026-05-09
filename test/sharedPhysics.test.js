@@ -219,6 +219,36 @@ describe('SharedPhysics Analog Thrust Visual Scaling', () => {
             2
         );
     });
+
+    test('thrustForward uses mid-range particle count for medium analog input', () => {
+        const entity = createMockEntity({
+            thrustManager: { createThrust: jest.fn() }
+        });
+
+        SharedPhysics.thrustForward(entity, 1.2, true, 1 / 60);
+
+        expect(entity.thrustManager.createThrust).toHaveBeenCalledWith(
+            entity.pos,
+            entity.angle,
+            entity.size,
+            3
+        );
+    });
+
+    test('thrustForward clamps particle count at max for high analog input', () => {
+        const entity = createMockEntity({
+            thrustManager: { createThrust: jest.fn() }
+        });
+
+        SharedPhysics.thrustForward(entity, 2.5, true, 1 / 60);
+
+        expect(entity.thrustManager.createThrust).toHaveBeenCalledWith(
+            entity.pos,
+            entity.angle,
+            entity.size,
+            4
+        );
+    });
 });
 
 // ============================================
