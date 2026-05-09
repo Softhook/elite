@@ -1221,8 +1221,19 @@ class SurfaceMode {
 
         // Check for any movement input
         // Keys: W(87), A(65), S(83), D(68) or Arrows (UP/LEFT/DOWN/RIGHT)
-        const moving = keyIsDown(87) || keyIsDown(65) || keyIsDown(83) || keyIsDown(68) ||
+        const keyboardMoving = keyIsDown(87) || keyIsDown(65) || keyIsDown(83) || keyIsDown(68) ||
             keyIsDown(UP_ARROW) || keyIsDown(LEFT_ARROW) || keyIsDown(DOWN_ARROW) || keyIsDown(RIGHT_ARROW);
+
+        const gpState = (typeof window !== 'undefined') ? window?._gamepadManager?.state : null;
+        const gamepadMoving = !!gpState && (
+            gpState.dpad?.up || gpState.dpad?.down || gpState.dpad?.left || gpState.dpad?.right ||
+            Math.abs(gpState.ls?.x || 0) > 0.35 ||
+            Math.abs(gpState.ls?.y || 0) > 0.35 ||
+            (gpState.r2 || 0) > 0.35 ||
+            (gpState.l2 || 0) > 0.35
+        );
+
+        const moving = keyboardMoving || gamepadMoving;
 
         // Only allow disembark if moving AND stationary (speed < 10) AND not on cooldown
         if (moving && this.playerSpeed < 10 && this.reboardCooldown <= 0) {
