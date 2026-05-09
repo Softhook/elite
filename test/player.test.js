@@ -190,6 +190,7 @@ describe('Player Combat', () => {
 describe('Player Damage', () => {
     let player;
     let previousWindow;
+    let previousGlobalGamepadManager;
 
     beforeEach(() => {
         player = new Player();
@@ -198,11 +199,13 @@ describe('Player Damage', () => {
         player.shield = 50;
         player.maxShield = 50;
         previousWindow = global.window;
+        previousGlobalGamepadManager = global._gamepadManager;
         global.window = global.window || {};
     });
 
     afterEach(() => {
         global.window = previousWindow;
+        global._gamepadManager = previousGlobalGamepadManager;
     });
 
 
@@ -248,6 +251,20 @@ describe('Player Damage', () => {
         player.takeDamage(10);
 
         expect(rumble).not.toHaveBeenCalled();
+    });
+
+    test('should use globalThis gamepad manager when window is unavailable', () => {
+        const rumble = jest.fn();
+        global.window = undefined;
+        global._gamepadManager = {
+            connected: true,
+            state: { mode: 'S-MODE (Switch)' },
+            rumble
+        };
+
+        player.takeDamage(10);
+
+        expect(rumble).toHaveBeenCalledWith(0.35, 90);
     });
 
 });
