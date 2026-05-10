@@ -300,7 +300,7 @@ describe('Player Target Cycling', () => {
             enemies: [],
             asteroids: [],
             spaceObjects: [],
-            // 200 + 400 buffer = 600 unit dashed-circle targeting radius in these tests.
+            // 200 + 900 buffer = 1100 unit targeting radius in these tests.
             _getDiagonalDistance: () => 200,
             isPlayerWanted: () => false
         };
@@ -322,9 +322,9 @@ describe('Player Target Cycling', () => {
         delete SHIP_DEFINITIONS[TEST_SHIP_KEY];
     });
 
-    test('cycles only nearby hostile targets within the dashed proximity circle', () => {
+    test('cycles only nearby hostile targets within the cycle-target radius', () => {
         const pirateInRange = createTarget({ x: 450, role: AI_ROLE.PIRATE, shipTypeName: 'Raider' });
-        const pirateOutOfRange = createTarget({ x: 650, role: AI_ROLE.PIRATE, shipTypeName: 'Far Raider' });
+        const pirateOutOfRange = createTarget({ x: 1200, role: AI_ROLE.PIRATE, shipTypeName: 'Far Raider' });
         const previousTarget = { pos: createVector(40, 0), destroyed: false, type: 'Station' };
 
         player.currentSystem.enemies = [pirateOutOfRange, pirateInRange];
@@ -337,6 +337,20 @@ describe('Player Target Cycling', () => {
         expect(player.target).not.toBe(pirateOutOfRange);
         expect(global.uiManager.addMessage).toHaveBeenCalledWith('Target locked: Raider', [0, 255, 0]);
         expect(global.soundManager.playSound).toHaveBeenCalledWith('click');
+    });
+
+    test('prioritizes hostile targets before nearby neutral ships', () => {
+        const neutralNearby = createTarget({ x: 100, role: AI_ROLE.COMBAT, faction: 'IMPERIAL', shipTypeName: 'Trader' });
+        const hostileFarther = createTarget({ x: 300, role: AI_ROLE.PIRATE, shipTypeName: 'Raider' });
+
+        player.playerFaction = 'IMPERIAL';
+        player.currentSystem.enemies = [neutralNearby, hostileFarther];
+
+        player.cycleTarget(1);
+        expect(player.target).toBe(hostileFarther);
+
+        player.cycleTarget(1);
+        expect(player.target).toBe(neutralNearby);
     });
 
     test('uses joined faction hostility when filtering cycle targets', () => {

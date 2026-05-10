@@ -832,6 +832,12 @@ function _handleGamepadStationMenus(gp, state) {
             if (Number.isInteger(selectedMissionButton?.index) &&
                 gameStateManager?.selectedMissionIndex !== selectedMissionButton.index) {
                 gameStateManager.selectedMissionIndex = selectedMissionButton.index;
+            } else if (gameStateManager &&
+                (!Number.isInteger(gameStateManager.selectedMissionIndex) || gameStateManager.selectedMissionIndex < 0)) {
+                const fallbackMissionButton = buttons.find(btn => Number.isInteger(btn?.index));
+                if (Number.isInteger(fallbackMissionButton?.index)) {
+                    gameStateManager.selectedMissionIndex = fallbackMissionButton.index;
+                }
             }
         }
     }

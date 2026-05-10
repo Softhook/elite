@@ -3101,7 +3101,7 @@ class Player {
      * @private
      */
     _getCycleTargetMaxDistance() {
-        const TARGET_CYCLE_RADIUS_BUFFER = 400;
+        const TARGET_CYCLE_RADIUS_BUFFER = 900;
 
         if (!this.currentSystem) return 5000;
 
@@ -3183,7 +3183,7 @@ class Player {
 
     /**
      * Cycle through nearby targets using the D-pad (or keys).
-     * Automatically cycles through nearby hostile targets only.
+     * Prioritizes nearby hostile targets, then other nearby ships.
      * @param {number} direction - 1 for next, -1 for previous
      */
     cycleTarget(direction = 1) {
@@ -3191,16 +3191,21 @@ class Player {
 
         const maxDist = this._getCycleTargetMaxDistance();
         const maxDistSq = maxDist * maxDist;
-        const targets = [];
+        const hostileTargets = [];
+        const nearbyTargets = [];
 
-        const addTargetIfEligible = (target) => {
-            if (!this._isCycleTargetHostile(target)) return;
+        const addTargetIfEligible = (target, allowNonHostile = false) => {
+            if (!target || target.destroyed || !target.pos) return;
 
             const dx = this.pos.x - target.pos.x;
             const dy = this.pos.y - target.pos.y;
             const distSq = dx * dx + dy * dy;
-            if (distSq <= maxDistSq) {
-                targets.push({ target, distSq });
+            if (distSq > maxDistSq) return;
+
+            if (this._isCycleTargetHostile(target)) {
+                hostileTargets.push({ target, distSq });
+            } else if (allowNonHostile) {
+                nearbyTargets.push({ target, distSq });
             }
         };
 
@@ -3209,16 +3214,16 @@ class Player {
         if (inSurfaceMode) {
             if (surfaceMode.surfaceObjects) {
                 for (const obj of surfaceMode.surfaceObjects) {
-                    addTargetIfEligible(obj);
+                    addTargetIfEligible(obj, false);
                 }
             }
         } else if (this.currentSystem.enemies) {
             for (const enemy of this.currentSystem.enemies) {
-                addTargetIfEligible(enemy);
+                addTargetIfEligible(enemy, true);
             }
         }
 
-        if (targets.length === 0) {
+        if (hostileTargets.length === 0 && nearbyTargets.length === 0) {
             if (this.target) {
                 this.target = null;
                 if (typeof uiManager !== 'undefined') uiManager.addMessage("No targets in range.", [255, 150, 0]);
@@ -3226,8 +3231,9 @@ class Player {
             return;
         }
 
-        targets.sort((a, b) => a.distSq - b.distSq);
-        const targetList = targets.map(entry => entry.target);
+        hostileTargets.sort((a, b) => a.distSq - b.distSq);
+        nearbyTargets.sort((a, b) => a.distSq - b.distSq);
+        const targetList = hostileTargets.concat(nearbyTargets).map(entry => entry.target);
 
         // 3. Determine current index and move to next
         let currentIndex = targetList.indexOf(this.target);
