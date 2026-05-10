@@ -440,13 +440,34 @@ class Projectile {
             }
             pop();
         } else {
-            // Standard projectile drawing
+            // Standard projectile drawing with additive glow for visual impact
             push();
             translate(finalX, finalY);
             scale(counterScale);
-            fill(this.color);
             noStroke();
+
+            // Extract colour components for glow layers
+            const c = this.color;
+            const cr = c.levels ? c.levels[0] : (Array.isArray(c) ? c[0] : 255);
+            const cg = c.levels ? c.levels[1] : (Array.isArray(c) ? c[1] : 100);
+            const cb = c.levels ? c.levels[2] : (Array.isArray(c) ? c[2] : 0);
+
+            // Outer soft glow (additive blend)
+            blendMode(ADD);
+            fill(cr, cg, cb, 60);
+            ellipse(0, 0, this.size * 6, this.size * 6);
+            fill(cr, cg, cb, 110);
+            ellipse(0, 0, this.size * 3.5, this.size * 3.5);
+            blendMode(BLEND);
+
+            // Bright core
+            fill(cr, cg, cb);
             ellipse(0, 0, this.size * 2, this.size * 2);
+
+            // White hot centre dot
+            fill(255, 255, 255, 200);
+            ellipse(0, 0, this.size * 0.9, this.size * 0.9);
+
             pop();
         }
     }

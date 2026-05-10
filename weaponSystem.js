@@ -544,6 +544,11 @@ class WeaponSystem {
             }
             soundManager.playWorldSound(soundName, spawnX, spawnY, player.pos, owner);
         }
+
+        // Muzzle flash lighting effect
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.addMuzzleFlash(spawnX, spawnY, weapon.color, 24);
+        }
     }
 
     static fireMissile(owner, system, angle, target) {
@@ -600,6 +605,11 @@ class WeaponSystem {
         if (soundManager && player?.pos) {
             // Consider adding a specific 'missileLaunch' sound
             soundManager.playWorldSound('missileLaunch', spawnX, spawnY, player.pos, owner);
+        }
+
+        // Muzzle flash lighting effect for missile launch
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.addMuzzleFlash(spawnX, spawnY, weapon.color, 30);
         }
     }
 
@@ -826,6 +836,15 @@ class WeaponSystem {
                 system,
                 weapon?.color || [255, 0, 0]
             );
+        }
+
+        // Lighting effects: muzzle flash at origin and impact flash at beam end
+        if (typeof LightingEffects !== 'undefined') {
+            const beamColor = weapon?.color || [255, 0, 0];
+            LightingEffects.addMuzzleFlash(beamStartX, beamStartY, beamColor, 20);
+            if (hit.target && hit.point) {
+                LightingEffects.addImpactFlash(hit.point.x, hit.point.y, beamColor, 50);
+            }
         }
 
         // Play sound using playWorldSound
@@ -1568,6 +1587,11 @@ class WeaponSystem {
             } else if (system.addExplosion) {
                 // Fallback for space mode or if surfaceMode helper is missing
                 system.addExplosion(worldHitX, worldHitY, hitSize, hitColor, inSurfaceMode);
+            }
+
+            // Lighting: impact flash at hit position (world space)
+            if (typeof LightingEffects !== 'undefined') {
+                LightingEffects.addImpactFlash(worldHitX, worldHitY, hitColor, targetHasShield ? 35 : 45);
             }
         }
     }

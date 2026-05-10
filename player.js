@@ -1918,17 +1918,41 @@ class Player {
 
         // Draw beam if recently fired (skip in surface mode - handled by surfaceMode._drawBeams)
         if (!inSurfaceMode && this.lastBeam && millis() - this.lastBeam.time < 150) {
-            push();
-            stroke(this.lastBeam.color);
-            strokeWeight(3);
-            line(this.lastBeam.start.x, this.lastBeam.start.y,
-                this.lastBeam.end.x, this.lastBeam.end.y);
+            const beamAge    = millis() - this.lastBeam.time;
+            const beamAlpha  = map(beamAge, 0, 150, 255, 0); // fade to transparent
+            const bc         = this.lastBeam.color;
+            const br         = Array.isArray(bc) ? bc[0] : (bc && bc.levels ? bc.levels[0] : 255);
+            const bg2        = Array.isArray(bc) ? bc[1] : (bc && bc.levels ? bc.levels[1] : 0);
+            const bb         = Array.isArray(bc) ? bc[2] : (bc && bc.levels ? bc.levels[2] : 0);
+            const sx         = this.lastBeam.start.x;
+            const sy         = this.lastBeam.start.y;
+            const ex         = this.lastBeam.end.x;
+            const ey         = this.lastBeam.end.y;
 
-            // Add a glow effect
-            stroke(this.lastBeam.color[0], this.lastBeam.color[1], this.lastBeam.color[2], 100);
-            strokeWeight(6);
-            line(this.lastBeam.start.x, this.lastBeam.start.y,
-                this.lastBeam.end.x, this.lastBeam.end.y);
+            push();
+            blendMode(ADD);
+            noFill();
+
+            // Outer soft glow (wide, transparent)
+            stroke(br, bg2, bb, beamAlpha * 0.18);
+            strokeWeight(14);
+            line(sx, sy, ex, ey);
+
+            // Middle glow
+            stroke(br, bg2, bb, beamAlpha * 0.35);
+            strokeWeight(7);
+            line(sx, sy, ex, ey);
+
+            // Inner coloured beam
+            stroke(br, bg2, bb, beamAlpha * 0.85);
+            strokeWeight(3);
+            line(sx, sy, ex, ey);
+
+            // White-hot core
+            stroke(255, 255, 255, beamAlpha * 0.75);
+            strokeWeight(1.2);
+            line(sx, sy, ex, ey);
+
             pop();
         }
 
@@ -2095,6 +2119,20 @@ class Player {
         }
         const isShieldOnlyHit = shieldHit && hullDamageFromHit <= 0;
         triggerGamepadHitRumble(isShieldOnlyHit, actualDamage);
+
+        // Screen-flash lighting effect for significant hits
+        if (typeof LightingEffects !== 'undefined' && actualDamage > 0) {
+            if (!shieldHit) {
+                // Hull hit: red flash, scaled with damage severity
+                const hullPct = this.maxHull > 0 ? hullDamageFromHit / this.maxHull : 0;
+                const flashAlpha = Math.min(110, 40 + hullPct * 350);
+                LightingEffects.addScreenFlash([255, 30, 30], flashAlpha);
+            } else if (isShieldOnlyHit) {
+                // Shield-only hit: subtle cyan flash
+                LightingEffects.addScreenFlash([80, 180, 255], 30);
+            }
+        }
+
         // Shield down cue on transition >0 -> 0
         if (prevShield > 0 && this.shield === 0) {
             if (typeof soundManager !== 'undefined') { soundManager.playSound('shieldDown', 1.0, this); }
