@@ -322,7 +322,7 @@ describe('Player Target Cycling', () => {
         delete SHIP_DEFINITIONS[TEST_SHIP_KEY];
     });
 
-    test('cycles only nearby hostile targets within the dashed proximity circle', () => {
+    test('cycles only nearby hostile targets within the cycle-target radius', () => {
         const pirateInRange = createTarget({ x: 450, role: AI_ROLE.PIRATE, shipTypeName: 'Raider' });
         const pirateOutOfRange = createTarget({ x: 1200, role: AI_ROLE.PIRATE, shipTypeName: 'Far Raider' });
         const previousTarget = { pos: createVector(40, 0), destroyed: false, type: 'Station' };
