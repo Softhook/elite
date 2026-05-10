@@ -75,7 +75,12 @@ class InputManager {
                 Enter: INPUT_ACTIONS.CONFIRM, Space: INPUT_ACTIONS.CONFIRM,
                 KeyM: INPUT_ACTIONS.TOGGLE_MAP, KeyX: INPUT_ACTIONS.MAP_MARKET_TOGGLE, Escape: INPUT_ACTIONS.BACK
             },
-            [INPUT_CONTEXTS.MISSION_OVERLAY]: { KeyN: INPUT_ACTIONS.TOGGLE_MISSION, Escape: INPUT_ACTIONS.BACK },
+            [INPUT_CONTEXTS.MISSION_OVERLAY]: {
+                ArrowUp: INPUT_ACTIONS.NAV_UP,
+                ArrowDown: INPUT_ACTIONS.NAV_DOWN,
+                KeyN: INPUT_ACTIONS.TOGGLE_MISSION,
+                Escape: INPUT_ACTIONS.BACK
+            },
             [INPUT_CONTEXTS.INVENTORY]: { KeyI: INPUT_ACTIONS.TOGGLE_INVENTORY, Escape: INPUT_ACTIONS.BACK },
             [INPUT_CONTEXTS.IN_FLIGHT]: {
                 Space: INPUT_ACTIONS.FIRE_PRIMARY,

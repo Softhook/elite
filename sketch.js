@@ -458,6 +458,21 @@ function executeInputAction(action, context) {
                 return true;
             }
             return false;
+        case INPUT_ACTIONS.NAV_UP:
+            if (context === INPUT_CONTEXTS.MISSION_OVERLAY && missionOverlay) {
+                missionOverlay.scrollOffset = Math.max(0, missionOverlay.scrollOffset - 24);
+                return true;
+            }
+            return false;
+        case INPUT_ACTIONS.NAV_DOWN:
+            if (context === INPUT_CONTEXTS.MISSION_OVERLAY && missionOverlay) {
+                missionOverlay.scrollOffset = Math.min(
+                    missionOverlay.maxScroll || 0,
+                    missionOverlay.scrollOffset + 24
+                );
+                return true;
+            }
+            return false;
         case INPUT_ACTIONS.TOGGLE_INVENTORY: return handleInventoryToggle();
         case INPUT_ACTIONS.TOGGLE_MAP: return handleMapToggle();
         case INPUT_ACTIONS.TOGGLE_MISSION: return handleMissionOverlayToggle();
@@ -554,18 +569,18 @@ function handleGamepadContinuousInput() {
     }
 
     if (context === INPUT_CONTEXTS.MISSION_OVERLAY) {
-        if (uiManager?.missionOverlay) {
+        if (missionOverlay) {
             const scrollSpeed = 8;
             if (Math.abs(s.rs.y) > 0.1) {
-                uiManager.missionOverlay.scrollOffset += s.rs.y * scrollSpeed;
-            } else if (s.dpad.up) {
-                uiManager.missionOverlay.scrollOffset -= scrollSpeed;
-            } else if (s.dpad.down) {
-                uiManager.missionOverlay.scrollOffset += scrollSpeed;
+                missionOverlay.scrollOffset += s.rs.y * scrollSpeed;
+            } else if (inputManager.isGamepadActionHeld(INPUT_ACTIONS.NAV_UP, context)) {
+                missionOverlay.scrollOffset -= scrollSpeed;
+            } else if (inputManager.isGamepadActionHeld(INPUT_ACTIONS.NAV_DOWN, context)) {
+                missionOverlay.scrollOffset += scrollSpeed;
             }
-            uiManager.missionOverlay.scrollOffset = Math.min(
-                Math.max(uiManager.missionOverlay.scrollOffset, 0),
-                uiManager.missionOverlay.maxScroll || 0
+            missionOverlay.scrollOffset = Math.min(
+                Math.max(missionOverlay.scrollOffset, 0),
+                missionOverlay.maxScroll || 0
             );
         }
         return;
