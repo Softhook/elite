@@ -6047,8 +6047,8 @@ class StarSystem {
             if (startInView || endInView || this.lineIntersectsScreen(beam.start, beam.end, screenBounds)) {
                 const bc = beam.color;
                 const br = bc && bc.levels ? bc.levels[0] : (Array.isArray(bc) ? bc[0] : 255);
-                const bg2 = bc && bc.levels ? bc.levels[1] : (Array.isArray(bc) ? bc[1] : 0);
-                const bb2 = bc && bc.levels ? bc.levels[2] : (Array.isArray(bc) ? bc[2] : 0);
+                const bg = bc && bc.levels ? bc.levels[1] : (Array.isArray(bc) ? bc[1] : 0);
+                const bb = bc && bc.levels ? bc.levels[2] : (Array.isArray(bc) ? bc[2] : 0);
                 const sx = beam.start.x, sy = beam.start.y;
                 const ex = beam.end.x, ey = beam.end.y;
                 const w = beam.width || 2;
@@ -6058,17 +6058,17 @@ class StarSystem {
                 noFill();
 
                 // Outer glow
-                stroke(br, bg2, bb2, 40);
+                stroke(br, bg, bb, 40);
                 strokeWeight(w * 5);
                 line(sx, sy, ex, ey);
 
                 // Mid glow
-                stroke(br, bg2, bb2, 90);
+                stroke(br, bg, bb, 90);
                 strokeWeight(w * 2.5);
                 line(sx, sy, ex, ey);
 
                 // Core beam
-                stroke(br, bg2, bb2, 220);
+                stroke(br, bg, bb, 220);
                 strokeWeight(w);
                 line(sx, sy, ex, ey);
 

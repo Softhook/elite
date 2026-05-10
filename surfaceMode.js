@@ -3215,24 +3215,24 @@ class SurfaceMode {
         // Draw main beam line with multi-layer glow for dramatic effect
         const bc = beam.color;
         const br = Array.isArray(bc) ? bc[0] : (bc && bc.levels ? bc.levels[0] : 255);
-        const bg2 = Array.isArray(bc) ? bc[1] : (bc && bc.levels ? bc.levels[1] : 0);
+        const bg = Array.isArray(bc) ? bc[1] : (bc && bc.levels ? bc.levels[1] : 0);
         const bb = Array.isArray(bc) ? bc[2] : (bc && bc.levels ? bc.levels[2] : 0);
 
         blendMode(ADD);
         noFill();
 
         // Outer soft glow
-        stroke(br, bg2, bb, 45);
+        stroke(br, bg, bb, 45);
         strokeWeight(14 * counterScale);
         line(vStartX, vStartY, vEndX, vEndY);
 
         // Mid glow
-        stroke(br, bg2, bb, 90);
+        stroke(br, bg, bb, 90);
         strokeWeight(7 * counterScale);
         line(vStartX, vStartY, vEndX, vEndY);
 
         // Core coloured beam
-        stroke(br, bg2, bb, 220);
+        stroke(br, bg, bb, 220);
         strokeWeight(3 * counterScale);
         line(vStartX, vStartY, vEndX, vEndY);
 

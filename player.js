@@ -1922,7 +1922,7 @@ class Player {
             const beamAlpha  = map(beamAge, 0, 150, 255, 0); // fade to transparent
             const bc         = this.lastBeam.color;
             const br         = Array.isArray(bc) ? bc[0] : (bc && bc.levels ? bc.levels[0] : 255);
-            const bg2        = Array.isArray(bc) ? bc[1] : (bc && bc.levels ? bc.levels[1] : 0);
+            const bg         = Array.isArray(bc) ? bc[1] : (bc && bc.levels ? bc.levels[1] : 0);
             const bb         = Array.isArray(bc) ? bc[2] : (bc && bc.levels ? bc.levels[2] : 0);
             const sx         = this.lastBeam.start.x;
             const sy         = this.lastBeam.start.y;
@@ -1934,17 +1934,17 @@ class Player {
             noFill();
 
             // Outer soft glow (wide, transparent)
-            stroke(br, bg2, bb, beamAlpha * 0.18);
+            stroke(br, bg, bb, beamAlpha * 0.18);
             strokeWeight(14);
             line(sx, sy, ex, ey);
 
             // Middle glow
-            stroke(br, bg2, bb, beamAlpha * 0.35);
+            stroke(br, bg, bb, beamAlpha * 0.35);
             strokeWeight(7);
             line(sx, sy, ex, ey);
 
             // Inner coloured beam
-            stroke(br, bg2, bb, beamAlpha * 0.85);
+            stroke(br, bg, bb, beamAlpha * 0.85);
             strokeWeight(3);
             line(sx, sy, ex, ey);
 
