@@ -1934,6 +1934,9 @@ class SurfaceMode {
         this._drawExplosions();
         this._drawProjectiles();
         this._drawMines();
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.draw();
+        }
 
         // Draw beam and force wave effects (no projectile, direct rendering)
         this._drawBeams();
@@ -3212,36 +3215,16 @@ class SurfaceMode {
             vEndY = beam.end.y - endYOffset;
         }
 
-        // Draw main beam line with multi-layer glow for dramatic effect
-        const bc = beam.color;
-        const br = Array.isArray(bc) ? bc[0] : (bc && bc.levels ? bc.levels[0] : 255);
-        const bg = Array.isArray(bc) ? bc[1] : (bc && bc.levels ? bc.levels[1] : 0);
-        const bb = Array.isArray(bc) ? bc[2] : (bc && bc.levels ? bc.levels[2] : 0);
-
-        blendMode(ADD);
-        noFill();
-
-        // Outer soft glow
-        stroke(br, bg, bb, 45);
-        strokeWeight(14 * counterScale);
-        line(vStartX, vStartY, vEndX, vEndY);
-
-        // Mid glow
-        stroke(br, bg, bb, 90);
-        strokeWeight(7 * counterScale);
-        line(vStartX, vStartY, vEndX, vEndY);
-
-        // Core coloured beam
-        stroke(br, bg, bb, 220);
-        strokeWeight(3 * counterScale);
-        line(vStartX, vStartY, vEndX, vEndY);
-
-        // White-hot centre line
-        stroke(255, 255, 255, 190);
-        strokeWeight(1.2 * counterScale);
-        line(vStartX, vStartY, vEndX, vEndY);
-
-        blendMode(BLEND);
+        if (typeof LightingEffects !== 'undefined' && typeof LightingEffects.drawBeamGlow === 'function') {
+            LightingEffects.drawBeamGlow(vStartX, vStartY, vEndX, vEndY, beam.color, {
+                baseWidth: 3,
+                counterScale,
+                outerAlpha: 45,
+                midAlpha: 90,
+                coreAlpha: 220,
+                whiteAlpha: 190
+            });
+        }
 
         pop();
     }

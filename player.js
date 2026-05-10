@@ -1920,40 +1920,20 @@ class Player {
         if (!inSurfaceMode && this.lastBeam && millis() - this.lastBeam.time < 150) {
             const beamAge    = millis() - this.lastBeam.time;
             const beamAlpha  = map(beamAge, 0, 150, 255, 0); // fade to transparent
-            const bc         = this.lastBeam.color;
-            const br         = Array.isArray(bc) ? bc[0] : (bc && bc.levels ? bc.levels[0] : 255);
-            const bg         = Array.isArray(bc) ? bc[1] : (bc && bc.levels ? bc.levels[1] : 0);
-            const bb         = Array.isArray(bc) ? bc[2] : (bc && bc.levels ? bc.levels[2] : 0);
             const sx         = this.lastBeam.start.x;
             const sy         = this.lastBeam.start.y;
             const ex         = this.lastBeam.end.x;
             const ey         = this.lastBeam.end.y;
-
-            push();
-            blendMode(ADD);
-            noFill();
-
-            // Outer soft glow (wide, transparent)
-            stroke(br, bg, bb, beamAlpha * 0.18);
-            strokeWeight(14);
-            line(sx, sy, ex, ey);
-
-            // Middle glow
-            stroke(br, bg, bb, beamAlpha * 0.35);
-            strokeWeight(7);
-            line(sx, sy, ex, ey);
-
-            // Inner coloured beam
-            stroke(br, bg, bb, beamAlpha * 0.85);
-            strokeWeight(3);
-            line(sx, sy, ex, ey);
-
-            // White-hot core
-            stroke(255, 255, 255, beamAlpha * 0.75);
-            strokeWeight(1.2);
-            line(sx, sy, ex, ey);
-
-            pop();
+            if (typeof LightingEffects !== 'undefined' && typeof LightingEffects.drawBeamGlow === 'function') {
+                LightingEffects.drawBeamGlow(sx, sy, ex, ey, this.lastBeam.color, {
+                    baseWidth: 2.8,
+                    alphaScale: beamAlpha / 255,
+                    outerAlpha: 46,
+                    midAlpha: 89,
+                    coreAlpha: 217,
+                    whiteAlpha: 191
+                });
+            }
         }
 
         // Draw line to secret base if feature is active (early exit if not active)

@@ -843,13 +843,10 @@ class WeaponSystem {
             );
         }
 
-        // Lighting effects: muzzle flash at origin and impact flash at beam end
+        // Lighting effects: muzzle flash at world-space origin
         if (typeof LightingEffects !== 'undefined') {
             const beamColor = weapon?.color || [255, 0, 0];
-            LightingEffects.addMuzzleFlash(beamStartX, beamStartY, beamColor, 20);
-            if (hit.target && hit.point) {
-                LightingEffects.addImpactFlash(hit.point.x, hit.point.y, beamColor, 50);
-            }
+            LightingEffects.addMuzzleFlash(start.x, start.y, beamColor, 20);
         }
 
         // Play sound using playWorldSound

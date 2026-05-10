@@ -6045,39 +6045,13 @@ class StarSystem {
 
             // If either end is visible, or beam crosses screen, draw it
             if (startInView || endInView || this.lineIntersectsScreen(beam.start, beam.end, screenBounds)) {
-                const bc = beam.color;
-                const br = bc && bc.levels ? bc.levels[0] : (Array.isArray(bc) ? bc[0] : 255);
-                const bg = bc && bc.levels ? bc.levels[1] : (Array.isArray(bc) ? bc[1] : 0);
-                const bb = bc && bc.levels ? bc.levels[2] : (Array.isArray(bc) ? bc[2] : 0);
                 const sx = beam.start.x, sy = beam.start.y;
                 const ex = beam.end.x, ey = beam.end.y;
                 const w = beam.width || 2;
 
-                push();
-                blendMode(ADD);
-                noFill();
-
-                // Outer glow
-                stroke(br, bg, bb, 40);
-                strokeWeight(w * 5);
-                line(sx, sy, ex, ey);
-
-                // Mid glow
-                stroke(br, bg, bb, 90);
-                strokeWeight(w * 2.5);
-                line(sx, sy, ex, ey);
-
-                // Core beam
-                stroke(br, bg, bb, 220);
-                strokeWeight(w);
-                line(sx, sy, ex, ey);
-
-                // White-hot centre
-                stroke(255, 255, 255, 160);
-                strokeWeight(Math.max(1, w * 0.4));
-                line(sx, sy, ex, ey);
-
-                pop();
+                if (typeof LightingEffects !== 'undefined' && typeof LightingEffects.drawBeamGlow === 'function') {
+                    LightingEffects.drawBeamGlow(sx, sy, ex, ey, beam.color, { baseWidth: w });
+                }
             }
         }
     }

@@ -1930,7 +1930,7 @@ class GameStateManager {
                 if (player.pos && chargePercent > 0) {
                     const tx = width / 2 - player.pos.x;
                     const ty = height / 2 - player.pos.y;
-                    const pulse = (sin(millis() * 0.012) + 1) * 0.5;  // ~0.75 Hz oscillation → 0..1
+                    const pulse = (sin(millis() * 0.012) + 1) * 0.5;  // ~1.9 Hz oscillation → 0..1
                     const haloR = player.size * (1.5 + chargePercent * 2.5 + pulse * 0.8);
                     const haloA = chargePercent * (60 + pulse * 60);
 

@@ -9,6 +9,7 @@ const LightingEffects = (() => {
 
     // Active world-space lighting events
     const _events = [];
+    const MAX_EVENTS = 200;
 
     // Screen-space hit flash state (player takes damage)
     let _screenFlash = {
@@ -21,6 +22,23 @@ const LightingEffects = (() => {
 
     function _now() {
         return (typeof millis === 'function') ? millis() : Date.now();
+    }
+
+    function _purgeExpired(now = _now()) {
+        for (let i = _events.length - 1; i >= 0; i--) {
+            if (now - _events[i].startTime >= _events[i].duration) {
+                _events.splice(i, 1);
+            }
+        }
+    }
+
+    function _pushEvent(event) {
+        const now = _now();
+        _purgeExpired(now);
+        if (_events.length >= MAX_EVENTS) {
+            _events.shift();
+        }
+        _events.push(event);
     }
 
     /**
@@ -45,7 +63,7 @@ const LightingEffects = (() => {
      */
     function addMuzzleFlash(x, y, colorIn, size = 28) {
         if (!isFinite(x) || !isFinite(y)) return;
-        _events.push({
+        _pushEvent({
             type: TYPE_MUZZLE,
             x, y,
             color: _toRGB(colorIn),
@@ -64,7 +82,7 @@ const LightingEffects = (() => {
      */
     function addImpactFlash(x, y, colorIn, size = 40) {
         if (!isFinite(x) || !isFinite(y)) return;
-        _events.push({
+        _pushEvent({
             type: TYPE_IMPACT,
             x, y,
             color: _toRGB(colorIn),
@@ -72,6 +90,49 @@ const LightingEffects = (() => {
             startTime: _now(),
             duration: 180
         });
+    }
+
+    /**
+     * Draw a layered additive beam glow.
+     * @param {number} startX
+     * @param {number} startY
+     * @param {number} endX
+     * @param {number} endY
+     * @param {p5.Color|number[]} colorIn
+     * @param {Object} [cfg]
+     */
+    function drawBeamGlow(startX, startY, endX, endY, colorIn, cfg = {}) {
+        const rgb = _toRGB(colorIn);
+        const br = rgb[0], bg = rgb[1], bb = rgb[2];
+        const baseWidth = cfg.baseWidth ?? 2;
+        const counterScale = cfg.counterScale ?? 1;
+        const alphaScale = cfg.alphaScale ?? 1;
+        const outerAlpha = (cfg.outerAlpha ?? 40) * alphaScale;
+        const midAlpha = (cfg.midAlpha ?? 90) * alphaScale;
+        const coreAlpha = (cfg.coreAlpha ?? 220) * alphaScale;
+        const whiteAlpha = (cfg.whiteAlpha ?? 160) * alphaScale;
+
+        push();
+        blendMode(ADD);
+        noFill();
+
+        stroke(br, bg, bb, outerAlpha);
+        strokeWeight(baseWidth * 5 * counterScale);
+        line(startX, startY, endX, endY);
+
+        stroke(br, bg, bb, midAlpha);
+        strokeWeight(baseWidth * 2.5 * counterScale);
+        line(startX, startY, endX, endY);
+
+        stroke(br, bg, bb, coreAlpha);
+        strokeWeight(baseWidth * counterScale);
+        line(startX, startY, endX, endY);
+
+        stroke(255, 255, 255, whiteAlpha);
+        strokeWeight(Math.max(1, baseWidth * 0.4 * counterScale));
+        line(startX, startY, endX, endY);
+
+        pop();
     }
 
     /**
@@ -115,13 +176,7 @@ const LightingEffects = (() => {
      */
     function draw() {
         const now = _now();
-
-        // Purge expired events
-        for (let i = _events.length - 1; i >= 0; i--) {
-            if (now - _events[i].startTime >= _events[i].duration) {
-                _events.splice(i, 1);
-            }
-        }
+        _purgeExpired(now);
 
         if (_events.length === 0) return;
 
@@ -197,5 +252,5 @@ const LightingEffects = (() => {
     }
 
     // Public API
-    return { addMuzzleFlash, addImpactFlash, addScreenFlash, draw, drawScreenEffects };
+    return { addMuzzleFlash, addImpactFlash, addScreenFlash, draw, drawScreenEffects, drawBeamGlow };
 })();

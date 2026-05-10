@@ -473,12 +473,17 @@ class Projectile {
             const cg = c.levels ? c.levels[1] : (Array.isArray(c) ? c[1] : 100);
             const cb = c.levels ? c.levels[2] : (Array.isArray(c) ? c[2] : 0);
 
-            // Subtle outer glow (additive blend) — reduced from previous over-bright version
+            // Dynamic detail reduction: simplify glow layers during heavy projectile loads
+            const projectileCount = (this.system && Array.isArray(this.system.projectiles)) ? this.system.projectiles.length : 0;
+            const highLoad = projectileCount > 120;
+
             blendMode(ADD);
-            fill(cr, cg, cb, 28);
-            ellipse(0, 0, this.size * 3.5, this.size * 3.5);
-            fill(cr, cg, cb, 68);
-            ellipse(0, 0, this.size * 2.2, this.size * 2.2);
+            fill(cr, cg, cb, highLoad ? 48 : 28);
+            ellipse(0, 0, this.size * (highLoad ? 2.4 : 3.5), this.size * (highLoad ? 2.4 : 3.5));
+            if (!highLoad) {
+                fill(cr, cg, cb, 68);
+                ellipse(0, 0, this.size * 2.2, this.size * 2.2);
+            }
             blendMode(BLEND);
 
             // Bright core
