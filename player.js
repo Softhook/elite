@@ -1918,18 +1918,22 @@ class Player {
 
         // Draw beam if recently fired (skip in surface mode - handled by surfaceMode._drawBeams)
         if (!inSurfaceMode && this.lastBeam && millis() - this.lastBeam.time < 150) {
-            push();
-            stroke(this.lastBeam.color);
-            strokeWeight(3);
-            line(this.lastBeam.start.x, this.lastBeam.start.y,
-                this.lastBeam.end.x, this.lastBeam.end.y);
-
-            // Add a glow effect
-            stroke(this.lastBeam.color[0], this.lastBeam.color[1], this.lastBeam.color[2], 100);
-            strokeWeight(6);
-            line(this.lastBeam.start.x, this.lastBeam.start.y,
-                this.lastBeam.end.x, this.lastBeam.end.y);
-            pop();
+            const beamAge    = millis() - this.lastBeam.time;
+            const beamAlpha  = map(beamAge, 0, 150, 255, 0); // fade to transparent
+            const sx         = this.lastBeam.start.x;
+            const sy         = this.lastBeam.start.y;
+            const ex         = this.lastBeam.end.x;
+            const ey         = this.lastBeam.end.y;
+            if (typeof LightingEffects !== 'undefined' && typeof LightingEffects.drawBeamGlow === 'function') {
+                LightingEffects.drawBeamGlow(sx, sy, ex, ey, this.lastBeam.color, {
+                    baseWidth: 2.8,
+                    alphaScale: beamAlpha / 255,
+                    outerAlpha: 46,
+                    midAlpha: 89,
+                    coreAlpha: 217,
+                    whiteAlpha: 191
+                });
+            }
         }
 
         // Draw line to secret base if feature is active (early exit if not active)
@@ -2095,6 +2099,20 @@ class Player {
         }
         const isShieldOnlyHit = shieldHit && hullDamageFromHit <= 0;
         triggerGamepadHitRumble(isShieldOnlyHit, actualDamage);
+
+        // Screen-flash lighting effect for significant hits
+        if (typeof LightingEffects !== 'undefined' && actualDamage > 0) {
+            if (!shieldHit) {
+                // Hull hit: red flash, scaled with damage severity
+                const hullPct = this.maxHull > 0 ? hullDamageFromHit / this.maxHull : 0;
+                const flashAlpha = Math.min(110, 40 + hullPct * 350);
+                LightingEffects.addScreenFlash([255, 30, 30], flashAlpha);
+            } else if (isShieldOnlyHit) {
+                // Shield-only hit: subtle cyan flash
+                LightingEffects.addScreenFlash([80, 180, 255], 30);
+            }
+        }
+
         // Shield down cue on transition >0 -> 0
         if (prevShield > 0 && this.shield === 0) {
             if (typeof soundManager !== 'undefined') { soundManager.playSound('shieldDown', 1.0, this); }

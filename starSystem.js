@@ -6010,6 +6010,11 @@ class StarSystem {
         // Player is always drawn (center of view)
         this.player.draw();
 
+        // Draw dynamic lighting effects (muzzle flashes, impact glows) in world space
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.draw();
+        }
+
         pop();
     }
 
@@ -6040,9 +6045,13 @@ class StarSystem {
 
             // If either end is visible, or beam crosses screen, draw it
             if (startInView || endInView || this.lineIntersectsScreen(beam.start, beam.end, screenBounds)) {
-                stroke(beam.color);
-                strokeWeight(beam.width || 2);
-                line(beam.start.x, beam.start.y, beam.end.x, beam.end.y);
+                const sx = beam.start.x, sy = beam.start.y;
+                const ex = beam.end.x, ey = beam.end.y;
+                const w = beam.width || 2;
+
+                if (typeof LightingEffects !== 'undefined' && typeof LightingEffects.drawBeamGlow === 'function') {
+                    LightingEffects.drawBeamGlow(sx, sy, ex, ey, beam.color, { baseWidth: w });
+                }
             }
         }
     }

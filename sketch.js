@@ -1180,6 +1180,11 @@ function renderUI() {
         uiManager.checkMarketButtonHeld(player.currentSystem?.station?.getMarket(), player);
     }
 
+    // Screen-space lighting effects (damage flash, etc.) drawn before HUD
+    if (typeof LightingEffects !== 'undefined') {
+        LightingEffects.drawScreenEffects();
+    }
+
     uiManager?.drawFramerate();    // fps cap removed for frame-rate independence
     uiManager?.drawMessages();
 

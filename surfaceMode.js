@@ -1934,6 +1934,9 @@ class SurfaceMode {
         this._drawExplosions();
         this._drawProjectiles();
         this._drawMines();
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.draw();
+        }
 
         // Draw beam and force wave effects (no projectile, direct rendering)
         this._drawBeams();
@@ -3212,15 +3215,16 @@ class SurfaceMode {
             vEndY = beam.end.y - endYOffset;
         }
 
-        // Draw main beam line
-        stroke(beam.color);
-        strokeWeight(3 * counterScale);
-        line(vStartX, vStartY, vEndX, vEndY);
-
-        // Draw glow effect
-        stroke(beam.color[0], beam.color[1], beam.color[2], 100);
-        strokeWeight(6 * counterScale);
-        line(vStartX, vStartY, vEndX, vEndY);
+        if (typeof LightingEffects !== 'undefined' && typeof LightingEffects.drawBeamGlow === 'function') {
+            LightingEffects.drawBeamGlow(vStartX, vStartY, vEndX, vEndY, beam.color, {
+                baseWidth: 3,
+                counterScale,
+                outerAlpha: 45,
+                midAlpha: 90,
+                coreAlpha: 220,
+                whiteAlpha: 190
+            });
+        }
 
         pop();
     }

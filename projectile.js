@@ -306,18 +306,39 @@ class Projectile {
             translate(finalX, finalY);
             scale(counterScale);
             rotate(this.vel.heading());
-            fill(this.color);
             noStroke();
-            // Simple triangle shape for missile
+
+            // ── Engine exhaust plume (additive blend, behind missile body) ──
+            blendMode(ADD);
+            // Wide dim outer wash
+            fill(255, 80, 0, 30);
+            ellipse(-this.size * 3.2, 0, this.size * 3.5, this.size * 2.0);
+            // Mid amber glow
+            fill(255, 140, 0, 70);
+            ellipse(-this.size * 2.5, 0, this.size * 2.2, this.size * 1.2);
+            // Bright white-orange nozzle core
+            fill(255, 220, 100, 160);
+            ellipse(-this.size * 1.6, 0, this.size * 1.2, this.size * 0.7);
+            // White-hot point
+            fill(255, 255, 255, 200);
+            ellipse(-this.size * 1.3, 0, this.size * 0.55, this.size * 0.45);
+            blendMode(BLEND);
+
+            // ── Missile body ──
+            fill(this.color);
             const s1 = this.size * 1.5;
             const s2 = this.size * 0.7;
             const s3 = this.size * 1.3;
             triangle(-s1, -s2, -s1, s2, s3, 0);
-            // Fading orange trail
-            const lifeAlpha1 = this.lifespan * 3;
-            const lifeAlpha2 = this.lifespan * 2;
-            fill(255, lifeAlpha1 > 150 ? 150 : lifeAlpha1, 0, lifeAlpha2 > 100 ? 100 : lifeAlpha2);
-            ellipse(-this.size * 2, 0, this.size * 1.5, this.size * 0.8);
+
+            // ── Nose-cone hot glow ──
+            blendMode(ADD);
+            fill(255, 200, 80, 90);
+            ellipse(s3 * 0.7, 0, this.size * 1.0, this.size * 0.7);
+            fill(255, 255, 200, 60);
+            ellipse(s3 * 0.85, 0, this.size * 0.55, this.size * 0.4);
+            blendMode(BLEND);
+
             pop();
 
             // Draw hull bar for missiles only if damaged
@@ -440,13 +461,39 @@ class Projectile {
             }
             pop();
         } else {
-            // Standard projectile drawing
+            // Standard projectile drawing with a subtle additive glow
             push();
             translate(finalX, finalY);
             scale(counterScale);
-            fill(this.color);
             noStroke();
+
+            // Extract colour components for glow layers
+            const c = this.color;
+            const cr = c.levels ? c.levels[0] : (Array.isArray(c) ? c[0] : 255);
+            const cg = c.levels ? c.levels[1] : (Array.isArray(c) ? c[1] : 100);
+            const cb = c.levels ? c.levels[2] : (Array.isArray(c) ? c[2] : 0);
+
+            // Dynamic detail reduction: simplify glow layers during heavy projectile loads
+            const projectileCount = (this.system && Array.isArray(this.system.projectiles)) ? this.system.projectiles.length : 0;
+            const highLoad = projectileCount > 120;
+
+            blendMode(ADD);
+            fill(cr, cg, cb, highLoad ? 48 : 28);
+            ellipse(0, 0, this.size * (highLoad ? 2.4 : 3.5), this.size * (highLoad ? 2.4 : 3.5));
+            if (!highLoad) {
+                fill(cr, cg, cb, 68);
+                ellipse(0, 0, this.size * 2.2, this.size * 2.2);
+            }
+            blendMode(BLEND);
+
+            // Bright core
+            fill(cr, cg, cb);
             ellipse(0, 0, this.size * 2, this.size * 2);
+
+            // White hot centre dot
+            fill(255, 255, 255, 190);
+            ellipse(0, 0, this.size * 0.85, this.size * 0.85);
+
             pop();
         }
     }

@@ -358,6 +358,11 @@ class WeaponSystem {
         if (soundManager && player?.pos) {
             soundManager.playWorldSound('force', ownerX, ownerY, player.pos, owner);
         }
+
+        // Muzzle flash lighting effect for force blast origin
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.addMuzzleFlash(ownerX, ownerY, color, 34);
+        }
     }
 
     /** 
@@ -544,6 +549,11 @@ class WeaponSystem {
             }
             soundManager.playWorldSound(soundName, spawnX, spawnY, player.pos, owner);
         }
+
+        // Muzzle flash lighting effect
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.addMuzzleFlash(spawnX, spawnY, weapon.color, 24);
+        }
     }
 
     static fireMissile(owner, system, angle, target) {
@@ -600,6 +610,11 @@ class WeaponSystem {
         if (soundManager && player?.pos) {
             // Consider adding a specific 'missileLaunch' sound
             soundManager.playWorldSound('missileLaunch', spawnX, spawnY, player.pos, owner);
+        }
+
+        // Muzzle flash lighting effect for missile launch
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.addMuzzleFlash(spawnX, spawnY, weapon.color, 30);
         }
     }
 
@@ -826,6 +841,12 @@ class WeaponSystem {
                 system,
                 weapon?.color || [255, 0, 0]
             );
+        }
+
+        // Lighting effects: muzzle flash at world-space origin
+        if (typeof LightingEffects !== 'undefined') {
+            const beamColor = weapon?.color || [255, 0, 0];
+            LightingEffects.addMuzzleFlash(start.x, start.y, beamColor, 20);
         }
 
         // Play sound using playWorldSound
@@ -1199,6 +1220,11 @@ class WeaponSystem {
         if (soundManager && player?.pos) {
             soundManager.playWorldSound('tangleCast', spawnX, spawnY, player.pos, owner);
         }
+
+        // Muzzle flash lighting effect for tangle cast
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.addMuzzleFlash(spawnX, spawnY, weapon.color, 24);
+        }
     }
 
     /**
@@ -1249,6 +1275,11 @@ class WeaponSystem {
 
         if (soundManager && player?.pos) {
             soundManager.playWorldSound('harpoonFire', spawnX, spawnY, player.pos, owner);
+        }
+
+        // Muzzle flash lighting effect for harpoon fire
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.addMuzzleFlash(spawnX, spawnY, weapon.color, 26);
         }
     }
 
@@ -1323,6 +1354,11 @@ class WeaponSystem {
         if (soundManager && player?.pos) {
             soundManager.playWorldSound('mineDrop', ownerX, ownerY, player.pos, owner);
         }
+
+        // Muzzle flash lighting effect for mine deploy point
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.addMuzzleFlash(dropX, dropY, color, 22);
+        }
     }
 
     /**
@@ -1396,6 +1432,11 @@ class WeaponSystem {
         // Play storm launch sound (uses force sound - similar energy weapon)
         if (soundManager && player?.pos) {
             soundManager.playWorldSound('force', spawnX, spawnY, player.pos, owner);
+        }
+
+        // Muzzle flash lighting effect for storm launch
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.addMuzzleFlash(spawnX, spawnY, colorArr, 28);
         }
 
         WEAPON_LOG(`Storm weapon fired: ${weapon.name} by ${owner.shipTypeName || owner.constructor.name}`);
@@ -1568,6 +1609,11 @@ class WeaponSystem {
             } else if (system.addExplosion) {
                 // Fallback for space mode or if surfaceMode helper is missing
                 system.addExplosion(worldHitX, worldHitY, hitSize, hitColor, inSurfaceMode);
+            }
+
+            // Lighting: impact flash at hit position (world space)
+            if (typeof LightingEffects !== 'undefined') {
+                LightingEffects.addImpactFlash(worldHitX, worldHitY, hitColor, targetHasShield ? 35 : 45);
             }
         }
     }
@@ -1809,4 +1855,3 @@ if (typeof module !== 'undefined' && module.exports) {
     global.WeaponSystem = WeaponSystem;
     global.WEAPON_TYPE = WEAPON_TYPE;
 }
-
