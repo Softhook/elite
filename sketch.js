@@ -679,7 +679,7 @@ function handleGamepadContinuousInput() {
 
         // Strafe from the perpendicular (world-right) component
         if (Math.abs(right) > 0.1) {
-            const strafeStrength = Math.max(0.2, Math.abs(right)) * 0.8;
+            const strafeStrength = Math.max(0.2, Math.abs(right)) * 0.4;
             if (right < 0) player.kiteLeft(strafeStrength);
             else player.kiteRight(strafeStrength);
             player.isStrafing = true;
@@ -800,19 +800,29 @@ function _handleGamepadStationMenus(gp, state) {
 
     const isMarket = state === 'VIEWING_MARKET' || state === 'VIEWING_SPACE_OBJECT_MARKET';
     const isHorizontalDetail = state === 'VIEWING_SHIP_DETAIL' || state === 'VIEWING_WEAPON_DETAIL';
+    const isRecordView = state === 'VIEWING_RECORD';
     const isWeaponSlotPicker = state === 'VIEWING_WEAPON_DETAIL' && !!uiManager?.stationMenus?.showingSlotPicker;
     const slotPickerSlotCount = isWeaponSlotPicker
         ? Math.max(1, (uiManager?.stationMenus?.slotPickerButtons || []).filter(b => typeof b?.slotIndex === 'number').length)
         : 1;
     const rowSize = isMarket ? 4 : 1;
 
+    const pressedUp = gp.pressed('dpad.up') || (gp.state.ls.y < -0.7 && gp.prevState && gp.prevState.ls.y >= -0.7);
+    const pressedDown = gp.pressed('dpad.down') || (gp.state.ls.y > 0.7 && gp.prevState && gp.prevState.ls.y <= 0.7);
+
+    // Personal log has a long scrollable list and usually only one actionable button.
+    // Prioritize vertical D-pad/left-stick as list scroll so gamepad users can browse entries.
+    if (isRecordView && (pressedUp || pressedDown)) {
+        _handleGamepadListScroll(state, pressedDown ? 1 : -1);
+        soundManager?.playSound('click');
+    }
+
     // ── D-pad up/down = navigate selection ──
     if (buttons && buttons.length > 0) {
-        const pressedUp = gp.pressed('dpad.up') || (gp.state.ls.y < -0.7 && gp.prevState && gp.prevState.ls.y >= -0.7);
-        const pressedDown = gp.pressed('dpad.down') || (gp.state.ls.y > 0.7 && gp.prevState && gp.prevState.ls.y <= 0.7);
-
         if (pressedUp || pressedDown) {
-            if (isHorizontalDetail && !isWeaponSlotPicker) {
+            if (isRecordView) {
+                // Keep focus stable on Record view controls while list scrolling is handled above.
+            } else if (isHorizontalDetail && !isWeaponSlotPicker) {
                 _handleGamepadListScroll(state, pressedDown ? 1 : -1);
             } else if (isWeaponSlotPicker && buttons.length > slotPickerSlotCount) {
                 const cancelIndex = buttons.length - 1;

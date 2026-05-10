@@ -2792,7 +2792,10 @@ class StarSystem {
             }
 
             // Check for removal (destroyed or despawned)
-            if (asteroid.isDestroyed() || this.shouldDespawnEntity(asteroid, 1.2)) {
+            // Comets are event entities spawned far outside normal asteroid ranges,
+            // so they need a larger despawn window to cross through the play area.
+            const despawnFactor = asteroid.isComet ? 3.0 : 1.2;
+            if (asteroid.isDestroyed() || this.shouldDespawnEntity(asteroid, despawnFactor)) {
                 this._handleAsteroidDestruction(asteroid);
                 this._fastRemove(this.asteroids, i);
             }

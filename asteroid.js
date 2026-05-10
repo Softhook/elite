@@ -159,6 +159,35 @@ class Asteroid {
     draw() {
         if (this.destroyed) return;
 
+        if (this.isComet) {
+            // Draw a bright velocity-aligned tail behind comet heads so they stand out in-world.
+            const vx = this.vel?.x || 0;
+            const vy = this.vel?.y || 0;
+            const speed = Math.sqrt(vx * vx + vy * vy);
+            if (speed > 0.01) {
+                const nx = vx / speed;
+                const ny = vy / speed;
+                const tailLen = Math.max(this.size * 2.2, 180);
+
+                push();
+                strokeWeight(Math.max(2, this.size * 0.03));
+                for (let i = 0; i < 4; i++) {
+                    const t = i / 3;
+                    const alpha = lerp(120, 12, t);
+                    stroke(255, 230, 170, alpha);
+                    const sx = this.pos.x - nx * tailLen * t;
+                    const sy = this.pos.y - ny * tailLen * t;
+                    const ex = this.pos.x - nx * tailLen * (t + 0.33);
+                    const ey = this.pos.y - ny * tailLen * (t + 0.33);
+                    line(sx, sy, ex, ey);
+                }
+                noStroke();
+                fill(255, 245, 170, 85);
+                ellipse(this.pos.x, this.pos.y, this.size * 1.8, this.size * 1.8);
+                pop();
+            }
+        }
+
         push();
         translate(this.pos.x, this.pos.y);
         rotate(this.angle);

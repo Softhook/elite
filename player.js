@@ -1259,14 +1259,14 @@ class Player {
     }
 
     /** Apply a left-strafe (kite) thrust with optional analog strength. */
-    kiteLeft(multiplier = 0.8) {
+    kiteLeft(multiplier = 0.4) {
         if (typeof SharedPhysics !== 'undefined') {
             SharedPhysics.thrustStrafe(this, -1, multiplier);
         }
     }
 
     /** Apply a right-strafe (kite) thrust with optional analog strength. */
-    kiteRight(multiplier = 0.8) {
+    kiteRight(multiplier = 0.4) {
         if (typeof SharedPhysics !== 'undefined') {
             SharedPhysics.thrustStrafe(this, 1, multiplier);
         }
