@@ -358,6 +358,11 @@ class WeaponSystem {
         if (soundManager && player?.pos) {
             soundManager.playWorldSound('force', ownerX, ownerY, player.pos, owner);
         }
+
+        // Muzzle flash lighting effect for force blast origin
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.addMuzzleFlash(ownerX, ownerY, color, 34);
+        }
     }
 
     /** 
@@ -1218,6 +1223,11 @@ class WeaponSystem {
         if (soundManager && player?.pos) {
             soundManager.playWorldSound('tangleCast', spawnX, spawnY, player.pos, owner);
         }
+
+        // Muzzle flash lighting effect for tangle cast
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.addMuzzleFlash(spawnX, spawnY, weapon.color, 24);
+        }
     }
 
     /**
@@ -1268,6 +1278,11 @@ class WeaponSystem {
 
         if (soundManager && player?.pos) {
             soundManager.playWorldSound('harpoonFire', spawnX, spawnY, player.pos, owner);
+        }
+
+        // Muzzle flash lighting effect for harpoon fire
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.addMuzzleFlash(spawnX, spawnY, weapon.color, 26);
         }
     }
 
@@ -1342,6 +1357,11 @@ class WeaponSystem {
         if (soundManager && player?.pos) {
             soundManager.playWorldSound('mineDrop', ownerX, ownerY, player.pos, owner);
         }
+
+        // Muzzle flash lighting effect for mine deploy point
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.addMuzzleFlash(dropX, dropY, color, 22);
+        }
     }
 
     /**
@@ -1415,6 +1435,11 @@ class WeaponSystem {
         // Play storm launch sound (uses force sound - similar energy weapon)
         if (soundManager && player?.pos) {
             soundManager.playWorldSound('force', spawnX, spawnY, player.pos, owner);
+        }
+
+        // Muzzle flash lighting effect for storm launch
+        if (typeof LightingEffects !== 'undefined') {
+            LightingEffects.addMuzzleFlash(spawnX, spawnY, colorArr, 28);
         }
 
         WEAPON_LOG(`Storm weapon fired: ${weapon.name} by ${owner.shipTypeName || owner.constructor.name}`);
@@ -1833,4 +1858,3 @@ if (typeof module !== 'undefined' && module.exports) {
     global.WeaponSystem = WeaponSystem;
     global.WEAPON_TYPE = WEAPON_TYPE;
 }
-
