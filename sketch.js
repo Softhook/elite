@@ -736,12 +736,22 @@ function handleGamepadContinuousInput() {
 // Gamepad menu navigation state (persists across frames)
 let _gpMenuIndex = 0;
 let _gpMenuState = '';  // tracks which state the index belongs to
+let _gpMissionPanel = 'list';   // 'list' | 'detail' — which panel is focused on the mission board
+let _gpMissionDetailIndex = 0; // index within the detail-panel buttons
 
 function _handleGamepadStationMenus(gp, state) {
     // Reset selection index when entering a new menu state
     if (state !== _gpMenuState) {
         _gpMenuIndex = 0;
         _gpMenuState = state;
+        _gpMissionPanel = 'list';
+        _gpMissionDetailIndex = 0;
+    }
+
+    // Mission board uses dedicated two-panel navigation
+    if (state === 'VIEWING_MISSIONS') {
+        _handleGamepadMissions(gp);
+        return;
     }
 
     // Get the button areas for the current state
@@ -825,21 +835,6 @@ function _handleGamepadStationMenus(gp, state) {
     // Clamp index to valid range
     if (buttons && buttons.length > 0) {
         _gpMenuIndex = constrain(_gpMenuIndex, 0, buttons.length - 1);
-
-        // Keep mission board details synced with the currently highlighted list mission.
-        if (state === 'VIEWING_MISSIONS') {
-            const selectedMissionButton = buttons[_gpMenuIndex];
-            if (Number.isInteger(selectedMissionButton?.index) &&
-                gameStateManager?.selectedMissionIndex !== selectedMissionButton.index) {
-                gameStateManager.selectedMissionIndex = selectedMissionButton.index;
-            } else if (gameStateManager &&
-                (!Number.isInteger(gameStateManager.selectedMissionIndex) || gameStateManager.selectedMissionIndex < 0)) {
-                const fallbackMissionButton = buttons.find(btn => Number.isInteger(btn?.index));
-                if (Number.isInteger(fallbackMissionButton?.index)) {
-                    gameStateManager.selectedMissionIndex = fallbackMissionButton.index;
-                }
-            }
-        }
     }
 
     // ── A button = click the selected button ──
@@ -862,6 +857,106 @@ function _handleGamepadStationMenus(gp, state) {
 }
 
 /**
+ * Two-panel gamepad navigation for the mission board.
+ * Left panel  (list)   – D-pad up/down selects a mission.
+ * Right panel (detail) – D-pad left/right navigates Accept/Back/Abandon/Complete.
+ * D-pad right from list → detail.  D-pad left from first detail button → list.
+ */
+function _handleGamepadMissions(gp) {
+    const listButtons   = uiManager?.missionListButtonAreas || [];
+    // Order detail buttons: action buttons (accept/complete/abandon) before back
+    const detailButtonsObj = uiManager?.missionDetailButtonAreas || {};
+    const detailButtons = Object.entries(detailButtonsObj)
+        .sort(([key]) => key === 'back' ? 1 : -1) // action buttons first, back last
+        .map(([, btn]) => btn)
+        .filter(b => b && b.w > 0);
+
+    // B = go back to station
+    if (gp.pressed('b')) {
+        _gpMenuIndex = 0;
+        _gpMissionPanel = 'list';
+        gameStateManager.setState('DOCKED');
+        soundManager?.playSound('click_off');
+        return;
+    }
+
+    const pressedUp    = gp.pressed('dpad.up')    || (gp.state?.ls?.y < -0.7 && gp.prevState?.ls?.y >= -0.7);
+    const pressedDown  = gp.pressed('dpad.down')  || (gp.state?.ls?.y > 0.7  && gp.prevState?.ls?.y <= 0.7);
+    const pressedLeft  = gp.pressed('dpad.left');
+    const pressedRight = gp.pressed('dpad.right');
+
+    if (_gpMissionPanel === 'list') {
+        // ── Navigate the mission list ──
+        if ((pressedUp || pressedDown) && listButtons.length > 0) {
+            _gpMenuIndex = (_gpMenuIndex + (pressedDown ? 1 : -1) + listButtons.length) % listButtons.length;
+            soundManager?.playSound('click');
+        }
+
+        // Clamp and sync selected mission index
+        if (listButtons.length > 0) {
+            _gpMenuIndex = constrain(_gpMenuIndex, 0, listButtons.length - 1);
+            const sel = listButtons[_gpMenuIndex];
+            if (Number.isInteger(sel?.index)) {
+                gameStateManager.selectedMissionIndex = sel.index;
+            }
+        }
+
+        // D-pad right → move to detail panel
+        if (pressedRight && detailButtons.length > 0) {
+            _gpMissionPanel = 'detail';
+            _gpMissionDetailIndex = 0;
+            soundManager?.playSound('click');
+        }
+
+        // A = confirm mission selection (click the list button)
+        if (gp.pressed('a') && listButtons.length > 0 && _gpMenuIndex < listButtons.length) {
+            const btn = listButtons[_gpMenuIndex];
+            if (btn) {
+                uiManager?.handleMouseClicks(
+                    btn.x + btn.w / 2, btn.y + btn.h / 2, 'VIEWING_MISSIONS', player,
+                    player.currentSystem?.station?.getMarket?.() || galaxy?.getCurrentSystem()?.station?.getMarket?.(),
+                    galaxy
+                );
+            }
+        }
+    } else {
+        // ── Navigate the detail panel (Accept / Back / etc.) ──
+        if (pressedLeft) {
+            if (_gpMissionDetailIndex === 0) {
+                // Return to mission list
+                _gpMissionPanel = 'list';
+            } else {
+                _gpMissionDetailIndex = (_gpMissionDetailIndex - 1 + detailButtons.length) % detailButtons.length;
+            }
+            soundManager?.playSound('click');
+        } else if (pressedRight && detailButtons.length > 0) {
+            _gpMissionDetailIndex = (_gpMissionDetailIndex + 1) % detailButtons.length;
+            soundManager?.playSound('click');
+        }
+
+        // Clamp
+        if (detailButtons.length > 0) {
+            _gpMissionDetailIndex = constrain(_gpMissionDetailIndex, 0, detailButtons.length - 1);
+        }
+
+        // A = click the highlighted detail button
+        if (gp.pressed('a') && detailButtons.length > 0 && _gpMissionDetailIndex < detailButtons.length) {
+            const btn = detailButtons[_gpMissionDetailIndex];
+            if (btn) {
+                uiManager?.handleMouseClicks(
+                    btn.x + btn.w / 2, btn.y + btn.h / 2, 'VIEWING_MISSIONS', player,
+                    player.currentSystem?.station?.getMarket?.() || galaxy?.getCurrentSystem()?.station?.getMarket?.(),
+                    galaxy
+                );
+                // After accepting/completing, return focus to the list
+                _gpMissionPanel = 'list';
+                _gpMissionDetailIndex = 0;
+            }
+        }
+    }
+}
+
+/**
  * Get the relevant button area array for the current game state.
  * Each station screen stores its clickable areas in uiManager/stationMenus.
  */
@@ -878,7 +973,7 @@ function _getButtonAreasForState(state) {
         case 'VIEWING_SPACE_OBJECT_MARKET':
             return uiManager.spaceObjectMarketButtonAreas || [];
         case 'VIEWING_MISSIONS':
-            return _getMissionButtons();
+            return []; // Handled separately by _handleGamepadMissions
         case 'VIEWING_SHIPYARD':
             return (uiManager.stationMenus?.shipyardListAreas || []).concat(
                 _objectToButtons(uiManager.stationMenus?.shipyardDetailButtons)
@@ -932,16 +1027,6 @@ function _getButtonAreasForState(state) {
         default:
             return [];
     }
-}
-
-/**
- * Get mission board buttons (list + detail action buttons)
- */
-function _getMissionButtons() {
-    const list = uiManager.missionListButtonAreas || [];
-    const detail = uiManager.missionDetailButtonAreas || {};
-    const detailBtns = _objectToButtons(detail);
-    return list.concat(detailBtns);
 }
 
 /**
@@ -1078,10 +1163,27 @@ function renderUI() {
         const state = gameStateManager.currentState;
         const isStationState = STATION_STATES && STATION_STATES.includes(state);
         if (isStationState) {
-            const buttons = _getButtonAreasForState(state);
-            if (buttons && buttons.length > 0 && _gpMenuIndex < buttons.length) {
-                _drawGamepadMenuHighlight(buttons[_gpMenuIndex]);
+            let highlightBtn = null;
+            if (state === 'VIEWING_MISSIONS') {
+                if (_gpMissionPanel === 'list') {
+                    const lb = uiManager?.missionListButtonAreas || [];
+                    if (lb.length > 0) highlightBtn = lb[constrain(_gpMenuIndex, 0, lb.length - 1)];
+                } else {
+                    // Match the sorting used in _handleGamepadMissions: action buttons first, back last
+                    const detailButtonsObj = uiManager?.missionDetailButtonAreas || {};
+                    const db = Object.entries(detailButtonsObj)
+                        .sort(([key]) => key === 'back' ? 1 : -1)
+                        .map(([, btn]) => btn)
+                        .filter(b => b && b.w > 0);
+                    if (db.length > 0) highlightBtn = db[constrain(_gpMissionDetailIndex, 0, db.length - 1)];
+                }
+            } else {
+                const buttons = _getButtonAreasForState(state);
+                if (buttons && buttons.length > 0 && _gpMenuIndex < buttons.length) {
+                    highlightBtn = buttons[_gpMenuIndex];
+                }
             }
+            if (highlightBtn) _drawGamepadMenuHighlight(highlightBtn);
         }
     }
 }
