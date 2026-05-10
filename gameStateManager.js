@@ -1926,6 +1926,32 @@ class GameStateManager {
                 const chargePercent = constrain(this.jumpChargeTimer / this.jumpChargeDuration, 0, 1);
                 rect(0, height - 35, width * chargePercent, 35);
 
+                // Jump charge shimmer: pulsing blue-white halo around the player ship
+                if (player.pos && chargePercent > 0) {
+                    const tx = width / 2 - player.pos.x;
+                    const ty = height / 2 - player.pos.y;
+                    const pulse = (sin(millis() * 0.012) + 1) * 0.5;  // ~0.75 Hz oscillation → 0..1
+                    const haloR = player.size * (1.5 + chargePercent * 2.5 + pulse * 0.8);
+                    const haloA = chargePercent * (60 + pulse * 60);
+
+                    push();
+                    translate(player.pos.x + tx, player.pos.y + ty);
+                    blendMode(ADD);
+                    noStroke();
+                    // Outer shimmer ring
+                    fill(80, 160, 255, haloA * 0.5);
+                    ellipse(0, 0, haloR * 2.2, haloR * 2.2);
+                    // Inner bright core
+                    fill(160, 220, 255, haloA);
+                    ellipse(0, 0, haloR * 1.2, haloR * 1.2);
+                    // Sparkling white dot at full charge
+                    if (chargePercent > 0.85) {
+                        fill(255, 255, 255, (chargePercent - 0.85) / 0.15 * 180 * pulse);
+                        ellipse(0, 0, haloR * 0.5, haloR * 0.5);
+                    }
+                    pop();
+                }
+
                 // Determine target name
                 let targetName = "Unknown";
                 if (galaxy &&

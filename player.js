@@ -1793,6 +1793,23 @@ class Player {
         // Draw thrust particles ON TOP of the ship
         this.thrustManager.draw();
 
+        // Engine glow: soft additive halo at the thruster tail when thrusting
+        if (this.isThrusting) {
+            // 0.55 ≈ distance from ship centre to thruster exhaust point (in ship-size units)
+            const tailX = this.pos.x + cos(this.angle + PI) * this.size * 0.55;
+            const tailY = this.pos.y + sin(this.angle + PI) * this.size * 0.55;
+            push();
+            blendMode(ADD);
+            noStroke();
+            // Wide dim wash
+            fill(255, 120, 20, 22);
+            ellipse(tailX, tailY, this.size * 2.0, this.size * 2.0);
+            // Brighter core
+            fill(255, 180, 60, 55);
+            ellipse(tailX, tailY, this.size * 0.9, this.size * 0.9);
+            pop();
+        }
+
         // --- Health Bar ---
         // Show health bar below ship if damaged
         if (this.hull < this.maxHull && this.maxHull > 0) {
