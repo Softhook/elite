@@ -9,16 +9,15 @@ describe('draw3d rim glint', () => {
         global.line = jest.fn();
     });
 
-    test('keeps rim glint visible for near-tangent edges', () => {
-        expect(computeShipRimGlintStrength(0)).toBeCloseTo(1, 5);
-        expect(computeShipRimGlintStrength(0.4)).toBeGreaterThan(0.24);
-        expect(computeShipRimGlintStrength(0.4)).toBeCloseTo(computeShipRimGlintStrength(-0.4), 5);
-        expect(computeShipRimGlintStrength(0.62)).toBeGreaterThan(0.24);
-        expect(computeShipRimGlintStrength(0.64)).toBeLessThan(0.24);
-        expect(computeShipRimGlintStrength(1)).toBe(0);
+    test('only keeps rim glint on edges closely aligned with the sun direction', () => {
+        expect(computeShipRimGlintStrength(1)).toBeCloseTo(1, 5);
+        expect(computeShipRimGlintStrength(0.95)).toBeGreaterThan(0.5);
+        expect(computeShipRimGlintStrength(0.85)).toBeLessThan(0.5);
+        expect(computeShipRimGlintStrength(-0.95)).toBe(0);
+        expect(computeShipRimGlintStrength(0)).toBe(0);
     });
 
-    test('draws the tangent edges that match the sun direction', () => {
+    test('draws only the edge nearest the sun direction', () => {
         const layerCache = {
             fillRGB: { r: 100, g: 120, b: 140 },
             vertexData: [
@@ -37,16 +36,7 @@ describe('draw3d rim glint', () => {
 
         drawShipRimGlint(layerCache, 10, 0);
 
-        expect(line).toHaveBeenCalledTimes(2);
-
-        const ys = line.mock.calls
-            .map(([, y1, , y2]) => [y1, y2])
-            .flat()
-            .sort((a, b) => a - b);
-
-        expect(ys[0]).toBeCloseTo(-10.75, 5);
-        expect(ys[1]).toBeCloseTo(-10.75, 5);
-        expect(ys[2]).toBeCloseTo(10.75, 5);
-        expect(ys[3]).toBeCloseTo(10.75, 5);
+        expect(line).toHaveBeenCalledTimes(1);
+        expect(line).toHaveBeenCalledWith(10.3, -10, 10.3, 10);
     });
 });

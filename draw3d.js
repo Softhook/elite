@@ -17,11 +17,11 @@ const SHADING_FILL_EXPONENT = 1.8;
 const SHADING_FILL_INTENSITY = 0.06;
 const SHADING_RIM_EXPONENT = 1.7;
 const SHADING_RIM_INTENSITY = 0.28;
-const SHIP_RIM_GLINT_THRESHOLD = 0.24;
-const SHIP_RIM_GLINT_EXPONENT = 1.45;
-const SHIP_RIM_GLINT_ALPHA = 150;
-const SHIP_RIM_GLINT_STROKE = 1.3;
-const SHIP_RIM_GLINT_OUTSET = 0.75;
+const SHIP_RIM_GLINT_THRESHOLD = 0.5;
+const SHIP_RIM_GLINT_EXPONENT = 6.0;
+const SHIP_RIM_GLINT_ALPHA = 90;
+const SHIP_RIM_GLINT_STROKE = 0.55;
+const SHIP_RIM_GLINT_OUTSET = 0.3;
 for (let i = 0; i < SHADE_TABLE_SIZE; i++) {
     const angle = (i / SHADE_TABLE_SIZE) * Math.PI * 2;
     const ndl = Math.cos(angle);
@@ -72,7 +72,7 @@ function drawShipRimGlint(layerCache, layerR, localSunAngle) {
         if (rim < SHIP_RIM_GLINT_THRESHOLD) continue;
 
         const alpha = SHIP_RIM_GLINT_ALPHA * rim;
-        const tint = 0.32 + rim * 0.38;
+        const tint = 0.12 + rim * 0.18;
         const rr = Math.min(255, layerCache.fillRGB.r + (255 - layerCache.fillRGB.r) * tint);
         const rg = Math.min(255, layerCache.fillRGB.g + (255 - layerCache.fillRGB.g) * tint);
         const rb = Math.min(255, layerCache.fillRGB.b + (255 - layerCache.fillRGB.b) * tint);
@@ -80,7 +80,7 @@ function drawShipRimGlint(layerCache, layerR, localSunAngle) {
         const oy = Math.sin(faceAngle) * SHIP_RIM_GLINT_OUTSET;
 
         stroke(rr, rg, rb, alpha);
-        strokeWeight(0.35 + rim * SHIP_RIM_GLINT_STROKE);
+        strokeWeight(0.18 + rim * SHIP_RIM_GLINT_STROKE);
         line(
             edge.v1.x * layerR + ox, edge.v1.y * layerR + oy,
             edge.v2.x * layerR + ox, edge.v2.y * layerR + oy
@@ -93,12 +93,12 @@ function drawShipRimGlint(layerCache, layerR, localSunAngle) {
 /**
  * Returns rim-light strength for an edge normal vs. sun direction dot product.
  * ndl is the normalized dot product of the edge's outward normal and the sun direction (-1 to 1).
- * Higher values are produced for edges that sit near the sun tangent, where the rim glint should appear.
+ * Higher values are produced only for edges whose outward normal stays close to the sun direction.
  * @param {number} ndl
  * @returns {number}
  */
 function computeShipRimGlintStrength(ndl) {
-    return Math.pow(Math.max(0, 1 - Math.abs(ndl)), SHIP_RIM_GLINT_EXPONENT);
+    return Math.pow(Math.max(0, ndl), SHIP_RIM_GLINT_EXPONENT);
 }
 
 function getEdgeFaceAngle(edge) {
