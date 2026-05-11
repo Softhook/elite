@@ -113,7 +113,7 @@ function getEdgeNormal(edge) {
     if (edge.faceAngle === undefined) {
         edge.faceAngle = Math.atan2(-edge.dx, edge.dy);
     }
-    if (edge.normalX === undefined || edge.normalY === undefined) {
+    if (edge.normalX === undefined) {
         edge.normalX = Math.cos(edge.faceAngle);
         edge.normalY = Math.sin(edge.faceAngle);
     }

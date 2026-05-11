@@ -105,21 +105,21 @@ const LightingEffects = (() => {
         const sparks = [];
         const debris = [];
         for (let i = 0; i < 6; i++) {
-            const angle = impactDir + (Math.random() - 0.5) * 0.9;
+            const sparkAngle = impactDir + (Math.random() - 0.5) * 0.9;
             sparks.push({
-                angle,
-                dirX: Math.cos(angle),
-                dirY: Math.sin(angle),
+                angle: sparkAngle,
+                dirX: Math.cos(sparkAngle),
+                dirY: Math.sin(sparkAngle),
                 speed: size * (0.18 + Math.random() * 0.32),
                 len: 2 + Math.random() * 4
             });
         }
         for (let i = 0; i < 4; i++) {
-            const angle = impactDir + (Math.random() - 0.5) * 1.2;
+            const debrisAngle = impactDir + (Math.random() - 0.5) * 1.2;
             debris.push({
-                angle,
-                dirX: Math.cos(angle),
-                dirY: Math.sin(angle),
+                angle: debrisAngle,
+                dirX: Math.cos(debrisAngle),
+                dirY: Math.sin(debrisAngle),
                 speed: size * (0.1 + Math.random() * 0.24),
                 radius: 0.8 + Math.random() * 1.6
             });
