@@ -174,16 +174,18 @@ describe('WeaponSystem Tests', () => {
 
         test('maps lighting position to visual coordinates in surface mode', () => {
             const originalSurfaceMode = global.surfaceMode;
-            global.surfaceMode = {
-                isActive: () => true,
-                _toVisualX: (x, altitude) => x - altitude,
-                _toVisualY: (y, altitude) => y - altitude * 2
-            };
+            try {
+                global.surfaceMode = {
+                    isActive: () => true,
+                    _toVisualX: (x, altitude) => x - altitude,
+                    _toVisualY: (y, altitude) => y - altitude * 2
+                };
 
-            const pos = WeaponSystem._projectLightingPositionForSurface(100, 200, 10);
-            expect(pos).toEqual({ x: 90, y: 180 });
-
-            global.surfaceMode = originalSurfaceMode;
+                const pos = WeaponSystem._projectLightingPositionForSurface(100, 200, 10);
+                expect(pos).toEqual({ x: 90, y: 180 });
+            } finally {
+                global.surfaceMode = originalSurfaceMode;
+            }
         });
 
         test('resolves RGB arrays from color input safely', () => {

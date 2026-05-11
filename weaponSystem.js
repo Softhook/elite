@@ -109,9 +109,11 @@ class WeaponSystem {
             };
         }
 
-        const extrusionAngle = (typeof SurfaceUtils !== 'undefined' && typeof SurfaceUtils.getExtrusionAngle === 'function')
-            ? SurfaceUtils.getExtrusionAngle()
-            : 0.5;
+        const extrusionAngle = (typeof surfaceMode._getExtrusionAngle === 'function')
+            ? surfaceMode._getExtrusionAngle()
+            : (typeof SurfaceUtils !== 'undefined' && typeof SurfaceUtils.getExtrusionAngle === 'function')
+                ? SurfaceUtils.getExtrusionAngle()
+                : 0.5;
         return {
             x: x - alt * Math.sin(extrusionAngle),
             y: y - alt * Math.cos(extrusionAngle)
