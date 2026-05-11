@@ -116,10 +116,19 @@ describe('InputManager', () => {
     });
 
     test('supports contextual surface altitude actions in S and D gamepad modes', () => {
-        gp._state = { mode: 'D-MODE', dpad: { up: true }, l1: false };
+        gp._state = { mode: 'D-MODE', dpad: { up: false }, l1: true };
         expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.ALTITUDE_UP, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(true);
 
-        gp._state = { mode: 'S-MODE (Switch)', dpad: { up: false, down: true }, l4: false };
+        gp._state = { mode: 'S-MODE (Switch)', dpad: { up: false, down: false }, l2: 0.7, l4: false };
         expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.ALTITUDE_DOWN, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(true);
+    });
+
+    test('keeps surface D-pad mapped to weapon and target controls', () => {
+        gp._state = { mode: 'D-MODE', dpad: { up: true, down: true, left: true, right: true } };
+
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.WEAPON_NEXT, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(true);
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.WEAPON_PREV, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(true);
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.TARGET_NEXT, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(true);
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.TARGET_PREV, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(true);
     });
 });
