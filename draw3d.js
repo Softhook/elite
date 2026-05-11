@@ -15,14 +15,14 @@ const SHADING_KEY_EXPONENT = 1.1;
 const SHADING_KEY_INTENSITY = 0.5;
 const SHADING_FILL_EXPONENT = 1.8;
 const SHADING_FILL_INTENSITY = 0.06;
-const SHADING_RIM_EXPONENT = 3.2;
-const SHADING_RIM_INTENSITY = 0.16;
+const SHADING_RIM_EXPONENT = 1.7;
+const SHADING_RIM_INTENSITY = 0.28;
 for (let i = 0; i < SHADE_TABLE_SIZE; i++) {
     const angle = (i / SHADE_TABLE_SIZE) * Math.PI * 2;
     const ndl = Math.cos(angle);
     const key = Math.pow(Math.max(0, ndl), SHADING_KEY_EXPONENT) * SHADING_KEY_INTENSITY;
     const fill = Math.pow(Math.max(0, -ndl), SHADING_FILL_EXPONENT) * SHADING_FILL_INTENSITY;
-    const rim = Math.pow(Math.max(0, -ndl), SHADING_RIM_EXPONENT) * SHADING_RIM_INTENSITY;
+    const rim = Math.pow(Math.max(0, 1 - Math.abs(ndl)), SHADING_RIM_EXPONENT) * SHADING_RIM_INTENSITY;
     SHADE_TABLE[i] = Math.max(SHADING_MIN, Math.min(SHADING_MAX, SHADING_BASE + key + fill + rim));
 }
 
@@ -47,7 +47,7 @@ function computeShading(angleDiff) {
     const ndl = Math.cos(angleDiff);
     const key = Math.pow(Math.max(0, ndl), SHADING_KEY_EXPONENT) * SHADING_KEY_INTENSITY;
     const fill = Math.pow(Math.max(0, -ndl), SHADING_FILL_EXPONENT) * SHADING_FILL_INTENSITY;
-    const rim = Math.pow(Math.max(0, -ndl), SHADING_RIM_EXPONENT) * SHADING_RIM_INTENSITY;
+    const rim = Math.pow(Math.max(0, 1 - Math.abs(ndl)), SHADING_RIM_EXPONENT) * SHADING_RIM_INTENSITY;
     return Math.max(SHADING_MIN, Math.min(SHADING_MAX, SHADING_BASE + key + fill + rim));
 }
 
