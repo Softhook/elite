@@ -8,13 +8,22 @@
 // ============================================================================
 const SHADE_TABLE_SIZE = 360;
 const SHADE_TABLE = new Float32Array(SHADE_TABLE_SIZE);
+const SHADING_MIN = 0.35;
+const SHADING_MAX = 1.15;
+const SHADING_BASE = 0.42;
+const SHADING_KEY_EXPONENT = 1.1;
+const SHADING_KEY_INTENSITY = 0.5;
+const SHADING_FILL_EXPONENT = 1.8;
+const SHADING_FILL_INTENSITY = 0.06;
+const SHADING_RIM_EXPONENT = 3.2;
+const SHADING_RIM_INTENSITY = 0.16;
 for (let i = 0; i < SHADE_TABLE_SIZE; i++) {
     const angle = (i / SHADE_TABLE_SIZE) * Math.PI * 2;
     const ndl = Math.cos(angle);
-    const key = Math.pow(Math.max(0, ndl), 1.1) * 0.5;
-    const fill = Math.pow(Math.max(0, -ndl), 1.8) * 0.06;
-    const rim = Math.pow(Math.max(0, -ndl), 3.2) * 0.16;
-    SHADE_TABLE[i] = Math.max(0.35, Math.min(1.15, 0.42 + key + fill + rim));
+    const key = Math.pow(Math.max(0, ndl), SHADING_KEY_EXPONENT) * SHADING_KEY_INTENSITY;
+    const fill = Math.pow(Math.max(0, -ndl), SHADING_FILL_EXPONENT) * SHADING_FILL_INTENSITY;
+    const rim = Math.pow(Math.max(0, -ndl), SHADING_RIM_EXPONENT) * SHADING_RIM_INTENSITY;
+    SHADE_TABLE[i] = Math.max(SHADING_MIN, Math.min(SHADING_MAX, SHADING_BASE + key + fill + rim));
 }
 
 /**
@@ -36,10 +45,10 @@ function getShading(angleDiff) {
  */
 function computeShading(angleDiff) {
     const ndl = Math.cos(angleDiff);
-    const key = Math.pow(Math.max(0, ndl), 1.1) * 0.5;
-    const fill = Math.pow(Math.max(0, -ndl), 1.8) * 0.06;
-    const rim = Math.pow(Math.max(0, -ndl), 3.2) * 0.16;
-    return Math.max(0.35, Math.min(1.15, 0.42 + key + fill + rim));
+    const key = Math.pow(Math.max(0, ndl), SHADING_KEY_EXPONENT) * SHADING_KEY_INTENSITY;
+    const fill = Math.pow(Math.max(0, -ndl), SHADING_FILL_EXPONENT) * SHADING_FILL_INTENSITY;
+    const rim = Math.pow(Math.max(0, -ndl), SHADING_RIM_EXPONENT) * SHADING_RIM_INTENSITY;
+    return Math.max(SHADING_MIN, Math.min(SHADING_MAX, SHADING_BASE + key + fill + rim));
 }
 
 /**
@@ -60,7 +69,8 @@ function getNearestSunAngleForEntity(entity) {
         for (let i = 0; i < planets.length; i++) {
             const p = planets[i];
             if (!p?.pos) continue;
-            const isSun = !!p.isSun || p.planetIndex === 0;
+            const hasExplicitSunIndex = Number.isFinite(p.planetIndex) && p.planetIndex === 0;
+            const isSun = !!p.isSun || hasExplicitSunIndex;
             if (!isSun) continue;
             const dx = p.pos.x - ex;
             const dy = p.pos.y - ey;

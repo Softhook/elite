@@ -2,6 +2,9 @@
 // Enemy Rendering Methods - Stage 10
 // Contains draw methods and visual effects
 
+const ENEMY_TRAIL_SPEED_THRESHOLD_SQ = 42;
+const ENEMY_TRAIL_MAX_LENGTH = 12;
+
 /**
  * EnemyRendering class contains rendering methods for enemies.
  * These methods are mixed into the Enemy prototype via applyEnemyRenderingMethods().
@@ -226,9 +229,9 @@ class EnemyRendering {
         const vy = this.vel?.y || 0;
         const speedSq = vx * vx + vy * vy;
 
-        if (speedSq > 42) {
+        if (speedSq > ENEMY_TRAIL_SPEED_THRESHOLD_SQ) {
             this._velocityTrail.push({ x: this.pos.x, y: this.pos.y, t: now });
-            if (this._velocityTrail.length > 12) this._velocityTrail.shift();
+            if (this._velocityTrail.length > ENEMY_TRAIL_MAX_LENGTH) this._velocityTrail.shift();
         } else if (this._velocityTrail.length > 0) {
             this._velocityTrail.shift();
         }

@@ -27,7 +27,11 @@ const PLAYER_CONFIG = {
     MAX_BODYGUARDS: 3,
 
     // Starting values
-    STARTING_CREDITS: 1000
+    STARTING_CREDITS: 1000,
+
+    // Visual trails
+    TRAIL_SPEED_THRESHOLD_SQ: 49,
+    TRAIL_MAX_LENGTH: 14
 };
 
 /**
@@ -1735,9 +1739,9 @@ class Player {
         const vy = this.vel?.y || 0;
         const speedSq = vx * vx + vy * vy;
 
-        if (speedSq > 49) {
+        if (speedSq > PLAYER_CONFIG.TRAIL_SPEED_THRESHOLD_SQ) {
             this._velocityTrail.push({ x: this.pos.x, y: this.pos.y, t: now });
-            if (this._velocityTrail.length > 14) this._velocityTrail.shift();
+            if (this._velocityTrail.length > PLAYER_CONFIG.TRAIL_MAX_LENGTH) this._velocityTrail.shift();
         } else if (this._velocityTrail.length > 0) {
             this._velocityTrail.shift();
         }

@@ -195,7 +195,9 @@ describe('WeaponSystem Tests', () => {
         });
 
         test('boosts muzzle flash size for player owner', () => {
-            expect(WeaponSystem._resolveMuzzleFlashSize({ isPlayer: true }, 20)).toBeCloseTo(29, 2);
+            const baseSize = 20;
+            const expectedPlayerSize = baseSize * 1.45;
+            expect(WeaponSystem._resolveMuzzleFlashSize({ isPlayer: true }, baseSize)).toBeCloseTo(expectedPlayerSize, 2);
             expect(WeaponSystem._resolveMuzzleFlashSize({ isPlayer: false }, 20)).toBe(20);
         });
     });

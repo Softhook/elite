@@ -8,6 +8,9 @@
 // - Streamlined reset() logic with early validation and efficient color updates
 // - Removed try-catch from hot path (reset) for better JIT optimization
 
+const PROJECTILE_TRAIL_MAX_LENGTH = 10;
+const PROJECTILE_TRAIL_SPEED_THRESHOLD_SQ = 36;
+
 class Projectile {
     constructor(x, y, angle, owner, speed = DEFAULT_WEAPON_CONFIG.PROJECTILE_SPEED, damage = DEFAULT_WEAPON_CONFIG.PROJECTILE_DAMAGE, colorOverride = null,
         type = "projectile", target = null, lifespan = DEFAULT_WEAPON_CONFIG.PROJECTILE_LIFESPAN, turnRate = 0,
@@ -55,7 +58,7 @@ class Projectile {
         this.ownerType = 'ship'; // 'ship' or 'turret'
         this._timeCorrection = 1.0;
         this.trail = [];
-        this.trailMax = 10;
+        this.trailMax = PROJECTILE_TRAIL_MAX_LENGTH;
 
         // Call reset if parameters provided
         if (x !== undefined) {
@@ -226,7 +229,7 @@ class Projectile {
         this.lifespan -= timeScale;
 
         const speedSq = this.vel.x * this.vel.x + this.vel.y * this.vel.y;
-        if (speedSq > 36) {
+        if (speedSq > PROJECTILE_TRAIL_SPEED_THRESHOLD_SQ) {
             this.trail.push({ x: this.pos.x, y: this.pos.y });
             if (this.trail.length > this.trailMax) this.trail.shift();
         } else if (this.trail.length > 0) {

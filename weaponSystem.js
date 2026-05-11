@@ -16,6 +16,7 @@ const WEAPON_TYPE = {
     STORM: 'storm', // Storm weapons - alien specialty area-denial
     BASE_BUILD: 'base_build' // Base builder weapon for surface construction
 };
+const PLAYER_MUZZLE_FLASH_MULTIPLIER = 1.45;
 
 class WeaponSystem {
     // Scale angle jitter by disruption level (0..1)
@@ -139,7 +140,7 @@ class WeaponSystem {
     }
 
     static _resolveMuzzleFlashSize(owner, baseSize) {
-        return this._isPlayerOwner(owner) ? baseSize * 1.45 : baseSize;
+        return this._isPlayerOwner(owner) ? baseSize * PLAYER_MUZZLE_FLASH_MULTIPLIER : baseSize;
     }
 
     // Static regex for parsing weapon count from type string
