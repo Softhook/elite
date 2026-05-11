@@ -180,7 +180,7 @@ describe('WeaponSystem Tests', () => {
                 _toVisualY: (y, altitude) => y - altitude * 2
             };
 
-            const pos = WeaponSystem._getLightingPosition(100, 200, 10);
+            const pos = WeaponSystem._projectLightingPositionForSurface(100, 200, 10);
             expect(pos).toEqual({ x: 90, y: 180 });
 
             global.surfaceMode = originalSurfaceMode;
