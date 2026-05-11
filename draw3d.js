@@ -66,7 +66,7 @@ function drawShipRimGlint(layerCache, layerR, localSunAngle) {
 
     for (let i = 0; i < layerCache.edges.length; i++) {
         const edge = layerCache.edges[i];
-        const faceAngle = edge.faceAngle !== undefined ? edge.faceAngle : Math.atan2(-edge.dx, edge.dy);
+        const faceAngle = getEdgeFaceAngle(edge);
         const ndl = Math.cos(faceAngle - localSunAngle);
         const rim = computeShipRimGlintStrength(ndl);
         if (rim < SHIP_RIM_GLINT_THRESHOLD) continue;
@@ -92,6 +92,13 @@ function drawShipRimGlint(layerCache, layerR, localSunAngle) {
 
 function computeShipRimGlintStrength(ndl) {
     return Math.pow(Math.max(0, 1 - Math.abs(ndl)), SHIP_RIM_GLINT_EXPONENT);
+}
+
+function getEdgeFaceAngle(edge) {
+    if (edge.faceAngle === undefined) {
+        edge.faceAngle = Math.atan2(-edge.dx, edge.dy);
+    }
+    return edge.faceAngle;
 }
 
 /**

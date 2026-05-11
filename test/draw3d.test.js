@@ -6,6 +6,7 @@ describe('draw3d rim glint', () => {
         global.ROUND = 'ROUND';
         global.blendMode = jest.fn();
         global.strokeCap = jest.fn();
+        global.line = jest.fn();
     });
 
     test('keeps rim glint visible for near-tangent edges', () => {
