@@ -19,8 +19,9 @@ const SHADING_RIM_EXPONENT = 1.7;
 const SHADING_RIM_INTENSITY = 0.28;
 const SHIP_RIM_GLINT_THRESHOLD = 0.45;
 const SHIP_RIM_GLINT_EXPONENT = 1.6;
-const SHIP_RIM_GLINT_ALPHA = 170;
-const SHIP_RIM_GLINT_STROKE = 2.1;
+const SHIP_RIM_GLINT_ALPHA = 125;
+const SHIP_RIM_GLINT_STROKE = 0.8;
+const SHIP_RIM_GLINT_OUTSET = 0.75;
 for (let i = 0; i < SHADE_TABLE_SIZE; i++) {
     const angle = (i / SHADE_TABLE_SIZE) * Math.PI * 2;
     const ndl = Math.cos(angle);
@@ -58,6 +59,18 @@ function computeShading(angleDiff) {
 function drawShipRimGlint(layerCache, layerR, localSunAngle) {
     if (!layerCache?.edges || layerCache.edges.length === 0) return;
 
+    let cx = 0;
+    let cy = 0;
+    for (let i = 0; i < layerCache.vertexData.length; i++) {
+        cx += layerCache.vertexData[i].x;
+        cy += layerCache.vertexData[i].y;
+    }
+    cx /= layerCache.vertexData.length;
+    cy /= layerCache.vertexData.length;
+
+    const sunX = Math.cos(localSunAngle);
+    const sunY = Math.sin(localSunAngle);
+
     push();
     blendMode(ADD);
     noFill();
@@ -65,17 +78,33 @@ function drawShipRimGlint(layerCache, layerR, localSunAngle) {
 
     for (let i = 0; i < layerCache.edges.length; i++) {
         const edge = layerCache.edges[i];
-        const faceAngle = edge.faceAngle !== undefined ? edge.faceAngle : Math.atan2(-edge.dx, edge.dy);
-        const ndl = Math.cos(faceAngle - localSunAngle);
-        const rim = Math.pow(Math.max(0, 1 - Math.abs(ndl)), SHIP_RIM_GLINT_EXPONENT);
+        const midX = (edge.v1.x + edge.v2.x) * 0.5;
+        const midY = (edge.v1.y + edge.v2.y) * 0.5;
+        let nx = midX - cx;
+        let ny = midY - cy;
+        const nLen = Math.hypot(nx, ny) || 1;
+        nx /= nLen;
+        ny /= nLen;
+
+        const ndl = nx * sunX + ny * sunY;
+        const graze = Math.max(0, 1 - Math.abs(ndl));
+        const backSideBias = Math.max(0, -ndl);
+        const rim = Math.pow(graze, SHIP_RIM_GLINT_EXPONENT) * (0.45 + backSideBias * 0.55);
         if (rim < SHIP_RIM_GLINT_THRESHOLD) continue;
 
         const alpha = SHIP_RIM_GLINT_ALPHA * rim;
-        stroke(255, 255, 255, alpha);
-        strokeWeight(0.8 + rim * SHIP_RIM_GLINT_STROKE);
+        const tint = 0.32 + rim * 0.38;
+        const rr = Math.min(255, layerCache.fillRGB.r + (255 - layerCache.fillRGB.r) * tint);
+        const rg = Math.min(255, layerCache.fillRGB.g + (255 - layerCache.fillRGB.g) * tint);
+        const rb = Math.min(255, layerCache.fillRGB.b + (255 - layerCache.fillRGB.b) * tint);
+        const ox = nx * SHIP_RIM_GLINT_OUTSET;
+        const oy = ny * SHIP_RIM_GLINT_OUTSET;
+
+        stroke(rr, rg, rb, alpha);
+        strokeWeight(0.35 + rim * SHIP_RIM_GLINT_STROKE);
         line(
-            edge.v1.x * layerR, edge.v1.y * layerR,
-            edge.v2.x * layerR, edge.v2.y * layerR
+            edge.v1.x * layerR + ox, edge.v1.y * layerR + oy,
+            edge.v2.x * layerR + ox, edge.v2.y * layerR + oy
         );
     }
 
