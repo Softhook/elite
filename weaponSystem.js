@@ -93,6 +93,43 @@ class WeaponSystem {
         };
     }
 
+    /**
+     * Project a world-space lighting point into surface visual space when needed.
+     * In space mode this returns the original world coordinates unchanged.
+     */
+    static _projectLightingPositionForSurface(x, y, altitude = 0) {
+        const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
+        if (!inSurfaceMode) return { x, y };
+
+        const alt = Number.isFinite(altitude) ? altitude : 0;
+        if (typeof surfaceMode._toVisualX === 'function' && typeof surfaceMode._toVisualY === 'function') {
+            return {
+                x: surfaceMode._toVisualX(x, alt),
+                y: surfaceMode._toVisualY(y, alt)
+            };
+        }
+
+        const extrusionAngle = (typeof surfaceMode._getExtrusionAngle === 'function')
+            ? surfaceMode._getExtrusionAngle()
+            : (typeof SurfaceUtils !== 'undefined' && typeof SurfaceUtils.getExtrusionAngle === 'function')
+                ? SurfaceUtils.getExtrusionAngle()
+                : 0.5;
+        return {
+            x: x - alt * Math.sin(extrusionAngle),
+            y: y - alt * Math.cos(extrusionAngle)
+        };
+    }
+
+    /**
+     * Normalize supported color formats to an [r,g,b] array.
+     * Accepts plain RGB arrays and p5.Color-like objects with a levels array.
+     */
+    static _resolveRGB(color, fallback = [255, 0, 0]) {
+        if (Array.isArray(color)) return color;
+        if (color && Array.isArray(color.levels)) return [color.levels[0], color.levels[1], color.levels[2]];
+        return fallback;
+    }
+
     // Static regex for parsing weapon count from type string
     static _countRegex = /(\d+)$/;
 
@@ -361,7 +398,8 @@ class WeaponSystem {
 
         // Muzzle flash lighting effect for force blast origin
         if (typeof LightingEffects !== 'undefined') {
-            LightingEffects.addMuzzleFlash(ownerX, ownerY, color, 34);
+            const flashPos = this._projectLightingPositionForSurface(ownerX, ownerY, owner.altitude || 0);
+            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, color, 34);
         }
     }
 
@@ -552,7 +590,8 @@ class WeaponSystem {
 
         // Muzzle flash lighting effect
         if (typeof LightingEffects !== 'undefined') {
-            LightingEffects.addMuzzleFlash(spawnX, spawnY, weapon.color, 24);
+            const flashPos = this._projectLightingPositionForSurface(spawnX, spawnY, owner?.altitude || 0);
+            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, weapon.color, 24);
         }
     }
 
@@ -614,7 +653,8 @@ class WeaponSystem {
 
         // Muzzle flash lighting effect for missile launch
         if (typeof LightingEffects !== 'undefined') {
-            LightingEffects.addMuzzleFlash(spawnX, spawnY, weapon.color, 30);
+            const flashPos = this._projectLightingPositionForSurface(spawnX, spawnY, owner?.altitude || 0);
+            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, weapon.color, 30);
         }
     }
 
@@ -846,7 +886,8 @@ class WeaponSystem {
         // Lighting effects: muzzle flash at world-space origin
         if (typeof LightingEffects !== 'undefined') {
             const beamColor = weapon?.color || [255, 0, 0];
-            LightingEffects.addMuzzleFlash(start.x, start.y, beamColor, 20);
+            const flashPos = this._projectLightingPositionForSurface(start.x, start.y, owner?.altitude || 0);
+            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, beamColor, 20);
         }
 
         // Play sound using playWorldSound
@@ -1223,7 +1264,8 @@ class WeaponSystem {
 
         // Muzzle flash lighting effect for tangle cast
         if (typeof LightingEffects !== 'undefined') {
-            LightingEffects.addMuzzleFlash(spawnX, spawnY, weapon.color, 24);
+            const flashPos = this._projectLightingPositionForSurface(spawnX, spawnY, owner?.altitude || 0);
+            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, weapon.color, 24);
         }
     }
 
@@ -1279,7 +1321,8 @@ class WeaponSystem {
 
         // Muzzle flash lighting effect for harpoon fire
         if (typeof LightingEffects !== 'undefined') {
-            LightingEffects.addMuzzleFlash(spawnX, spawnY, weapon.color, 26);
+            const flashPos = this._projectLightingPositionForSurface(spawnX, spawnY, owner?.altitude || 0);
+            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, weapon.color, 26);
         }
     }
 
@@ -1357,7 +1400,8 @@ class WeaponSystem {
 
         // Muzzle flash lighting effect for mine deploy point
         if (typeof LightingEffects !== 'undefined') {
-            LightingEffects.addMuzzleFlash(dropX, dropY, color, 22);
+            const flashPos = this._projectLightingPositionForSurface(dropX, dropY, owner?.altitude || 0);
+            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, color, 22);
         }
     }
 
@@ -1436,7 +1480,8 @@ class WeaponSystem {
 
         // Muzzle flash lighting effect for storm launch
         if (typeof LightingEffects !== 'undefined') {
-            LightingEffects.addMuzzleFlash(spawnX, spawnY, colorArr, 28);
+            const flashPos = this._projectLightingPositionForSurface(spawnX, spawnY, owner?.altitude || 0);
+            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, colorArr, 28);
         }
 
         WEAPON_LOG(`Storm weapon fired: ${weapon.name} by ${owner.shipTypeName || owner.constructor.name}`);
@@ -1596,11 +1641,10 @@ class WeaponSystem {
                 hitSize = 4;
             } else {
                 // Hull hit: Weapon color
-                const isColorArray = Array.isArray(color);
-                hitColor = isColorArray ? color :
-                    (color && color.levels) ? [color.levels[0], color.levels[1], color.levels[2]] :
-                        [255, 0, 0];
+                hitColor = this._resolveRGB(color, [255, 0, 0]);
             }
+
+            const resolvedWeaponColor = this._resolveRGB(color, hitColor);
 
             if (inSurfaceMode && typeof surfaceMode._createSurfaceExplosion === 'function') {
                 // Pass world coordinates and target altitude to the specialized surface explosion creator
@@ -1611,9 +1655,12 @@ class WeaponSystem {
                 system.addExplosion(worldHitX, worldHitY, hitSize, hitColor, inSurfaceMode);
             }
 
-            // Lighting: impact flash at hit position (world space)
+            // Lighting: impact flash at hit position (surface uses projected visual space)
             if (typeof LightingEffects !== 'undefined') {
-                LightingEffects.addImpactFlash(worldHitX, worldHitY, hitColor, targetHasShield ? 35 : 45);
+                // Some surface entities expose vertical placement as yOffset instead of altitude.
+                const targetAltitude = (target && target.altitude !== undefined) ? target.altitude : (target?.yOffset || 0);
+                const impactPos = this._projectLightingPositionForSurface(worldHitX, worldHitY, targetAltitude);
+                LightingEffects.addImpactFlash(impactPos.x, impactPos.y, resolvedWeaponColor, targetHasShield ? 35 : 45);
             }
         }
     }

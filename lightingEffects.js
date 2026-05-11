@@ -59,9 +59,9 @@ const LightingEffects = (() => {
      * @param {number} x  - World X
      * @param {number} y  - World Y
      * @param {p5.Color|number[]} colorIn - Weapon colour
-     * @param {number} [size=28] - Glow radius in world units
+     * @param {number} [size=22] - Glow radius in world units
      */
-    function addMuzzleFlash(x, y, colorIn, size = 28) {
+    function addMuzzleFlash(x, y, colorIn, size = 22) {
         if (!isFinite(x) || !isFinite(y)) return;
         _pushEvent({
             type: TYPE_MUZZLE,
@@ -69,7 +69,7 @@ const LightingEffects = (() => {
             color: _toRGB(colorIn),
             size,
             startTime: _now(),
-            duration: 100
+            duration: 85
         });
     }
 
@@ -191,12 +191,12 @@ const LightingEffects = (() => {
 
             if (ev.type === TYPE_MUZZLE) {
                 // Quick bright flash that shrinks and fades
-                const alpha  = 230 * invT * invT;
-                const outerR = ev.size * (1 + t * 0.4);   // Slight expansion
-                const innerR = outerR * 0.25;
+                const alpha  = 165 * invT * invT;
+                const outerR = ev.size * (1 + t * 0.25);   // Slight expansion
+                const innerR = outerR * 0.2;
 
                 // White hot core
-                fill(255, 255, 255, alpha * 0.9);
+                fill(255, 255, 255, alpha * 0.7);
                 ellipse(ev.x, ev.y, innerR * 2, innerR * 2);
 
                 // Coloured halo

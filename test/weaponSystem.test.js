@@ -171,6 +171,28 @@ describe('WeaponSystem Tests', () => {
         test('should have fireForce method', () => {
             expect(typeof WeaponSystem.fireForce).toBe('function');
         });
+
+        test('maps lighting position to visual coordinates in surface mode', () => {
+            const originalSurfaceMode = global.surfaceMode;
+            try {
+                global.surfaceMode = {
+                    isActive: () => true,
+                    _toVisualX: (x, altitude) => x - altitude,
+                    _toVisualY: (y, altitude) => y - altitude * 2
+                };
+
+                const pos = WeaponSystem._projectLightingPositionForSurface(100, 200, 10);
+                expect(pos).toEqual({ x: 90, y: 180 });
+            } finally {
+                global.surfaceMode = originalSurfaceMode;
+            }
+        });
+
+        test('resolves RGB arrays from color input safely', () => {
+            expect(WeaponSystem._resolveRGB([1, 2, 3], [9, 9, 9])).toEqual([1, 2, 3]);
+            expect(WeaponSystem._resolveRGB({ levels: [4, 5, 6, 255] }, [9, 9, 9])).toEqual([4, 5, 6]);
+            expect(WeaponSystem._resolveRGB(null, [9, 9, 9])).toEqual([9, 9, 9]);
+        });
     });
 
     // ============================================

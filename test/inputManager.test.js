@@ -119,7 +119,16 @@ describe('InputManager', () => {
         gp._state = { mode: 'D-MODE', dpad: { up: true }, l1: false };
         expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.ALTITUDE_UP, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(true);
 
-        gp._state = { mode: 'S-MODE (Switch)', dpad: { up: false, down: true }, l4: false };
+        gp._state = { mode: 'S-MODE (Switch)', dpad: { up: false, down: true }, l2: 0, l4: false };
         expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.ALTITUDE_DOWN, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(true);
+    });
+
+    test('keeps surface D-pad left/right mapped to weapon controls', () => {
+        gp._state = { mode: 'D-MODE', dpad: { up: true, down: true, left: true, right: true } };
+
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.WEAPON_NEXT, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(true);
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.WEAPON_PREV, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(true);
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.TARGET_NEXT, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(false);
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.TARGET_PREV, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(false);
     });
 });
