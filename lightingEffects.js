@@ -80,15 +80,35 @@ const LightingEffects = (() => {
      * @param {p5.Color|number[]} colorIn - Weapon or explosion colour
      * @param {number} [size=40] - Glow radius in world units
      */
-    function addImpactFlash(x, y, colorIn, size = 40) {
+    function addImpactFlash(x, y, colorIn, size = 40, impactAngle = null) {
         if (!isFinite(x) || !isFinite(y)) return;
+        const impactDir = Number.isFinite(impactAngle) ? impactAngle : Math.random() * Math.PI * 2;
+        const sparks = [];
+        const debris = [];
+        for (let i = 0; i < 6; i++) {
+            sparks.push({
+                angle: impactDir + (Math.random() - 0.5) * 0.9,
+                speed: size * (0.18 + Math.random() * 0.32),
+                len: 2 + Math.random() * 4
+            });
+        }
+        for (let i = 0; i < 4; i++) {
+            debris.push({
+                angle: impactDir + (Math.random() - 0.5) * 1.2,
+                speed: size * (0.1 + Math.random() * 0.24),
+                radius: 0.8 + Math.random() * 1.6
+            });
+        }
         _pushEvent({
             type: TYPE_IMPACT,
             x, y,
             color: _toRGB(colorIn),
             size,
+            impactDir,
+            sparks,
+            debris,
             startTime: _now(),
-            duration: 180
+            duration: 260
         });
     }
 
@@ -221,6 +241,48 @@ const LightingEffects = (() => {
 
                 // Coloured corona
                 _drawGlow(ev.x, ev.y, innerR * 0.5, outerR, ev.color, alpha * 0.85);
+
+                // Tiny shock ring
+                noFill();
+                stroke(ev.color[0], ev.color[1], ev.color[2], alpha * 0.7);
+                strokeWeight(1.4);
+                const ringR = ev.size * (0.2 + t * 0.75);
+                ellipse(ev.x, ev.y, ringR * 2, ringR * 2);
+                noStroke();
+
+                // Directional sparks
+                const sparkAlpha = alpha * invT;
+                stroke(255, 220, 150, sparkAlpha);
+                for (let s = 0; s < ev.sparks.length; s++) {
+                    const spark = ev.sparks[s];
+                    const dist = spark.speed * t;
+                    const sx = ev.x + Math.cos(spark.angle) * dist;
+                    const sy = ev.y + Math.sin(spark.angle) * dist;
+                    const ex = sx + Math.cos(spark.angle) * spark.len;
+                    const ey = sy + Math.sin(spark.angle) * spark.len;
+                    strokeWeight(0.8 + invT * 1.5);
+                    line(sx, sy, ex, ey);
+                }
+
+                // Directional debris
+                noStroke();
+                for (let d = 0; d < ev.debris.length; d++) {
+                    const piece = ev.debris[d];
+                    const dd = piece.speed * t;
+                    const dx = ev.x + Math.cos(piece.angle) * dd;
+                    const dy = ev.y + Math.sin(piece.angle) * dd;
+                    fill(255, 200, 120, alpha * 0.45);
+                    ellipse(dx, dy, piece.radius * 2, piece.radius * 2);
+                }
+
+                // Emissive scorch fade
+                const scorchAlpha = 90 * invT * invT;
+                if (scorchAlpha > 1) {
+                    fill(ev.color[0], ev.color[1], ev.color[2], scorchAlpha);
+                    ellipse(ev.x, ev.y, ev.size * 0.45, ev.size * 0.45);
+                    fill(0, 0, 0, scorchAlpha * 0.35);
+                    ellipse(ev.x, ev.y, ev.size * 0.28, ev.size * 0.28);
+                }
             }
         }
 

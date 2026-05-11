@@ -10,8 +10,11 @@ const SHADE_TABLE_SIZE = 360;
 const SHADE_TABLE = new Float32Array(SHADE_TABLE_SIZE);
 for (let i = 0; i < SHADE_TABLE_SIZE; i++) {
     const angle = (i / SHADE_TABLE_SIZE) * Math.PI * 2;
-    // Formula: 0.5 + (cos(angle) + 1) * 0.25 → range ~0.5 - 1.0
-    SHADE_TABLE[i] = 0.5 + (Math.cos(angle) + 1) * 0.25;
+    const ndl = Math.cos(angle);
+    const key = Math.pow(Math.max(0, ndl), 1.1) * 0.5;
+    const fill = Math.pow(Math.max(0, -ndl), 1.8) * 0.06;
+    const rim = Math.pow(Math.max(0, -ndl), 3.2) * 0.16;
+    SHADE_TABLE[i] = Math.max(0.35, Math.min(1.15, 0.42 + key + fill + rim));
 }
 
 /**
@@ -32,7 +35,47 @@ function getShading(angleDiff) {
  * @returns {number} Brightness multiplier (0.5 - 1.0)
  */
 function computeShading(angleDiff) {
-    return 0.5 + (Math.cos(angleDiff) + 1) * 0.25;
+    const ndl = Math.cos(angleDiff);
+    const key = Math.pow(Math.max(0, ndl), 1.1) * 0.5;
+    const fill = Math.pow(Math.max(0, -ndl), 1.8) * 0.06;
+    const rim = Math.pow(Math.max(0, -ndl), 3.2) * 0.16;
+    return Math.max(0.35, Math.min(1.15, 0.42 + key + fill + rim));
+}
+
+/**
+ * Returns the angle from an entity toward the nearest sun in its current system.
+ * Falls back to world-origin sun direction when no explicit sun can be resolved.
+ * @param {Object} entity
+ * @returns {number}
+ */
+function getNearestSunAngleForEntity(entity) {
+    const ex = entity?.pos?.x ?? 0;
+    const ey = entity?.pos?.y ?? 0;
+    const planets = entity?.currentSystem?.planets;
+
+    let nearestSun = null;
+    let bestDistSq = Infinity;
+
+    if (Array.isArray(planets)) {
+        for (let i = 0; i < planets.length; i++) {
+            const p = planets[i];
+            if (!p?.pos) continue;
+            const isSun = !!p.isSun || p.planetIndex === 0;
+            if (!isSun) continue;
+            const dx = p.pos.x - ex;
+            const dy = p.pos.y - ey;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < bestDistSq) {
+                bestDistSq = d2;
+                nearestSun = p.pos;
+            }
+        }
+    }
+
+    if (!nearestSun) {
+        nearestSun = { x: 0, y: 0 };
+    }
+    return Math.atan2(nearestSun.y - ey, nearestSun.x - ex);
 }
 
 // ============================================================================
