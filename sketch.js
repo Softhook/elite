@@ -732,7 +732,7 @@ function handleGamepadContinuousInput() {
 
     // Flight-only shortcuts
     if (state === 'IN_FLIGHT') {
-        // Target cycling with D-pad up/down stays in flight mode
+        // Target cycling with D-pad up/down is flight-only (surface D-pad up/down controls altitude).
         if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.TARGET_NEXT, context)) {
             player.cycleTarget(1);
         } else if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.TARGET_PREV, context)) {

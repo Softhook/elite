@@ -98,7 +98,7 @@ class WeaponSystem {
         if (!inSurfaceMode) return { x, y };
 
         const alt = Number.isFinite(altitude) ? altitude : 0;
-        if (surfaceMode && typeof surfaceMode._toVisualX === 'function' && typeof surfaceMode._toVisualY === 'function') {
+        if (typeof surfaceMode._toVisualX === 'function' && typeof surfaceMode._toVisualY === 'function') {
             return {
                 x: surfaceMode._toVisualX(x, alt),
                 y: surfaceMode._toVisualY(y, alt)
@@ -1634,7 +1634,7 @@ class WeaponSystem {
                 hitColor = this._resolveRGB(color, [255, 0, 0]);
             }
 
-            const impactLightColor = this._resolveRGB(color, hitColor);
+            const resolvedWeaponColor = this._resolveRGB(color, hitColor);
 
             if (inSurfaceMode && typeof surfaceMode._createSurfaceExplosion === 'function') {
                 // Pass world coordinates and target altitude to the specialized surface explosion creator
@@ -1647,9 +1647,10 @@ class WeaponSystem {
 
             // Lighting: impact flash at hit position (surface uses projected visual space)
             if (typeof LightingEffects !== 'undefined') {
+                // Some surface entities expose vertical placement as yOffset instead of altitude.
                 const targetAltitude = (target && target.altitude !== undefined) ? target.altitude : (target?.yOffset || 0);
                 const impactPos = this._getLightingPosition(worldHitX, worldHitY, targetAltitude);
-                LightingEffects.addImpactFlash(impactPos.x, impactPos.y, impactLightColor, targetHasShield ? 35 : 45);
+                LightingEffects.addImpactFlash(impactPos.x, impactPos.y, resolvedWeaponColor, targetHasShield ? 35 : 45);
             }
         }
     }
