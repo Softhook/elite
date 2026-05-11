@@ -13,6 +13,8 @@ describe('draw3d rim glint', () => {
         expect(computeShipRimGlintStrength(0)).toBeCloseTo(1, 5);
         expect(computeShipRimGlintStrength(0.4)).toBeGreaterThan(0.24);
         expect(computeShipRimGlintStrength(0.4)).toBeCloseTo(computeShipRimGlintStrength(-0.4), 5);
+        expect(computeShipRimGlintStrength(0.62)).toBeGreaterThan(0.24);
+        expect(computeShipRimGlintStrength(0.64)).toBeLessThan(0.24);
         expect(computeShipRimGlintStrength(1)).toBe(0);
     });
 

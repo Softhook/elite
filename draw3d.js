@@ -90,11 +90,20 @@ function drawShipRimGlint(layerCache, layerR, localSunAngle) {
     pop();
 }
 
+/**
+ * Returns rim-light strength for an edge normal vs. sun direction dot product.
+ * ndl is the normalized dot product of the edge's outward normal and the sun direction (-1 to 1).
+ * Higher values are produced for edges that sit near the sun tangent, where the rim glint should appear.
+ * @param {number} ndl
+ * @returns {number}
+ */
 function computeShipRimGlintStrength(ndl) {
     return Math.pow(Math.max(0, 1 - Math.abs(ndl)), SHIP_RIM_GLINT_EXPONENT);
 }
 
 function getEdgeFaceAngle(edge) {
+    // Cache the computed outward normal angle on the edge so repeat draws avoid extra atan2 work.
+    // Math.atan2(-edge.dx, edge.dy) rotates the edge vector 90° to get the outward-facing normal.
     if (edge.faceAngle === undefined) {
         edge.faceAngle = Math.atan2(-edge.dx, edge.dy);
     }
