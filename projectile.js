@@ -8,6 +8,9 @@
 // - Streamlined reset() logic with early validation and efficient color updates
 // - Removed try-catch from hot path (reset) for better JIT optimization
 
+const PROJECTILE_TRAIL_MAX_LENGTH = 10;
+const PROJECTILE_TRAIL_SPEED_THRESHOLD_SQ = 36;
+
 class Projectile {
     constructor(x, y, angle, owner, speed = DEFAULT_WEAPON_CONFIG.PROJECTILE_SPEED, damage = DEFAULT_WEAPON_CONFIG.PROJECTILE_DAMAGE, colorOverride = null,
         type = "projectile", target = null, lifespan = DEFAULT_WEAPON_CONFIG.PROJECTILE_LIFESPAN, turnRate = 0,
@@ -54,6 +57,8 @@ class Projectile {
         this.isSurface = false; // Whether this is a surface mode projectile
         this.ownerType = 'ship'; // 'ship' or 'turret'
         this._timeCorrection = 1.0;
+        this.trail = [];
+        this.trailMax = PROJECTILE_TRAIL_MAX_LENGTH;
 
         // Call reset if parameters provided
         if (x !== undefined) {
@@ -170,6 +175,7 @@ class Projectile {
 
         this.lifespan = this.initialLifespan;
         this.destroyed = false;
+        this.trail.length = 0;
 
         // Set velocity vector
         const effectiveSpeed = this._isMissile ? this.missileSpeed : speed;
@@ -221,6 +227,14 @@ class Projectile {
         // Move projectile (frame-rate independent)
         this.pos.add(p5.Vector.mult(this.vel, timeScale));
         this.lifespan -= timeScale;
+
+        const speedSq = this.vel.x * this.vel.x + this.vel.y * this.vel.y;
+        if (speedSq > PROJECTILE_TRAIL_SPEED_THRESHOLD_SQ) {
+            this.trail.push({ x: this.pos.x, y: this.pos.y });
+            if (this.trail.length > this.trailMax) this.trail.shift();
+        } else if (this.trail.length > 0) {
+            this.trail.shift();
+        }
 
         // Smoothly interpolate altitude for surface projectiles
         // DISABLED: This causes visual offset as projectiles arc from start to target altitude
@@ -299,6 +313,8 @@ class Projectile {
                 finalY = drawY - alt * Math.cos(extrusionAngle);
             }
         }
+
+        this._drawVelocityTrail(counterScale);
 
         // Use cached type checks to avoid repeated string comparisons
         if (this._isMissile) {
@@ -496,6 +512,47 @@ class Projectile {
 
             pop();
         }
+    }
+
+    _drawVelocityTrail(counterScale = 1.0) {
+        if (!this.trail || this.trail.length < 2) return;
+
+        const c = this.color;
+        const cr = c?.levels ? c.levels[0] : (Array.isArray(c) ? c[0] : 255);
+        const cg = c?.levels ? c.levels[1] : (Array.isArray(c) ? c[1] : 120);
+        const cb = c?.levels ? c.levels[2] : (Array.isArray(c) ? c[2] : 20);
+        const speed = Math.sqrt(this.vel.x * this.vel.x + this.vel.y * this.vel.y);
+        const baseWidth = Math.max(0.8, Math.min(4.8, speed * 0.08)) * counterScale;
+
+        push();
+        noFill();
+        blendMode(ADD);
+        for (let i = 1; i < this.trail.length; i++) {
+            const p0 = this.trail[i - 1];
+            const p1 = this.trail[i];
+            let x0 = p0.x, y0 = p0.y, x1 = p1.x, y1 = p1.y;
+            if (this.isSurface) {
+                const alt = this.altitude || 0;
+                if (typeof SurfaceUtils !== 'undefined') {
+                    x0 = SurfaceUtils.toVisualX(x0, alt);
+                    y0 = SurfaceUtils.toVisualY(y0, alt);
+                    x1 = SurfaceUtils.toVisualX(x1, alt);
+                    y1 = SurfaceUtils.toVisualY(y1, alt);
+                } else {
+                    const extrusionAngle = 0.5;
+                    x0 -= alt * Math.sin(extrusionAngle);
+                    y0 -= alt * Math.cos(extrusionAngle);
+                    x1 -= alt * Math.sin(extrusionAngle);
+                    y1 -= alt * Math.cos(extrusionAngle);
+                }
+            }
+            const t = i / (this.trail.length - 1);
+            stroke(cr, cg, cb, 8 + t * 105);
+            strokeWeight(Math.max(0.4, baseWidth * t * t));
+            line(x0, y0, x1, y1);
+        }
+        blendMode(BLEND);
+        pop();
     }
 
     // Collision check with polygon narrowphase for on-screen accuracy

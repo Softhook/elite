@@ -193,6 +193,12 @@ describe('WeaponSystem Tests', () => {
             expect(WeaponSystem._resolveRGB({ levels: [4, 5, 6, 255] }, [9, 9, 9])).toEqual([4, 5, 6]);
             expect(WeaponSystem._resolveRGB(null, [9, 9, 9])).toEqual([9, 9, 9]);
         });
+
+        test('uses consistent muzzle flash size regardless of owner', () => {
+            const baseSize = 20;
+            expect(WeaponSystem._resolveMuzzleFlashSize({ isPlayer: true }, baseSize)).toBe(baseSize);
+            expect(WeaponSystem._resolveMuzzleFlashSize({ isPlayer: false }, 20)).toBe(20);
+        });
     });
 
     // ============================================
@@ -498,6 +504,14 @@ describe('WeaponSystem Tests', () => {
         test('should track lifespan', () => {
             const proj = new Projectile(0, 0, 0, null, 8, 10, null, 'projectile', null, 90);
             expect(proj.lifespan).toBe(90);
+        });
+
+        test('should keep trail history for fast projectiles', () => {
+            const proj = new Projectile(0, 0, 0, null, 12, 10, null, 'projectile', null, 90);
+            proj.update();
+            proj.update();
+            expect(Array.isArray(proj.trail)).toBe(true);
+            expect(proj.trail.length).toBeGreaterThan(0);
         });
 
         test('should have toJSON method', () => {

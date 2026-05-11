@@ -8,16 +8,33 @@
 // ============================================================================
 const SHADE_TABLE_SIZE = 360;
 const SHADE_TABLE = new Float32Array(SHADE_TABLE_SIZE);
+const SHADING_MIN = 0.35;
+const SHADING_MAX = 1.15;
+const SHADING_BASE = 0.42;
+const SHADING_KEY_EXPONENT = 1.1;
+const SHADING_KEY_INTENSITY = 0.5;
+const SHADING_FILL_EXPONENT = 1.8;
+const SHADING_FILL_INTENSITY = 0.06;
+const SHADING_RIM_EXPONENT = 1.7;
+const SHADING_RIM_INTENSITY = 0.28;
+const SHIP_RIM_GLINT_THRESHOLD = 0.5;
+const SHIP_RIM_GLINT_EXPONENT = 6.0;
+const SHIP_RIM_GLINT_ALPHA = 90;
+const SHIP_RIM_GLINT_STROKE = 0.55;
+const SHIP_RIM_GLINT_OUTSET = 0.3;
 for (let i = 0; i < SHADE_TABLE_SIZE; i++) {
     const angle = (i / SHADE_TABLE_SIZE) * Math.PI * 2;
-    // Formula: 0.5 + (cos(angle) + 1) * 0.25 → range ~0.5 - 1.0
-    SHADE_TABLE[i] = 0.5 + (Math.cos(angle) + 1) * 0.25;
+    const ndl = Math.cos(angle);
+    const key = Math.pow(Math.max(0, ndl), SHADING_KEY_EXPONENT) * SHADING_KEY_INTENSITY;
+    const fill = Math.pow(Math.max(0, -ndl), SHADING_FILL_EXPONENT) * SHADING_FILL_INTENSITY;
+    const rim = Math.pow(Math.max(0, 1 - Math.abs(ndl)), SHADING_RIM_EXPONENT) * SHADING_RIM_INTENSITY;
+    SHADE_TABLE[i] = Math.max(SHADING_MIN, Math.min(SHADING_MAX, SHADING_BASE + key + fill + rim));
 }
 
 /**
  * Fast shading lookup using pre-computed table
  * @param {number} angleDiff - Angle difference in radians
- * @returns {number} Brightness multiplier (0.5 - 1.0)
+ * @returns {number} Brightness multiplier (SHADING_MIN - SHADING_MAX, currently 0.35 - 1.15)
  */
 function getShading(angleDiff) {
     let normalized = angleDiff % (Math.PI * 2);
@@ -29,10 +46,117 @@ function getShading(angleDiff) {
 /**
  * Compute shading using direct formula (for cases where lookup isn't beneficial)
  * @param {number} angleDiff - Angle difference in radians
- * @returns {number} Brightness multiplier (0.5 - 1.0)
+ * @returns {number} Brightness multiplier (SHADING_MIN - SHADING_MAX, currently 0.35 - 1.15)
  */
 function computeShading(angleDiff) {
-    return 0.5 + (Math.cos(angleDiff) + 1) * 0.25;
+    const ndl = Math.cos(angleDiff);
+    const key = Math.pow(Math.max(0, ndl), SHADING_KEY_EXPONENT) * SHADING_KEY_INTENSITY;
+    const fill = Math.pow(Math.max(0, -ndl), SHADING_FILL_EXPONENT) * SHADING_FILL_INTENSITY;
+    const rim = Math.pow(Math.max(0, 1 - Math.abs(ndl)), SHADING_RIM_EXPONENT) * SHADING_RIM_INTENSITY;
+    return Math.max(SHADING_MIN, Math.min(SHADING_MAX, SHADING_BASE + key + fill + rim));
+}
+
+function drawShipRimGlint(layerCache, layerR, localSunAngle) {
+    if (!layerCache?.edges || layerCache.edges.length === 0) return;
+    const sunX = Math.cos(localSunAngle);
+    const sunY = Math.sin(localSunAngle);
+
+    push();
+    blendMode(ADD);
+    noFill();
+    strokeCap(ROUND);
+
+    for (let i = 0; i < layerCache.edges.length; i++) {
+        const edge = layerCache.edges[i];
+        const normal = getEdgeNormal(edge);
+        const ndl = normal.x * sunX + normal.y * sunY;
+        const rim = computeShipRimGlintStrength(ndl);
+        if (rim < SHIP_RIM_GLINT_THRESHOLD) continue;
+
+        const alpha = SHIP_RIM_GLINT_ALPHA * rim;
+        const tint = 0.12 + rim * 0.18;
+        const rr = Math.min(255, layerCache.fillRGB.r + (255 - layerCache.fillRGB.r) * tint);
+        const rg = Math.min(255, layerCache.fillRGB.g + (255 - layerCache.fillRGB.g) * tint);
+        const rb = Math.min(255, layerCache.fillRGB.b + (255 - layerCache.fillRGB.b) * tint);
+        const ox = normal.x * SHIP_RIM_GLINT_OUTSET;
+        const oy = normal.y * SHIP_RIM_GLINT_OUTSET;
+
+        stroke(rr, rg, rb, alpha);
+        strokeWeight(0.18 + rim * SHIP_RIM_GLINT_STROKE);
+        line(
+            edge.v1.x * layerR + ox, edge.v1.y * layerR + oy,
+            edge.v2.x * layerR + ox, edge.v2.y * layerR + oy
+        );
+    }
+
+    pop();
+}
+
+/**
+ * Returns rim-light strength for an edge normal vs. sun direction dot product.
+ * ndl is the normalized dot product of the edge's outward normal and the sun direction (-1 to 1).
+ * Higher values are produced only for edges whose outward normal stays close to the sun direction.
+ * @param {number} ndl
+ * @returns {number}
+ */
+function computeShipRimGlintStrength(ndl) {
+    return Math.pow(Math.max(0, ndl), SHIP_RIM_GLINT_EXPONENT);
+}
+
+function getEdgeFaceAngle(edge) {
+    return getEdgeNormal(edge).angle;
+}
+
+function getEdgeNormal(edge) {
+    // Cache the computed outward normal angle/vector on the edge so repeat draws avoid extra atan2/cos/sin work.
+    // Math.atan2(-edge.dx, edge.dy) rotates the edge vector 90° to get the outward-facing normal.
+    if (!edge.normal) {
+        const angle = edge.faceAngle !== undefined ? edge.faceAngle : Math.atan2(-edge.dx, edge.dy);
+        edge.faceAngle = angle;
+        edge.normal = {
+            angle,
+            x: Math.cos(angle),
+            y: Math.sin(angle)
+        };
+    }
+    return edge.normal;
+}
+
+/**
+ * Returns the angle from an entity toward the nearest sun in its current system.
+ * Falls back to world-origin sun direction when no explicit sun can be resolved.
+ * @param {Object} entity
+ * @returns {number}
+ */
+function getNearestSunAngleForEntity(entity) {
+    const ex = entity?.pos?.x ?? 0;
+    const ey = entity?.pos?.y ?? 0;
+    const planets = entity?.currentSystem?.planets;
+
+    let nearestSun = null;
+    let bestDistSq = Infinity;
+
+    if (Array.isArray(planets)) {
+        for (let i = 0; i < planets.length; i++) {
+            const p = planets[i];
+            if (!p?.pos) continue;
+            const hasExplicitSunIndex = Number.isFinite(p.planetIndex) && p.planetIndex === 0;
+            const isSun = !!p.isSun || hasExplicitSunIndex;
+            if (!isSun) continue;
+            const dx = p.pos.x - ex;
+            const dy = p.pos.y - ey;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < bestDistSq) {
+                bestDistSq = d2;
+                nearestSun = p.pos;
+            }
+        }
+    }
+
+    if (!nearestSun) {
+        nearestSun = { x: 0, y: 0 };
+    }
+    return Math.atan2(nearestSun.y - ey, nearestSun.x - ex);
 }
 
 // ============================================================================
@@ -1263,6 +1387,9 @@ function drawExtrudedPolyOptimized(r, layerCache, depth, angle, localSunAngle, l
             vertex(v.x * layerR, v.y * layerR);
         }
         endShape(CLOSE);
+        if (layerIndex === 0) {
+            drawShipRimGlint(layerCache, layerR, localSunAngle);
+        }
     }
 }
 
@@ -1328,6 +1455,9 @@ function drawExtrudedPolySymmetric(r, layerCache, depth, angle, localSunAngle, l
             vertex(v.x * layerR, v.y * layerR);
         }
         endShape(CLOSE);
+        if (layerIndex === 0) {
+            drawShipRimGlint(layerCache, layerR, localSunAngle);
+        }
     }
 }
 
@@ -1548,3 +1678,11 @@ Draw3D.drawUpgradeModel = function (type, level, x, y, size, angle) {
 };
 
 console.log("draw3d.js - Centralized Faux 3D Rendering System loaded.");
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        computeShipRimGlintStrength,
+        drawShipRimGlint,
+        getNearestSunAngleForEntity
+    };
+}

@@ -2,6 +2,9 @@
 // Enemy Rendering Methods - Stage 10
 // Contains draw methods and visual effects
 
+const ENEMY_TRAIL_SPEED_THRESHOLD_SQ = 42;
+const ENEMY_TRAIL_MAX_LENGTH = 12;
+
 /**
  * EnemyRendering class contains rendering methods for enemies.
  * These methods are mixed into the Enemy prototype via applyEnemyRenderingMethods().
@@ -85,7 +88,9 @@ class EnemyRendering {
             const turretBarrelDepth = turretSize * 0.3;
 
             // Calculate sun angle for lighting
-            const sunAngle = atan2(-this.pos.y, -this.pos.x);
+            const sunAngle = (typeof getNearestSunAngleForEntity === 'function')
+                ? getNearestSunAngleForEntity(this)
+                : atan2(-this.pos.y, -this.pos.x);
             const localSunAngle = sunAngle - this.angle;
 
             // --- Draw Base ---
@@ -218,6 +223,45 @@ class EnemyRendering {
         }
     }
 
+    _updateVelocityTrail() {
+        if (!this._velocityTrail) this._velocityTrail = [];
+        const vx = this.vel?.x || 0;
+        const vy = this.vel?.y || 0;
+        const speedSq = vx * vx + vy * vy;
+
+        if (speedSq > ENEMY_TRAIL_SPEED_THRESHOLD_SQ) {
+            this._velocityTrail.push({ x: this.pos.x, y: this.pos.y });
+            if (this._velocityTrail.length > ENEMY_TRAIL_MAX_LENGTH) this._velocityTrail.shift();
+        } else if (this._velocityTrail.length > 0) {
+            this._velocityTrail.shift();
+        }
+    }
+
+    _drawVelocityTrail() {
+        const trail = this._velocityTrail;
+        if (!trail || trail.length < 2) return;
+
+        const vx = this.vel?.x || 0;
+        const vy = this.vel?.y || 0;
+        const speed = Math.sqrt(vx * vx + vy * vy);
+        const baseWidth = Math.max(1.0, Math.min(5.2, speed * 0.09));
+        const c = this.baseColorValue || [180, 190, 220];
+
+        push();
+        noFill();
+        blendMode(ADD);
+        for (let i = 1; i < trail.length; i++) {
+            const p0 = trail[i - 1];
+            const p1 = trail[i];
+            const lifeT = i / (trail.length - 1);
+            stroke(c[0], c[1], c[2], 10 + lifeT * 95);
+            strokeWeight(Math.max(0.5, baseWidth * lifeT * lifeT));
+            line(p0.x, p0.y, p1.x, p1.y);
+        }
+        blendMode(BLEND);
+        pop();
+    }
+
     /** Draws the enemy ship using its specific draw function and adds UI elements. */
     draw() {
         // Allow rendering while jump-fading even if `destroyed` is set so the visual
@@ -231,6 +275,8 @@ class EnemyRendering {
 
         // Cache current time (avoid multiple millis() calls per frame)
         const now = millis();
+        this._updateVelocityTrail();
+        this._drawVelocityTrail();
 
         if (!this.p5FillColor || !this.p5StrokeColor) { this.initializeColors(); }
         if (!this.p5FillColor || !this.p5StrokeColor) { return; }
@@ -428,7 +474,9 @@ class EnemyRendering {
         // --- End Info Label ---
 
         // Calculate sun angle relative to ship's rotation for 3D shading
-        const sunAngle = atan2(-this.pos.y, -this.pos.x);
+        const sunAngle = (typeof getNearestSunAngleForEntity === 'function')
+            ? getNearestSunAngleForEntity(this)
+            : atan2(-this.pos.y, -this.pos.x);
         const localSunAngle = sunAngle - this.angle;
 
         rotate(this.angle);

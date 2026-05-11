@@ -27,7 +27,11 @@ const PLAYER_CONFIG = {
     MAX_BODYGUARDS: 3,
 
     // Starting values
-    STARTING_CREDITS: 1000
+    STARTING_CREDITS: 1000,
+
+    // Visual trails
+    TRAIL_SPEED_THRESHOLD_SQ: 49,
+    TRAIL_MAX_LENGTH: 14
 };
 
 /**
@@ -1729,6 +1733,45 @@ class Player {
         pop();
     }
 
+    _updateVelocityTrail() {
+        if (!this._velocityTrail) this._velocityTrail = [];
+        const vx = this.vel?.x || 0;
+        const vy = this.vel?.y || 0;
+        const speedSq = vx * vx + vy * vy;
+
+        if (speedSq > PLAYER_CONFIG.TRAIL_SPEED_THRESHOLD_SQ) {
+            this._velocityTrail.push({ x: this.pos.x, y: this.pos.y });
+            if (this._velocityTrail.length > PLAYER_CONFIG.TRAIL_MAX_LENGTH) this._velocityTrail.shift();
+        } else if (this._velocityTrail.length > 0) {
+            this._velocityTrail.shift();
+        }
+    }
+
+    _drawVelocityTrail() {
+        const trail = this._velocityTrail;
+        if (!trail || trail.length < 2) return;
+
+        const vx = this.vel?.x || 0;
+        const vy = this.vel?.y || 0;
+        const speed = Math.sqrt(vx * vx + vy * vy);
+        const baseWidth = Math.max(1.4, Math.min(6.5, speed * 0.11));
+
+        push();
+        noFill();
+        blendMode(ADD);
+        for (let i = 1; i < trail.length; i++) {
+            const p0 = trail[i - 1];
+            const p1 = trail[i];
+            const lifeT = i / (trail.length - 1);
+            const alpha = 12 + lifeT * 120;
+            stroke(120, 200, 255, alpha);
+            strokeWeight(Math.max(0.6, baseWidth * lifeT * lifeT));
+            line(p0.x, p0.y, p1.x, p1.y);
+        }
+        blendMode(BLEND);
+        pop();
+    }
+
     /** Draws the player ship using its specific draw function. */
     draw(overrideSunAngle = null) {
         // Don't draw ship if exploding
@@ -1748,6 +1791,9 @@ class Player {
 
         if (isNaN(this.angle)) { return; } // Safety check
 
+        this._updateVelocityTrail();
+        this._drawVelocityTrail();
+
         // Cache ship definition lookup
         if (!this._cachedShipDef || this._cachedShipTypeName !== this.shipTypeName) {
             this._cachedShipDef = SHIP_DEFINITIONS[this.shipTypeName];
@@ -1766,6 +1812,8 @@ class Player {
         let sunAngle;
         if (overrideSunAngle !== null && overrideSunAngle !== undefined) {
             sunAngle = overrideSunAngle;
+        } else if (typeof getNearestSunAngleForEntity === 'function') {
+            sunAngle = getNearestSunAngleForEntity(this);
         } else {
             sunAngle = atan2(-this.pos.y, -this.pos.x);
         }
