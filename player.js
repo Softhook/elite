@@ -1431,6 +1431,9 @@ class Player {
                 if (typeof soundManager !== 'undefined') {
                     soundManager.playSound('barrierUp');
                 }
+                if (typeof WeaponSystem !== 'undefined' && typeof WeaponSystem.addMuzzleFlash === 'function') {
+                    WeaponSystem.addMuzzleFlash(this, this.pos.x, this.pos.y, this.barrierColor, 30, this.angle);
+                }
                 return true; // Barrier activated, no projectile fired
             } else {
                 if (typeof uiManager !== 'undefined') {

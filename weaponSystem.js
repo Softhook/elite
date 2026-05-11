@@ -134,6 +134,19 @@ class WeaponSystem {
         return baseSize;
     }
 
+    static addMuzzleFlash(owner, x, y, color, baseSize, angle = null) {
+        if (typeof LightingEffects === 'undefined') return;
+
+        const flashPos = this._projectLightingPositionForSurface(x, y, owner?.altitude || 0);
+        LightingEffects.addMuzzleFlash(
+            flashPos.x,
+            flashPos.y,
+            color,
+            this._resolveMuzzleFlashSize(owner, baseSize),
+            angle
+        );
+    }
+
     // Static regex for parsing weapon count from type string
     static _countRegex = /(\d+)$/;
 
@@ -772,6 +785,8 @@ class WeaponSystem {
         if (soundManager && player?.pos) {
             soundManager.playWorldSound('laser', baseX, baseY, player.pos, owner);
         }
+
+        this.addMuzzleFlash(owner, baseX, baseY, color, 24, angle);
     }
 
     /** 
@@ -1882,6 +1897,7 @@ class WeaponSystem {
         if (soundManager && player?.pos) {
             soundManager.playWorldSound('upgrade', bx, by, player.pos, owner);
         }
+        this.addMuzzleFlash(owner, bx, by, owner?.currentWeapon?.color || [120, 220, 255], 26, angle);
 
         // CRITICAL: Initialize robots immediately for the new base
         // This ensures robots are spawned BEFORE the game saves
