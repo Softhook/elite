@@ -29,7 +29,7 @@ for (let i = 0; i < SHADE_TABLE_SIZE; i++) {
 /**
  * Fast shading lookup using pre-computed table
  * @param {number} angleDiff - Angle difference in radians
- * @returns {number} Brightness multiplier (0.5 - 1.0)
+ * @returns {number} Brightness multiplier (SHADING_MIN - SHADING_MAX, currently 0.35 - 1.15)
  */
 function getShading(angleDiff) {
     let normalized = angleDiff % (Math.PI * 2);
@@ -41,7 +41,7 @@ function getShading(angleDiff) {
 /**
  * Compute shading using direct formula (for cases where lookup isn't beneficial)
  * @param {number} angleDiff - Angle difference in radians
- * @returns {number} Brightness multiplier (0.5 - 1.0)
+ * @returns {number} Brightness multiplier (SHADING_MIN - SHADING_MAX, currently 0.35 - 1.15)
  */
 function computeShading(angleDiff) {
     const ndl = Math.cos(angleDiff);

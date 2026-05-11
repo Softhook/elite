@@ -1733,14 +1733,14 @@ class Player {
         pop();
     }
 
-    _updateVelocityTrail(now) {
+    _updateVelocityTrail() {
         if (!this._velocityTrail) this._velocityTrail = [];
         const vx = this.vel?.x || 0;
         const vy = this.vel?.y || 0;
         const speedSq = vx * vx + vy * vy;
 
         if (speedSq > PLAYER_CONFIG.TRAIL_SPEED_THRESHOLD_SQ) {
-            this._velocityTrail.push({ x: this.pos.x, y: this.pos.y, t: now });
+            this._velocityTrail.push({ x: this.pos.x, y: this.pos.y });
             if (this._velocityTrail.length > PLAYER_CONFIG.TRAIL_MAX_LENGTH) this._velocityTrail.shift();
         } else if (this._velocityTrail.length > 0) {
             this._velocityTrail.shift();
@@ -1791,8 +1791,7 @@ class Player {
 
         if (isNaN(this.angle)) { return; } // Safety check
 
-        const now = millis();
-        this._updateVelocityTrail(now);
+        this._updateVelocityTrail();
         this._drawVelocityTrail();
 
         // Cache ship definition lookup

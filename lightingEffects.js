@@ -79,6 +79,7 @@ const LightingEffects = (() => {
      * @param {number} y  - World Y
      * @param {p5.Color|number[]} colorIn - Weapon or explosion colour
      * @param {number} [size=40] - Glow radius in world units
+     * @param {?number} [impactAngle=null] - Optional incoming impact direction in radians
      */
     function addImpactFlash(x, y, colorIn, size = 40, impactAngle = null) {
         if (!isFinite(x) || !isFinite(y)) return;

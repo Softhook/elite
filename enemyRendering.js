@@ -223,14 +223,14 @@ class EnemyRendering {
         }
     }
 
-    _updateVelocityTrail(now) {
+    _updateVelocityTrail() {
         if (!this._velocityTrail) this._velocityTrail = [];
         const vx = this.vel?.x || 0;
         const vy = this.vel?.y || 0;
         const speedSq = vx * vx + vy * vy;
 
         if (speedSq > ENEMY_TRAIL_SPEED_THRESHOLD_SQ) {
-            this._velocityTrail.push({ x: this.pos.x, y: this.pos.y, t: now });
+            this._velocityTrail.push({ x: this.pos.x, y: this.pos.y });
             if (this._velocityTrail.length > ENEMY_TRAIL_MAX_LENGTH) this._velocityTrail.shift();
         } else if (this._velocityTrail.length > 0) {
             this._velocityTrail.shift();
@@ -275,7 +275,7 @@ class EnemyRendering {
 
         // Cache current time (avoid multiple millis() calls per frame)
         const now = millis();
-        this._updateVelocityTrail(now);
+        this._updateVelocityTrail();
         this._drawVelocityTrail();
 
         if (!this.p5FillColor || !this.p5StrokeColor) { this.initializeColors(); }
