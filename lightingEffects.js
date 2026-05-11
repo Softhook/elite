@@ -60,17 +60,35 @@ const LightingEffects = (() => {
      * @param {number} y  - World Y
      * @param {p5.Color|number[]} colorIn - Weapon colour
      * @param {number} [size=22] - Glow radius in world units
+     * @param {?number} [angle=null] - Optional facing direction in radians for directional flash
      */
-    function addMuzzleFlash(x, y, colorIn, size = 22) {
+    function addMuzzleFlash(x, y, colorIn, size = 22, angle = null) {
         if (!isFinite(x) || !isFinite(y)) return;
         _pushEvent({
             type: TYPE_MUZZLE,
             x, y,
             color: _toRGB(colorIn),
             size,
+            angle: Number.isFinite(angle) ? angle : null,
             startTime: _now(),
             duration: 85
         });
+    }
+
+    function _drawDirectionalMuzzleGlow(cx, cy, innerR, outerR, rgb, peakA, facingAngle) {
+        const steps = 5;
+        const r = rgb[0], g = rgb[1], b = rgb[2];
+        push();
+        translate(cx, cy);
+        rotate(facingAngle);
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const rad = innerR + (outerR - innerR) * (1 - t);
+            const alpha = peakA * t * t;
+            fill(r, g, b, alpha);
+            arc(0, 0, rad * 2, rad * 2, -HALF_PI, HALF_PI, PIE);
+        }
+        pop();
     }
 
     /**
@@ -211,17 +229,20 @@ const LightingEffects = (() => {
             const invT = 1 - t;
 
             if (ev.type === TYPE_MUZZLE) {
-                // Quick bright flash that shrinks and fades
-                const alpha  = 165 * invT * invT;
-                const outerR = ev.size * (1 + t * 0.25);   // Slight expansion
-                const innerR = outerR * 0.2;
+                // Directional muzzle bloom: softer, forward-facing semicircle
+                const alpha = 108 * invT * invT;
+                const outerR = ev.size * (0.8 + t * 0.2);
+                const innerR = outerR * 0.22;
+                const flashAngle = Number.isFinite(ev.angle) ? ev.angle : 0;
 
-                // White hot core
-                fill(255, 255, 255, alpha * 0.7);
-                ellipse(ev.x, ev.y, innerR * 2, innerR * 2);
+                push();
+                translate(ev.x, ev.y);
+                rotate(flashAngle);
+                fill(255, 255, 255, alpha * 0.58);
+                arc(0, 0, innerR * 2, innerR * 2, -HALF_PI, HALF_PI, PIE);
+                pop();
 
-                // Coloured halo
-                _drawGlow(ev.x, ev.y, innerR, outerR, ev.color, alpha);
+                _drawDirectionalMuzzleGlow(ev.x, ev.y, innerR, outerR, ev.color, alpha, flashAngle);
 
             } else if (ev.type === TYPE_IMPACT) {
                 // Quick ramp-up then slower fade with expanding ring

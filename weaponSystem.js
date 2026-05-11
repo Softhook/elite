@@ -403,7 +403,7 @@ class WeaponSystem {
         // Muzzle flash lighting effect for force blast origin
         if (typeof LightingEffects !== 'undefined') {
             const flashPos = this._projectLightingPositionForSurface(ownerX, ownerY, owner.altitude || 0);
-            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, color, this._resolveMuzzleFlashSize(owner, 34));
+            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, color, this._resolveMuzzleFlashSize(owner, 34), owner?.angle ?? 0);
         }
     }
 
@@ -595,7 +595,7 @@ class WeaponSystem {
         // Muzzle flash lighting effect
         if (typeof LightingEffects !== 'undefined') {
             const flashPos = this._projectLightingPositionForSurface(spawnX, spawnY, owner?.altitude || 0);
-            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, weapon.color, this._resolveMuzzleFlashSize(owner, 24));
+            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, weapon.color, this._resolveMuzzleFlashSize(owner, 24), angle);
         }
     }
 
@@ -658,7 +658,7 @@ class WeaponSystem {
         // Muzzle flash lighting effect for missile launch
         if (typeof LightingEffects !== 'undefined') {
             const flashPos = this._projectLightingPositionForSurface(spawnX, spawnY, owner?.altitude || 0);
-            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, weapon.color, this._resolveMuzzleFlashSize(owner, 30));
+            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, weapon.color, this._resolveMuzzleFlashSize(owner, 30), angle);
         }
     }
 
@@ -891,7 +891,7 @@ class WeaponSystem {
         if (typeof LightingEffects !== 'undefined') {
             const beamColor = weapon?.color || [255, 0, 0];
             const flashPos = this._projectLightingPositionForSurface(start.x, start.y, owner?.altitude || 0);
-            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, beamColor, this._resolveMuzzleFlashSize(owner, 20));
+            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, beamColor, this._resolveMuzzleFlashSize(owner, 20), angle);
         }
 
         // Play sound using playWorldSound
@@ -1269,7 +1269,7 @@ class WeaponSystem {
         // Muzzle flash lighting effect for tangle cast
         if (typeof LightingEffects !== 'undefined') {
             const flashPos = this._projectLightingPositionForSurface(spawnX, spawnY, owner?.altitude || 0);
-            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, weapon.color, this._resolveMuzzleFlashSize(owner, 24));
+            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, weapon.color, this._resolveMuzzleFlashSize(owner, 24), angle);
         }
     }
 
@@ -1326,7 +1326,7 @@ class WeaponSystem {
         // Muzzle flash lighting effect for harpoon fire
         if (typeof LightingEffects !== 'undefined') {
             const flashPos = this._projectLightingPositionForSurface(spawnX, spawnY, owner?.altitude || 0);
-            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, weapon.color, this._resolveMuzzleFlashSize(owner, 26));
+            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, weapon.color, this._resolveMuzzleFlashSize(owner, 26), angle);
         }
     }
 
@@ -1405,7 +1405,7 @@ class WeaponSystem {
         // Muzzle flash lighting effect for mine deploy point
         if (typeof LightingEffects !== 'undefined') {
             const flashPos = this._projectLightingPositionForSurface(dropX, dropY, owner?.altitude || 0);
-            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, color, this._resolveMuzzleFlashSize(owner, 22));
+            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, color, this._resolveMuzzleFlashSize(owner, 22), dropAngle);
         }
     }
 
@@ -1485,7 +1485,7 @@ class WeaponSystem {
         // Muzzle flash lighting effect for storm launch
         if (typeof LightingEffects !== 'undefined') {
             const flashPos = this._projectLightingPositionForSurface(spawnX, spawnY, owner?.altitude || 0);
-            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, colorArr, this._resolveMuzzleFlashSize(owner, 28));
+            LightingEffects.addMuzzleFlash(flashPos.x, flashPos.y, colorArr, this._resolveMuzzleFlashSize(owner, 28), firingAngle);
         }
 
         WEAPON_LOG(`Storm weapon fired: ${weapon.name} by ${owner.shipTypeName || owner.constructor.name}`);

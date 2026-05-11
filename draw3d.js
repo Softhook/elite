@@ -17,6 +17,10 @@ const SHADING_FILL_EXPONENT = 1.8;
 const SHADING_FILL_INTENSITY = 0.06;
 const SHADING_RIM_EXPONENT = 1.7;
 const SHADING_RIM_INTENSITY = 0.28;
+const SHIP_RIM_GLINT_THRESHOLD = 0.45;
+const SHIP_RIM_GLINT_EXPONENT = 1.6;
+const SHIP_RIM_GLINT_ALPHA = 170;
+const SHIP_RIM_GLINT_STROKE = 2.1;
 for (let i = 0; i < SHADE_TABLE_SIZE; i++) {
     const angle = (i / SHADE_TABLE_SIZE) * Math.PI * 2;
     const ndl = Math.cos(angle);
@@ -49,6 +53,33 @@ function computeShading(angleDiff) {
     const fill = Math.pow(Math.max(0, -ndl), SHADING_FILL_EXPONENT) * SHADING_FILL_INTENSITY;
     const rim = Math.pow(Math.max(0, 1 - Math.abs(ndl)), SHADING_RIM_EXPONENT) * SHADING_RIM_INTENSITY;
     return Math.max(SHADING_MIN, Math.min(SHADING_MAX, SHADING_BASE + key + fill + rim));
+}
+
+function drawShipRimGlint(layerCache, layerR, localSunAngle) {
+    if (!layerCache?.edges || layerCache.edges.length === 0) return;
+
+    push();
+    blendMode(ADD);
+    noFill();
+    strokeCap(ROUND);
+
+    for (let i = 0; i < layerCache.edges.length; i++) {
+        const edge = layerCache.edges[i];
+        const faceAngle = edge.faceAngle !== undefined ? edge.faceAngle : Math.atan2(-edge.dx, edge.dy);
+        const ndl = Math.cos(faceAngle - localSunAngle);
+        const rim = Math.pow(Math.max(0, 1 - Math.abs(ndl)), SHIP_RIM_GLINT_EXPONENT);
+        if (rim < SHIP_RIM_GLINT_THRESHOLD) continue;
+
+        const alpha = SHIP_RIM_GLINT_ALPHA * rim;
+        stroke(255, 255, 255, alpha);
+        strokeWeight(0.8 + rim * SHIP_RIM_GLINT_STROKE);
+        line(
+            edge.v1.x * layerR, edge.v1.y * layerR,
+            edge.v2.x * layerR, edge.v2.y * layerR
+        );
+    }
+
+    pop();
 }
 
 /**
@@ -1316,6 +1347,9 @@ function drawExtrudedPolyOptimized(r, layerCache, depth, angle, localSunAngle, l
             vertex(v.x * layerR, v.y * layerR);
         }
         endShape(CLOSE);
+        if (layerIndex === 0) {
+            drawShipRimGlint(layerCache, layerR, localSunAngle);
+        }
     }
 }
 
@@ -1381,6 +1415,9 @@ function drawExtrudedPolySymmetric(r, layerCache, depth, angle, localSunAngle, l
             vertex(v.x * layerR, v.y * layerR);
         }
         endShape(CLOSE);
+        if (layerIndex === 0) {
+            drawShipRimGlint(layerCache, layerR, localSunAngle);
+        }
     }
 }
 
