@@ -110,14 +110,16 @@ function getEdgeFaceAngle(edge) {
 function getEdgeNormal(edge) {
     // Cache the computed outward normal angle/vector on the edge so repeat draws avoid extra atan2/cos/sin work.
     // Math.atan2(-edge.dx, edge.dy) rotates the edge vector 90° to get the outward-facing normal.
-    if (edge.faceAngle === undefined) {
-        edge.faceAngle = Math.atan2(-edge.dx, edge.dy);
+    if (!edge.normal) {
+        const angle = edge.faceAngle !== undefined ? edge.faceAngle : Math.atan2(-edge.dx, edge.dy);
+        edge.faceAngle = angle;
+        edge.normal = {
+            angle,
+            x: Math.cos(angle),
+            y: Math.sin(angle)
+        };
     }
-    if (edge.normalX === undefined) {
-        edge.normalX = Math.cos(edge.faceAngle);
-        edge.normalY = Math.sin(edge.faceAngle);
-    }
-    return { angle: edge.faceAngle, x: edge.normalX, y: edge.normalY };
+    return edge.normal;
 }
 
 /**
