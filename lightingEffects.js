@@ -105,15 +105,21 @@ const LightingEffects = (() => {
         const sparks = [];
         const debris = [];
         for (let i = 0; i < 6; i++) {
+            const angle = impactDir + (Math.random() - 0.5) * 0.9;
             sparks.push({
-                angle: impactDir + (Math.random() - 0.5) * 0.9,
+                angle,
+                dirX: Math.cos(angle),
+                dirY: Math.sin(angle),
                 speed: size * (0.18 + Math.random() * 0.32),
                 len: 2 + Math.random() * 4
             });
         }
         for (let i = 0; i < 4; i++) {
+            const angle = impactDir + (Math.random() - 0.5) * 1.2;
             debris.push({
-                angle: impactDir + (Math.random() - 0.5) * 1.2,
+                angle,
+                dirX: Math.cos(angle),
+                dirY: Math.sin(angle),
                 speed: size * (0.1 + Math.random() * 0.24),
                 radius: 0.8 + Math.random() * 1.6
             });
@@ -275,25 +281,25 @@ const LightingEffects = (() => {
                 // Directional sparks
                 const sparkAlpha = alpha * invT;
                 stroke(255, 220, 150, sparkAlpha);
+                strokeWeight(0.8 + invT * 1.5);
                 for (let s = 0; s < ev.sparks.length; s++) {
                     const spark = ev.sparks[s];
                     const dist = spark.speed * t;
-                    const sx = ev.x + Math.cos(spark.angle) * dist;
-                    const sy = ev.y + Math.sin(spark.angle) * dist;
-                    const ex = sx + Math.cos(spark.angle) * spark.len;
-                    const ey = sy + Math.sin(spark.angle) * spark.len;
-                    strokeWeight(0.8 + invT * 1.5);
+                    const sx = ev.x + spark.dirX * dist;
+                    const sy = ev.y + spark.dirY * dist;
+                    const ex = sx + spark.dirX * spark.len;
+                    const ey = sy + spark.dirY * spark.len;
                     line(sx, sy, ex, ey);
                 }
 
                 // Directional debris
                 noStroke();
+                fill(255, 200, 120, alpha * 0.45);
                 for (let d = 0; d < ev.debris.length; d++) {
                     const piece = ev.debris[d];
                     const dd = piece.speed * t;
-                    const dx = ev.x + Math.cos(piece.angle) * dd;
-                    const dy = ev.y + Math.sin(piece.angle) * dd;
-                    fill(255, 200, 120, alpha * 0.45);
+                    const dx = ev.x + piece.dirX * dd;
+                    const dy = ev.y + piece.dirY * dd;
                     ellipse(dx, dy, piece.radius * 2, piece.radius * 2);
                 }
 

@@ -58,6 +58,8 @@ function computeShading(angleDiff) {
 
 function drawShipRimGlint(layerCache, layerR, localSunAngle) {
     if (!layerCache?.edges || layerCache.edges.length === 0) return;
+    const sunX = Math.cos(localSunAngle);
+    const sunY = Math.sin(localSunAngle);
 
     push();
     blendMode(ADD);
@@ -66,8 +68,8 @@ function drawShipRimGlint(layerCache, layerR, localSunAngle) {
 
     for (let i = 0; i < layerCache.edges.length; i++) {
         const edge = layerCache.edges[i];
-        const faceAngle = getEdgeFaceAngle(edge);
-        const ndl = Math.cos(faceAngle - localSunAngle);
+        const normal = getEdgeNormal(edge);
+        const ndl = normal.x * sunX + normal.y * sunY;
         const rim = computeShipRimGlintStrength(ndl);
         if (rim < SHIP_RIM_GLINT_THRESHOLD) continue;
 
@@ -76,8 +78,8 @@ function drawShipRimGlint(layerCache, layerR, localSunAngle) {
         const rr = Math.min(255, layerCache.fillRGB.r + (255 - layerCache.fillRGB.r) * tint);
         const rg = Math.min(255, layerCache.fillRGB.g + (255 - layerCache.fillRGB.g) * tint);
         const rb = Math.min(255, layerCache.fillRGB.b + (255 - layerCache.fillRGB.b) * tint);
-        const ox = Math.cos(faceAngle) * SHIP_RIM_GLINT_OUTSET;
-        const oy = Math.sin(faceAngle) * SHIP_RIM_GLINT_OUTSET;
+        const ox = normal.x * SHIP_RIM_GLINT_OUTSET;
+        const oy = normal.y * SHIP_RIM_GLINT_OUTSET;
 
         stroke(rr, rg, rb, alpha);
         strokeWeight(0.18 + rim * SHIP_RIM_GLINT_STROKE);
@@ -102,12 +104,20 @@ function computeShipRimGlintStrength(ndl) {
 }
 
 function getEdgeFaceAngle(edge) {
-    // Cache the computed outward normal angle on the edge so repeat draws avoid extra atan2 work.
+    return getEdgeNormal(edge).angle;
+}
+
+function getEdgeNormal(edge) {
+    // Cache the computed outward normal angle/vector on the edge so repeat draws avoid extra atan2/cos/sin work.
     // Math.atan2(-edge.dx, edge.dy) rotates the edge vector 90° to get the outward-facing normal.
     if (edge.faceAngle === undefined) {
         edge.faceAngle = Math.atan2(-edge.dx, edge.dy);
     }
-    return edge.faceAngle;
+    if (edge.normalX === undefined || edge.normalY === undefined) {
+        edge.normalX = Math.cos(edge.faceAngle);
+        edge.normalY = Math.sin(edge.faceAngle);
+    }
+    return { angle: edge.faceAngle, x: edge.normalX, y: edge.normalY };
 }
 
 /**
