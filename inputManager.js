@@ -175,12 +175,10 @@ class InputManager {
                     [INPUT_ACTIONS.MINIMAP_ZOOM_IN]: ['pr'],
                     [INPUT_ACTIONS.MINIMAP_ZOOM_OUT]: ['pl'],
                     [INPUT_ACTIONS.ACTIVATE_CLOAK]: ['y'],
-                    [INPUT_ACTIONS.ALTITUDE_UP]: ['l1'],
-                    [INPUT_ACTIONS.ALTITUDE_DOWN]: ['l2', 'l4'],
+                    [INPUT_ACTIONS.ALTITUDE_UP]: ['l1', 'dpad.up'],
+                    [INPUT_ACTIONS.ALTITUDE_DOWN]: ['l2', 'l4', 'dpad.down'],
                     [INPUT_ACTIONS.WEAPON_NEXT]: ['dpad.right'],
                     [INPUT_ACTIONS.WEAPON_PREV]: ['dpad.left'],
-                    [INPUT_ACTIONS.TARGET_NEXT]: ['dpad.up'],
-                    [INPUT_ACTIONS.TARGET_PREV]: ['dpad.down'],
                     [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
                 },
                 [INPUT_CONTEXTS.SURFACE_ASTRONAUT]: {
@@ -234,12 +232,10 @@ class InputManager {
                     [INPUT_ACTIONS.MINIMAP_ZOOM_IN]: ['pr'],
                     [INPUT_ACTIONS.MINIMAP_ZOOM_OUT]: ['pl'],
                     [INPUT_ACTIONS.ACTIVATE_CLOAK]: ['y'],
-                    [INPUT_ACTIONS.ALTITUDE_UP]: ['l1'],
-                    [INPUT_ACTIONS.ALTITUDE_DOWN]: ['l2'],
+                    [INPUT_ACTIONS.ALTITUDE_UP]: ['l1', 'dpad.up'],
+                    [INPUT_ACTIONS.ALTITUDE_DOWN]: ['l2', 'dpad.down'],
                     [INPUT_ACTIONS.WEAPON_NEXT]: ['dpad.right'],
                     [INPUT_ACTIONS.WEAPON_PREV]: ['dpad.left'],
-                    [INPUT_ACTIONS.TARGET_NEXT]: ['dpad.up'],
-                    [INPUT_ACTIONS.TARGET_PREV]: ['dpad.down'],
                     [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
                 },
                 [INPUT_CONTEXTS.SURFACE_ASTRONAUT]: {
@@ -289,12 +285,10 @@ class InputManager {
                     [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1'],
                     [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
                     [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
-                    [INPUT_ACTIONS.ALTITUDE_UP]: ['l1'],
-                    [INPUT_ACTIONS.ALTITUDE_DOWN]: ['l2', 'l4'],
+                    [INPUT_ACTIONS.ALTITUDE_UP]: ['l1', 'dpad.up'],
+                    [INPUT_ACTIONS.ALTITUDE_DOWN]: ['l2', 'l4', 'dpad.down'],
                     [INPUT_ACTIONS.WEAPON_NEXT]: ['dpad.right'],
                     [INPUT_ACTIONS.WEAPON_PREV]: ['dpad.left'],
-                    [INPUT_ACTIONS.TARGET_NEXT]: ['dpad.up'],
-                    [INPUT_ACTIONS.TARGET_PREV]: ['dpad.down'],
                     [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
                 },
                 [INPUT_CONTEXTS.SURFACE_ASTRONAUT]: {

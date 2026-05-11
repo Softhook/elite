@@ -715,7 +715,7 @@ function handleGamepadContinuousInput() {
 
     const inSurfaceShipMode = state === 'SURFACE_MODE' && typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.controlMode === 'SHIP';
 
-    // Weapon switching and target cycling available in space and surface ship mode
+    // Weapon switching available in space and surface ship mode
     if (state === 'IN_FLIGHT' || inSurfaceShipMode) {
         if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.WEAPON_NEXT, context) && player.weapons && player.weapons.length > 1) {
             const nextIdx = (player.weaponIndex + 1) % player.weapons.length;
@@ -728,17 +728,17 @@ function handleGamepadContinuousInput() {
                 soundManager?.playSound('click');
             }
         }
-        
-        // Target cycling with D-pad up/down
+    }
+
+    // Flight-only shortcuts
+    if (state === 'IN_FLIGHT') {
+        // Target cycling with D-pad up/down stays in flight mode
         if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.TARGET_NEXT, context)) {
             player.cycleTarget(1);
         } else if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.TARGET_PREV, context)) {
             player.cycleTarget(-1);
         }
-    }
 
-    // Flight-only shortcuts
-    if (state === 'IN_FLIGHT') {
         if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.SURFACE_DESCENT, context)) executeInputAction(INPUT_ACTIONS.SURFACE_DESCENT, context);
         if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.AUTOPILOT_PLANET, context)) executeInputAction(INPUT_ACTIONS.AUTOPILOT_PLANET, context);
         if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.AUTOPILOT_SERVICE, context)) executeInputAction(INPUT_ACTIONS.AUTOPILOT_SERVICE, context);
