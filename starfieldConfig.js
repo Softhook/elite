@@ -33,8 +33,9 @@ const STARFIELD_CONFIG = {
     //   1. deep-stars   (0.08)  – distant star field, faint blue/white
     //   2. nebula       (0.15)  – large soft gradient cloud puffs
     //   3. midfield     (0.38)  – mid-distance stars, warmer / more varied colors
-    //   4. near-dust    (0.88)  – fine particle dust, cold blue tint
-    //   5. foreground   (1.4)   – tiny crisp specks flying past the ship
+    //   4. near-dust    (0.95)  – fine particle dust, cold blue tint
+    //   5. foreground-A (1.95)  – bright tiny specks with obvious near-field motion
+    //   6. foreground-B (2.65)  – sparse, extra-fast micro-specks for speed sensation
     PARALLAX_ENABLED: true,
     PARALLAX_LAYERS: [
         {
@@ -79,25 +80,40 @@ const STARFIELD_CONFIG = {
         {
             // Layer 4 – near-field dust: cold micro-motes at mid-high parallax.
             type: 'dust',
-            parallax: 0.88,
+            parallax: 0.95,
             cellSize: 160,
             chance: 0.58,
             maxPerCell: 1,
             sizeRange: [1.0, 2.2],
-            alphaRange: [28, 75],
+            alphaRange: [42, 105],
+            maxVisibleItems: 240,
             colors: [[160, 185, 230], [195, 208, 240]]
         },
         {
-            // Layer 5 – crisp foreground specks racing past the ship.
-            // parallax > 1 means they move faster than the base starfield on screen.
+            // Layer 5 – visible foreground specks racing past the ship.
+            // Bright + tiny + non-glowing, with stronger parallax for readability.
             type: 'particle',
-            parallax: 1.4,
-            cellSize: 140,
-            chance: 0.35,
-            maxPerCell: 1,
-            sizeRange: [0.8, 1.6],
-            alphaRange: [60, 140],
+            parallax: 1.95,
+            cellSize: 120,
+            chance: 0.62,
+            maxPerCell: 2,
+            sizeRange: [1.05, 1.95],
+            alphaRange: [125, 235],
             twinkleSpeed: 0,
+            maxVisibleItems: 320,
+            colors: [[235, 245, 255], [255, 255, 255], [225, 238, 255]]
+        },
+        {
+            // Layer 6 – sparse, extra-fast micro-specks to sell high-speed movement.
+            type: 'particle',
+            parallax: 2.65,
+            cellSize: 190,
+            chance: 0.32,
+            maxPerCell: 1,
+            sizeRange: [0.85, 1.35],
+            alphaRange: [95, 190],
+            twinkleSpeed: 0,
+            maxVisibleItems: 120,
             colors: [[230, 240, 255], [255, 255, 255]]
         }
     ]

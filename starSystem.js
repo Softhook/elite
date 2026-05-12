@@ -5021,6 +5021,7 @@ class StarSystem {
         if (!layer || !layer.cellSize || typeof layer.parallax !== 'number') return;
         const cellSize = layer.cellSize;
         const maxPerCell = Math.max(1, layer.maxPerCell || 1);
+        const maxVisibleItems = Math.max(1, Number.isFinite(layer.maxVisibleItems) ? layer.maxVisibleItems : Number.POSITIVE_INFINITY);
         const chance = Math.min(1, Math.max(0, layer.chance || 0.5));
         const sizeMin = layer.sizeRange?.[0] ?? 1;
         const sizeMax = layer.sizeRange?.[1] ?? sizeMin;
@@ -5044,9 +5045,11 @@ class StarSystem {
         const startCellY = Math.floor(top / cellSize);
         const endCellY = Math.ceil(bottom / cellSize);
         const seed = (this.systemIndex + 1) * PARALLAX_SEED_MULTIPLIER;
+        let drawnItems = 0;
 
         noStroke();
 
+        layerLoop:
         for (let cx = startCellX; cx <= endCellX; cx++) {
             for (let cy = startCellY; cy <= endCellY; cy++) {
                 if (this._parallaxNoise2D(cx, cy, seed) > chance) continue;
@@ -5087,6 +5090,10 @@ class StarSystem {
                         // All non-nebula/dust types render as plain crisp specks — no glow.
                         fill(color[0], color[1], color[2], alpha);
                         circle(worldX, worldY, size);
+                    }
+                    drawnItems++;
+                    if (drawnItems >= maxVisibleItems) {
+                        break layerLoop;
                     }
                 }
             }
