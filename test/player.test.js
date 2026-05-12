@@ -9,6 +9,7 @@ require('../ships.js');
 require('../weapons.js');
 require('../shipUpgrades.js');
 require('../enemyConstants.js');
+require('../enemyUtils.js');  // Provides isPirateShip, isShipOfFaction helpers
 require('../mission.js');
 require('../objectPool.js');
 require('../thrustParticles.js');
@@ -535,5 +536,170 @@ describe('Player Serialization', () => {
         expect(restored.hull).toBe(40);
         expect(restored.cargo).toHaveLength(1);
         expect(restored.shipTypeName).toBe('Sidewinder');
+    });
+});
+
+// ============================================
+// Faction Kill Tracking Tests
+// ============================================
+
+describe('Faction Kill Tracking', () => {
+    let player;
+
+    function makePirate(overrides = {}) {
+        return Object.assign({
+            role: AI_ROLE.PIRATE,
+            faction: null,
+            shipTypeName: 'PirateRaider',
+            displayName: 'Pirate Raider',
+            pilotName: 'Scoundrel'
+        }, overrides);
+    }
+
+    function makeAlien(overrides = {}) {
+        return Object.assign({
+            role: AI_ROLE.ALIEN,
+            faction: 'ALIEN',
+            shipTypeName: 'AlienScout',
+            displayName: 'Alien Scout',
+            pilotName: 'Invader'
+        }, overrides);
+    }
+
+    beforeEach(() => {
+        player = new Player();
+    });
+
+    // ---- Police faction ----
+
+    test('police: killing a pirate (role=PIRATE) increments factionKills[POLICE]', () => {
+        player.isPolice = true;
+        const before = player.factionKills.POLICE;
+        player.addKill(makePirate());
+        expect(player.factionKills.POLICE).toBe(before + 1);
+    });
+
+    test('police: killing a pirate by faction (faction=PIRATE, role=COMBAT) increments factionKills[POLICE]', () => {
+        player.isPolice = true;
+        const before = player.factionKills.POLICE;
+        player.addKill(makePirate({ role: AI_ROLE.COMBAT, faction: 'PIRATE' }));
+        expect(player.factionKills.POLICE).toBe(before + 1);
+    });
+
+    test('police: killing an alien increments factionKills[POLICE]', () => {
+        player.isPolice = true;
+        const before = player.factionKills.POLICE;
+        player.addKill(makeAlien());
+        expect(player.factionKills.POLICE).toBe(before + 1);
+    });
+
+    test('police: killing a non-pirate non-alien does not increment factionKills[POLICE]', () => {
+        player.isPolice = true;
+        const before = player.factionKills.POLICE;
+        player.addKill({ role: AI_ROLE.HAULER, faction: null, shipTypeName: 'Hauler', displayName: 'Freighter', pilotName: 'Trader' });
+        expect(player.factionKills.POLICE).toBe(before);
+    });
+
+    test('police: rank promotion triggers when kill threshold is crossed', () => {
+        player.isPolice = true;
+        // POLICE threshold[0] is 10 kills → Constable
+        player.factionKills.POLICE = 9;
+        const beforeRank = player.getFactionRank('POLICE');
+        expect(beforeRank).toBe('Recruit'); // below first threshold
+
+        player.addKill(makePirate()); // 10th kill crosses threshold
+        const afterRank = player.getFactionRank('POLICE');
+        expect(afterRank).toBe('Constable');
+        expect(afterRank).not.toBe(beforeRank);
+    });
+
+    // ---- Military faction ----
+
+    test('military: killing a pirate (role=PIRATE) increments factionKills[MILITARY]', () => {
+        player.playerFaction = 'MILITARY';
+        const before = player.factionKills.MILITARY;
+        player.addKill(makePirate());
+        expect(player.factionKills.MILITARY).toBe(before + 1);
+    });
+
+    test('military: killing a pirate by faction (faction=PIRATE) increments factionKills[MILITARY]', () => {
+        player.playerFaction = 'MILITARY';
+        const before = player.factionKills.MILITARY;
+        player.addKill(makePirate({ role: AI_ROLE.COMBAT, faction: 'PIRATE' }));
+        expect(player.factionKills.MILITARY).toBe(before + 1);
+    });
+
+    test('military: killing an alien increments factionKills[MILITARY]', () => {
+        player.playerFaction = 'MILITARY';
+        const before = player.factionKills.MILITARY;
+        player.addKill(makeAlien());
+        expect(player.factionKills.MILITARY).toBe(before + 1);
+    });
+
+    // ---- Imperial / Separatist factions ----
+
+    test('imperial: killing a separatist ship increments factionKills[IMPERIAL]', () => {
+        player.playerFaction = 'IMPERIAL';
+        const before = player.factionKills.IMPERIAL;
+        player.addKill({ role: AI_ROLE.COMBAT, faction: 'SEPARATIST', shipTypeName: 'SepFighter', displayName: 'Sep Fighter', pilotName: 'Rebel' });
+        expect(player.factionKills.IMPERIAL).toBe(before + 1);
+    });
+
+    test('separatist: killing an imperial ship increments factionKills[SEPARATIST]', () => {
+        player.playerFaction = 'SEPARATIST';
+        const before = player.factionKills.SEPARATIST;
+        player.addKill({ role: AI_ROLE.COMBAT, faction: 'IMPERIAL', shipTypeName: 'ImpFighter', displayName: 'Imp Fighter', pilotName: 'Officer' });
+        expect(player.factionKills.SEPARATIST).toBe(before + 1);
+    });
+});
+
+// ============================================
+// Faction Rank Level Tests
+// ============================================
+
+describe('getFactionRankLevel', () => {
+    let player;
+
+    beforeEach(() => {
+        player = new Player();
+    });
+
+    test('returns 0 at base (no kills/prestige)', () => {
+        expect(player.getFactionRankLevel('POLICE')).toBe(0);
+        expect(player.getFactionRankLevel('MILITARY')).toBe(0);
+        expect(player.getFactionRankLevel('IMPERIAL')).toBe(0);
+        expect(player.getFactionRankLevel('SEPARATIST')).toBe(0);
+    });
+
+    test('returns 1 after crossing first POLICE threshold (10 kills)', () => {
+        player.factionKills.POLICE = 10;
+        expect(player.getFactionRankLevel('POLICE')).toBe(1);
+    });
+
+    test('returns 2 after crossing second POLICE threshold (25 kills)', () => {
+        player.factionKills.POLICE = 25;
+        expect(player.getFactionRankLevel('POLICE')).toBe(2);
+    });
+
+    test('returns 7 at max POLICE threshold (1000 kills)', () => {
+        player.factionKills.POLICE = 1000;
+        expect(player.getFactionRankLevel('POLICE')).toBe(7);
+    });
+
+    test('returns 1 after crossing first MILITARY prestige threshold (5)', () => {
+        player.factionPrestige.MILITARY = 5;
+        expect(player.getFactionRankLevel('MILITARY')).toBe(1);
+    });
+
+    test('returns 0 for unknown faction', () => {
+        expect(player.getFactionRankLevel('UNKNOWN_FACTION')).toBe(0);
+    });
+
+    test('level is always a finite number (never NaN)', () => {
+        player.factionKills.POLICE = 999;
+        const level = player.getFactionRankLevel('POLICE');
+        expect(Number.isFinite(level)).toBe(true);
+        const multiplier = 1.0 + (level * 0.1);
+        expect(Number.isFinite(multiplier)).toBe(true);
     });
 });

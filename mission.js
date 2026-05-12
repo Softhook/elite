@@ -716,18 +716,38 @@ class Mission {
             return;
         }
 
+        // Use shared completion logic to ensure consistency
+        this._executeCompletion(playerRef);
+        this._cleanupAssassinationRuntime(playerRef.currentSystem);
+    }
+
+    /**
+     * Shared completion logic for both completion paths.
+     * Ensures consistent behavior: credits, prestige, news, illegal consequences.
+     * @param {Player} playerRef - Player reference
+     * @private
+     */
+    _executeCompletion(playerRef) {
         MISSION_LOG(`  -> Granting reward: ${this.rewardCredits} Credits`);
         playerRef.addCredits(this.rewardCredits);
         this.status = 'Completed';
 
+        // Award faction prestige if mission has a prestige reward (was missing in old mission.complete())
+        if (this.prestigeReward && this.requiredFaction && typeof playerRef.addFactionPrestige === 'function') {
+            MISSION_LOG(`   Awarding ${this.prestigeReward} prestige to ${this.requiredFaction}`);
+            playerRef.addFactionPrestige(this.requiredFaction, this.prestigeReward);
+        }
+
+        // Record completion and UI feedback
         this._recordCompletion(playerRef);
+
+        // Generate news for assassination/sabotage (was missing in player.completeMission())
         this._generateCompletionNews(playerRef);
 
+        // Apply illegal consequences if applicable (was missing in player.completeMission())
         if (this.isIllegal) {
             this._applyIllegalConsequences(playerRef);
         }
-
-        this._cleanupAssassinationRuntime(playerRef.currentSystem);
     }
 
     /** Record mission completion in player log and UI */

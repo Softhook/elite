@@ -409,6 +409,9 @@ const BOUNTY_FACTION_RIVALRY = 2000;          // Separatist vs Imperial bounty
 const BOUNTY_MILITARY_ALIEN = 4000;           // Military bounty for killing aliens
 const BOUNTY_MILITARY_PIRATE = 1000;          // Military bounty for killing pirates
 
+// Faction mission reward multiplier
+const FACTION_MISSION_RANK_MULTIPLIER_PER_LEVEL = 0.1; // 10% reward increase per faction rank level
+
 // -------------------------
 // --- Combat Role Bonuses ---
 // -------------------------
@@ -673,6 +676,7 @@ if (typeof module !== 'undefined' && module.exports) {
     global.BOUNTY_FACTION_RIVALRY = BOUNTY_FACTION_RIVALRY;
     global.BOUNTY_MILITARY_ALIEN = BOUNTY_MILITARY_ALIEN;
     global.BOUNTY_MILITARY_PIRATE = BOUNTY_MILITARY_PIRATE;
+    global.FACTION_MISSION_RANK_MULTIPLIER_PER_LEVEL = FACTION_MISSION_RANK_MULTIPLIER_PER_LEVEL;
     global.TARGET_SCORE_CURRENT_TARGET_BONUS = TARGET_SCORE_CURRENT_TARGET_BONUS;
     global.DEFAULT_SCAN_INTERVAL = DEFAULT_SCAN_INTERVAL;
     global.MAX_TARGETING_RADIUS = MAX_TARGETING_RADIUS;

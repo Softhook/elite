@@ -403,6 +403,40 @@ class EnemyUtils {
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// UNIFIED FACTION/ROLE CHECKERS (DRY - used by multiple systems)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Unified pirate detection: checks role OR faction OR isPirate flag.
+ * Used by: addKill(), _awardFactionBounty(), mission progress tracking
+ * @param {Enemy} enemy - Enemy object to check
+ * @returns {boolean} True if enemy is a pirate
+ */
+function isPirateShip(enemy) {
+    if (!enemy) return false;
+    return enemy.role === AI_ROLE.PIRATE || enemy.faction === 'PIRATE' || enemy.isPirate === true;
+}
+
+/**
+ * Check if enemy belongs to a specific faction
+ * Used by: faction mission reward checks, bounty awards
+ * @param {Enemy} enemy - Enemy object
+ * @param {string} factionName - Faction to check ('IMPERIAL', 'SEPARATIST', etc.)
+ * @returns {boolean} True if enemy is of that faction
+ */
+function isShipOfFaction(enemy, factionName) {
+    if (!enemy) return false;
+    if (enemy.faction === factionName) return true;
+    // Fallback to ship type arrays for backwards compatibility
+    const factionShipsMap = {
+        'IMPERIAL': typeof IMPERIAL_SHIPS !== 'undefined' ? IMPERIAL_SHIPS : [],
+        'SEPARATIST': typeof SEPARATIST_SHIPS !== 'undefined' ? SEPARATIST_SHIPS : []
+    };
+    const factionShips = factionShipsMap[factionName] || [];
+    return Array.isArray(factionShips) && factionShips.includes(enemy.shipTypeName);
+}
+
 // Apply utility methods to Enemy prototype
 // This will be called after Enemy class is defined
 function applyEnemyUtilityMethods() {
@@ -421,9 +455,11 @@ function applyEnemyUtilityMethods() {
 
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { EnemyUtils, applyEnemyUtilityMethods, getDeltaSeconds, getTimeScale };
+    module.exports = { EnemyUtils, applyEnemyUtilityMethods, getDeltaSeconds, getTimeScale, isPirateShip, isShipOfFaction };
     global.EnemyUtils = EnemyUtils;
     global.applyEnemyUtilityMethods = applyEnemyUtilityMethods;
     global.getDeltaSeconds = getDeltaSeconds;
     global.getTimeScale = getTimeScale;
+    global.isPirateShip = isPirateShip;
+    global.isShipOfFaction = isShipOfFaction;
 }

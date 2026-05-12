@@ -263,9 +263,7 @@ class UIMissions {
                 let canCompleteHere = false;
 
                 // Check delivery completion conditions (including smuggle missions)
-                if (typeof MISSION_TYPE !== 'undefined' &&
-                    (activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL)) {
-
+                if (DELIVERY_TYPES && DELIVERY_TYPES.has(activeMission.type)) {
                     // For delivery missions, check if at destination with cargo
                     const atRightSystem = currentSystem && activeMission.destinationSystem === currentSystem.name;
                     const atRightStation = currentStation && activeMission.destinationStation === currentStation.name;
@@ -277,31 +275,25 @@ class UIMissions {
                 }
 
                 // Check bounty mission completion (can complete anywhere once target count met)
-                if (typeof MISSION_TYPE !== 'undefined' &&
-                    (activeMission.type === MISSION_TYPE.BOUNTY_PIRATE ||
-                        activeMission.type === MISSION_TYPE.BOUNTY_POLICE ||
-                        activeMission.type === MISSION_TYPE.BOUNTY_ALIEN) &&
+                if (BOUNTY_TYPES && BOUNTY_TYPES.has(activeMission.type) &&
                     activeMission.progressCount >= activeMission.targetCount) {
                     canCompleteHere = true;
                 }
 
                 // Check assassination mission completion (can complete anywhere once target eliminated)
-                if (typeof MISSION_TYPE !== 'undefined' &&
-                    activeMission.type === MISSION_TYPE.ASSASSINATION &&
+                if (activeMission.type === MISSION_TYPE.ASSASSINATION &&
                     (activeMission.progressCount >= 1 || activeMission.status === 'Completable')) {
                     canCompleteHere = true;
                 }
 
                 // Check sabotage mission completion (can complete anywhere once target destroyed)
-                if (typeof MISSION_TYPE !== 'undefined' &&
-                    activeMission.type === MISSION_TYPE.SABOTAGE &&
+                if (ALL_SABOTAGE_TYPES && ALL_SABOTAGE_TYPES.has(activeMission.type) &&
                     (activeMission.progressCount >= 1 || activeMission.status === 'Completable')) {
                     canCompleteHere = true;
                 }
 
                 // Check faction delivery missions (e.g., SEPARATIST_SUPPLY)
-                if (typeof FACTION_DELIVERY_TYPES !== 'undefined' &&
-                    FACTION_DELIVERY_TYPES.has(activeMission.type)) {
+                if (FACTION_DELIVERY_TYPES && FACTION_DELIVERY_TYPES.has(activeMission.type)) {
                     const atRightSystem = currentSystem && activeMission.destinationSystem === currentSystem.name;
                     const atRightStation = currentStation && activeMission.destinationStation === currentStation.name;
                     const hasCargo = player.hasCargo && player.hasCargo(activeMission.cargoType, activeMission.cargoQuantity);

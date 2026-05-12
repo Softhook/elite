@@ -196,6 +196,7 @@ describe('Integration Tests', () => {
             });
             player.acceptMission(mission);
             system.player = player;
+            const startCredits = player.credits;
 
             // Simulate an actual pirate kill through the destruction path
             const enemy = new Enemy(0, 0, player, "Sidewinder", AI_ROLE.PIRATE);
@@ -209,8 +210,35 @@ describe('Integration Tests', () => {
             expect(mission.status).toBe('Completed');
             expect(player.activeMission).toBeNull();
 
-            // Completion should have been handled by the kill hook already
-            expect(player.credits).toBeGreaterThan(1000);
+            // Non-police player: only the mission reward (1,000 cr), no faction bounty
+            expect(player.credits).toBe(startCredits + 1000);
+        });
+
+        test('Police player with pirate bounty mission receives both faction bounty and mission reward', () => {
+            const MISSION_REWARD = 2500;
+            const mission = new Mission({
+                title: "Police Bounty Test",
+                type: MISSION_TYPE.BOUNTY_PIRATE,
+                targetCount: 1,
+                rewardCredits: MISSION_REWARD
+            });
+            player.isPolice = true;
+            player.acceptMission(mission);
+            system.player = player;
+            const startCredits = player.credits;
+
+            const enemy = new Enemy(0, 0, player, "Sidewinder", AI_ROLE.PIRATE);
+            enemy.faction = "PIRATE";
+            enemy.currentSystem = system;
+            enemy.getSystem = () => system;
+
+            enemy.takeDamage(9999, player, system);
+
+            expect(mission.status).toBe('Completed');
+            expect(player.activeMission).toBeNull();
+
+            // Police player earns BOTH the faction bounty (1,000 cr) AND the mission reward (2,500 cr)
+            expect(player.credits).toBe(startCredits + BOUNTY_POLICE_ALIEN_PIRATE + MISSION_REWARD);
         });
     });
 

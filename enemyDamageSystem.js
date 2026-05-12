@@ -407,7 +407,7 @@ class EnemyDamageSystem {
             const missionTargetMap = {
                 // Standard bounty missions
                 [MISSION_TYPE.BOUNTY_PIRATE]: {
-                    checkFn: () => this.role === AI_ROLE.PIRATE || this.faction === 'PIRATE' || this.isPirate === true,
+                    checkFn: () => isPirateShip(this),
                     logName: 'pirate bounty'
                 },
                 [MISSION_TYPE.BOUNTY_POLICE]: {
@@ -420,22 +420,22 @@ class EnemyDamageSystem {
                 },
                 // Faction kill missions
                 [MISSION_TYPE.IMPERIAL_ELIMINATION]: {
-                    checkFn: () => this._isSeparatistShip() || this.role === AI_ROLE.PIRATE,
+                    checkFn: () => isShipOfFaction(this, 'SEPARATIST') || this.role === AI_ROLE.PIRATE,
                     logName: 'Imperial',
                     msgColor: [255, 215, 0]
                 },
                 [MISSION_TYPE.IMPERIAL_STRIKE]: {
-                    checkFn: () => this._isSeparatistShip() || this.role === AI_ROLE.PIRATE,
+                    checkFn: () => isShipOfFaction(this, 'SEPARATIST') || this.role === AI_ROLE.PIRATE,
                     logName: 'Imperial',
                     msgColor: [255, 215, 0]
                 },
                 [MISSION_TYPE.SEPARATIST_RAID]: {
-                    checkFn: () => this._isImperialShip() || this.role === AI_ROLE.POLICE,
+                    checkFn: () => isShipOfFaction(this, 'IMPERIAL') || this.role === AI_ROLE.POLICE,
                     logName: 'Separatist',
                     msgColor: [100, 200, 100]
                 },
                 [MISSION_TYPE.SEPARATIST_STRIKE]: {
-                    checkFn: () => this._isImperialShip() || this.role === AI_ROLE.POLICE,
+                    checkFn: () => isShipOfFaction(this, 'IMPERIAL') || this.role === AI_ROLE.POLICE,
                     logName: 'Separatist',
                     msgColor: [100, 200, 100]
                 },
@@ -523,18 +523,21 @@ class EnemyDamageSystem {
         let bountyAmount = 0;
         let bountyMessage = null;
 
+        // Use unified pirate detection helper (consistent with addKill and mission checks)
+        const isPirateEnemy = isPirateShip(this);
+
         // Police bounties for killing aliens or pirates
-        if (attacker.isPolice && (this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.PIRATE)) {
+        if (attacker.isPolice && (this.role === AI_ROLE.ALIEN || isPirateEnemy)) {
             bountyAmount = BOUNTY_POLICE_ALIEN_PIRATE;
             bountyMessage = `Police bounty: ${BOUNTY_POLICE_ALIEN_PIRATE.toLocaleString()} cr`;
         }
         // Separatist bounties for killing Imperial ships
-        else if (attacker.playerFaction === 'SEPARATIST' && this._isShipOfFaction('IMPERIAL')) {
+        else if (attacker.playerFaction === 'SEPARATIST' && isShipOfFaction(this, 'IMPERIAL')) {
             bountyAmount = BOUNTY_FACTION_RIVALRY;
             bountyMessage = `Separatist bounty: ${BOUNTY_FACTION_RIVALRY.toLocaleString()} cr`;
         }
         // Imperial bounties for killing Separatist ships
-        else if (attacker.playerFaction === 'IMPERIAL' && this._isShipOfFaction('SEPARATIST')) {
+        else if (attacker.playerFaction === 'IMPERIAL' && isShipOfFaction(this, 'SEPARATIST')) {
             bountyAmount = BOUNTY_FACTION_RIVALRY;
             bountyMessage = `Imperial bounty: ${BOUNTY_FACTION_RIVALRY.toLocaleString()} cr`;
         }
@@ -544,7 +547,7 @@ class EnemyDamageSystem {
             bountyMessage = `Military bounty: ${BOUNTY_MILITARY_ALIEN.toLocaleString()} cr`;
         }
         // Military bounties for killing pirates
-        else if (attacker.playerFaction === 'MILITARY' && this.role === AI_ROLE.PIRATE) {
+        else if (attacker.playerFaction === 'MILITARY' && isPirateEnemy) {
             bountyAmount = BOUNTY_MILITARY_PIRATE;
             bountyMessage = `Military bounty: ${BOUNTY_MILITARY_PIRATE.toLocaleString()} cr`;
         }
@@ -557,40 +560,6 @@ class EnemyDamageSystem {
             }
             AI_LOG(`Faction bounty awarded: ${bountyAmount} credits (${bountyMessage})`);
         }
-    }
-
-    /**
-     * Helper: Checks if this enemy belongs to a specific faction
-     * @param {string} factionName - Faction to check ('IMPERIAL', 'SEPARATIST', etc.)
-     * @returns {boolean}
-     */
-    _isShipOfFaction(factionName) {
-        // Check faction property first (set in Enemy constructor)
-        if (this.faction === factionName) return true;
-
-        // Fallback: Check ship type arrays for backwards compatibility
-        const factionShipsMap = {
-            'IMPERIAL': typeof IMPERIAL_SHIPS !== 'undefined' ? IMPERIAL_SHIPS : [],
-            'SEPARATIST': typeof SEPARATIST_SHIPS !== 'undefined' ? SEPARATIST_SHIPS : []
-        };
-        const factionShips = factionShipsMap[factionName];
-        return Array.isArray(factionShips) && factionShips.includes(this.shipTypeName);
-    }
-
-    /**
-     * Helper: Checks if this enemy is an Imperial ship
-     * @returns {boolean}
-     */
-    _isImperialShip() {
-        return this._isShipOfFaction('IMPERIAL');
-    }
-
-    /**
-     * Helper: Checks if this enemy is a Separatist ship
-     * @returns {boolean}
-     */
-    _isSeparatistShip() {
-        return this._isShipOfFaction('SEPARATIST');
     }
 
     /**

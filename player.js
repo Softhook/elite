@@ -510,7 +510,7 @@ class Player {
         if (this.activeMission.status === 'Active' || this.activeMission.status === 'Completable') { // Allow either status initially
 
             // --- DELIVERY MISSIONS (REQUIRE Location & Cargo) ---
-            if (this.activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || this.activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL) {
+            if (DELIVERY_TYPES && DELIVERY_TYPES.has(this.activeMission.type)) {
                 // These *strictly* require the location context
                 if (!currentSystem || !currentStation) {
                     console.warn("   Complete failed: Delivery missions require docking at the destination.");
@@ -534,35 +534,17 @@ class Player {
                 console.warn("   canComplete!");
             }
 
-            // --- BOUNTY MISSIONS (Check progress - Location check removed for auto-complete) ---
-            else if (this.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE) {
-                MISSION_LOG(`   Bounty Check: Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
+            // --- BOUNTY MISSIONS (Check progress - all bounty types use same logic) ---
+            else if (BOUNTY_TYPES && BOUNTY_TYPES.has(this.activeMission.type)) {
+                const bountyLabel = this.activeMission.type === MISSION_TYPE.BOUNTY_PIRATE ? 'Pirate' : 
+                                    this.activeMission.type === MISSION_TYPE.BOUNTY_POLICE ? 'Police' : 'Alien';
+                MISSION_LOG(`   Bounty Check (${bountyLabel}): Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
                 if (this.activeMission.progressCount >= this.activeMission.targetCount) {
-                    MISSION_LOG("   Bounty Check: Target count met. Allowing completion.");
-                    canComplete = true; // Allow completion anywhere once count is met
+                    MISSION_LOG(`   Bounty Check (${bountyLabel}): Target count met. Allowing completion.`);
+                    canComplete = true;
                 } else {
-                    console.warn("   Complete failed: Bounty target count not met."); return false;
-                }
-            }
-
-            // --- NEW: COP KILLER BOUNTY MISSIONS (Check progress - Location check removed for auto-complete) ---
-            else if (this.activeMission.type === MISSION_TYPE.BOUNTY_POLICE) {
-                MISSION_LOG(`   Bounty Check (Police): Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
-                if (this.activeMission.progressCount >= this.activeMission.targetCount) {
-                    MISSION_LOG("   Bounty Check (Police): Target count met. Allowing completion.");
-                    canComplete = true; // Allow completion anywhere once count is met
-                } else {
-                    console.warn("   Complete failed: Bounty (Police) target count not met."); return false;
-                }
-            }
-            // --- NEW: ALIEN BOUNTY MISSIONS (Check progress - Location check removed for auto-complete) ---
-            else if (this.activeMission.type === MISSION_TYPE.BOUNTY_ALIEN) {
-                MISSION_LOG(`   Bounty Check (Alien): Progress ${this.activeMission.progressCount}/${this.activeMission.targetCount}`);
-                if (this.activeMission.progressCount >= this.activeMission.targetCount) {
-                    MISSION_LOG("   Bounty Check (Alien): Target count met. Allowing completion.");
-                    canComplete = true; // Allow completion anywhere once count is met
-                } else {
-                    console.warn("   Complete failed: Bounty (Alien) target count not met."); return false;
+                    console.warn(`   Complete failed: Bounty (${bountyLabel}) target count not met.`);
+                    return false;
                 }
             }
 
@@ -581,7 +563,7 @@ class Player {
             }
 
             // --- SABOTAGE MISSIONS (Check if target object was destroyed) ---
-            else if (this.activeMission.type === MISSION_TYPE.SABOTAGE) {
+            else if (ALL_SABOTAGE_TYPES && ALL_SABOTAGE_TYPES.has(this.activeMission.type)) {
                 MISSION_LOG(`   Sabotage Check: Progress ${this.activeMission.progressCount}, Status ${this.activeMission.status}`);
                 // Sabotage missions are auto-completed when the target object is destroyed (via mission.update)
                 // But we also allow manual completion if status is 'Completable' or progressCount >= 1
@@ -614,18 +596,6 @@ class Player {
                     canComplete = true;
                 } else {
                     console.warn("   Complete failed: Faction patrol scan count not met.");
-                    return false;
-                }
-            }
-
-            // === FACTION SABOTAGE MISSIONS (Imperial/Separatist/Military Sabotage) ===
-            else if (FACTION_SABOTAGE_TYPES && FACTION_SABOTAGE_TYPES.has(this.activeMission.type)) {
-                MISSION_LOG(`   Faction Sabotage Check: Progress ${this.activeMission.progressCount}, Status ${this.activeMission.status}`);
-                if (this.activeMission.progressCount >= 1 || this.activeMission.status === 'Completable') {
-                    MISSION_LOG("   Faction Sabotage Check: Target destroyed. Allowing completion.");
-                    canComplete = true;
-                } else {
-                    console.warn("   Complete failed: Faction sabotage target not yet destroyed.");
                     return false;
                 }
             }
@@ -672,45 +642,26 @@ class Player {
 
         // --- Proceed with Completion ---
         if (canComplete) {
-            MISSION_LOG(`   Completing mission: ${this.activeMission.title}`);
+            const completedTitle = this.activeMission.title;
+            const reward = this.activeMission.rewardCredits;
+            
+            MISSION_LOG(`   Completing mission: ${completedTitle}`);
 
-
-
-            let reward = this.activeMission.rewardCredits; let completedTitle = this.activeMission.title;
-
-            // Remove cargo ONLY for delivery missions
-            if (this.activeMission.type === MISSION_TYPE.DELIVERY_LEGAL || this.activeMission.type === MISSION_TYPE.DELIVERY_ILLEGAL) {
+            // Remove cargo ONLY for delivery missions (using global DELIVERY_TYPES set for consistency)
+            if (DELIVERY_TYPES && DELIVERY_TYPES.has(this.activeMission.type)) {
                 MISSION_LOG(`   Removing cargo: ${this.activeMission.cargoQuantity}t ${this.activeMission.cargoType}`);
                 this.removeCargo(this.activeMission.cargoType, this.activeMission.cargoQuantity);
             }
 
-            MISSION_LOG(`   Calling addCredits(${reward}). Current Credits: ${this.credits}`);
-            this.addCredits(reward);
-            MISSION_LOG(`   Credits after addCredits call: ${this.credits}`);
-
-            this.activeMission.status = 'Completed'; // Mark internal status (though we clear player ref next)
-
-            // Record mission completion in personal record
-            this.recordMissionCompletion(this.activeMission);
-
-            // Award faction prestige if mission has a prestige reward
-            if (this.activeMission.prestigeReward && this.activeMission.requiredFaction) {
-                MISSION_LOG(`   Awarding ${this.activeMission.prestigeReward} prestige to ${this.activeMission.requiredFaction}`);
-                this.addFactionPrestige(this.activeMission.requiredFaction, this.activeMission.prestigeReward);
-            }
-
-            if (this.activeMission && typeof uiManager !== 'undefined') {
-                uiManager.inactiveMissionIds.add(this.activeMission.id);
-                MISSION_LOG(`Added mission ID ${this.activeMission.id} to inactive missions list`);
-            }
+            // Use shared completion logic to ensure consistency across both completion paths
+            // This includes: credits, prestige, news generation, and illegal consequences
+            this.activeMission._executeCompletion(this);
 
             this.activeMission = null; // Clear active mission from player
-            MISSION_LOG(`   activeMission is now: ${this.activeMission}`);
+            MISSION_LOG(`   activeMission is now: null`);
 
             // --- Provide feedback ---
-            //alert(`Mission Complete!\n${completedTitle}\nReward: ${reward} Credits`); // Replace with better UI message later
             MISSION_LOG(`!!! Mission Complete: ${completedTitle} | Reward: ${reward}cr !!!`);
-            uiManager.addMessage(`Mission Complete: ${completedTitle} | Reward: ${reward}cr`);
 
             // Play mission complete sound
             if (soundManager?.playSound) {
@@ -3967,67 +3918,53 @@ class Player {
             const playerFactionKey = this.isPolice ? 'POLICE' : this.playerFaction;
 
             let factionKillEligible = false;
-            let bountyAmount = 0;
-            let bountyDescription = '';
 
-            // Police: get credit and bounty for killing pirates OR aliens
+            // Use unified pirate detection helper (role OR faction check, consistent across all systems)
+            const isPirateTarget = isPirateShip(killTarget);
+
+            // Police: get credit for killing pirates OR aliens
             if (this.isPolice) {
-                if (killTarget.role === AI_ROLE.PIRATE) {
+                if (isPirateTarget || killTarget.role === AI_ROLE.ALIEN) {
                     factionKillEligible = true;
-                    bountyAmount = 1000;
-                    bountyDescription = 'Police bounty: 1,000 cr (Pirate)';
-                } else if (killTarget.role === AI_ROLE.ALIEN) {
-                    factionKillEligible = true;
-                    bountyAmount = 1000;
-                    bountyDescription = 'Police bounty: 1,000 cr (Alien)';
                 }
             }
-            // Military: get credit and bounty for killing aliens OR pirates
+            // Military: get credit for killing aliens OR pirates
             else if (this.playerFaction === 'MILITARY') {
-                if (killTarget.role === AI_ROLE.ALIEN) {
+                if (killTarget.role === AI_ROLE.ALIEN || isPirateTarget) {
                     factionKillEligible = true;
-                    bountyAmount = 4000;
-                    bountyDescription = 'Military bounty: 4,000 cr (Alien)';
-                } else if (killTarget.role === AI_ROLE.PIRATE) {
-                    factionKillEligible = true;
-                    bountyAmount = 1000;
-                    bountyDescription = 'Military bounty: 1,000 cr (Pirate)';
                 }
             }
-            // Imperial: get credit and bounty for killing Separatists
+            // Imperial: get credit for killing Separatists
             else if (this.playerFaction === 'IMPERIAL') {
                 if (killTarget.faction === 'SEPARATIST') {
                     factionKillEligible = true;
-                    bountyAmount = 2000;
-                    bountyDescription = 'Imperial bounty: 2,000 cr (Separatist)';
                 }
             }
-            // Separatist: get credit and bounty for killing Imperials
+            // Separatist: get credit for killing Imperials
             else if (this.playerFaction === 'SEPARATIST') {
                 if (killTarget.faction === 'IMPERIAL') {
                     factionKillEligible = true;
-                    bountyAmount = 2000;
-                    bountyDescription = 'Separatist bounty: 2,000 cr (Imperial)';
                 }
             }
 
-            // Increment faction kill count and award prestige
-            // NOTE: Faction bounty credits are awarded centrally by
-            // EnemyDamageSystem._awardFactionBounty to avoid duplicate rewards.
+            // Increment faction kill count and award prestige/rank-up notification.
+            // Credits are awarded separately by EnemyDamageSystem._awardFactionBounty.
             if (factionKillEligible && playerFactionKey) {
-                // Track the kill
-                if (this.factionKills && this.factionKills[playerFactionKey] !== undefined) {
-                    this.factionKills[playerFactionKey]++;
-                }
-
                 // Award prestige for prestige-based factions (1 prestige per kill)
                 // This will also handle rank-up notifications via addFactionPrestige
                 const cfg = typeof FACTION_RANKS !== 'undefined' ? FACTION_RANKS[playerFactionKey] : null;
                 if (cfg?.usesPrestige) {
+                    // Track the kill
+                    if (this.factionKills && this.factionKills[playerFactionKey] !== undefined) {
+                        this.factionKills[playerFactionKey]++;
+                    }
                     this.addFactionPrestige(playerFactionKey, 1);
                 } else {
-                    // For kill-based factions (Police), check for rank change manually
+                    // For kill-based factions (Police): capture old rank BEFORE incrementing
                     const oldFactionRank = this.getFactionRank(playerFactionKey);
+                    if (this.factionKills && this.factionKills[playerFactionKey] !== undefined) {
+                        this.factionKills[playerFactionKey]++;
+                    }
                     const newFactionRank = this.getFactionRank(playerFactionKey);
                     if (oldFactionRank !== newFactionRank) {
                         const factionDisplayName = this.getFactionDisplayName(playerFactionKey);
@@ -4104,6 +4041,26 @@ class Player {
             if (progress >= cfg.thresholds[i]) return cfg.ranks[i];
         }
         return cfg.base;
+    }
+
+    /**
+     * Returns the numeric rank level for a faction (0 = base, 1 = first threshold, etc.)
+     * Used for computing mission reward multipliers.
+     * @param {string} factionName
+     * @returns {number}
+     */
+    getFactionRankLevel(factionName) {
+        const cfg = FACTION_RANKS[factionName];
+        if (!cfg) return 0;
+
+        const progress = cfg.usesPrestige
+            ? (this.factionPrestige?.[factionName] || 0)
+            : (this.factionKills?.[factionName] || 0);
+
+        for (let i = cfg.thresholds.length - 1; i >= 0; i--) {
+            if (progress >= cfg.thresholds[i]) return i + 1;
+        }
+        return 0;
     }
 
     /**

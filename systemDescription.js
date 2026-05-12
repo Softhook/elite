@@ -38,9 +38,13 @@ function generateSystemDescription(system, env = {}) {
                     if (typeof MISSION_TYPE !== 'undefined') {
                         if (m.type === MISSION_TYPE.ASSASSINATION) hasAssassination = true;
                         if (m.type === MISSION_TYPE.SABOTAGE) hasSabotage = true;
-                        if (m.type === MISSION_TYPE.BOUNTY_PIRATE) { hasBounty = true; pirateBountyCount += 1; }
-                        if (m.type === MISSION_TYPE.BOUNTY_ALIEN) { hasBounty = true; alienBountyCount += 1; }
-                        if (m.type === MISSION_TYPE.BOUNTY_POLICE) { hasBounty = true; otherBountyCount += 1; }
+                        if (BOUNTY_TYPES && BOUNTY_TYPES.has(m.type)) {
+                            hasBounty = true;
+                            // Count specific bounty types
+                            if (m.type === MISSION_TYPE.BOUNTY_PIRATE) pirateBountyCount += 1;
+                            else if (m.type === MISSION_TYPE.BOUNTY_ALIEN) alienBountyCount += 1;
+                            else otherBountyCount += 1;
+                        }
                     }
 
                     // Fallback: textual heuristics only if enum checks didn't mark anything
@@ -58,11 +62,11 @@ function generateSystemDescription(system, env = {}) {
                     if (/repair|refit|deliver|courier/.test(t)) types.add('logistics');
 
                     // Attempt to detect bounty targets from mission fields or description
-                    if (/bounty|wanted/.test(t) || /bounty|wanted/.test(desc) || (typeof MISSION_TYPE !== 'undefined' && (m.type === MISSION_TYPE.BOUNTY_PIRATE || m.type === MISSION_TYPE.BOUNTY_ALIEN || m.type === MISSION_TYPE.BOUNTY_POLICE))) {
+                    if (/bounty|wanted/.test(t) || /bounty|wanted/.test(desc) || (BOUNTY_TYPES && BOUNTY_TYPES.has(m.type))) {
                         // Prefer explicit target fields when present
                         const targetText = ((m.targetFaction || (m.target && m.target.faction) || m.target || m.client || m.targetDesc || desc) || '').toString().toLowerCase();
-                        if (/pirat/.test(targetText) || (typeof MISSION_TYPE !== 'undefined' && m.type === MISSION_TYPE.BOUNTY_PIRATE)) pirateBountyCount += 1;
-                        else if (/(alien|xeno)/.test(targetText) || (typeof MISSION_TYPE !== 'undefined' && m.type === MISSION_TYPE.BOUNTY_ALIEN)) alienBountyCount += 1;
+                        if (/pirat/.test(targetText) || (m.type === MISSION_TYPE.BOUNTY_PIRATE)) pirateBountyCount += 1;
+                        else if (/(alien|xeno)/.test(targetText) || (m.type === MISSION_TYPE.BOUNTY_ALIEN)) alienBountyCount += 1;
                         else otherBountyCount += 1;
                     }
 

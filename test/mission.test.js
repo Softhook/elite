@@ -5,6 +5,10 @@
  */
 
 // Load source files
+require('../debug.js');
+require('../ships.js');
+require('../weapons.js');
+require('../enemyConstants.js');  // Provides FACTION_MISSION_RANK_MULTIPLIER_PER_LEVEL and other constants
 require('../mission.js');
 require('../missionGenerator.js');
 

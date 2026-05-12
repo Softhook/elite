@@ -964,8 +964,8 @@ class MissionGenerator {
         }
 
         // Fallback: Generate inline faction missions
-        const playerRank = player.getFactionRank?.(factionKey) || 0;
-        const rankMultiplier = 1.0 + (playerRank * 0.1);
+        const playerRank = player.getFactionRankLevel?.(factionKey) || 0;
+        const rankMultiplier = 1.0 + (playerRank * FACTION_MISSION_RANK_MULTIPLIER_PER_LEVEL);
 
         const creators = {
             'IMPERIAL': () => this._createImperialMission(originSystem, originStation, galaxy, player, rankMultiplier),
