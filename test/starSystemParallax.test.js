@@ -37,12 +37,12 @@ describe('StarSystem parallax helpers', () => {
         const p2 = 400;
 
         const distantShift = Math.abs(
-            (StarSystem.computeParallaxWorldPosition(base, p2, 0.15) - p2) -
-            (StarSystem.computeParallaxWorldPosition(base, p1, 0.15) - p1)
+            (StarSystem.computeParallaxWorldPosition(base, p2, 1.02) - p2) -
+            (StarSystem.computeParallaxWorldPosition(base, p1, 1.02) - p1)
         );
         const nearShift = Math.abs(
-            (StarSystem.computeParallaxWorldPosition(base, p2, 0.8) - p2) -
-            (StarSystem.computeParallaxWorldPosition(base, p1, 0.8) - p1)
+            (StarSystem.computeParallaxWorldPosition(base, p2, 1.42) - p2) -
+            (StarSystem.computeParallaxWorldPosition(base, p1, 1.42) - p1)
         );
 
         expect(nearShift).toBeGreaterThan(distantShift);

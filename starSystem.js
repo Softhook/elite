@@ -4978,7 +4978,7 @@ class StarSystem {
      * Computes a parallax layer world position so it scrolls relative to player movement.
      * @param {number} baseCoord - Base coordinate in layer-space.
      * @param {number} playerCoord - Current player world coordinate.
-     * @param {number} parallaxFactor - Layer movement factor (0..1).
+     * @param {number} parallaxFactor - Layer movement multiplier (1.0 = baseline, >1.0 = foreground/faster, <1.0 = background/slower).
      * @returns {number}
      */
     static computeParallaxWorldPosition(baseCoord, playerCoord, parallaxFactor) {
