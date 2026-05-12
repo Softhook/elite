@@ -113,7 +113,7 @@ class EnemyStateMachine {
         }
 
         // Guards should return to guarding
-        if (this.role === AI_ROLE.GUARD && this.principal && this.isTargetValid(this.principal)) {
+        if (this.role === AI_ROLE.GUARD && this.isPrincipalValid(this.principal)) {
             this.changeState(AI_STATE.GUARDING);
             return;
         }
@@ -163,7 +163,7 @@ class EnemyStateMachine {
         if (this.role === AI_ROLE.BOUNTY_HUNTER && this.hasCompletedContract) {
             return AI_STATE.LEAVING_SYSTEM;
         }
-        if (this.role === AI_ROLE.GUARD && this.principal && this.isTargetValid(this.principal)) {
+        if (this.role === AI_ROLE.GUARD && this.isPrincipalValid(this.principal)) {
             return AI_STATE.GUARDING;
         } else if (this.role === AI_ROLE.GUARD) {
             // Guard without valid principal - depart the system
@@ -400,7 +400,7 @@ class EnemyStateMachine {
             return;
         }
         // If patrolling and a principal is assigned, switch to GUARDING
-        if (this.role === AI_ROLE.GUARD && this.principal && this.isTargetValid(this.principal)) {
+        if (this.role === AI_ROLE.GUARD && this.isPrincipalValid(this.principal)) {
             this.changeState(AI_STATE.GUARDING);
         }
     }
@@ -415,7 +415,7 @@ class EnemyStateMachine {
         const system = this.getSystem();
 
         // Validate principal reference and ensure we can track them
-        const principalValid = principal && this.isTargetValid(principal) && principal.pos;
+        const principalValid = this.isPrincipalValid(principal);
         if (!principalValid) {
             AI_LOG(`${this.shipTypeName} (Guard): Principal is invalid/destroyed. Reverting to default state.`);
             this.principal = null;
@@ -628,7 +628,7 @@ class EnemyStateMachine {
         let state;
 
         // Determine base state based on role
-        if (this.role === AI_ROLE.GUARD && this.principal && this.isTargetValid(this.principal)) {
+        if (this.role === AI_ROLE.GUARD && this.isPrincipalValid(this.principal)) {
             state = AI_STATE.GUARDING;
         } else if (this.role === AI_ROLE.GUARD) {
             // Guard without valid principal after fleeing - depart the system

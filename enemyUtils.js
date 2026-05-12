@@ -159,6 +159,19 @@ class EnemyUtils {
     }
 
     /**
+     * Checks whether a guard principal reference is still valid for ownership/follow behavior.
+     * This intentionally does NOT apply combat targeting rules like docked invulnerability or cloaking.
+     * @param {Object} principal - Candidate principal entity
+     * @return {boolean} Whether the principal can still be followed/protected
+     */
+    isPrincipalValid(principal) {
+        return !!(principal &&
+            principal.pos &&
+            (principal.destroyed === undefined || !principal.destroyed) &&
+            ((principal.hull === undefined) || principal.hull > 0));
+    }
+
+    /**
      * Gets the current star system reference
      * @return {StarSystem|null} The current system or null if not available
      */

@@ -543,6 +543,353 @@ describe('Player Serialization', () => {
 // Faction Kill Tracking Tests
 // ============================================
 
+// ============================================
+// Bodyguard Lifecycle Regression Tests
+// ============================================
+
+describe('Player Bodyguard Lifecycle Regression', () => {
+    let player;
+    let previousEnemyCtor;
+
+    beforeEach(() => {
+        player = new Player();
+        player.pos = createVector(100, 200);
+        player.activeBodyguards = [];
+
+        previousEnemyCtor = global.Enemy;
+        global.Enemy = jest.fn((x, y, principal, shipType, role) => ({
+            pos: createVector(x, y),
+            principal,
+            shipTypeName: shipType,
+            role,
+            currentSystem: null,
+            destroyed: false,
+            hull: 60,
+            maxHull: 60,
+            changeState: jest.fn()
+        }));
+
+        if (!global.AI_STATE) {
+            global.AI_STATE = { GUARDING: 'GUARDING' };
+        }
+    });
+
+    afterEach(() => {
+        global.Enemy = previousEnemyCtor;
+    });
+
+    test('re-spawns a bodyguard when enemyRef exists but is stale (not tracked by system)', () => {
+        const system = {
+            enemies: [],
+            addEnemy(enemy) {
+                enemy.currentSystem = this;
+                this.enemies.push(enemy);
+            }
+        };
+
+        const staleEnemyRef = {
+            currentSystem: system,
+            destroyed: false,
+            hull: 40,
+            maxHull: 60
+        };
+
+        player.activeBodyguards.push({
+            shipType: 'ViperGuard',
+            hull: 40,
+            maxHull: 60,
+            destroyed: false,
+            enemyRef: staleEnemyRef
+        });
+
+        player.spawnBodyguards(system);
+
+        expect(global.Enemy).toHaveBeenCalledTimes(1);
+        expect(system.enemies).toHaveLength(1);
+        expect(player.activeBodyguards[0].enemyRef).toBe(system.enemies[0]);
+        expect(staleEnemyRef.destroyed).toBe(false);
+    });
+
+    test('marks old enemyRef as destroyed when spawning in different system', () => {
+        const systemA = {
+            enemies: [],
+            addEnemy(enemy) {
+                enemy.currentSystem = this;
+                this.enemies.push(enemy);
+            }
+        };
+
+        const systemB = {
+            enemies: [],
+            addEnemy(enemy) {
+                enemy.currentSystem = this;
+                this.enemies.push(enemy);
+            }
+        };
+
+        player.activeBodyguards.push({
+            shipType: 'ViperGuard',
+            hull: null,
+            maxHull: null,
+            destroyed: false,
+            enemyRef: null
+        });
+
+        player.spawnBodyguards(systemA);
+        const firstEnemyRef = systemA.enemies[0];
+        expect(firstEnemyRef).toBeDefined();
+        expect(firstEnemyRef.destroyed).toBe(false);
+
+        global.Enemy.mockClear();
+        player.spawnBodyguards(systemB);
+
+        expect(firstEnemyRef.destroyed).toBe(true);
+        expect(systemB.enemies).toHaveLength(1);
+        expect(player.activeBodyguards[0].enemyRef).toBe(systemB.enemies[0]);
+    });
+
+    test('respawns guard when enemyRef is marked destroyed', () => {
+        const system = {
+            enemies: [],
+            addEnemy(enemy) {
+                enemy.currentSystem = this;
+                this.enemies.push(enemy);
+            }
+        };
+
+        const destroyedEnemyRef = {
+            currentSystem: system,
+            destroyed: true,
+            hull: 20,
+            maxHull: 60
+        };
+
+        player.activeBodyguards.push({
+            shipType: 'ViperGuard',
+            hull: 20,
+            maxHull: 60,
+            destroyed: false,
+            enemyRef: destroyedEnemyRef
+        });
+
+        player.spawnBodyguards(system);
+
+        expect(global.Enemy).toHaveBeenCalledTimes(1);
+        expect(system.enemies).toHaveLength(1);
+        expect(player.activeBodyguards[0].enemyRef).toBe(system.enemies[0]);
+        expect(destroyedEnemyRef.destroyed).toBe(true);
+    });
+
+    test('syncBodyguardStatus clears stale refs culled from system.enemies', () => {
+        const system = {
+            enemies: [],
+            addEnemy(enemy) {
+                enemy.currentSystem = this;
+                this.enemies.push(enemy);
+            }
+        };
+
+        player.currentSystem = system;
+        player.activeBodyguards.push({
+            shipType: 'ViperGuard',
+            hull: null,
+            maxHull: null,
+            destroyed: false,
+            enemyRef: null
+        });
+
+        player.spawnBodyguards(system);
+        expect(system.enemies).toHaveLength(1);
+
+        const culledEnemy = player.activeBodyguards[0].enemyRef;
+        culledEnemy.destroyed = false;
+        system.enemies = [];
+
+        player.syncBodyguardStatus();
+        expect(player.activeBodyguards[0].enemyRef).toBeNull();
+    });
+
+    test('syncBodyguardStatus removes destroyed guards', () => {
+        const system = {
+            enemies: [],
+            addEnemy(enemy) {
+                enemy.currentSystem = this;
+                this.enemies.push(enemy);
+            }
+        };
+
+        player.currentSystem = system;
+        player.activeBodyguards.push({
+            shipType: 'ViperGuard',
+            hull: null,
+            maxHull: null,
+            destroyed: false,
+            enemyRef: null
+        });
+
+        player.spawnBodyguards(system);
+        const guard = player.activeBodyguards[0];
+        guard.enemyRef.destroyed = true;
+
+        const beforeLength = player.activeBodyguards.length;
+        player.syncBodyguardStatus();
+
+        expect(player.activeBodyguards.length).toBe(beforeLength - 1);
+    });
+
+    test('handles multiple guards with mixed stale/fresh refs', () => {
+        const system = {
+            enemies: [],
+            addEnemy(enemy) {
+                enemy.currentSystem = this;
+                this.enemies.push(enemy);
+            }
+        };
+
+        player.currentSystem = system;
+        player.activeBodyguards = [
+            { shipType: 'Guard1', hull: null, maxHull: null, destroyed: false, enemyRef: null },
+            { shipType: 'Guard2', hull: null, maxHull: null, destroyed: false, enemyRef: null },
+            { shipType: 'Guard3', hull: null, maxHull: null, destroyed: false, enemyRef: null }
+        ];
+
+        player.spawnBodyguards(system);
+        expect(global.Enemy).toHaveBeenCalledTimes(3);
+        expect(system.enemies).toHaveLength(3);
+
+        global.Enemy.mockClear();
+        const guard2Enemy = player.activeBodyguards[1].enemyRef;
+        system.enemies.splice(1, 1);
+
+        player.spawnBodyguards(system);
+        expect(global.Enemy).toHaveBeenCalledTimes(1);
+        expect(system.enemies).toHaveLength(3);
+    });
+
+    test('preserves hull damage across respawn for same-system culling', () => {
+        const system = {
+            enemies: [],
+            addEnemy(enemy) {
+                enemy.currentSystem = this;
+                this.enemies.push(enemy);
+            }
+        };
+
+        player.activeBodyguards.push({
+            shipType: 'ViperGuard',
+            hull: 25,
+            maxHull: 60,
+            destroyed: false,
+            enemyRef: {
+                currentSystem: system,
+                destroyed: false,
+                hull: 25,
+                maxHull: 60
+            }
+        });
+
+        system.enemies = [];
+
+        player.spawnBodyguards(system);
+
+        const newEnemy = system.enemies[0];
+        expect(newEnemy.hull).toBe(25);
+        expect(newEnemy.maxHull).toBe(60);
+    });
+
+    test('relinks existing in-system guard to player principal without respawn', () => {
+        const system = {
+            enemies: [],
+            addEnemy(enemy) {
+                enemy.currentSystem = this;
+                this.enemies.push(enemy);
+            }
+        };
+
+        const previousPrincipal = { pos: createVector(0, 0), destroyed: false, hull: 100 };
+        const existingGuardRef = {
+            currentSystem: system,
+            destroyed: false,
+            hull: 45,
+            maxHull: 60,
+            principal: previousPrincipal,
+            isPlayerBodyguard: false,
+            currentState: 'LEAVING_SYSTEM',
+            target: null,
+            lastAttacker: null,
+            changeState: jest.fn()
+        };
+
+        system.enemies.push(existingGuardRef);
+
+        player.activeBodyguards.push({
+            shipType: 'ViperGuard',
+            hull: 45,
+            maxHull: 60,
+            destroyed: false,
+            enemyRef: existingGuardRef
+        });
+
+        global.Enemy.mockClear();
+        player.spawnBodyguards(system);
+
+        expect(global.Enemy).not.toHaveBeenCalled();
+        expect(player.activeBodyguards[0].enemyRef).toBe(existingGuardRef);
+        expect(existingGuardRef.principal).toBe(player);
+        expect(existingGuardRef.isPlayerBodyguard).toBe(true);
+        expect(existingGuardRef.changeState).toHaveBeenCalledWith(global.AI_STATE.GUARDING, { principal: player });
+    });
+
+    test('relink clears stale friendly target and lastAttacker on existing guard', () => {
+        const system = {
+            enemies: [],
+            addEnemy(enemy) {
+                enemy.currentSystem = this;
+                this.enemies.push(enemy);
+            }
+        };
+
+        const friendlyGuard = {
+            role: global.AI_ROLE?.GUARD ?? 'GUARD',
+            principal: player,
+            pos: createVector(120, 220),
+            destroyed: false,
+            hull: 60
+        };
+
+        const existingGuardRef = {
+            currentSystem: system,
+            destroyed: false,
+            hull: 45,
+            maxHull: 60,
+            principal: player,
+            isPlayerBodyguard: true,
+            currentState: global.AI_STATE.GUARDING,
+            target: player,
+            lastAttacker: friendlyGuard,
+            changeState: jest.fn()
+        };
+
+        system.enemies.push(existingGuardRef);
+
+        player.activeBodyguards.push({
+            shipType: 'ViperGuard',
+            hull: 45,
+            maxHull: 60,
+            destroyed: false,
+            enemyRef: existingGuardRef
+        });
+
+        global.Enemy.mockClear();
+        player.spawnBodyguards(system);
+
+        expect(global.Enemy).not.toHaveBeenCalled();
+        expect(existingGuardRef.target).toBeNull();
+        expect(existingGuardRef.lastAttacker).toBeNull();
+        expect(existingGuardRef.changeState).not.toHaveBeenCalled();
+    });
+});
+
 describe('Faction Kill Tracking', () => {
     let player;
 

@@ -2705,7 +2705,7 @@ class Player {
             activeBodyguards: (this.activeBodyguards || []).map(g => ({
                 shipType: g.shipType,
                 hull: (typeof g.hull === 'number') ? g.hull : null,
-                maxHull: (typeof g.hull === 'number') ? g.maxHull : null,
+                maxHull: (typeof g.maxHull === 'number') ? g.maxHull : null,
                 destroyed: !!g.destroyed
             })),
             // Navigation preferences
@@ -4337,6 +4337,20 @@ class Player {
         return guard.hull !== null && guard.maxHull !== null;
     }
 
+    /**
+     * Returns true when a bodyguard runtime ref is still present in the given system enemy list.
+     * @param {Object} guard - Bodyguard metadata entry
+     * @param {StarSystem} system - System expected to contain the runtime enemy
+     * @returns {boolean}
+     * @private
+     */
+    _isBodyguardRefTrackedInSystem(guard, system) {
+        if (!guard || !guard.enemyRef || !system) return false;
+        return guard.enemyRef.currentSystem === system
+            && Array.isArray(system.enemies)
+            && system.enemies.includes(guard.enemyRef);
+    }
+
     // =========================================================================
     // SECTION 12: BODYGUARD MANAGEMENT
     // =========================================================================
@@ -4466,6 +4480,11 @@ class Player {
             return;
         }
 
+        if (!system || typeof system.addEnemy !== 'function' || !Array.isArray(system.enemies)) {
+            PLAYER_LOG('Cannot spawn bodyguards: invalid system context');
+            return;
+        }
+
         // Clean up any destroyed bodyguards from the list
         this.activeBodyguards = this.activeBodyguards.filter(guard => !guard.destroyed);
 
@@ -4473,16 +4492,38 @@ class Player {
         this.activeBodyguards.forEach((guard, index) => {
             // Check if guard has an existing enemyRef
             if (guard.enemyRef) {
+                const guardStillInSystem = this._isBodyguardRefTrackedInSystem(guard, system);
+
                 // If the guard's enemyRef is in a different system or marked for respawn, clean it up
-                if (guard.enemyRef.currentSystem !== system || guard.enemyRef.destroyed) {
+                if (guard.enemyRef.currentSystem !== system || guard.enemyRef.destroyed || !guardStillInSystem) {
                     // Mark old reference as destroyed to clean it from old system
-                    if (!guard.enemyRef.destroyed) {
+                    if (!guard.enemyRef.destroyed && guard.enemyRef.currentSystem !== system) {
                         guard.enemyRef.destroyed = true;
                     }
                     // Clear the reference so we can spawn a new one
                     guard.enemyRef = null;
                 } else {
-                    // Guard is already spawned in the current system and alive, skip
+                    // Guard already exists in-system: refresh linkage in case it lost principal while player was docked.
+                    guard.enemyRef.principal = this;
+                    guard.enemyRef.isPlayerBodyguard = true;
+
+                    // Reset stale friendly targets if guard was orphaned and retargeted while docked.
+                    if (guard.enemyRef.target === this ||
+                        (guard.enemyRef.target?.role === AI_ROLE.GUARD && guard.enemyRef.target.principal === this)) {
+                        guard.enemyRef.target = null;
+                    }
+
+                    if (guard.enemyRef.lastAttacker === this ||
+                        (guard.enemyRef.lastAttacker?.role === AI_ROLE.GUARD && guard.enemyRef.lastAttacker.principal === this)) {
+                        guard.enemyRef.lastAttacker = null;
+                    }
+
+                    // Force guard behavior back to escort mode after relinking.
+                    if (guard.enemyRef.currentState !== AI_STATE.GUARDING) {
+                        guard.enemyRef.changeState(AI_STATE.GUARDING, { principal: this });
+                    }
+
+                    // Guard is already spawned in the current system and alive, no respawn needed.
                     return;
                 }
             }
@@ -4535,6 +4576,14 @@ class Player {
         for (let i = guards.length - 1; i >= 0; i--) {
             const guard = guards[i];
             if (guard.enemyRef) {
+                // If runtime ref was culled from the system list, clear it so spawnBodyguards can recreate.
+                const inCurrentSystem = guard.enemyRef.currentSystem === this.currentSystem;
+                const stillTrackedBySystem = this._isBodyguardRefTrackedInSystem(guard, this.currentSystem);
+                if (!guard.enemyRef.destroyed && inCurrentSystem && !stillTrackedBySystem) {
+                    guard.enemyRef = null;
+                    continue;
+                }
+
                 // Sync hull from enemy
                 guard.hull = guard.enemyRef.hull;
                 guard.maxHull = guard.enemyRef.maxHull;

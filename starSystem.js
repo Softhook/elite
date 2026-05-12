@@ -6929,6 +6929,13 @@ class StarSystem {
         // If no runtime player or invalid entity, don't despawn by distance
         if (!this.player || !entity || !entity.pos) return false;
 
+        // Player-hired bodyguards are persistent escorts and should survive normal distance culling
+        // while still assigned to the current runtime player. Orphaned guards are not protected.
+        if (entity.isPlayerBodyguard) {
+            const hasValidPrincipal = !!(entity.principal && !entity.principal.destroyed && entity.principal === this.player);
+            if (hasValidPrincipal) return false;
+        }
+
         // Protect mission-critical entities from being despawned.
         // Assassination targets/guards are explicitly flagged when spawned.
         // Event entities (Raids, Swarms) are also protected.

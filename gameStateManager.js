@@ -380,6 +380,13 @@ class GameStateManager {
         }
 
         player.vel.mult(0);
+
+        // Spawn any hired bodyguards when undocking
+        if (player.activeBodyguards?.length > 0 && galaxy?.getCurrentSystem()) {
+            console.log("Spawning bodyguards when undocking from space object");
+            player.spawnBodyguards(galaxy.getCurrentSystem());
+        }
+
         this.currentDockedSpaceObject = null;
     }
 
