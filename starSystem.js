@@ -5021,7 +5021,10 @@ class StarSystem {
         if (!layer || !layer.cellSize || typeof layer.parallax !== 'number') return;
         const cellSize = layer.cellSize;
         const maxPerCell = Math.max(1, layer.maxPerCell || 1);
-        const maxVisibleItems = Math.max(1, Number.isFinite(layer.maxVisibleItems) ? layer.maxVisibleItems : Number.POSITIVE_INFINITY);
+        const maxVisibleItems = Number.isFinite(layer.maxVisibleItems)
+            ? Math.max(1, layer.maxVisibleItems)
+            : Number.POSITIVE_INFINITY;
+        const hasVisibleItemCap = Number.isFinite(maxVisibleItems);
         const chance = Math.min(1, Math.max(0, layer.chance || 0.5));
         const sizeMin = layer.sizeRange?.[0] ?? 1;
         const sizeMax = layer.sizeRange?.[1] ?? sizeMin;
@@ -5092,7 +5095,7 @@ class StarSystem {
                         circle(worldX, worldY, size);
                     }
                     drawnItems++;
-                    if (drawnItems >= maxVisibleItems) {
+                    if (hasVisibleItemCap && drawnItems >= maxVisibleItems) {
                         break layerLoop;
                     }
                 }

@@ -48,6 +48,7 @@ const STARFIELD_CONFIG = {
             sizeRange: [0.7, 1.8],
             alphaRange: [55, 150],
             twinkleSpeed: 0.002,
+            maxVisibleItems: 520,
             colors: [[210, 225, 255], [255, 250, 220], [185, 210, 255]]
         },
         {
@@ -62,6 +63,7 @@ const STARFIELD_CONFIG = {
             // Other layers use p5 fill/stroke APIs that expect 0..255 alpha values.
             alphaRange: [0.07, 0.2],
             drift: [0.003, 0.002],
+            maxVisibleItems: 24,
             colors: [[110, 75, 210], [80, 140, 215], [160, 85, 165], [55, 120, 175]]
         },
         {
@@ -75,6 +77,7 @@ const STARFIELD_CONFIG = {
             sizeRange: [1.0, 2.4],
             alphaRange: [80, 170],
             twinkleSpeed: 0.003,
+            maxVisibleItems: 260,
             colors: [[255, 220, 160], [200, 225, 255], [255, 200, 130], [180, 230, 255]]
         },
         {
