@@ -81,7 +81,8 @@ const PARALLAX_HASH_SALTS = {
     POS_Y: 11,
     SIZE: 17,
     ALPHA: 29,
-    COLOR: 41
+    COLOR: 41,
+    DENSITY: 53
 };
 const PARALLAX_TWINKLE_BASE = 0.7;
 const PARALLAX_TWINKLE_RANGE = 0.3;
@@ -5026,6 +5027,17 @@ class StarSystem {
             : Number.POSITIVE_INFINITY;
         const hasVisibleItemCap = Number.isFinite(maxVisibleItems);
         const chance = Math.min(1, Math.max(0, layer.chance || 0.5));
+        const densityVariation = layer.densityVariation;
+        const hasDensityVariation = densityVariation && typeof densityVariation === 'object';
+        const macroCellSpan = hasDensityVariation
+            ? Math.max(1, Math.floor(densityVariation.macroCellSpan || 1))
+            : 1;
+        const chanceMultiplierMin = hasDensityVariation
+            ? (densityVariation.chanceMultiplierRange?.[0] ?? 1)
+            : 1;
+        const chanceMultiplierMax = hasDensityVariation
+            ? (densityVariation.chanceMultiplierRange?.[1] ?? chanceMultiplierMin)
+            : chanceMultiplierMin;
         const sizeMin = layer.sizeRange?.[0] ?? 1;
         const sizeMax = layer.sizeRange?.[1] ?? sizeMin;
         const alphaMin = layer.alphaRange?.[0] ?? 80;
@@ -5055,7 +5067,15 @@ class StarSystem {
         layerLoop:
         for (let cx = startCellX; cx <= endCellX; cx++) {
             for (let cy = startCellY; cy <= endCellY; cy++) {
-                if (this._parallaxNoise2D(cx, cy, seed) > chance) continue;
+                let cellChance = chance;
+                if (hasDensityVariation) {
+                    const macroX = Math.floor(cx / macroCellSpan);
+                    const macroY = Math.floor(cy / macroCellSpan);
+                    const densityNoise = this._parallaxNoise2D(macroX, macroY, seed + PARALLAX_HASH_SALTS.DENSITY);
+                    const chanceMultiplier = chanceMultiplierMin + densityNoise * (chanceMultiplierMax - chanceMultiplierMin);
+                    cellChance = Math.min(1, Math.max(0, chance * chanceMultiplier));
+                }
+                if (this._parallaxNoise2D(cx, cy, seed) > cellChance) continue;
 
                 const countNoise = this._parallaxNoise2D(cx, cy, seed + PARALLAX_HASH_SALTS.COUNT);
                 const itemCount = 1 + Math.floor(countNoise * maxPerCell);

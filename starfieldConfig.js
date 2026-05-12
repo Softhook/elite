@@ -34,8 +34,8 @@ const STARFIELD_CONFIG = {
     //   2. nebula       (0.15)  – large soft gradient cloud puffs
     //   3. midfield     (0.38)  – mid-distance stars, warmer / more varied colors
     //   4. near-dust    (0.95)  – fine particle dust, cold blue tint
-    //   5. foreground-A (1.45)  – bright tiny specks with readable near-field motion
-    //   6. foreground-B (1.85)  – sparse, faster micro-specks for added speed sensation
+    //   5. foreground-A (1.20)  – bright tiny specks with slower near-field motion
+    //   6. foreground-B (1.55)  – sparse, somewhat faster micro-specks for depth
     PARALLAX_ENABLED: true,
     PARALLAX_LAYERS: [
         {
@@ -93,30 +93,38 @@ const STARFIELD_CONFIG = {
             colors: [[160, 185, 230], [195, 208, 240]]
         },
         {
-            // Layer 5 – visible foreground specks racing past the ship.
+            // Layer 5 – visible foreground specks with patchy dense/sparse pockets.
             // Bright + tiny + non-glowing, with stronger parallax for readability.
             type: 'particle',
-            parallax: 1.45,
+            parallax: 1.2,
             cellSize: 120,
-            chance: 0.62,
+            chance: 0.54,
             maxPerCell: 2,
             sizeRange: [1.05, 1.95],
             alphaRange: [125, 235],
             twinkleSpeed: 0,
             maxVisibleItems: 320,
+            densityVariation: {
+                macroCellSpan: 6,
+                chanceMultiplierRange: [0.22, 1.28]
+            },
             colors: [[235, 245, 255], [255, 255, 255], [225, 238, 255]]
         },
         {
-            // Layer 6 – sparse, slightly faster micro-specks to reinforce depth.
+            // Layer 6 – sparse micro-specks with occasional denser clusters.
             type: 'particle',
-            parallax: 1.85,
+            parallax: 1.55,
             cellSize: 190,
-            chance: 0.32,
+            chance: 0.24,
             maxPerCell: 1,
             sizeRange: [0.85, 1.35],
             alphaRange: [95, 190],
             twinkleSpeed: 0,
             maxVisibleItems: 120,
+            densityVariation: {
+                macroCellSpan: 5,
+                chanceMultiplierRange: [0.08, 1.45]
+            },
             colors: [[230, 240, 255], [255, 255, 255]]
         }
     ]
