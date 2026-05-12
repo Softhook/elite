@@ -25,5 +25,54 @@ const STARFIELD_CONFIG = {
     // Deferred bitmap processing - prevents frame spikes from worker callbacks
     MAX_PENDING_BITMAPS: 20,           // Maximum bitmaps to queue before dropping oldest
     BITMAP_PROCESS_TIME_MS: 8,         // Max milliseconds per frame for bitmap processing (~half a frame at 60fps)
-    BITMAP_PROCESS_MIN_COUNT: 1        // Always process at least this many per frame if available
+    BITMAP_PROCESS_MIN_COUNT: 1,       // Always process at least this many per frame if available
+
+    // Layered parallax overlays for improved depth perception in space.
+    // Each layer is deterministic and screen-bounded for predictable performance.
+    PARALLAX_ENABLED: true,
+    PARALLAX_LAYERS: [
+        {
+            type: 'star',
+            parallax: 0.12,
+            cellSize: 240,
+            chance: 0.78,
+            maxPerCell: 2,
+            sizeRange: [0.8, 2.0],
+            alphaRange: [70, 165],
+            twinkleSpeed: 0.0025,
+            colors: [[215, 230, 255], [255, 245, 210], [200, 220, 255]]
+        },
+        {
+            type: 'nebula',
+            parallax: 0.2,
+            cellSize: 900,
+            chance: 0.35,
+            maxPerCell: 1,
+            sizeRange: [220, 520],
+            alphaRange: [0.04, 0.13],
+            drift: [0.003, 0.002],
+            colors: [[120, 80, 220], [90, 150, 220], [170, 90, 170]]
+        },
+        {
+            type: 'dust',
+            parallax: 0.45,
+            cellSize: 180,
+            chance: 0.7,
+            maxPerCell: 1,
+            sizeRange: [1.0, 2.2],
+            alphaRange: [45, 120],
+            colors: [[170, 190, 235], [200, 210, 240]]
+        },
+        {
+            type: 'particle',
+            parallax: 0.78,
+            cellSize: 130,
+            chance: 0.5,
+            maxPerCell: 1,
+            sizeRange: [1.2, 3.2],
+            alphaRange: [45, 145],
+            twinkleSpeed: 0.0045,
+            colors: [[210, 235, 255], [255, 255, 255]]
+        }
+    ]
 };
