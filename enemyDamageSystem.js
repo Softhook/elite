@@ -361,10 +361,31 @@ class EnemyDamageSystem {
             }
 
             // Handle player-related consequences (mission progress, wanted status)
-            if (attacker instanceof Player && system.player === attacker) {
-                this._handlePlayerKillConsequences(attacker, system);
+            const playerAttacker = this._resolvePlayerAttacker(attacker);
+            if (playerAttacker && system.player === playerAttacker) {
+                this._handlePlayerKillConsequences(playerAttacker, system);
             }
         }
+    }
+
+    /**
+     * Resolves the player responsible for a kill, including weapon/projectile owners.
+     * @param {Object} attacker
+     * @returns {Player|null}
+     */
+    _resolvePlayerAttacker(attacker) {
+        if (!attacker) return null;
+
+        if (typeof Player !== 'undefined' && attacker instanceof Player) {
+            return attacker;
+        }
+
+        const owner = attacker.owner || attacker.source || attacker.launcher || null;
+        if (typeof Player !== 'undefined' && owner instanceof Player) {
+            return owner;
+        }
+
+        return null;
     }
 
     /**
@@ -386,7 +407,7 @@ class EnemyDamageSystem {
             const missionTargetMap = {
                 // Standard bounty missions
                 [MISSION_TYPE.BOUNTY_PIRATE]: {
-                    validRoles: [AI_ROLE.PIRATE],
+                    checkFn: () => this.role === AI_ROLE.PIRATE || this.faction === 'PIRATE' || this.isPirate === true,
                     logName: 'pirate bounty'
                 },
                 [MISSION_TYPE.BOUNTY_POLICE]: {
@@ -438,7 +459,7 @@ class EnemyDamageSystem {
                     : (missionConfig.validRoles && missionConfig.validRoles.includes(this.role));
 
                 if (countsForMission) {
-                    mission.progressCount = (mission.progressCount || 0) + 1;
+                    mission.updateProgress(1);
                     AI_LOG(`Updated ${missionConfig.logName} mission progress: ${mission.progressCount}/${mission.targetCount}`);
 
                     // Show UI message for faction missions

@@ -191,23 +191,26 @@ describe('Integration Tests', () => {
             const mission = new Mission({
                 title: "Bounty Test",
                 type: MISSION_TYPE.BOUNTY_PIRATE,
-                targetCount: 3,
+                targetCount: 1,
                 rewardCredits: 1000
             });
             player.acceptMission(mission);
+            system.player = player;
 
-            // Simulate enemy kill
-            const enemy = new Enemy(0, 0, player, "Krait", "PIRATE");
+            // Simulate an actual pirate kill through the destruction path
+            const enemy = new Enemy(0, 0, player, "Sidewinder", AI_ROLE.PIRATE);
             enemy.faction = "PIRATE";
+            enemy.currentSystem = system;
+            enemy.getSystem = () => system;
 
-            // In the real system, this happens via events or manual checks
-            mission.progressCount++;
+            enemy.takeDamage(9999, player, system);
+
             expect(mission.progressCount).toBe(1);
-            expect(mission.status).toBe('Active');
+            expect(mission.status).toBe('Completed');
+            expect(player.activeMission).toBeNull();
 
-            mission.progressCount = 3;
-            const completed = player.completeMission(system, station);
-            expect(completed).toBe(true);
+            // Completion should have been handled by the kill hook already
+            expect(player.credits).toBeGreaterThan(1000);
         });
     });
 

@@ -807,6 +807,18 @@ class SurfaceMode {
     }
 
     /**
+     * Backwards-compatible alias used by existing tests and input paths.
+     */
+    handleKeyPress(keyCode) {
+        if (keyCode === SURFACE_CONFIG.TRIGGER_KEY) {
+            this._keyPressed = true;
+            return true;
+        }
+
+        return this.handleKeyDown(keyCode);
+    }
+
+    /**
      * Handle mouse press for surface mode
      */
     handleMousePressed() {

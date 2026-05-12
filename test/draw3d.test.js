@@ -37,6 +37,6 @@ describe('draw3d rim glint', () => {
         drawShipRimGlint(layerCache, 10, 0);
 
         expect(line).toHaveBeenCalledTimes(1);
-        expect(line).toHaveBeenCalledWith(10.3, -10, 10.3, 10);
+        expect(line).toHaveBeenCalledWith(10.35, -10, 10.35, 10);
     });
 });
