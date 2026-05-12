@@ -34,8 +34,8 @@ const STARFIELD_CONFIG = {
     //   2. nebula       (0.15)  – large soft gradient cloud puffs
     //   3. midfield     (0.38)  – mid-distance stars, warmer / more varied colors
     //   4. near-dust    (0.95)  – fine particle dust, cold blue tint
-    //   5. foreground-A (1.95)  – bright tiny specks with obvious near-field motion
-    //   6. foreground-B (2.65)  – sparse, extra-fast micro-specks for speed sensation
+    //   5. foreground-A (1.45)  – bright tiny specks with readable near-field motion
+    //   6. foreground-B (1.85)  – sparse, faster micro-specks for added speed sensation
     PARALLAX_ENABLED: true,
     PARALLAX_LAYERS: [
         {
@@ -96,7 +96,7 @@ const STARFIELD_CONFIG = {
             // Layer 5 – visible foreground specks racing past the ship.
             // Bright + tiny + non-glowing, with stronger parallax for readability.
             type: 'particle',
-            parallax: 1.95,
+            parallax: 1.45,
             cellSize: 120,
             chance: 0.62,
             maxPerCell: 2,
@@ -107,9 +107,9 @@ const STARFIELD_CONFIG = {
             colors: [[235, 245, 255], [255, 255, 255], [225, 238, 255]]
         },
         {
-            // Layer 6 – sparse, extra-fast micro-specks to sell high-speed movement.
+            // Layer 6 – sparse, slightly faster micro-specks to reinforce depth.
             type: 'particle',
-            parallax: 2.65,
+            parallax: 1.85,
             cellSize: 190,
             chance: 0.32,
             maxPerCell: 1,
