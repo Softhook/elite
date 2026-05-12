@@ -5078,10 +5078,11 @@ class StarSystem {
                     if (layer.type === 'nebula') {
                         this._drawParallaxNebula(worldX, worldY, size, alpha, color);
                     } else if (layer.type === 'dust') {
-                        stroke(color[0], color[1], color[2], alpha);
-                        strokeWeight(Math.max(1, size * 0.5));
-                        line(worldX, worldY, worldX + size * 4, worldY + size * 1.2);
-                        noStroke();
+                        // Soft dust motes (non-linear), avoids streak artifacts.
+                        fill(color[0], color[1], color[2], alpha * 0.55);
+                        circle(worldX, worldY, size * 2.1);
+                        fill(color[0], color[1], color[2], alpha);
+                        circle(worldX, worldY, size);
                     } else {
                         fill(color[0], color[1], color[2], alpha);
                         if (layer.type === 'particle' && size > PARALLAX_PARTICLE_GLOW_THRESHOLD) {

@@ -47,4 +47,20 @@ describe('StarSystem parallax helpers', () => {
 
         expect(nearShift).toBeGreaterThan(distantShift);
     });
+
+    test('foreground factor above 1 moves faster than baseline starfield', () => {
+        const { StarSystem } = require('../starSystem');
+        const base = 700;
+        const p1 = 50;
+        const p2 = 250;
+        const foregroundFactor = 1.3;
+
+        const shift = Math.abs(
+            (StarSystem.computeParallaxWorldPosition(base, p2, foregroundFactor) - p2) -
+            (StarSystem.computeParallaxWorldPosition(base, p1, foregroundFactor) - p1)
+        );
+        const baselineShift = Math.abs(p2 - p1);
+
+        expect(shift).toBeGreaterThan(baselineShift);
+    });
 });

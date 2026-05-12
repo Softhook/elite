@@ -57,22 +57,23 @@ const STARFIELD_CONFIG = {
         },
         {
             type: 'dust',
-            parallax: 0.45,
+            parallax: 1.05,
             cellSize: 180,
-            chance: 0.7,
+            chance: 0.62,
             maxPerCell: 1,
-            sizeRange: [1.0, 2.2],
-            alphaRange: [45, 120],
+            sizeRange: [1.3, 2.8],
+            alphaRange: [35, 95],
             colors: [[170, 190, 235], [200, 210, 240]]
         },
         {
             type: 'particle',
-            parallax: 0.78,
-            cellSize: 130,
-            chance: 0.5,
+            // Foreground particles intentionally use >1 parallax to move faster than the base starfield.
+            parallax: 1.3,
+            cellSize: 150,
+            chance: 0.4,
             maxPerCell: 1,
-            sizeRange: [1.2, 3.2],
-            alphaRange: [45, 145],
+            sizeRange: [1.5, 3.8],
+            alphaRange: [55, 155],
             twinkleSpeed: 0.0045,
             colors: [[210, 235, 255], [255, 255, 255]]
         }
