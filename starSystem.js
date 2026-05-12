@@ -74,6 +74,20 @@ const STAR_LAYER_CONFIG = {
     }
 };
 
+const PARALLAX_SEED_MULTIPLIER = 911;
+const PARALLAX_HASH_SALTS = {
+    COUNT: 3,
+    POS_X: 5,
+    POS_Y: 11,
+    SIZE: 17,
+    ALPHA: 29,
+    COLOR: 41,
+    DENSITY: 53
+};
+const PARALLAX_TWINKLE_BASE = 0.7;
+const PARALLAX_TWINKLE_RANGE = 0.3;
+
+
 /**
  * Build ship role arrays from SHIP_DEFINITIONS
  * Optimized: Single-pass iteration using Map for O(1) role lookups
@@ -4952,9 +4966,176 @@ class StarSystem {
         // Always use progressive tile-based rendering (worker-driven)
         this._drawProgressiveStarfield();
 
+        // Layered parallax overlays for additional depth (distant stars, nebula, dust, particles)
+        this._drawLayeredParallaxBackground();
+
         // Draw spectacular stars (animated phenomena) - these are rare and change over time
         // so they're drawn directly each frame, but only in visible area
         this._drawSpectacularStarsOverlay();
+    }
+
+    /**
+     * Computes a parallax layer world position so it scrolls relative to player movement.
+     * @param {number} baseCoord - Base coordinate in layer-space.
+     * @param {number} playerCoord - Current player world coordinate.
+     * @param {number} parallaxFactor - Layer movement multiplier (1.0 = baseline, >1.0 = foreground/faster, <1.0 = background/slower).
+     * @returns {number}
+     */
+    static computeParallaxWorldPosition(baseCoord, playerCoord, parallaxFactor) {
+        return baseCoord + playerCoord * (1 - parallaxFactor);
+    }
+
+    /**
+     * Fast deterministic 2D noise/hash helper returning [0,1).
+     * @private
+     */
+    _parallaxNoise2D(x, y, salt = 0) {
+        let h = (Math.imul((x | 0), 374761393) ^ Math.imul((y | 0), 668265263) ^ Math.imul((salt | 0), 1442695041)) >>> 0;
+        h ^= h >>> 13;
+        h = Math.imul(h, 1274126177) >>> 0;
+        return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+    }
+
+    /**
+     * Draws layered deterministic parallax effects in world space.
+     * @private
+     */
+    _drawLayeredParallaxBackground() {
+        if (!this.player?.pos || !STARFIELD_CONFIG.PARALLAX_ENABLED) return;
+        const layers = STARFIELD_CONFIG.PARALLAX_LAYERS;
+        if (!Array.isArray(layers) || layers.length === 0) return;
+
+        const playerX = this.player.pos.x;
+        const playerY = this.player.pos.y;
+        const now = millis();
+
+        for (const layer of layers) {
+            this._drawParallaxLayerCells(layer, playerX, playerY, now);
+        }
+    }
+
+    /**
+     * Draws one parallax layer by iterating deterministic cells around the viewport.
+     * @private
+     */
+    _drawParallaxLayerCells(layer, playerX, playerY, now) {
+        if (!layer || !layer.cellSize || typeof layer.parallax !== 'number') return;
+        const cellSize = layer.cellSize;
+        const maxPerCell = Math.max(1, layer.maxPerCell || 1);
+        const maxVisibleItems = Number.isFinite(layer.maxVisibleItems)
+            ? Math.max(1, layer.maxVisibleItems)
+            : Number.POSITIVE_INFINITY;
+        const hasVisibleItemCap = Number.isFinite(maxVisibleItems);
+        const chance = Math.min(1, Math.max(0, layer.chance || 0.5));
+        const densityVariation = layer.densityVariation;
+        const hasDensityVariation = densityVariation && typeof densityVariation === 'object';
+        const macroCellSpan = hasDensityVariation
+            ? Math.max(1, Math.floor(densityVariation.macroCellSpan || 1))
+            : 1;
+        const chanceMultiplierMin = hasDensityVariation
+            ? (densityVariation.chanceMultiplierRange?.[0] ?? 1)
+            : 1;
+        const chanceMultiplierMax = hasDensityVariation
+            ? (densityVariation.chanceMultiplierRange?.[1] ?? chanceMultiplierMin)
+            : chanceMultiplierMin;
+        const sizeMin = layer.sizeRange?.[0] ?? 1;
+        const sizeMax = layer.sizeRange?.[1] ?? sizeMin;
+        const alphaMin = layer.alphaRange?.[0] ?? 80;
+        const alphaMax = layer.alphaRange?.[1] ?? alphaMin;
+        const twinkleSpeed = layer.twinkleSpeed || 0;
+        const drift = layer.drift || [0, 0];
+        const driftX = now * drift[0];
+        const driftY = now * drift[1];
+        const palette = Array.isArray(layer.colors) && layer.colors.length > 0 ? layer.colors : [[255, 255, 255]];
+        const parallax = layer.parallax;
+
+        const camX = playerX * parallax + driftX;
+        const camY = playerY * parallax + driftY;
+        const left = camX - width / 2 - cellSize;
+        const right = camX + width / 2 + cellSize;
+        const top = camY - height / 2 - cellSize;
+        const bottom = camY + height / 2 + cellSize;
+        const startCellX = Math.floor(left / cellSize);
+        const endCellX = Math.ceil(right / cellSize);
+        const startCellY = Math.floor(top / cellSize);
+        const endCellY = Math.ceil(bottom / cellSize);
+        const seed = (this.systemIndex + 1) * PARALLAX_SEED_MULTIPLIER;
+        let drawnItems = 0;
+
+        noStroke();
+
+        layerLoop:
+        for (let cx = startCellX; cx <= endCellX; cx++) {
+            for (let cy = startCellY; cy <= endCellY; cy++) {
+                let cellChance = chance;
+                if (hasDensityVariation) {
+                    const macroX = Math.floor(cx / macroCellSpan);
+                    const macroY = Math.floor(cy / macroCellSpan);
+                    const densityNoise = this._parallaxNoise2D(macroX, macroY, seed + PARALLAX_HASH_SALTS.DENSITY);
+                    const chanceMultiplier = chanceMultiplierMin + densityNoise * (chanceMultiplierMax - chanceMultiplierMin);
+                    cellChance = Math.min(1, Math.max(0, chance * chanceMultiplier));
+                }
+                if (this._parallaxNoise2D(cx, cy, seed) > cellChance) continue;
+
+                const countNoise = this._parallaxNoise2D(cx, cy, seed + PARALLAX_HASH_SALTS.COUNT);
+                const itemCount = 1 + Math.floor(countNoise * maxPerCell);
+
+                for (let i = 0; i < itemCount; i++) {
+                    const salt = seed + i * 23;
+                    const rx = this._parallaxNoise2D(cx, cy, salt + PARALLAX_HASH_SALTS.POS_X);
+                    const ry = this._parallaxNoise2D(cx, cy, salt + PARALLAX_HASH_SALTS.POS_Y);
+                    const rs = this._parallaxNoise2D(cx, cy, salt + PARALLAX_HASH_SALTS.SIZE);
+                    const ra = this._parallaxNoise2D(cx, cy, salt + PARALLAX_HASH_SALTS.ALPHA);
+                    const rc = this._parallaxNoise2D(cx, cy, salt + PARALLAX_HASH_SALTS.COLOR);
+
+                    const baseX = cx * cellSize + rx * cellSize - driftX;
+                    const baseY = cy * cellSize + ry * cellSize - driftY;
+                    const worldX = StarSystem.computeParallaxWorldPosition(baseX, playerX, parallax);
+                    const worldY = StarSystem.computeParallaxWorldPosition(baseY, playerY, parallax);
+                    let size = sizeMin + rs * (sizeMax - sizeMin);
+                    let alpha = alphaMin + ra * (alphaMax - alphaMin);
+
+                    if (twinkleSpeed > 0) {
+                        alpha *= (PARALLAX_TWINKLE_BASE + PARALLAX_TWINKLE_RANGE * Math.sin(now * twinkleSpeed + rc * TWO_PI));
+                    }
+
+                    const color = palette[Math.floor(rc * palette.length) % palette.length];
+
+                    if (layer.type === 'nebula') {
+                        this._drawParallaxNebula(worldX, worldY, size, alpha, color);
+                    } else if (layer.type === 'dust') {
+                        // Soft dust motes (non-linear), avoids streak artifacts.
+                        fill(color[0], color[1], color[2], alpha * 0.55);
+                        circle(worldX, worldY, size * 2.1);
+                        fill(color[0], color[1], color[2], alpha);
+                        circle(worldX, worldY, size);
+                    } else {
+                        // All non-nebula/dust types render as plain crisp specks — no glow.
+                        fill(color[0], color[1], color[2], alpha);
+                        circle(worldX, worldY, size);
+                    }
+                    drawnItems++;
+                    if (hasVisibleItemCap && drawnItems >= maxVisibleItems) {
+                        break layerLoop;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Draws a soft nebula puff at world coordinates.
+     * @private
+     */
+    _drawParallaxNebula(x, y, size, alpha, color) {
+        const ctx = drawingContext;
+        const grad = ctx.createRadialGradient(x, y, size * 0.1, x, y, size);
+        grad.addColorStop(0, `rgba(${color[0]},${color[1]},${color[2]},${alpha})`);
+        grad.addColorStop(1, `rgba(${color[0]},${color[1]},${color[2]},0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, TWO_PI);
+        ctx.fill();
     }
 
     /**
