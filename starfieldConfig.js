@@ -29,53 +29,76 @@ const STARFIELD_CONFIG = {
 
     // Layered parallax overlays for improved depth perception in space.
     // Each layer is deterministic and screen-bounded for predictable performance.
+    // Depth model (parallax 0..1 = background..tied to player; >1 = faster than player):
+    //   1. deep-stars   (0.08)  – distant star field, faint blue/white
+    //   2. nebula       (0.15)  – large soft gradient cloud puffs
+    //   3. midfield     (0.38)  – mid-distance stars, warmer / more varied colors
+    //   4. near-dust    (0.88)  – fine particle dust, cold blue tint
+    //   5. foreground   (1.4 )  – tiny crisp specks flying past the ship
     PARALLAX_ENABLED: true,
     PARALLAX_LAYERS: [
         {
+            // Layer 1 – deep, distant stars. Very slow, high density, faint twinkle.
             type: 'star',
-            parallax: 0.12,
-            cellSize: 240,
-            chance: 0.78,
+            parallax: 0.08,
+            cellSize: 200,
+            chance: 0.82,
             maxPerCell: 2,
-            sizeRange: [0.8, 2.0],
-            alphaRange: [70, 165],
-            twinkleSpeed: 0.0025,
-            colors: [[215, 230, 255], [255, 245, 210], [200, 220, 255]]
+            sizeRange: [0.7, 1.8],
+            alphaRange: [55, 150],
+            twinkleSpeed: 0.002,
+            colors: [[210, 225, 255], [255, 250, 220], [185, 210, 255]]
         },
         {
+            // Layer 2 – deep nebula cloud puffs, very slow drift.
             type: 'nebula',
-            parallax: 0.2,
-            cellSize: 900,
-            chance: 0.35,
+            parallax: 0.15,
+            cellSize: 950,
+            chance: 0.32,
             maxPerCell: 1,
-            sizeRange: [220, 520],
+            sizeRange: [240, 560],
             // Nebula alpha is normalized (0..1) because this layer renders via drawingContext rgba().
             // Other layers use p5 fill/stroke APIs that expect 0..255 alpha values.
-            alphaRange: [0.1, 0.24],
+            alphaRange: [0.07, 0.2],
             drift: [0.003, 0.002],
-            colors: [[120, 80, 220], [90, 150, 220], [170, 90, 170]]
+            colors: [[110, 75, 210], [80, 140, 215], [160, 85, 165], [55, 120, 175]]
         },
         {
+            // Layer 3 – mid-field stars. Slightly larger, warmer hues; provides separation
+            // from the deep star layer and the near-field layers.
+            type: 'star',
+            parallax: 0.38,
+            cellSize: 320,
+            chance: 0.55,
+            maxPerCell: 1,
+            sizeRange: [1.0, 2.4],
+            alphaRange: [80, 170],
+            twinkleSpeed: 0.003,
+            colors: [[255, 220, 160], [200, 225, 255], [255, 200, 130], [180, 230, 255]]
+        },
+        {
+            // Layer 4 – near-field dust: cold micro-motes at mid-high parallax.
             type: 'dust',
-            parallax: 1.05,
-            cellSize: 180,
-            chance: 0.62,
+            parallax: 0.88,
+            cellSize: 160,
+            chance: 0.58,
             maxPerCell: 1,
-            sizeRange: [1.3, 2.8],
-            alphaRange: [35, 95],
-            colors: [[170, 190, 235], [200, 210, 240]]
+            sizeRange: [1.0, 2.2],
+            alphaRange: [28, 75],
+            colors: [[160, 185, 230], [195, 208, 240]]
         },
         {
+            // Layer 5 – crisp foreground specks racing past the ship.
+            // parallax > 1 means they move faster than the base starfield on screen.
             type: 'particle',
-            // Foreground particles intentionally use >1 parallax to move faster than the base starfield.
-            parallax: 1.3,
-            cellSize: 150,
-            chance: 0.4,
+            parallax: 1.4,
+            cellSize: 140,
+            chance: 0.35,
             maxPerCell: 1,
-            sizeRange: [1.5, 3.8],
-            alphaRange: [55, 155],
-            twinkleSpeed: 0.0045,
-            colors: [[210, 235, 255], [255, 255, 255]]
+            sizeRange: [0.8, 1.6],
+            alphaRange: [60, 140],
+            twinkleSpeed: 0,
+            colors: [[230, 240, 255], [255, 255, 255]]
         }
     ]
 };

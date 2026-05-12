@@ -85,7 +85,7 @@ const PARALLAX_HASH_SALTS = {
 };
 const PARALLAX_TWINKLE_BASE = 0.7;
 const PARALLAX_TWINKLE_RANGE = 0.3;
-const PARALLAX_PARTICLE_GLOW_THRESHOLD = 2.5;
+
 
 /**
  * Build ship role arrays from SHIP_DEFINITIONS
@@ -5084,14 +5084,9 @@ class StarSystem {
                         fill(color[0], color[1], color[2], alpha);
                         circle(worldX, worldY, size);
                     } else {
+                        // All non-nebula/dust types render as plain crisp specks — no glow.
                         fill(color[0], color[1], color[2], alpha);
-                        if (layer.type === 'particle' && size > PARALLAX_PARTICLE_GLOW_THRESHOLD) {
-                            circle(worldX, worldY, size * 1.6);
-                            fill(color[0], color[1], color[2], alpha * 0.7);
-                            circle(worldX, worldY, size);
-                        } else {
-                            circle(worldX, worldY, size);
-                        }
+                        circle(worldX, worldY, size);
                     }
                 }
             }
