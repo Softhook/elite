@@ -49,7 +49,9 @@ const STARFIELD_CONFIG = {
             chance: 0.35,
             maxPerCell: 1,
             sizeRange: [220, 520],
-            alphaRange: [0.04, 0.13],
+            // Nebula alpha is normalized (0..1) because this layer renders via drawingContext rgba().
+            // Other layers use p5 fill/stroke APIs that expect 0..255 alpha values.
+            alphaRange: [0.1, 0.24],
             drift: [0.003, 0.002],
             colors: [[120, 80, 220], [90, 150, 220], [170, 90, 170]]
         },

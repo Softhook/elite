@@ -74,6 +74,19 @@ const STAR_LAYER_CONFIG = {
     }
 };
 
+const PARALLAX_SEED_MULTIPLIER = 911;
+const PARALLAX_HASH_SALTS = {
+    COUNT: 3,
+    POS_X: 5,
+    POS_Y: 11,
+    SIZE: 17,
+    ALPHA: 29,
+    COLOR: 41
+};
+const PARALLAX_TWINKLE_BASE = 0.7;
+const PARALLAX_TWINKLE_RANGE = 0.3;
+const PARALLAX_PARTICLE_GLOW_THRESHOLD = 2.5;
+
 /**
  * Build ship role arrays from SHIP_DEFINITIONS
  * Optimized: Single-pass iteration using Map for O(1) role lookups
@@ -5030,7 +5043,7 @@ class StarSystem {
         const endCellX = Math.ceil(right / cellSize);
         const startCellY = Math.floor(top / cellSize);
         const endCellY = Math.ceil(bottom / cellSize);
-        const seed = (this.systemIndex + 1) * 911;
+        const seed = (this.systemIndex + 1) * PARALLAX_SEED_MULTIPLIER;
 
         noStroke();
 
@@ -5038,16 +5051,16 @@ class StarSystem {
             for (let cy = startCellY; cy <= endCellY; cy++) {
                 if (this._parallaxNoise2D(cx, cy, seed) > chance) continue;
 
-                const countNoise = this._parallaxNoise2D(cx, cy, seed + 3);
+                const countNoise = this._parallaxNoise2D(cx, cy, seed + PARALLAX_HASH_SALTS.COUNT);
                 const itemCount = 1 + Math.floor(countNoise * maxPerCell);
 
                 for (let i = 0; i < itemCount; i++) {
                     const salt = seed + i * 23;
-                    const rx = this._parallaxNoise2D(cx, cy, salt + 5);
-                    const ry = this._parallaxNoise2D(cx, cy, salt + 11);
-                    const rs = this._parallaxNoise2D(cx, cy, salt + 17);
-                    const ra = this._parallaxNoise2D(cx, cy, salt + 29);
-                    const rc = this._parallaxNoise2D(cx, cy, salt + 41);
+                    const rx = this._parallaxNoise2D(cx, cy, salt + PARALLAX_HASH_SALTS.POS_X);
+                    const ry = this._parallaxNoise2D(cx, cy, salt + PARALLAX_HASH_SALTS.POS_Y);
+                    const rs = this._parallaxNoise2D(cx, cy, salt + PARALLAX_HASH_SALTS.SIZE);
+                    const ra = this._parallaxNoise2D(cx, cy, salt + PARALLAX_HASH_SALTS.ALPHA);
+                    const rc = this._parallaxNoise2D(cx, cy, salt + PARALLAX_HASH_SALTS.COLOR);
 
                     const baseX = cx * cellSize + rx * cellSize - driftX;
                     const baseY = cy * cellSize + ry * cellSize - driftY;
@@ -5057,7 +5070,7 @@ class StarSystem {
                     let alpha = alphaMin + ra * (alphaMax - alphaMin);
 
                     if (twinkleSpeed > 0) {
-                        alpha *= (0.7 + 0.3 * Math.sin(now * twinkleSpeed + rc * TWO_PI));
+                        alpha *= (PARALLAX_TWINKLE_BASE + PARALLAX_TWINKLE_RANGE * Math.sin(now * twinkleSpeed + rc * TWO_PI));
                     }
 
                     const color = palette[Math.floor(rc * palette.length) % palette.length];
@@ -5071,7 +5084,7 @@ class StarSystem {
                         noStroke();
                     } else {
                         fill(color[0], color[1], color[2], alpha);
-                        if (layer.type === 'particle' && size > 2.5) {
+                        if (layer.type === 'particle' && size > PARALLAX_PARTICLE_GLOW_THRESHOLD) {
                             circle(worldX, worldY, size * 1.6);
                             fill(color[0], color[1], color[2], alpha * 0.7);
                             circle(worldX, worldY, size);
