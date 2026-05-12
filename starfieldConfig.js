@@ -34,7 +34,7 @@ const STARFIELD_CONFIG = {
     //   2. nebula       (0.15)  – large soft gradient cloud puffs
     //   3. midfield     (0.38)  – mid-distance stars, warmer / more varied colors
     //   4. near-dust    (0.88)  – fine particle dust, cold blue tint
-    //   5. foreground   (1.4 )  – tiny crisp specks flying past the ship
+    //   5. foreground   (1.4)   – tiny crisp specks flying past the ship
     PARALLAX_ENABLED: true,
     PARALLAX_LAYERS: [
         {
