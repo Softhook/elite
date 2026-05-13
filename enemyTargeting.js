@@ -905,9 +905,11 @@ class EnemyTargeting {
                         const isFactionRivalTarget = (myFaction === 'IMPERIAL' && targetFaction === 'SEPARATIST') ||
                             (myFaction === 'SEPARATIST' && targetFaction === 'IMPERIAL');
                         const isMilitaryAlienTarget = myFaction === 'MILITARY' && target.role === AI_ROLE.ALIEN;
-                        const isSharedThreatTarget = target.role === AI_ROLE.PIRATE || target.role === AI_ROLE.ALIEN;
+                        const isSharedThreatTarget = target.role === AI_ROLE.PIRATE ||
+                            (target.role === AI_ROLE.ALIEN && myFaction !== 'MILITARY');
+                        const hasFactionIdentity = myFaction && myFaction !== 'UNKNOWN';
                         const shouldCoordinateFocusFire = enemy.role === AI_ROLE.COMBAT &&
-                            myFaction && myFaction !== 'UNKNOWN' &&
+                            hasFactionIdentity &&
                             (isFactionRivalTarget || isMilitaryAlienTarget || isSharedThreatTarget);
 
                         if (shouldCoordinateFocusFire) {
