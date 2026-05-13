@@ -303,6 +303,9 @@ class CommunicationSystem {
         this._summonResponseDurationMs = 4200;
         this._summonCallerCooldownMs = 18000;
         this._summonGlobalCooldownMs = 6000;
+        this._factionAllyAidCooldownMs = 30000; // 30 seconds between ally-aid events
+        this._factionAllyAidRescueRadius = 2400; // 2× default combat summon radius
+        this._factionAllyAidMaxResponders = 3;   // Cap how many allies redirect per aid event
         this._summonResponseMaxCount = 1;
         this._summonTemplateRetryAttempts = 4;
 
@@ -3402,12 +3405,11 @@ class CommunicationSystem {
         const category = 'faction_ally_aid';
         const playerRecord = this._enemyCooldowns.get('player_faction') || {};
         const lastTime = playerRecord[category] ?? -Infinity;
-        const cooldown = 30000; // 30 seconds between ally-aid events
-        if (now - lastTime < cooldown) return false;
+        if (now - lastTime < this._factionAllyAidCooldownMs) return false;
 
         // Find idle same-faction allies within rescue range
         const rescueRadius = typeof COMBAT_ALLY_SUMMON_RADIUS !== 'undefined'
-            ? COMBAT_ALLY_SUMMON_RADIUS * 2 : 2400;
+            ? COMBAT_ALLY_SUMMON_RADIUS * 2 : this._factionAllyAidRescueRadius;
         const rescueRadiusSq = rescueRadius * rescueRadius;
         const responders = [];
 
@@ -3429,7 +3431,7 @@ class CommunicationSystem {
                     ally.targetSwitchCooldown = Math.max(ally.targetSwitchCooldown || 0, 2.0);
                 }
                 responders.push(ally);
-                if (responders.length >= 3) break; // Cap responders to avoid mass pile-on
+                if (responders.length >= this._factionAllyAidMaxResponders) break; // Cap responders to avoid mass pile-on
             }
         }
 
