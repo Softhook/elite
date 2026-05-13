@@ -159,6 +159,35 @@ describe('Role & Faction Interaction Tests', () => {
             expectNegativeOrZeroScore(score);
         });
 
+        test('Combat ships coordinate focus fire with faction partners against rival faction targets', () => {
+            const wingman = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL');
+            const partner = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 40, 0);
+            const rival = createEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 120, 0);
+            mockSystem.enemies = [wingman, partner, rival];
+            mockSystem.player = null;
+
+            partner.target = rival;
+            const withPartnerFocus = wingman.evaluateTargetScore(rival, mockSystem);
+
+            partner.target = null;
+            const withoutPartnerFocus = wingman.evaluateTargetScore(rival, mockSystem);
+
+            expect(withPartnerFocus).toBeGreaterThan(withoutPartnerFocus);
+        });
+
+        test('Combat ships do not coordinate focus fire against same-faction targets', () => {
+            const wingman = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL');
+            const partner = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 40, 0);
+            const allyTarget = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 120, 0);
+            mockSystem.enemies = [wingman, partner, allyTarget];
+            mockSystem.player = null;
+
+            partner.target = allyTarget;
+            const score = wingman.evaluateTargetScore(allyTarget, mockSystem);
+
+            expectNegativeOrZeroScore(score);
+        });
+
         test('Guards should only retaliate (not initiate combat)', () => {
             const guard = createEnemy(AI_ROLE.GUARD, 'IMPERIAL');
             const pirate = createEnemy(AI_ROLE.PIRATE, 'PIRATE', 100, 0);

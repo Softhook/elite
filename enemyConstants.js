@@ -157,6 +157,8 @@ const TARGET_SCORE_DISTANCE_PENALTY_MULT = 0.15; // Multiplier for distance pena
 const TARGET_SCORE_DISTANCE_PENALTY_CAP = 150;   // Max distance penalty - prevents ships from traveling far to already-engaged enemies
 const TARGET_SCORE_ALLY_ENGAGED_PENALTY = 25;    // Penalty per ally already targeting same enemy
 const TARGET_SCORE_ALLY_ENGAGED_CAP = 75;        // Max penalty from ally engagement
+const TARGET_SCORE_FACTION_PARTNER_FOCUS_BONUS = 30; // Bonus per faction partner already engaging same hostile target
+const TARGET_SCORE_FACTION_PARTNER_FOCUS_CAP = 90;   // Cap for coordinated faction focus-fire bonus
 const TARGET_SCORE_PROXIMITY_BONUS_MAX = 30;     // Bonus for very close targets
 const TARGET_SCORE_PROXIMITY_THRESHOLD = 300;    // Distance threshold for proximity bonus
 const TARGET_SCORE_HULL_DAMAGE_MAX_BONUS = 20;   // Max bonus score for damaged hull
@@ -587,6 +589,8 @@ if (typeof module !== 'undefined' && module.exports) {
         TARGET_SCORE_DISTANCE_PENALTY_CAP,
         TARGET_SCORE_ALLY_ENGAGED_PENALTY,
         TARGET_SCORE_ALLY_ENGAGED_CAP,
+        TARGET_SCORE_FACTION_PARTNER_FOCUS_BONUS,
+        TARGET_SCORE_FACTION_PARTNER_FOCUS_CAP,
         TARGET_SCORE_PROXIMITY_BONUS_MAX,
         TARGET_SCORE_PROXIMITY_THRESHOLD,
         TARGET_SCORE_HULL_DAMAGE_MAX_BONUS,
@@ -652,6 +656,8 @@ if (typeof module !== 'undefined' && module.exports) {
     global.TARGET_SCORE_DISTANCE_PENALTY_CAP = TARGET_SCORE_DISTANCE_PENALTY_CAP;
     global.TARGET_SCORE_ALLY_ENGAGED_PENALTY = TARGET_SCORE_ALLY_ENGAGED_PENALTY;
     global.TARGET_SCORE_ALLY_ENGAGED_CAP = TARGET_SCORE_ALLY_ENGAGED_CAP;
+    global.TARGET_SCORE_FACTION_PARTNER_FOCUS_BONUS = TARGET_SCORE_FACTION_PARTNER_FOCUS_BONUS;
+    global.TARGET_SCORE_FACTION_PARTNER_FOCUS_CAP = TARGET_SCORE_FACTION_PARTNER_FOCUS_CAP;
     global.TARGET_SCORE_PROXIMITY_BONUS_MAX = TARGET_SCORE_PROXIMITY_BONUS_MAX;
     global.TARGET_SCORE_PROXIMITY_THRESHOLD = TARGET_SCORE_PROXIMITY_THRESHOLD;
     global.TARGET_SCORE_HULL_DAMAGE_MAX_BONUS = TARGET_SCORE_HULL_DAMAGE_MAX_BONUS;

@@ -870,8 +870,8 @@ class EnemyTargeting {
                     _score += proximityBonus;
                 }
 
-                // 3. Ally engagement penalty - encourage target distribution
-                // Count same-faction allies already targeting this same target
+                // 3. Ally engagement scoring
+                // Usually encourages target distribution, but combat factions coordinate focus fire on shared hostiles.
                 if (system?.enemies && enemy._getShipFaction) {
                     const myFaction = enemy._getShipFaction(enemy);
                     let alliesTargetingSame = 0;
@@ -899,22 +899,41 @@ class EnemyTargeting {
                     }
 
                     if (alliesTargetingSame > 0) {
-                        let allyPenalty = Math.min(
-                            TARGET_SCORE_ALLY_ENGAGED_CAP,
-                            alliesTargetingSame * TARGET_SCORE_ALLY_ENGAGED_PENALTY
-                        );
+                        const targetFaction = (target instanceof Player)
+                            ? (target.playerFaction || 'UNKNOWN')
+                            : (enemy._getShipFaction(target) || 'UNKNOWN');
+                        const isFactionRivalTarget = (myFaction === 'IMPERIAL' && targetFaction === 'SEPARATIST') ||
+                            (myFaction === 'SEPARATIST' && targetFaction === 'IMPERIAL');
+                        const isMilitaryAlienTarget = myFaction === 'MILITARY' && target.role === AI_ROLE.ALIEN;
+                        const isSharedThreatTarget = target.role === AI_ROLE.PIRATE || target.role === AI_ROLE.ALIEN;
+                        const shouldCoordinateFocusFire = enemy.role === AI_ROLE.COMBAT &&
+                            myFaction && myFaction !== 'UNKNOWN' &&
+                            (isFactionRivalTarget || isMilitaryAlienTarget || isSharedThreatTarget);
 
-                        // Scale penalty by distance - ships already close should still engage
-                        // Ships far away should have full penalty to prevent convergence
-                        const closeEngagementDistance = 200; // Ships within this range can engage despite allies
-                        if (distance < closeEngagementDistance) {
-                            // Reduce penalty for close ships (linear scale from 0% at 0 distance to 100% at closeEngagementDistance)
-                            const distanceScale = distance / closeEngagementDistance;
-                            allyPenalty *= distanceScale;
+                        if (shouldCoordinateFocusFire) {
+                            const coordinationBonus = Math.min(
+                                TARGET_SCORE_FACTION_PARTNER_FOCUS_CAP,
+                                alliesTargetingSame * TARGET_SCORE_FACTION_PARTNER_FOCUS_BONUS
+                            );
+                            _score += coordinationBonus;
+                        } else {
+                            let allyPenalty = Math.min(
+                                TARGET_SCORE_ALLY_ENGAGED_CAP,
+                                alliesTargetingSame * TARGET_SCORE_ALLY_ENGAGED_PENALTY
+                            );
+
+                            // Scale penalty by distance - ships already close should still engage
+                            // Ships far away should have full penalty to prevent convergence
+                            const closeEngagementDistance = 200; // Ships within this range can engage despite allies
+                            if (distance < closeEngagementDistance) {
+                                // Reduce penalty for close ships (linear scale from 0% at 0 distance to 100% at closeEngagementDistance)
+                                const distanceScale = distance / closeEngagementDistance;
+                                allyPenalty *= distanceScale;
+                            }
+                            // Ships beyond closeEngagementDistance get full penalty
+
+                            _score -= allyPenalty;
                         }
-                        // Ships beyond closeEngagementDistance get full penalty
-
-                        _score -= allyPenalty;
                     }
                 }
 
