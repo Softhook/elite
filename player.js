@@ -2174,6 +2174,12 @@ class Player {
             }
         }
 
+        // Faction ally aid: nearby same-faction NPCs may respond when the player takes hull damage
+        if (hullDamageFromHit > 0 && attacker && typeof communicationSystem !== 'undefined' &&
+            (this.playerFaction || this.isPolice) && this.currentSystem) {
+            communicationSystem.handlePlayerUnderAttack(attacker, this.currentSystem);
+        }
+
         // Check for destruction
         // Compute current hull percent and handle hull-warning thresholds
         const curHullPercent = (this.maxHull > 0) ? (this.hull / this.maxHull) * 100 : 0;

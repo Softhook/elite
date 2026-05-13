@@ -1474,6 +1474,75 @@ class CommunicationSystem {
                 "Police Command: Peace prevails.",
                 "Justice Division: Law enforced."
             ],
+            // Ally aid messages when player is under attack (addressed as Commander)
+            imperialAllyAid: [
+                "{enemyName}: For the Empire! Engaging your attacker, {playerTitle}!",
+                "{enemyName}: Imperial forces rallying to your defense, {playerTitle}!",
+                "{enemyName}: Crown's honor demands I assist you, {playerTitle}.",
+                "{enemyName}: Hold fast, {playerTitle}! Engaging hostile now.",
+                "{enemyName}: Imperial wing to your aid, {playerTitle}. Stay alive!",
+                "{enemyName}: No Imperial falls alone. On your six, {playerTitle}.",
+                "{enemyName}: Emperor's will — I have your flank, {playerTitle}!",
+                "{enemyName}: Imperial backup inbound, {playerTitle}. Keep fighting!",
+                "{enemyName}: For Crown and Empire! Covering you, {playerTitle}.",
+                "{enemyName}: Imperial loyalty! Engaging attacker, {playerTitle}.",
+                "{enemyName}: You don't fight alone, {playerTitle}. I'm with you.",
+                "{enemyName}: {playerTitle}, break left — I'll take that hostile!",
+                "{enemyName}: Imperial forces present! Targeting your attacker.",
+                "{enemyName}: {playerTitle}, the Empire protects its own. Moving in!",
+                "{enemyName}: Imperial combat support engaged, {playerTitle}!"
+            ],
+            militaryAllyAid: [
+                "{enemyName}: Wing support inbound, {playerTitle}! Engaging attacker.",
+                "{enemyName}: Fleet covers its own! On your six, {playerTitle}.",
+                "{enemyName}: Naval backup here, {playerTitle}. Hold your position!",
+                "{enemyName}: Military support engaged. Targeting hostile, {playerTitle}.",
+                "{enemyName}: No pilot left behind! Engaging, {playerTitle}.",
+                "{enemyName}: Fleet formation response — engaging attacker, {playerTitle}.",
+                "{enemyName}: Naval wing to your aid, {playerTitle}. Stay sharp!",
+                "{enemyName}: {playerTitle}, military support authorized. Moving in!",
+                "{enemyName}: Covering your flank, {playerTitle}. Keep fighting!",
+                "{enemyName}: Fleet solidarity, {playerTitle}. I've got the hostile.",
+                "{enemyName}: Combat wing response! Engaging threat, {playerTitle}.",
+                "{enemyName}: {playerTitle}, you've got backup. Engaging now.",
+                "{enemyName}: Military recon confirms hostile — engaging, {playerTitle}!",
+                "{enemyName}: Squad response active. You're not alone, {playerTitle}.",
+                "{enemyName}: Naval discipline — protect the fleet. On it, {playerTitle}!"
+            ],
+            separatistAllyAid: [
+                "{enemyName}: Freedom fighters don't abandon each other! On your side, {playerTitle}!",
+                "{enemyName}: {separatistSlogan}! Engaging your attacker, {playerTitle}!",
+                "{enemyName}: Rebels fight together! Covering you, {playerTitle}.",
+                "{enemyName}: Republic forces respond! Engaging hostile, {playerTitle}.",
+                "{enemyName}: {playerTitle}, liberation demands we protect our own!",
+                "{enemyName}: Freedom fleet to your aid, {playerTitle}. Hold on!",
+                "{enemyName}: Separatist solidarity! Targeting your attacker, {playerTitle}.",
+                "{enemyName}: No comrade left behind! Engaging now, {playerTitle}.",
+                "{enemyName}: {playerTitle}, the revolution fights as one!",
+                "{enemyName}: Republic wing here! Engaging threat, {playerTitle}.",
+                "{enemyName}: {separatistSlogan}! I've got your back, {playerTitle}!",
+                "{enemyName}: Freedom force response — on your six, {playerTitle}.",
+                "{enemyName}: Republic honors its fighters. Moving in, {playerTitle}!",
+                "{enemyName}: Rebel backup engaged! Stay alive, {playerTitle}.",
+                "{enemyName}: Fight together, win together! Engaging, {playerTitle}."
+            ],
+            policeAllyAid: [
+                "{enemyName}: Officer in distress! Responding to your position, {playerTitle}.",
+                "{enemyName}: Backup inbound! Engaging hostile, {playerTitle}.",
+                "{enemyName}: Law enforcement assist — covering you, {playerTitle}!",
+                "{enemyName}: Police response active! Targeting attacker, {playerTitle}.",
+                "{enemyName}: We back our own. Engaging, {playerTitle}.",
+                "{enemyName}: {playerTitle}, hold on — support is here!",
+                "{enemyName}: Unit response to officer aid! Engaging hostile.",
+                "{enemyName}: Got your back, {playerTitle}. Justice will prevail!",
+                "{enemyName}: Sector command — assisting {playerTitle} now.",
+                "{enemyName}: Patrol wing response! Engaging your attacker, {playerTitle}.",
+                "{enemyName}: Law enforcement rallying! On your six, {playerTitle}.",
+                "{enemyName}: {playerTitle}, reinforcements arrived. Stand by!",
+                "{enemyName}: Police cover engaged. Taking on hostile, {playerTitle}.",
+                "{enemyName}: Assist call acknowledged! Moving in, {playerTitle}.",
+                "{enemyName}: Force protection active. Covering you, {playerTitle}."
+            ],
             // Gloating messages when player is dying
             pirateGloat: [
                 "{enemyName}: Going down, {playerTitle}!",
@@ -3293,6 +3362,120 @@ class CommunicationSystem {
         this._enemyCooldowns.set('player_faction', playerRecord);
 
         return true;
+    }
+
+    /**
+     * Called when the player takes hull damage from a hostile attacker.
+     * If the player belongs to a faction, nearby same-faction NPC allies that are
+     * currently idle will redirect to engage the attacker and broadcast a support message.
+     * @param {Object} attacker - The enemy that attacked the player
+     * @param {Object} system - The current star system (used to iterate enemies)
+     * @returns {boolean} true if at least one ally responded
+     */
+    handlePlayerUnderAttack(attacker, system) {
+        if (!this.player || !attacker || !system || !this.uiManager) return false;
+
+        // Player must be in a faction to receive ally support
+        const playerFaction = this.player.isPolice ? 'POLICE' : (this.player.playerFaction || null);
+        if (!playerFaction) return false;
+
+        // Per-faction template and color
+        let templateList, color;
+        if (playerFaction === 'POLICE') {
+            templateList = this.templates.policeAllyAid;
+            color = [140, 180, 255];
+        } else if (playerFaction === 'IMPERIAL') {
+            templateList = this.templates.imperialAllyAid;
+            color = [255, 180, 100];
+        } else if (playerFaction === 'MILITARY') {
+            templateList = this.templates.militaryAllyAid;
+            color = [255, 100, 100];
+        } else if (playerFaction === 'SEPARATIST') {
+            templateList = this.templates.separatistAllyAid;
+            color = [120, 200, 120];
+        } else {
+            return false;
+        }
+
+        // Cooldown guard — avoid spamming ally-aid calls
+        const now = this._now();
+        const category = 'faction_ally_aid';
+        const playerRecord = this._enemyCooldowns.get('player_faction') || {};
+        const lastTime = playerRecord[category] ?? -Infinity;
+        const cooldown = 30000; // 30 seconds between ally-aid events
+        if (now - lastTime < cooldown) return false;
+
+        // Find idle same-faction allies within rescue range
+        const rescueRadius = typeof COMBAT_ALLY_SUMMON_RADIUS !== 'undefined'
+            ? COMBAT_ALLY_SUMMON_RADIUS * 2 : 2400;
+        const rescueRadiusSq = rescueRadius * rescueRadius;
+        const responders = [];
+
+        if (Array.isArray(system.enemies)) {
+            for (const ally of system.enemies) {
+                if (!ally || ally.destroyed) continue;
+                if (!this._isPlayerFactionAlly(ally, playerFaction)) continue;
+                // Only redirect truly idle allies — skip those already engaged with another target
+                if (ally.target && ally.target !== attacker) continue;
+                if (!ally.pos || !this.player.pos) continue;
+
+                const dx = ally.pos.x - this.player.pos.x;
+                const dy = ally.pos.y - this.player.pos.y;
+                if (dx * dx + dy * dy > rescueRadiusSq) continue;
+
+                // Redirect ally to engage the attacker
+                ally.target = attacker;
+                if (typeof ally.targetSwitchCooldown !== 'undefined') {
+                    ally.targetSwitchCooldown = Math.max(ally.targetSwitchCooldown || 0, 2.0);
+                }
+                responders.push(ally);
+                if (responders.length >= 3) break; // Cap responders to avoid mass pile-on
+            }
+        }
+
+        if (responders.length === 0) return false;
+
+        // Broadcast a support message from one of the responding allies
+        const responder = responders[0];
+        const template = this._pickTemplate(templateList);
+        if (!template) return false;
+
+        const tokens = this._buildTokenMap(responder, {});
+        const message = this._applyTokens(template, tokens).trim();
+        if (!message) return false;
+
+        const duration = this.uiManager.communicationDisplayTime || this.uiManager.messageDisplayTime || 6000;
+        const addFn = typeof this.uiManager.addCommunicationMessage === 'function'
+            ? this.uiManager.addCommunicationMessage.bind(this.uiManager)
+            : this.uiManager.addMessage.bind(this.uiManager);
+
+        addFn(message, color, duration);
+        this._queueSpeech(message, responder);
+        this._lastGlobalMessageTime = now;
+
+        // Update cooldown
+        playerRecord[category] = now;
+        this._enemyCooldowns.set('player_faction', playerRecord);
+
+        return true;
+    }
+
+    /**
+     * Returns true if the given NPC ship is a same-faction ally of the player's faction.
+     * @param {Object} ally - NPC ship to test
+     * @param {string} playerFaction - Player's faction key (e.g. 'IMPERIAL', 'POLICE')
+     * @returns {boolean}
+     */
+    _isPlayerFactionAlly(ally, playerFaction) {
+        if (!ally || !playerFaction) return false;
+        if (typeof AI_ROLE === 'undefined') return false;
+
+        if (playerFaction === 'POLICE') {
+            return ally.role === AI_ROLE.POLICE || ally.role === AI_ROLE.GUARD;
+        }
+
+        const allyFaction = this._getShipFaction(ally);
+        return !!allyFaction && allyFaction === playerFaction;
     }
 
     /**
