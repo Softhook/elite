@@ -3498,7 +3498,7 @@ class CommunicationSystem {
         const callDelay = Number(this._summonCallDelayMs) || 0;
         const responseDelay = Number(this._summonResponseBaseDelayMs) || 0;
         const stagger = Number(this._summonResponseStaggerMs) || 0;
-        const maxResponders = Math.max(1, Number(this._summonResponseMaxCount) || 1);
+        const maxResponders = Math.max(1, Number(this._summonResponseMaxCount) || 0);
         const cappedIndex = Math.max(0, Math.min(Math.floor(Number(responseIndex) || 0), maxResponders - 1));
         return Math.max(0, callDelay + responseDelay + cappedIndex * stagger);
     }
@@ -3589,6 +3589,8 @@ class CommunicationSystem {
         const responders = Array.isArray(summonedAllies)
             ? summonedAllies.filter(ally => ally && ally !== caller)
             : [];
+        // Keep responder order deterministic so per-responder movement delay index
+        // aligns with staggered response chatter timing.
         const responseCount = Math.min(this._summonResponseMaxCount, responders.length);
         const pendingResponses = [];
         for (let i = 0; i < responseCount; i++) {
