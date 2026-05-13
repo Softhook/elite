@@ -3499,8 +3499,7 @@ class CommunicationSystem {
         const responseDelay = Number(this._summonResponseBaseDelayMs) || 0;
         const stagger = Number(this._summonResponseStaggerMs) || 0;
         const maxResponders = Math.max(1, Number(this._summonResponseMaxCount) || 1);
-        const normalizedIndex = Math.max(0, Math.floor(Number(responseIndex) || 0));
-        const cappedIndex = Math.min(normalizedIndex, maxResponders - 1);
+        const cappedIndex = Math.max(0, Math.min(Math.floor(Number(responseIndex) || 0), maxResponders - 1));
         return Math.max(0, callDelay + responseDelay + cappedIndex * stagger);
     }
 
@@ -3592,8 +3591,6 @@ class CommunicationSystem {
             : [];
         const responseCount = Math.min(this._summonResponseMaxCount, responders.length);
         const pendingResponses = [];
-        const baseResponseDelay = this._summonResponseBaseDelayMs;
-        const stagger = this._summonResponseStaggerMs;
         for (let i = 0; i < responseCount; i++) {
             const responder = responders[i];
             const responderKey = this._getEnemyKey(responder);
@@ -3606,7 +3603,7 @@ class CommunicationSystem {
                 responder,
                 responderKey,
                 responseMessage,
-                responseDelay: baseResponseDelay + i * stagger
+                responseDelay: Math.max(0, this.getSummonMovementResponseDelayMs(i) - callDelay)
             });
         }
 

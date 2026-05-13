@@ -105,7 +105,7 @@ describe('CommunicationSystem Summon/Support Delays', () => {
         expect(ally.target).toBe(attacker);
     });
 
-    test('handlePlayerUnderAttack does not consume full cooldown when uiManager disappears before delayed dispatch', () => {
+    test('handlePlayerUnderAttack does not consume full cooldown when UI manager disappears before delayed dispatch', () => {
         global.COMBAT_ALLY_SUMMON_RADIUS = 2000;
         const attacker = { id: 'atk-3', faction: 'PIRATE' };
         const ally = { id: 'ally-aid-3', role: 'Police', faction: 'POLICE', pos: { x: 0, y: 0 }, isTargetValid: () => true };
