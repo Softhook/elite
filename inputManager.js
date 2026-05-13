@@ -259,7 +259,7 @@ class InputManager {
                 includeSurfaceMinimapZoom: true
             }),
             S: buildModeContexts({
-                missionToggle: 'x',
+                missionToggle: 'home',
                 inFlightFirePrimary: ['a', 'r1'],
                 surfaceShipFirePrimary: ['a', 'r1'],
                 surfaceAltitudeDown: ['l2', 'l4', 'dpad.down'],

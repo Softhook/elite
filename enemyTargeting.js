@@ -529,8 +529,8 @@ class EnemyTargeting {
             }
 
             // --- GUARD: Prioritize Principal's Attacker (with friendly fire prevention) ---
-            if (enemy.role === AI_ROLE.GUARD && enemy.principal && enemy.isTargetValid(enemy.principal)) {
-                // FRIENDLY FIRE PREVENTION: Never target principal
+            if (enemy.role === AI_ROLE.GUARD && enemy.principal) {
+                // FRIENDLY FIRE PREVENTION: Never target principal (applies even when principal is docked/cloaked)
                 if (target === enemy.principal) {
                     return TARGET_SCORE_INVALID;
                 }
@@ -540,39 +540,34 @@ class EnemyTargeting {
                     return TARGET_SCORE_INVALID;
                 }
 
-                // CRITICAL FIX: Check if we're currently locked onto THIS target
-                // This prevents flickering when principal.lastAttacker changes or becomes invalid
-                // NOTE: The friendly fire checks above already returned INVALID for principal/fellow guards
-                // so if we reach here with a lock, it's a valid hostile target
-                const isLockedOn = enemy.guardEngagementLock > 0 && target === enemy.target;
-                if (isLockedOn) {
-                    // Maintain lock with consistent high score regardless of lastAttacker status
-                    // This keeps the guard committed to the threat even if principal's reference changes
-                    return 2500; // Higher than initial engagement to prevent target loss/switching
-                }
-
-                // High priority for principal's attacker (initial engagement)
-                const isPrincipalAttacker = target === enemy.principal.lastAttacker &&
-                    enemy.isTargetValid(target) &&
-                    (enemy.principal.lastAttackTime && millis() - enemy.principal.lastAttackTime < 5000);
-
-                if (isPrincipalAttacker) {
-                    //console.log(`${enemy.shipTypeName} (Guard) evaluating ${target.shipTypeName || 'Player'} as principal's attacker. HIGH SCORE.`);
-                    return 2000; // Very high score to engage principal's attacker
-                }
-
-                // Self-defense: if this guard was attacked, can engage the attacker
-                // BUT NOT if the attacker is the principal or a fellow guard (friendly fire prevention)
-                if (target === enemy.lastAttacker) {
-                    // Don't retaliate against principal
-                    if (target === enemy.principal) {
-                        return TARGET_SCORE_INVALID;
+                // Active combat logic requires the principal to be a valid (non-docked, non-cloaked) target
+                if (enemy.isTargetValid(enemy.principal)) {
+                    // CRITICAL FIX: Check if we're currently locked onto THIS target
+                    // This prevents flickering when principal.lastAttacker changes or becomes invalid
+                    // NOTE: The friendly fire checks above already returned INVALID for principal/fellow guards
+                    // so if we reach here with a lock, it's a valid hostile target
+                    const isLockedOn = enemy.guardEngagementLock > 0 && target === enemy.target;
+                    if (isLockedOn) {
+                        // Maintain lock with consistent high score regardless of lastAttacker status
+                        // This keeps the guard committed to the threat even if principal's reference changes
+                        return 2500; // Higher than initial engagement to prevent target loss/switching
                     }
-                    // Don't retaliate against fellow guards protecting the same principal
-                    if (target.role === AI_ROLE.GUARD && target.principal === enemy.principal) {
-                        return TARGET_SCORE_INVALID;
+
+                    // High priority for principal's attacker (initial engagement)
+                    const isPrincipalAttacker = target === enemy.principal.lastAttacker &&
+                        enemy.isTargetValid(target) &&
+                        (enemy.principal.lastAttackTime && millis() - enemy.principal.lastAttackTime < 5000);
+
+                    if (isPrincipalAttacker) {
+                        //console.log(`${enemy.shipTypeName} (Guard) evaluating ${target.shipTypeName || 'Player'} as principal's attacker. HIGH SCORE.`);
+                        return 2000; // Very high score to engage principal's attacker
                     }
-                    return 1500; // High score for self-defense, but lower than principal defense
+
+                    // Self-defense: if this guard was attacked, can engage the attacker
+                    // (principal and fellow guards are already blocked by the checks above)
+                    if (target === enemy.lastAttacker) {
+                        return 1500; // High score for self-defense, but lower than principal defense
+                    }
                 }
 
                 // Otherwise, guards don't pick fights - return invalid

@@ -111,6 +111,44 @@ describe('Friendly Fire & Faction Collision Tests', () => {
         expect(score).toBeGreaterThan(0);
     });
 
+    test('player bodyguard never targets fellow bodyguard even when principal is docked', () => {
+        const guard1 = createEnemy(AI_ROLE.GUARD, 'IMPERIAL');
+        const guard2 = createEnemy(AI_ROLE.GUARD, 'IMPERIAL');
+
+        // Both guards share the same player as principal
+        guard1.principal = mockPlayer;
+        guard2.principal = mockPlayer;
+
+        // Override isTargetValid so principal appears docked/invalid (simulates docked player)
+        const origIsTargetValid1 = guard1.isTargetValid;
+        guard1.isTargetValid = (t) => {
+            if (t === mockPlayer) return false; // principal is docked
+            return origIsTargetValid1.call(guard1, t);
+        };
+
+        // guard1 should still refuse to target guard2 (fellow bodyguard)
+        const score = guard1.evaluateTargetScore(guard2, mockSystem);
+        expect(score).toBeLessThanOrEqual(0);
+        guard1.isTargetValid = origIsTargetValid1;
+    });
+
+    test('player bodyguard never targets the player principal even when principal is docked', () => {
+        const guard = createEnemy(AI_ROLE.GUARD, 'IMPERIAL');
+        guard.principal = mockPlayer;
+
+        // Override isTargetValid so principal appears docked/invalid
+        const origIsTargetValid = guard.isTargetValid;
+        guard.isTargetValid = (t) => {
+            if (t === mockPlayer) return false; // principal is docked
+            return origIsTargetValid.call(guard, t);
+        };
+
+        // guard should still refuse to target the player
+        const score = guard.evaluateTargetScore(mockPlayer, mockSystem);
+        expect(score).toBeLessThanOrEqual(0);
+        guard.isTargetValid = origIsTargetValid;
+    });
+
     test('Imperial ship SHOULD target same-faction player if they are WANTED', () => {
         const imperialShip = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 100, 0);
 

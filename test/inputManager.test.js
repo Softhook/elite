@@ -150,6 +150,8 @@ describe('InputManager', () => {
         expect(bindings.gamepad[exported.INPUT_ACTIONS.FIRE_PRIMARY]).toEqual(['a', 'r1']);
         expect(bindings.gamepad[exported.INPUT_ACTIONS.MINIMAP_ZOOM_IN]).toBeUndefined();
         expect(bindings.gamepad[exported.INPUT_ACTIONS.TOGGLE_SECRET_NAV]).toEqual(['r4']);
+        expect(bindings.gamepad[exported.INPUT_ACTIONS.TOGGLE_MISSION]).toEqual(['home']);
+        expect(bindings.gamepad[exported.INPUT_ACTIONS.ACTIVATE_BURST]).toEqual(['x']);
     });
 
     test('keeps save-selection gamepad bindings consistent across controller modes', () => {
