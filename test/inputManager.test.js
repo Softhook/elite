@@ -131,4 +131,24 @@ describe('InputManager', () => {
         expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.TARGET_NEXT, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(false);
         expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.TARGET_PREV, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(false);
     });
+
+    test('describes mode-specific bindings without changing controller behavior', () => {
+        gp._state = { mode: 'D-MODE' };
+        let bindings = input.describeBindings(exported.INPUT_CONTEXTS.IN_FLIGHT);
+        expect(bindings.gamepad[exported.INPUT_ACTIONS.TOGGLE_MISSION]).toEqual(['home']);
+        expect(bindings.gamepad[exported.INPUT_ACTIONS.MINIMAP_ZOOM_IN]).toEqual(['pr']);
+        expect(bindings.gamepad[exported.INPUT_ACTIONS.TOGGLE_SECRET_NAV]).toEqual(['r4']);
+
+        gp._state = { mode: 'X-MODE (Xbox)' };
+        bindings = input.describeBindings(exported.INPUT_CONTEXTS.SURFACE_SHIP);
+        expect(bindings.gamepad[exported.INPUT_ACTIONS.TOGGLE_MISSION]).toBeUndefined();
+        expect(bindings.gamepad[exported.INPUT_ACTIONS.MINIMAP_ZOOM_OUT]).toEqual(['pl']);
+        expect(bindings.gamepad[exported.INPUT_ACTIONS.ALTITUDE_DOWN]).toEqual(['l2', 'dpad.down']);
+
+        gp._state = { mode: 'S-MODE (Switch)' };
+        bindings = input.describeBindings(exported.INPUT_CONTEXTS.IN_FLIGHT);
+        expect(bindings.gamepad[exported.INPUT_ACTIONS.FIRE_PRIMARY]).toEqual(['a', 'r1']);
+        expect(bindings.gamepad[exported.INPUT_ACTIONS.MINIMAP_ZOOM_IN]).toBeUndefined();
+        expect(bindings.gamepad[exported.INPUT_ACTIONS.TOGGLE_SECRET_NAV]).toEqual(['r4']);
+    });
 });
