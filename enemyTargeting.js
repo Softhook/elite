@@ -523,12 +523,8 @@ class EnemyTargeting {
     }
 
     _getSummonMovementDelayMs() {
-        if (typeof communicationSystem !== 'undefined' &&
-            communicationSystem &&
-            typeof communicationSystem.getSummonMovementResponseDelayMs === 'function') {
-            const configuredDelay = Number(communicationSystem.getSummonMovementResponseDelayMs());
-            if (Number.isFinite(configuredDelay) && configuredDelay >= 0) return configuredDelay;
-        }
+        const configuredDelay = Number(globalThis.communicationSystem?.getSummonMovementResponseDelayMs?.());
+        if (Number.isFinite(configuredDelay) && configuredDelay >= 0) return configuredDelay;
         return 0;
     }
 
@@ -537,7 +533,8 @@ class EnemyTargeting {
 
         const applyTarget = () => {
             if (!ally || ally.destroyed) return;
-            if (!ally.isTargetValid?.(target)) return;
+            if (typeof ally.isTargetValid !== 'function') return;
+            if (!ally.isTargetValid(target)) return;
             // Respect current engagements to avoid overriding a target picked meanwhile.
             if (ally.target && ally.target !== target && ally.isTargetValid(ally.target)) return;
             ally.target = target;

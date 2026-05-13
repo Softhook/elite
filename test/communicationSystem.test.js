@@ -10,9 +10,7 @@ global.AI_ROLE = {
     BOUNTY_HUNTER: 'Bounty Hunter',
     HAULER: 'Hauler',
     TRANSPORT: 'Transport',
-    REPAIR: 'Repair',
-    COMBAT: 'Combat',
-    GUARD: 'Guard',
+    REPAIR: 'Repair'
 };
 
 describe('CommunicationSystem Summon/Support Delays', () => {

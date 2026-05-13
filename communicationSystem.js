@@ -3458,7 +3458,7 @@ class CommunicationSystem {
         const msgColor = color;
         setTimeout(() => {
             for (const ally of responders) {
-                this._assignAidTargetWithOptionalDelay(ally, attacker, 0);
+                this._assignAidTargetWithOptionalDelay(ally, attacker);
             }
             if (!this.uiManager) return;
             const addFn = typeof this.uiManager.addCommunicationMessage === 'function'
@@ -3485,8 +3485,11 @@ class CommunicationSystem {
         if (!ally || !attacker) return;
         const applyTarget = () => {
             if (!ally || ally.destroyed) return;
+            const hasTargetValidation = typeof ally.isTargetValid === 'function';
+            if (hasTargetValidation && !ally.isTargetValid(attacker)) return;
             // Keep existing active engagements unless already on this attacker.
-            if (ally.target && ally.target !== attacker) return;
+            if (hasTargetValidation && ally.target && ally.target !== attacker && ally.isTargetValid(ally.target)) return;
+            if (!hasTargetValidation && ally.target && ally.target !== attacker) return;
             ally.target = attacker;
             if (typeof ally.targetSwitchCooldown !== 'undefined') {
                 ally.targetSwitchCooldown = Math.max(ally.targetSwitchCooldown || 0, 2.0);
