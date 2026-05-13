@@ -557,6 +557,39 @@ describe('Player Serialization', () => {
         expect(restored.cargo).toHaveLength(1);
         expect(restored.shipTypeName).toBe('Sidewinder');
     });
+
+    test('should preserve zero-valued shield data when loading saves', () => {
+        const saveData = player.toJSON();
+        saveData.maxShield = 0;
+        saveData.shield = 0;
+        saveData.shieldRechargeRate = 0;
+
+        const restored = Player.fromJSON(saveData);
+
+        expect(restored.maxShield).toBe(0);
+        expect(restored.shield).toBe(0);
+        expect(restored.shieldRechargeRate).toBe(0);
+    });
+
+    test('should clamp loaded shield to the restored max shield', () => {
+        const saveData = player.toJSON();
+        saveData.maxShield = 10;
+        saveData.shield = 25;
+
+        const restored = Player.fromJSON(saveData);
+
+        expect(restored.maxShield).toBe(10);
+        expect(restored.shield).toBe(10);
+    });
+
+    test('should preserve zero kills when loading saves', () => {
+        const saveData = player.toJSON();
+        saveData.kills = 0;
+
+        const restored = Player.fromJSON(saveData);
+
+        expect(restored.kills).toBe(0);
+    });
 });
 
 // ============================================

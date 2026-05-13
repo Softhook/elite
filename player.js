@@ -2807,11 +2807,11 @@ class Player {
         this.hasJoinedFaction = data.hasJoinedFaction || false;
         this.factionShip = data.factionShip || null;
 
-        this.shield = data.shield !== undefined ? data.shield : this.maxShield;
-        this.maxShield = data.maxShield || this.maxShield;
-        this.shieldRechargeRate = data.shieldRechargeRate || this.shieldRechargeRate;
+        this.maxShield = data.maxShield ?? this.maxShield;
+        this.shield = data.shield !== undefined ? constrain(data.shield, 0, this.maxShield) : this.maxShield;
+        this.shieldRechargeRate = data.shieldRechargeRate ?? this.shieldRechargeRate;
 
-        this.kills = data.kills || 0;
+        this.kills = data.kills ?? 0;
 
         // Load faction kills with defaults
         this.factionKills = data.factionKills || { POLICE: 0, MILITARY: 0, IMPERIAL: 0, SEPARATIST: 0 };
