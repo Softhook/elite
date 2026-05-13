@@ -87,6 +87,33 @@ const PARALLAX_HASH_SALTS = {
 const PARALLAX_TWINKLE_BASE = 0.7;
 const PARALLAX_TWINKLE_RANGE = 0.3;
 
+// === Summon Ping Visual Configuration ===
+const SUMMON_PING_CONFIG = {
+    DEFAULT_DURATION_MS: 1150,
+    INITIAL_RADIUS: 18,
+    ECHO_DELAY_FRACTION: 0.24,
+    ECHO_INITIAL_RADIUS: 12,
+    ECHO_MAX_SCALE: 0.92,
+    ECHO_ALPHA_MULTIPLIER: 0.55,
+    CENTER_GLOW_MIN: 6,
+    CENTER_GLOW_MAX: 12,
+    ARC_SEGMENTS: 3,
+    ARC_SPAN: Math.PI * 0.38,
+    INNER_ARC_SPAN: Math.PI * 0.24,
+    WAVE_OFFSETS: [0, 0.16, 0.33],
+    ROTATION_SPEED: 0.9,
+    RING_SEPARATION: 20,
+    WAVE_ALPHA_DECAY: 0.65,
+    WAVE_INDEX_ALPHA_FACTOR: 0.18,
+    WAVE_ROTATION_OFFSET: 0.42,
+    BASE_STROKE_WEIGHT: 2.1,
+    STROKE_WEIGHT_DECAY: 0.35,
+    INNER_ARC_ALPHA_MULTIPLIER: 0.72,
+    INNER_ARC_OFFSET: 0.18,
+    INNER_ARC_STROKE_WEIGHT: 1.15,
+    MIN_INNER_RADIUS: 8
+};
+
 
 /**
  * Build ship role arrays from SHIP_DEFINITIONS
@@ -499,6 +526,7 @@ class StarSystem {
         this.beams = [];
         this.forceWaves = []; // Make sure this is initialized
         this.explosions = [];
+        this.summonPings = [];
         this.cargo = [];
         this.starColor = null; // Set in initStaticElements
         this.starSize = 100;   // Default size, set in initStaticElements
@@ -1378,6 +1406,7 @@ class StarSystem {
         this.discover();
         this.enemies = []; this.enemiesById.clear(); // Clear both array and Map
         this.projectiles = []; this.mines = []; this.asteroids = []; this.harpoons = [];
+        this.summonPings = [];
         if (this.spatialHash) this.spatialHash.clear(); // Clear spatial hash on entry to prevent stale queries
         // Reset timers when entering
         this.enemySpawnTimer = 0; this.asteroidSpawnTimer = 0;
@@ -2207,6 +2236,7 @@ class StarSystem {
             this._updateForceWaves();
             this._updateHarpoons();
             this._updateExplosions();
+            this._updateSummonPings();
 
             // Collision Checks
             this.checkCollisions();
@@ -2294,6 +2324,7 @@ class StarSystem {
 
             // Explosions fade out
             this._updateExplosions();
+            this._updateSummonPings();
 
             // NPC-only collisions (enemies vs asteroids, enemies vs enemies)
             this._checkNPCCollisions();
@@ -3417,6 +3448,21 @@ class StarSystem {
                 }
             }
         );
+    }
+
+    /**
+     * Updates summon ping effects.
+     * @private
+     */
+    _updateSummonPings() {
+        if (!this.summonPings || this.summonPings.length === 0) return;
+        const now = this._getCurrentTime();
+        for (let i = this.summonPings.length - 1; i >= 0; i--) {
+            const ping = this.summonPings[i];
+            if ((now - ping.startTime) >= ping.durationMs) {
+                this._fastRemove(this.summonPings, i);
+            }
+        }
     }
 
     /**
@@ -4928,6 +4974,28 @@ class StarSystem {
     /** Adds a force wave to the system's list. */
     addForceWave(wave) { if (wave) this.forceWaves.push(wave); }
 
+    /** Adds a summon ping effect at the caller's position. */
+    addSummonPing(caller, options = {}) {
+        if (!caller?.pos) return;
+        const faction = options.faction || caller.faction || 'UNKNOWN';
+        const factionColorMap = {
+            IMPERIAL: [120, 180, 255],
+            SEPARATIST: [255, 120, 120],
+            MILITARY: [255, 220, 120],
+            PIRATE: [255, 145, 105],
+            POLICE: [140, 180, 255]
+        };
+        this.summonPings.push({
+            x: caller.pos.x,
+            y: caller.pos.y,
+            color: factionColorMap[faction] || [210, 210, 255],
+            startTime: this._getCurrentTime(),
+            durationMs: options.durationMs || SUMMON_PING_CONFIG.DEFAULT_DURATION_MS,
+            maxRadius: options.maxRadius || 360,
+            arcOffset: random(TWO_PI)
+        });
+    }
+
     /** Adds a cargo item to the system's cargo array */
     addCargo(cargo) {
         if (!this.cargo) this.cargo = [];
@@ -6179,6 +6247,10 @@ class StarSystem {
             this.drawForceWavesWithCulling(screenBounds);
         }
 
+        if (this.summonPings && this.summonPings.length > 0) {
+            this.drawSummonPingsWithCulling(screenBounds);
+        }
+
         // Draw only visible explosions
         const explosionCount = this.explosions.length;
         for (let i = 0; i < explosionCount; i++) {
@@ -6209,6 +6281,10 @@ class StarSystem {
     _isEntityVisible(x, y, size) {
         const bounds = this.screenBounds;
         return this.isInView(x, y, size, bounds.left, bounds.right, bounds.top, bounds.bottom);
+    }
+
+    _getCurrentTime() {
+        return (typeof millis === 'function') ? millis() : Date.now();
     }
 
     isInView(x, y, size, left, right, top, bottom) {
@@ -6249,6 +6325,69 @@ class StarSystem {
                 strokeWeight(1); // Thinner beams
                 ellipse(wave.pos.x, wave.pos.y, wave.radius * 2);
             }
+        }
+    }
+
+    /** Draw summon pings with visibility culling. */
+    drawSummonPingsWithCulling(screenBounds) {
+        const now = this._getCurrentTime();
+        for (let i = 0; i < this.summonPings.length; i++) {
+            const ping = this.summonPings[i];
+            const maxR = ping.maxRadius || 360;
+            if (!this.isInView(ping.x, ping.y, maxR, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) continue;
+
+            const t = constrain((now - ping.startTime) / Math.max(1, ping.durationMs || 1), 0, 1);
+            const pulseRadius = lerp(SUMMON_PING_CONFIG.INITIAL_RADIUS, maxR, t);
+            const baseAlpha = Math.max(0, 205 * (1 - t));
+            const col = ping.color || [210, 210, 255];
+            const baseRotation = (ping.arcOffset || 0) + (t * SUMMON_PING_CONFIG.ROTATION_SPEED);
+
+            noFill();
+            for (let waveIndex = 0; waveIndex < SUMMON_PING_CONFIG.WAVE_OFFSETS.length; waveIndex++) {
+                const waveT = t - SUMMON_PING_CONFIG.WAVE_OFFSETS[waveIndex];
+                if (waveT < 0 || waveT > 1) continue;
+
+                const waveRadius = lerp(SUMMON_PING_CONFIG.INITIAL_RADIUS, maxR, waveT);
+                const waveAlpha = Math.max(
+                    0,
+                    baseAlpha
+                    * (1 - waveT * SUMMON_PING_CONFIG.WAVE_ALPHA_DECAY)
+                    * (1 - waveIndex * SUMMON_PING_CONFIG.WAVE_INDEX_ALPHA_FACTOR)
+                );
+                const waveRotation = baseRotation + waveIndex * SUMMON_PING_CONFIG.WAVE_ROTATION_OFFSET;
+
+                stroke(col[0], col[1], col[2], waveAlpha);
+                strokeWeight(SUMMON_PING_CONFIG.BASE_STROKE_WEIGHT - waveIndex * SUMMON_PING_CONFIG.STROKE_WEIGHT_DECAY);
+                for (let segment = 0; segment < SUMMON_PING_CONFIG.ARC_SEGMENTS; segment++) {
+                    const segStart = waveRotation + segment * (TWO_PI / SUMMON_PING_CONFIG.ARC_SEGMENTS);
+                    arc(
+                        ping.x,
+                        ping.y,
+                        waveRadius * 2,
+                        waveRadius * 2,
+                        segStart,
+                        segStart + SUMMON_PING_CONFIG.ARC_SPAN
+                    );
+
+                    const innerRadius = Math.max(SUMMON_PING_CONFIG.MIN_INNER_RADIUS, waveRadius - SUMMON_PING_CONFIG.RING_SEPARATION);
+                    stroke(col[0], col[1], col[2], waveAlpha * SUMMON_PING_CONFIG.INNER_ARC_ALPHA_MULTIPLIER);
+                    strokeWeight(SUMMON_PING_CONFIG.INNER_ARC_STROKE_WEIGHT);
+                    arc(
+                        ping.x,
+                        ping.y,
+                        innerRadius * 2,
+                        innerRadius * 2,
+                        segStart + SUMMON_PING_CONFIG.INNER_ARC_OFFSET,
+                        segStart + SUMMON_PING_CONFIG.INNER_ARC_OFFSET + SUMMON_PING_CONFIG.INNER_ARC_SPAN
+                    );
+                    stroke(col[0], col[1], col[2], waveAlpha);
+                    strokeWeight(SUMMON_PING_CONFIG.BASE_STROKE_WEIGHT - waveIndex * SUMMON_PING_CONFIG.STROKE_WEIGHT_DECAY);
+                }
+            }
+
+            noStroke();
+            fill(col[0], col[1], col[2], Math.max(0, 135 * (1 - t)));
+            circle(ping.x, ping.y, lerp(SUMMON_PING_CONFIG.CENTER_GLOW_MAX, SUMMON_PING_CONFIG.CENTER_GLOW_MIN, t));
         }
     }
 
