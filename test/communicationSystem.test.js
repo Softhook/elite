@@ -78,6 +78,7 @@ describe('CommunicationSystem Summon/Support Delays', () => {
 
         commSystem.handlePlayerUnderAttack(attacker, system);
         expect(addCommunicationMessage).not.toHaveBeenCalled();
+        expect(ally.target).toBeUndefined();
     });
 
     test('handlePlayerUnderAttack shows the aid message after ~1 s delay', () => {
@@ -91,6 +92,7 @@ describe('CommunicationSystem Summon/Support Delays', () => {
         commSystem.handlePlayerUnderAttack(attacker, system);
         jest.advanceTimersByTime(commSystem._factionAllyAidMessageDelayMs);
         expect(addCommunicationMessage).toHaveBeenCalledTimes(1);
+        expect(ally.target).toBe(attacker);
     });
 });
 

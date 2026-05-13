@@ -3430,11 +3430,6 @@ class CommunicationSystem {
                 const dy = ally.pos.y - this.player.pos.y;
                 if (dx * dx + dy * dy > rescueRadiusSq) continue;
 
-                // Redirect ally to engage the attacker
-                ally.target = attacker;
-                if (typeof ally.targetSwitchCooldown !== 'undefined') {
-                    ally.targetSwitchCooldown = Math.max(ally.targetSwitchCooldown || 0, 2.0);
-                }
                 responders.push(ally);
                 if (responders.length >= this._factionAllyAidMaxResponders) break; // Cap responders to avoid mass pile-on
             }
@@ -3458,18 +3453,50 @@ class CommunicationSystem {
         playerRecord[category] = now;
         this._enemyCooldowns.set('player_faction', playerRecord);
 
-        // Delay the message by ~1 s to simulate the ally noticing the situation and deciding to help
+        const movementDelay = this.getFactionAllyAidMovementResponseDelayMs();
+        // Delay movement + message to simulate the ally noticing the situation and deciding to help
         const msgColor = color;
         setTimeout(() => {
+            for (const ally of responders) {
+                this._assignAidTargetWithOptionalDelay(ally, attacker, 0);
+            }
             if (!this.uiManager) return;
             const addFn = typeof this.uiManager.addCommunicationMessage === 'function'
                 ? this.uiManager.addCommunicationMessage.bind(this.uiManager)
                 : this.uiManager.addMessage.bind(this.uiManager);
             addFn(message, msgColor, duration);
             this._queueSpeech(message, responder);
-        }, this._factionAllyAidMessageDelayMs);
+        }, movementDelay);
 
         return true;
+    }
+
+    getSummonMovementResponseDelayMs() {
+        const callDelay = Number(this._summonCallDelayMs) || 0;
+        const responseDelay = Number(this._summonResponseBaseDelayMs) || 0;
+        return Math.max(0, callDelay + responseDelay);
+    }
+
+    getFactionAllyAidMovementResponseDelayMs() {
+        return Math.max(0, Number(this._factionAllyAidMessageDelayMs) || 0);
+    }
+
+    _assignAidTargetWithOptionalDelay(ally, attacker, delayMs = 0) {
+        if (!ally || !attacker) return;
+        const applyTarget = () => {
+            if (!ally || ally.destroyed) return;
+            // Keep existing active engagements unless already on this attacker.
+            if (ally.target && ally.target !== attacker) return;
+            ally.target = attacker;
+            if (typeof ally.targetSwitchCooldown !== 'undefined') {
+                ally.targetSwitchCooldown = Math.max(ally.targetSwitchCooldown || 0, 2.0);
+            }
+        };
+        if (!Number.isFinite(delayMs) || delayMs <= 0) {
+            applyTarget();
+            return;
+        }
+        setTimeout(applyTarget, delayMs);
     }
 
     /**
