@@ -2,6 +2,15 @@
 // Enemy Targeting Logic
 // Handles target selection and evaluation for Enemy AI
 
+const SUMMON_CALL_FEEDBACK = {
+    VISUAL_COOLDOWN_MS: 2500,
+    PING_RADIUS_SCALE: 0.45,
+    PING_RADIUS_MIN: 220,
+    PING_RADIUS_MAX: 540,
+    NOTIFICATION_RANGE_MULTIPLIER: 2,
+    MESSAGE_DURATION_MS: 4200
+};
+
 /**
  * Enemy targeting methods as a mixin class
  * These methods handle target selection and scoring
@@ -493,6 +502,7 @@ class EnemyTargeting {
 
         const summonRadius = COMBAT_ALLY_SUMMON_RADIUS;
         const summonRadiusSq = summonRadius * summonRadius;
+        let summonedCount = 0;
 
         for (let i = 0, len = system.enemies.length; i < len; i++) {
             const ally = system.enemies[i];
@@ -513,7 +523,63 @@ class EnemyTargeting {
             ally.target = target;
             // Preserve any longer existing cooldown while enforcing a minimum post-summon lock.
             ally.targetSwitchCooldown = Math.max(ally.targetSwitchCooldown || 0, COMBAT_SUMMON_TARGET_COOLDOWN);
+            summonedCount++;
         }
+
+        this._emitSummonCallFeedback(system, target, myFaction, summonedCount);
+    }
+
+    /**
+     * Emits audiovisual feedback for a summon call with cooldown throttling.
+     * Adds a world-space summon ping and, when the player is nearby, a short
+     * communication message describing faction/target/response details.
+     * @param {Object} system - Active star system.
+     * @param {Object} target - Target being called out.
+     * @param {string} myFaction - Caller faction label.
+     * @param {number} summonedCount - Number of allies redirected by this call.
+     */
+    _emitSummonCallFeedback(system, target, myFaction, summonedCount) {
+        const now = (typeof millis === 'function') ? millis() : Date.now();
+        const visualCooldownMs = SUMMON_CALL_FEEDBACK.VISUAL_COOLDOWN_MS;
+        if ((this._lastSummonCallTime || 0) + visualCooldownMs > now) return;
+        this._lastSummonCallTime = now;
+
+        if (typeof system?.addSummonPing === 'function') {
+            system.addSummonPing(this, {
+                faction: myFaction,
+                target,
+                summonedCount,
+                maxRadius: Math.min(
+                    Math.max(COMBAT_ALLY_SUMMON_RADIUS * SUMMON_CALL_FEEDBACK.PING_RADIUS_SCALE, SUMMON_CALL_FEEDBACK.PING_RADIUS_MIN),
+                    SUMMON_CALL_FEEDBACK.PING_RADIUS_MAX
+                )
+            });
+        }
+
+        if (typeof uiManager === 'undefined') return;
+        if (typeof uiManager.addCommunicationMessage !== 'function') return;
+        if (!system?.player?.pos) return;
+        if (!this?.pos) return;
+
+        const dx = system.player.pos.x - this.pos.x;
+        const dy = system.player.pos.y - this.pos.y;
+        const notificationRange = COMBAT_ALLY_SUMMON_RADIUS * SUMMON_CALL_FEEDBACK.NOTIFICATION_RANGE_MULTIPLIER;
+        if ((dx * dx + dy * dy) > notificationRange * notificationRange) return;
+
+        const targetLabel = (target instanceof Player)
+            ? 'you'
+            : (target?.shipTypeName || 'hostile ship');
+        const allyWord = summonedCount === 1 ? 'ally' : 'allies';
+        const details = summonedCount > 0
+            ? `${summonedCount} ${allyWord} responding`
+            : 'no immediate response';
+        const shipLabel = this.shipTypeName || 'Combat ship';
+        const factionLabel = myFaction || this.faction || 'UNKNOWN';
+        uiManager.addCommunicationMessage(
+            `Call for assistance: ${shipLabel} (${factionLabel}) engaging ${targetLabel} — ${details}.`,
+            [255, 205, 140],
+            SUMMON_CALL_FEEDBACK.MESSAGE_DURATION_MS
+        );
     }
 
     /**

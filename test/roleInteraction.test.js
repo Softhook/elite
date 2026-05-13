@@ -433,6 +433,36 @@ describe('Role & Faction Interaction Tests', () => {
                 expect(destroyed.target).toBeFalsy();
                 expect(alreadyEngaged.target).toBe(decoyTarget);
             });
+
+            test('summon call emits ping and communication details when player is nearby', () => {
+                const leader = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+                const idlePartner = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 160, 0);
+                const rival = createSummonEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 120, 0);
+                const addSummonPing = jest.fn();
+                const addCommunicationMessage = jest.fn();
+                const originalUiManager = global.uiManager;
+
+                try {
+                    global.uiManager = { addCommunicationMessage };
+                    mockSystem.addSummonPing = addSummonPing;
+                    mockSystem.player = createMockPlayer({ x: 100, y: 0 });
+                    mockSystem.enemies = [leader, idlePartner, rival];
+
+                    leader.updateTargeting(mockSystem);
+
+                    expect(addSummonPing).toHaveBeenCalledTimes(1);
+                    expect(addSummonPing.mock.calls[0][0]).toBe(leader);
+                    expect(addCommunicationMessage).toHaveBeenCalledTimes(1);
+                    const [msg, colorArg, durationArg] = addCommunicationMessage.mock.calls[0];
+                    expect(msg).toContain('Call for assistance');
+                    expect(msg).toContain('IMPERIAL');
+                    expect(msg).toContain('responding');
+                    expect(colorArg).toEqual([255, 205, 140]);
+                    expect(durationArg).toBe(4200);
+                } finally {
+                    global.uiManager = originalUiManager;
+                }
+            });
         });
 
         test('Guards should only retaliate (not initiate combat)', () => {

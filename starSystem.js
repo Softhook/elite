@@ -87,6 +87,18 @@ const PARALLAX_HASH_SALTS = {
 const PARALLAX_TWINKLE_BASE = 0.7;
 const PARALLAX_TWINKLE_RANGE = 0.3;
 
+// === Summon Ping Visual Configuration ===
+const SUMMON_PING_CONFIG = {
+    DEFAULT_DURATION_MS: 900,
+    INITIAL_RADIUS: 18,
+    ECHO_DELAY_FRACTION: 0.24,
+    ECHO_INITIAL_RADIUS: 12,
+    ECHO_MAX_SCALE: 0.92,
+    ECHO_ALPHA_MULTIPLIER: 0.55,
+    CENTER_GLOW_MIN: 6,
+    CENTER_GLOW_MAX: 12
+};
+
 
 /**
  * Build ship role arrays from SHIP_DEFINITIONS
@@ -499,6 +511,7 @@ class StarSystem {
         this.beams = [];
         this.forceWaves = []; // Make sure this is initialized
         this.explosions = [];
+        this.summonPings = [];
         this.cargo = [];
         this.starColor = null; // Set in initStaticElements
         this.starSize = 100;   // Default size, set in initStaticElements
@@ -1378,6 +1391,7 @@ class StarSystem {
         this.discover();
         this.enemies = []; this.enemiesById.clear(); // Clear both array and Map
         this.projectiles = []; this.mines = []; this.asteroids = []; this.harpoons = [];
+        this.summonPings = [];
         if (this.spatialHash) this.spatialHash.clear(); // Clear spatial hash on entry to prevent stale queries
         // Reset timers when entering
         this.enemySpawnTimer = 0; this.asteroidSpawnTimer = 0;
@@ -2207,6 +2221,7 @@ class StarSystem {
             this._updateForceWaves();
             this._updateHarpoons();
             this._updateExplosions();
+            this._updateSummonPings();
 
             // Collision Checks
             this.checkCollisions();
@@ -2294,6 +2309,7 @@ class StarSystem {
 
             // Explosions fade out
             this._updateExplosions();
+            this._updateSummonPings();
 
             // NPC-only collisions (enemies vs asteroids, enemies vs enemies)
             this._checkNPCCollisions();
@@ -3417,6 +3433,21 @@ class StarSystem {
                 }
             }
         );
+    }
+
+    /**
+     * Updates summon ping effects.
+     * @private
+     */
+    _updateSummonPings() {
+        if (!this.summonPings || this.summonPings.length === 0) return;
+        const now = this._getCurrentTime();
+        for (let i = this.summonPings.length - 1; i >= 0; i--) {
+            const ping = this.summonPings[i];
+            if ((now - ping.startTime) >= ping.durationMs) {
+                this._fastRemove(this.summonPings, i);
+            }
+        }
     }
 
     /**
@@ -4928,6 +4959,25 @@ class StarSystem {
     /** Adds a force wave to the system's list. */
     addForceWave(wave) { if (wave) this.forceWaves.push(wave); }
 
+    /** Adds a summon ping effect at the caller's position. */
+    addSummonPing(caller, options = {}) {
+        if (!caller?.pos) return;
+        const faction = options.faction || caller.faction || 'UNKNOWN';
+        const factionColorMap = {
+            IMPERIAL: [120, 180, 255],
+            SEPARATIST: [255, 120, 120],
+            MILITARY: [255, 220, 120]
+        };
+        this.summonPings.push({
+            x: caller.pos.x,
+            y: caller.pos.y,
+            color: factionColorMap[faction] || [210, 210, 255],
+            startTime: this._getCurrentTime(),
+            durationMs: options.durationMs || SUMMON_PING_CONFIG.DEFAULT_DURATION_MS,
+            maxRadius: options.maxRadius || 360
+        });
+    }
+
     /** Adds a cargo item to the system's cargo array */
     addCargo(cargo) {
         if (!this.cargo) this.cargo = [];
@@ -6179,6 +6229,10 @@ class StarSystem {
             this.drawForceWavesWithCulling(screenBounds);
         }
 
+        if (this.summonPings && this.summonPings.length > 0) {
+            this.drawSummonPingsWithCulling(screenBounds);
+        }
+
         // Draw only visible explosions
         const explosionCount = this.explosions.length;
         for (let i = 0; i < explosionCount; i++) {
@@ -6209,6 +6263,10 @@ class StarSystem {
     _isEntityVisible(x, y, size) {
         const bounds = this.screenBounds;
         return this.isInView(x, y, size, bounds.left, bounds.right, bounds.top, bounds.bottom);
+    }
+
+    _getCurrentTime() {
+        return (typeof millis === 'function') ? millis() : Date.now();
     }
 
     isInView(x, y, size, left, right, top, bottom) {
@@ -6249,6 +6307,42 @@ class StarSystem {
                 strokeWeight(1); // Thinner beams
                 ellipse(wave.pos.x, wave.pos.y, wave.radius * 2);
             }
+        }
+    }
+
+    /** Draw summon pings with visibility culling. */
+    drawSummonPingsWithCulling(screenBounds) {
+        const now = this._getCurrentTime();
+        for (let i = 0; i < this.summonPings.length; i++) {
+            const ping = this.summonPings[i];
+            const maxR = ping.maxRadius || 360;
+            if (!this.isInView(ping.x, ping.y, maxR, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) continue;
+
+            const t = constrain((now - ping.startTime) / Math.max(1, ping.durationMs || 1), 0, 1);
+            const pulseRadius = lerp(SUMMON_PING_CONFIG.INITIAL_RADIUS, maxR, t);
+            const baseAlpha = Math.max(0, 180 * (1 - t));
+            const col = ping.color || [210, 210, 255];
+
+            noFill();
+            stroke(col[0], col[1], col[2], baseAlpha);
+            strokeWeight(2.2);
+            circle(ping.x, ping.y, pulseRadius * 2);
+
+            const echoT = t - SUMMON_PING_CONFIG.ECHO_DELAY_FRACTION;
+            if (echoT > 0) {
+                const echoRadius = lerp(
+                    SUMMON_PING_CONFIG.ECHO_INITIAL_RADIUS,
+                    maxR * SUMMON_PING_CONFIG.ECHO_MAX_SCALE,
+                    echoT
+                );
+                stroke(col[0], col[1], col[2], Math.max(0, baseAlpha * SUMMON_PING_CONFIG.ECHO_ALPHA_MULTIPLIER));
+                strokeWeight(1.2);
+                circle(ping.x, ping.y, echoRadius * 2);
+            }
+
+            noStroke();
+            fill(col[0], col[1], col[2], Math.max(0, 120 * (1 - t)));
+            circle(ping.x, ping.y, lerp(SUMMON_PING_CONFIG.CENTER_GLOW_MAX, SUMMON_PING_CONFIG.CENTER_GLOW_MIN, t));
         }
     }
 
