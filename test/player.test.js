@@ -590,6 +590,50 @@ describe('Player Serialization', () => {
 
         expect(restored.kills).toBe(0);
     });
+
+    test('should return detached save snapshots for mutable player state', () => {
+        player.installedUpgrades.armor = 2;
+        player.factionKills.POLICE = 4;
+        player.factionPrestige.MILITARY = 3;
+        player.shipsDestroyed = [{ shipType: 'Viper' }];
+        player.secretStorage = [{ name: 'Food', quantity: 1 }];
+
+        const saveData = player.getSaveData();
+        saveData.installedUpgrades.armor = 0;
+        saveData.factionKills.POLICE = 99;
+        saveData.factionPrestige.MILITARY = 88;
+        saveData.shipsDestroyed[0].shipType = 'Cobra';
+        saveData.secretStorage[0].quantity = 9;
+
+        expect(player.installedUpgrades.armor).toBe(2);
+        expect(player.factionKills.POLICE).toBe(4);
+        expect(player.factionPrestige.MILITARY).toBe(3);
+        expect(player.shipsDestroyed[0].shipType).toBe('Viper');
+        expect(player.secretStorage[0].quantity).toBe(1);
+    });
+
+    test('should detach loaded mutable state from the source save data', () => {
+        const saveData = player.toJSON();
+        saveData.installedUpgrades = { ...saveData.installedUpgrades, armor: 2 };
+        saveData.factionKills = { ...saveData.factionKills, POLICE: 7 };
+        saveData.factionPrestige = { ...saveData.factionPrestige, MILITARY: 5 };
+        saveData.shipsDestroyed = [{ shipType: 'Viper' }];
+        saveData.secretStorage = [{ name: 'Medicine', quantity: 2 }];
+
+        const restored = Player.fromJSON(saveData);
+
+        saveData.installedUpgrades.armor = 0;
+        saveData.factionKills.POLICE = 0;
+        saveData.factionPrestige.MILITARY = 0;
+        saveData.shipsDestroyed[0].shipType = 'Cobra';
+        saveData.secretStorage[0].quantity = 99;
+
+        expect(restored.installedUpgrades.armor).toBe(2);
+        expect(restored.factionKills.POLICE).toBe(7);
+        expect(restored.factionPrestige.MILITARY).toBe(5);
+        expect(restored.shipsDestroyed[0].shipType).toBe('Viper');
+        expect(restored.secretStorage[0].quantity).toBe(2);
+    });
 });
 
 // ============================================
