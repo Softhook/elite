@@ -340,6 +340,99 @@ describe('Role & Faction Interaction Tests', () => {
 
                 expect(idlePartner.targetSwitchCooldown).toBe(highCooldown);
             });
+
+            test('ally at exactly COMBAT_ALLY_SUMMON_RADIUS is included (boundary-inclusive)', () => {
+                const leader = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+                const edgePartner = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', global.COMBAT_ALLY_SUMMON_RADIUS, 0);
+                const rival = createSummonEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 120, 0);
+                mockSystem.enemies = [leader, edgePartner, rival];
+                mockSystem.player = null;
+
+                leader.updateTargeting(mockSystem);
+
+                expect(edgePartner.target).toBe(rival);
+            });
+
+            test('ally just outside COMBAT_ALLY_SUMMON_RADIUS is excluded', () => {
+                const leader = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+                const outsidePartner = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', global.COMBAT_ALLY_SUMMON_RADIUS + 0.01, 0);
+                const rival = createSummonEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 120, 0);
+                mockSystem.enemies = [leader, outsidePartner, rival];
+                mockSystem.player = null;
+
+                leader.updateTargeting(mockSystem);
+
+                expect(outsidePartner.target).toBeFalsy();
+            });
+
+            test('distance sweep simulation: summon uses a hard <= radius cutoff', () => {
+                const radius = global.COMBAT_ALLY_SUMMON_RADIUS;
+                // Sweep from near to well outside radius (radius + 600) to validate cutoff behavior.
+                const sweepMaxDistance = radius + 600;
+                for (let distance = 200; distance <= sweepMaxDistance; distance += 200) {
+                    const leader = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+                    const partner = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', distance, 0);
+                    const rival = createSummonEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 100, 0);
+                    mockSystem.enemies = [leader, partner, rival];
+                    mockSystem.player = null;
+
+                    leader.updateTargeting(mockSystem);
+
+                    if (distance <= radius) {
+                        expect(partner.target).toBe(rival);
+                    } else {
+                        expect(partner.target).toBeFalsy();
+                    }
+                }
+            });
+
+            test('mixed-swarm simulation only redirects eligible allies', () => {
+                const radius = global.COMBAT_ALLY_SUMMON_RADIUS;
+                const leader = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+                const rival = createSummonEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 100, 0);
+                const decoyTarget = createSummonEnemy(AI_ROLE.PIRATE, 'PIRATE', 50, 50);
+
+                const eligible1 = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 200, 0);
+                const eligible2 = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 1000, 0);
+                const eligibleAtEdge = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', radius, 0);
+
+                const wrongFaction = createSummonEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 220, 0);
+                const wrongRole = createSummonEnemy(AI_ROLE.HAULER, 'IMPERIAL', 220, 0);
+                // Derived offset keeps this test valid if the summon radius is tuned in future.
+                const outOfRangeOffset = Math.ceil(radius * 0.2);
+                const outOfRange = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', radius + outOfRangeOffset, 0);
+                const destroyed = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 220, 0);
+                destroyed.destroyed = true;
+                const alreadyEngaged = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 220, 0);
+                alreadyEngaged.target = decoyTarget; // valid existing target should be preserved
+
+                mockSystem.enemies = [
+                    leader,
+                    rival,
+                    decoyTarget,
+                    eligible1,
+                    eligible2,
+                    eligibleAtEdge,
+                    wrongFaction,
+                    wrongRole,
+                    outOfRange,
+                    destroyed,
+                    alreadyEngaged
+                ];
+                mockSystem.player = null;
+
+                leader.updateTargeting(mockSystem);
+
+                expect(eligible1.target).toBe(rival);
+                expect(eligible2.target).toBe(rival);
+                expect(eligibleAtEdge.target).toBe(rival);
+
+                expect(wrongFaction.target).toBeFalsy();
+                expect(wrongRole.target).toBeFalsy();
+                expect(outOfRange.target).toBeFalsy();
+                expect(destroyed.target).toBeFalsy();
+                expect(alreadyEngaged.target).toBe(decoyTarget);
+            });
         });
 
         test('Guards should only retaliate (not initiate combat)', () => {
