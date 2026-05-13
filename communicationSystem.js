@@ -308,6 +308,11 @@ class CommunicationSystem {
         this._factionAllyAidMaxResponders = 3;   // Cap how many allies redirect per aid event
         this._summonResponseMaxCount = 1;
         this._summonTemplateRetryAttempts = 4;
+        // Human-reaction delays: simulate time needed to hear the call and decide to respond
+        this._summonCallDelayMs = 1000;          // ~1 s before the caller's help message appears
+        this._summonResponseBaseDelayMs = 2000;  // base delay before first ally response (≥2 s after call)
+        this._summonResponseStaggerMs = 600;     // extra stagger per subsequent responder
+        this._factionAllyAidMessageDelayMs = 1000; // ~1 s before ally-aid message for player under attack
 
         this.templates = {
             pirateEngage: [
@@ -3447,17 +3452,23 @@ class CommunicationSystem {
         if (!message) return false;
 
         const duration = this.uiManager.communicationDisplayTime || this.uiManager.messageDisplayTime || 6000;
-        const addFn = typeof this.uiManager.addCommunicationMessage === 'function'
-            ? this.uiManager.addCommunicationMessage.bind(this.uiManager)
-            : this.uiManager.addMessage.bind(this.uiManager);
-
-        addFn(message, color, duration);
-        this._queueSpeech(message, responder);
         this._lastGlobalMessageTime = now;
 
-        // Update cooldown
+        // Update cooldown immediately so concurrent damage events don't trigger a second message
         playerRecord[category] = now;
         this._enemyCooldowns.set('player_faction', playerRecord);
+
+        // Delay the message by ~1 s to simulate the ally noticing the situation and deciding to help
+        const self = this;
+        const msgColor = color;
+        setTimeout(() => {
+            if (!self.uiManager) return;
+            const addFn = typeof self.uiManager.addCommunicationMessage === 'function'
+                ? self.uiManager.addCommunicationMessage.bind(self.uiManager)
+                : self.uiManager.addMessage.bind(self.uiManager);
+            addFn(message, msgColor, duration);
+            self._queueSpeech(message, responder);
+        }, this._factionAllyAidMessageDelayMs);
 
         return true;
     }
@@ -3510,38 +3521,59 @@ class CommunicationSystem {
         const callMessage = this._applyTokens(callTemplate, callTokens).trim();
         if (!callMessage) return false;
 
-        const addFn = typeof this.uiManager.addCommunicationMessage === 'function'
-            ? this.uiManager.addCommunicationMessage.bind(this.uiManager)
-            : this.uiManager.addMessage.bind(this.uiManager);
-        addFn(callMessage, color, this._summonCallDurationMs);
-        this._queueSpeech(callMessage, caller);
-
-        const responders = Array.isArray(summonedAllies)
-            ? summonedAllies.filter(ally => ally && ally !== caller)
-            : [];
-        if (responders.length > 0) {
-            const responseCount = Math.min(this._summonResponseMaxCount, responders.length);
-            const shuffledResponders = this._shuffleList(responders);
-            for (let i = 0; i < responseCount; i++) {
-                const responder = shuffledResponders[i];
-                const responderKey = this._getEnemyKey(responder);
-                const responderRecord = responderKey ? (this._enemyCooldowns.get(responderKey) || {}) : {};
-                const responseTokens = this._buildSummonTokenMap(responder, target);
-                const responseTemplate = this._pickTemplateAvoidRepeat(responseTemplates, responderRecord, 'summon_response_last_template');
-                const responseMessage = this._applyTokens(responseTemplate, responseTokens).trim();
-                if (!responseMessage) continue;
-                addFn(responseMessage, color, this._summonResponseDurationMs);
-                this._queueSpeech(responseMessage, responder);
-                responderRecord.summon_response = now;
-                if (responderKey) {
-                    this._enemyCooldowns.set(responderKey, responderRecord);
-                }
-            }
-        }
-
+        // Update cooldowns immediately so concurrent calls are blocked even before the delayed message fires
         record.summon_call = now;
         this._enemyCooldowns.set(callerKey, record);
         this._lastGlobalMessageTime = now;
+
+        // Prepare responder data up-front so we don't hold live object references through the closures longer than needed
+        const responders = Array.isArray(summonedAllies)
+            ? summonedAllies.filter(ally => ally && ally !== caller)
+            : [];
+        const responseCount = Math.min(this._summonResponseMaxCount, responders.length);
+        const shuffledResponders = this._shuffleList(responders);
+        const pendingResponses = [];
+        for (let i = 0; i < responseCount; i++) {
+            const responder = shuffledResponders[i];
+            const responderKey = this._getEnemyKey(responder);
+            const responderRecord = responderKey ? (this._enemyCooldowns.get(responderKey) || {}) : {};
+            const responseTokens = this._buildSummonTokenMap(responder, target);
+            const responseTemplate = this._pickTemplateAvoidRepeat(responseTemplates, responderRecord, 'summon_response_last_template');
+            const responseMessage = this._applyTokens(responseTemplate, responseTokens).trim();
+            if (!responseMessage) continue;
+            responderRecord.summon_response = now;
+            if (responderKey) {
+                this._enemyCooldowns.set(responderKey, responderRecord);
+            }
+            pendingResponses.push({ responder, responseMessage });
+        }
+
+        // Delay the caller's help message by ~1 s to simulate human reaction time
+        const callDelay = this._summonCallDelayMs;
+        const self = this;
+        setTimeout(() => {
+            if (!self.uiManager) return;
+            const addFn = typeof self.uiManager.addCommunicationMessage === 'function'
+                ? self.uiManager.addCommunicationMessage.bind(self.uiManager)
+                : self.uiManager.addMessage.bind(self.uiManager);
+            addFn(callMessage, color, self._summonCallDurationMs);
+            self._queueSpeech(callMessage, caller);
+
+            // Each ally response is further delayed: at least 2 s after the call message, staggered
+            const baseResponseDelay = self._summonResponseBaseDelayMs;
+            const stagger = self._summonResponseStaggerMs;
+            pendingResponses.forEach((item, idx) => {
+                setTimeout(() => {
+                    if (!self.uiManager) return;
+                    const rAddFn = typeof self.uiManager.addCommunicationMessage === 'function'
+                        ? self.uiManager.addCommunicationMessage.bind(self.uiManager)
+                        : self.uiManager.addMessage.bind(self.uiManager);
+                    rAddFn(item.responseMessage, color, self._summonResponseDurationMs);
+                    self._queueSpeech(item.responseMessage, item.responder);
+                }, baseResponseDelay + idx * stagger);
+            });
+        }, callDelay);
+
         return true;
     }
 

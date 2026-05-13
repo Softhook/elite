@@ -10,8 +10,90 @@ global.AI_ROLE = {
     BOUNTY_HUNTER: 'Bounty Hunter',
     HAULER: 'Hauler',
     TRANSPORT: 'Transport',
-    REPAIR: 'Repair'
+    REPAIR: 'Repair',
+    COMBAT: 'Combat',
+    GUARD: 'Guard',
 };
+
+describe('CommunicationSystem Summon/Support Delays', () => {
+    let commSystem;
+    let addCommunicationMessage;
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        commSystem = new CommunicationSystem();
+        addCommunicationMessage = jest.fn();
+        commSystem.uiManager = { addCommunicationMessage };
+        commSystem._queueSpeech = jest.fn();
+        commSystem._getEnemyKey = (ship) => ship && ship.id ? ship.id : null;
+        commSystem._getShipFaction = (ship) => ship && ship.faction ? ship.faction : null;
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    test('emitSummonCall does NOT show the call message immediately', () => {
+        const caller = { id: 'caller-1', role: 'PIRATE', faction: 'PIRATE', pos: { x: 0, y: 0 } };
+        const target = { id: 'tgt-1', shipTypeName: 'Cobra' };
+        commSystem.emitSummonCall(caller, target, []);
+        expect(addCommunicationMessage).not.toHaveBeenCalled();
+    });
+
+    test('emitSummonCall shows the call message after ~1 s delay', () => {
+        const caller = { id: 'caller-2', role: 'PIRATE', faction: 'PIRATE', pos: { x: 0, y: 0 } };
+        const target = { id: 'tgt-2', shipTypeName: 'Cobra' };
+        commSystem.emitSummonCall(caller, target, []);
+        jest.advanceTimersByTime(commSystem._summonCallDelayMs);
+        expect(addCommunicationMessage).toHaveBeenCalledTimes(1);
+    });
+
+    test('emitSummonCall shows ally response only after call delay + response base delay', () => {
+        const caller = { id: 'caller-3', role: 'PIRATE', faction: 'PIRATE', pos: { x: 0, y: 0 } };
+        const ally   = { id: 'ally-3',   role: 'PIRATE', faction: 'PIRATE', pos: { x: 10, y: 0 } };
+        const target = { id: 'tgt-3', shipTypeName: 'Cobra' };
+        // Ensure ally is not filtered out by increasing _summonResponseMaxCount
+        commSystem._summonResponseMaxCount = 2;
+        commSystem.emitSummonCall(caller, target, [ally]);
+
+        // No messages yet
+        expect(addCommunicationMessage).not.toHaveBeenCalled();
+
+        // Advance to just after the call delay — only call message should appear
+        jest.advanceTimersByTime(commSystem._summonCallDelayMs);
+        expect(addCommunicationMessage).toHaveBeenCalledTimes(1);
+
+        // Advance by the response base delay — response should now appear
+        jest.advanceTimersByTime(commSystem._summonResponseBaseDelayMs);
+        expect(addCommunicationMessage).toHaveBeenCalledTimes(2);
+    });
+
+    test('handlePlayerUnderAttack does NOT show the aid message immediately', () => {
+        global.COMBAT_ALLY_SUMMON_RADIUS = 2000;
+        global.Enemy = class {};
+        const attacker = { id: 'atk-1', faction: 'PIRATE' };
+        const ally = { id: 'ally-aid-1', role: 'Police', faction: 'POLICE', pos: { x: 0, y: 0 }, isTargetValid: () => true };
+        commSystem.player = { isPolice: true, playerFaction: null, pos: { x: 0, y: 0 } };
+        const system = { enemies: [ally] };
+        commSystem._isPlayerFactionAlly = () => true;
+
+        commSystem.handlePlayerUnderAttack(attacker, system);
+        expect(addCommunicationMessage).not.toHaveBeenCalled();
+    });
+
+    test('handlePlayerUnderAttack shows the aid message after ~1 s delay', () => {
+        global.COMBAT_ALLY_SUMMON_RADIUS = 2000;
+        const attacker = { id: 'atk-2', faction: 'PIRATE' };
+        const ally = { id: 'ally-aid-2', role: 'Police', faction: 'POLICE', pos: { x: 0, y: 0 }, isTargetValid: () => true };
+        commSystem.player = { isPolice: true, playerFaction: null, pos: { x: 0, y: 0 } };
+        const system = { enemies: [ally] };
+        commSystem._isPlayerFactionAlly = () => true;
+
+        commSystem.handlePlayerUnderAttack(attacker, system);
+        jest.advanceTimersByTime(commSystem._factionAllyAidMessageDelayMs);
+        expect(addCommunicationMessage).toHaveBeenCalledTimes(1);
+    });
+});
 
 describe('CommunicationSystem Friendly Fire Logic', () => {
     let commSystem;
