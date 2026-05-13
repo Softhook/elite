@@ -192,6 +192,156 @@ describe('Role & Faction Interaction Tests', () => {
             expect(engagedPartner.target).toBe(pirate);
         });
 
+        // --- Ally-Summon Behaviour ---
+        describe('Ally summon behaviour (_summonFactionAlliesForTarget)', () => {
+            // Helpers that use a proper isTargetValid so updateTargeting can run
+            const createSummonEnemy = (role, faction, x = 0, y = 0) => {
+                const e = createEnemy(role, faction, x, y);
+                e.isTargetValid = (t) => !!(t && t.pos && !t.destroyed);
+                return e;
+            };
+
+            test('non-COMBAT ship does not summon allies when acquiring a target', () => {
+                const hauler = createSummonEnemy(AI_ROLE.HAULER, 'IMPERIAL', 0, 0);
+                const idleAlly = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 80, 0);
+                const rival = createSummonEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 120, 0);
+                // Give hauler a scoring path so it can acquire a target
+                hauler.lastAttacker = rival;
+                hauler.lastAttackTime = global.millis();
+                mockSystem.enemies = [hauler, idleAlly, rival];
+                mockSystem.player = null;
+
+                hauler.updateTargeting(mockSystem);
+
+                // Hauler may or may not acquire a target, but idleAlly must not be summoned
+                expect(idleAlly.target).toBeFalsy();
+            });
+
+            test('ally beyond summon radius is not summoned', () => {
+                const leader = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+                // Place partner > COMBAT_ALLY_SUMMON_RADIUS away (1200 px)
+                const farPartner = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 1400, 0);
+                const rival = createSummonEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 120, 0);
+                mockSystem.enemies = [leader, farPartner, rival];
+                mockSystem.player = null;
+
+                leader.updateTargeting(mockSystem);
+
+                expect(farPartner.target).toBeFalsy();
+            });
+
+            test('ally within radius IS summoned', () => {
+                const leader = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+                const nearPartner = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 300, 0);
+                const rival = createSummonEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 120, 0);
+                mockSystem.enemies = [leader, nearPartner, rival];
+                mockSystem.player = null;
+
+                leader.updateTargeting(mockSystem);
+
+                expect(nearPartner.target).toBe(rival);
+            });
+
+            test('ally from a different faction is not summoned', () => {
+                const leader = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+                const separatistNearby = createSummonEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 80, 0);
+                const pirate = createSummonEnemy(AI_ROLE.PIRATE, 'PIRATE', 120, 0);
+                mockSystem.enemies = [leader, separatistNearby, pirate];
+                mockSystem.player = null;
+
+                leader.updateTargeting(mockSystem);
+
+                // Imperial summons pirate target but must not redirect the Separatist
+                expect(separatistNearby.target).toBeFalsy();
+            });
+
+            test('pirate target triggers summon (shared-threat path)', () => {
+                const leader = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+                const idlePartner = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 80, 0);
+                const pirate = createSummonEnemy(AI_ROLE.PIRATE, 'PIRATE', 150, 0);
+                mockSystem.enemies = [leader, idlePartner, pirate];
+                mockSystem.player = null;
+
+                leader.updateTargeting(mockSystem);
+
+                expect(leader.target).toBe(pirate);
+                expect(idlePartner.target).toBe(pirate);
+            });
+
+            test('alien target triggers summon for non-military faction (shared-threat path)', () => {
+                const leader = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+                const idlePartner = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 80, 0);
+                const alien = createSummonEnemy(AI_ROLE.ALIEN, 'ALIEN', 150, 0);
+                mockSystem.enemies = [leader, idlePartner, alien];
+                mockSystem.player = null;
+
+                leader.updateTargeting(mockSystem);
+
+                expect(leader.target).toBe(alien);
+                expect(idlePartner.target).toBe(alien);
+            });
+
+            test('neutral/non-hostile target does not trigger summon', () => {
+                const leader = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+                const idlePartner = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 80, 0);
+                // REPAIR ships are neutral - COMBAT role should not score them as targets
+                const repair = createSummonEnemy(AI_ROLE.REPAIR, null, 120, 0);
+                mockSystem.enemies = [leader, idlePartner, repair];
+                mockSystem.player = null;
+
+                leader.updateTargeting(mockSystem);
+
+                // Leader should not have acquired the repair ship as a target
+                expect(leader.target).toBeFalsy();
+                // And therefore no summon
+                expect(idlePartner.target).toBeFalsy();
+            });
+
+            test('multiple idle allies are all summoned simultaneously', () => {
+                const leader = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+                const partner1 = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 80, 0);
+                const partner2 = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 100, 0);
+                const partner3 = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 120, 10);
+                const rival = createSummonEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 200, 0);
+                mockSystem.enemies = [leader, partner1, partner2, partner3, rival];
+                mockSystem.player = null;
+
+                leader.updateTargeting(mockSystem);
+
+                expect(leader.target).toBe(rival);
+                expect(partner1.target).toBe(rival);
+                expect(partner2.target).toBe(rival);
+                expect(partner3.target).toBe(rival);
+            });
+
+            test('summoned ally receives minimum target-switch cooldown', () => {
+                const leader = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+                const idlePartner = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 80, 0);
+                const rival = createSummonEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 120, 0);
+                idlePartner.targetSwitchCooldown = 0;
+                mockSystem.enemies = [leader, idlePartner, rival];
+                mockSystem.player = null;
+
+                leader.updateTargeting(mockSystem);
+
+                expect(idlePartner.targetSwitchCooldown).toBeGreaterThanOrEqual(global.COMBAT_SUMMON_TARGET_COOLDOWN);
+            });
+
+            test('ally with a higher existing cooldown keeps its cooldown after summon', () => {
+                const leader = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+                const idlePartner = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 80, 0);
+                const rival = createSummonEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 120, 0);
+                const highCooldown = 10;
+                idlePartner.targetSwitchCooldown = highCooldown;
+                mockSystem.enemies = [leader, idlePartner, rival];
+                mockSystem.player = null;
+
+                leader.updateTargeting(mockSystem);
+
+                expect(idlePartner.targetSwitchCooldown).toBe(highCooldown);
+            });
+        });
+
         test('Guards should only retaliate (not initiate combat)', () => {
             const guard = createEnemy(AI_ROLE.GUARD, 'IMPERIAL');
             const pirate = createEnemy(AI_ROLE.PIRATE, 'PIRATE', 100, 0);
