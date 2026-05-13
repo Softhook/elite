@@ -3459,15 +3459,14 @@ class CommunicationSystem {
         this._enemyCooldowns.set('player_faction', playerRecord);
 
         // Delay the message by ~1 s to simulate the ally noticing the situation and deciding to help
-        const self = this;
         const msgColor = color;
         setTimeout(() => {
-            if (!self.uiManager) return;
-            const addFn = typeof self.uiManager.addCommunicationMessage === 'function'
-                ? self.uiManager.addCommunicationMessage.bind(self.uiManager)
-                : self.uiManager.addMessage.bind(self.uiManager);
+            if (!this.uiManager) return;
+            const addFn = typeof this.uiManager.addCommunicationMessage === 'function'
+                ? this.uiManager.addCommunicationMessage.bind(this.uiManager)
+                : this.uiManager.addMessage.bind(this.uiManager);
             addFn(message, msgColor, duration);
-            self._queueSpeech(message, responder);
+            this._queueSpeech(message, responder);
         }, this._factionAllyAidMessageDelayMs);
 
         return true;
@@ -3550,26 +3549,25 @@ class CommunicationSystem {
 
         // Delay the caller's help message by ~1 s to simulate human reaction time
         const callDelay = this._summonCallDelayMs;
-        const self = this;
         setTimeout(() => {
-            if (!self.uiManager) return;
-            const addFn = typeof self.uiManager.addCommunicationMessage === 'function'
-                ? self.uiManager.addCommunicationMessage.bind(self.uiManager)
-                : self.uiManager.addMessage.bind(self.uiManager);
-            addFn(callMessage, color, self._summonCallDurationMs);
-            self._queueSpeech(callMessage, caller);
+            if (!this.uiManager) return;
+            const addFn = typeof this.uiManager.addCommunicationMessage === 'function'
+                ? this.uiManager.addCommunicationMessage.bind(this.uiManager)
+                : this.uiManager.addMessage.bind(this.uiManager);
+            addFn(callMessage, color, this._summonCallDurationMs);
+            this._queueSpeech(callMessage, caller);
 
             // Each ally response is further delayed: at least 2 s after the call message, staggered
-            const baseResponseDelay = self._summonResponseBaseDelayMs;
-            const stagger = self._summonResponseStaggerMs;
+            const baseResponseDelay = this._summonResponseBaseDelayMs;
+            const stagger = this._summonResponseStaggerMs;
             pendingResponses.forEach((item, idx) => {
                 setTimeout(() => {
-                    if (!self.uiManager) return;
-                    const rAddFn = typeof self.uiManager.addCommunicationMessage === 'function'
-                        ? self.uiManager.addCommunicationMessage.bind(self.uiManager)
-                        : self.uiManager.addMessage.bind(self.uiManager);
-                    rAddFn(item.responseMessage, color, self._summonResponseDurationMs);
-                    self._queueSpeech(item.responseMessage, item.responder);
+                    if (!this.uiManager) return;
+                    const rAddFn = typeof this.uiManager.addCommunicationMessage === 'function'
+                        ? this.uiManager.addCommunicationMessage.bind(this.uiManager)
+                        : this.uiManager.addMessage.bind(this.uiManager);
+                    rAddFn(item.responseMessage, color, this._summonResponseDurationMs);
+                    this._queueSpeech(item.responseMessage, item.responder);
                 }, baseResponseDelay + idx * stagger);
             });
         }, callDelay);

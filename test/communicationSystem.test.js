@@ -70,7 +70,6 @@ describe('CommunicationSystem Summon/Support Delays', () => {
 
     test('handlePlayerUnderAttack does NOT show the aid message immediately', () => {
         global.COMBAT_ALLY_SUMMON_RADIUS = 2000;
-        global.Enemy = class {};
         const attacker = { id: 'atk-1', faction: 'PIRATE' };
         const ally = { id: 'ally-aid-1', role: 'Police', faction: 'POLICE', pos: { x: 0, y: 0 }, isTargetValid: () => true };
         commSystem.player = { isPolice: true, playerFaction: null, pos: { x: 0, y: 0 } };
