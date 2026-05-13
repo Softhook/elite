@@ -151,4 +151,18 @@ describe('InputManager', () => {
         expect(bindings.gamepad[exported.INPUT_ACTIONS.MINIMAP_ZOOM_IN]).toBeUndefined();
         expect(bindings.gamepad[exported.INPUT_ACTIONS.TOGGLE_SECRET_NAV]).toEqual(['r4']);
     });
+
+    test('keeps save-selection gamepad bindings consistent across controller modes', () => {
+        for (const mode of ['D-MODE', 'X-MODE (Xbox)', 'S-MODE (Switch)']) {
+            gp._state = { mode };
+            const bindings = input.describeBindings(exported.INPUT_CONTEXTS.SAVE_SELECTION).gamepad;
+
+            expect(bindings[exported.INPUT_ACTIONS.CONFIRM]).toEqual(['a']);
+            expect(bindings[exported.INPUT_ACTIONS.BACK]).toEqual(['b']);
+            expect(bindings[exported.INPUT_ACTIONS.NAV_UP]).toEqual(['dpad.up']);
+            expect(bindings[exported.INPUT_ACTIONS.NAV_DOWN]).toEqual(['dpad.down']);
+            expect(bindings[exported.INPUT_ACTIONS.NAV_LEFT]).toEqual(['dpad.left']);
+            expect(bindings[exported.INPUT_ACTIONS.NAV_RIGHT]).toEqual(['dpad.right']);
+        }
+    });
 });

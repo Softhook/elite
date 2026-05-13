@@ -60,4 +60,56 @@ describe('SaveSelectionScreen gamepad-style action selection', () => {
         expect(screen.selectedActionColumn).toBe(0);
         expect(global.gameStateManager.setState).toHaveBeenCalledWith('TITLE_SCREEN');
     });
+
+    test('constructor restores the last active save slot when stored data is valid', () => {
+        const originalInitBackgroundStars = SaveSelectionScreen.prototype.initBackgroundStars;
+        const originalLoadAllSavePreviews = SaveSelectionScreen.prototype.loadAllSavePreviews;
+
+        global.localStorage = {
+            getItem: jest.fn((key) => key === 'eliteP5_lastActiveSlot' ? '2' : null),
+            removeItem: jest.fn()
+        };
+
+        SaveSelectionScreen.prototype.initBackgroundStars = jest.fn();
+        SaveSelectionScreen.prototype.loadAllSavePreviews = jest.fn();
+
+        const screen = new SaveSelectionScreen();
+
+        expect(screen.selectedOption).toBe(2);
+        expect(global.localStorage.removeItem).not.toHaveBeenCalled();
+
+        SaveSelectionScreen.prototype.initBackgroundStars = originalInitBackgroundStars;
+        SaveSelectionScreen.prototype.loadAllSavePreviews = originalLoadAllSavePreviews;
+    });
+
+    test('loadAllSavePreviews recovers from backup save data when primary data is invalid', () => {
+        global.Storage = function Storage() { };
+        global.localStorage = {
+            getItem: jest.fn((key) => {
+                if (key === 'eliteP5_save_0') return '{"broken":true}';
+                if (key === 'eliteP5_save_0_bak') {
+                    return JSON.stringify({
+                        playerData: { credits: 1234 },
+                        galaxyData: { systems: [] },
+                        currentSystemIndex: 1,
+                        savedAt: 9999
+                    });
+                }
+                return null;
+            })
+        };
+
+        const screen = Object.create(SaveSelectionScreen.prototype);
+        screen.savedGamePreviews = new Array(3).fill(null);
+
+        screen.loadAllSavePreviews();
+
+        expect(screen.savedGamePreviews[0]).toMatchObject({
+            currentSystemIndex: 1,
+            savedAt: 9999,
+            __recovered: true
+        });
+        expect(screen.savedGamePreviews[1]).toBeNull();
+        expect(screen.savedGamePreviews[2]).toBeNull();
+    });
 });
