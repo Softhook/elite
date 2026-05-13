@@ -67,6 +67,7 @@ describe('SaveSelectionScreen gamepad-style action selection', () => {
 
         global.localStorage = {
             getItem: jest.fn((key) => key === 'eliteP5_lastActiveSlot' ? '2' : null),
+            setItem: jest.fn(),
             removeItem: jest.fn()
         };
 
@@ -83,6 +84,7 @@ describe('SaveSelectionScreen gamepad-style action selection', () => {
     });
 
     test('loadAllSavePreviews recovers from backup save data when primary data is invalid', () => {
+        // loadAllSavePreviews checks for browser Storage support before reading previews.
         global.Storage = function Storage() { };
         global.localStorage = {
             getItem: jest.fn((key) => {
@@ -96,7 +98,9 @@ describe('SaveSelectionScreen gamepad-style action selection', () => {
                     });
                 }
                 return null;
-            })
+            }),
+            setItem: jest.fn(),
+            removeItem: jest.fn()
         };
 
         const screen = Object.create(SaveSelectionScreen.prototype);
