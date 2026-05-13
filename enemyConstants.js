@@ -161,6 +161,8 @@ const TARGET_SCORE_PROXIMITY_BONUS_MAX = 30;     // Bonus for very close targets
 const TARGET_SCORE_PROXIMITY_THRESHOLD = 300;    // Distance threshold for proximity bonus
 const TARGET_SCORE_HULL_DAMAGE_MAX_BONUS = 20;   // Max bonus score for damaged hull
 const TARGET_SCORE_HULL_DAMAGE_MULT = 20;        // Multiplier for hull damage bonus calculation
+const COMBAT_ALLY_SUMMON_RADIUS = 1200;          // Max range for combat ships to answer ally summon
+const COMBAT_SUMMON_TARGET_COOLDOWN = 1.5;       // Minimum target-switch cooldown after ally summon
 
 // -------------------------
 // --- Combat Role Targeting Scores ---
@@ -591,6 +593,8 @@ if (typeof module !== 'undefined' && module.exports) {
         TARGET_SCORE_PROXIMITY_THRESHOLD,
         TARGET_SCORE_HULL_DAMAGE_MAX_BONUS,
         TARGET_SCORE_HULL_DAMAGE_MULT,
+        COMBAT_ALLY_SUMMON_RADIUS,
+        COMBAT_SUMMON_TARGET_COOLDOWN,
         TARGET_SCORE_COMBAT_VS_ALIEN_BONUS,
         TARGET_SCORE_COMBAT_RIVALRY_BONUS,
         TARGET_SCORE_COMBAT_STANDARD_ENGAGE,
@@ -656,6 +660,8 @@ if (typeof module !== 'undefined' && module.exports) {
     global.TARGET_SCORE_PROXIMITY_THRESHOLD = TARGET_SCORE_PROXIMITY_THRESHOLD;
     global.TARGET_SCORE_HULL_DAMAGE_MAX_BONUS = TARGET_SCORE_HULL_DAMAGE_MAX_BONUS;
     global.TARGET_SCORE_HULL_DAMAGE_MULT = TARGET_SCORE_HULL_DAMAGE_MULT;
+    global.COMBAT_ALLY_SUMMON_RADIUS = COMBAT_ALLY_SUMMON_RADIUS;
+    global.COMBAT_SUMMON_TARGET_COOLDOWN = COMBAT_SUMMON_TARGET_COOLDOWN;
     global.TARGET_SCORE_COMBAT_VS_ALIEN_BONUS = TARGET_SCORE_COMBAT_VS_ALIEN_BONUS;
     global.TARGET_SCORE_COMBAT_RIVALRY_BONUS = TARGET_SCORE_COMBAT_RIVALRY_BONUS;
     global.TARGET_SCORE_COMBAT_STANDARD_ENGAGE = TARGET_SCORE_COMBAT_STANDARD_ENGAGE;

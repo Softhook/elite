@@ -491,7 +491,7 @@ class EnemyTargeting {
         const isSharedThreatTarget = target.role === AI_ROLE.PIRATE || target.role === AI_ROLE.ALIEN;
         if (!isFactionRivalTarget && !isMilitaryAlienTarget && !isSharedThreatTarget) return;
 
-        const summonRadius = 1200;
+        const summonRadius = COMBAT_ALLY_SUMMON_RADIUS;
         const summonRadiusSq = summonRadius * summonRadius;
 
         for (let i = 0, len = system.enemies.length; i < len; i++) {
@@ -511,7 +511,7 @@ class EnemyTargeting {
             }
 
             ally.target = target;
-            ally.targetSwitchCooldown = Math.max(ally.targetSwitchCooldown || 0, 1.5);
+            ally.targetSwitchCooldown = Math.max(ally.targetSwitchCooldown || 0, COMBAT_SUMMON_TARGET_COOLDOWN);
         }
     }
 
