@@ -152,47 +152,82 @@ class CommunicationSystem {
             "We fight for the people", "No more kings"
         ];
 
+        this._summonGenericTargetRefs = [
+            "this one", "this hostile", "this contact", "the bogey", "this ship", "this bastard"
+        ];
+        this._summonHelpRequests = [
+            "help me here", "back me up", "need support here", "need another gun here",
+            "I could use a hand", "I need help with {targetRef}", "some help needed here with {targetRef}"
+        ];
+
         this._summonCallTemplates = {
             IMPERIAL: [
-                "{enemyName}: Imperial request—assist on {targetLabel}.",
-                "{enemyName}: Crown patrol requesting support on {targetLabel}.",
-                "{enemyName}: By Imperial order, reinforce my attack on {targetLabel}.",
-                "{enemyName}: Imperial contact needs backup on {targetLabel}.",
-                "{enemyName}: Throne unit requesting immediate support on {targetLabel}."
+                "{enemyName}: Crown patrol requesting support on {targetRef}.",
+                "{enemyName}: By Imperial order, reinforce my attack on {targetRef}.",
+                "{enemyName}: Imperial contact needs backup on {targetRef}.",
+                "{enemyName}: Throne unit requesting immediate support on {targetShip}.",
+                "{enemyName}: For the Crown—{helpRequest}.",
+                "{enemyName}: {imperialRank}, attend me. I have {targetName} engaged.",
+                "{enemyName}: Imperial wings, close in on {targetShip}.",
+                "{enemyName}: Assist me. {targetName} resists Imperial authority.",
+                "{enemyName}: Crown ships, to me now. {targetRef} is still fighting.",
+                "{enemyName}: His Majesty's service requires help with {targetRef}."
             ],
             SEPARATIST: [
-                "{enemyName}: Republic wing, I need help with {targetLabel}!",
-                "{enemyName}: Freedom flight requesting support on {targetLabel}.",
-                "{enemyName}: Rebel unit taking fire—assist on {targetLabel}!",
-                "{enemyName}: Comrades, converge on {targetLabel}!",
-                "{enemyName}: Separatist contact requests immediate backup on {targetLabel}."
+                "{enemyName}: Republic wing, I need help with {targetRef}!",
+                "{enemyName}: Freedom flight requesting support on {targetShip}.",
+                "{enemyName}: Rebel unit taking fire—assist on {targetRef}!",
+                "{enemyName}: Comrades, converge on {targetName}!",
+                "{enemyName}: Separatist contact requests immediate backup on {targetRef}.",
+                "{enemyName}: {helpRequest}—{targetShip} won't break.",
+                "{enemyName}: Free pilots, get over here and hit {targetRef} with me!",
+                "{enemyName}: Liberty wing, I have {targetName} pinned—join in!",
+                "{enemyName}: Brothers, sisters, with me now. {targetRef} is still hot.",
+                "{enemyName}: No crowns, no mercy—help me crush {targetShip}!"
             ],
             MILITARY: [
-                "{enemyName}: Military contact requesting assistance on {targetLabel}.",
-                "{enemyName}: Tactical support needed here—engage {targetLabel}.",
-                "{enemyName}: Need another gun on {targetLabel}.",
-                "{enemyName}: Command channel: assist my attack on {targetLabel}.",
-                "{enemyName}: Sector unit requesting backup on {targetLabel}."
+                "{enemyName}: Military contact requesting assistance on {targetRef}.",
+                "{enemyName}: Tactical support needed here—engage {targetShip}.",
+                "{enemyName}: Need another gun on {targetRef}.",
+                "{enemyName}: Command channel: assist my attack on {targetName}.",
+                "{enemyName}: Sector unit requesting backup on {targetRef}.",
+                "{enemyName}: {helpRequest}. {targetShip} is still maneuvering.",
+                "{enemyName}: Support element, move on my target now.",
+                "{enemyName}: I need cover on this pass—help me with {targetRef}.",
+                "{enemyName}: Weapons free on {targetShip}. Reinforce immediately.",
+                "{enemyName}: Squadron, assist. I'm tied up with {targetName}."
             ],
             PIRATE: [
-                "{enemyName}: Oi, I need hands over here—on {targetLabel}!",
-                "{enemyName}: Pack up! Help me crack {targetLabel}.",
-                "{enemyName}: Crew, pile in—{targetLabel} is mine!",
-                "{enemyName}: Need backup now, bring guns to {targetLabel}.",
-                "{enemyName}: Get over here and help me gut {targetLabel}!"
+                "{enemyName}: Oi, I need hands over here—on {targetRef}!",
+                "{enemyName}: Pack up! Help me crack {targetShip}.",
+                "{enemyName}: Crew, pile in—{targetName} is mine!",
+                "{enemyName}: Need backup now, bring guns to {targetRef}.",
+                "{enemyName}: Get over here and help me gut {targetRef}!",
+                "{enemyName}: Stop drifting and help me, this one bites back!",
+                "{enemyName}: {helpRequest}—{targetShip} looks rich and angry.",
+                "{enemyName}: Black space take it, somebody help me finish {targetName}!",
+                "{enemyName}: Loot later, fight now—get on {targetRef}!",
+                "{enemyName}: I tagged {targetShip}; come help me peel it open!"
             ],
             POLICE: [
-                "{enemyName}: Dispatch, unit requesting immediate support on {targetLabel}.",
-                "{enemyName}: Patrol under pressure—backup needed on {targetLabel}.",
-                "{enemyName}: All nearby units, assist with {targetLabel}.",
-                "{enemyName}: Law enforcement contact requesting reinforcement on {targetLabel}.",
-                "{enemyName}: Officer requesting support—engaging {targetLabel}."
+                "{enemyName}: Dispatch, unit requesting immediate support on {targetRef}.",
+                "{enemyName}: Patrol under pressure—backup needed on {targetShip}.",
+                "{enemyName}: All nearby units, assist with {targetName}.",
+                "{enemyName}: Law enforcement contact requesting reinforcement on {targetRef}.",
+                "{enemyName}: Officer requesting support—engaging {targetShip}.",
+                "{enemyName}: Need a second unit here. {targetRef} is resisting.",
+                "{enemyName}: Patrol call—help me lock down {targetRef}.",
+                "{enemyName}: Backup requested. I have {targetName} in a live engagement.",
+                "{enemyName}: Unit to unit, I need help here now.",
+                "{enemyName}: All cars in range, converge on {targetShip}."
             ],
             default: [
-                "{enemyName}: Need support on {targetLabel}.",
-                "{enemyName}: Some help needed here with {targetLabel}.",
-                "{enemyName}: Assist my attack on {targetLabel}.",
-                "{enemyName}: Requesting backup on {targetLabel}."
+                "{enemyName}: Need support on {targetRef}.",
+                "{enemyName}: Some help needed here with {targetRef}.",
+                "{enemyName}: Assist my attack on {targetShip}.",
+                "{enemyName}: Requesting backup on {targetRef}.",
+                "{enemyName}: {helpRequest}.",
+                "{enemyName}: I have {targetName} occupied—help me finish it."
             ]
         };
 
@@ -202,40 +237,56 @@ class CommunicationSystem {
                 "{enemyName}: Crown wing inbound—hang on.",
                 "{enemyName}: Reinforcing your position now.",
                 "{enemyName}: Imperial support en route.",
-                "{enemyName}: Hold formation, I'm joining."
+                "{enemyName}: Hold formation, I'm joining.",
+                "{enemyName}: The Crown answers. I'm on my way.",
+                "{enemyName}: Stay on {targetRef}; I'll flank.",
+                "{enemyName}: Imperial guns inbound. Keep {targetShip} busy."
             ],
             SEPARATIST: [
                 "{enemyName}: Copy that, coming over to help!",
                 "{enemyName}: Rebel wing inbound—hold on!",
                 "{enemyName}: On my way, let's finish this!",
                 "{enemyName}: I hear you. Engaging with you now.",
-                "{enemyName}: Freedom flight responding!"
+                "{enemyName}: Freedom flight responding!",
+                "{enemyName}: You're not alone—I'm on {targetRef}.",
+                "{enemyName}: Hang on, I'm burning over now!",
+                "{enemyName}: I see {targetShip}. I'm coming in fast."
             ],
             MILITARY: [
                 "{enemyName}: Yes, hang on, coming over to help.",
                 "{enemyName}: Support inbound, keep pressure on.",
                 "{enemyName}: Copy. Reinforcing your vector.",
                 "{enemyName}: Tactical response, moving to assist.",
-                "{enemyName}: I'm with you. Engaging target."
+                "{enemyName}: I'm with you. Engaging target.",
+                "{enemyName}: Sliding over now. Keep {targetRef} lit up.",
+                "{enemyName}: On your wing. I'll take a shot at {targetShip}.",
+                "{enemyName}: Acknowledged. Assisting immediately."
             ],
             PIRATE: [
                 "{enemyName}: Heh, on my way—save some scrap for me!",
                 "{enemyName}: Copy that, I'm crashing the party!",
                 "{enemyName}: Coming in hot—don't die before I get there.",
                 "{enemyName}: Got you. Let's tear them open!",
-                "{enemyName}: Moving to help. Keep them busy."
+                "{enemyName}: Moving to help. Keep them busy.",
+                "{enemyName}: Yeah alright, I'm on {targetRef}.",
+                "{enemyName}: Hang on, I'm swinging round now.",
+                "{enemyName}: Keep {targetShip} distracted—I'll gut it from the side."
             ],
             POLICE: [
                 "{enemyName}: Unit responding. Reinforcement inbound.",
                 "{enemyName}: Copy, I'm coming to assist.",
                 "{enemyName}: Patrol support en route.",
                 "{enemyName}: Acknowledged. Joining your engagement.",
-                "{enemyName}: Hold position, officer—I'm inbound."
+                "{enemyName}: Hold position, officer—I'm inbound.",
+                "{enemyName}: Secondary unit moving to support.",
+                "{enemyName}: On my way. Keep {targetRef} contained.",
+                "{enemyName}: I have your call. Assisting on {targetShip}."
             ],
             default: [
                 "{enemyName}: Copy, coming over to help.",
                 "{enemyName}: On my way.",
-                "{enemyName}: Responding now."
+                "{enemyName}: Responding now.",
+                "{enemyName}: I see it. Moving to assist."
             ]
         };
 
@@ -250,8 +301,10 @@ class CommunicationSystem {
 
         this._summonCallDurationMs = 5200;
         this._summonResponseDurationMs = 4200;
-        this._summonCallerCooldownMs = 10000;
+        this._summonCallerCooldownMs = 18000;
+        this._summonGlobalCooldownMs = 6000;
         this._summonResponseMaxCount = 1;
+        this._summonTemplateRetryAttempts = 4;
 
         this.templates = {
             pirateEngage: [
@@ -3254,6 +3307,7 @@ class CommunicationSystem {
         if (!caller || !this.uiManager) return false;
 
         const now = this._now();
+        if (now - this._lastGlobalMessageTime < this._summonGlobalCooldownMs) return false;
         const callerKey = this._getEnemyKey(caller);
         if (!callerKey) return false;
 
@@ -3266,10 +3320,8 @@ class CommunicationSystem {
         const responseTemplates = this._summonResponseTemplates[group] || this._summonResponseTemplates.default;
         const color = this._summonColors[group] || this._summonColors.default;
 
-        const callTokens = this._buildTokenMap(caller, {
-            tokens: { targetLabel: this._describeSummonTarget(target) }
-        });
-        const callTemplate = this._pickTemplate(callTemplates);
+        const callTokens = this._buildSummonTokenMap(caller, target);
+        const callTemplate = this._pickTemplateAvoidRepeat(callTemplates, record, 'summon_call_last_template');
         const callMessage = this._applyTokens(callTemplate, callTokens).trim();
         if (!callMessage) return false;
 
@@ -3284,16 +3336,21 @@ class CommunicationSystem {
             : [];
         if (responders.length > 0) {
             const responseCount = Math.min(this._summonResponseMaxCount, responders.length);
+            const shuffledResponders = this._shuffleList(responders);
             for (let i = 0; i < responseCount; i++) {
-                const responder = responders[Math.floor(this._random() * responders.length)];
-                const responseTokens = this._buildTokenMap(responder, {
-                    tokens: { targetLabel: this._describeSummonTarget(target) }
-                });
-                const responseTemplate = this._pickTemplate(responseTemplates);
+                const responder = shuffledResponders[i];
+                const responderKey = this._getEnemyKey(responder);
+                const responderRecord = responderKey ? (this._enemyCooldowns.get(responderKey) || {}) : {};
+                const responseTokens = this._buildSummonTokenMap(responder, target);
+                const responseTemplate = this._pickTemplateAvoidRepeat(responseTemplates, responderRecord, 'summon_response_last_template');
                 const responseMessage = this._applyTokens(responseTemplate, responseTokens).trim();
                 if (!responseMessage) continue;
                 addFn(responseMessage, color, this._summonResponseDurationMs);
                 this._queueSpeech(responseMessage, responder);
+                responderRecord.summon_response = now;
+                if (responderKey) {
+                    this._enemyCooldowns.set(responderKey, responderRecord);
+                }
             }
         }
 
@@ -3301,6 +3358,32 @@ class CommunicationSystem {
         this._enemyCooldowns.set(callerKey, record);
         this._lastGlobalMessageTime = now;
         return true;
+    }
+
+    _buildSummonTokenMap(speaker, target) {
+        const targetName = this._describeSummonTarget(target);
+        const targetShip = this._describeSummonTargetShip(target);
+        const genericRef = this._pick(this._summonGenericTargetRefs);
+        const targetRef = this._pick([
+            targetName,
+            targetShip,
+            genericRef,
+            `that ${targetShip}`,
+            `${targetName} in the ${targetShip}`
+        ].filter(Boolean));
+
+        return this._buildTokenMap(speaker, {
+            target,
+            tokens: {
+                targetLabel: targetName,
+                targetName,
+                targetShip,
+                targetRef,
+                helpRequest: this._applyTokens(this._pick(this._summonHelpRequests), {
+                    targetRef
+                })
+            }
+        });
     }
 
     _getSummonGroup(ship) {
@@ -3322,6 +3405,38 @@ class CommunicationSystem {
         if (target.displayName) return target.displayName;
         if (target.shipTypeName) return target.shipTypeName;
         return 'hostile contact';
+    }
+
+    _describeSummonTargetShip(target) {
+        if (!target) return 'hostile ship';
+        if (this._isPlayerEntity(target)) return 'player ship';
+        if (target.shipTypeName) return target.shipTypeName;
+        return 'hostile ship';
+    }
+
+    _pickTemplateAvoidRepeat(list, record, recordKey) {
+        if (!Array.isArray(list) || list.length === 0) return null;
+        if (!record || list.length === 1) return this._pickTemplate(list);
+
+        const lastTemplate = record[recordKey];
+        let candidate = this._pickTemplate(list);
+        if (list.length > 1 && lastTemplate && candidate === lastTemplate) {
+            for (let attempt = 0; attempt < this._summonTemplateRetryAttempts && candidate === lastTemplate; attempt++) {
+                candidate = this._pickTemplate(list);
+            }
+        }
+        record[recordKey] = candidate;
+        return candidate;
+    }
+
+    _shuffleList(list) {
+        if (!Array.isArray(list)) return [];
+        const copy = list.slice();
+        for (let i = copy.length - 1; i > 0; i--) {
+            const j = Math.floor(this._random() * (i + 1));
+            [copy[i], copy[j]] = [copy[j], copy[i]];
+        }
+        return copy;
     }
 
     /**
