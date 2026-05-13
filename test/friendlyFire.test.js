@@ -129,6 +129,7 @@ describe('Friendly Fire & Faction Collision Tests', () => {
         // guard1 should still refuse to target guard2 (fellow bodyguard)
         const score = guard1.evaluateTargetScore(guard2, mockSystem);
         expect(score).toBeLessThanOrEqual(0);
+        guard1.isTargetValid = origIsTargetValid1;
     });
 
     test('player bodyguard never targets the player principal even when principal is docked', () => {
@@ -145,6 +146,7 @@ describe('Friendly Fire & Faction Collision Tests', () => {
         // guard should still refuse to target the player
         const score = guard.evaluateTargetScore(mockPlayer, mockSystem);
         expect(score).toBeLessThanOrEqual(0);
+        guard.isTargetValid = origIsTargetValid;
     });
 
     test('Imperial ship SHOULD target same-faction player if they are WANTED', () => {

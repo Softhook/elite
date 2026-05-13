@@ -565,9 +565,7 @@ class EnemyTargeting {
 
                     // Self-defense: if this guard was attacked, can engage the attacker
                     // (principal and fellow guards are already blocked by the checks above)
-                    if (target === enemy.lastAttacker &&
-                        target !== enemy.principal &&
-                        !(target.role === AI_ROLE.GUARD && target.principal === enemy.principal)) {
+                    if (target === enemy.lastAttacker) {
                         return 1500; // High score for self-defense, but lower than principal defense
                     }
                 }
