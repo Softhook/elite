@@ -496,7 +496,6 @@ class EnemyTargeting {
 
         const summonRadius = COMBAT_ALLY_SUMMON_RADIUS;
         const summonRadiusSq = summonRadius * summonRadius;
-        const movementDelayMs = this._getSummonMovementDelayMs();
         let summonedCount = 0;
         const summonedAllies = [];
 
@@ -514,6 +513,7 @@ class EnemyTargeting {
                 if ((dx * dx + dy * dy) > summonRadiusSq) continue;
             }
 
+            const movementDelayMs = this._getSummonMovementDelayMs(summonedCount);
             this._assignSummonTargetWithOptionalDelay(ally, target, movementDelayMs);
             summonedCount++;
             summonedAllies.push(ally);
@@ -522,8 +522,8 @@ class EnemyTargeting {
         this._emitSummonCallFeedback(system, target, myFaction, summonedCount, summonedAllies);
     }
 
-    _getSummonMovementDelayMs() {
-        const configuredDelay = Number(globalThis.communicationSystem?.getSummonMovementResponseDelayMs?.());
+    _getSummonMovementDelayMs(responseIndex = 0) {
+        const configuredDelay = Number(globalThis.communicationSystem?.getSummonMovementResponseDelayMs?.(responseIndex));
         if (Number.isFinite(configuredDelay) && configuredDelay >= 0) return configuredDelay;
         return 0;
     }

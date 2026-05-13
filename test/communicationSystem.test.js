@@ -66,6 +66,18 @@ describe('CommunicationSystem Summon/Support Delays', () => {
         expect(addCommunicationMessage).toHaveBeenCalledTimes(2);
     });
 
+    test('emitSummonCall blocks duplicate scheduling while delayed and stamps cooldown on display', () => {
+        const caller = { id: 'caller-dup', role: 'PIRATE', faction: 'PIRATE', pos: { x: 0, y: 0 } };
+        const target = { id: 'tgt-dup', shipTypeName: 'Cobra' };
+
+        expect(commSystem.emitSummonCall(caller, target, [])).toBe(true);
+        expect(commSystem.emitSummonCall(caller, target, [])).toBe(false);
+        expect(commSystem._enemyCooldowns.get(caller.id)?.summon_call).toBeUndefined();
+
+        jest.advanceTimersByTime(commSystem._summonCallDelayMs);
+        expect(commSystem._enemyCooldowns.get(caller.id)?.summon_call).toBeDefined();
+    });
+
     test('handlePlayerUnderAttack does NOT show the aid message immediately', () => {
         global.COMBAT_ALLY_SUMMON_RADIUS = 2000;
         const attacker = { id: 'atk-1', faction: 'PIRATE' };
@@ -91,6 +103,26 @@ describe('CommunicationSystem Summon/Support Delays', () => {
         jest.advanceTimersByTime(commSystem._factionAllyAidMessageDelayMs);
         expect(addCommunicationMessage).toHaveBeenCalledTimes(1);
         expect(ally.target).toBe(attacker);
+    });
+
+    test('handlePlayerUnderAttack does not consume full cooldown when uiManager disappears before delayed dispatch', () => {
+        global.COMBAT_ALLY_SUMMON_RADIUS = 2000;
+        const attacker = { id: 'atk-3', faction: 'PIRATE' };
+        const ally = { id: 'ally-aid-3', role: 'Police', faction: 'POLICE', pos: { x: 0, y: 0 }, isTargetValid: () => true };
+        commSystem.player = { isPolice: true, playerFaction: null, pos: { x: 0, y: 0 } };
+        const system = { enemies: [ally] };
+        commSystem._isPlayerFactionAlly = () => true;
+
+        expect(commSystem.handlePlayerUnderAttack(attacker, system)).toBe(true);
+        commSystem.uiManager = null;
+        jest.advanceTimersByTime(commSystem._factionAllyAidMessageDelayMs);
+
+        const factionRecord = commSystem._enemyCooldowns.get('player_faction') || {};
+        expect(factionRecord.faction_ally_aid).toBeUndefined();
+        expect(factionRecord.faction_ally_aid_pending_until).toBeUndefined();
+
+        commSystem.uiManager = { addCommunicationMessage };
+        expect(commSystem.handlePlayerUnderAttack(attacker, system)).toBe(true);
     });
 });
 
