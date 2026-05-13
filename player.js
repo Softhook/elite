@@ -34,6 +34,50 @@ const PLAYER_CONFIG = {
     TRAIL_MAX_LENGTH: 40
 };
 
+const DEFAULT_INSTALLED_UPGRADES = Object.freeze({
+    armor: 0,
+    engine: 0,
+    cargo: 0,
+    hardpoints: 0,
+    shield: 0,
+    cloak: 0,
+    booster: 0
+});
+
+function createDefaultInstalledUpgrades() {
+    return { ...DEFAULT_INSTALLED_UPGRADES };
+}
+
+const DEFAULT_FACTION_STANDING = Object.freeze({
+    POLICE: 0,
+    MILITARY: 0,
+    IMPERIAL: 0,
+    SEPARATIST: 0
+});
+
+function createDefaultFactionStanding() {
+    return { ...DEFAULT_FACTION_STANDING };
+}
+
+/**
+ * Deep-clones JSON-serializable state for save/load boundaries.
+ * Returns the provided fallback when the source value is nullish.
+ * @param {*} value
+ * @param {*} fallback
+ * @returns {*}
+ */
+function cloneSerializableState(value, fallback) {
+    if (value === undefined || value === null) {
+        return fallback;
+    }
+
+    return JSON.parse(JSON.stringify(value));
+}
+
+function cloneSerializableArray(value) {
+    return Array.isArray(value) ? cloneSerializableState(value, []) : [];
+}
+
 /**
  * Player class - represents the player's ship and state
  * 
@@ -102,7 +146,7 @@ class Player {
         this.shipDefinition = shipDef;
 
         // Initialize installed upgrades tracking (all start at level 0)
-        this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0, booster: 0 };
+        this.installedUpgrades = createDefaultInstalledUpgrades();
         this._applyDefaultUpgrades(shipDef);
 
         return shipDef;
@@ -710,7 +754,7 @@ class Player {
         this.loadWeaponsFromShipDefinition(shipTypeName);
 
         // Recalculate any derived properties
-        this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0, booster: 0 }; // Reset upgrades on ship change
+        this.installedUpgrades = createDefaultInstalledUpgrades(); // Reset upgrades on ship change
         this._applyDefaultUpgrades(def); // Apply default upgrades from definition
         this.recalculateStats(); // Apply bonuses from default upgrades
         this.hull = this.maxHull; // Full hull for new ship
@@ -725,7 +769,7 @@ class Player {
      * @param {number} level - 1, 2, 3
      */
     applyUpgrade(type, level) {
-        if (!this.installedUpgrades) this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0, booster: 0 };
+        if (!this.installedUpgrades) this.installedUpgrades = createDefaultInstalledUpgrades();
 
         const oldMaxHull = this.maxHull;
         const oldMaxShield = this.maxShield;
@@ -2682,7 +2726,7 @@ class Player {
 
         return {
             shipTypeName: this.shipTypeName,
-            installedUpgrades: this.installedUpgrades || { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0, booster: 0 }, // Save upgrades
+            installedUpgrades: cloneSerializableState(this.installedUpgrades, createDefaultInstalledUpgrades()), // Save upgrades
             pos: { x: this.pos.x, y: this.pos.y }, vel: { x: this.vel.x, y: this.vel.y }, angle: normalizedAngle,
             hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(cleanedCargo)),
             isWanted: this.isWanted,
@@ -2695,8 +2739,8 @@ class Player {
             maxShield: this.maxShield,
             shieldRechargeRate: this.shieldRechargeRate,
             kills: this.kills,
-            factionKills: this.factionKills || { POLICE: 0, MILITARY: 0, IMPERIAL: 0, SEPARATIST: 0 },
-            factionPrestige: this.factionPrestige || { POLICE: 0, MILITARY: 0, IMPERIAL: 0, SEPARATIST: 0 },
+            factionKills: cloneSerializableState(this.factionKills, createDefaultFactionStanding()),
+            factionPrestige: cloneSerializableState(this.factionPrestige, createDefaultFactionStanding()),
             // --- Save the plain mission data object ---
             activeMission: missionDataToSave,
             weaponIndex: this.weaponIndex, // Save the index instead of just the name
@@ -2712,17 +2756,17 @@ class Player {
             // Navigation preferences
             showSecretBaseNavigation: this.showSecretBaseNavigation || false,
             // Personal record tracking
-            shipsDestroyed: this.shipsDestroyed || [],
-            systemsVisited: this.systemsVisited || [],
-            stationsTraded: this.stationsTraded || [],
-            factionsJoined: this.factionsJoined || [],
-            eliteStatusChanges: this.eliteStatusChanges || [],
-            missionsCompleted: this.missionsCompleted || [],
-            wantedStatusChanges: this.wantedStatusChanges || [],
-            shipsPurchased: this.shipsPurchased || [],
-            weaponsUpgraded: this.weaponsUpgraded || [],
+            shipsDestroyed: cloneSerializableState(this.shipsDestroyed, []),
+            systemsVisited: cloneSerializableState(this.systemsVisited, []),
+            stationsTraded: cloneSerializableState(this.stationsTraded, []),
+            factionsJoined: cloneSerializableState(this.factionsJoined, []),
+            eliteStatusChanges: cloneSerializableState(this.eliteStatusChanges, []),
+            missionsCompleted: cloneSerializableState(this.missionsCompleted, []),
+            wantedStatusChanges: cloneSerializableState(this.wantedStatusChanges, []),
+            shipsPurchased: cloneSerializableState(this.shipsPurchased, []),
+            weaponsUpgraded: cloneSerializableState(this.weaponsUpgraded, []),
             // Secret base storage
-            secretStorage: this.secretStorage || []
+            secretStorage: cloneSerializableState(this.secretStorage, [])
             // -----------------------------------------
         };
     }
@@ -2755,7 +2799,7 @@ class Player {
         if (data.installedUpgrades) {
             // Keep current defaults (which include all upgrade types like booster)
             // then overlay saved values on top
-            this.installedUpgrades = { ...this.installedUpgrades, ...data.installedUpgrades };
+            this.installedUpgrades = { ...this.installedUpgrades, ...cloneSerializableState(data.installedUpgrades, {}) };
             // Recalculate stats immediately to apply bonuses (hull, slots, etc.)
             this.recalculateStats();
         }
@@ -2793,14 +2837,14 @@ class Player {
         this.hasJoinedFaction = data.hasJoinedFaction || false;
         this.factionShip = data.factionShip || null;
 
-        this.shield = data.shield !== undefined ? data.shield : this.maxShield;
-        this.maxShield = data.maxShield || this.maxShield;
-        this.shieldRechargeRate = data.shieldRechargeRate || this.shieldRechargeRate;
+        this.maxShield = data.maxShield ?? this.maxShield;
+        this.shield = data.shield !== undefined ? constrain(data.shield, 0, this.maxShield) : this.maxShield;
+        this.shieldRechargeRate = data.shieldRechargeRate ?? this.shieldRechargeRate;
 
-        this.kills = data.kills || 0;
+        this.kills = data.kills ?? 0;
 
         // Load faction kills with defaults
-        this.factionKills = data.factionKills || { POLICE: 0, MILITARY: 0, IMPERIAL: 0, SEPARATIST: 0 };
+        this.factionKills = cloneSerializableState(data.factionKills, createDefaultFactionStanding());
         // Ensure all faction keys exist (check for undefined/null, not falsy values)
         const requiredFactions = ['POLICE', 'MILITARY', 'IMPERIAL', 'SEPARATIST'];
         requiredFactions.forEach(faction => {
@@ -2810,7 +2854,7 @@ class Player {
         });
 
         // Load faction prestige with defaults
-        this.factionPrestige = data.factionPrestige || { POLICE: 0, MILITARY: 0, IMPERIAL: 0, SEPARATIST: 0 };
+        this.factionPrestige = cloneSerializableState(data.factionPrestige, createDefaultFactionStanding());
         requiredFactions.forEach(faction => {
             if (this.factionPrestige[faction] === undefined || this.factionPrestige[faction] === null) {
                 this.factionPrestige[faction] = 0;
@@ -2912,18 +2956,18 @@ class Player {
         }
 
         // Restore personal record tracking
-        this.shipsDestroyed = Array.isArray(data.shipsDestroyed) ? data.shipsDestroyed : [];
-        this.systemsVisited = Array.isArray(data.systemsVisited) ? data.systemsVisited : [];
-        this.stationsTraded = Array.isArray(data.stationsTraded) ? data.stationsTraded : [];
-        this.factionsJoined = Array.isArray(data.factionsJoined) ? data.factionsJoined : [];
-        this.eliteStatusChanges = Array.isArray(data.eliteStatusChanges) ? data.eliteStatusChanges : [];
-        this.missionsCompleted = Array.isArray(data.missionsCompleted) ? data.missionsCompleted : [];
-        this.wantedStatusChanges = Array.isArray(data.wantedStatusChanges) ? data.wantedStatusChanges : [];
-        this.shipsPurchased = Array.isArray(data.shipsPurchased) ? data.shipsPurchased : [];
-        this.weaponsUpgraded = Array.isArray(data.weaponsUpgraded) ? data.weaponsUpgraded : [];
+        this.shipsDestroyed = cloneSerializableArray(data.shipsDestroyed);
+        this.systemsVisited = cloneSerializableArray(data.systemsVisited);
+        this.stationsTraded = cloneSerializableArray(data.stationsTraded);
+        this.factionsJoined = cloneSerializableArray(data.factionsJoined);
+        this.eliteStatusChanges = cloneSerializableArray(data.eliteStatusChanges);
+        this.missionsCompleted = cloneSerializableArray(data.missionsCompleted);
+        this.wantedStatusChanges = cloneSerializableArray(data.wantedStatusChanges);
+        this.shipsPurchased = cloneSerializableArray(data.shipsPurchased);
+        this.weaponsUpgraded = cloneSerializableArray(data.weaponsUpgraded);
 
         // Restore secret base storage
-        this.secretStorage = Array.isArray(data.secretStorage) ? data.secretStorage : [];
+        this.secretStorage = cloneSerializableArray(data.secretStorage);
 
         // Initialize session trade tracking (not saved, always starts fresh)
         this.currentSessionTradedLocations = new Set();

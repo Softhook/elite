@@ -59,6 +59,26 @@ describe('Player Construction', () => {
         expect(player.thrustForce).toBeGreaterThan(0);
         expect(player.size).toBeGreaterThan(0);
     });
+
+    test('should keep installed upgrades isolated per player instance', () => {
+        const playerOne = new Player();
+        const playerTwo = new Player();
+
+        playerOne.installedUpgrades.armor = 2;
+
+        expect(playerTwo.installedUpgrades.armor).not.toBe(2);
+    });
+
+    test('should restore default installed upgrades when reapplying ship definition', () => {
+        const player = new Player();
+        const defaultUpgrades = { ...player.installedUpgrades };
+
+        player.installedUpgrades.armor = 2;
+        player.installedUpgrades.engine = 1;
+        player.applyShipDefinition(player.shipTypeName);
+
+        expect(player.installedUpgrades).toEqual(defaultUpgrades);
+    });
 });
 
 // ============================================
@@ -536,6 +556,110 @@ describe('Player Serialization', () => {
         expect(restored.hull).toBe(40);
         expect(restored.cargo).toHaveLength(1);
         expect(restored.shipTypeName).toBe('Sidewinder');
+    });
+
+    test('should preserve zero-valued shield data when loading saves', () => {
+        const saveData = player.toJSON();
+        saveData.maxShield = 0;
+        saveData.shield = 0;
+        saveData.shieldRechargeRate = 0;
+
+        const restored = Player.fromJSON(saveData);
+
+        expect(restored.maxShield).toBe(0);
+        expect(restored.shield).toBe(0);
+        expect(restored.shieldRechargeRate).toBe(0);
+    });
+
+    test('should clamp loaded shield to the restored max shield', () => {
+        const saveData = player.toJSON();
+        saveData.maxShield = 10;
+        saveData.shield = 25;
+
+        const restored = Player.fromJSON(saveData);
+
+        expect(restored.maxShield).toBe(10);
+        expect(restored.shield).toBe(10);
+    });
+
+    test('should preserve zero kills when loading saves', () => {
+        const saveData = player.toJSON();
+        saveData.kills = 0;
+
+        const restored = Player.fromJSON(saveData);
+
+        expect(restored.kills).toBe(0);
+    });
+
+    test('should return detached save snapshots for mutable player state', () => {
+        player.installedUpgrades.armor = 2;
+        player.factionKills.POLICE = 4;
+        player.factionPrestige.MILITARY = 3;
+        player.shipsDestroyed = [{ shipType: 'Viper' }];
+        player.secretStorage = [{ name: 'Food', quantity: 1 }];
+
+        const saveData = player.getSaveData();
+        saveData.installedUpgrades.armor = 0;
+        saveData.factionKills.POLICE = 99;
+        saveData.factionPrestige.MILITARY = 88;
+        saveData.shipsDestroyed[0].shipType = 'Cobra';
+        saveData.secretStorage[0].quantity = 9;
+
+        expect(player.installedUpgrades.armor).toBe(2);
+        expect(player.factionKills.POLICE).toBe(4);
+        expect(player.factionPrestige.MILITARY).toBe(3);
+        expect(player.shipsDestroyed[0].shipType).toBe('Viper');
+        expect(player.secretStorage[0].quantity).toBe(1);
+    });
+
+    test('should detach loaded mutable state from the source save data', () => {
+        const saveData = player.toJSON();
+        saveData.installedUpgrades = { ...saveData.installedUpgrades, armor: 2 };
+        saveData.factionKills = { ...saveData.factionKills, POLICE: 7 };
+        saveData.factionPrestige = { ...saveData.factionPrestige, MILITARY: 5 };
+        saveData.shipsDestroyed = [{ shipType: 'Viper' }];
+        saveData.secretStorage = [{ name: 'Medicine', quantity: 2 }];
+
+        const restored = Player.fromJSON(saveData);
+
+        saveData.installedUpgrades.armor = 0;
+        saveData.factionKills.POLICE = 0;
+        saveData.factionPrestige.MILITARY = 0;
+        saveData.shipsDestroyed[0].shipType = 'Cobra';
+        saveData.secretStorage[0].quantity = 99;
+
+        expect(restored.installedUpgrades.armor).toBe(2);
+        expect(restored.factionKills.POLICE).toBe(7);
+        expect(restored.factionPrestige.MILITARY).toBe(5);
+        expect(restored.shipsDestroyed[0].shipType).toBe('Viper');
+        expect(restored.secretStorage[0].quantity).toBe(2);
+    });
+
+    test('should reset corrupted non-array save collections to empty arrays', () => {
+        const saveData = player.toJSON();
+        saveData.shipsDestroyed = { shipType: 'Viper' };
+        saveData.systemsVisited = 'Lave';
+        saveData.stationsTraded = 42;
+        saveData.factionsJoined = { POLICE: true };
+        saveData.eliteStatusChanges = null;
+        saveData.missionsCompleted = { title: 'Courier' };
+        saveData.wantedStatusChanges = 'wanted';
+        saveData.shipsPurchased = { shipType: 'Sidewinder' };
+        saveData.weaponsUpgraded = { name: 'Pulse Laser' };
+        saveData.secretStorage = { name: 'Food', quantity: 1 };
+
+        const restored = Player.fromJSON(saveData);
+
+        expect(restored.shipsDestroyed).toEqual([]);
+        expect(restored.systemsVisited).toEqual([]);
+        expect(restored.stationsTraded).toEqual([]);
+        expect(restored.factionsJoined).toEqual([]);
+        expect(restored.eliteStatusChanges).toEqual([]);
+        expect(restored.missionsCompleted).toEqual([]);
+        expect(restored.wantedStatusChanges).toEqual([]);
+        expect(restored.shipsPurchased).toEqual([]);
+        expect(restored.weaponsUpgraded).toEqual([]);
+        expect(restored.secretStorage).toEqual([]);
     });
 });
 
