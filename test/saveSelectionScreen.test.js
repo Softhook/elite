@@ -1,7 +1,12 @@
 const SaveSelectionScreen = require('../saveSelectionScreen');
 
 describe('SaveSelectionScreen gamepad-style action selection', () => {
+    let originalLocalStorage;
+    let originalStorage;
+
     beforeEach(() => {
+        originalLocalStorage = global.localStorage;
+        originalStorage = global.Storage;
         global.soundManager = { playSound: jest.fn() };
         global.gameStateManager = { setState: jest.fn() };
         global.UP_ARROW = 38;
@@ -13,6 +18,17 @@ describe('SaveSelectionScreen gamepad-style action selection', () => {
     });
 
     afterEach(() => {
+        jest.restoreAllMocks();
+        if (originalLocalStorage === undefined) {
+            delete global.localStorage;
+        } else {
+            global.localStorage = originalLocalStorage;
+        }
+        if (originalStorage === undefined) {
+            delete global.Storage;
+        } else {
+            global.Storage = originalStorage;
+        }
         delete global.gameStateManager;
     });
 
@@ -62,25 +78,19 @@ describe('SaveSelectionScreen gamepad-style action selection', () => {
     });
 
     test('constructor restores the last active save slot when stored data is valid', () => {
-        const originalInitBackgroundStars = SaveSelectionScreen.prototype.initBackgroundStars;
-        const originalLoadAllSavePreviews = SaveSelectionScreen.prototype.loadAllSavePreviews;
-
         global.localStorage = {
             getItem: jest.fn((key) => key === 'eliteP5_lastActiveSlot' ? '2' : null),
             setItem: jest.fn(),
             removeItem: jest.fn()
         };
 
-        SaveSelectionScreen.prototype.initBackgroundStars = jest.fn();
-        SaveSelectionScreen.prototype.loadAllSavePreviews = jest.fn();
+        jest.spyOn(SaveSelectionScreen.prototype, 'initBackgroundStars').mockImplementation(() => { });
+        jest.spyOn(SaveSelectionScreen.prototype, 'loadAllSavePreviews').mockImplementation(() => { });
 
         const screen = new SaveSelectionScreen();
 
         expect(screen.selectedOption).toBe(2);
         expect(global.localStorage.removeItem).not.toHaveBeenCalled();
-
-        SaveSelectionScreen.prototype.initBackgroundStars = originalInitBackgroundStars;
-        SaveSelectionScreen.prototype.loadAllSavePreviews = originalLoadAllSavePreviews;
     });
 
     test('loadAllSavePreviews recovers from backup save data when primary data is invalid', () => {
