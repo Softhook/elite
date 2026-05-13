@@ -439,11 +439,11 @@ describe('Role & Faction Interaction Tests', () => {
                 const idlePartner = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 160, 0);
                 const rival = createSummonEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 120, 0);
                 const addSummonPing = jest.fn();
-                const addCommunicationMessage = jest.fn();
-                const originalUiManager = global.uiManager;
+                const emitSummonCall = jest.fn();
+                const originalCommunicationSystem = global.communicationSystem;
 
                 try {
-                    global.uiManager = { addCommunicationMessage };
+                    global.communicationSystem = { emitSummonCall };
                     mockSystem.addSummonPing = addSummonPing;
                     mockSystem.player = createMockPlayer({ x: 100, y: 0 });
                     mockSystem.enemies = [leader, idlePartner, rival];
@@ -452,16 +452,40 @@ describe('Role & Faction Interaction Tests', () => {
 
                     expect(addSummonPing).toHaveBeenCalledTimes(1);
                     expect(addSummonPing.mock.calls[0][0]).toBe(leader);
-                    expect(addCommunicationMessage).toHaveBeenCalledTimes(1);
-                    const [msg, colorArg, durationArg] = addCommunicationMessage.mock.calls[0];
-                    expect(msg).toContain('Call for assistance');
-                    expect(msg).toContain('IMPERIAL');
-                    expect(msg).toContain('responding');
-                    expect(colorArg).toEqual([255, 205, 140]);
-                    expect(durationArg).toBe(4200);
+                    expect(emitSummonCall).toHaveBeenCalledTimes(1);
+                    const [caller, calledTarget, responders] = emitSummonCall.mock.calls[0];
+                    expect(caller).toBe(leader);
+                    expect(calledTarget).toBe(rival);
+                    expect(Array.isArray(responders)).toBe(true);
+                    expect(responders).toContain(idlePartner);
                 } finally {
-                    global.uiManager = originalUiManager;
+                    global.communicationSystem = originalCommunicationSystem;
                 }
+            });
+
+            test('pirates now summon nearby pirate allies', () => {
+                const pirateLeader = createSummonEnemy(AI_ROLE.PIRATE, 'PIRATE', 0, 0);
+                const pirateWing = createSummonEnemy(AI_ROLE.PIRATE, 'PIRATE', 100, 0);
+                const haulerTarget = createSummonEnemy(AI_ROLE.HAULER, null, 140, 0);
+                mockSystem.enemies = [pirateLeader, pirateWing, haulerTarget];
+                mockSystem.player = null;
+
+                pirateLeader.updateTargeting(mockSystem);
+
+                expect(pirateLeader.target).toBe(haulerTarget);
+                expect(pirateWing.target).toBe(haulerTarget);
+            });
+
+            test('police now summon nearby police allies against pirate threats', () => {
+                const policeLeader = createSummonEnemy(AI_ROLE.POLICE, 'POLICE', 0, 0);
+                const policeWing = createSummonEnemy(AI_ROLE.POLICE, 'POLICE', 110, 0);
+                const pirateTarget = createSummonEnemy(AI_ROLE.PIRATE, 'PIRATE', 140, 0);
+                mockSystem.player = null;
+                mockSystem.enemies = [policeLeader, policeWing, pirateTarget];
+
+                policeLeader._summonFactionAlliesForTarget(mockSystem, pirateTarget);
+
+                expect(policeWing.target).toBe(pirateTarget);
             });
         });
 

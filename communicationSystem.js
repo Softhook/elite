@@ -152,6 +152,107 @@ class CommunicationSystem {
             "We fight for the people", "No more kings"
         ];
 
+        this._summonCallTemplates = {
+            IMPERIAL: [
+                "{enemyName}: Imperial request—assist on {targetLabel}.",
+                "{enemyName}: Crown patrol requesting support on {targetLabel}.",
+                "{enemyName}: By Imperial order, reinforce my attack on {targetLabel}.",
+                "{enemyName}: Imperial contact needs backup on {targetLabel}.",
+                "{enemyName}: Throne unit requesting immediate support on {targetLabel}."
+            ],
+            SEPARATIST: [
+                "{enemyName}: Republic wing, I need help with {targetLabel}!",
+                "{enemyName}: Freedom flight requesting support on {targetLabel}.",
+                "{enemyName}: Rebel unit taking fire—assist on {targetLabel}!",
+                "{enemyName}: Comrades, converge on {targetLabel}!",
+                "{enemyName}: Separatist contact requests immediate backup on {targetLabel}."
+            ],
+            MILITARY: [
+                "{enemyName}: Military contact requesting assistance on {targetLabel}.",
+                "{enemyName}: Tactical support needed here—engage {targetLabel}.",
+                "{enemyName}: Need another gun on {targetLabel}.",
+                "{enemyName}: Command channel: assist my attack on {targetLabel}.",
+                "{enemyName}: Sector unit requesting backup on {targetLabel}."
+            ],
+            PIRATE: [
+                "{enemyName}: Oi, I need hands over here—on {targetLabel}!",
+                "{enemyName}: Pack up! Help me crack {targetLabel}.",
+                "{enemyName}: Crew, pile in—{targetLabel} is mine!",
+                "{enemyName}: Need backup now, bring guns to {targetLabel}.",
+                "{enemyName}: Get over here and help me gut {targetLabel}!"
+            ],
+            POLICE: [
+                "{enemyName}: Dispatch, unit requesting immediate support on {targetLabel}.",
+                "{enemyName}: Patrol under pressure—backup needed on {targetLabel}.",
+                "{enemyName}: All nearby units, assist with {targetLabel}.",
+                "{enemyName}: Law enforcement contact requesting reinforcement on {targetLabel}.",
+                "{enemyName}: Officer requesting support—engaging {targetLabel}."
+            ],
+            default: [
+                "{enemyName}: Need support on {targetLabel}.",
+                "{enemyName}: Some help needed here with {targetLabel}.",
+                "{enemyName}: Assist my attack on {targetLabel}.",
+                "{enemyName}: Requesting backup on {targetLabel}."
+            ]
+        };
+
+        this._summonResponseTemplates = {
+            IMPERIAL: [
+                "{enemyName}: Imperial response acknowledged. Moving to assist.",
+                "{enemyName}: Crown wing inbound—hang on.",
+                "{enemyName}: Reinforcing your position now.",
+                "{enemyName}: Imperial support en route.",
+                "{enemyName}: Hold formation, I'm joining."
+            ],
+            SEPARATIST: [
+                "{enemyName}: Copy that, coming over to help!",
+                "{enemyName}: Rebel wing inbound—hold on!",
+                "{enemyName}: On my way, let's finish this!",
+                "{enemyName}: I hear you. Engaging with you now.",
+                "{enemyName}: Freedom flight responding!"
+            ],
+            MILITARY: [
+                "{enemyName}: Yes, hang on, coming over to help.",
+                "{enemyName}: Support inbound, keep pressure on.",
+                "{enemyName}: Copy. Reinforcing your vector.",
+                "{enemyName}: Tactical response, moving to assist.",
+                "{enemyName}: I'm with you. Engaging target."
+            ],
+            PIRATE: [
+                "{enemyName}: Heh, on my way—save some scrap for me!",
+                "{enemyName}: Copy that, I'm crashing the party!",
+                "{enemyName}: Coming in hot—don't die before I get there.",
+                "{enemyName}: Got you. Let's tear them open!",
+                "{enemyName}: Moving to help. Keep them busy."
+            ],
+            POLICE: [
+                "{enemyName}: Unit responding. Reinforcement inbound.",
+                "{enemyName}: Copy, I'm coming to assist.",
+                "{enemyName}: Patrol support en route.",
+                "{enemyName}: Acknowledged. Joining your engagement.",
+                "{enemyName}: Hold position, officer—I'm inbound."
+            ],
+            default: [
+                "{enemyName}: Copy, coming over to help.",
+                "{enemyName}: On my way.",
+                "{enemyName}: Responding now."
+            ]
+        };
+
+        this._summonColors = {
+            IMPERIAL: [255, 190, 120],
+            SEPARATIST: [155, 230, 170],
+            MILITARY: [255, 145, 145],
+            PIRATE: [255, 145, 105],
+            POLICE: [140, 180, 255],
+            default: [255, 205, 140]
+        };
+
+        this._summonCallDurationMs = 5200;
+        this._summonResponseDurationMs = 4200;
+        this._summonCallerCooldownMs = 10000;
+        this._summonResponseMaxCount = 1;
+
         this.templates = {
             pirateEngage: [
                 "{enemyName}: Kill thrust. {pirateDemand}.",
@@ -3139,6 +3240,88 @@ class CommunicationSystem {
         this._enemyCooldowns.set('player_faction', playerRecord);
 
         return true;
+    }
+
+    /**
+     * Emits themed call-for-assistance comms and optional ally responses.
+     * A response line is only emitted when at least one ally actually responds.
+     * @param {Object} caller
+     * @param {Object} target
+     * @param {Array<Object>} summonedAllies
+     * @returns {boolean}
+     */
+    emitSummonCall(caller, target, summonedAllies = []) {
+        if (!caller || !this.uiManager) return false;
+
+        const now = this._now();
+        const callerKey = this._getEnemyKey(caller);
+        if (!callerKey) return false;
+
+        const record = this._enemyCooldowns.get(callerKey) || {};
+        const lastTime = record.summon_call ?? -Infinity;
+        if (now - lastTime < this._summonCallerCooldownMs) return false;
+
+        const group = this._getSummonGroup(caller);
+        const callTemplates = this._summonCallTemplates[group] || this._summonCallTemplates.default;
+        const responseTemplates = this._summonResponseTemplates[group] || this._summonResponseTemplates.default;
+        const color = this._summonColors[group] || this._summonColors.default;
+
+        const callTokens = this._buildTokenMap(caller, {
+            tokens: { targetLabel: this._describeSummonTarget(target) }
+        });
+        const callTemplate = this._pickTemplate(callTemplates);
+        const callMessage = this._applyTokens(callTemplate, callTokens).trim();
+        if (!callMessage) return false;
+
+        const addFn = typeof this.uiManager.addCommunicationMessage === 'function'
+            ? this.uiManager.addCommunicationMessage.bind(this.uiManager)
+            : this.uiManager.addMessage.bind(this.uiManager);
+        addFn(callMessage, color, this._summonCallDurationMs);
+        this._queueSpeech(callMessage, caller);
+
+        const responders = Array.isArray(summonedAllies)
+            ? summonedAllies.filter(ally => ally && ally !== caller)
+            : [];
+        if (responders.length > 0) {
+            const responseCount = Math.min(this._summonResponseMaxCount, responders.length);
+            for (let i = 0; i < responseCount; i++) {
+                const responder = responders[Math.floor(this._random() * responders.length)];
+                const responseTokens = this._buildTokenMap(responder, {
+                    tokens: { targetLabel: this._describeSummonTarget(target) }
+                });
+                const responseTemplate = this._pickTemplate(responseTemplates);
+                const responseMessage = this._applyTokens(responseTemplate, responseTokens).trim();
+                if (!responseMessage) continue;
+                addFn(responseMessage, color, this._summonResponseDurationMs);
+                this._queueSpeech(responseMessage, responder);
+            }
+        }
+
+        record.summon_call = now;
+        this._enemyCooldowns.set(callerKey, record);
+        this._lastGlobalMessageTime = now;
+        return true;
+    }
+
+    _getSummonGroup(ship) {
+        if (!ship) return 'default';
+        if (typeof AI_ROLE !== 'undefined') {
+            if (ship.role === AI_ROLE.PIRATE) return 'PIRATE';
+            if (ship.role === AI_ROLE.POLICE) return 'POLICE';
+        }
+        const faction = this._getShipFaction(ship);
+        if (faction === 'IMPERIAL' || faction === 'SEPARATIST' || faction === 'MILITARY') {
+            return faction;
+        }
+        return 'default';
+    }
+
+    _describeSummonTarget(target) {
+        if (!target) return 'hostile contact';
+        if (this._isPlayerEntity(target)) return 'the player';
+        if (target.displayName) return target.displayName;
+        if (target.shipTypeName) return target.shipTypeName;
+        return 'hostile contact';
     }
 
     /**

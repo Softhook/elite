@@ -11,6 +11,8 @@ const SUMMON_CALL_FEEDBACK = {
     MESSAGE_DURATION_MS: 4200
 };
 
+const SUMMON_CALLER_ROLES = ['Combat', 'Pirate', 'Police', 'Guard'];
+
 /**
  * Enemy targeting methods as a mixin class
  * These methods handle target selection and scoring
@@ -486,31 +488,22 @@ class EnemyTargeting {
     }
 
     _summonFactionAlliesForTarget(system, target) {
-        if (this.role !== AI_ROLE.COMBAT || !system?.enemies || !this._getShipFaction || !target) return;
+        if (!system?.enemies || !this._getShipFaction || !target) return;
+        if (!this._canShipSummonAllies(this)) return;
 
         const myFaction = this._getShipFaction(this);
-        if (!myFaction || myFaction === 'UNKNOWN') return;
-
-        const targetFaction = (target instanceof Player)
-            ? (target.playerFaction || 'UNKNOWN')
-            : (this._getShipFaction(target) || 'UNKNOWN');
-        const isFactionRivalTarget = (myFaction === 'IMPERIAL' && targetFaction === 'SEPARATIST') ||
-            (myFaction === 'SEPARATIST' && targetFaction === 'IMPERIAL');
-        const isMilitaryAlienTarget = myFaction === 'MILITARY' && target.role === AI_ROLE.ALIEN;
-        const isSharedThreatTarget = target.role === AI_ROLE.PIRATE || target.role === AI_ROLE.ALIEN;
-        if (!isFactionRivalTarget && !isMilitaryAlienTarget && !isSharedThreatTarget) return;
+        if (!this._isSummonTargetEligible(this, target, myFaction)) return;
 
         const summonRadius = COMBAT_ALLY_SUMMON_RADIUS;
         const summonRadiusSq = summonRadius * summonRadius;
         let summonedCount = 0;
+        const summonedAllies = [];
 
         for (let i = 0, len = system.enemies.length; i < len; i++) {
             const ally = system.enemies[i];
             if (!(ally instanceof Enemy) || ally === this || ally.destroyed) continue;
-            if (ally.role !== AI_ROLE.COMBAT || !ally.isTargetValid?.(target)) continue;
-
-            const allyFaction = this._getShipFaction(ally);
-            if (!allyFaction || allyFaction !== myFaction) continue;
+            if (!this._canShipSummonAllies(ally) || !ally.isTargetValid?.(target)) continue;
+            if (!this._isEligibleSummonResponder(this, ally, myFaction)) continue;
 
             if (ally.target && ally.isTargetValid(ally.target)) continue;
 
@@ -524,9 +517,63 @@ class EnemyTargeting {
             // Preserve any longer existing cooldown while enforcing a minimum post-summon lock.
             ally.targetSwitchCooldown = Math.max(ally.targetSwitchCooldown || 0, COMBAT_SUMMON_TARGET_COOLDOWN);
             summonedCount++;
+            summonedAllies.push(ally);
         }
 
-        this._emitSummonCallFeedback(system, target, myFaction, summonedCount);
+        this._emitSummonCallFeedback(system, target, myFaction, summonedCount, summonedAllies);
+    }
+
+    _canShipSummonAllies(ship) {
+        if (!ship || !Array.isArray(SUMMON_CALLER_ROLES) || SUMMON_CALLER_ROLES.length === 0) return false;
+        return SUMMON_CALLER_ROLES.includes(ship.role);
+    }
+
+    _isEligibleSummonResponder(caller, ally, callerFaction) {
+        if (!caller || !ally) return false;
+
+        const allyFaction = this._getShipFaction(ally);
+        if (caller.role === AI_ROLE.COMBAT) {
+            return !!allyFaction && allyFaction === callerFaction;
+        }
+
+        if (caller.role === AI_ROLE.PIRATE) {
+            return ally.role === AI_ROLE.PIRATE || allyFaction === callerFaction;
+        }
+
+        if (caller.role === AI_ROLE.POLICE) {
+            return ally.role === AI_ROLE.POLICE || ally.role === AI_ROLE.GUARD || allyFaction === callerFaction;
+        }
+
+        return false;
+    }
+
+    _isSummonTargetEligible(caller, target, callerFaction) {
+        if (!caller || !target) return false;
+
+        const targetFaction = (target instanceof Player)
+            ? (target.playerFaction || 'UNKNOWN')
+            : (this._getShipFaction(target) || 'UNKNOWN');
+
+        if (caller.role === AI_ROLE.COMBAT) {
+            const isFactionRivalTarget = (callerFaction === 'IMPERIAL' && targetFaction === 'SEPARATIST') ||
+                (callerFaction === 'SEPARATIST' && targetFaction === 'IMPERIAL');
+            const isMilitaryAlienTarget = callerFaction === 'MILITARY' && target.role === AI_ROLE.ALIEN;
+            const isSharedThreatTarget = target.role === AI_ROLE.PIRATE || target.role === AI_ROLE.ALIEN;
+            return isFactionRivalTarget || isMilitaryAlienTarget || isSharedThreatTarget;
+        }
+
+        if (caller.role === AI_ROLE.PIRATE) {
+            if (target instanceof Player) return true;
+            return target.role !== AI_ROLE.PIRATE;
+        }
+
+        if (caller.role === AI_ROLE.POLICE) {
+            const targetIsWantedPlayer = target instanceof Player && !!target.isWanted;
+            const targetIsKnownCriminal = target.role === AI_ROLE.PIRATE || target.role === AI_ROLE.ALIEN || !!target.isWanted;
+            return targetIsWantedPlayer || targetIsKnownCriminal;
+        }
+
+        return false;
     }
 
     /**
@@ -537,8 +584,9 @@ class EnemyTargeting {
      * @param {Object} target - Target being called out.
      * @param {string} myFaction - Caller faction label.
      * @param {number} summonedCount - Number of allies redirected by this call.
+     * @param {Array<Object>} summonedAllies - Allies that accepted the call.
      */
-    _emitSummonCallFeedback(system, target, myFaction, summonedCount) {
+    _emitSummonCallFeedback(system, target, myFaction, summonedCount, summonedAllies = []) {
         const now = (typeof millis === 'function') ? millis() : Date.now();
         const visualCooldownMs = SUMMON_CALL_FEEDBACK.VISUAL_COOLDOWN_MS;
         if ((this._lastSummonCallTime || 0) + visualCooldownMs > now) return;
@@ -556,8 +604,6 @@ class EnemyTargeting {
             });
         }
 
-        if (typeof uiManager === 'undefined') return;
-        if (typeof uiManager.addCommunicationMessage !== 'function') return;
         if (!system?.player?.pos) return;
         if (!this?.pos) return;
 
@@ -566,17 +612,21 @@ class EnemyTargeting {
         const notificationRange = COMBAT_ALLY_SUMMON_RADIUS * SUMMON_CALL_FEEDBACK.NOTIFICATION_RANGE_MULTIPLIER;
         if ((dx * dx + dy * dy) > notificationRange * notificationRange) return;
 
+        if (typeof communicationSystem !== 'undefined' && typeof communicationSystem.emitSummonCall === 'function') {
+            communicationSystem.emitSummonCall(this, target, summonedAllies);
+            return;
+        }
+
+        if (typeof uiManager === 'undefined') return;
+        if (typeof uiManager.addCommunicationMessage !== 'function') return;
+
         const targetLabel = (target instanceof Player)
             ? 'you'
             : (target?.shipTypeName || 'hostile ship');
-        const allyWord = summonedCount === 1 ? 'ally' : 'allies';
-        const details = summonedCount > 0
-            ? `${summonedCount} ${allyWord} responding`
-            : 'no immediate response';
         const shipLabel = this.shipTypeName || 'Combat ship';
         const factionLabel = myFaction || this.faction || 'UNKNOWN';
         uiManager.addCommunicationMessage(
-            `Call for assistance: ${shipLabel} (${factionLabel}) engaging ${targetLabel} — ${details}.`,
+            `Call for assistance: ${shipLabel} (${factionLabel}) engaging ${targetLabel}.`,
             [255, 205, 140],
             SUMMON_CALL_FEEDBACK.MESSAGE_DURATION_MS
         );
