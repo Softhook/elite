@@ -125,176 +125,146 @@ class InputManager {
             [INPUT_ACTIONS.NAV_RIGHT]: ['dpad.right']
         };
 
-        return {
-            D: {
-                [INPUT_CONTEXTS.TITLE]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
-                [INPUT_CONTEXTS.INSTRUCTIONS]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'], [INPUT_ACTIONS.BACK]: ['b'] },
-                [INPUT_CONTEXTS.SAVE_SELECTION]: { ...sharedMenu, [INPUT_ACTIONS.BACK]: ['b'] },
-                [INPUT_CONTEXTS.GAME_OVER]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
-                [INPUT_CONTEXTS.STATION_MENU]: sharedMenu,
-                [INPUT_CONTEXTS.GALAXY_MAP]: {
-                    ...sharedMenu,
-                    [INPUT_ACTIONS.CONFIRM]: ['a'],
-                    [INPUT_ACTIONS.BACK]: ['b'],
-                    [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
-                    [INPUT_ACTIONS.MAP_MARKET_TOGGLE]: ['x']
-                },
-                [INPUT_CONTEXTS.MISSION_OVERLAY]: { 
-                    [INPUT_ACTIONS.BACK]: ['b'], 
-                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['home'],
-                    [INPUT_ACTIONS.NAV_UP]: ['dpad.up'], 
-                    [INPUT_ACTIONS.NAV_DOWN]: ['dpad.down'] 
-                },
-                [INPUT_CONTEXTS.INVENTORY]: { [INPUT_ACTIONS.BACK]: ['b'], [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'] },
-                [INPUT_CONTEXTS.IN_FLIGHT]: {
-                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['r1'],
-                    [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
-                    [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
-                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['home'],
-                    [INPUT_ACTIONS.TOGGLE_SECRET_NAV]: ['r4'],
-                    [INPUT_ACTIONS.ACTIVATE_BURST]: ['x'],
-                    [INPUT_ACTIONS.AUTOPILOT_PLANET]: ['l1'],
-                    [INPUT_ACTIONS.AUTOPILOT_SERVICE]: ['l2'],
-                    [INPUT_ACTIONS.MINIMAP_ZOOM_IN]: ['pr'],
-                    [INPUT_ACTIONS.MINIMAP_ZOOM_OUT]: ['pl'],
-                    [INPUT_ACTIONS.ACTIVATE_CLOAK]: ['y'],
-                    [INPUT_ACTIONS.SURFACE_DESCENT]: ['b'],
-                    [INPUT_ACTIONS.WEAPON_NEXT]: ['dpad.right'],
-                    [INPUT_ACTIONS.WEAPON_PREV]: ['dpad.left'],
-                    [INPUT_ACTIONS.TARGET_NEXT]: ['dpad.up'],
-                    [INPUT_ACTIONS.TARGET_PREV]: ['dpad.down']
-                },
-                [INPUT_CONTEXTS.BEAM_TARGETING]: {
-                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
-                },
-                [INPUT_CONTEXTS.SURFACE_SHIP]: {
-                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1'],
-                    [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
-                    [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
-                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['home'],
-                    [INPUT_ACTIONS.MINIMAP_ZOOM_IN]: ['pr'],
-                    [INPUT_ACTIONS.MINIMAP_ZOOM_OUT]: ['pl'],
-                    [INPUT_ACTIONS.ACTIVATE_CLOAK]: ['y'],
-                    [INPUT_ACTIONS.ALTITUDE_UP]: ['l1', 'dpad.up'],
-                    [INPUT_ACTIONS.ALTITUDE_DOWN]: ['l2', 'l4', 'dpad.down'],
-                    [INPUT_ACTIONS.WEAPON_NEXT]: ['dpad.right'],
-                    [INPUT_ACTIONS.WEAPON_PREV]: ['dpad.left'],
-                    [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
-                },
-                [INPUT_CONTEXTS.SURFACE_ASTRONAUT]: {
-                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
-                }
-            },
-            X: {
-                [INPUT_CONTEXTS.TITLE]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
-                [INPUT_CONTEXTS.INSTRUCTIONS]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'], [INPUT_ACTIONS.BACK]: ['b'] },
-                [INPUT_CONTEXTS.SAVE_SELECTION]: { ...sharedMenu, [INPUT_ACTIONS.BACK]: ['b'] },
-                [INPUT_CONTEXTS.GAME_OVER]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
-                [INPUT_CONTEXTS.STATION_MENU]: sharedMenu,
-                [INPUT_CONTEXTS.GALAXY_MAP]: {
-                    ...sharedMenu,
-                    [INPUT_ACTIONS.CONFIRM]: ['a'],
-                    [INPUT_ACTIONS.BACK]: ['b'],
-                    [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
-                    [INPUT_ACTIONS.MAP_MARKET_TOGGLE]: ['x']
-                },
-                [INPUT_CONTEXTS.MISSION_OVERLAY]: {
-                    [INPUT_ACTIONS.BACK]: ['b'],
-                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['x'],
-                    [INPUT_ACTIONS.NAV_UP]: ['dpad.up'],
-                    [INPUT_ACTIONS.NAV_DOWN]: ['dpad.down']
-                },
-                [INPUT_CONTEXTS.INVENTORY]: { [INPUT_ACTIONS.BACK]: ['b'], [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'] },
-                [INPUT_CONTEXTS.IN_FLIGHT]: {
-                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['r1'],
-                    [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
-                    [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
-                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['x'],
-                    [INPUT_ACTIONS.ACTIVATE_CLOAK]: ['y'],
-                    [INPUT_ACTIONS.AUTOPILOT_PLANET]: ['l1'],
-                    [INPUT_ACTIONS.AUTOPILOT_SERVICE]: ['l2'],
-                    [INPUT_ACTIONS.MINIMAP_ZOOM_IN]: ['pr'],
-                    [INPUT_ACTIONS.MINIMAP_ZOOM_OUT]: ['pl'],
-                    [INPUT_ACTIONS.SURFACE_DESCENT]: ['b'],
-                    [INPUT_ACTIONS.WEAPON_NEXT]: ['dpad.right'],
-                    [INPUT_ACTIONS.WEAPON_PREV]: ['dpad.left'],
-                    [INPUT_ACTIONS.TARGET_NEXT]: ['dpad.up'],
-                    [INPUT_ACTIONS.TARGET_PREV]: ['dpad.down'],
-                    [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
-                },
-                [INPUT_CONTEXTS.BEAM_TARGETING]: {
-                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
-                },
-                [INPUT_CONTEXTS.SURFACE_SHIP]: {
-                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1'],
-                    [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
-                    [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
-                    [INPUT_ACTIONS.MINIMAP_ZOOM_IN]: ['pr'],
-                    [INPUT_ACTIONS.MINIMAP_ZOOM_OUT]: ['pl'],
-                    [INPUT_ACTIONS.ACTIVATE_CLOAK]: ['y'],
-                    [INPUT_ACTIONS.ALTITUDE_UP]: ['l1', 'dpad.up'],
-                    [INPUT_ACTIONS.ALTITUDE_DOWN]: ['l2', 'dpad.down'],
-                    [INPUT_ACTIONS.WEAPON_NEXT]: ['dpad.right'],
-                    [INPUT_ACTIONS.WEAPON_PREV]: ['dpad.left'],
-                    [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
-                },
-                [INPUT_CONTEXTS.SURFACE_ASTRONAUT]: {
-                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
-                }
-            },
-            S: {
-                [INPUT_CONTEXTS.TITLE]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
-                [INPUT_CONTEXTS.INSTRUCTIONS]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'], [INPUT_ACTIONS.BACK]: ['b'] },
-                [INPUT_CONTEXTS.SAVE_SELECTION]: { ...sharedMenu, [INPUT_ACTIONS.BACK]: ['b'] },
-                [INPUT_CONTEXTS.GAME_OVER]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
-                [INPUT_CONTEXTS.STATION_MENU]: sharedMenu,
-                [INPUT_CONTEXTS.GALAXY_MAP]: {
-                    ...sharedMenu,
-                    [INPUT_ACTIONS.CONFIRM]: ['a'],
-                    [INPUT_ACTIONS.BACK]: ['b'],
-                    [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
-                    [INPUT_ACTIONS.MAP_MARKET_TOGGLE]: ['x']
-                },
-                [INPUT_CONTEXTS.MISSION_OVERLAY]: { 
-                    [INPUT_ACTIONS.BACK]: ['b'], 
-                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['x'],
-                    [INPUT_ACTIONS.NAV_UP]: ['dpad.up'], 
-                    [INPUT_ACTIONS.NAV_DOWN]: ['dpad.down'] 
-                },
-                [INPUT_CONTEXTS.INVENTORY]: { [INPUT_ACTIONS.BACK]: ['b'], [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'] },
-                [INPUT_CONTEXTS.IN_FLIGHT]: {
-                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1'],
-                    [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
-                    [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
-                    [INPUT_ACTIONS.TOGGLE_MISSION]: ['x'],
-                    [INPUT_ACTIONS.TOGGLE_SECRET_NAV]: ['r4'],
-                    [INPUT_ACTIONS.ACTIVATE_CLOAK]: ['y'],
-                    [INPUT_ACTIONS.AUTOPILOT_PLANET]: ['l1'],
-                    [INPUT_ACTIONS.AUTOPILOT_SERVICE]: ['l2'],
-                    [INPUT_ACTIONS.WEAPON_NEXT]: ['dpad.right'],
-                    [INPUT_ACTIONS.WEAPON_PREV]: ['dpad.left'],
-                    [INPUT_ACTIONS.TARGET_NEXT]: ['dpad.up'],
-                    [INPUT_ACTIONS.TARGET_PREV]: ['dpad.down'],
-                    [INPUT_ACTIONS.SURFACE_DESCENT]: ['b'],
-                    [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
-                },
-                [INPUT_CONTEXTS.BEAM_TARGETING]: {
-                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
-                },
-                [INPUT_CONTEXTS.SURFACE_SHIP]: {
-                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1'],
-                    [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
-                    [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
-                    [INPUT_ACTIONS.ALTITUDE_UP]: ['l1', 'dpad.up'],
-                    [INPUT_ACTIONS.ALTITUDE_DOWN]: ['l2', 'l4', 'dpad.down'],
-                    [INPUT_ACTIONS.WEAPON_NEXT]: ['dpad.right'],
-                    [INPUT_ACTIONS.WEAPON_PREV]: ['dpad.left'],
-                    [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
-                },
-                [INPUT_CONTEXTS.SURFACE_ASTRONAUT]: {
-                    [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
-                }
+        const buildMissionOverlay = (missionToggle) => ({
+            [INPUT_ACTIONS.BACK]: ['b'],
+            [INPUT_ACTIONS.TOGGLE_MISSION]: [missionToggle],
+            [INPUT_ACTIONS.NAV_UP]: ['dpad.up'],
+            [INPUT_ACTIONS.NAV_DOWN]: ['dpad.down']
+        });
+
+        const buildInventory = () => ({
+            [INPUT_ACTIONS.BACK]: ['b'],
+            [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel']
+        });
+
+        const buildFlightContext = ({
+            firePrimary,
+            missionToggle,
+            includeSecretNav = false,
+            includeMinimapZoom = false
+        }) => {
+            const actions = {
+                [INPUT_ACTIONS.FIRE_PRIMARY]: firePrimary,
+                [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
+                [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
+                [INPUT_ACTIONS.TOGGLE_MISSION]: [missionToggle],
+                [INPUT_ACTIONS.ACTIVATE_CLOAK]: ['y'],
+                [INPUT_ACTIONS.AUTOPILOT_PLANET]: ['l1'],
+                [INPUT_ACTIONS.AUTOPILOT_SERVICE]: ['l2'],
+                [INPUT_ACTIONS.SURFACE_DESCENT]: ['b'],
+                [INPUT_ACTIONS.WEAPON_NEXT]: ['dpad.right'],
+                [INPUT_ACTIONS.WEAPON_PREV]: ['dpad.left'],
+                [INPUT_ACTIONS.TARGET_NEXT]: ['dpad.up'],
+                [INPUT_ACTIONS.TARGET_PREV]: ['dpad.down'],
+                [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
+            };
+
+            if (includeSecretNav) actions[INPUT_ACTIONS.TOGGLE_SECRET_NAV] = ['r4'];
+            if (includeMinimapZoom) {
+                actions[INPUT_ACTIONS.MINIMAP_ZOOM_IN] = ['pr'];
+                actions[INPUT_ACTIONS.MINIMAP_ZOOM_OUT] = ['pl'];
             }
+
+            return actions;
+        };
+
+        const buildSurfaceShipContext = ({
+            firePrimary,
+            missionToggle = null,
+            altitudeDown,
+            includeMinimapZoom = false
+        }) => {
+            const actions = {
+                [INPUT_ACTIONS.FIRE_PRIMARY]: firePrimary,
+                [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
+                [INPUT_ACTIONS.TOGGLE_INVENTORY]: ['sel'],
+                [INPUT_ACTIONS.ACTIVATE_CLOAK]: ['y'],
+                [INPUT_ACTIONS.ALTITUDE_UP]: ['l1', 'dpad.up'],
+                [INPUT_ACTIONS.ALTITUDE_DOWN]: altitudeDown,
+                [INPUT_ACTIONS.WEAPON_NEXT]: ['dpad.right'],
+                [INPUT_ACTIONS.WEAPON_PREV]: ['dpad.left'],
+                [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
+            };
+
+            if (missionToggle) actions[INPUT_ACTIONS.TOGGLE_MISSION] = [missionToggle];
+            if (includeMinimapZoom) {
+                actions[INPUT_ACTIONS.MINIMAP_ZOOM_IN] = ['pr'];
+                actions[INPUT_ACTIONS.MINIMAP_ZOOM_OUT] = ['pl'];
+            }
+
+            return actions;
+        };
+
+        const buildModeContexts = ({
+            missionToggle,
+            inFlightFirePrimary,
+            surfaceShipFirePrimary,
+            surfaceAltitudeDown,
+            includeSecretNav = false,
+            includeFlightMinimapZoom = false,
+            includeSurfaceMissionToggle = false,
+            includeSurfaceMinimapZoom = false
+        }) => ({
+            [INPUT_CONTEXTS.TITLE]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
+            [INPUT_CONTEXTS.INSTRUCTIONS]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'], [INPUT_ACTIONS.BACK]: ['b'] },
+            [INPUT_CONTEXTS.SAVE_SELECTION]: { ...sharedMenu, [INPUT_ACTIONS.BACK]: ['b'] },
+            [INPUT_CONTEXTS.GAME_OVER]: { [INPUT_ACTIONS.CONFIRM]: ['a', 'start'] },
+            [INPUT_CONTEXTS.STATION_MENU]: sharedMenu,
+            [INPUT_CONTEXTS.GALAXY_MAP]: {
+                ...sharedMenu,
+                [INPUT_ACTIONS.CONFIRM]: ['a'],
+                [INPUT_ACTIONS.BACK]: ['b'],
+                [INPUT_ACTIONS.TOGGLE_MAP]: ['start'],
+                [INPUT_ACTIONS.MAP_MARKET_TOGGLE]: ['x']
+            },
+            [INPUT_CONTEXTS.MISSION_OVERLAY]: buildMissionOverlay(missionToggle),
+            [INPUT_CONTEXTS.INVENTORY]: buildInventory(),
+            [INPUT_CONTEXTS.IN_FLIGHT]: buildFlightContext({
+                firePrimary: inFlightFirePrimary,
+                missionToggle,
+                includeSecretNav,
+                includeMinimapZoom: includeFlightMinimapZoom
+            }),
+            [INPUT_CONTEXTS.BEAM_TARGETING]: {
+                [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
+            },
+            [INPUT_CONTEXTS.SURFACE_SHIP]: buildSurfaceShipContext({
+                firePrimary: surfaceShipFirePrimary,
+                missionToggle: includeSurfaceMissionToggle ? missionToggle : null,
+                altitudeDown: surfaceAltitudeDown,
+                includeMinimapZoom: includeSurfaceMinimapZoom
+            }),
+            [INPUT_CONTEXTS.SURFACE_ASTRONAUT]: {
+                [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
+            }
+        });
+
+        return {
+            D: buildModeContexts({
+                missionToggle: 'home',
+                inFlightFirePrimary: ['r1'],
+                surfaceShipFirePrimary: ['a', 'r1'],
+                surfaceAltitudeDown: ['l2', 'l4', 'dpad.down'],
+                includeSecretNav: true,
+                includeFlightMinimapZoom: true,
+                includeSurfaceMissionToggle: true,
+                includeSurfaceMinimapZoom: true
+            }),
+            X: buildModeContexts({
+                missionToggle: 'x',
+                inFlightFirePrimary: ['r1'],
+                surfaceShipFirePrimary: ['a', 'r1'],
+                surfaceAltitudeDown: ['l2', 'dpad.down'],
+                includeFlightMinimapZoom: true,
+                includeSurfaceMinimapZoom: true
+            }),
+            S: buildModeContexts({
+                missionToggle: 'x',
+                inFlightFirePrimary: ['a', 'r1'],
+                surfaceShipFirePrimary: ['a', 'r1'],
+                surfaceAltitudeDown: ['l2', 'l4', 'dpad.down'],
+                includeSecretNav: true
+            })
         };
     }
 
