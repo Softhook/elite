@@ -3,7 +3,7 @@
 // Contains draw methods and visual effects
 
 const ENEMY_TRAIL_SPEED_THRESHOLD_SQ = 42;
-const ENEMY_TRAIL_MAX_LENGTH = 12;
+const ENEMY_TRAIL_MAX_LENGTH = 35;
 
 /**
  * EnemyRendering class contains rendering methods for enemies.
@@ -244,7 +244,8 @@ class EnemyRendering {
         const vx = this.vel?.x || 0;
         const vy = this.vel?.y || 0;
         const speed = Math.sqrt(vx * vx + vy * vy);
-        const baseWidth = Math.max(1.0, Math.min(5.2, speed * 0.09));
+        const baseWidth = (this.size || 30) * 0.22;
+        const speedScale = Math.min(2.0, speed / 6.5);
         const c = this.baseColorValue || [180, 190, 220];
 
         push();
@@ -254,7 +255,7 @@ class EnemyRendering {
             const p0 = trail[i - 1];
             const p1 = trail[i];
             const lifeT = i / (trail.length - 1);
-            stroke(c[0], c[1], c[2], 10 + lifeT * 95);
+            stroke(c[0], c[1], c[2], (8 + lifeT * 100) * speedScale);
             strokeWeight(Math.max(0.5, baseWidth * lifeT * lifeT));
             line(p0.x, p0.y, p1.x, p1.y);
         }

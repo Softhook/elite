@@ -31,7 +31,7 @@ const PLAYER_CONFIG = {
 
     // Visual trails
     TRAIL_SPEED_THRESHOLD_SQ: 49,
-    TRAIL_MAX_LENGTH: 14
+    TRAIL_MAX_LENGTH: 40
 };
 
 /**
@@ -1708,7 +1708,8 @@ class Player {
         const vx = this.vel?.x || 0;
         const vy = this.vel?.y || 0;
         const speed = Math.sqrt(vx * vx + vy * vy);
-        const baseWidth = Math.max(1.4, Math.min(6.5, speed * 0.11));
+        const baseWidth = (this.size || 30) * 0.22;
+        const speedScale = Math.min(2.0, speed / 7);
 
         push();
         noFill();
@@ -1717,9 +1718,9 @@ class Player {
             const p0 = trail[i - 1];
             const p1 = trail[i];
             const lifeT = i / (trail.length - 1);
-            const alpha = 12 + lifeT * 120;
+            const alpha = (10 + lifeT * 130) * speedScale;
             stroke(120, 200, 255, alpha);
-            strokeWeight(Math.max(0.6, baseWidth * lifeT * lifeT));
+            strokeWeight(Math.max(0.5, baseWidth * lifeT * lifeT));
             line(p0.x, p0.y, p1.x, p1.y);
         }
         blendMode(BLEND);
