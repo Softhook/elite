@@ -159,33 +159,37 @@ describe('Role & Faction Interaction Tests', () => {
             expectNegativeOrZeroScore(score);
         });
 
-        test('Combat ships coordinate focus fire with faction partners against rival faction targets', () => {
-            const wingman = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL');
-            const partner = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 40, 0);
+        test('Combat ships summon idle faction partners to attack a rival target', () => {
+            const leader = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+            const idlePartner = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 80, 0);
             const rival = createEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 120, 0);
-            mockSystem.enemies = [wingman, partner, rival];
+            leader.isTargetValid = (t) => !!(t && t.pos && !t.destroyed);
+            idlePartner.isTargetValid = (t) => !!(t && t.pos && !t.destroyed);
+            mockSystem.enemies = [leader, idlePartner, rival];
             mockSystem.player = null;
 
-            partner.target = rival;
-            const withPartnerFocus = wingman.evaluateTargetScore(rival, mockSystem);
+            expect(idlePartner.target).toBeFalsy();
 
-            partner.target = null;
-            const withoutPartnerFocus = wingman.evaluateTargetScore(rival, mockSystem);
-
-            expect(withPartnerFocus).toBeGreaterThan(withoutPartnerFocus);
+            const acquired = leader.updateTargeting(mockSystem);
+            expect(acquired).toBe(true);
+            expect(leader.target).toBe(rival);
+            expect(idlePartner.target).toBe(rival);
         });
 
-        test('Combat ships do not coordinate focus fire against same-faction targets', () => {
-            const wingman = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL');
-            const partner = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 40, 0);
-            const allyTarget = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 120, 0);
-            mockSystem.enemies = [wingman, partner, allyTarget];
+        test('Combat summon does not overwrite a partner with an existing valid target', () => {
+            const leader = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+            const engagedPartner = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 60, 0);
+            const rival = createEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 120, 0);
+            const pirate = createEnemy(AI_ROLE.PIRATE, 'PIRATE', 140, 0);
+            leader.isTargetValid = (t) => !!(t && t.pos && !t.destroyed);
+            engagedPartner.isTargetValid = (t) => !!(t && t.pos && !t.destroyed);
+            mockSystem.enemies = [leader, engagedPartner, rival, pirate];
             mockSystem.player = null;
 
-            partner.target = allyTarget;
-            const score = wingman.evaluateTargetScore(allyTarget, mockSystem);
+            engagedPartner.target = pirate;
+            leader.updateTargeting(mockSystem);
 
-            expectNegativeOrZeroScore(score);
+            expect(engagedPartner.target).toBe(pirate);
         });
 
         test('Guards should only retaliate (not initiate combat)', () => {
