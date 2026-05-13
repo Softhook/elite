@@ -59,6 +59,26 @@ describe('Player Construction', () => {
         expect(player.thrustForce).toBeGreaterThan(0);
         expect(player.size).toBeGreaterThan(0);
     });
+
+    test('should keep installed upgrades isolated per player instance', () => {
+        const playerOne = new Player();
+        const playerTwo = new Player();
+
+        playerOne.installedUpgrades.armor = 2;
+
+        expect(playerTwo.installedUpgrades.armor).not.toBe(2);
+    });
+
+    test('should restore default installed upgrades when reapplying ship definition', () => {
+        const player = new Player();
+        const defaultUpgrades = { ...player.installedUpgrades };
+
+        player.installedUpgrades.armor = 2;
+        player.installedUpgrades.engine = 1;
+        player.applyShipDefinition(player.shipTypeName);
+
+        expect(player.installedUpgrades).toEqual(defaultUpgrades);
+    });
 });
 
 // ============================================

@@ -34,6 +34,20 @@ const PLAYER_CONFIG = {
     TRAIL_MAX_LENGTH: 40
 };
 
+const DEFAULT_INSTALLED_UPGRADES = Object.freeze({
+    armor: 0,
+    engine: 0,
+    cargo: 0,
+    hardpoints: 0,
+    shield: 0,
+    cloak: 0,
+    booster: 0
+});
+
+function createDefaultInstalledUpgrades() {
+    return { ...DEFAULT_INSTALLED_UPGRADES };
+}
+
 /**
  * Player class - represents the player's ship and state
  * 
@@ -102,7 +116,7 @@ class Player {
         this.shipDefinition = shipDef;
 
         // Initialize installed upgrades tracking (all start at level 0)
-        this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0, booster: 0 };
+        this.installedUpgrades = createDefaultInstalledUpgrades();
         this._applyDefaultUpgrades(shipDef);
 
         return shipDef;
@@ -710,7 +724,7 @@ class Player {
         this.loadWeaponsFromShipDefinition(shipTypeName);
 
         // Recalculate any derived properties
-        this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0, booster: 0 }; // Reset upgrades on ship change
+        this.installedUpgrades = createDefaultInstalledUpgrades(); // Reset upgrades on ship change
         this._applyDefaultUpgrades(def); // Apply default upgrades from definition
         this.recalculateStats(); // Apply bonuses from default upgrades
         this.hull = this.maxHull; // Full hull for new ship
@@ -725,7 +739,7 @@ class Player {
      * @param {number} level - 1, 2, 3
      */
     applyUpgrade(type, level) {
-        if (!this.installedUpgrades) this.installedUpgrades = { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0, booster: 0 };
+        if (!this.installedUpgrades) this.installedUpgrades = createDefaultInstalledUpgrades();
 
         const oldMaxHull = this.maxHull;
         const oldMaxShield = this.maxShield;
@@ -2682,7 +2696,7 @@ class Player {
 
         return {
             shipTypeName: this.shipTypeName,
-            installedUpgrades: this.installedUpgrades || { armor: 0, engine: 0, cargo: 0, hardpoints: 0, shield: 0, cloak: 0, booster: 0 }, // Save upgrades
+            installedUpgrades: this.installedUpgrades || createDefaultInstalledUpgrades(), // Save upgrades
             pos: { x: this.pos.x, y: this.pos.y }, vel: { x: this.vel.x, y: this.vel.y }, angle: normalizedAngle,
             hull: this.hull, credits: this.credits, cargo: JSON.parse(JSON.stringify(cleanedCargo)),
             isWanted: this.isWanted,
