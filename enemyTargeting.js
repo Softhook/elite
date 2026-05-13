@@ -497,7 +497,7 @@ class EnemyTargeting {
         for (let i = 0, len = system.enemies.length; i < len; i++) {
             const ally = system.enemies[i];
             if (!(ally instanceof Enemy) || ally === this || ally.destroyed) continue;
-            if (ally.role !== AI_ROLE.COMBAT || !ally.isTargetValid || !ally.isTargetValid(target)) continue;
+            if (ally.role !== AI_ROLE.COMBAT || !ally.isTargetValid?.(target)) continue;
 
             const allyFaction = this._getShipFaction(ally);
             if (!allyFaction || allyFaction !== myFaction) continue;
@@ -511,6 +511,7 @@ class EnemyTargeting {
             }
 
             ally.target = target;
+            // Preserve any longer existing cooldown while enforcing a minimum post-summon lock.
             ally.targetSwitchCooldown = Math.max(ally.targetSwitchCooldown || 0, COMBAT_SUMMON_TARGET_COOLDOWN);
         }
     }
