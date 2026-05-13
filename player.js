@@ -59,6 +59,13 @@ function createDefaultFactionStanding() {
     return { ...DEFAULT_FACTION_STANDING };
 }
 
+/**
+ * Deep-clones JSON-serializable state for save/load boundaries.
+ * Returns the provided fallback when the source value is nullish.
+ * @param {*} value
+ * @param {*} fallback
+ * @returns {*}
+ */
 function cloneSerializableState(value, fallback) {
     if (value === undefined || value === null) {
         return fallback;
