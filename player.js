@@ -74,6 +74,10 @@ function cloneSerializableState(value, fallback) {
     return JSON.parse(JSON.stringify(value));
 }
 
+function cloneSerializableArray(value) {
+    return Array.isArray(value) ? cloneSerializableState(value, []) : [];
+}
+
 /**
  * Player class - represents the player's ship and state
  * 
@@ -2952,18 +2956,18 @@ class Player {
         }
 
         // Restore personal record tracking
-        this.shipsDestroyed = cloneSerializableState(data.shipsDestroyed, []);
-        this.systemsVisited = cloneSerializableState(data.systemsVisited, []);
-        this.stationsTraded = cloneSerializableState(data.stationsTraded, []);
-        this.factionsJoined = cloneSerializableState(data.factionsJoined, []);
-        this.eliteStatusChanges = cloneSerializableState(data.eliteStatusChanges, []);
-        this.missionsCompleted = cloneSerializableState(data.missionsCompleted, []);
-        this.wantedStatusChanges = cloneSerializableState(data.wantedStatusChanges, []);
-        this.shipsPurchased = cloneSerializableState(data.shipsPurchased, []);
-        this.weaponsUpgraded = cloneSerializableState(data.weaponsUpgraded, []);
+        this.shipsDestroyed = cloneSerializableArray(data.shipsDestroyed);
+        this.systemsVisited = cloneSerializableArray(data.systemsVisited);
+        this.stationsTraded = cloneSerializableArray(data.stationsTraded);
+        this.factionsJoined = cloneSerializableArray(data.factionsJoined);
+        this.eliteStatusChanges = cloneSerializableArray(data.eliteStatusChanges);
+        this.missionsCompleted = cloneSerializableArray(data.missionsCompleted);
+        this.wantedStatusChanges = cloneSerializableArray(data.wantedStatusChanges);
+        this.shipsPurchased = cloneSerializableArray(data.shipsPurchased);
+        this.weaponsUpgraded = cloneSerializableArray(data.weaponsUpgraded);
 
         // Restore secret base storage
-        this.secretStorage = cloneSerializableState(data.secretStorage, []);
+        this.secretStorage = cloneSerializableArray(data.secretStorage);
 
         // Initialize session trade tracking (not saved, always starts fresh)
         this.currentSessionTradedLocations = new Set();

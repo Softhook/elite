@@ -634,6 +634,33 @@ describe('Player Serialization', () => {
         expect(restored.shipsDestroyed[0].shipType).toBe('Viper');
         expect(restored.secretStorage[0].quantity).toBe(2);
     });
+
+    test('should reset corrupted non-array save collections to empty arrays', () => {
+        const saveData = player.toJSON();
+        saveData.shipsDestroyed = { shipType: 'Viper' };
+        saveData.systemsVisited = 'Lave';
+        saveData.stationsTraded = 42;
+        saveData.factionsJoined = { POLICE: true };
+        saveData.eliteStatusChanges = null;
+        saveData.missionsCompleted = { title: 'Courier' };
+        saveData.wantedStatusChanges = 'wanted';
+        saveData.shipsPurchased = { shipType: 'Sidewinder' };
+        saveData.weaponsUpgraded = { name: 'Pulse Laser' };
+        saveData.secretStorage = { name: 'Food', quantity: 1 };
+
+        const restored = Player.fromJSON(saveData);
+
+        expect(restored.shipsDestroyed).toEqual([]);
+        expect(restored.systemsVisited).toEqual([]);
+        expect(restored.stationsTraded).toEqual([]);
+        expect(restored.factionsJoined).toEqual([]);
+        expect(restored.eliteStatusChanges).toEqual([]);
+        expect(restored.missionsCompleted).toEqual([]);
+        expect(restored.wantedStatusChanges).toEqual([]);
+        expect(restored.shipsPurchased).toEqual([]);
+        expect(restored.weaponsUpgraded).toEqual([]);
+        expect(restored.secretStorage).toEqual([]);
+    });
 });
 
 // ============================================
