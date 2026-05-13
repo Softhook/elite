@@ -5,6 +5,20 @@
 const OFFSCREEN_VOLUME_REDUCTION_FACTOR = 0.1;
 const SHIELD_RECHARGE_RATE_MULTIPLIER = 4.0;
 
+/**
+ * Returns true if the player is currently in a ship-control state
+ * (flying in space or piloting on a planetary surface).
+ * Replaces the repeated inline check pattern throughout the file.
+ * @returns {boolean}
+ */
+function isShipControlState() {
+    if (!gameStateManager) return false;
+    const state = gameStateManager.currentState;
+    if (state === 'IN_FLIGHT') return true;
+    if (state === 'SURFACE_MODE' && surfaceMode && surfaceMode.controlMode === 'SHIP') return true;
+    return false;
+}
+
 // --- Global Game State ---
 const GameGlobals = {
     player: null,
@@ -57,7 +71,6 @@ function setup() {
         configurePlayerShip();
         setInitialGameState();
         setupAudioGestures();
-        setupFullscreenBehavior();
         initializeGamepad();
 
         UI_LOG("--- Setup Complete ---");
@@ -152,7 +165,7 @@ function initializeGameObjects() {
     missionOverlay = new MissionOverlay();
     saveSelectionScreen = new SaveSelectionScreen();
     communicationSystem = new CommunicationSystem();
-    const newsManager = new NewsManager();
+    GameGlobals.newsManager = new NewsManager();
 
     // Initialize communication system with references
     communicationSystem.initialize({ uiManager, player });
@@ -167,8 +180,7 @@ function initializeGameObjects() {
         inventoryScreen,
         missionOverlay,
         saveSelectionScreen,
-        communicationSystem,
-        newsManager
+        communicationSystem
     });
 }
 
@@ -231,16 +243,6 @@ function rebuildAmbientSounds() {
     } catch (e) {
         console.warn('Error rebuilding ambient sounds after resume', e);
     }
-}
-
-/**
- * Setup fullscreen behavior on title/save selection screens
- * Note: Fullscreen is now handled by the TitleScreen class when user clicks START.
- * This function is kept for potential future use.
- */
-function setupFullscreenBehavior() {
-    // No automatic fullscreen attempts - let the title screen handle it on user interaction
-    // This prevents "API can only be initiated by a user gesture" errors
 }
 
 /**
@@ -518,14 +520,11 @@ function executeInputAction(action, context) {
  * Handle continuous firing when space is held (keyboard or gamepad)
  */
 function handleContinuousFiring() {
-    const isShipControl = gameStateManager.currentState === "IN_FLIGHT" ||
-        (gameStateManager.currentState === "SURFACE_MODE" && typeof surfaceMode !== 'undefined' && surfaceMode.controlMode === 'SHIP');
-
     const context = getActiveInputContext();
     inputManager?.updateBeamTargetCursor(context, player);
     const gpFiring = !!(inputManager && context && inputManager.isGamepadActionHeld(INPUT_ACTIONS.FIRE_PRIMARY, context));
 
-    if (isShipControl && !player.destroyed && (keyIsDown(32) || gpFiring)) {
+    if (isShipControlState() && !player.destroyed && (keyIsDown(32) || gpFiring)) {
         player.handleFireInput();
     }
 }
@@ -621,10 +620,7 @@ function handleGamepadContinuousInput() {
     }
 
     // ── In-flight / Surface ship control: analog sticks → movement ──
-    const isShipControl = state === 'IN_FLIGHT' ||
-        (state === 'SURFACE_MODE' && typeof surfaceMode !== 'undefined' && surfaceMode.controlMode === 'SHIP');
-
-    if (!isShipControl) return;
+    if (!isShipControlState()) return;
 
     // Read analog values
     const shipControls = inputManager.getGamepadShipControls(context);
@@ -700,7 +696,7 @@ function handleGamepadContinuousInput() {
     }
 
     // Surface mode altitude from bumpers
-    if (state === 'SURFACE_MODE' && typeof surfaceMode !== 'undefined' && surfaceMode) {
+    if (state === 'SURFACE_MODE' && surfaceMode) {
         if (inputManager.isGamepadActionHeld(INPUT_ACTIONS.ALTITUDE_UP, context)) surfaceMode.altitudeInput = 1;
         else if (inputManager.isGamepadActionHeld(INPUT_ACTIONS.ALTITUDE_DOWN, context)) surfaceMode.altitudeInput = -1;
         else if (!keyIsDown(90) && !keyIsDown(88)) { // Only reset if keyboard Z/X not held
@@ -713,10 +709,8 @@ function handleGamepadContinuousInput() {
     if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.MINIMAP_ZOOM_OUT, context)) executeInputAction(INPUT_ACTIONS.MINIMAP_ZOOM_OUT, context);
     if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.ACTIVATE_BURST, context)) executeInputAction(INPUT_ACTIONS.ACTIVATE_BURST, context);
 
-    const inSurfaceShipMode = state === 'SURFACE_MODE' && typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.controlMode === 'SHIP';
-
     // Weapon switching available in space and surface ship mode
-    if (state === 'IN_FLIGHT' || inSurfaceShipMode) {
+    if (isShipControlState()) {
         if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.WEAPON_NEXT, context) && player.weapons && player.weapons.length > 1) {
             const nextIdx = (player.weaponIndex + 1) % player.weapons.length;
             if (player.switchToWeapon(nextIdx)) {
@@ -753,418 +747,7 @@ function handleGamepadContinuousInput() {
  * The system reads the live button area arrays from uiManager to know what's clickable.
  */
 
-// Gamepad menu navigation state (persists across frames)
-let _gpMenuIndex = 0;
-let _gpMenuState = '';  // tracks which state the index belongs to
-let _gpMissionPanel = 'list';   // 'list' | 'detail' — which panel is focused on the mission board
-let _gpMissionDetailIndex = 0; // index within the detail-panel buttons
-
-function _handleGamepadStationMenus(gp, state) {
-    // Reset selection index when entering a new menu state
-    if (state !== _gpMenuState) {
-        _gpMenuIndex = 0;
-        _gpMenuState = state;
-        _gpMissionPanel = 'list';
-        _gpMissionDetailIndex = 0;
-    }
-
-    // Mission board uses dedicated two-panel navigation
-    if (state === 'VIEWING_MISSIONS') {
-        _handleGamepadMissions(gp);
-        return;
-    }
-
-    // Get the button areas for the current state
-    const buttons = _getButtonAreasForState(state);
-
-    // ── B button = go back / escape ──
-    if (gp.pressed('b')) {
-        _gpMenuIndex = 0;
-        if (state === 'DOCKED' || state === 'DOCKED_SPACE_OBJECT') {
-            gameStateManager.setState('IN_FLIGHT');
-            soundManager?.playSound('click_off');
-        } else if (state === 'VIEWING_SHIP_DETAIL') {
-            gameStateManager.setState('VIEWING_SHIPYARD');
-            soundManager?.playSound('click');
-        } else if (state === 'VIEWING_WEAPON_DETAIL') {
-            gameStateManager.setState('VIEWING_UPGRADES');
-            soundManager?.playSound('click');
-        } else if (state === 'VIEWING_RECORD') {
-            // Return to the correct docked state (space object or station)
-            const returnState = gameStateManager?._returnFromRecordState || 'DOCKED';
-            if (gameStateManager) gameStateManager._returnFromRecordState = null;
-            if (gameStateManager) gameStateManager.setState(returnState);
-            soundManager?.playSound('click_off');
-        } else {
-            const isSpaceObj = state.startsWith('VIEWING_SPACE_OBJECT');
-            gameStateManager.setState(isSpaceObj ? 'DOCKED_SPACE_OBJECT' : 'DOCKED');
-            soundManager?.playSound('click');
-        }
-        return;
-    }
-
-    const isMarket = state === 'VIEWING_MARKET' || state === 'VIEWING_SPACE_OBJECT_MARKET';
-    const isHorizontalDetail = state === 'VIEWING_SHIP_DETAIL' || state === 'VIEWING_WEAPON_DETAIL';
-    const isRecordView = state === 'VIEWING_RECORD';
-    const isWeaponSlotPicker = state === 'VIEWING_WEAPON_DETAIL' && !!uiManager?.stationMenus?.showingSlotPicker;
-    const slotPickerSlotCount = isWeaponSlotPicker
-        ? Math.max(1, (uiManager?.stationMenus?.slotPickerButtons || []).filter(b => typeof b?.slotIndex === 'number').length)
-        : 1;
-    const rowSize = isMarket ? 4 : 1;
-
-    const pressedUp = gp.pressed('dpad.up') || (gp.state.ls.y < -0.7 && gp.prevState && gp.prevState.ls.y >= -0.7);
-    const pressedDown = gp.pressed('dpad.down') || (gp.state.ls.y > 0.7 && gp.prevState && gp.prevState.ls.y <= 0.7);
-
-    // Personal log has a long scrollable list and usually only one actionable button.
-    // Prioritize vertical D-pad/left-stick as list scroll so gamepad users can browse entries.
-    if (isRecordView && (pressedUp || pressedDown)) {
-        _handleGamepadListScroll(state, pressedDown ? 1 : -1);
-        soundManager?.playSound('click');
-    }
-
-    // ── D-pad up/down = navigate selection ──
-    if (buttons && buttons.length > 0) {
-        if (pressedUp || pressedDown) {
-            if (isRecordView) {
-                // Keep focus stable on Record view controls while list scrolling is handled above.
-            } else if (isHorizontalDetail && !isWeaponSlotPicker) {
-                _handleGamepadListScroll(state, pressedDown ? 1 : -1);
-            } else if (isWeaponSlotPicker && buttons.length > slotPickerSlotCount) {
-                const cancelIndex = buttons.length - 1;
-                if (pressedDown) {
-                    _gpMenuIndex = (_gpMenuIndex < slotPickerSlotCount) ? cancelIndex : 0;
-                } else if (pressedUp) {
-                    _gpMenuIndex = (_gpMenuIndex >= slotPickerSlotCount) ? 0 : cancelIndex;
-                }
-            } else {
-                _gpMenuIndex = (_gpMenuIndex + (pressedDown ? rowSize : -rowSize) + buttons.length) % buttons.length;
-            }
-            if (!(isHorizontalDetail && !isWeaponSlotPicker)) {
-                soundManager?.playSound('click');
-            }
-        }
-    }
-
-    // ── D-pad left/right = scroll or horizontal nav in lists ──
-    if (gp.pressed('dpad.left') || gp.pressed('dpad.right')) {
-        const dir = gp.pressed('dpad.right') ? 1 : -1;
-        if ((isWeaponSlotPicker || isHorizontalDetail) && buttons && buttons.length > 0) {
-            _gpMenuIndex = (_gpMenuIndex + dir + buttons.length) % buttons.length;
-            soundManager?.playSound('click');
-        } else if (isMarket && buttons && buttons.length > 0) {
-            const baseRowIdx = Math.floor(_gpMenuIndex / 4) * 4;
-            const subIdx = _gpMenuIndex % 4;
-            const newSubIdx = (subIdx + dir + 4) % 4;
-            _gpMenuIndex = baseRowIdx + newSubIdx;
-            soundManager?.playSound('click');
-        } else {
-            _handleGamepadListScroll(state, dir);
-        }
-    }
-
-    // Clamp index to valid range
-    if (buttons && buttons.length > 0) {
-        _gpMenuIndex = constrain(_gpMenuIndex, 0, buttons.length - 1);
-    }
-
-    // ── A button = click the selected button ──
-    if (gp.pressed('a') && buttons && buttons.length > 0 && _gpMenuIndex < buttons.length) {
-        const selectedBtn = buttons[_gpMenuIndex];
-        if (selectedBtn && selectedBtn.w > 0 && selectedBtn.h > 0) {
-            // Simulate a click at the center of the selected button
-            const cx = selectedBtn.x + selectedBtn.w / 2;
-            const cy = selectedBtn.y + selectedBtn.h / 2;
-
-            if (uiManager) {
-                uiManager.handleMouseClicks(
-                    cx, cy, state, player,
-                    player.currentSystem?.station?.getMarket?.() || galaxy?.getCurrentSystem()?.station?.getMarket?.(),
-                    galaxy
-                );
-            }
-        }
-    }
-}
-
-/**
- * Two-panel gamepad navigation for the mission board.
- * Left panel  (list)   – D-pad up/down selects a mission.
- * Right panel (detail) – D-pad left/right navigates Accept/Back/Abandon/Complete.
- * D-pad right from list → detail.  D-pad left from first detail button → list.
- */
-function _handleGamepadMissions(gp) {
-    const listButtons   = uiManager?.missionListButtonAreas || [];
-    // Order detail buttons: action buttons (accept/complete/abandon) before back
-    const detailButtonsObj = uiManager?.missionDetailButtonAreas || {};
-    const detailButtons = Object.entries(detailButtonsObj)
-        .sort(([key]) => key === 'back' ? 1 : -1) // action buttons first, back last
-        .map(([, btn]) => btn)
-        .filter(b => b && b.w > 0);
-
-    // B = go back to station
-    if (gp.pressed('b')) {
-        _gpMenuIndex = 0;
-        _gpMissionPanel = 'list';
-        gameStateManager.setState('DOCKED');
-        soundManager?.playSound('click_off');
-        return;
-    }
-
-    const pressedUp    = gp.pressed('dpad.up')    || (gp.state?.ls?.y < -0.7 && gp.prevState?.ls?.y >= -0.7);
-    const pressedDown  = gp.pressed('dpad.down')  || (gp.state?.ls?.y > 0.7  && gp.prevState?.ls?.y <= 0.7);
-    const pressedLeft  = gp.pressed('dpad.left');
-    const pressedRight = gp.pressed('dpad.right');
-
-    if (_gpMissionPanel === 'list') {
-        // ── Navigate the mission list ──
-        if ((pressedUp || pressedDown) && listButtons.length > 0) {
-            _gpMenuIndex = (_gpMenuIndex + (pressedDown ? 1 : -1) + listButtons.length) % listButtons.length;
-            soundManager?.playSound('click');
-        }
-
-        // Clamp and sync selected mission index
-        if (listButtons.length > 0) {
-            _gpMenuIndex = constrain(_gpMenuIndex, 0, listButtons.length - 1);
-            const sel = listButtons[_gpMenuIndex];
-            if (Number.isInteger(sel?.index)) {
-                gameStateManager.selectedMissionIndex = sel.index;
-            }
-        }
-
-        // D-pad right → move to detail panel
-        if (pressedRight && detailButtons.length > 0) {
-            _gpMissionPanel = 'detail';
-            _gpMissionDetailIndex = 0;
-            soundManager?.playSound('click');
-        }
-
-        // A = confirm mission selection (click the list button)
-        if (gp.pressed('a') && listButtons.length > 0 && _gpMenuIndex < listButtons.length) {
-            const btn = listButtons[_gpMenuIndex];
-            if (btn) {
-                uiManager?.handleMouseClicks(
-                    btn.x + btn.w / 2, btn.y + btn.h / 2, 'VIEWING_MISSIONS', player,
-                    player.currentSystem?.station?.getMarket?.() || galaxy?.getCurrentSystem()?.station?.getMarket?.(),
-                    galaxy
-                );
-            }
-        }
-    } else {
-        // ── Navigate the detail panel (Accept / Back / etc.) ──
-        if (pressedLeft) {
-            if (_gpMissionDetailIndex === 0) {
-                // Return to mission list
-                _gpMissionPanel = 'list';
-            } else {
-                _gpMissionDetailIndex = (_gpMissionDetailIndex - 1 + detailButtons.length) % detailButtons.length;
-            }
-            soundManager?.playSound('click');
-        } else if (pressedRight && detailButtons.length > 0) {
-            _gpMissionDetailIndex = (_gpMissionDetailIndex + 1) % detailButtons.length;
-            soundManager?.playSound('click');
-        }
-
-        // Clamp
-        if (detailButtons.length > 0) {
-            _gpMissionDetailIndex = constrain(_gpMissionDetailIndex, 0, detailButtons.length - 1);
-        }
-
-        // A = click the highlighted detail button
-        if (gp.pressed('a') && detailButtons.length > 0 && _gpMissionDetailIndex < detailButtons.length) {
-            const btn = detailButtons[_gpMissionDetailIndex];
-            if (btn) {
-                uiManager?.handleMouseClicks(
-                    btn.x + btn.w / 2, btn.y + btn.h / 2, 'VIEWING_MISSIONS', player,
-                    player.currentSystem?.station?.getMarket?.() || galaxy?.getCurrentSystem()?.station?.getMarket?.(),
-                    galaxy
-                );
-                // After accepting/completing, return focus to the list
-                _gpMissionPanel = 'list';
-                _gpMissionDetailIndex = 0;
-            }
-        }
-    }
-}
-
-/**
- * Get the relevant button area array for the current game state.
- * Each station screen stores its clickable areas in uiManager/stationMenus.
- */
-function _getButtonAreasForState(state) {
-    if (!uiManager) return [];
-
-    switch (state) {
-        case 'DOCKED':
-            return uiManager.stationMenuButtonAreas || [];
-        case 'DOCKED_SPACE_OBJECT':
-            return uiManager.spaceObjectMenuButtonAreas || [];
-        case 'VIEWING_MARKET':
-            return uiManager.marketButtonAreas || [];
-        case 'VIEWING_SPACE_OBJECT_MARKET':
-            return uiManager.spaceObjectMarketButtonAreas || [];
-        case 'VIEWING_MISSIONS':
-            return []; // Handled separately by _handleGamepadMissions
-        case 'VIEWING_SHIPYARD':
-            return (uiManager.stationMenus?.shipyardListAreas || []).concat(
-                _objectToButtons(uiManager.stationMenus?.shipyardDetailButtons)
-            );
-        case 'VIEWING_SHIP_DETAIL':
-            return _objectToButtons(uiManager.stationMenus?.shipDetailButtons);
-        case 'VIEWING_UPGRADES':
-            return (uiManager.stationMenus?.upgradeListAreas || []).concat(
-                _objectToButtons(uiManager.stationMenus?.upgradeDetailButtons)
-            );
-        case 'VIEWING_WEAPON_DETAIL':
-            if (uiManager.stationMenus?.showingSlotPicker && Array.isArray(uiManager.stationMenus?.slotPickerButtons)) {
-                return uiManager.stationMenus.slotPickerButtons;
-            }
-            return _objectToButtons(uiManager.stationMenus?.weaponDetailButtons);
-        case 'VIEWING_REPAIRS':
-            return [
-                uiManager.repairsFullButtonArea,
-                uiManager.repairsHalfButtonArea,
-                uiManager.repairsBodyguardsButtonArea,
-                uiManager.repairsBackButtonArea
-            ].filter(b => b && b.w > 0);
-        case 'VIEWING_SPACE_OBJECT_REPAIRS':
-            return [
-                uiManager.spaceObjectRepairsFullButtonArea,
-                uiManager.spaceObjectRepairsHalfButtonArea,
-                uiManager.spaceObjectRepairsBodyguardsButtonArea,
-                uiManager.spaceObjectRepairsBackButtonArea
-            ].filter(b => b && b.w > 0);
-        case 'VIEWING_PROTECTION':
-            return uiManager.stationMenus?.protectionServicesButtons || [];
-        case 'VIEWING_POLICE':
-        case 'VIEWING_IMPERIAL_RECRUITMENT':
-        case 'VIEWING_SEPARATIST_RECRUITMENT':
-        case 'VIEWING_MILITARY_RECRUITMENT':
-            return uiManager.factionRecruitmentButtonAreas || [];
-        case 'VIEWING_STORAGE':
-            return uiManager.stationMenus?.storageButtonAreas || uiManager.storageButtonAreas || [];
-        case 'VIEWING_RECORD':
-            return uiManager.stationMenus?.recordButtonAreas || uiManager.recordButtonAreas || [];
-        case 'VIEWING_NEWS':
-            return uiManager.stationMenus?.newsButtonAreas || uiManager.newsButtonAreas || [];
-        case 'VIEWING_SERVICES':
-            return [];
-        case 'VIEWING_BASE':
-            return [
-                uiManager.baseRepairButtonArea,
-                uiManager.stationMenus?.baseMiningStorageButtonArea,
-                uiManager.baseBackButtonArea
-            ].filter(b => b && b.w > 0);
-        default:
-            return [];
-    }
-}
-
-/**
- * Convert a button-area object (keyed by action name) to an array
- */
-function _objectToButtons(obj) {
-    if (!obj || typeof obj !== 'object') return [];
-    return Object.values(obj).filter(b => b && typeof b === 'object' && b.w > 0);
-}
-
-/**
- * Handle D-pad left/right for scrollable lists (market, shipyard, upgrades, news, record)
- */
-function _handleGamepadListScroll(state, direction) {
-    if (!uiManager) return;
-    const sm = uiManager.stationMenus;
-
-    switch (state) {
-        case 'VIEWING_MARKET':
-        case 'VIEWING_SPACE_OBJECT_MARKET':
-            // Market scrolling handled by existing keyboard bridge
-            break;
-        case 'VIEWING_SHIPYARD':
-            if (sm) {
-                sm.shipyardScrollOffset = constrain(
-                    (sm.shipyardScrollOffset || 0) + direction * 3,
-                    0, sm.shipyardScrollMax || 0
-                );
-            }
-            break;
-        case 'VIEWING_UPGRADES':
-            if (sm) {
-                sm.upgradeScrollOffset = constrain(
-                    (sm.upgradeScrollOffset || 0) + direction * 3,
-                    0, sm.upgradeScrollMax || 0
-                );
-            }
-            break;
-        case 'VIEWING_NEWS':
-            if (sm) {
-                sm.newsScrollOffset = constrain(
-                    (sm.newsScrollOffset || 0) + direction,
-                    0, sm.newsScrollMax || 0
-                );
-            }
-            break;
-        case 'VIEWING_RECORD':
-            if (sm) {
-                sm.recordScrollOffset = constrain(
-                    (sm.recordScrollOffset || 0) + direction,
-                    0, sm.recordScrollMax || 0
-                );
-            }
-            break;
-        case 'VIEWING_SHIP_DETAIL':
-            // Prev/next ship
-            if (sm && sm.availableShipsList && sm.availableShipsList.length > 1) {
-                const idx = sm.currentShipIndex + direction;
-                if (idx >= 0 && idx < sm.availableShipsList.length) {
-                    sm.currentShipIndex = idx;
-                    sm.selectedShipForDetail = sm.availableShipsList[idx];
-                    soundManager?.playSound('click');
-                }
-            }
-            break;
-        case 'VIEWING_WEAPON_DETAIL':
-            // Prev/next weapon
-            if (sm && sm.availableWeaponsList && sm.availableWeaponsList.length > 1) {
-                const idx = sm.currentWeaponIndex + direction;
-                if (idx >= 0 && idx < sm.availableWeaponsList.length) {
-                    sm.currentWeaponIndex = idx;
-                    sm.selectedWeaponForDetail = sm.availableWeaponsList[idx];
-                    // Also reset the slot picker state so we don't carry it over
-                    sm.showingSlotPicker = false;
-                    sm.selectedSlotForUpgrade = -1;
-                    soundManager?.playSound('click');
-                }
-            }
-            break;
-    }
-}
-
-/**
- * Draw a highlight rectangle around the gamepad-selected button.
- * Called at the end of each frame during station states.
- */
-function _drawGamepadMenuHighlight(btn) {
-    if (!btn || !btn.w || !btn.h) return;
-
-    push();
-    noFill();
-
-    // Animated pulse for visibility
-    const pulse = (Math.sin((typeof millis === 'function' ? millis() : 0) * 0.006) + 1) / 2;
-    const alpha = 180 + pulse * 75;
-
-    // Outer glow
-    stroke(100, 200, 255, alpha * 0.4);
-    strokeWeight(4);
-    rect(btn.x - 3, btn.y - 3, btn.w + 6, btn.h + 6, 6);
-
-    // Inner border
-    stroke(100, 200, 255, alpha);
-    strokeWeight(2);
-    rect(btn.x - 1, btn.y - 1, btn.w + 2, btn.h + 2, 4);
-
-    pop();
-}
+// Gamepad station menu navigation is in gamepadMenuNavigation.js
 
 /**
  * Render current game state visuals
@@ -1288,7 +871,7 @@ function keyPressed() {
  */
 function handleSurfaceModeKeys() {
     if (!gameStateManager || gameStateManager.currentState !== "SURFACE_MODE") return false;
-    if (typeof surfaceMode === 'undefined' || !surfaceMode) return false;
+    if (!surfaceMode) return false;
 
     return surfaceMode.handleKeyDown(keyCode, key);
 }
@@ -1347,10 +930,7 @@ function handleSaveSelectionInput() {
  * @returns {boolean} True if handled
  */
 function handleSpacebarFiring() {
-    const isShipControl = gameStateManager.currentState === "IN_FLIGHT" ||
-        (gameStateManager.currentState === "SURFACE_MODE" && typeof surfaceMode !== 'undefined' && surfaceMode.controlMode === 'SHIP');
-
-    if ((key === ' ' || keyCode === 32) && isShipControl && player) {
+    if ((key === ' ' || keyCode === 32) && isShipControlState() && player) {
         player.handleFireInput();
         return true;
     }
@@ -1362,11 +942,7 @@ function handleSpacebarFiring() {
  * @returns {boolean} True if handled
  */
 function handleWeaponSwitching() {
-    const state = gameStateManager.currentState;
-    const isShipControl = state === "IN_FLIGHT" ||
-        (state === "SURFACE_MODE" && typeof surfaceMode !== 'undefined' && surfaceMode.controlMode === 'SHIP');
-
-    if (!isShipControl || !player) return false;
+    if (!isShipControlState() || !player) return false;
 
     const numKey = parseInt(key);
     if (isNaN(numKey) || numKey < 1 || numKey > 9) return false;
@@ -1837,7 +1413,7 @@ function handleCloakActivation() {
  */
 function handleSurfaceDescent() {
     if (gameStateManager.currentState !== "IN_FLIGHT" || !player) return false;
-    if (typeof surfaceMode === 'undefined' || !surfaceMode) return false;
+    if (!surfaceMode) return false;
 
     const currentSystem = galaxy?.getCurrentSystem();
     if (!currentSystem?.planets) return false;
@@ -1877,7 +1453,7 @@ function handleEscapeKey() {
 function keyReleased() {
     // Handle surface mode key releases
     if (gameStateManager?.currentState === "SURFACE_MODE" &&
-        typeof surfaceMode !== 'undefined' && surfaceMode) {
+        surfaceMode) {
         surfaceMode.handleKeyUp(keyCode, key);
     }
     return true;
@@ -1908,7 +1484,7 @@ function mousePressed() {
  */
 function handleSurfaceModeClick() {
     if (gameStateManager && gameStateManager.currentState === "SURFACE_MODE") {
-        if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.handleMousePressed) {
+        if (surfaceMode && surfaceMode.handleMousePressed) {
             if (surfaceMode.handleMousePressed()) return true;
         }
     }
@@ -2063,607 +1639,7 @@ function mouseWheel(event) {
     }
 }
 
-// --- Save/Load Functionality ---
-
-/** Debounce timer for save operations */
-let __saveDebounceTimer = null;
-
-/**
- * Validates save payload structure and data integrity
- * @param {Object} payload - The save data payload to validate
- * @returns {{ok: boolean, reason?: string}} Validation result
- */
-function __validatePayload(payload) {
-    try {
-        if (!payload) return { ok: false, reason: 'missing payload' };
-        if (!payload.galaxyData) return { ok: false, reason: 'missing galaxyData' };
-        if (payload.currentSystemIndex === undefined || payload.currentSystemIndex === null) return { ok: false, reason: 'missing currentSystemIndex' };
-        if (!payload.playerData) return { ok: false, reason: 'missing playerData' };
-        // Credits must be a finite number and non-negative
-        const cr = payload.playerData.credits;
-        if (typeof cr !== 'number' || !isFinite(cr) || cr < 0) return { ok: false, reason: 'invalid credits' };
-        // Weapons array can be empty but should be defined if saved
-        if (payload.playerData.weapons !== undefined && !Array.isArray(payload.playerData.weapons)) return { ok: false, reason: 'invalid weapons array' };
-        return { ok: true };
-    } catch (e) {
-        return { ok: false, reason: 'exception during validation: ' + e?.message };
-    }
-}
-
-function __buildSaveData() {
-    // Build and soft-coerce critical fields to avoid aborting saves on transient state
-    // Ensure planets have deterministic save-ready fields before serializing
-    try {
-        if (galaxy && Array.isArray(galaxy.systems)) {
-            galaxy.systems.forEach(sys => {
-                if (!sys || !Array.isArray(sys.planets)) return;
-                sys.planets.forEach(pl => { try { if (pl && typeof pl.prepareForSave === 'function') pl.prepareForSave(); } catch (e) { /* ignore */ } });
-            });
-        }
-    } catch (e) { /* ignore */ }
-
-    const playerData = player.getSaveData();
-    // Normalize credits
-    if (!(typeof playerData.credits === 'number' && isFinite(playerData.credits) && playerData.credits >= 0)) {
-        playerData.credits = 1000;
-    } else {
-        playerData.credits = Math.floor(playerData.credits);
-    }
-
-    // Capture a minimal docking snapshot so we can restore space-object/station dock state on load
-    const dockingState = (() => {
-        if (!gameStateManager) return { state: "IN_FLIGHT" };
-        const state = gameStateManager.currentState || "IN_FLIGHT";
-
-        // Persist docked space object id when in a space-object docked/menu state
-        const isSpaceObjectState = state === "DOCKED_SPACE_OBJECT"
-            || state === "VIEWING_SPACE_OBJECT_MARKET"
-            || state === "VIEWING_SPACE_OBJECT_REPAIRS"
-            || state === "VIEWING_SPACE_OBJECT_SHIPYARD"
-            || state === "VIEWING_SPACE_OBJECT_UPGRADES";
-        if (isSpaceObjectState && gameStateManager.currentDockedSpaceObject?.id) {
-            return {
-                state: "DOCKED_SPACE_OBJECT",
-                spaceObjectId: gameStateManager.currentDockedSpaceObject.id
-            };
-        }
-
-        // Persist station docking so we don't drop the player out of menus after reloads
-        // Check if docked at a SECRET station (not the main one)
-        if (state === "DOCKED") {
-            const dockedStation = gameStateManager.currentDockedStation;
-            const mainStation = player?.currentSystem?.station;
-            const secretStations = player?.currentSystem?.secretStations || [];
-
-            // Check if docked at a secret station
-            const secretIndex = secretStations.findIndex(s => s === dockedStation);
-            if (secretIndex >= 0 && dockedStation) {
-                return {
-                    state: "DOCKED",
-                    isSecretStation: true,
-                    secretStationIndex: secretIndex,
-                    stationName: dockedStation.name || null
-                };
-            }
-
-            // Docked at main station
-            if (mainStation) {
-                return {
-                    state: "DOCKED",
-                    isSecretStation: false,
-                    stationName: mainStation.name || null
-                };
-            }
-        }
-
-        return { state: "IN_FLIGHT" };
-    })();
-
-    // Capture surface/save-at-base metadata when appropriate so loads resume on-planet
-    const savedSurface = (() => {
-        try {
-            if (!gameStateManager) return null;
-            const st = gameStateManager.currentState;
-            // Check if we are logically on the surface (state is surface mode OR landed flag is true)
-            // This is safer than relying only on the state string
-            const isSurface = (st === 'SURFACE_MODE' || st === 'VIEWING_BASE') || (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isLanded);
-            if (!isSurface) return null;
-            if (typeof surfaceMode === 'undefined' || !surfaceMode || !surfaceMode.planet) return null;
-
-            const planet = surfaceMode.planet;
-            let planetIndex = -1;
-            try {
-                planetIndex = (player && player.currentSystem && Array.isArray(player.currentSystem.planets))
-                    ? player.currentSystem.planets.indexOf(planet)
-                    : -1;
-            } catch (e) { planetIndex = -1; }
-
-            const baseObj = (typeof uiManager !== 'undefined' && uiManager && uiManager.currentBaseObject) ? uiManager.currentBaseObject : null;
-
-            return {
-                state: st,
-                planetIndex: planetIndex >= 0 ? planetIndex : null,
-                baseId: baseObj ? (baseObj.id || null) : null,
-                basePos: baseObj && baseObj.pos ? { x: baseObj.pos.x, y: baseObj.pos.y } : null,
-                controlMode: surfaceMode.controlMode || 'SHIP',
-                playerPos: player && player.pos ? { x: player.pos.x, y: player.pos.y } : null,
-                astronautPos: (surfaceMode.astronaut && surfaceMode.astronaut.pos) ? { x: surfaceMode.astronaut.pos.x, y: surfaceMode.astronaut.pos.y } : null
-            };
-        } catch (e) {
-            return null;
-        }
-    })();
-
-    return {
-        playerData,
-        galaxyData: galaxy.getSaveData(),
-        currentSystemIndex: galaxy.currentSystemIndex,
-        globalSessionSeed: typeof globalSessionSeed !== 'undefined' ? globalSessionSeed : null,
-        savedAt: Date.now(),
-        version: 2,
-        dockingState,
-        savedSurface,
-        newsManager: GameGlobals.newsManager ? GameGlobals.newsManager.toJSON() : null,
-        eventManager: GameGlobals.eventManager ? GameGlobals.eventManager.toJSON() : null
-    };
-}
-
-function __atomicStoreToSlot(slotIndex) {
-    const saveKey = SAVE_KEY_PREFIX + slotIndex;
-    const backupKey = saveKey + '_bak';
-
-    const saveData = __buildSaveData();
-
-    // Validate before saving
-    const validation = __validatePayload(saveData);
-    if (!validation.ok) {
-        console.error('Save validation failed:', validation.reason);
-        return false;
-    }
-
-    const dataString = JSON.stringify(saveData);
-
-    // Backup the current save if it exists
-    try {
-        const previous = localStorage.getItem(saveKey);
-        if (previous) {
-            localStorage.setItem(backupKey, previous);
-        }
-    } catch (e) {
-        console.warn('Failed to create backup for save key', saveKey, e);
-    }
-
-    // Write the new save
-    try {
-        localStorage.setItem(saveKey, dataString);
-        return true;
-    } catch (e) {
-        console.error('Failed to write save:', e);
-        return false;
-    }
-}
-
-function saveGame() {
-    try {
-        // Prevent saves during GAME_OVER state
-        if (gameStateManager && gameStateManager.currentState === "GAME_OVER") {
-            console.warn("Save blocked: Cannot save during GAME_OVER state");
-            return;
-        }
-
-        // Prevent saves if player is dead or dying
-        if (player && (player.destroyed || player.isDying || player.hull <= 0)) {
-            console.warn("Save blocked: Player is dead or dying");
-            return;
-        }
-
-        if (typeof (Storage) === "undefined") {
-            console.warn("localStorage is not supported. Game cannot be saved.");
-            return;
-        }
-
-        // Clear any pending save and schedule a new one
-        if (__saveDebounceTimer) {
-            clearTimeout(__saveDebounceTimer);
-        }
-
-        __saveDebounceTimer = setTimeout(() => {
-            __saveDebounceTimer = null;
-
-            const currentSlotIndex = (window.activeSaveSlotIndex !== undefined ? window.activeSaveSlotIndex : 0);
-            const ok = __atomicStoreToSlot(currentSlotIndex);
-
-            if (!ok) {
-                console.error('Save aborted: validation failed. Your last known-good backup was preserved.');
-                return;
-            }
-
-            localStorage.setItem(LAST_ACTIVE_SLOT_KEY, String(currentSlotIndex));
-            SAVE_LOG(`Game saved to slot ${currentSlotIndex + 1} (Key: ${SAVE_KEY_PREFIX + currentSlotIndex})`);
-
-            // Refresh previews after a successful write
-            if (typeof saveSelectionScreen !== 'undefined' && saveSelectionScreen && typeof saveSelectionScreen.loadAllSavePreviews === 'function') {
-                saveSelectionScreen.loadAllSavePreviews();
-            } else if (window.saveScreen && typeof window.saveScreen.loadAllSavePreviews === 'function') {
-                window.saveScreen.loadAllSavePreviews();
-            }
-        }, 300); // Small debounce to batch rapid saves
-
-    } catch (e) {
-        console.error("Error scheduling save:", e);
-    }
-}
-
-function loadGame(slotIndex) {
-    if (typeof (Storage) !== "undefined") {
-        if (slotIndex === undefined || slotIndex === null) {
-            console.error("loadGame: slotIndex is undefined. Cannot load.");
-            return false;
-        }
-        const loadKey = SAVE_KEY_PREFIX + slotIndex; // Define loadKey here
-
-        const tryLoadFromKey = (key) => {
-            const str = localStorage.getItem(key);
-            if (!str) return { ok: false, reason: 'no data' };
-            try {
-                const obj = JSON.parse(str);
-                // Validate schema
-                const schema = __validatePayload(obj);
-                if (!schema.ok) {
-                    return { ok: false, reason: schema.reason };
-                }
-                return { ok: true, data: obj };
-            } catch (e) {
-                return { ok: false, reason: e?.message || 'parse error' };
-            }
-        };
-
-        const savedDataString = localStorage.getItem(loadKey);
-        const backupDataString = localStorage.getItem(loadKey + '_bak');
-
-        if (savedDataString || backupDataString) {
-            try {
-                let savedData = null;
-                // Prefer validated main; if invalid, try backup
-                const primary = tryLoadFromKey(loadKey);
-                if (!primary.ok) {
-                    console.warn(`Primary save validation failed (${primary.reason}). Attempting backup...`);
-                    const backup = tryLoadFromKey(loadKey + '_bak');
-                    if (!backup.ok) {
-                        console.error(`Backup save also invalid: ${backup.reason}`);
-                        showCriticalError("Corrupt save: Both primary and backup invalid.");
-                        return false;
-                    }
-                    // Promote backup to primary since primary is corrupt or missing
-                    console.log('Promoting backup to primary save slot');
-                    try {
-                        const bakStr = localStorage.getItem(loadKey + '_bak');
-                        if (bakStr) localStorage.setItem(loadKey, bakStr);
-                    } catch (e) { /* ignore */ }
-                    savedData = backup.data;
-                } else {
-                    savedData = primary.data;
-                }
-
-                // Clean up any existing ambient layers before rebuilding from save data
-                if (ambientSoundManager && typeof ambientSoundManager.cleanup === 'function') {
-                    ambientSoundManager.cleanup();
-                }
-
-                // 1. Restore Global Seed (Critical for correct procedural generation)
-                if (savedData.globalSessionSeed !== undefined && savedData.globalSessionSeed !== null) {
-                    globalSessionSeed = savedData.globalSessionSeed;
-                } else {
-                    // Fallback to avoid complete breakage, though positions will likely shift
-                    if (typeof globalSessionSeed === 'undefined' || globalSessionSeed === null) {
-                        globalSessionSeed = Math.floor(Math.random() * 999999);
-                    }
-                }
-
-                // 2. Load Galaxy Data First
-                if (savedData.galaxyData) {
-                    galaxy.loadSaveData(savedData.galaxyData, globalSessionSeed); // This populates galaxy.systems
-                } else {
-                    console.error(`No galaxyData found in save file for slot ${slotIndex} (Key: ${loadKey})`);
-                    showCriticalError("Corrupt save: Missing galaxy data.");
-                    return false;
-                }
-
-                // 2. Restore Current System Index
-                if (savedData.currentSystemIndex !== undefined) {
-                    // Validate index against loaded systems
-                    if (galaxy.systems && galaxy.systems.length > 0 &&
-                        (savedData.currentSystemIndex < 0 || savedData.currentSystemIndex >= galaxy.systems.length)) {
-                        console.error(`Invalid currentSystemIndex (${savedData.currentSystemIndex}) for loaded systems count (${galaxy.systems.length}) in slot ${slotIndex}.`);
-                        showCriticalError("Corrupt save: Invalid system index.");
-                        return false;
-                    }
-                    galaxy.currentSystemIndex = savedData.currentSystemIndex;
-                } else {
-                    // If galaxyData was supposed to provide systems, missing index is an error.
-                    if (galaxy.systems && galaxy.systems.length > 0) {
-                        console.error(`No currentSystemIndex found in save file for slot ${slotIndex}, but galaxy systems are present!`);
-                        showCriticalError("Corrupt save: Missing system index.");
-                        return false;
-                    }
-                    // If galaxy.systems is empty (e.g., galaxyData was empty/corrupt), this will be caught below.
-                }
-
-                // 3. Check if galaxy systems are populated BEFORE loading player
-                if (!galaxy.systems || galaxy.systems.length === 0) {
-                    showCriticalError("Galaxy systems array is empty AFTER attempting to load galaxy data!");
-                    console.error(`Galaxy systems array is empty AFTER attempting to load galaxy data from slot ${slotIndex}.`);
-                    return false;
-                }
-
-                // 5. Restore Player Data
-                if (savedData.playerData) {
-                    player.loadSaveData(savedData.playerData);
-                } else {
-                    console.error(`No playerData found in save file for slot ${slotIndex}.`);
-                    showCriticalError("Corrupt save: Missing player data.");
-                    return false;
-                }
-
-
-                // 5. Link Player to the (now loaded) Current System
-                player.currentSystem = galaxy.getCurrentSystem();
-
-                // 6. Extract docking state early for use in bodyguard spawning and state restoration
-                const dockingState = savedData.dockingState;
-
-                if (player.currentSystem) {
-                    player.currentSystem.player = player; // Link player object to the system instance
-
-                    // Fix for initial station positioning: 
-                    if (player.currentSystem.station && player.currentSystem.station.pos) {
-                        const distToStation = dist(player.pos.x, player.pos.y,
-                            player.currentSystem.station.pos.x,
-                            player.currentSystem.station.pos.y);
-
-                        if (distToStation > 10000 || isNaN(player.pos.x) || isNaN(player.pos.y)) {
-                            console.warn("Player position appears invalid or too far from station. Repositioning near station.");
-                            player.pos.set(player.currentSystem.station.pos.x + player.currentSystem.station.size + 100,
-                                player.currentSystem.station.pos.y);
-                            player.vel.set(0, 0);
-                        }
-                    }
-
-                    if (eventManager) {
-                        eventManager.initializeReferences(player.currentSystem, player, uiManager);
-                    }
-
-                    // Pre-warm starfield tiles around player position on load
-                    // This queues tiles for background generation to reduce initial stuttering
-                    if (player.pos && typeof player.currentSystem.prewarmStarfieldTiles === 'function') {
-                        player.currentSystem.prewarmStarfieldTiles(player.pos.x, player.pos.y);
-                    }
-
-                    // Respawn bodyguards ONLY if loading into IN_FLIGHT state
-                    // If docked, undocking will handle spawning them properly
-                    const willRestoreToDocked = dockingState && (
-                        dockingState.state === "DOCKED" ||
-                        dockingState.state === "DOCKED_SPACE_OBJECT"
-                    );
-
-                    if (!willRestoreToDocked && player.activeBodyguards && player.activeBodyguards.length > 0) {
-                        console.log(`Respawning ${player.activeBodyguards.length} bodyguards after load (in-flight state)...`);
-                        player.spawnBodyguards(player.currentSystem);
-                    }
-                } else {
-                    showCriticalError("CRITICAL: Failed to link player to a valid currentSystem after load!");
-                    console.error(`CRITICAL: Failed to link player to a valid currentSystem after load! Index: ${galaxy.currentSystemIndex}, Systems count: ${galaxy.systems ? galaxy.systems.length : 'N/A'}, Slot: ${slotIndex}`);
-                    return false;
-                }
-
-                // 7. Restore docking state (stations and space objects) if present
-                let restoredDockState = false;
-                if (gameStateManager && dockingState && player.currentSystem) {
-                    // Attempt to restore space-object docking first
-                    if (dockingState.state === "DOCKED_SPACE_OBJECT" && dockingState.spaceObjectId) {
-                        const so = player.currentSystem.spaceObjects?.find(o => o && !o.destroyed && o.id === dockingState.spaceObjectId);
-                        if (so) {
-                            gameStateManager.currentDockedSpaceObject = so;
-                            gameStateManager.currentDockedStation = null;
-                            if (player.vel?.set) player.vel.set(0, 0); else if (player.vel) { player.vel.x = 0; player.vel.y = 0; }
-                            player.isDockedAndInvulnerable = true;
-                            gameStateManager.setState("DOCKED_SPACE_OBJECT");
-                            restoredDockState = true;
-                        }
-                    }
-
-                    // Restore station docking if applicable and space-object restoration did not run
-                    if (!restoredDockState && dockingState.state === "DOCKED") {
-                        gameStateManager.currentDockedSpaceObject = null;
-
-                        // Check if we were docked at a secret station
-                        let dockedStation = null;
-                        if (dockingState.isSecretStation && dockingState.secretStationIndex !== undefined) {
-                            const secretStations = player.currentSystem.secretStations || [];
-                            if (secretStations[dockingState.secretStationIndex]) {
-                                dockedStation = secretStations[dockingState.secretStationIndex];
-                                console.log("Restoring dock at SECRET station:", dockedStation.name);
-                            }
-                        }
-
-                        // Fall back to main station if secret station not found
-                        if (!dockedStation && player.currentSystem.station) {
-                            dockedStation = player.currentSystem.station;
-                            console.log("Restoring dock at MAIN station:", dockedStation.name);
-                        }
-
-                        if (dockedStation) {
-                            gameStateManager.currentDockedStation = dockedStation;
-                            // Position player at the correct station
-                            if (dockedStation.pos) {
-                                player.pos.set(dockedStation.pos.x, dockedStation.pos.y);
-                            }
-                            if (player.vel?.set) player.vel.set(0, 0); else if (player.vel) { player.vel.x = 0; player.vel.y = 0; }
-                            player.isDockedAndInvulnerable = true;
-                            gameStateManager.setState("DOCKED");
-                            restoredDockState = true;
-                        }
-                    }
-                }
-
-                // Default to in-flight if no docking context was restored
-                // But first, if the save recorded a surface/base marker, restore SURFACE_MODE
-                let restoredSurface = false;
-                try {
-                    const savedSurface = savedData.savedSurface;
-
-                    if (savedSurface && player.currentSystem && Array.isArray(player.currentSystem.planets) && savedSurface.planetIndex !== null && savedSurface.planetIndex !== undefined) {
-                        const planet = player.currentSystem.planets[savedSurface.planetIndex];
-                        if (planet) {
-                            // If playerPos was saved, restore ship position first so surface.enter can reference it
-                            if (savedSurface.playerPos && player && player.pos) {
-                                try { player.pos.set(savedSurface.playerPos.x, savedSurface.playerPos.y); } catch (e) { /* ignore */ }
-                            }
-
-                            if (typeof surfaceMode !== 'undefined' && surfaceMode) {
-                                try {
-                                    // Ensure deterministic terrain/object generation by seeding
-                                    // p5 random/noise from the planet's persisted featureRand or seed.
-                                    try {
-                                        const seedFromFeature = (typeof planet.featureRand === 'number') ? Math.floor(planet.featureRand * 1000000) : null;
-                                        const useSeed = (seedFromFeature !== null) ? seedFromFeature : (typeof planet.seed === 'number' ? planet.seed : Math.floor(Math.random() * 1000000));
-                                        if (typeof randomSeed === 'function') {
-                                            try { randomSeed(useSeed); } catch (e) { /* ignore */ }
-                                        }
-                                        if (typeof noiseSeed === 'function') {
-                                            try { noiseSeed(useSeed); } catch (e) { /* ignore */ }
-                                        }
-                                    } catch (e) { /* ignore seeding failures */ }
-
-                                    surfaceMode.enter(player, planet, player.currentSystem, { force: true });
-
-                                    // Place ship low to the surface so restores allow boarding.
-                                    try {
-                                        const groundH = (typeof surfaceMode._getTerrainHeightAt === 'function') ? surfaceMode._getTerrainHeightAt(player.pos.x, player.pos.y) : null;
-                                        if (groundH !== null && typeof SURFACE_CONFIG !== 'undefined') {
-                                            // Place at minimum allowed altitude (close to ground) so landing state can be detected
-                                            surfaceMode.altitude = groundH + (SURFACE_CONFIG.MIN_ALTITUDE || 10);
-                                            surfaceMode.player.altitude = surfaceMode.altitude;
-                                            // Mark landed for immediate boarding availability
-                                            surfaceMode.isLanded = true;
-                                        }
-                                    } catch (e) { /* ignore altitude restore failures */ }
-
-                                    // Restore control mode (ASTRONAUT vs SHIP)
-                                    if (savedSurface.controlMode === 'ASTRONAUT') {
-                                        // Create astronaut first, then flip control mode to avoid
-                                        // a transient state where controlMode === 'ASTRONAUT' but
-                                        // surfaceMode.astronaut is null (which can cause update-time errors).
-                                        if (savedSurface.astronautPos && typeof Astronaut !== 'undefined') {
-                                            surfaceMode.astronaut = new Astronaut(createVector(savedSurface.astronautPos.x, savedSurface.astronautPos.y), { skipSpawnOffset: true });
-                                            try { surfaceMode.astronaut.altitude = surfaceMode._getTerrainHeightAt(surfaceMode.astronaut.pos.x, surfaceMode.astronaut.pos.y); } catch (e) { /* ignore */ }
-                                            surfaceMode.controlMode = 'ASTRONAUT';
-
-                                            // Immediately set zoom for restored astronaut mode (no lerp on first frame)
-                                            if (typeof SURFACE_CONFIG !== 'undefined' && SURFACE_CONFIG.EVA_ZOOM) {
-                                                surfaceMode.viewZoom = SURFACE_CONFIG.EVA_ZOOM;
-                                                surfaceMode.targetViewZoom = SURFACE_CONFIG.EVA_ZOOM;
-                                            }
-                                        } else {
-                                            // Missing astronaut position in save — fallback to ship control
-                                            surfaceMode.controlMode = 'SHIP';
-                                            console.warn('Saved surface state requested ASTRONAUT control but astronautPos is missing. Defaulting to SHIP control.');
-                                        }
-                                    } else {
-                                        surfaceMode.controlMode = 'SHIP';
-                                    }
-
-                                    // Attempt to re-link current base object for UI if base info saved
-                                    if (typeof uiManager !== 'undefined' && uiManager && savedSurface.baseId) {
-                                        // Search spawned surface objects for matching id or approximate position
-                                        for (const obj of surfaceMode.surfaceObjects || []) {
-                                            if (!obj) continue;
-                                            if (savedSurface.baseId && obj.id && obj.id === savedSurface.baseId) {
-                                                uiManager.currentBaseObject = obj; break;
-                                            }
-                                            if (savedSurface.basePos && obj.pos && Math.abs((obj.pos.x || 0) - savedSurface.basePos.x) < 2 && Math.abs((obj.pos.y || 0) - savedSurface.basePos.y) < 2) {
-                                                uiManager.currentBaseObject = obj; break;
-                                            }
-                                        }
-                                    }
-
-                                    // If base object found and save indicated we were viewing it, open VIEWING_BASE
-                                    if (uiManager && uiManager.currentBaseObject) {
-                                        if (gameStateManager) {
-                                            gameStateManager._returnFromBaseState = 'SURFACE_MODE';
-                                            try { gameStateManager.setState('VIEWING_BASE'); } catch (e) { /* ignore */ }
-                                        }
-                                    }
-
-                                    restoredSurface = true;
-                                } catch (e) {
-                                    console.warn('Failed to enter surface mode during load:', e);
-                                }
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.warn('Error while attempting to restore saved surface state:', e);
-                }
-
-                if (gameStateManager && !restoredDockState && !restoredSurface) {
-                    gameStateManager.currentDockedSpaceObject = null;
-                    gameStateManager.currentDockedStation = null;
-                    player.isDockedAndInvulnerable = false;
-                    gameStateManager.setState("IN_FLIGHT");
-                }
-
-                // 8. Restore News and Event Persistence
-                if (savedData.newsManager && GameGlobals.newsManager) {
-                    GameGlobals.newsManager.fromJSON(savedData.newsManager);
-                }
-
-                if (savedData.eventManager && GameGlobals.eventManager) {
-                    GameGlobals.eventManager.fromJSON(savedData.eventManager);
-                }
-
-                // 9. Ensure economy types are synchronized after loading
-                if (galaxy.systems) {
-                    galaxy.systems.forEach(system => {
-                        if (system && system.economyType) {
-                            system.setEconomyType(system.economyType);
-                        }
-                    });
-                }
-
-                // 8. Restore current view and other relevant states
-                if (savedData.currentView) {
-                    Object.assign(uiManager.currentView, savedData.currentView);
-                }
-
-                // 9. Clear any locked jump destination to prevent stale jump targets
-                if (uiManager) {
-                    uiManager.lockedDestinationIndex = -1;
-                }
-
-                window.activeSaveSlotIndex = (slotIndex !== undefined ? slotIndex : 0);
-                localStorage.setItem(LAST_ACTIVE_SLOT_KEY, slotIndex.toString()); // Store as last active slot
-                // Mark the time of a successful load so we can suppress unintended immediate auto-saves
-                try { if (typeof window !== 'undefined') { window.__lastLoadTime = Date.now(); } } catch (_) { }
-                SAVE_LOG(`Game loaded successfully from slot ${slotIndex + 1} (Key: ${loadKey})`);
-                return true;
-            } catch (e) {
-                console.error(`Error loading game from slot ${slotIndex + 1} (Key: ${loadKey}):`, e);
-                localStorage.removeItem(loadKey); // Clear corrupted data
-                return false;
-            }
-        } else {
-            // Neither primary nor backup keys exist
-            SAVE_LOG(`No saved game found in slot ${slotIndex + 1} (Key: ${loadKey})`);
-            return false;
-        }
-    } else {
-        console.warn("localStorage is not supported. Cannot load game.");
-        return false;
-    }
-}
-
-// --- End Save/Load ---
+// Save/Load functionality is in saveLoadSystem.js
 
 /**
  * Resets the entire game to a fresh state.
@@ -2716,6 +1692,7 @@ function resetGame() {
     uiManager = new UIManager();
     titleScreen = new TitleScreen();
     inventoryScreen = new InventoryScreen();
+    missionOverlay = new MissionOverlay();
     saveSelectionScreen = new SaveSelectionScreen();
     eventManager = new EventManager();
 
@@ -2726,6 +1703,7 @@ function resetGame() {
     communicationSystem = new CommunicationSystem();
     stationMusicManager = new StationMusicManager();
     spaceMusicManager = new SpaceMusicManager();
+    GameGlobals.newsManager = new NewsManager();
     communicationSystem.initialize({ uiManager, player });
     communicationSystem.initializeSpeech(); // Enable speech synthesis for ship communications
 
@@ -2743,6 +1721,25 @@ function resetGame() {
         console.log("Reinitializing weapon system pool after reset");
         WeaponSystem.init(100);
     }
+
+    // Sync GameGlobals with freshly created instances
+    Object.assign(GameGlobals, {
+        gameStateManager,
+        galaxy,
+        player,
+        uiManager,
+        titleScreen,
+        inventoryScreen,
+        missionOverlay,
+        saveSelectionScreen,
+        communicationSystem,
+        eventManager,
+        soundManager,
+        ambientSoundManager,
+        stationMusicManager,
+        spaceMusicManager,
+        loadGameWasSuccessful: false
+    });
 
     // Restore fullscreen if it was active
     if (wasFullscreen) {

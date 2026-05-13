@@ -75,6 +75,7 @@ class GamepadManager {
   get connected() { return this._connected; }
   get state() { return this._state; }
   get prevState() { return this._prev; }
+  get previousState() { return this._prev; }
 
   /** True only on the frame a button transitions off→on */
   pressed(input) {
@@ -138,10 +139,6 @@ class GamepadManager {
     this._keysHeld.clear();
     this._bindings = [];
   }
-
-  get state() { return this._state; }
-  get previousState() { return this._prev; }
-  get connected() { return this._connected; }
 
   // ─── Polling Loop ───────────────────────────────────────────────────────────
 
