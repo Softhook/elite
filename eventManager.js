@@ -98,7 +98,7 @@ class EventManager {
         this.events = [
             {
                 type: "ASTEROID_CLUSTER",
-                probabilityPerFrame: 0.000025,
+                probabilityPerFrame: 0.00001,
                 minCooldownMs: 5 * 60 * 1000, // 5 minutes
                 warningDurationMs: 5000,      // 5 seconds
                 lastTriggeredTime: -Infinity,
@@ -123,7 +123,7 @@ class EventManager {
             },
             {
                 type: "ALIEN_RAID",
-                probabilityPerFrame: 0.000015,
+                probabilityPerFrame: 0.000007,
                 minCooldownMs: 10 * 60 * 1000, // 10 minutes
                 warningDurationMs: 5000,
                 lastTriggeredTime: -Infinity,
@@ -153,7 +153,7 @@ class EventManager {
             },
             {
                 type: "PIRATE_SWARM",
-                probabilityPerFrame: 0.000025,
+                probabilityPerFrame: 0.00001,
                 minCooldownMs: 8 * 60 * 1000, // 8 minutes
                 warningDurationMs: 5000,
                 lastTriggeredTime: -Infinity,
@@ -187,7 +187,7 @@ class EventManager {
             },
             {
                 type: "BOUNTY_HUNTER_AMBUSH",
-                probabilityPerFrame: 0.00001,
+                probabilityPerFrame: 0.000005,
                 minCooldownMs: 12 * 60 * 1000, // 12 minutes
                 warningDurationMs: 8300,
                 lastTriggeredTime: -Infinity,
@@ -266,7 +266,7 @@ class EventManager {
             },
             {
                 type: "COMET",
-                probabilityPerFrame: 0.000005,
+                probabilityPerFrame: 0.000002,
                 minCooldownMs: 20 * 60 * 1000,
                 warningDurationMs: 10000,
                 lastTriggeredTime: -Infinity,
@@ -286,13 +286,14 @@ class EventManager {
                     spawnRadiusMin: 8000,
                     spawnRadiusMax: 9000,
                     clusterSpreadRadius: 0,
-                    asteroidSizeMax: 200,
+                    asteroidSizeMin: 400, // consumed by _executeAsteroidSpawn: random(asteroidSizeMin, asteroidSizeMax)
+                    asteroidSizeMax: 600,
                     speed: 12
                 }
             },
             {
                 type: "METEOR_SHOWER",
-                probabilityPerFrame: 0.00002,
+                probabilityPerFrame: 0.000008,
                 minCooldownMs: 12 * 60 * 1000,
                 warningDurationMs: 5000,
                 lastTriggeredTime: -Infinity,
@@ -317,7 +318,7 @@ class EventManager {
             },
             {
                 type: "COSMIC_STORM",
-                probabilityPerFrame: 0.00001,
+                probabilityPerFrame: 0.000005,
                 minCooldownMs: 25 * 60 * 1000,
                 warningDurationMs: 10000,
                 lastTriggeredTime: -Infinity,
@@ -341,7 +342,7 @@ class EventManager {
             },
             {
                 type: "DISTRESS_SIGNAL",
-                probabilityPerFrame: 0.000015,
+                probabilityPerFrame: 0.000007,
                 minCooldownMs: 15 * 60 * 1000,
                 warningDurationMs: 5000,
                 lastTriggeredTime: -Infinity,
@@ -378,7 +379,7 @@ class EventManager {
             },
             {
                 type: "TRADER_CONVOY",
-                probabilityPerFrame: 0.0000125,
+                probabilityPerFrame: 0.000006,
                 minCooldownMs: 18 * 60 * 1000,
                 warningDurationMs: 5000,
                 lastTriggeredTime: -Infinity,
@@ -411,7 +412,7 @@ class EventManager {
             },
             {
                 type: "NAVAL_PATROL",
-                probabilityPerFrame: 0.00001,
+                probabilityPerFrame: 0.000005,
                 minCooldownMs: 20 * 60 * 1000,
                 warningDurationMs: 6600,
                 lastTriggeredTime: -Infinity,
@@ -444,7 +445,7 @@ class EventManager {
             },
             {
                 type: "ALIEN_ARTIFACT",
-                probabilityPerFrame: 0.0000025,
+                probabilityPerFrame: 0.000001,
                 minCooldownMs: 30 * 60 * 1000,
                 warningDurationMs: 5000,
                 lastTriggeredTime: -Infinity,
@@ -475,67 +476,67 @@ class EventManager {
 
     _addDynamicEvents() {
         this.events.push(
-            { type: "MARKET_SHORTAGE", probabilityPerFrame: 0.00002, minCooldownMs: 12 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "MARKET ALERT: Local shortage detected!", color: "orange", consoleLog: "EventManager: Market shortage warning issued." } },
-            { type: "MARKET_SURPLUS", probabilityPerFrame: 0.000015, minCooldownMs: 12 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "MARKET NOTICE: Oversupply affecting prices.", color: "green", consoleLog: "EventManager: Market surplus warning issued." } },
-            { type: "BLACK_MARKET_AUCTION", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "UNDERTONE: Black market auction incoming.", color: "purple", consoleLog: "EventManager: Black market auction warning issued." } },
-            { type: "SMUGGLING_BUST", probabilityPerFrame: 0.00001, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ENFORCEMENT: Smuggling interdiction underway.", color: "red", consoleLog: "EventManager: Smuggling bust warning issued." } },
-            { type: "BLOCKADE", probabilityPerFrame: 0.000005, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "BLOCKADE: Trade lanes restricted by military.", color: "blue", consoleLog: "EventManager: Blockade warning issued." } },
-            { type: "DIPLOMATIC_VISIT", probabilityPerFrame: 0.000005, minCooldownMs: 45 * 60 * 1000, warningDurationMs: 6600, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CIVIC: Diplomatic envoy arriving.", color: "teal", consoleLog: "EventManager: Diplomatic visit warning issued." } },
-            { type: "TECH_BREAKTHROUGH", probabilityPerFrame: 0.000004, minCooldownMs: 60 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "RESEARCH: New tech prototype surfaced.", color: "magenta", consoleLog: "EventManager: Tech breakthrough warning issued." } },
-            { type: "STATION_STRIKE", probabilityPerFrame: 0.000006, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "LABOR: Station strike in progress.", color: "orange", consoleLog: "EventManager: Station strike warning issued." } },
-            { type: "POWER_OUTAGE", probabilityPerFrame: 0.0000075, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ALERT: Station power outage reported.", color: "yellow", consoleLog: "EventManager: Power outage warning issued." } },
-            { type: "SABOTAGE", probabilityPerFrame: 0.000005, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SABOTAGE: Infrastructure damage detected.", color: "crimson", consoleLog: "EventManager: Sabotage warning issued." } },
-            { type: "MINING_BOOM", probabilityPerFrame: 0.00001, minCooldownMs: 35 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "MINING: High-yield discovery announced.", color: "olive", consoleLog: "EventManager: Mining boom warning issued." } },
-            { type: "MINE_ACCIDENT", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "HAZARD: Mining accident - emergency response.", color: "orange", consoleLog: "EventManager: Mine accident warning issued." } },
-            { type: "SOLAR_FLARE", probabilityPerFrame: 0.000004, minCooldownMs: 50 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "[STORM] SPACE WEATHER: Solar flare activity detected.", color: "yellow", consoleLog: "EventManager: Solar flare warning issued." } },
-            { type: "QUARANTINE", probabilityPerFrame: 0.000003, minCooldownMs: 80 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "QUARANTINE: Contagion measures in effect.", color: "purple", consoleLog: "EventManager: Quarantine warning issued." } },
-            { type: "REFUGEE_INFLUX", probabilityPerFrame: 0.000005, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CIVIC: Refugee influx stresses local services.", color: "brown", consoleLog: "EventManager: Refugee influx warning issued." } },
-            { type: "RARE_COMMODITY", probabilityPerFrame: 0.000005, minCooldownMs: 50 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "DISCOVERY: Rare commodity located nearby.", color: "gold", consoleLog: "EventManager: Rare commodity warning issued." }, spawnConfig: { entityType: 'cargo', minEntities: 1, maxEntities: 2, spawnRadiusMin: 1500, spawnRadiusMax: 3000, cargoType: 'Rare Ore', quantity: 1 } },
-            { type: "HACKER_ATTACK", probabilityPerFrame: 0.0000045, minCooldownMs: 36 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CYBER: Systems under hacker attack.", color: "purple", consoleLog: "EventManager: Hacker attack warning issued." } },
-            { type: "SALVAGE_OPPORTUNITY", probabilityPerFrame: 0.00001, minCooldownMs: 12 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SALVAGE: Wreckage detected — high-value salvage possible.", color: "silver", consoleLog: "EventManager: Salvage opportunity warning issued." }, spawnConfig: { entityType: 'cargo', minEntities: 1, maxEntities: 3, spawnRadiusMin: 1600, spawnRadiusMax: 3000, cargoType: 'Metals', quantity: 2 } },
-            { type: "BOUNTY_INCREASE", probabilityPerFrame: 0.0000075, minCooldownMs: 28 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "NOTICE: Bounties increased on wanted criminals.", color: "red", consoleLog: "EventManager: Bounty increase warning issued." } },
-            { type: "REPUTATION_SCANDAL", probabilityPerFrame: 0.0000035, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SCANDAL: Reputation-shifting news is spreading.", color: "pink", consoleLog: "EventManager: Reputation scandal warning issued." } },
+            { type: "MARKET_SHORTAGE", probabilityPerFrame: 0.00001, minCooldownMs: 12 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "MARKET ALERT: Local shortage detected!", color: "orange", consoleLog: "EventManager: Market shortage warning issued." } },
+            { type: "MARKET_SURPLUS", probabilityPerFrame: 0.000007, minCooldownMs: 12 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "MARKET NOTICE: Oversupply affecting prices.", color: "green", consoleLog: "EventManager: Market surplus warning issued." } },
+            { type: "BLACK_MARKET_AUCTION", probabilityPerFrame: 0.0000025, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "UNDERTONE: Black market auction incoming.", color: "purple", consoleLog: "EventManager: Black market auction warning issued." } },
+            { type: "SMUGGLING_BUST", probabilityPerFrame: 0.000005, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ENFORCEMENT: Smuggling interdiction underway.", color: "red", consoleLog: "EventManager: Smuggling bust warning issued." } },
+            { type: "BLOCKADE", probabilityPerFrame: 0.0000025, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "BLOCKADE: Trade lanes restricted by military.", color: "blue", consoleLog: "EventManager: Blockade warning issued." } },
+            { type: "DIPLOMATIC_VISIT", probabilityPerFrame: 0.0000025, minCooldownMs: 45 * 60 * 1000, warningDurationMs: 6600, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CIVIC: Diplomatic envoy arriving.", color: "teal", consoleLog: "EventManager: Diplomatic visit warning issued." } },
+            { type: "TECH_BREAKTHROUGH", probabilityPerFrame: 0.000002, minCooldownMs: 60 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "RESEARCH: New tech prototype surfaced.", color: "magenta", consoleLog: "EventManager: Tech breakthrough warning issued." } },
+            { type: "STATION_STRIKE", probabilityPerFrame: 0.000003, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "LABOR: Station strike in progress.", color: "orange", consoleLog: "EventManager: Station strike warning issued." } },
+            { type: "POWER_OUTAGE", probabilityPerFrame: 0.000003, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ALERT: Station power outage reported.", color: "yellow", consoleLog: "EventManager: Power outage warning issued." } },
+            { type: "SABOTAGE", probabilityPerFrame: 0.0000025, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SABOTAGE: Infrastructure damage detected.", color: "crimson", consoleLog: "EventManager: Sabotage warning issued." } },
+            { type: "MINING_BOOM", probabilityPerFrame: 0.000005, minCooldownMs: 35 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "MINING: High-yield discovery announced.", color: "olive", consoleLog: "EventManager: Mining boom warning issued." } },
+            { type: "MINE_ACCIDENT", probabilityPerFrame: 0.0000025, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "HAZARD: Mining accident - emergency response.", color: "orange", consoleLog: "EventManager: Mine accident warning issued." } },
+            { type: "SOLAR_FLARE", probabilityPerFrame: 0.000002, minCooldownMs: 50 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "[STORM] SPACE WEATHER: Solar flare activity detected.", color: "yellow", consoleLog: "EventManager: Solar flare warning issued." } },
+            { type: "QUARANTINE", probabilityPerFrame: 0.0000015, minCooldownMs: 80 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "QUARANTINE: Contagion measures in effect.", color: "purple", consoleLog: "EventManager: Quarantine warning issued." } },
+            { type: "REFUGEE_INFLUX", probabilityPerFrame: 0.0000025, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CIVIC: Refugee influx stresses local services.", color: "brown", consoleLog: "EventManager: Refugee influx warning issued." } },
+            { type: "RARE_COMMODITY", probabilityPerFrame: 0.0000025, minCooldownMs: 50 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "DISCOVERY: Rare commodity located nearby.", color: "gold", consoleLog: "EventManager: Rare commodity warning issued." }, spawnConfig: { entityType: 'cargo', minEntities: 1, maxEntities: 2, spawnRadiusMin: 1500, spawnRadiusMax: 3000, cargoType: 'Rare Ore', quantity: 1 } },
+            { type: "HACKER_ATTACK", probabilityPerFrame: 0.000002, minCooldownMs: 36 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CYBER: Systems under hacker attack.", color: "purple", consoleLog: "EventManager: Hacker attack warning issued." } },
+            { type: "SALVAGE_OPPORTUNITY", probabilityPerFrame: 0.000005, minCooldownMs: 12 * 60 * 1000, warningDurationMs: 4000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SALVAGE: Wreckage detected — high-value salvage possible.", color: "silver", consoleLog: "EventManager: Salvage opportunity warning issued." }, spawnConfig: { entityType: 'cargo', minEntities: 1, maxEntities: 3, spawnRadiusMin: 1600, spawnRadiusMax: 3000, cargoType: 'Metals', quantity: 2 } },
+            { type: "BOUNTY_INCREASE", probabilityPerFrame: 0.000003, minCooldownMs: 28 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "NOTICE: Bounties increased on wanted criminals.", color: "red", consoleLog: "EventManager: Bounty increase warning issued." } },
+            { type: "REPUTATION_SCANDAL", probabilityPerFrame: 0.0000015, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SCANDAL: Reputation-shifting news is spreading.", color: "pink", consoleLog: "EventManager: Reputation scandal warning issued." } },
             // === War Events ===
-            { type: "SKIRMISH_SEPARATIST_IMPERIAL", probabilityPerFrame: 0.0000075, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "⚔️ CONFLICT: Separatist and Imperial forces clashing!", color: "orange", consoleLog: "EventManager: Separatist vs Imperial skirmish warning issued." } },
-            { type: "SKIRMISH_ALIEN_MILITARY", probabilityPerFrame: 0.000005, minCooldownMs: 35 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "⚔️ INVASION: Alien forces engaging military!", color: "magenta", consoleLog: "EventManager: Alien vs Military skirmish warning issued." } },
-            { type: "WAR_SEPARATIST_IMPERIAL", probabilityPerFrame: 0.000004, minCooldownMs: 60 * 60 * 1000, warningDurationMs: 15000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "🔥 FULL SCALE WAR: Separatist vs Imperial forces!", color: "red", consoleLog: "EventManager: Separatist vs Imperial full war warning issued." } },
-            { type: "WAR_ALIEN_MILITARY", probabilityPerFrame: 0.000003, minCooldownMs: 70 * 60 * 1000, warningDurationMs: 15000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "🔥 FULL SCALE WAR: Alien invasion vs Military!", color: "crimson", consoleLog: "EventManager: Alien vs Military full war warning issued." } },
+            { type: "SKIRMISH_SEPARATIST_IMPERIAL", probabilityPerFrame: 0.000003, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "⚔️ CONFLICT: Separatist and Imperial forces clashing!", color: "orange", consoleLog: "EventManager: Separatist vs Imperial skirmish warning issued." } },
+            { type: "SKIRMISH_ALIEN_MILITARY", probabilityPerFrame: 0.0000025, minCooldownMs: 35 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "⚔️ INVASION: Alien forces engaging military!", color: "magenta", consoleLog: "EventManager: Alien vs Military skirmish warning issued." } },
+            { type: "WAR_SEPARATIST_IMPERIAL", probabilityPerFrame: 0.000002, minCooldownMs: 60 * 60 * 1000, warningDurationMs: 15000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "🔥 FULL SCALE WAR: Separatist vs Imperial forces!", color: "red", consoleLog: "EventManager: Separatist vs Imperial full war warning issued." } },
+            { type: "WAR_ALIEN_MILITARY", probabilityPerFrame: 0.0000015, minCooldownMs: 70 * 60 * 1000, warningDurationMs: 15000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "🔥 FULL SCALE WAR: Alien invasion vs Military!", color: "crimson", consoleLog: "EventManager: Alien vs Military full war warning issued." } },
             // === Crisis Events (affect connected systems) ===
-            { type: "PLAGUE", probabilityPerFrame: 0.0000025, minCooldownMs: 80 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "☠️ PLAGUE: Deadly outbreak spreading across systems!", color: "magenta", consoleLog: "EventManager: Plague warning issued." } },
-            { type: "FAMINE", probabilityPerFrame: 0.0000025, minCooldownMs: 80 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "🍂 FAMINE: Crop failures cause widespread hunger!", color: "orange", consoleLog: "EventManager: Famine warning issued." } },
+            { type: "PLAGUE", probabilityPerFrame: 0.0000012, minCooldownMs: 80 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "☠️ PLAGUE: Deadly outbreak spreading across systems!", color: "magenta", consoleLog: "EventManager: Plague warning issued." } },
+            { type: "FAMINE", probabilityPerFrame: 0.0000012, minCooldownMs: 80 * 60 * 1000, warningDurationMs: 10000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "🍂 FAMINE: Crop failures cause widespread hunger!", color: "orange", consoleLog: "EventManager: Famine warning issued." } },
 
             // === New Random Events ===
-            { type: "LOST_SHIPMENT", probabilityPerFrame: 0.00001, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SIGNAL: Lost cargo shipment beacon detected.", color: "gold", consoleLog: "EventManager: Lost Shipment warning issued." } },
-            { type: "FACTION_SKIRMISH", probabilityPerFrame: 0.00001, minCooldownMs: 15 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ALERT: Faction skirmish in progress.", color: "red", consoleLog: "EventManager: Faction skirmish warning issued." } },
-            { type: "VIP_CONVOY", probabilityPerFrame: 0.000008, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 8000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "TRAFFIC: Priority VIP convoy passing through.", color: "cyan", consoleLog: "EventManager: VIP Convoy warning issued." } },
-            { type: "MINING_OPERATION", probabilityPerFrame: 0.00001, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "OPS: Temporary mining operation detected.", color: "yellow", consoleLog: "EventManager: Mining Op warning issued." } },
-            { type: "ROGUE_SECURITY", probabilityPerFrame: 0.000005, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "WARNING: Rogue security forces identified.", color: "red", consoleLog: "EventManager: Rogue Security warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.POLICE, fallbackShip: "ViperPol" }, aiRole: AI_ROLE.PIRATE, spawnRadiusMin: 1800, spawnRadiusMax: 2200, additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Rogue Security"; } } },
-            { type: "INTERSTELLAR_RALLY", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "RACE: Interstellar Rally racers entering sector!", color: "cyan", consoleLog: "EventManager: Rally warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 3, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.TRADER, fallbackShip: "Type6Transporter" }, aiRole: AI_ROLE.HAULER, spawnRadiusMin: 1200, spawnRadiusMax: 1700, additionalEnemySetup: (e, player, system) => { e.baseMaxSpeed *= 2.5; e.maxSpeed *= 2.5; e.currentState = AI_STATE.PATROLLING; e.displayName = "Rally Racer"; e.isRacing = true; e.patrolTargetPos = system?.jumpZoneCenter?.copy ? system.jumpZoneCenter.copy() : (player?.pos?.copy ? player.pos.copy() : null); } } },
-            { type: "ALIEN_SCOUT", probabilityPerFrame: 0.000005, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "[ALIEN] CONTACT: Unidentified scout vessel.", color: "magenta", consoleLog: "EventManager: Alien Scout warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.ALIEN, fallbackShip: "Thargoid" }, aiRole: AI_ROLE.ALIEN, spawnRadiusMin: 2000, spawnRadiusMax: 2500, additionalEnemySetup: (e, player) => { e.currentState = AI_STATE.APPROACHING; e.target = player || null; } } },
-            { type: "PROTOTYPE_TESTING", probabilityPerFrame: 0.000004, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "DETECTED: High-signature prototype vessel.", color: "blue", consoleLog: "EventManager: Prototype warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.MILITARY, fallbackShip: "Viper" }, aiRole: AI_ROLE.COMBAT, spawnRadiusMin: 2500, spawnRadiusMax: 3000, additionalEnemySetup: (e) => { e.baseMaxSpeed *= 2.0; e.maxSpeed *= 2.0; e.shield *= 1.5; e.displayName = "Prototype Unit"; e.currentState = AI_STATE.PATROLLING; } } },
+            { type: "LOST_SHIPMENT", probabilityPerFrame: 0.000005, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SIGNAL: Lost cargo shipment beacon detected.", color: "gold", consoleLog: "EventManager: Lost Shipment warning issued." } },
+            { type: "FACTION_SKIRMISH", probabilityPerFrame: 0.000005, minCooldownMs: 15 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ALERT: Faction skirmish in progress.", color: "red", consoleLog: "EventManager: Faction skirmish warning issued." } },
+            { type: "VIP_CONVOY", probabilityPerFrame: 0.000004, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 8000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "TRAFFIC: Priority VIP convoy passing through.", color: "cyan", consoleLog: "EventManager: VIP Convoy warning issued." } },
+            { type: "MINING_OPERATION", probabilityPerFrame: 0.000005, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "OPS: Temporary mining operation detected.", color: "yellow", consoleLog: "EventManager: Mining Op warning issued." } },
+            { type: "ROGUE_SECURITY", probabilityPerFrame: 0.0000025, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "WARNING: Rogue security forces identified.", color: "red", consoleLog: "EventManager: Rogue Security warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.POLICE, fallbackShip: "ViperPol" }, aiRole: AI_ROLE.PIRATE, spawnRadiusMin: 1800, spawnRadiusMax: 2200, additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Rogue Security"; } } },
+            { type: "INTERSTELLAR_RALLY", probabilityPerFrame: 0.0000025, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "RACE: Interstellar Rally racers entering sector!", color: "cyan", consoleLog: "EventManager: Rally warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 3, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.TRADER, fallbackShip: "Type6Transporter" }, aiRole: AI_ROLE.HAULER, spawnRadiusMin: 1200, spawnRadiusMax: 1700, additionalEnemySetup: (e, player, system) => { e.baseMaxSpeed *= 2.5; e.maxSpeed *= 2.5; e.currentState = AI_STATE.PATROLLING; e.displayName = "Rally Racer"; e.isRacing = true; e.patrolTargetPos = system?.jumpZoneCenter?.copy ? system.jumpZoneCenter.copy() : (player?.pos?.copy ? player.pos.copy() : null); } } },
+            { type: "ALIEN_SCOUT", probabilityPerFrame: 0.0000025, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "[ALIEN] CONTACT: Unidentified scout vessel.", color: "magenta", consoleLog: "EventManager: Alien Scout warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.ALIEN, fallbackShip: "Thargoid" }, aiRole: AI_ROLE.ALIEN, spawnRadiusMin: 2000, spawnRadiusMax: 2500, additionalEnemySetup: (e, player) => { e.currentState = AI_STATE.APPROACHING; e.target = player || null; } } },
+            { type: "PROTOTYPE_TESTING", probabilityPerFrame: 0.000002, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "DETECTED: High-signature prototype vessel.", color: "blue", consoleLog: "EventManager: Prototype warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.MILITARY, fallbackShip: "Viper" }, aiRole: AI_ROLE.COMBAT, spawnRadiusMin: 2500, spawnRadiusMax: 3000, additionalEnemySetup: (e) => { e.baseMaxSpeed *= 2.0; e.maxSpeed *= 2.0; e.shield *= 1.5; e.displayName = "Prototype Unit"; e.currentState = AI_STATE.PATROLLING; } } },
             // === Missionary & Creative Events ===
-            { type: "MISSIONARY_CONVOY", probabilityPerFrame: 0.00001, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CONVOY: Procession of faithful passing through.", color: "cyan" }, spawnConfig: { entityType: 'enemy', minEntities: 3, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"] }, aiRole: AI_ROLE.MISSIONARY, spawnRadiusMin: 1800, spawnRadiusMax: 2200 } },
-            { type: "FORCED_CONVERSION", probabilityPerFrame: 0.00001, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "DISTRESS: Trader under religious siege!", color: "orange" } },
-            { type: "HERETIC_HUNT", probabilityPerFrame: 0.00001, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ALERT: Military purging heretic vessel.", color: "red" } },
-            { type: "DOOMSDAY_PROPHET", probabilityPerFrame: 0.000005, minCooldownMs: 60 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "COMMS: 'The end is nigh! Embrace the void!'", color: "purple" } },
-            { type: "ASCENSION_RITUAL", probabilityPerFrame: 0.000005, minCooldownMs: 45 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "RITUAL: Ascension flight detected on sensors.", color: "cyan" } },
-            { type: "ARTIFACT_WORSHIP", probabilityPerFrame: 0.000005, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SCAN: Religious activity near unknown artifact.", color: "magenta" } },
-            { type: "FALSE_IDOLS", probabilityPerFrame: 0.00001, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "WARNING: Missionary vessel broadcasting pirate codes.", color: "red" }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"] }, aiRole: AI_ROLE.PIRATE, spawnRadiusMin: 1500, spawnRadiusMax: 2000, additionalEnemySetup: (enemy) => { const weaponDef = WEAPON_UPGRADES?.find(w => w.name === "Pulse Laser"); if (weaponDef) { if (!enemy.weapons) enemy.weapons = []; if (!enemy.weaponCooldowns) enemy.weaponCooldowns = []; enemy.weapons.push(weaponDef); enemy.weaponCooldowns.push(0); enemy.currentWeapon = weaponDef; enemy.fireRate = weaponDef.fireRate; } enemy.displayName = "False Prophet"; } } },
-            { type: "CLEANSING_FIRE", probabilityPerFrame: 0.00001, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "PURGE: Missionaries attacking unclean vessel.", color: "orange" } },
-            { type: "SIN_EATER", probabilityPerFrame: 0.00001, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "NOTICE: 'Sin Eater' vessel hunting criminals.", color: "red" }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"] }, aiRole: AI_ROLE.BOUNTY_HUNTER, spawnRadiusMin: 1500, spawnRadiusMax: 2000, additionalEnemySetup: (enemy) => { const weaponDef = WEAPON_UPGRADES?.find(w => w.name === "Harpoon Launcher"); if (weaponDef) { if (!enemy.weapons) enemy.weapons = []; if (!enemy.weaponCooldowns) enemy.weaponCooldowns = []; enemy.weapons.push(weaponDef); enemy.weaponCooldowns.push(0); enemy.currentWeapon = weaponDef; enemy.fireRate = weaponDef.fireRate; } enemy.displayName = "Sin Eater"; } } },
-            { type: "TECH_CRUSADE", probabilityPerFrame: 0.000005, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "WAR: Posthumans engaging alien presence.", color: "cyan" } },
+            { type: "MISSIONARY_CONVOY", probabilityPerFrame: 0.000005, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CONVOY: Procession of faithful passing through.", color: "cyan" }, spawnConfig: { entityType: 'enemy', minEntities: 3, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"] }, aiRole: AI_ROLE.MISSIONARY, spawnRadiusMin: 1800, spawnRadiusMax: 2200 } },
+            { type: "FORCED_CONVERSION", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "DISTRESS: Trader under religious siege!", color: "orange" } },
+            { type: "HERETIC_HUNT", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ALERT: Military purging heretic vessel.", color: "red" } },
+            { type: "DOOMSDAY_PROPHET", probabilityPerFrame: 0.0000025, minCooldownMs: 60 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "COMMS: 'The end is nigh! Embrace the void!'", color: "purple" } },
+            { type: "ASCENSION_RITUAL", probabilityPerFrame: 0.0000025, minCooldownMs: 45 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "RITUAL: Ascension flight detected on sensors.", color: "cyan" } },
+            { type: "ARTIFACT_WORSHIP", probabilityPerFrame: 0.0000025, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SCAN: Religious activity near unknown artifact.", color: "magenta" } },
+            { type: "FALSE_IDOLS", probabilityPerFrame: 0.000005, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "WARNING: Missionary vessel broadcasting pirate codes.", color: "red" }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"] }, aiRole: AI_ROLE.PIRATE, spawnRadiusMin: 1500, spawnRadiusMax: 2000, additionalEnemySetup: (enemy) => { const weaponDef = WEAPON_UPGRADES?.find(w => w.name === "Pulse Laser"); if (weaponDef) { if (!enemy.weapons) enemy.weapons = []; if (!enemy.weaponCooldowns) enemy.weaponCooldowns = []; enemy.weapons.push(weaponDef); enemy.weaponCooldowns.push(0); enemy.currentWeapon = weaponDef; enemy.fireRate = weaponDef.fireRate; } enemy.displayName = "False Prophet"; } } },
+            { type: "CLEANSING_FIRE", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "PURGE: Missionaries attacking unclean vessel.", color: "orange" } },
+            { type: "SIN_EATER", probabilityPerFrame: 0.000005, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "NOTICE: 'Sin Eater' vessel hunting criminals.", color: "red" }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"] }, aiRole: AI_ROLE.BOUNTY_HUNTER, spawnRadiusMin: 1500, spawnRadiusMax: 2000, additionalEnemySetup: (enemy) => { const weaponDef = WEAPON_UPGRADES?.find(w => w.name === "Harpoon Launcher"); if (weaponDef) { if (!enemy.weapons) enemy.weapons = []; if (!enemy.weaponCooldowns) enemy.weaponCooldowns = []; enemy.weapons.push(weaponDef); enemy.weaponCooldowns.push(0); enemy.currentWeapon = weaponDef; enemy.fireRate = weaponDef.fireRate; } enemy.displayName = "Sin Eater"; } } },
+            { type: "TECH_CRUSADE", probabilityPerFrame: 0.0000025, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "WAR: Posthumans engaging alien presence.", color: "cyan" } },
             // === Separatist & Imperial Events ===
-            { type: "IMPERIAL_INTERDICTION", probabilityPerFrame: 0.00001, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "AUTHORITY: Imperial forces inspecting vessel.", color: "cyan" } },
-            { type: "SEPARATIST_AMBUSH", probabilityPerFrame: 0.00001, minCooldownMs: 35 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "AMBUSH: Rebel forces engaging logistics.", color: "orange" } },
-            { type: "DEFECTOR_ESCORT", probabilityPerFrame: 0.000005, minCooldownMs: 45 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ALERT: High-value defector detected.", color: "gold" } },
-            { type: "DIPLOMATIC_STANDOFF", probabilityPerFrame: 0.000005, minCooldownMs: 60 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "POLITICAL: Tense diplomatic standoff in progress.", color: "cyan" } },
-            { type: "PROTOTYPE_HEIST", probabilityPerFrame: 0.000004, minCooldownMs: 50 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "THEFT: Rebels fleeing with stolen tech!", color: "red" } },
+            { type: "IMPERIAL_INTERDICTION", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "AUTHORITY: Imperial forces inspecting vessel.", color: "cyan" } },
+            { type: "SEPARATIST_AMBUSH", probabilityPerFrame: 0.000005, minCooldownMs: 35 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "AMBUSH: Rebel forces engaging logistics.", color: "orange" } },
+            { type: "DEFECTOR_ESCORT", probabilityPerFrame: 0.0000025, minCooldownMs: 45 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ALERT: High-value defector detected.", color: "gold" } },
+            { type: "DIPLOMATIC_STANDOFF", probabilityPerFrame: 0.0000025, minCooldownMs: 60 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "POLITICAL: Tense diplomatic standoff in progress.", color: "cyan" } },
+            { type: "PROTOTYPE_HEIST", probabilityPerFrame: 0.000002, minCooldownMs: 50 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "THEFT: Rebels fleeing with stolen tech!", color: "red" } },
             // === Harlequin Events ===
-            { type: "HARLEQUIN_PARADE", probabilityPerFrame: 0.00001, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CIRCUS: Harlequin convoy detected.", color: "white" } },
-            { type: "JESTERS_TRAP", probabilityPerFrame: 0.00001, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CONTACT: Lone fighter drifting nearby.", color: "cyan" } },
-            { type: "COLOR_WAR", probabilityPerFrame: 0.00001, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ASSAULT: Harlequins attacking 'drab' vessel.", color: "red" } },
-            { type: "MAD_BOMBER", probabilityPerFrame: 0.000005, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "THREAT: Maniac threatening station bombardment!", color: "red" } },
-            { type: "CARNIVAL_DROP", probabilityPerFrame: 0.00001, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SCAN: Unsanctioned cargo drop detected.", color: "lime" } }
+            { type: "HARLEQUIN_PARADE", probabilityPerFrame: 0.000005, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CIRCUS: Harlequin convoy detected.", color: "white" } },
+            { type: "JESTERS_TRAP", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CONTACT: Lone fighter drifting nearby.", color: "cyan" } },
+            { type: "COLOR_WAR", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "ASSAULT: Harlequins attacking 'drab' vessel.", color: "red" } },
+            { type: "MAD_BOMBER", probabilityPerFrame: 0.0000025, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "THREAT: Maniac threatening station bombardment!", color: "red" } },
+            { type: "CARNIVAL_DROP", probabilityPerFrame: 0.000005, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SCAN: Unsanctioned cargo drop detected.", color: "lime" } }
         );
         this.events.push(...this._buildLoreExpansionEvents());
 
@@ -581,68 +582,68 @@ class EventManager {
         });
 
         return [
-            newEvent("IMPERIAL_TAX_CONVOY", 0.000006, 40 * 60 * 1000, 5000, { message: "AUTHORITY: Imperial tax convoy sweeping trade lanes.", color: "cyan" }, {
+            newEvent("IMPERIAL_TAX_CONVOY", 0.000003, 40 * 60 * 1000, 5000, { message: "AUTHORITY: Imperial tax convoy sweeping trade lanes.", color: "cyan" }, {
                 entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.IMPERIAL, fallbackShip: "ImperialCourier" }, aiRole: AI_ROLE.POLICE, spawnRadiusMin: 1600, spawnRadiusMax: 2200,
                 additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Tax Frigate"; e.faction = 'IMPERIAL'; }
             }),
-            newEvent("SEPARATIST_PRIVATEERS", 0.000006, 38 * 60 * 1000, 5000, { message: "ALERT: Separatist privateers targeting independent shipping.", color: "orange" }, {
+            newEvent("SEPARATIST_PRIVATEERS", 0.000003, 38 * 60 * 1000, 5000, { message: "ALERT: Separatist privateers targeting independent shipping.", color: "orange" }, {
                 entityType: 'enemy', minEntities: 2, maxEntities: 4, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.SEPARATIST, fallbackShip: "SeparatistPartisan" }, aiRole: AI_ROLE.PIRATE, spawnRadiusMin: 1700, spawnRadiusMax: 2400,
                 additionalEnemySetup: (e) => { e.displayName = "Rebel Privateer"; e.faction = 'SEPARATIST'; }
             }),
-            newEvent("PILGRIM_ESCORT", 0.000007, 30 * 60 * 1000, 5000, { message: "CONVOY: Pilgrim procession requests right of passage.", color: "cyan" }, {
+            newEvent("PILGRIM_ESCORT", 0.0000035, 30 * 60 * 1000, 5000, { message: "CONVOY: Pilgrim procession requests right of passage.", color: "cyan" }, {
                 entityType: 'enemy', minEntities: 3, maxEntities: 4, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"], fallbackShip: "PosthumanMissionary" }, aiRole: AI_ROLE.MISSIONARY, spawnRadiusMin: 1500, spawnRadiusMax: 2200,
                 additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Pilgrim Convoy"; }
             }),
-            newEvent("ALIEN_RELIC_HUNTERS", 0.000005, 45 * 60 * 1000, 6000, { message: "[ALIEN] ANOMALY: Alien relic hunters entering system.", color: "magenta" }, {
+            newEvent("ALIEN_RELIC_HUNTERS", 0.0000025, 45 * 60 * 1000, 6000, { message: "[ALIEN] ANOMALY: Alien relic hunters entering system.", color: "magenta" }, {
                 entityType: 'enemy', minEntities: 1, maxEntities: 2, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.ALIEN, fallbackShip: "Thargoid" }, aiRole: AI_ROLE.ALIEN, spawnRadiusMin: 1800, spawnRadiusMax: 2500,
                 additionalEnemySetup: (e) => { e.displayName = "Relic Hunter"; }
             }),
-            newEvent("BLACK_OPS_INTERCEPTORS", 0.000005, 50 * 60 * 1000, 6000, { message: "INTEL: Black-ops interceptors operating without transponders.", color: "red" }, {
+            newEvent("BLACK_OPS_INTERCEPTORS", 0.0000025, 50 * 60 * 1000, 6000, { message: "INTEL: Black-ops interceptors operating without transponders.", color: "red" }, {
                 entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.BOUNTY_HUNTER, fallbackShip: "ViperBH" }, aiRole: AI_ROLE.BOUNTY_HUNTER, spawnRadiusMin: 1800, spawnRadiusMax: 2400,
                 additionalEnemySetup: (e) => { e.currentState = AI_STATE.APPROACHING; e.displayName = "Black Ops Interceptor"; }
             }),
-            newEvent("STATION_EXTORTION_RING", 0.000006, 35 * 60 * 1000, 5000, { message: "CRIME: Protection racketeers extorting dock traffic.", color: "red" }, {
+            newEvent("STATION_EXTORTION_RING", 0.000003, 35 * 60 * 1000, 5000, { message: "CRIME: Protection racketeers extorting dock traffic.", color: "red" }, {
                 entityType: 'enemy', minEntities: 3, maxEntities: 4, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.PIRATE, fallbackShip: "Sidewinder" }, aiRole: AI_ROLE.PIRATE, spawnRadiusMin: 1200, spawnRadiusMax: 1900,
                 additionalEnemySetup: (e) => { e.displayName = "Extortionist"; }
             }),
-            newEvent("IMPERIAL_RETRIBUTION_WING", 0.000004, 55 * 60 * 1000, 6000, { message: "MILITARY: Imperial retribution wing hunting dissidents.", color: "cyan" }, {
+            newEvent("IMPERIAL_RETRIBUTION_WING", 0.000002, 55 * 60 * 1000, 6000, { message: "MILITARY: Imperial retribution wing hunting dissidents.", color: "cyan" }, {
                 entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.IMPERIAL, fallbackShip: "ImperialLancer" }, aiRole: AI_ROLE.COMBAT, spawnRadiusMin: 1900, spawnRadiusMax: 2600,
                 additionalEnemySetup: (e) => { e.displayName = "Imperial Retributor"; e.faction = 'IMPERIAL'; }
             }),
-            newEvent("SEPARATIST_SIGNAL_JAMMERS", 0.0000045, 45 * 60 * 1000, 6000, { message: "INTERFERENCE: Separatist jamming flotilla detected.", color: "orange" }, {
+            newEvent("SEPARATIST_SIGNAL_JAMMERS", 0.000002, 45 * 60 * 1000, 6000, { message: "INTERFERENCE: Separatist jamming flotilla detected.", color: "orange" }, {
                 entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.SEPARATIST, fallbackShip: "SeparatistShadow" }, aiRole: AI_ROLE.COMBAT, spawnRadiusMin: 1800, spawnRadiusMax: 2500,
                 additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Signal Jammer"; e.faction = 'SEPARATIST'; }
             }),
-            newEvent("HARLEQUIN_FLASHMOB", 0.000006, 30 * 60 * 1000, 5000, { message: "CIRCUS: Harlequin flashmob strobing local traffic lanes.", color: "white" }, {
+            newEvent("HARLEQUIN_FLASHMOB", 0.000003, 30 * 60 * 1000, 5000, { message: "CIRCUS: Harlequin flashmob strobing local traffic lanes.", color: "white" }, {
                 entityType: 'enemy', minEntities: 3, maxEntities: 4, shipSelection: { strategy: 'randomFromList', shipList: ["HarlequinPulcinella", "HarlequinPierrot", "HarlequinColumbine"], fallbackShip: "HarlequinPulcinella" }, aiRole: AI_ROLE.PIRATE, spawnRadiusMin: 1300, spawnRadiusMax: 2000,
                 additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Flashmob Marauder"; e.faction = 'HARLEQUIN'; }
             }),
-            newEvent("MISSIONARY_RECLAMATION_FLEET", 0.0000055, 33 * 60 * 1000, 5000, { message: "SERMON: Reclamation fleet demanding ideological compliance.", color: "purple" }, {
+            newEvent("MISSIONARY_RECLAMATION_FLEET", 0.0000027, 33 * 60 * 1000, 5000, { message: "SERMON: Reclamation fleet demanding ideological compliance.", color: "purple" }, {
                 entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"], fallbackShip: "PosthumanMissionary" }, aiRole: AI_ROLE.MISSIONARY, spawnRadiusMin: 1500, spawnRadiusMax: 2100,
                 additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Reclamation Missionary"; }
             }),
-            newEvent("BORDER_MILITIA_DRILL", 0.000005, 42 * 60 * 1000, 5000, { message: "EXERCISE: Border militia conducting live-fire drills.", color: "blue" }, {
+            newEvent("BORDER_MILITIA_DRILL", 0.0000025, 42 * 60 * 1000, 5000, { message: "EXERCISE: Border militia conducting live-fire drills.", color: "blue" }, {
                 entityType: 'enemy', minEntities: 3, maxEntities: 4, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.MILITARY, fallbackShip: "Viper" }, aiRole: AI_ROLE.COMBAT, spawnRadiusMin: 1700, spawnRadiusMax: 2400,
                 additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Militia Patrol"; }
             }),
-            newEvent("ALIEN_BIO_PROSPECTORS", 0.0000045, 48 * 60 * 1000, 6000, { message: "[ALIEN] BIOSCAN: Prospectors sampling local biosignatures.", color: "magenta" }, {
+            newEvent("ALIEN_BIO_PROSPECTORS", 0.000002, 48 * 60 * 1000, 6000, { message: "[ALIEN] BIOSCAN: Prospectors sampling local biosignatures.", color: "magenta" }, {
                 entityType: 'enemy', minEntities: 1, maxEntities: 2, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.ALIEN, fallbackShip: "BioFrigate" }, aiRole: AI_ROLE.ALIEN, spawnRadiusMin: 1900, spawnRadiusMax: 2600,
                 additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Bio Prospector"; }
             }),
-            newEvent("DEFENSE_DRONE_SWEEP", 0.0000065, 28 * 60 * 1000, 5000, { message: "SECURITY: Autonomous defense drones sweeping traffic lanes.", color: "cyan" }, {
+            newEvent("DEFENSE_DRONE_SWEEP", 0.000003, 28 * 60 * 1000, 5000, { message: "SECURITY: Autonomous defense drones sweeping traffic lanes.", color: "cyan" }, {
                 entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.POLICE, fallbackShip: "ViperPol" }, aiRole: AI_ROLE.POLICE, spawnRadiusMin: 1400, spawnRadiusMax: 2100,
                 additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Defense Drone"; }
             }),
-            newEvent("SHADOW_COURIER", 0.000005, 40 * 60 * 1000, 5000, { message: "INTEL: Unmarked courier running dark through the sector.", color: "gold" }, {
+            newEvent("SHADOW_COURIER", 0.0000025, 40 * 60 * 1000, 5000, { message: "INTEL: Unmarked courier running dark through the sector.", color: "gold" }, {
                 entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.TRADER, fallbackShip: "CobraMkIII" }, aiRole: AI_ROLE.HAULER, spawnRadiusMin: 2000, spawnRadiusMax: 2600,
                 additionalEnemySetup: (e) => { e.currentState = AI_STATE.FLEEING; e.displayName = "Shadow Courier"; }
             }),
-            newEvent("ORBITAL_WRECKFIELD", 0.000008, 22 * 60 * 1000, 5000, { message: "SALVAGE: Fresh orbital wreckfield shedding valuables.", color: "silver" }, { entityType: 'cargo', minEntities: 2, maxEntities: 4, spawnRadiusMin: 1400, spawnRadiusMax: 2600, cargoType: 'Metals', quantity: 3 }),
-            newEvent("PILGRIM_OFFERINGS", 0.000007, 24 * 60 * 1000, 5000, { message: "RITUAL: Pilgrims jettisoning tribute crates.", color: "gold" }, { entityType: 'cargo', minEntities: 2, maxEntities: 3, spawnRadiusMin: 1300, spawnRadiusMax: 2200, cargoType: 'Luxury Goods', quantity: 2 }),
-            newEvent("SEPARATIST_ARMS_CACHE", 0.000006, 30 * 60 * 1000, 5000, { message: "BLACKSITE: Hidden separatist arms cache exposed.", color: "orange" }, { entityType: 'cargo', minEntities: 1, maxEntities: 2, spawnRadiusMin: 1700, spawnRadiusMax: 2600, cargoType: 'Weapons', quantity: 2 }),
-            newEvent("ALIEN_RELIC_CACHE", 0.000004, 55 * 60 * 1000, 6000, { message: "[ALIEN] SIGNAL: Relic cache pulse detected.", color: "magenta" }, { entityType: 'cargo', minEntities: 1, maxEntities: 1, spawnRadiusMin: 1900, spawnRadiusMax: 3000, cargoType: 'Alien Artifact', quantity: 1 }),
-            newEvent("VOID_CHOIR_STORM", 0.0000035, 60 * 60 * 1000, 8000, { message: "[STORM] ANOMALY: Harmonic void storm forming.", color: "purple" }, { entityType: 'cosmicStorm', minEntities: 1, maxEntities: 1, spawnRadiusMin: 1400, spawnRadiusMax: 2400, radius: 700, type: 'electromagnetic' }),
-            newEvent("SUNSPIKE_TURBULENCE", 0.000004, 55 * 60 * 1000, 8000, { message: "[STORM] SPACE WEATHER: Sunspike turbulence front incoming.", color: "yellow" }, { entityType: 'cosmicStorm', minEntities: 1, maxEntities: 1, spawnRadiusMin: 1200, spawnRadiusMax: 2200, radius: 620, type: 'electromagnetic' })
+            newEvent("ORBITAL_WRECKFIELD", 0.000004, 22 * 60 * 1000, 5000, { message: "SALVAGE: Fresh orbital wreckfield shedding valuables.", color: "silver" }, { entityType: 'cargo', minEntities: 2, maxEntities: 4, spawnRadiusMin: 1400, spawnRadiusMax: 2600, cargoType: 'Metals', quantity: 3 }),
+            newEvent("PILGRIM_OFFERINGS", 0.0000035, 24 * 60 * 1000, 5000, { message: "RITUAL: Pilgrims jettisoning tribute crates.", color: "gold" }, { entityType: 'cargo', minEntities: 2, maxEntities: 3, spawnRadiusMin: 1300, spawnRadiusMax: 2200, cargoType: 'Luxury Goods', quantity: 2 }),
+            newEvent("SEPARATIST_ARMS_CACHE", 0.000003, 30 * 60 * 1000, 5000, { message: "BLACKSITE: Hidden separatist arms cache exposed.", color: "orange" }, { entityType: 'cargo', minEntities: 1, maxEntities: 2, spawnRadiusMin: 1700, spawnRadiusMax: 2600, cargoType: 'Weapons', quantity: 2 }),
+            newEvent("ALIEN_RELIC_CACHE", 0.000002, 55 * 60 * 1000, 6000, { message: "[ALIEN] SIGNAL: Relic cache pulse detected.", color: "magenta" }, { entityType: 'cargo', minEntities: 1, maxEntities: 1, spawnRadiusMin: 1900, spawnRadiusMax: 3000, cargoType: 'Alien Artifact', quantity: 1 }),
+            newEvent("VOID_CHOIR_STORM", 0.0000017, 60 * 60 * 1000, 8000, { message: "[STORM] ANOMALY: Harmonic void storm forming.", color: "purple" }, { entityType: 'cosmicStorm', minEntities: 1, maxEntities: 1, spawnRadiusMin: 1400, spawnRadiusMax: 2400, radius: 700, type: 'electromagnetic' }),
+            newEvent("SUNSPIKE_TURBULENCE", 0.000002, 55 * 60 * 1000, 8000, { message: "[STORM] SPACE WEATHER: Sunspike turbulence front incoming.", color: "yellow" }, { entityType: 'cosmicStorm', minEntities: 1, maxEntities: 1, spawnRadiusMin: 1200, spawnRadiusMax: 2200, radius: 620, type: 'electromagnetic' })
         ];
     }
 

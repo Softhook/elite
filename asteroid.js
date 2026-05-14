@@ -160,30 +160,48 @@ class Asteroid {
         if (this.destroyed) return;
 
         if (this.isComet) {
-            // Draw a bright velocity-aligned tail behind comet heads so they stand out in-world.
+            // Draw a massive debris-trail tail for the giant asteroid.
             const vx = this.vel?.x || 0;
             const vy = this.vel?.y || 0;
             const speed = Math.sqrt(vx * vx + vy * vy);
             if (speed > 0.01) {
                 const nx = vx / speed;
                 const ny = vy / speed;
-                const tailLen = Math.max(this.size * 2.2, 180);
+                // Perpendicular axis for spreading the debris fan
+                const px = -ny;
+                const py = nx;
+                const tailLen = this.size * 5;
 
                 push();
-                strokeWeight(Math.max(2, this.size * 0.03));
-                for (let i = 0; i < 4; i++) {
-                    const t = i / 3;
-                    const alpha = lerp(120, 12, t);
-                    stroke(255, 230, 170, alpha);
-                    const sx = this.pos.x - nx * tailLen * t;
-                    const sy = this.pos.y - ny * tailLen * t;
-                    const ex = this.pos.x - nx * tailLen * (t + 0.33);
-                    const ey = this.pos.y - ny * tailLen * (t + 0.33);
-                    line(sx, sy, ex, ey);
+                // Wide central debris tail – multiple parallel strands
+                const numStrands = 7;
+                for (let s = 0; s < numStrands; s++) {
+                    const spread = lerp(-this.size * 0.8, this.size * 0.8, s / (numStrands - 1));
+                    const strandAlphaBase = s === Math.floor(numStrands / 2) ? 160 : 80;
+                    const segments = 6;
+                    for (let i = 0; i < segments; i++) {
+                        const t0 = i / segments;
+                        const t1 = (i + 1) / segments;
+                        const fanSpread0 = spread * (1 + t0 * 2.5);
+                        const fanSpread1 = spread * (1 + t1 * 2.5);
+                        const alpha = lerp(strandAlphaBase, 0, t0 * t0);
+                        const w = lerp(Math.max(3, this.size * 0.06), 1, t0);
+                        stroke(200, 150, 90, alpha);
+                        strokeWeight(w);
+                        const sx = this.pos.x - nx * tailLen * t0 + px * fanSpread0;
+                        const sy = this.pos.y - ny * tailLen * t0 + py * fanSpread0;
+                        const ex = this.pos.x - nx * tailLen * t1 + px * fanSpread1;
+                        const ey = this.pos.y - ny * tailLen * t1 + py * fanSpread1;
+                        line(sx, sy, ex, ey);
+                    }
                 }
                 noStroke();
-                fill(255, 245, 170, 85);
-                ellipse(this.pos.x, this.pos.y, this.size * 1.8, this.size * 1.8);
+                // Wide outer dust coma
+                fill(180, 130, 70, 30);
+                ellipse(this.pos.x, this.pos.y, this.size * 4, this.size * 4);
+                // Inner glowing halo
+                fill(230, 180, 100, 60);
+                ellipse(this.pos.x, this.pos.y, this.size * 2.2, this.size * 2.2);
                 pop();
             }
         }
@@ -222,6 +240,11 @@ class Asteroid {
         let r = baseGray;
         let g = baseGray;
         let b = baseGray;
+
+        // Comets are giant rocky asteroids – give them a dark brownish-red tone
+        if (this.isComet) {
+            r = 130; g = 90; b = 60; // dark iron-rust brown
+        }
 
         // Apply tint if rich
         if (this.isRich && this.seamColor) {
