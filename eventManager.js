@@ -502,7 +502,7 @@ class EventManager {
             { type: "MINING_OPERATION", probabilityPerFrame: 0.00001, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "OPS: Temporary mining operation detected.", color: "yellow", consoleLog: "EventManager: Mining Op warning issued." } },
             { type: "ROGUE_SECURITY", probabilityPerFrame: 0.000005, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "WARNING: Rogue security forces identified.", color: "red", consoleLog: "EventManager: Rogue Security warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.POLICE, fallbackShip: "ViperPol" }, aiRole: AI_ROLE.PIRATE, spawnRadiusMin: 1800, spawnRadiusMax: 2200, additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Rogue Security"; } } },
             { type: "INTERSTELLAR_RALLY", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "RACE: Interstellar Rally racers entering sector!", color: "cyan", consoleLog: "EventManager: Rally warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 3, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.TRADER, fallbackShip: "Type6Transporter" }, aiRole: AI_ROLE.HAULER, spawnRadiusMin: 3000, spawnRadiusMax: 3500, additionalEnemySetup: (e) => { e.baseMaxSpeed *= 2.5; e.maxSpeed *= 2.5; e.currentState = AI_STATE.FLEEING; e.displayName = "Rally Racer"; e.isRacing = true; } } },
-            { type: "ALIEN_SCOUT", probabilityPerFrame: 0.000005, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "[ALIEN] CONTACT: Unidentified scout vessel.", color: "magenta", consoleLog: "EventManager: Alien Scout warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.ALIEN, fallbackShip: "Thargoid" }, aiRole: AI_ROLE.ALIEN, spawnRadiusMin: 2000, spawnRadiusMax: 2500, additionalEnemySetup: (e) => { e.currentState = AI_STATE.IDLE; } } },
+            { type: "ALIEN_SCOUT", probabilityPerFrame: 0.000005, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "[ALIEN] CONTACT: Unidentified scout vessel.", color: "magenta", consoleLog: "EventManager: Alien Scout warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.ALIEN, fallbackShip: "Thargoid" }, aiRole: AI_ROLE.ALIEN, spawnRadiusMin: 2000, spawnRadiusMax: 2500, additionalEnemySetup: (e, player) => { e.currentState = AI_STATE.APPROACHING; e.target = player || null; } } },
             { type: "PROTOTYPE_TESTING", probabilityPerFrame: 0.000004, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "DETECTED: High-signature prototype vessel.", color: "blue", consoleLog: "EventManager: Prototype warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.MILITARY, fallbackShip: "Viper" }, aiRole: AI_ROLE.COMBAT, spawnRadiusMin: 2500, spawnRadiusMax: 3000, additionalEnemySetup: (e) => { e.baseMaxSpeed *= 2.0; e.maxSpeed *= 2.0; e.shield *= 1.5; e.displayName = "Prototype Unit"; e.currentState = AI_STATE.PATROLLING; } } },
             // === Missionary & Creative Events ===
             { type: "MISSIONARY_CONVOY", probabilityPerFrame: 0.00001, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CONVOY: Procession of faithful passing through.", color: "cyan" }, spawnConfig: { entityType: 'enemy', minEntities: 3, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"] }, aiRole: AI_ROLE.MISSIONARY, spawnRadiusMin: 1800, spawnRadiusMax: 2200 } },
@@ -2230,8 +2230,37 @@ class EventManager {
             if (typeof config.additionalEnemySetup === 'function') {
                 config.additionalEnemySetup(newEnemy, this.player, this.starSystem);
             }
+            this._stabilizeSpawnedEventEnemy(newEnemy, event);
 
             this.starSystem.addEnemy(newEnemy);
+        }
+    }
+
+    _stabilizeSpawnedEventEnemy(enemy, event) {
+        if (!enemy || enemy.immobilized) return;
+
+        const eventType = event?.type || '';
+        const allowIdleEvents = new Set(['DISTRESS_SIGNAL']);
+        if (allowIdleEvents.has(eventType)) return;
+
+        const hostileRoles = new Set([
+            AI_ROLE.PIRATE,
+            AI_ROLE.ALIEN,
+            AI_ROLE.BOUNTY_HUNTER,
+            AI_ROLE.COMBAT,
+            AI_ROLE.MISSIONARY
+        ]);
+        const patrolRoles = new Set([AI_ROLE.POLICE, AI_ROLE.GUARD, AI_ROLE.HAULER]);
+
+        if (hostileRoles.has(enemy.role) && !enemy.target && this.player) {
+            enemy.target = this.player;
+        }
+
+        if (enemy.currentState !== AI_STATE.IDLE) return;
+        if (hostileRoles.has(enemy.role)) {
+            enemy.currentState = AI_STATE.APPROACHING;
+        } else if (patrolRoles.has(enemy.role)) {
+            enemy.currentState = AI_STATE.PATROLLING;
         }
     }
 

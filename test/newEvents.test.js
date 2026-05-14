@@ -257,6 +257,8 @@ describe('New Events Tests', () => {
 
         expect(system.enemies.length).toBe(1);
         expect(system.enemies[0].role).toBe(AI_ROLE.ALIEN);
+        expect(system.enemies[0].currentState).toBe(AI_STATE.APPROACHING);
+        expect(system.enemies[0].target).toBe(player);
     });
 
     test('should execute PROTOTYPE_TESTING', () => {
@@ -275,6 +277,8 @@ describe('New Events Tests', () => {
         em.executeConfiguredEvent('MISSIONARY_CONVOY');
         expect(system.enemies.length).toBeGreaterThanOrEqual(3);
         expect(system.enemies.every(e => e.role === AI_ROLE.MISSIONARY)).toBe(true);
+        expect(system.enemies.every(e => e.currentState === AI_STATE.APPROACHING)).toBe(true);
+        expect(system.enemies.every(e => e.target === player)).toBe(true);
     });
 
     test('should execute FORCED_CONVERSION', () => {
@@ -356,6 +360,8 @@ describe('New Events Tests', () => {
         const wolf = system.enemies[0];
         expect(wolf.role).toBe(AI_ROLE.PIRATE);
         expect(wolf.displayName).toBe("False Prophet");
+        expect(wolf.currentState).toBe(AI_STATE.APPROACHING);
+        expect(wolf.target).toBe(player);
         // Check armament override if mock supported it (mock doesn't have armament array usually, 
         // need to check MockEnemy setup).
         // MockEnemy doesn't init armament. But specific event code assumes it does (`e.armament.push`).
