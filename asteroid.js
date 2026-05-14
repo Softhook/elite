@@ -243,7 +243,7 @@ class Asteroid {
 
         // Comets are giant rocky asteroids – give them a dark brownish-red tone
         if (this.isComet) {
-            r = 130; g = 90; b = 60;
+            r = 130; g = 90; b = 60; // dark iron-rust brown
         }
 
         // Apply tint if rich

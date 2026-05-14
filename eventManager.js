@@ -286,7 +286,7 @@ class EventManager {
                     spawnRadiusMin: 8000,
                     spawnRadiusMax: 9000,
                     clusterSpreadRadius: 0,
-                    asteroidSizeMin: 400,
+                    asteroidSizeMin: 400, // consumed by _executeAsteroidSpawn: random(asteroidSizeMin, asteroidSizeMax)
                     asteroidSizeMax: 600,
                     speed: 12
                 }
