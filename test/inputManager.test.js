@@ -86,6 +86,10 @@ describe('InputManager', () => {
         gp._state = { mode: 'X-MODE (Xbox)', x: true, r1: false };
         expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.TOGGLE_MISSION, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(true);
 
+        gp._state = { mode: 'S-MODE (Switch)', home: true, dpad: { up: false, down: false, left: false, right: false } };
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.TOGGLE_MISSION, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(true);
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.NAV_UP, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(false);
+
         gp._state = { mode: 'S-MODE (Switch)', l4: true, r4: false };
         expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.TOGGLE_WANTED, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(false);
         expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.TOGGLE_SECRET_NAV, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(false);

@@ -31,7 +31,7 @@ const GP_MAPS = {
     A: 1, B: 0, X: 3, Y: 2, L1: 4, R1: 5, L2_BTN: 6, R2_BTN: 7,
     L4: 16, R4: 17, Pl: 14, Pr: 15, LX: 0, LY: 1, RX: 2, RY: 3,
     D_UP: 12, D_DOWN: 13, D_LEFT: 14, D_RIGHT: 15,
-    SELECT: 8, START: 9, HOME: 12
+    SELECT: 8, START: 9, HOME: 16
   }
 };
 
