@@ -277,8 +277,7 @@ describe('New Events Tests', () => {
         em.executeConfiguredEvent('MISSIONARY_CONVOY');
         expect(system.enemies.length).toBeGreaterThanOrEqual(3);
         expect(system.enemies.every(e => e.role === AI_ROLE.MISSIONARY)).toBe(true);
-        expect(system.enemies.every(e => e.currentState === AI_STATE.APPROACHING)).toBe(true);
-        expect(system.enemies.every(e => e.target === player)).toBe(true);
+        expect(system.enemies.every(e => e.currentState === AI_STATE.PATROLLING)).toBe(true);
     });
 
     test('should execute FORCED_CONVERSION', () => {

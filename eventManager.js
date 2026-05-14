@@ -2247,10 +2247,9 @@ class EventManager {
             AI_ROLE.PIRATE,
             AI_ROLE.ALIEN,
             AI_ROLE.BOUNTY_HUNTER,
-            AI_ROLE.COMBAT,
-            AI_ROLE.MISSIONARY
+            AI_ROLE.COMBAT
         ]);
-        const patrolRoles = new Set([AI_ROLE.POLICE, AI_ROLE.GUARD, AI_ROLE.HAULER]);
+        const patrolRoles = new Set([AI_ROLE.POLICE, AI_ROLE.GUARD, AI_ROLE.HAULER, AI_ROLE.MISSIONARY]);
 
         if (hostileRoles.has(enemy.role) && !enemy.target && this.player) {
             enemy.target = this.player;
