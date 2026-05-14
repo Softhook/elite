@@ -1435,9 +1435,15 @@ class SurfaceMode {
             ],
         };
 
+        const companionPowerText = (typeof Player !== 'undefined' && typeof Player.getAlienCompanionPowerTextBySpecies === 'function')
+            ? Player.getAlienCompanionPowerTextBySpecies(species)
+            : 'No special power identified yet.';
+
         const lines = bySpecies[species];
-        if (lines) return pick(lines);
-        return `A ${personality} alien lifeform with ${trait}. It seems perfectly at home aboard the ship.`;
+        if (lines) {
+            return `${pick(lines)} Companion power: ${companionPowerText}`;
+        }
+        return `A ${personality} alien lifeform with ${trait}. It seems perfectly at home aboard the ship. Companion power: ${companionPowerText}`;
     }
 
     _generateRandomAlienName() {

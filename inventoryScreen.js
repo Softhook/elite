@@ -474,7 +474,12 @@ class InventoryScreen {
 
     fill(195, 215, 245);
     textSize(STATION_TEXT_SIZE.HELPER);
-    const description = companion.description || 'A loyal alien lifeform that now travels with your ship.';
+    const baseDescription = companion.description || 'A loyal alien lifeform that now travels with your ship.';
+    const powerText = (player && typeof player.getAlienCompanionPowerText === 'function')
+      ? player.getAlienCompanionPowerText(companion)
+      : 'No special power identified yet.';
+    const cleanedDescription = baseDescription.replace(/\s*Companion power:.*$/i, '').trim();
+    const description = `${cleanedDescription}\nPower: ${powerText}`;
     text(description, textX, cardY + 32, textW, cardH - 36);
 
     return cardY + cardH;

@@ -59,6 +59,45 @@ function createDefaultFactionStanding() {
     return { ...DEFAULT_FACTION_STANDING };
 }
 
+const ALIEN_COMPANION_BONUS_SPECS = Object.freeze({
+    SlitherCreature: Object.freeze({
+        role: 'Engineer',
+        powerText: 'Repairs 0.35 hull/sec after 6s without taking damage.',
+        hullRegenPerSecond: 0.35,
+        hullRegenDelayMs: 6000
+    }),
+    FloaterCreature: Object.freeze({
+        role: 'Field Harmonist',
+        powerText: 'Improves shield recharge by 12%.',
+        shieldRechargeMultiplier: 1.12
+    }),
+    RollerCreature: Object.freeze({
+        role: 'Impact Buffer',
+        powerText: 'Reduces incoming damage by 5%.',
+        damageTakenMultiplier: 0.95
+    }),
+    StalkCreature: Object.freeze({
+        role: 'Helm Spotter',
+        powerText: 'Improves turn rate by 7%.',
+        turnRateMultiplier: 1.07
+    }),
+    HopperCreature: Object.freeze({
+        role: 'Booster Tech',
+        powerText: 'Recovers boost cooldown 12% faster.',
+        boostCooldownRateMultiplier: 1.12
+    }),
+    GliderCreature: Object.freeze({
+        role: 'Flight Trimmer',
+        powerText: 'Improves max speed by 5%.',
+        maxSpeedMultiplier: 1.05
+    }),
+    HexapodCreature: Object.freeze({
+        role: 'Heat Siphon',
+        powerText: 'Cools weapon heat 15% faster.',
+        weaponCoolingMultiplier: 1.15
+    })
+});
+
 /**
  * Deep-clones JSON-serializable state for save/load boundaries.
  * Returns the provided fallback when the source value is nullish.
@@ -730,6 +769,7 @@ class Player {
 
     /** Applies base stats and calculates Radian properties. */
     applyShipDefinition(shipTypeName) {
+        const preservedCompanion = Player.sanitizeAlienCompanionData(this.alienCompanion);
         this.shipTypeName = shipTypeName;
         const def = SHIP_DEFINITIONS[shipTypeName];
         if (!def) {
@@ -763,6 +803,10 @@ class Player {
         this.recalculateStats(); // Apply bonuses from default upgrades
         this.hull = this.maxHull; // Full hull for new ship
         this.shield = this.maxShield; // Full shield for new ship
+
+        // Ensure companions always persist when changing ships.
+        this.alienCompanion = preservedCompanion;
+
         this.calculateRadianProperties && this.calculateRadianProperties();
         this.updateShipVisual && this.updateShipVisual();
     }
@@ -814,10 +858,13 @@ class Player {
         const def = this.shipDefinition;
         if (!def) return;
 
+        const companionBonus = this.getAlienCompanionBonusSpec();
+
         // Reset to base
         this.maxHull = def.baseHull;
         this.baseMaxSpeed = def.baseMaxSpeed;
         this.thrustForce = def.baseThrust;
+        this.rotationSpeed = def.baseTurnRate;
         this.cargoCapacity = def.cargoCapacity;
         // Weapon slots are tricky, we handle them carefully below
 
@@ -839,6 +886,15 @@ class Player {
                 this.thrustForce *= upg.thrustMultiplier;
             }
         }
+
+        // Companion species passive bonuses.
+        if (companionBonus?.maxSpeedMultiplier) {
+            this.baseMaxSpeed *= companionBonus.maxSpeedMultiplier;
+        }
+        if (companionBonus?.turnRateMultiplier) {
+            this.rotationSpeed *= companionBonus.turnRateMultiplier;
+        }
+
         // Update derived speed (drag/boost rely on baseMaxSpeed, usually recalculated in update but good to set)
         this.maxSpeed = this.baseMaxSpeed;
 
@@ -1505,9 +1561,11 @@ class Player {
         // Cache time values to avoid redundant calculations
         const deltaSeconds = deltaTime * 0.001; // Pre-calculate milliseconds to seconds
         const currentTime = millis();
+        const companionBonus = this.getAlienCompanionBonusSpec();
 
         if (typeof WeaponSystem !== 'undefined' && Number.isFinite(deltaSeconds)) {
-            WeaponSystem.coolWeaponHeat(this, deltaSeconds);
+            const weaponCoolingMultiplier = companionBonus?.weaponCoolingMultiplier || 1;
+            WeaponSystem.coolWeaponHeat(this, deltaSeconds * weaponCoolingMultiplier);
         }
 
         // Barrier duration update
@@ -1550,7 +1608,8 @@ class Player {
             }
         }
         if (this.cloakCooldownTimer > 0) {
-            this.cloakCooldownTimer -= deltaSeconds;
+            const cloakCooldownRate = companionBonus?.cloakCooldownRateMultiplier || 1;
+            this.cloakCooldownTimer -= deltaSeconds * cloakCooldownRate;
             if (this.cloakCooldownTimer < 0) {
                 this.cloakCooldownTimer = 0;
             }
@@ -1575,7 +1634,8 @@ class Player {
 
         // Update booster cooldown timer
         if (this.boostCooldownTimer > 0) {
-            this.boostCooldownTimer -= deltaSeconds;
+            const boostCooldownRate = companionBonus?.boostCooldownRateMultiplier || 1;
+            this.boostCooldownTimer -= deltaSeconds * boostCooldownRate;
             if (this.boostCooldownTimer < 0) {
                 this.boostCooldownTimer = 0;
             }
@@ -1624,7 +1684,8 @@ class Player {
         // Regenerate shields only after recharge delay has passed (and not disabled by Ion nebula)
         if (this.shield < this.maxShield && !this.shieldsDisabled && (currentTime - this.lastShieldHitTime) > this.shieldRechargeDelay) {
             // Use deltaSeconds for frame-rate independent recharge (shieldRechargeRate is per-second)
-            const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * deltaSeconds;
+            const shieldRechargeMultiplier = companionBonus?.shieldRechargeMultiplier || 1;
+            const rechargeAmount = this.shieldRechargeRate * SHIELD_RECHARGE_RATE_MULTIPLIER * shieldRechargeMultiplier * deltaSeconds;
             const prevShield = this.shield;
             const newShield = Math.min(this.maxShield, prevShield + rechargeAmount);
             // Play shield-up cue when recovering from 0
@@ -1633,6 +1694,15 @@ class Player {
                 this._shieldWasZero = false;
             }
             this.shield = newShield;
+        }
+
+        // Minor out-of-combat hull repair for engineer companions.
+        if (companionBonus?.hullRegenPerSecond > 0 && this.hull > 0 && this.hull < this.maxHull) {
+            const hullRegenDelayMs = companionBonus.hullRegenDelayMs || 6000;
+            if ((currentTime - this.lastDamageTime) > hullRegenDelayMs) {
+                const hullRepairAmount = companionBonus.hullRegenPerSecond * deltaSeconds;
+                this.hull = Math.min(this.maxHull, this.hull + hullRepairAmount);
+            }
         }
 
         // Sync bodyguard status from their enemy references
@@ -2094,6 +2164,10 @@ class Player {
 
         let shieldHit = false;
         let actualDamage = amount;
+        const companionBonus = this.getAlienCompanionBonusSpec();
+        if (companionBonus?.damageTakenMultiplier) {
+            actualDamage *= companionBonus.damageTakenMultiplier;
+        }
         let hullDamageFromHit = 0;
         const triggerGamepadHitRumble = (isShieldHit, damageAmount) => {
             if (damageAmount <= 0) return;
@@ -2705,12 +2779,15 @@ class Player {
             });
         };
 
+        const species = safeString(data.species, 'SurfaceFauna', 64);
+        const fallbackPowerText = Player.getAlienCompanionPowerTextBySpecies(species);
+
         return {
             name: safeString(data.name, 'Laine', 48),
-            species: safeString(data.species, 'SurfaceFauna', 64),
+            species,
             description: safeString(
                 data.description,
-                'A curious alien lifeform that now travels with your crew.',
+                `A curious alien lifeform that now travels with your crew. Companion power: ${fallbackPowerText}`,
                 240
             ),
             portraitColor: coerceColor(data.portraitColor),
@@ -2720,8 +2797,28 @@ class Player {
         };
     }
 
+    static getAlienCompanionBonusSpecBySpecies(species) {
+        if (typeof species !== 'string' || !species.trim()) return null;
+        return ALIEN_COMPANION_BONUS_SPECS[species.trim()] || null;
+    }
+
+    static getAlienCompanionPowerTextBySpecies(species) {
+        const bonusSpec = Player.getAlienCompanionBonusSpecBySpecies(species);
+        return bonusSpec?.powerText || 'No special power identified yet.';
+    }
+
+    getAlienCompanionBonusSpec() {
+        if (!this.alienCompanion) return null;
+        return Player.getAlienCompanionBonusSpecBySpecies(this.alienCompanion.species);
+    }
+
+    getAlienCompanionPowerText(companionData = this.alienCompanion) {
+        return Player.getAlienCompanionPowerTextBySpecies(companionData?.species);
+    }
+
     setAlienCompanion(companionData) {
         this.alienCompanion = Player.sanitizeAlienCompanionData(companionData);
+        this.recalculateStats();
         return this.alienCompanion;
     }
 
@@ -3024,6 +3121,7 @@ class Player {
         // Restore surface companion
         this.alienCompanion = Player.sanitizeAlienCompanionData(data.alienCompanion);
         this.alienCompanionIntroShown = !!data.alienCompanionIntroShown;
+        this.recalculateStats();
 
         // Initialize session trade tracking (not saved, always starts fresh)
         this.currentSessionTradedLocations = new Set();
