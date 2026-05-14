@@ -2,6 +2,7 @@ class InventoryScreen {
   constructor() {
     this.jettisonButtons = [];
     this.closeButton = {};
+    this.gamepadSelectedCargoIndex = -1;  // Track gamepad selection
   }
 
   draw(player) {
@@ -311,12 +312,24 @@ class InventoryScreen {
 
         // Check if mission cargo
         const isMissionCargo = player.activeMission && player.activeMission.cargoType === item.name;
+        const isGamepadSelected = i === this.gamepadSelectedCargoIndex;
 
         textAlign(LEFT, CENTER);
         textSize(STATION_TEXT_SIZE.BODY);
 
+        // Highlight background if gamepad-selected
+        if (isGamepadSelected) {
+          push();
+          fill(100, 120, 180, 100);
+          noStroke();
+          rect(rightColX + 5, rowY + 2, rightColW - 10, cargoRowH - 4, 3);
+          pop();
+        }
+
         if (isMissionCargo) {
           fill(255, 200, 100);
+        } else if (isGamepadSelected) {
+          fill(255, 255, 200);
         } else {
           fill(220, 220, 255);
         }

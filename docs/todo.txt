@@ -1,5 +1,13 @@
 # Elite Game Development TODO
 
+Make the befriend action work properly and make the alien appear in the menu. Make the visual style of the befriend look the same as the game. Text 
+
+Make the beam weapons work properly with the gamepad
+
+new navigation with game pad is not right
+
+cand drop cargo in invetory screen
+
 Create some secret asteroids that are actually drug stashes.
 these are mission objective to retrieve the drugs.
 

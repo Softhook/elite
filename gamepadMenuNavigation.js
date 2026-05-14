@@ -8,6 +8,7 @@ let _gpMenuIndex = 0;
 let _gpMenuState = '';  // tracks which state the index belongs to
 let _gpMissionPanel = 'list';   // 'list' | 'detail' — which panel is focused on the mission board
 let _gpMissionDetailIndex = 0; // index within the detail-panel buttons
+let _gpCargoSelectedIndex = -1; // selected cargo item in inventory (-1 = close button focused)
 
 function _handleGamepadStationMenus(gp, state) {
     // Reset selection index when entering a new menu state
@@ -68,7 +69,7 @@ function _handleGamepadStationMenus(gp, state) {
     // Personal log has a long scrollable list and usually only one actionable button.
     // Prioritize vertical D-pad/left-stick as list scroll so gamepad users can browse entries.
     if (isRecordView && (pressedUp || pressedDown)) {
-        _handleGamepadListScroll(state, pressedDown ? 1 : -1);
+        _handleGamepadListScroll(state, pressedDown ? -1 : 1);
         soundManager?.playSound('click');
     }
 
@@ -78,7 +79,7 @@ function _handleGamepadStationMenus(gp, state) {
             if (isRecordView) {
                 // Keep focus stable on Record view controls while list scrolling is handled above.
             } else if (isHorizontalDetail && !isWeaponSlotPicker) {
-                _handleGamepadListScroll(state, pressedDown ? 1 : -1);
+                _handleGamepadListScroll(state, pressedDown ? -1 : 1);
             } else if (isWeaponSlotPicker && buttons.length > slotPickerSlotCount) {
                 const cancelIndex = buttons.length - 1;
                 if (pressedDown) {
@@ -131,6 +132,15 @@ function _handleGamepadStationMenus(gp, state) {
                     player.currentSystem?.station?.getMarket?.() || galaxy?.getCurrentSystem()?.station?.getMarket?.(),
                     galaxy
                 );
+            }
+        }
+    }
+
+    // ── A button released = trigger mouse release for held button handling ──
+    if (gp.released('a')) {
+        if (state === 'VIEWING_MARKET' || state === 'VIEWING_SPACE_OBJECT_MARKET') {
+            if (uiManager) {
+                uiManager.handleMarketMouseRelease();
             }
         }
     }
@@ -386,6 +396,77 @@ function _handleGamepadListScroll(state, direction) {
                 }
             }
             break;
+    }
+}
+
+/**
+ * Handle gamepad navigation in the inventory screen.
+ * Allows selecting cargo items and jettisoning them.
+ */
+function _handleGamepadInventory(gp, player, inventoryScreen) {
+    const cargoCount = player?.cargo?.length || 0;
+    
+    // Initialize selection
+    if (_gpCargoSelectedIndex === -1 && cargoCount > 0) {
+        _gpCargoSelectedIndex = 0;
+    }
+    
+    // Update inventory screen with selected index for highlighting
+    if (inventoryScreen) {
+        inventoryScreen.gamepadSelectedCargoIndex = _gpCargoSelectedIndex;
+    }
+
+    // B = close inventory
+    if (gp.pressed('b')) {
+        if (typeof gameStateManager !== 'undefined' && gameStateManager) {
+            gameStateManager.showingInventory = false;
+            if (typeof soundManager !== 'undefined' && soundManager) {
+                soundManager.playSound('mapClose');
+            }
+        }
+        return;
+    }
+
+    const pressedUp = gp.pressed('dpad.up') || (gp.state?.ls?.y < -0.7 && gp.prevState?.ls?.y >= -0.7);
+    const pressedDown = gp.pressed('dpad.down') || (gp.state?.ls?.y > 0.7 && gp.prevState?.ls?.y <= 0.7);
+
+    // D-pad up/down = navigate cargo list
+    if (cargoCount > 0) {
+        if (pressedDown) {
+            _gpCargoSelectedIndex = (_gpCargoSelectedIndex + 1) % cargoCount;
+            if (typeof soundManager !== 'undefined' && soundManager) {
+                soundManager.playSound('click');
+            }
+        } else if (pressedUp) {
+            _gpCargoSelectedIndex = (_gpCargoSelectedIndex - 1 + cargoCount) % cargoCount;
+            if (typeof soundManager !== 'undefined' && soundManager) {
+                soundManager.playSound('click');
+            }
+        }
+        // Update inventory screen after navigation
+        if (inventoryScreen) {
+            inventoryScreen.gamepadSelectedCargoIndex = _gpCargoSelectedIndex;
+        }
+    }
+
+    // A = jettison selected cargo
+    if (gp.pressed('a') && cargoCount > 0 && _gpCargoSelectedIndex >= 0 && _gpCargoSelectedIndex < cargoCount) {
+        if (typeof soundManager !== 'undefined' && soundManager) {
+            soundManager.playSound('click');
+        }
+        if (typeof handleJettisonFromInventory !== 'undefined') {
+            handleJettisonFromInventory(_gpCargoSelectedIndex);
+        }
+        // Reset selection if cargo was jettisoned
+        if (player.cargo.length === 0) {
+            _gpCargoSelectedIndex = -1;
+        } else {
+            _gpCargoSelectedIndex = Math.min(_gpCargoSelectedIndex, player.cargo.length - 1);
+        }
+        // Update inventory screen after jettison
+        if (inventoryScreen) {
+            inventoryScreen.gamepadSelectedCargoIndex = _gpCargoSelectedIndex;
+        }
     }
 }
 

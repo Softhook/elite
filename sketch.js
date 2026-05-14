@@ -560,30 +560,36 @@ function handleWeaponSlotSelection(action) {
     return true;
 }
 
-function dispatchStationMenuKeyboardAction(action) {
-    if (typeof _handleGamepadStationMenus !== 'function' || !gameStateManager) return false;
-
-    const buttonByAction = {
-        [INPUT_ACTIONS.CONFIRM]: 'a',
-        [INPUT_ACTIONS.BACK]: 'b',
-        [INPUT_ACTIONS.NAV_UP]: 'dpad.up',
-        [INPUT_ACTIONS.NAV_DOWN]: 'dpad.down',
-        [INPUT_ACTIONS.NAV_LEFT]: 'dpad.left',
-        [INPUT_ACTIONS.NAV_RIGHT]: 'dpad.right'
-    };
-
-    const mappedButton = buttonByAction[action];
-    if (!mappedButton) return false;
-
-    const keyboardStationProxy = {
+/**
+ * Create a gamepad proxy object from a keyboard action.
+ * Used to unify keyboard and gamepad input into a single menu navigation handler.
+ * @param {string} action - INPUT_ACTIONS enum value
+ * @returns {Object} Proxy gamepad object with pressed() method
+ */
+function _createGamepadProxyFromAction(action) {
+    return {
         state: { ls: { x: 0, y: 0 } },
         prevState: { ls: { x: 0, y: 0 } },
         pressed(inputName) {
-            return inputName === mappedButton;
+            // Map action back to button name
+            const actionToButton = {
+                [INPUT_ACTIONS.CONFIRM]: 'a',
+                [INPUT_ACTIONS.BACK]: 'b',
+                [INPUT_ACTIONS.NAV_UP]: 'dpad.up',
+                [INPUT_ACTIONS.NAV_DOWN]: 'dpad.down',
+                [INPUT_ACTIONS.NAV_LEFT]: 'dpad.left',
+                [INPUT_ACTIONS.NAV_RIGHT]: 'dpad.right'
+            };
+            return inputName === actionToButton[action];
         }
     };
+}
 
-    _handleGamepadStationMenus(keyboardStationProxy, gameStateManager.currentState);
+function dispatchStationMenuKeyboardAction(action) {
+    if (typeof _handleGamepadStationMenus !== 'function' || !gameStateManager) return false;
+
+    const proxy = _createGamepadProxyFromAction(action);
+    _handleGamepadStationMenus(proxy, gameStateManager.currentState);
     return true;
 }
 
@@ -657,6 +663,9 @@ function handleGamepadContinuousInput() {
     }
 
     if (context === INPUT_CONTEXTS.INVENTORY) {
+        if (typeof _handleGamepadInventory === 'function') {
+            _handleGamepadInventory(gp, player, inventoryScreen);
+        }
         return;
     }
 
