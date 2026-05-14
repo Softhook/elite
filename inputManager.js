@@ -39,7 +39,16 @@ const INPUT_ACTIONS = {
     MAP_MARKET_TOGGLE: 'MAP_MARKET_TOGGLE',
     ALTITUDE_UP: 'ALTITUDE_UP',
     ALTITUDE_DOWN: 'ALTITUDE_DOWN',
-    ACTIVATE_BURST: 'ACTIVATE_BURST'
+    ACTIVATE_BURST: 'ACTIVATE_BURST',
+    WEAPON_SLOT_1: 'WEAPON_SLOT_1',
+    WEAPON_SLOT_2: 'WEAPON_SLOT_2',
+    WEAPON_SLOT_3: 'WEAPON_SLOT_3',
+    WEAPON_SLOT_4: 'WEAPON_SLOT_4',
+    WEAPON_SLOT_5: 'WEAPON_SLOT_5',
+    WEAPON_SLOT_6: 'WEAPON_SLOT_6',
+    WEAPON_SLOT_7: 'WEAPON_SLOT_7',
+    WEAPON_SLOT_8: 'WEAPON_SLOT_8',
+    WEAPON_SLOT_9: 'WEAPON_SLOT_9'
 };
 
 const DEFAULT_BEAM_ANCHOR_PLAYER_SIZE = 60;
@@ -55,17 +64,31 @@ class InputManager {
     }
 
     _buildKeyboardMap() {
+        const weaponSlotBindings = {
+            Digit1: INPUT_ACTIONS.WEAPON_SLOT_1,
+            Digit2: INPUT_ACTIONS.WEAPON_SLOT_2,
+            Digit3: INPUT_ACTIONS.WEAPON_SLOT_3,
+            Digit4: INPUT_ACTIONS.WEAPON_SLOT_4,
+            Digit5: INPUT_ACTIONS.WEAPON_SLOT_5,
+            Digit6: INPUT_ACTIONS.WEAPON_SLOT_6,
+            Digit7: INPUT_ACTIONS.WEAPON_SLOT_7,
+            Digit8: INPUT_ACTIONS.WEAPON_SLOT_8,
+            Digit9: INPUT_ACTIONS.WEAPON_SLOT_9
+        };
+
         return {
             [INPUT_CONTEXTS.TITLE]: { Enter: INPUT_ACTIONS.CONFIRM, Space: INPUT_ACTIONS.CONFIRM },
             [INPUT_CONTEXTS.INSTRUCTIONS]: { Enter: INPUT_ACTIONS.CONFIRM, Space: INPUT_ACTIONS.CONFIRM, Escape: INPUT_ACTIONS.BACK },
             [INPUT_CONTEXTS.SAVE_SELECTION]: {
-                ArrowUp: INPUT_ACTIONS.NAV_UP, ArrowDown: INPUT_ACTIONS.NAV_DOWN, Enter: INPUT_ACTIONS.CONFIRM, Escape: INPUT_ACTIONS.BACK
+                ArrowUp: INPUT_ACTIONS.NAV_UP, ArrowDown: INPUT_ACTIONS.NAV_DOWN,
+                ArrowLeft: INPUT_ACTIONS.NAV_LEFT, ArrowRight: INPUT_ACTIONS.NAV_RIGHT,
+                Enter: INPUT_ACTIONS.CONFIRM, Escape: INPUT_ACTIONS.BACK
             },
             [INPUT_CONTEXTS.GAME_OVER]: { Enter: INPUT_ACTIONS.CONFIRM, Space: INPUT_ACTIONS.CONFIRM },
             [INPUT_CONTEXTS.STATION_MENU]: {
                 ArrowUp: INPUT_ACTIONS.NAV_UP, ArrowDown: INPUT_ACTIONS.NAV_DOWN,
                 ArrowLeft: INPUT_ACTIONS.NAV_LEFT, ArrowRight: INPUT_ACTIONS.NAV_RIGHT,
-                Enter: INPUT_ACTIONS.CONFIRM
+                Enter: INPUT_ACTIONS.CONFIRM, Escape: INPUT_ACTIONS.BACK
             },
             [INPUT_CONTEXTS.GALAXY_MAP]: {
                 ArrowUp: INPUT_ACTIONS.NAV_UP, KeyW: INPUT_ACTIONS.NAV_UP,
@@ -95,7 +118,8 @@ class InputManager {
                 Comma: INPUT_ACTIONS.MINIMAP_ZOOM_OUT,
                 KeyC: INPUT_ACTIONS.ACTIVATE_CLOAK,
                 KeyX: INPUT_ACTIONS.SURFACE_DESCENT,
-                KeyR: INPUT_ACTIONS.ACTIVATE_BURST
+                KeyR: INPUT_ACTIONS.ACTIVATE_BURST,
+                ...weaponSlotBindings
             },
             [INPUT_CONTEXTS.BEAM_TARGETING]: {
                 Space: INPUT_ACTIONS.FIRE_PRIMARY
@@ -107,7 +131,9 @@ class InputManager {
                 KeyN: INPUT_ACTIONS.TOGGLE_MISSION,
                 Period: INPUT_ACTIONS.MINIMAP_ZOOM_IN,
                 Comma: INPUT_ACTIONS.MINIMAP_ZOOM_OUT,
-                KeyC: INPUT_ACTIONS.ACTIVATE_CLOAK
+                KeyC: INPUT_ACTIONS.ACTIVATE_CLOAK,
+                KeyR: INPUT_ACTIONS.ACTIVATE_BURST,
+                ...weaponSlotBindings
             },
             [INPUT_CONTEXTS.SURFACE_ASTRONAUT]: {
                 Space: INPUT_ACTIONS.FIRE_PRIMARY

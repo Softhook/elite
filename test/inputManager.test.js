@@ -77,6 +77,15 @@ describe('InputManager', () => {
         expect(input.getKeyboardAction(' ', 32, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(exported.INPUT_ACTIONS.FIRE_PRIMARY);
         expect(input.getKeyboardAction('', 27, exported.INPUT_CONTEXTS.SAVE_SELECTION)).toBe(exported.INPUT_ACTIONS.BACK);
         expect(input.getKeyboardAction('', 27, exported.INPUT_CONTEXTS.INSTRUCTIONS)).toBe(exported.INPUT_ACTIONS.BACK);
+        expect(input.getKeyboardAction('', 37, exported.INPUT_CONTEXTS.SAVE_SELECTION)).toBe(exported.INPUT_ACTIONS.NAV_LEFT);
+        expect(input.getKeyboardAction('', 39, exported.INPUT_CONTEXTS.SAVE_SELECTION)).toBe(exported.INPUT_ACTIONS.NAV_RIGHT);
+        expect(input.getKeyboardAction('r', 82, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(exported.INPUT_ACTIONS.ACTIVATE_BURST);
+        expect(input.getKeyboardAction('', 27, exported.INPUT_CONTEXTS.STATION_MENU)).toBe(exported.INPUT_ACTIONS.BACK);
+        expect(input.getKeyboardAction('', 13, exported.INPUT_CONTEXTS.STATION_MENU)).toBe(exported.INPUT_ACTIONS.CONFIRM);
+        expect(input.getKeyboardAction('', 38, exported.INPUT_CONTEXTS.STATION_MENU)).toBe(exported.INPUT_ACTIONS.NAV_UP);
+        expect(input.getKeyboardAction('1', 49, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(exported.INPUT_ACTIONS.WEAPON_SLOT_1);
+        expect(input.getKeyboardAction('9', 57, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(exported.INPUT_ACTIONS.WEAPON_SLOT_9);
+        expect(input.getKeyboardAction('1', 49, exported.INPUT_CONTEXTS.SAVE_SELECTION)).toBeNull();
     });
 
     test('maps gamepad actions by mode', () => {

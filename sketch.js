@@ -429,6 +429,9 @@ function executeInputAction(action, context) {
                 _handleGalaxyMapSelection();
                 return true;
             }
+            if (context === INPUT_CONTEXTS.STATION_MENU) {
+                return dispatchStationMenuKeyboardAction(INPUT_ACTIONS.CONFIRM);
+            }
             return false;
         case INPUT_ACTIONS.BACK:
             if (context === INPUT_CONTEXTS.INSTRUCTIONS) {
@@ -456,23 +459,38 @@ function executeInputAction(action, context) {
                 return true;
             }
             if (context === INPUT_CONTEXTS.STATION_MENU) {
-                _handleGamepadStationMenus(window._gamepadManager, gameStateManager.currentState);
-                return true;
+                return dispatchStationMenuKeyboardAction(INPUT_ACTIONS.BACK);
             }
             return false;
         case INPUT_ACTIONS.NAV_UP:
+            if (context === INPUT_CONTEXTS.STATION_MENU) {
+                return dispatchStationMenuKeyboardAction(INPUT_ACTIONS.NAV_UP);
+            }
             if (context === INPUT_CONTEXTS.MISSION_OVERLAY && missionOverlay) {
                 missionOverlay.scrollOffset = Math.max(0, missionOverlay.scrollOffset - 24);
                 return true;
             }
             return false;
         case INPUT_ACTIONS.NAV_DOWN:
+            if (context === INPUT_CONTEXTS.STATION_MENU) {
+                return dispatchStationMenuKeyboardAction(INPUT_ACTIONS.NAV_DOWN);
+            }
             if (context === INPUT_CONTEXTS.MISSION_OVERLAY && missionOverlay) {
                 missionOverlay.scrollOffset = Math.min(
                     missionOverlay.maxScroll || 0,
                     missionOverlay.scrollOffset + 24
                 );
                 return true;
+            }
+            return false;
+        case INPUT_ACTIONS.NAV_LEFT:
+            if (context === INPUT_CONTEXTS.STATION_MENU) {
+                return dispatchStationMenuKeyboardAction(INPUT_ACTIONS.NAV_LEFT);
+            }
+            return false;
+        case INPUT_ACTIONS.NAV_RIGHT:
+            if (context === INPUT_CONTEXTS.STATION_MENU) {
+                return dispatchStationMenuKeyboardAction(INPUT_ACTIONS.NAV_RIGHT);
             }
             return false;
         case INPUT_ACTIONS.TOGGLE_INVENTORY: return handleInventoryToggle();
@@ -510,10 +528,63 @@ function executeInputAction(action, context) {
             player?.handleFireInput?.();
             return true;
         case INPUT_ACTIONS.ACTIVATE_BURST:
-            return player?.trySpeedBurst();
+            return handleSpeedBurstActivation();
+        case INPUT_ACTIONS.WEAPON_SLOT_1:
+        case INPUT_ACTIONS.WEAPON_SLOT_2:
+        case INPUT_ACTIONS.WEAPON_SLOT_3:
+        case INPUT_ACTIONS.WEAPON_SLOT_4:
+        case INPUT_ACTIONS.WEAPON_SLOT_5:
+        case INPUT_ACTIONS.WEAPON_SLOT_6:
+        case INPUT_ACTIONS.WEAPON_SLOT_7:
+        case INPUT_ACTIONS.WEAPON_SLOT_8:
+        case INPUT_ACTIONS.WEAPON_SLOT_9:
+            return handleWeaponSlotSelection(action);
         default:
             return false;
     }
+}
+
+function handleWeaponSlotSelection(action) {
+    if (!isShipControlState() || !player) return false;
+
+    const requestedSlot = parseInt(action.slice(-1), 10);
+    if (isNaN(requestedSlot) || requestedSlot < 1 || requestedSlot > 9) return false;
+
+    const weaponIndex = requestedSlot - 1;
+    if (Array.isArray(player.weapons) && weaponIndex < player.weapons.length) {
+        if (player.switchToWeapon(weaponIndex)) {
+            WEAPON_LOG(`Switched to weapon: ${player.currentWeapon.name}`);
+            soundManager?.playSound('click');
+        }
+    }
+    return true;
+}
+
+function dispatchStationMenuKeyboardAction(action) {
+    if (typeof _handleGamepadStationMenus !== 'function' || !gameStateManager) return false;
+
+    const buttonByAction = {
+        [INPUT_ACTIONS.CONFIRM]: 'a',
+        [INPUT_ACTIONS.BACK]: 'b',
+        [INPUT_ACTIONS.NAV_UP]: 'dpad.up',
+        [INPUT_ACTIONS.NAV_DOWN]: 'dpad.down',
+        [INPUT_ACTIONS.NAV_LEFT]: 'dpad.left',
+        [INPUT_ACTIONS.NAV_RIGHT]: 'dpad.right'
+    };
+
+    const mappedButton = buttonByAction[action];
+    if (!mappedButton) return false;
+
+    const keyboardStationProxy = {
+        state: { ls: { x: 0, y: 0 } },
+        prevState: { ls: { x: 0, y: 0 } },
+        pressed(inputName) {
+            return inputName === mappedButton;
+        }
+    };
+
+    _handleGamepadStationMenus(keyboardStationProxy, gameStateManager.currentState);
+    return true;
 }
 
 /**
@@ -839,30 +910,23 @@ function keyPressed() {
                 _handleGalaxyMapHopping(0, mappedAction === INPUT_ACTIONS.NAV_UP ? -1 : 1);
                 return false;
             }
-            if (handleMissionNavigation()) return false;
         }
 
         if (mappedAction === INPUT_ACTIONS.NAV_LEFT || mappedAction === INPUT_ACTIONS.NAV_RIGHT) {
+            if (context === INPUT_CONTEXTS.SAVE_SELECTION) {
+                saveSelectionScreen?.handleKeyPressed(null, mappedAction === INPUT_ACTIONS.NAV_LEFT ? LEFT_ARROW : RIGHT_ARROW);
+                return false;
+            }
             if (context === INPUT_CONTEXTS.GALAXY_MAP) {
                 _handleGalaxyMapHopping(mappedAction === INPUT_ACTIONS.NAV_LEFT ? -1 : 1, 0);
                 return false;
             }
-            if (handleDetailScreenNavigation()) return false;
         }
 
         if (executeInputAction(mappedAction, context)) return false;
+        return false;
     }
 
-    if (handleGameOverInput()) return false;
-    if (handleInstructionsInput()) return false;
-    if (handleSaveSelectionInput()) return false;
-    if (handleSpacebarFiring()) return false;
-    if (handleWeaponSwitching()) return false;
-    if (handleSingleKeyActions()) return false;
-    if (handleMissionNavigation()) return false;
-    if (handleDetailScreenNavigation()) return false;
-    if (handleGalaxyMapInput()) return false;
-    if (handleEscapeKey()) return false;
 }
 
 /**
@@ -874,173 +938,6 @@ function handleSurfaceModeKeys() {
     if (!surfaceMode) return false;
 
     return surfaceMode.handleKeyDown(keyCode, key);
-}
-
-/**
- * Handle GAME_OVER state input
- * @returns {boolean} True if handled
- */
-function handleGameOverInput() {
-    if (gameStateManager?.currentState !== "GAME_OVER") return false;
-
-    if (player && (player.destroyed || player.isDying || player.hull <= 0)) {
-        // Verify player is actually dead before allowing reset
-        if (typeof resetGame === 'function') {
-            resetGame();
-        } else {
-            console.error("resetGame function not found, falling back to reload");
-            window.location.reload();
-        }
-        return false; // Indicate input was handled, prevent default behavior
-    }
-
-    // Toggle inventory with “I”
-    if (key === 'i' || key === 'I') {
-        return handleInventoryToggle();
-    }
-    return false;
-}
-
-/**
- * Handle instructions screen input
- * @returns {boolean} True if handled
- */
-function handleInstructionsInput() {
-    if (gameStateManager.currentState === "INSTRUCTIONS") {
-        titleScreen?.handleKeyPress(keyCode);
-        return true;
-    }
-    return false;
-}
-
-/**
- * Handle save selection screen input
- * @returns {boolean} True if handled
- */
-function handleSaveSelectionInput() {
-    if (gameStateManager.currentState === "SAVE_SELECTION") {
-        saveSelectionScreen?.handleKeyPressed(key, keyCode);
-        return true;
-    }
-    return false;
-}
-
-/**
- * Handle spacebar firing
- * @returns {boolean} True if handled
- */
-function handleSpacebarFiring() {
-    if ((key === ' ' || keyCode === 32) && isShipControlState() && player) {
-        player.handleFireInput();
-        return true;
-    }
-    return false;
-}
-
-/**
- * Handle weapon switching with number keys (1-9)
- * @returns {boolean} True if handled
- */
-function handleWeaponSwitching() {
-    if (!isShipControlState() || !player) return false;
-
-    const numKey = parseInt(key);
-    if (isNaN(numKey) || numKey < 1 || numKey > 9) return false;
-
-    const weaponIndex = numKey - 1;
-    if (Array.isArray(player.weapons) && weaponIndex < player.weapons.length) {
-        if (player.switchToWeapon(weaponIndex)) {
-            WEAPON_LOG(`Switched to weapon: ${player.currentWeapon.name}`);
-            soundManager?.playSound('click');
-        }
-    }
-    return true;
-}
-
-/**
- * Handle single-key action shortcuts
- * @returns {boolean} True if handled
- */
-function handleSingleKeyActions() {
-    const keyLower = key.toLowerCase();
-
-    switch (keyLower) {
-        case 'i':
-            return handleInventoryToggle();
-        case 'm':
-            return handleMapToggle();
-        case 'n':
-            return handleMissionOverlayToggle();
-        case 'b':
-            return handleSecretBaseNavigation();
-        case 'l':
-            return handleWantedToggle();
-        case 'h':
-        case 'j':
-            return handleAutopilot(keyLower);
-        case '.':
-            return handleMinimapZoomIn();
-        case ',':
-            return handleMinimapZoomOut();
-        case 'c':
-            return handleCloakActivation();
-        case 'r':
-            return player?.trySpeedBurst();
-        case 'x':
-            return handleSurfaceDescent();
-    }
-    return false;
-}
-
-/**
- * Handle Galaxy Map input (selection with Space/Enter)
- * @returns {boolean} True if handled
- */
-function handleGalaxyMapInput() {
-    if (gameStateManager.currentState !== "GALAXY_MAP") return false;
-    const keyLower = key.toLowerCase();
-
-    if (keyCode === ENTER || keyCode === 32) { // 32 is Space
-        _handleGalaxyMapSelection();
-        return true;
-    }
-
-    if (keyLower === 'm') {
-        const targetIdx = uiManager.galaxyMap.gamepadSelectedIndex;
-        if (targetIdx !== -1) {
-            const systems = galaxy.getSystemDataForMap ? galaxy.getSystemDataForMap() : [];
-            const sysData = systems[targetIdx];
-            const isCurrent = (targetIdx === galaxy.currentSystemIndex);
-            
-            if (sysData && (sysData.visited || isCurrent)) {
-                if (uiManager.marketOverlaySystemIndex === targetIdx) {
-                    uiManager.marketOverlaySystemIndex = -1;
-                    soundManager?.playSound('click_off');
-                } else {
-                    uiManager.marketOverlaySystemIndex = targetIdx;
-                    soundManager?.playSound('click');
-                }
-            } else {
-                uiManager.addMessage("Market data unavailable.", [255, 150, 150]);
-                soundManager?.playSound('error');
-            }
-        }
-        return true;
-    }
-
-    // Keyboard hopping
-    let dx = 0, dy = 0;
-    if (keyCode === UP_ARROW || keyLower === 'w') dy = -1;
-    else if (keyCode === DOWN_ARROW || keyLower === 's') dy = 1;
-    else if (keyCode === LEFT_ARROW || keyLower === 'a') dx = -1;
-    else if (keyCode === RIGHT_ARROW || keyLower === 'd') dx = 1;
-
-    if (dx !== 0 || dy !== 0) {
-        _handleGalaxyMapHopping(dx, dy);
-        return true;
-    }
-
-    return false;
 }
 
 /**
@@ -1110,93 +1007,6 @@ function _handleGalaxyMapSelection() {
             soundManager?.playSound('error');
         }
     }
-}
-
-/**
- * Handle mission list navigation with Up/Down arrows when viewing missions
- * @returns {boolean} True if handled
- */
-function handleMissionNavigation() {
-    if (!gameStateManager || gameStateManager.currentState !== "VIEWING_MISSIONS") return false;
-
-    // Only react to Up/Down arrow keys
-    if (!(keyCode === UP_ARROW || keyCode === DOWN_ARROW)) return false;
-
-    const missions = gameStateManager.currentStationMissions || [];
-    if (!Array.isArray(missions) || missions.length === 0) return false;
-
-    let idx = (typeof gameStateManager.selectedMissionIndex === 'number') ? gameStateManager.selectedMissionIndex : -1;
-
-    // If nothing selected, start at 0 on Down or last on Up
-    if (idx === -1) {
-        idx = (keyCode === DOWN_ARROW) ? 0 : (missions.length - 1);
-    } else {
-        if (keyCode === DOWN_ARROW) idx = Math.min(missions.length - 1, idx + 1);
-        else if (keyCode === UP_ARROW) idx = Math.max(0, idx - 1);
-    }
-
-    gameStateManager.selectedMissionIndex = idx;
-    soundManager?.playSound('click');
-    return true;
-}
-
-/**
- * Handle ship/weapon detail screen navigation with left/right arrow keys
- * @returns {boolean} True if handled
- */
-function handleDetailScreenNavigation() {
-    if (!gameStateManager || !uiManager) return false;
-
-    const state = gameStateManager.currentState;
-    if (state !== "VIEWING_SHIP_DETAIL" && state !== "VIEWING_WEAPON_DETAIL") return false;
-
-    // Only react to Left/Right arrow keys
-    if (!(keyCode === LEFT_ARROW || keyCode === RIGHT_ARROW)) return false;
-
-    const stationMenus = uiManager.stationMenus;
-    if (!stationMenus) return false;
-
-    // Handle ship detail navigation
-    if (state === "VIEWING_SHIP_DETAIL") {
-        const shipList = stationMenus.availableShipsList;
-        if (!Array.isArray(shipList) || shipList.length === 0) return false;
-
-        let idx = stationMenus.currentShipIndex;
-
-        if (keyCode === LEFT_ARROW && idx > 0) {
-            stationMenus.currentShipIndex--;
-            stationMenus.selectedShipForDetail = shipList[stationMenus.currentShipIndex];
-            soundManager?.playSound('click');
-            return true;
-        } else if (keyCode === RIGHT_ARROW && idx < shipList.length - 1) {
-            stationMenus.currentShipIndex++;
-            stationMenus.selectedShipForDetail = shipList[stationMenus.currentShipIndex];
-            soundManager?.playSound('click');
-            return true;
-        }
-    }
-
-    // Handle weapon detail navigation
-    if (state === "VIEWING_WEAPON_DETAIL") {
-        const weaponList = stationMenus.availableWeaponsList;
-        if (!Array.isArray(weaponList) || weaponList.length === 0) return false;
-
-        let idx = stationMenus.currentWeaponIndex;
-
-        if (keyCode === LEFT_ARROW && idx > 0) {
-            stationMenus.currentWeaponIndex--;
-            stationMenus.selectedWeaponForDetail = weaponList[stationMenus.currentWeaponIndex];
-            soundManager?.playSound('click');
-            return true;
-        } else if (keyCode === RIGHT_ARROW && idx < weaponList.length - 1) {
-            stationMenus.currentWeaponIndex++;
-            stationMenus.selectedWeaponForDetail = weaponList[stationMenus.currentWeaponIndex];
-            soundManager?.playSound('click');
-            return true;
-        }
-    }
-
-    return false;
 }
 
 /**
@@ -1408,6 +1218,27 @@ function handleCloakActivation() {
 }
 
 /**
+ * Handle speed burst activation ('R' key)
+ */
+function handleSpeedBurstActivation() {
+    const validStates = ["IN_FLIGHT", "SURFACE_MODE"];
+    if (!validStates.includes(gameStateManager.currentState) || !player || player.destroyed) {
+        return false;
+    }
+
+    if (player.isDockedAndInvulnerable) {
+        return false;
+    }
+
+    if (!player.installedUpgrades?.booster || player.boostMaxDuration <= 0) {
+        uiManager?.addMessage("Speed Burst unavailable: booster upgrade not installed.", [255, 150, 100]);
+        return true;
+    }
+
+    return !!player.trySpeedBurst?.();
+}
+
+/**
  * Handle surface descent ('F' key) - enter planetary surface mode
  * @returns {boolean} True if handled
  */
@@ -1432,22 +1263,6 @@ function handleSurfaceDescent() {
     // Not near any planet
     uiManager?.addMessage("No planet in range for surface descent", [255, 150, 100]);
     return false;
-}
-
-/**
- * Handle ESC key to exit map/docked state
- */
-function handleEscapeKey() {
-    if (keyCode !== ESCAPE) return false;
-
-    if (gameStateManager.currentState === "GALAXY_MAP") {
-        gameStateManager.setState("IN_FLIGHT");
-        soundManager?.playSound('mapClose');
-    } else if (gameStateManager.currentState === "DOCKED") {
-        gameStateManager.setState("IN_FLIGHT");
-        soundManager?.playSound('click_off');
-    }
-    return true;
 }
 
 function keyReleased() {
