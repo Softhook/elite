@@ -45,6 +45,15 @@ class EventManager {
             plague: null,  // { originSystemIndex, expires, priceMultiplier }
             famine: null   // { originSystemIndex, expires, priceMultiplier }
         };
+
+        this.allowIdleStabilizeEventTypes = new Set(['DISTRESS_SIGNAL']);
+        this.stabilizeHostileRoles = new Set([
+            AI_ROLE.PIRATE,
+            AI_ROLE.ALIEN,
+            AI_ROLE.BOUNTY_HUNTER,
+            AI_ROLE.COMBAT
+        ]);
+        this.stabilizePatrolRoles = new Set([AI_ROLE.POLICE, AI_ROLE.GUARD, AI_ROLE.HAULER, AI_ROLE.MISSIONARY]);
     }
 
     _initializeShipGroups() {
@@ -2346,25 +2355,16 @@ class EventManager {
         if (!enemy || enemy.immobilized) return;
 
         const eventType = event?.type || '';
-        const allowIdleEvents = new Set(['DISTRESS_SIGNAL']);
-        if (allowIdleEvents.has(eventType)) return;
+        if (this.allowIdleStabilizeEventTypes.has(eventType)) return;
 
-        const hostileRoles = new Set([
-            AI_ROLE.PIRATE,
-            AI_ROLE.ALIEN,
-            AI_ROLE.BOUNTY_HUNTER,
-            AI_ROLE.COMBAT
-        ]);
-        const patrolRoles = new Set([AI_ROLE.POLICE, AI_ROLE.GUARD, AI_ROLE.HAULER, AI_ROLE.MISSIONARY]);
-
-        if (hostileRoles.has(enemy.role) && !enemy.target && this.player) {
+        if (this.stabilizeHostileRoles.has(enemy.role) && !enemy.target && this.player) {
             enemy.target = this.player;
         }
 
         if (enemy.currentState !== AI_STATE.IDLE) return;
-        if (hostileRoles.has(enemy.role)) {
+        if (this.stabilizeHostileRoles.has(enemy.role)) {
             enemy.currentState = AI_STATE.APPROACHING;
-        } else if (patrolRoles.has(enemy.role)) {
+        } else if (this.stabilizePatrolRoles.has(enemy.role)) {
             enemy.currentState = AI_STATE.PATROLLING;
         }
     }
@@ -2467,7 +2467,6 @@ class EventManager {
 
 
         if (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager) {
-            // Check if this is one of the new dynamic events
             // Check if this is one of the new dynamic events
             if (this.dynamicNewsEventTypes.has(type)) {
                 GameGlobals.newsManager.addDynamicEventNews(type, {
