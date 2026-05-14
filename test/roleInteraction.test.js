@@ -463,6 +463,67 @@ describe('Role & Faction Interaction Tests', () => {
                 }
             });
 
+            test('summoned ally movement is delayed when communicationSystem defines summon response delay', () => {
+                jest.useFakeTimers();
+                const leader = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+                const idlePartner = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 160, 0);
+                const rival = createSummonEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 120, 0);
+                const emitSummonCall = jest.fn();
+                const originalCommunicationSystem = global.communicationSystem;
+                const movementDelayMs = 3000;
+
+                try {
+                    global.communicationSystem = {
+                        emitSummonCall,
+                        getSummonMovementResponseDelayMs: () => movementDelayMs
+                    };
+                    mockSystem.player = createMockPlayer({ x: 100, y: 0 });
+                    mockSystem.enemies = [leader, idlePartner, rival];
+
+                    leader.updateTargeting(mockSystem);
+                    expect(idlePartner.target).toBeFalsy();
+
+                    jest.advanceTimersByTime(movementDelayMs);
+                    expect(idlePartner.target).toBe(rival);
+                } finally {
+                    global.communicationSystem = originalCommunicationSystem;
+                    jest.useRealTimers();
+                }
+            });
+
+            test('multiple summoned allies can receive staggered movement delays by responder index', () => {
+                jest.useFakeTimers();
+                const leader = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 0, 0);
+                const firstAlly = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 140, 0);
+                const secondAlly = createSummonEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 180, 0);
+                const rival = createSummonEnemy(AI_ROLE.COMBAT, 'SEPARATIST', 120, 0);
+                const emitSummonCall = jest.fn();
+                const originalCommunicationSystem = global.communicationSystem;
+
+                try {
+                    global.communicationSystem = {
+                        emitSummonCall,
+                        getSummonMovementResponseDelayMs: (index) => index === 0 ? 1000 : 1600
+                    };
+                    mockSystem.player = createMockPlayer({ x: 100, y: 0 });
+                    mockSystem.enemies = [leader, firstAlly, secondAlly, rival];
+
+                    leader.updateTargeting(mockSystem);
+                    expect(firstAlly.target).toBeFalsy();
+                    expect(secondAlly.target).toBeFalsy();
+
+                    jest.advanceTimersByTime(1000);
+                    expect(firstAlly.target).toBe(rival);
+                    expect(secondAlly.target).toBeFalsy();
+
+                    jest.advanceTimersByTime(600);
+                    expect(secondAlly.target).toBe(rival);
+                } finally {
+                    global.communicationSystem = originalCommunicationSystem;
+                    jest.useRealTimers();
+                }
+            });
+
             test('pirates now summon nearby pirate allies', () => {
                 const pirateLeader = createSummonEnemy(AI_ROLE.PIRATE, 'PIRATE', 0, 0);
                 const pirateWing = createSummonEnemy(AI_ROLE.PIRATE, 'PIRATE', 100, 0);

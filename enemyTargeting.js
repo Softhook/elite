@@ -513,14 +513,41 @@ class EnemyTargeting {
                 if ((dx * dx + dy * dy) > summonRadiusSq) continue;
             }
 
-            ally.target = target;
-            // Preserve any longer existing cooldown while enforcing a minimum post-summon lock.
-            ally.targetSwitchCooldown = Math.max(ally.targetSwitchCooldown || 0, COMBAT_SUMMON_TARGET_COOLDOWN);
+            const movementDelayMs = this._getSummonMovementDelayMs(summonedCount);
+            this._assignSummonTargetWithOptionalDelay(ally, target, movementDelayMs);
             summonedCount++;
             summonedAllies.push(ally);
         }
 
         this._emitSummonCallFeedback(system, target, myFaction, summonedCount, summonedAllies);
+    }
+
+    _getSummonMovementDelayMs(responseIndex = 0) {
+        const configuredDelay = Number(globalThis.communicationSystem?.getSummonMovementResponseDelayMs?.(responseIndex));
+        if (Number.isFinite(configuredDelay) && configuredDelay >= 0) return configuredDelay;
+        return 0;
+    }
+
+    _assignSummonTargetWithOptionalDelay(ally, target, delayMs) {
+        if (!ally || !target) return;
+
+        const applyTarget = () => {
+            if (!ally || ally.destroyed) return;
+            if (typeof ally.isTargetValid !== 'function') return;
+            if (!ally.isTargetValid(target)) return;
+            // Respect current engagements to avoid overriding a target picked meanwhile.
+            if (ally.target && ally.target !== target && ally.isTargetValid(ally.target)) return;
+            ally.target = target;
+            // Preserve any longer existing cooldown while enforcing a minimum post-summon lock.
+            ally.targetSwitchCooldown = Math.max(ally.targetSwitchCooldown || 0, COMBAT_SUMMON_TARGET_COOLDOWN);
+        };
+
+        if (!Number.isFinite(delayMs) || delayMs <= 0) {
+            applyTarget();
+            return;
+        }
+
+        setTimeout(applyTarget, Math.max(0, delayMs));
     }
 
     _canShipSummonAllies(ship) {
