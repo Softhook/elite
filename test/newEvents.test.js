@@ -559,9 +559,40 @@ describe('New Events Tests', () => {
         expect(prize).toBeDefined();
     });
 
+    describe('Lore Expansion Events', () => {
+        test('should execute all 20 new lore events with expected spawn output', () => {
+            const enemyEvents = [
+                'IMPERIAL_TAX_CONVOY', 'SEPARATIST_PRIVATEERS', 'PILGRIM_ESCORT', 'ALIEN_RELIC_HUNTERS',
+                'BLACK_OPS_INTERCEPTORS', 'STATION_EXTORTION_RING', 'IMPERIAL_RETRIBUTION_WING',
+                'SEPARATIST_SIGNAL_JAMMERS', 'HARLEQUIN_FLASHMOB', 'MISSIONARY_RECLAMATION_FLEET',
+                'BORDER_MILITIA_DRILL', 'ALIEN_BIO_PROSPECTORS', 'DEFENSE_DRONE_SWEEP', 'SHADOW_COURIER'
+            ];
+            const cargoEvents = ['ORBITAL_WRECKFIELD', 'PILGRIM_OFFERINGS', 'SEPARATIST_ARMS_CACHE', 'ALIEN_RELIC_CACHE'];
+            const stormEvents = ['VOID_CHOIR_STORM', 'SUNSPIKE_TURBULENCE'];
+
+            enemyEvents.forEach(type => {
+                const before = system.enemies.length;
+                em.executeConfiguredEvent(type);
+                expect(system.enemies.length).toBeGreaterThan(before);
+            });
+
+            cargoEvents.forEach(type => {
+                const before = system.cargo.length;
+                em.executeConfiguredEvent(type);
+                expect(system.cargo.length).toBeGreaterThan(before);
+            });
+
+            stormEvents.forEach(type => {
+                const before = system.cosmicStorms.length;
+                em.executeConfiguredEvent(type);
+                expect(system.cosmicStorms.length).toBeGreaterThan(before);
+            });
+        });
+    });
+
     describe('News Integration', () => {
         test('should route dynamic events to newsManager.addDynamicEventNews', () => {
-            const dynamicEvents = ['LOST_SHIPMENT', 'FACTION_SKIRMISH', 'VIP_CONVOY', 'MAD_BOMBER', 'ROGUE_SECURITY', 'ALIEN_SCOUT', 'FALSE_IDOLS', 'MISSIONARY_CONVOY'];
+            const dynamicEvents = ['LOST_SHIPMENT', 'FACTION_SKIRMISH', 'VIP_CONVOY', 'MAD_BOMBER', 'ROGUE_SECURITY', 'ALIEN_SCOUT', 'FALSE_IDOLS', 'MISSIONARY_CONVOY', 'IMPERIAL_TAX_CONVOY', 'HARLEQUIN_FLASHMOB'];
 
             dynamicEvents.forEach(eventType => {
                 jest.clearAllMocks();
