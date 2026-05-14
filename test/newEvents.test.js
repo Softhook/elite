@@ -244,9 +244,10 @@ describe('New Events Tests', () => {
         expect(system.enemies.length).toBeGreaterThan(0);
         const racer = system.enemies[0];
         expect(racer.role).toBe(AI_ROLE.HAULER);
-        expect(racer.currentState).toBe(AI_STATE.FLEEING);
+        expect(racer.currentState).toBe(AI_STATE.PATROLLING);
         expect(racer.displayName).toBe("Rally Racer");
         expect(racer.isRacing).toBe(true);
+        expect(racer.patrolTargetPos).toBeDefined();
         // Verify speed boost
         expect(racer.baseMaxSpeed).toBe(12.5); // 5 * 2.5
         expect(racer.maxSpeed).toBe(12.5);
@@ -436,6 +437,7 @@ describe('New Events Tests', () => {
 
         const defector = system.enemies.find(e => e.displayName === "Imperial Defector");
         expect(defector).toBeDefined();
+        expect(defector.role).toBe(AI_ROLE.HAULER);
         expect(defector.currentState).toBe(AI_STATE.FLEEING);
 
         const pursuers = system.enemies.filter(e => e.displayName === "Imperial Pursuer");
@@ -478,6 +480,7 @@ describe('New Events Tests', () => {
 
         const stolen = system.enemies.find(e => e.displayName === "Stolen Prototype");
         expect(stolen).toBeDefined();
+        expect(stolen.role).toBe(AI_ROLE.HAULER);
         expect(stolen.currentState).toBe(AI_STATE.FLEEING);
 
         const guards = system.enemies.filter(e => e.displayName === "Prototype Guard");
