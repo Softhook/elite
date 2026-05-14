@@ -1,6 +1,6 @@
 # Elite Game Development TODO
 
-Make the befriend action work properly and make the alien appear in the menu. Make the visual style of the befriend look the same as the game. Text 
+Make the befriend action work properly. currently the laine seems to reappear on the planet surfce after getting into the ship. Make the alien appear in the menu via a text description and image. Make the visual style of the befriend text use the same typeface as the rest of game. 
 
 Make the beam weapons work properly with the gamepad
 

@@ -1304,26 +1304,149 @@ class SurfaceMode {
             uiManager.addMessage("Boarding Ship", [100, 255, 100]);
         }
 
-        // Check for friends to board with you
+        // Check for a single friend to board with you (closest only)
+        let boardedFriend = null;
         if (this.surfaceObjects) {
-            // Find friends near the ship (or near astronaut when they boarded)
-            // We use a simple loop backward so we can remove safely
-            for (let i = this.surfaceObjects.length - 1; i >= 0; i--) {
+            let closestDist = Infinity;
+            let closestIdx = -1;
+            for (let i = 0; i < this.surfaceObjects.length; i++) {
                 const obj = this.surfaceObjects[i];
                 if (obj && obj.isFauna && obj.isFriend && !obj.destroyed) {
-                    // Check dist to ship (player)
                     const d = p5.Vector.dist(obj.pos, this.player.pos);
-                    if (d < SURFACE_CONFIG.BOARDING_RANGE * 2) { // Generous range for followers
-                        // "Board" the creature (remove from surface)
-                        // In a full implementation, we'd add it to a cargo/crew manifest
-                        this.surfaceObjects.splice(i, 1);
-                        if (typeof uiManager !== 'undefined') {
-                            uiManager.addMessage("Your alien friend boards the ship with you!", [150, 255, 150]);
-                        }
+                    if (d < SURFACE_CONFIG.BOARDING_RANGE * 2 && d < closestDist) {
+                        closestDist = d;
+                        closestIdx = i;
                     }
                 }
             }
+            if (closestIdx >= 0) {
+                const obj = this.surfaceObjects[closestIdx];
+                // Persistently remove so it cannot respawn from cache/cell regen.
+                if (obj.cellKey) {
+                    this.registerDestruction(obj.cellKey);
+                    if (this.objectCache) this.objectCache.set(obj.cellKey, null);
+                }
+                obj.destroyed = true;
+                boardedFriend = obj;
+                this.surfaceObjects.splice(closestIdx, 1);
+            }
         }
+
+        if (boardedFriend) {
+            if (this.player && typeof this.player.setAlienCompanion === 'function') {
+                this.player.setAlienCompanion(this._buildAlienCompanionProfile(boardedFriend));
+            }
+
+            if (typeof uiManager !== 'undefined') {
+                uiManager.addMessage(`Your alien friend boards the ship with you!`, [150, 255, 150]);
+
+                if (this.player && !this.player.alienCompanionIntroShown && this.player.alienCompanion) {
+                    const companionName = this.player.alienCompanion.name || 'Unknown';
+                    uiManager.addMessage(`Companion acquired: ${companionName}`, [255, 235, 160]);
+                    uiManager.addMessage('Open Inventory to view your new companion profile.', [200, 220, 255]);
+                    this.player.alienCompanionIntroShown = true;
+                }
+            }
+
+            if (typeof saveGame === 'function') {
+                try { saveGame(); } catch (e) { /* ignore save errors */ }
+            }
+        }
+    }
+
+    _buildAlienCompanionProfile(fauna) {
+        const defaultColor = [120, 220, 180];
+        let portraitColor = defaultColor;
+
+        if (fauna && fauna.color) {
+            try {
+                portraitColor = [
+                    Math.round(red(fauna.color)),
+                    Math.round(green(fauna.color)),
+                    Math.round(blue(fauna.color))
+                ];
+            } catch (e) {
+                portraitColor = defaultColor;
+            }
+        }
+
+        const species = (fauna && fauna.constructor && fauna.constructor.name)
+            ? fauna.constructor.name
+            : 'Surface Fauna';
+
+        const existingName = this.player && this.player.alienCompanion && this.player.alienCompanion.name;
+        const generatedName = this._generateRandomAlienName();
+        const faunaSeed = (fauna && typeof fauna.seed === 'number') ? fauna.seed : Math.random() * 10000;
+        const faunaSize = (fauna && typeof fauna.size === 'number') ? fauna.size : 20;
+
+        return {
+            name: existingName || generatedName,
+            species,
+            description: this._generateAlienDescription(species, faunaSeed),
+            portraitColor,
+            seed: faunaSeed,
+            size: faunaSize,
+            boardedAt: Date.now()
+        };
+    }
+
+    _generateAlienDescription(species, seed) {
+        const pick = (arr) => arr[Math.floor((Math.sin(seed * arr.length * 1.7 + arr.length) * 0.5 + 0.5) * arr.length)];
+
+        const personality = pick(['curious', 'calm', 'skittish', 'playful', 'watchful', 'bold', 'gentle', 'restless']);
+        const trait = pick(['unusual intelligence', 'peculiar habits', 'odd sleeping patterns', 'a soothing presence', 'sharp instincts', 'endless energy', 'strange vocalizations', 'an uncanny sense of direction']);
+        const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+        const bySpecies = {
+            SlitherCreature: [
+                `A sinuous creature that glides silently through the ship corridors. ${cap(personality)} by nature, it shows ${trait}.`,
+                `This serpentine alien undulates along walls and pipes. It seems to prefer warmth and demonstrates ${trait}.`,
+                `A ribbon-like being that weaves between equipment. Its ${trait} has impressed the crew.`,
+            ],
+            FloaterCreature: [
+                `A delicate jellyfish-like being that drifts through the cabin. ${cap(personality)} and nearly weightless, it exhibits ${trait}.`,
+                `This bioluminescent floater pulses with soft light. It shows ${trait} and seems unbothered by zero-g.`,
+                `A translucent drifter that hovers near the viewport. Its ${trait} makes it hypnotic to watch.`,
+            ],
+            RollerCreature: [
+                `A spiky ball-creature that rolls freely around the cargo bay. ${cap(personality)}, with ${trait}.`,
+                `This compact creature tucks into a ball when startled. Its ${trait} has surprised the crew more than once.`,
+                `A rounded alien that bounces off bulkheads with enthusiasm. Displays ${trait} in abundance.`,
+            ],
+            StalkCreature: [
+                `A tall, spindly creature that perches on high fixtures. ${cap(personality)}, it watches everything with ${trait}.`,
+                `This long-limbed alien moves with deliberate grace. It displays ${trait} and an uncanny awareness of its surroundings.`,
+                `A towering, elegant creature that stalks the upper gantries. Its ${trait} is immediately apparent.`,
+            ],
+            HopperCreature: [
+                `A squat, bounding creature that ricochets around the hull. ${cap(personality)}, it shows ${trait}.`,
+                `This compact hopper leaps between perches with ease. It has ${trait} and seems to enjoy zero-g.`,
+                `A stubby leaper that navigates the ship with surprising precision. Exhibits ${trait}.`,
+            ],
+            GliderCreature: [
+                `A wide, winged creature that sails silently through the ship. ${cap(personality)} in disposition, it shows ${trait}.`,
+                `This triangular flier banks and circles the cockpit. Its ${trait} makes it a strangely calming presence.`,
+                `A graceful glider that rides air currents from the life-support vents. Possesses ${trait}.`,
+            ],
+            HexapodCreature: [
+                `A six-legged beetle that scuttles along the walls. ${cap(personality)}, it demonstrates ${trait}.`,
+                `This armoured hexapod clicks and taps on surfaces. Its ${trait} and methodical movement suggest high intelligence.`,
+                `A compact, chitinous creature that patrols the lower decks. Shows ${trait} in everything it does.`,
+            ],
+        };
+
+        const lines = bySpecies[species];
+        if (lines) return pick(lines);
+        return `A ${personality} alien lifeform with ${trait}. It seems perfectly at home aboard the ship.`;
+    }
+
+    _generateRandomAlienName() {
+        const starts = ['Xa', 'Ze', 'Ka', 'Vor', 'Tha', 'Qui', 'Ny', 'Ra', 'Lo', 'My'];
+        const middles = ['li', 're', 'na', 'xo', 've', 'sha', 'tri', 'mo', 'za', 'ko'];
+        const ends = ['n', 'th', 'x', 'ra', 'm', 'l', 'k', 's', 'v', 'q'];
+
+        const pick = (list) => list[Math.floor(Math.random() * list.length)];
+        return `${pick(starts)}${pick(middles)}${pick(ends)}`;
     }
 
     /**

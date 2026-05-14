@@ -288,6 +288,10 @@ class InventoryScreen {
     }
     rightY += sectionGap;
 
+    // --- Alien Companion Section ---
+    rightY = this._drawAlienCompanionSection(player, rightColX, rightY, rightColW, rowH);
+    rightY += sectionGap;
+
     // --- Cargo Section ---
     rightY = this._drawSectionHeader(`Cargo (${player.getCargoAmount()}/${player.cargoCapacity})`, rightColX, rightY, rightColW);
     rightY += 4;
@@ -422,6 +426,128 @@ class InventoryScreen {
     return color(255, 100, 100);
   }
 
+  _drawAlienCompanionSection(player, x, y, w, rowH) {
+    let curY = this._drawSectionHeader("Alien Companion", x, y, w);
+    curY += 4;
+
+    const companion = player.alienCompanion;
+    if (!companion) {
+      fill(120, 120, 120);
+      textAlign(LEFT, TOP);
+      textSize(STATION_TEXT_SIZE.BODY);
+      text('No companion aboard', x + 10, curY);
+      return curY + rowH;
+    }
+
+    const cardH = 100;
+    const cardX = x + 8;
+    const cardY = curY;
+    const cardW = w - 16;
+
+    fill(34, 46, 70, 210);
+    stroke(100, 150, 255, 120);
+    strokeWeight(1);
+    rect(cardX, cardY, cardW, cardH, 6);
+
+    const portraitSize = 64;
+    const portraitX = cardX + 12;
+    const portraitY = cardY + (cardH - portraitSize) / 2;
+    this._drawCompanionPortrait(
+      portraitX,
+      portraitY,
+      portraitSize,
+      Array.isArray(companion.portraitColor) ? companion.portraitColor : [120, 220, 180],
+      companion.species || 'SurfaceFauna',
+      typeof companion.seed === 'number' ? companion.seed : 0,
+      typeof companion.size === 'number' ? companion.size : 20
+    );
+
+    const textX = portraitX + portraitSize + 12;
+    const textW = cardW - (textX - cardX) - 10;
+
+    fill(255, 220, 160);
+    noStroke();
+    textAlign(LEFT, TOP);
+    textSize(STATION_TEXT_SIZE.BODY);
+    const title = `${companion.name || 'Laine'} (${this._formatSpeciesName(companion.species)})`;
+    text(title, textX, cardY + 10);
+
+    fill(195, 215, 245);
+    textSize(STATION_TEXT_SIZE.HELPER);
+    const description = companion.description || 'A loyal alien lifeform that now travels with your ship.';
+    text(description, textX, cardY + 32, textW, cardH - 36);
+
+    return cardY + cardH;
+  }
+
+  _drawCompanionPortrait(x, y, portraitSize, tintRgb, species, seed, companionSize) {
+    const r = tintRgb[0] || 120;
+    const g = tintRgb[1] || 220;
+    const b = tintRgb[2] || 180;
+
+    push();
+    // Portrait background
+    stroke(180, 220, 255, 180);
+    strokeWeight(1);
+    fill(18, 24, 36, 230);
+    rect(x, y, portraitSize, portraitSize, 6);
+
+    const cx = x + portraitSize / 2;
+    const cy = y + portraitSize / 2;
+
+    // Try to render actual creature using Draw3D
+    if (species && typeof window !== 'undefined' && window[species]) {
+      try {
+        const CreatureClass = window[species];
+        
+        // Build default planet colors from the tint color
+        const defaultPlanetColors = [
+          color(r, g, b),
+          color(constrain(r * 1.2, 0, 255), constrain(g * 0.8, 0, 255), b),
+          color(constrain(r * 0.8, 0, 255), constrain(g * 1.2, 0, 255), b),
+          color(r, g, constrain(b * 1.2, 0, 255))
+        ];
+        
+        // Recreate the creature with stored size and seed
+        const creature = new CreatureClass(0, 0, companionSize || 20, defaultPlanetColors, seed);
+        
+        // Draw creature using Draw3D (same mechanism as surface)
+        // Pass portrait center as world coordinates for projection
+        const sunAngle = -Math.PI / 4;
+        const portraitAltitude = 0;  // No altitude offset for portrait (stays centered)
+        creature.draw(cx, cy, sunAngle, portraitAltitude, 3);  // LOD 3 = full detail
+      } catch (e) {
+        // Fallback to simple blob if creature rendering fails
+        noStroke();
+        fill(r, g, b, 220);
+        ellipse(cx, cy, portraitSize * 0.62, portraitSize * 0.58);
+        fill(245, 250, 255, 230);
+        ellipse(cx - portraitSize * 0.12, cy - portraitSize * 0.06, portraitSize * 0.11, portraitSize * 0.11);
+        ellipse(cx + portraitSize * 0.12, cy - portraitSize * 0.06, portraitSize * 0.11, portraitSize * 0.11);
+        fill(20, 30, 40, 220);
+        ellipse(cx - portraitSize * 0.12, cy - portraitSize * 0.06, portraitSize * 0.045, portraitSize * 0.045);
+        ellipse(cx + portraitSize * 0.12, cy - portraitSize * 0.06, portraitSize * 0.045, portraitSize * 0.045);
+      }
+    } else {
+      // Fallback for unknown species
+      noStroke();
+      fill(r, g, b, 220);
+      ellipse(cx, cy, portraitSize * 0.62, portraitSize * 0.58);
+      fill(245, 250, 255, 230);
+      ellipse(cx - portraitSize * 0.12, cy - portraitSize * 0.06, portraitSize * 0.11, portraitSize * 0.11);
+      ellipse(cx + portraitSize * 0.12, cy - portraitSize * 0.06, portraitSize * 0.11, portraitSize * 0.11);
+      fill(20, 30, 40, 220);
+      ellipse(cx - portraitSize * 0.12, cy - portraitSize * 0.06, portraitSize * 0.045, portraitSize * 0.045);
+      ellipse(cx + portraitSize * 0.12, cy - portraitSize * 0.06, portraitSize * 0.045, portraitSize * 0.045);
+    }
+    pop();
+  }
+
+  _formatSpeciesName(species) {
+    if (!species) return 'Surface Fauna';
+    // Convert class name like 'SlitherCreature' -> 'Slither Creature'
+    return species.replace(/([A-Z])/g, ' $1').trim() || species;
+  }
 
 
   handleClick(mx, my, player) {

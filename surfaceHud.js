@@ -444,8 +444,9 @@ class SurfaceHUD {
             fill(255);
             noStroke();
             textAlign(CENTER, CENTER);
-            textSize(12);
-            text("BEFRIEND", bx + bw / 2, by + bh / 2);
+            if (typeof font !== 'undefined' && font) textFont(font);
+            textSize((typeof STATION_TEXT_SIZE !== 'undefined' && STATION_TEXT_SIZE.BODY) ? STATION_TEXT_SIZE.BODY : 12);
+            text("Befriend", bx + bw / 2, by + bh / 2);
             pop();
         } else {
             this._befriendButtonBounds = null;

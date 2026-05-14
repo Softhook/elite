@@ -306,6 +306,10 @@ class Player {
         this.credits = PLAYER_CONFIG.STARTING_CREDITS;
         this.cargo = [];
 
+        // Surface companion state (set when a befriended alien boards the ship)
+        this.alienCompanion = null;
+        this.alienCompanionIntroShown = false;
+
         // Secret base storage (separate from normal station storage)
         this.secretStorage = [];
 
@@ -2682,6 +2686,45 @@ class Player {
         return cleaned;
     }
 
+    static sanitizeAlienCompanionData(data) {
+        if (!data || typeof data !== 'object') return null;
+
+        const safeString = (value, fallback, maxLen = 120) => {
+            if (typeof value !== 'string') return fallback;
+            const trimmed = value.trim();
+            if (!trimmed) return fallback;
+            return trimmed.slice(0, maxLen);
+        };
+
+        const coerceColor = (input) => {
+            if (!Array.isArray(input) || input.length < 3) return [120, 220, 180];
+            return [0, 1, 2].map(i => {
+                const n = Number(input[i]);
+                if (!Number.isFinite(n)) return 180;
+                return Math.max(0, Math.min(255, Math.round(n)));
+            });
+        };
+
+        return {
+            name: safeString(data.name, 'Laine', 48),
+            species: safeString(data.species, 'SurfaceFauna', 64),
+            description: safeString(
+                data.description,
+                'A curious alien lifeform that now travels with your crew.',
+                240
+            ),
+            portraitColor: coerceColor(data.portraitColor),
+            seed: Number.isFinite(Number(data.seed)) ? Number(data.seed) : 0,
+            size: Number.isFinite(Number(data.size)) ? Number(data.size) : 20,
+            boardedAt: Number.isFinite(Number(data.boardedAt)) ? Number(data.boardedAt) : Date.now()
+        };
+    }
+
+    setAlienCompanion(companionData) {
+        this.alienCompanion = Player.sanitizeAlienCompanionData(companionData);
+        return this.alienCompanion;
+    }
+
     /** Save data for persistence */
     getSaveData() {
         // Normalize angle safely to prevent NaN or Infinity in save data
@@ -2772,7 +2815,10 @@ class Player {
             shipsPurchased: cloneSerializableState(this.shipsPurchased, []),
             weaponsUpgraded: cloneSerializableState(this.weaponsUpgraded, []),
             // Secret base storage
-            secretStorage: cloneSerializableState(this.secretStorage, [])
+            secretStorage: cloneSerializableState(this.secretStorage, []),
+            // Surface companion
+            alienCompanion: Player.sanitizeAlienCompanionData(this.alienCompanion),
+            alienCompanionIntroShown: !!this.alienCompanionIntroShown
             // -----------------------------------------
         };
     }
@@ -2974,6 +3020,10 @@ class Player {
 
         // Restore secret base storage
         this.secretStorage = cloneSerializableArray(data.secretStorage);
+
+        // Restore surface companion
+        this.alienCompanion = Player.sanitizeAlienCompanionData(data.alienCompanion);
+        this.alienCompanionIntroShown = !!data.alienCompanionIntroShown;
 
         // Initialize session trade tracking (not saved, always starts fresh)
         this.currentSessionTradedLocations = new Set();
