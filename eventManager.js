@@ -549,6 +549,33 @@ class EventManager {
             { type: "VOID_CHOIR_STORM", probabilityPerFrame: 0.0000035, minCooldownMs: 60 * 60 * 1000, warningDurationMs: 8000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "[STORM] ANOMALY: Harmonic void storm forming.", color: "purple" }, spawnConfig: { entityType: 'cosmicStorm', minEntities: 1, maxEntities: 1, spawnRadiusMin: 1400, spawnRadiusMax: 2400, radius: 700, type: 'electromagnetic' } },
             { type: "SUNSPIKE_TURBULENCE", probabilityPerFrame: 0.000004, minCooldownMs: 55 * 60 * 1000, warningDurationMs: 8000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "[STORM] SPACE WEATHER: Sunspike turbulence front incoming.", color: "yellow" }, spawnConfig: { entityType: 'cosmicStorm', minEntities: 1, maxEntities: 1, spawnRadiusMin: 1200, spawnRadiusMax: 2200, radius: 620, type: 'electromagnetic' } }
         );
+
+        this.dynamicSpawnNotifyEventTypes = new Set([
+            'ROGUE_SECURITY', 'INTERSTELLAR_RALLY', 'ALIEN_SCOUT', 'PROTOTYPE_TESTING',
+            'FALSE_IDOLS', 'SIN_EATER', 'MISSIONARY_CONVOY', 'ALIEN_RAID', 'PIRATE_SWARM',
+            'BOUNTY_HUNTER_AMBUSH', 'IMPERIAL_TAX_CONVOY', 'SEPARATIST_PRIVATEERS',
+            'PILGRIM_ESCORT', 'ALIEN_RELIC_HUNTERS', 'BLACK_OPS_INTERCEPTORS',
+            'STATION_EXTORTION_RING', 'IMPERIAL_RETRIBUTION_WING', 'SEPARATIST_SIGNAL_JAMMERS',
+            'HARLEQUIN_FLASHMOB', 'MISSIONARY_RECLAMATION_FLEET', 'BORDER_MILITIA_DRILL',
+            'ALIEN_BIO_PROSPECTORS', 'DEFENSE_DRONE_SWEEP', 'SHADOW_COURIER'
+        ]);
+
+        this.dynamicNewsEventTypes = new Set([
+            'LOST_SHIPMENT', 'FACTION_SKIRMISH', 'VIP_CONVOY', 'MINING_OPERATION',
+            'FORCED_CONVERSION', 'HERETIC_HUNT', 'DOOMSDAY_PROPHET', 'ASCENSION_RITUAL',
+            'ARTIFACT_WORSHIP', 'CLEANSING_FIRE', 'TECH_CRUSADE', 'IMPERIAL_INTERDICTION',
+            'SEPARATIST_AMBUSH', 'DEFECTOR_ESCORT', 'DIPLOMATIC_STANDOFF', 'PROTOTYPE_HEIST',
+            'HARLEQUIN_PARADE', 'JESTERS_TRAP', 'COLOR_WAR', 'MAD_BOMBER', 'CARNIVAL_DROP',
+            'PROTOTYPE_TESTING', 'INTERSTELLAR_RALLY', 'ROGUE_SECURITY', 'ALIEN_SCOUT',
+            'FALSE_IDOLS', 'SIN_EATER', 'MISSIONARY_CONVOY', 'ALIEN_ARTIFACT',
+            'IMPERIAL_TAX_CONVOY', 'SEPARATIST_PRIVATEERS', 'PILGRIM_ESCORT',
+            'ALIEN_RELIC_HUNTERS', 'BLACK_OPS_INTERCEPTORS', 'STATION_EXTORTION_RING',
+            'IMPERIAL_RETRIBUTION_WING', 'SEPARATIST_SIGNAL_JAMMERS', 'HARLEQUIN_FLASHMOB',
+            'MISSIONARY_RECLAMATION_FLEET', 'BORDER_MILITIA_DRILL', 'ALIEN_BIO_PROSPECTORS',
+            'DEFENSE_DRONE_SWEEP', 'SHADOW_COURIER', 'ORBITAL_WRECKFIELD',
+            'PILGRIM_OFFERINGS', 'SEPARATIST_ARMS_CACHE', 'ALIEN_RELIC_CACHE',
+            'VOID_CHOIR_STORM', 'SUNSPIKE_TURBULENCE'
+        ]);
     }
 
     initializeReferences(starSystem, player, uiManager) {
@@ -2203,8 +2230,7 @@ class EventManager {
             this._addEventMarkerSafely(`${event.type}_${frameCount}`, baseSpawnRadius * cos(baseSpawnAngle) + this.player.pos.x, baseSpawnRadius * sin(baseSpawnAngle) + this.player.pos.y, label, 'red', this._extendDurationMs(60000));
 
             // Trigger news for high-level dynamic events that use spawnConfig
-            const dynamicSpawnEvents = ['ROGUE_SECURITY', 'INTERSTELLAR_RALLY', 'ALIEN_SCOUT', 'PROTOTYPE_TESTING', 'FALSE_IDOLS', 'SIN_EATER', 'MISSIONARY_CONVOY', 'ALIEN_RAID', 'PIRATE_SWARM', 'BOUNTY_HUNTER_AMBUSH', 'IMPERIAL_TAX_CONVOY', 'SEPARATIST_PRIVATEERS', 'PILGRIM_ESCORT', 'ALIEN_RELIC_HUNTERS', 'BLACK_OPS_INTERCEPTORS', 'STATION_EXTORTION_RING', 'IMPERIAL_RETRIBUTION_WING', 'SEPARATIST_SIGNAL_JAMMERS', 'HARLEQUIN_FLASHMOB', 'MISSIONARY_RECLAMATION_FLEET', 'BORDER_MILITIA_DRILL', 'ALIEN_BIO_PROSPECTORS', 'DEFENSE_DRONE_SWEEP', 'SHADOW_COURIER'];
-            if (dynamicSpawnEvents.includes(event.type)) {
+            if (this.dynamicSpawnNotifyEventTypes.has(event.type)) {
                 let prefix = '';
                 if (event.type === 'ALIEN_RAID' || event.type === 'ALIEN_SCOUT') prefix = '[ALIEN] ';
                 if (event.type === 'PIRATE_SWARM' || event.type === 'BOUNTY_HUNTER_AMBUSH') prefix = '[SKULL] ';
@@ -2307,7 +2333,7 @@ class EventManager {
                 if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                     this.uiManager.addEventMarker(`COSMIC_STORM_${frameCount}_${i}`, spawnX, spawnY, label, 'cyan', this._extendDurationMs(180000));
                 }
-                this._notifyEvent(`[STORM] ${this.starSystem?.name || 'Local sector'}: Cosmic storm detected near ${this._formatStationLabel(this._pickRandomStation())}`, 'cyan');
+                this._notifyEvent(`[STORM] ${this.starSystem?.name || 'Local sector'}: Cosmic storm detected near ${this._formatStationLabel(this._pickRandomStation())}`, 'cyan', 4000, event.type);
             } catch (e) { }
         }
     }
@@ -2343,7 +2369,7 @@ class EventManager {
                 }
                 let prefix = '';
                 if (config.cargoType === 'Alien Artifact') prefix = '[ALIEN] ';
-                this._notifyEvent(`${prefix}${this.starSystem?.name || 'Local sector'}: ${config.cargoType || 'Cargo'} cache appears near ${anchorLabel}`, 'gold');
+                this._notifyEvent(`${prefix}${this.starSystem?.name || 'Local sector'}: ${config.cargoType || 'Cargo'} cache appears near ${anchorLabel}`, 'gold', 4000, event.type);
             } catch (e) {
                 // Fallback: if anything goes wrong, still add cargo without marker link
                 try { this.starSystem.addCargo(cargo); } catch (err) { }
@@ -2384,9 +2410,7 @@ class EventManager {
         if (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager) {
             // Check if this is one of the new dynamic events
             // Check if this is one of the new dynamic events
-            const newEvents = ['LOST_SHIPMENT', 'FACTION_SKIRMISH', 'VIP_CONVOY', 'MINING_OPERATION', 'FORCED_CONVERSION', 'HERETIC_HUNT', 'DOOMSDAY_PROPHET', 'ASCENSION_RITUAL', 'ARTIFACT_WORSHIP', 'CLEANSING_FIRE', 'TECH_CRUSADE', 'IMPERIAL_INTERDICTION', 'SEPARATIST_AMBUSH', 'DEFECTOR_ESCORT', 'DIPLOMATIC_STANDOFF', 'PROTOTYPE_HEIST', 'HARLEQUIN_PARADE', 'JESTERS_TRAP', 'COLOR_WAR', 'MAD_BOMBER', 'CARNIVAL_DROP', 'PROTOTYPE_TESTING', 'INTERSTELLAR_RALLY', 'ROGUE_SECURITY', 'ALIEN_SCOUT', 'FALSE_IDOLS', 'SIN_EATER', 'MISSIONARY_CONVOY', 'ALIEN_ARTIFACT', 'IMPERIAL_TAX_CONVOY', 'SEPARATIST_PRIVATEERS', 'PILGRIM_ESCORT', 'ALIEN_RELIC_HUNTERS', 'BLACK_OPS_INTERCEPTORS', 'STATION_EXTORTION_RING', 'IMPERIAL_RETRIBUTION_WING', 'SEPARATIST_SIGNAL_JAMMERS', 'HARLEQUIN_FLASHMOB', 'MISSIONARY_RECLAMATION_FLEET', 'BORDER_MILITIA_DRILL', 'ALIEN_BIO_PROSPECTORS', 'DEFENSE_DRONE_SWEEP', 'SHADOW_COURIER', 'ORBITAL_WRECKFIELD', 'PILGRIM_OFFERINGS', 'SEPARATIST_ARMS_CACHE', 'ALIEN_RELIC_CACHE', 'VOID_CHOIR_STORM', 'SUNSPIKE_TURBULENCE'];
-
-            if (newEvents.includes(type)) {
+            if (this.dynamicNewsEventTypes.has(type)) {
                 GameGlobals.newsManager.addDynamicEventNews(type, {
                     systemName: this.starSystem?.name,
                     stationName: details.stationName

@@ -606,6 +606,28 @@ describe('New Events Tests', () => {
             });
         });
 
+        test('should route all 20 lore expansion events to dynamic event news', () => {
+            const loreEvents = [
+                'IMPERIAL_TAX_CONVOY', 'SEPARATIST_PRIVATEERS', 'PILGRIM_ESCORT', 'ALIEN_RELIC_HUNTERS',
+                'BLACK_OPS_INTERCEPTORS', 'STATION_EXTORTION_RING', 'IMPERIAL_RETRIBUTION_WING',
+                'SEPARATIST_SIGNAL_JAMMERS', 'HARLEQUIN_FLASHMOB', 'MISSIONARY_RECLAMATION_FLEET',
+                'BORDER_MILITIA_DRILL', 'ALIEN_BIO_PROSPECTORS', 'DEFENSE_DRONE_SWEEP', 'SHADOW_COURIER',
+                'ORBITAL_WRECKFIELD', 'PILGRIM_OFFERINGS', 'SEPARATIST_ARMS_CACHE', 'ALIEN_RELIC_CACHE',
+                'VOID_CHOIR_STORM', 'SUNSPIKE_TURBULENCE'
+            ];
+
+            loreEvents.forEach(eventType => {
+                jest.clearAllMocks();
+                em.executeConfiguredEvent(eventType);
+                expect(global.GameGlobals.newsManager.addDynamicEventNews).toHaveBeenCalledWith(
+                    eventType,
+                    expect.objectContaining({
+                        systemName: system.name
+                    })
+                );
+            });
+        });
+
         test('should fallback to addNewsItem for unknown event types', () => {
             jest.clearAllMocks();
             em._notifyEvent('Something generic happened', 'white', 4000, 'UNKNOWN_TYPE');
