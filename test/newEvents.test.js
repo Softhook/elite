@@ -244,9 +244,10 @@ describe('New Events Tests', () => {
         expect(system.enemies.length).toBeGreaterThan(0);
         const racer = system.enemies[0];
         expect(racer.role).toBe(AI_ROLE.HAULER);
-        expect(racer.currentState).toBe(AI_STATE.FLEEING);
+        expect(racer.currentState).toBe(AI_STATE.PATROLLING);
         expect(racer.displayName).toBe("Rally Racer");
         expect(racer.isRacing).toBe(true);
+        expect(racer.patrolTargetPos).toBeDefined();
         // Verify speed boost
         expect(racer.baseMaxSpeed).toBe(12.5); // 5 * 2.5
         expect(racer.maxSpeed).toBe(12.5);
@@ -257,6 +258,8 @@ describe('New Events Tests', () => {
 
         expect(system.enemies.length).toBe(1);
         expect(system.enemies[0].role).toBe(AI_ROLE.ALIEN);
+        expect(system.enemies[0].currentState).toBe(AI_STATE.APPROACHING);
+        expect(system.enemies[0].target).toBe(player);
     });
 
     test('should execute PROTOTYPE_TESTING', () => {
@@ -275,6 +278,7 @@ describe('New Events Tests', () => {
         em.executeConfiguredEvent('MISSIONARY_CONVOY');
         expect(system.enemies.length).toBeGreaterThanOrEqual(3);
         expect(system.enemies.every(e => e.role === AI_ROLE.MISSIONARY)).toBe(true);
+        expect(system.enemies.every(e => e.currentState === AI_STATE.PATROLLING)).toBe(true);
     });
 
     test('should execute FORCED_CONVERSION', () => {
@@ -356,6 +360,8 @@ describe('New Events Tests', () => {
         const wolf = system.enemies[0];
         expect(wolf.role).toBe(AI_ROLE.PIRATE);
         expect(wolf.displayName).toBe("False Prophet");
+        expect(wolf.currentState).toBe(AI_STATE.APPROACHING);
+        expect(wolf.target).toBe(player);
         // Check armament override if mock supported it (mock doesn't have armament array usually, 
         // need to check MockEnemy setup).
         // MockEnemy doesn't init armament. But specific event code assumes it does (`e.armament.push`).
@@ -431,6 +437,7 @@ describe('New Events Tests', () => {
 
         const defector = system.enemies.find(e => e.displayName === "Imperial Defector");
         expect(defector).toBeDefined();
+        expect(defector.role).toBe(AI_ROLE.HAULER);
         expect(defector.currentState).toBe(AI_STATE.FLEEING);
 
         const pursuers = system.enemies.filter(e => e.displayName === "Imperial Pursuer");
@@ -473,6 +480,7 @@ describe('New Events Tests', () => {
 
         const stolen = system.enemies.find(e => e.displayName === "Stolen Prototype");
         expect(stolen).toBeDefined();
+        expect(stolen.role).toBe(AI_ROLE.HAULER);
         expect(stolen.currentState).toBe(AI_STATE.FLEEING);
 
         const guards = system.enemies.filter(e => e.displayName === "Prototype Guard");
@@ -551,11 +559,64 @@ describe('New Events Tests', () => {
         expect(prize).toBeDefined();
     });
 
+    describe('Lore Expansion Events', () => {
+        test('should execute all 20 new lore events with expected spawn output', () => {
+            const enemyEvents = [
+                'IMPERIAL_TAX_CONVOY', 'SEPARATIST_PRIVATEERS', 'PILGRIM_ESCORT', 'ALIEN_RELIC_HUNTERS',
+                'BLACK_OPS_INTERCEPTORS', 'STATION_EXTORTION_RING', 'IMPERIAL_RETRIBUTION_WING',
+                'SEPARATIST_SIGNAL_JAMMERS', 'HARLEQUIN_FLASHMOB', 'MISSIONARY_RECLAMATION_FLEET',
+                'BORDER_MILITIA_DRILL', 'ALIEN_BIO_PROSPECTORS', 'DEFENSE_DRONE_SWEEP', 'SHADOW_COURIER'
+            ];
+            const cargoEvents = ['ORBITAL_WRECKFIELD', 'PILGRIM_OFFERINGS', 'SEPARATIST_ARMS_CACHE', 'ALIEN_RELIC_CACHE'];
+            const stormEvents = ['VOID_CHOIR_STORM', 'SUNSPIKE_TURBULENCE'];
+
+            enemyEvents.forEach(type => {
+                const before = system.enemies.length;
+                em.executeConfiguredEvent(type);
+                expect(system.enemies.length).toBeGreaterThan(before);
+            });
+
+            cargoEvents.forEach(type => {
+                const before = system.cargo.length;
+                em.executeConfiguredEvent(type);
+                expect(system.cargo.length).toBeGreaterThan(before);
+            });
+
+            stormEvents.forEach(type => {
+                const before = system.cosmicStorms.length;
+                em.executeConfiguredEvent(type);
+                expect(system.cosmicStorms.length).toBeGreaterThan(before);
+            });
+        });
+    });
+
     describe('News Integration', () => {
         test('should route dynamic events to newsManager.addDynamicEventNews', () => {
-            const dynamicEvents = ['LOST_SHIPMENT', 'FACTION_SKIRMISH', 'VIP_CONVOY', 'MAD_BOMBER', 'ROGUE_SECURITY', 'ALIEN_SCOUT', 'FALSE_IDOLS', 'MISSIONARY_CONVOY'];
+            const dynamicEvents = ['LOST_SHIPMENT', 'FACTION_SKIRMISH', 'VIP_CONVOY', 'MAD_BOMBER', 'ROGUE_SECURITY', 'ALIEN_SCOUT', 'FALSE_IDOLS', 'MISSIONARY_CONVOY', 'IMPERIAL_TAX_CONVOY', 'HARLEQUIN_FLASHMOB'];
 
             dynamicEvents.forEach(eventType => {
+                jest.clearAllMocks();
+                em.executeConfiguredEvent(eventType);
+                expect(global.GameGlobals.newsManager.addDynamicEventNews).toHaveBeenCalledWith(
+                    eventType,
+                    expect.objectContaining({
+                        systemName: system.name
+                    })
+                );
+            });
+        });
+
+        test('should route all 20 lore expansion events to dynamic event news', () => {
+            const loreEvents = [
+                'IMPERIAL_TAX_CONVOY', 'SEPARATIST_PRIVATEERS', 'PILGRIM_ESCORT', 'ALIEN_RELIC_HUNTERS',
+                'BLACK_OPS_INTERCEPTORS', 'STATION_EXTORTION_RING', 'IMPERIAL_RETRIBUTION_WING',
+                'SEPARATIST_SIGNAL_JAMMERS', 'HARLEQUIN_FLASHMOB', 'MISSIONARY_RECLAMATION_FLEET',
+                'BORDER_MILITIA_DRILL', 'ALIEN_BIO_PROSPECTORS', 'DEFENSE_DRONE_SWEEP', 'SHADOW_COURIER',
+                'ORBITAL_WRECKFIELD', 'PILGRIM_OFFERINGS', 'SEPARATIST_ARMS_CACHE', 'ALIEN_RELIC_CACHE',
+                'VOID_CHOIR_STORM', 'SUNSPIKE_TURBULENCE'
+            ];
+
+            loreEvents.forEach(eventType => {
                 jest.clearAllMocks();
                 em.executeConfiguredEvent(eventType);
                 expect(global.GameGlobals.newsManager.addDynamicEventNews).toHaveBeenCalledWith(

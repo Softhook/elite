@@ -45,6 +45,15 @@ class EventManager {
             plague: null,  // { originSystemIndex, expires, priceMultiplier }
             famine: null   // { originSystemIndex, expires, priceMultiplier }
         };
+
+        this.allowIdleStabilizeEventTypes = new Set(['DISTRESS_SIGNAL']);
+        this.stabilizeHostileRoles = new Set([
+            AI_ROLE.PIRATE,
+            AI_ROLE.ALIEN,
+            AI_ROLE.BOUNTY_HUNTER,
+            AI_ROLE.COMBAT
+        ]);
+        this.stabilizePatrolRoles = new Set([AI_ROLE.POLICE, AI_ROLE.GUARD, AI_ROLE.HAULER, AI_ROLE.MISSIONARY]);
     }
 
     _initializeShipGroups() {
@@ -501,8 +510,8 @@ class EventManager {
             { type: "VIP_CONVOY", probabilityPerFrame: 0.000008, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 8000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "TRAFFIC: Priority VIP convoy passing through.", color: "cyan", consoleLog: "EventManager: VIP Convoy warning issued." } },
             { type: "MINING_OPERATION", probabilityPerFrame: 0.00001, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "OPS: Temporary mining operation detected.", color: "yellow", consoleLog: "EventManager: Mining Op warning issued." } },
             { type: "ROGUE_SECURITY", probabilityPerFrame: 0.000005, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "WARNING: Rogue security forces identified.", color: "red", consoleLog: "EventManager: Rogue Security warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.POLICE, fallbackShip: "ViperPol" }, aiRole: AI_ROLE.PIRATE, spawnRadiusMin: 1800, spawnRadiusMax: 2200, additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Rogue Security"; } } },
-            { type: "INTERSTELLAR_RALLY", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "RACE: Interstellar Rally racers entering sector!", color: "cyan", consoleLog: "EventManager: Rally warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 3, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.TRADER, fallbackShip: "Type6Transporter" }, aiRole: AI_ROLE.HAULER, spawnRadiusMin: 3000, spawnRadiusMax: 3500, additionalEnemySetup: (e) => { e.baseMaxSpeed *= 2.5; e.maxSpeed *= 2.5; e.currentState = AI_STATE.FLEEING; e.displayName = "Rally Racer"; e.isRacing = true; } } },
-            { type: "ALIEN_SCOUT", probabilityPerFrame: 0.000005, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "[ALIEN] CONTACT: Unidentified scout vessel.", color: "magenta", consoleLog: "EventManager: Alien Scout warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.ALIEN, fallbackShip: "Thargoid" }, aiRole: AI_ROLE.ALIEN, spawnRadiusMin: 2000, spawnRadiusMax: 2500, additionalEnemySetup: (e) => { e.currentState = AI_STATE.IDLE; } } },
+            { type: "INTERSTELLAR_RALLY", probabilityPerFrame: 0.000005, minCooldownMs: 30 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "RACE: Interstellar Rally racers entering sector!", color: "cyan", consoleLog: "EventManager: Rally warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 3, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.TRADER, fallbackShip: "Type6Transporter" }, aiRole: AI_ROLE.HAULER, spawnRadiusMin: 1200, spawnRadiusMax: 1700, additionalEnemySetup: (e, player, system) => { e.baseMaxSpeed *= 2.5; e.maxSpeed *= 2.5; e.currentState = AI_STATE.PATROLLING; e.displayName = "Rally Racer"; e.isRacing = true; e.patrolTargetPos = system?.jumpZoneCenter?.copy ? system.jumpZoneCenter.copy() : (player?.pos?.copy ? player.pos.copy() : null); } } },
+            { type: "ALIEN_SCOUT", probabilityPerFrame: 0.000005, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "[ALIEN] CONTACT: Unidentified scout vessel.", color: "magenta", consoleLog: "EventManager: Alien Scout warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.ALIEN, fallbackShip: "Thargoid" }, aiRole: AI_ROLE.ALIEN, spawnRadiusMin: 2000, spawnRadiusMax: 2500, additionalEnemySetup: (e, player) => { e.currentState = AI_STATE.APPROACHING; e.target = player || null; } } },
             { type: "PROTOTYPE_TESTING", probabilityPerFrame: 0.000004, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "DETECTED: High-signature prototype vessel.", color: "blue", consoleLog: "EventManager: Prototype warning issued." }, spawnConfig: { entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.MILITARY, fallbackShip: "Viper" }, aiRole: AI_ROLE.COMBAT, spawnRadiusMin: 2500, spawnRadiusMax: 3000, additionalEnemySetup: (e) => { e.baseMaxSpeed *= 2.0; e.maxSpeed *= 2.0; e.shield *= 1.5; e.displayName = "Prototype Unit"; e.currentState = AI_STATE.PATROLLING; } } },
             // === Missionary & Creative Events ===
             { type: "MISSIONARY_CONVOY", probabilityPerFrame: 0.00001, minCooldownMs: 25 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "CONVOY: Procession of faithful passing through.", color: "cyan" }, spawnConfig: { entityType: 'enemy', minEntities: 3, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"] }, aiRole: AI_ROLE.MISSIONARY, spawnRadiusMin: 1800, spawnRadiusMax: 2200 } },
@@ -528,6 +537,113 @@ class EventManager {
             { type: "MAD_BOMBER", probabilityPerFrame: 0.000005, minCooldownMs: 40 * 60 * 1000, warningDurationMs: 6000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "THREAT: Maniac threatening station bombardment!", color: "red" } },
             { type: "CARNIVAL_DROP", probabilityPerFrame: 0.00001, minCooldownMs: 20 * 60 * 1000, warningDurationMs: 5000, lastTriggeredTime: -Infinity, isWarningActive: false, eventTriggerTime: 0, warningConfig: { message: "SCAN: Unsanctioned cargo drop detected.", color: "lime" } }
         );
+        this.events.push(...this._buildLoreExpansionEvents());
+
+        this.dynamicSpawnNotifyEventTypes = new Set([
+            'ROGUE_SECURITY', 'INTERSTELLAR_RALLY', 'ALIEN_SCOUT', 'PROTOTYPE_TESTING',
+            'FALSE_IDOLS', 'SIN_EATER', 'MISSIONARY_CONVOY', 'ALIEN_RAID', 'PIRATE_SWARM',
+            'BOUNTY_HUNTER_AMBUSH', 'IMPERIAL_TAX_CONVOY', 'SEPARATIST_PRIVATEERS',
+            'PILGRIM_ESCORT', 'ALIEN_RELIC_HUNTERS', 'BLACK_OPS_INTERCEPTORS',
+            'STATION_EXTORTION_RING', 'IMPERIAL_RETRIBUTION_WING', 'SEPARATIST_SIGNAL_JAMMERS',
+            'HARLEQUIN_FLASHMOB', 'MISSIONARY_RECLAMATION_FLEET', 'BORDER_MILITIA_DRILL',
+            'ALIEN_BIO_PROSPECTORS', 'DEFENSE_DRONE_SWEEP', 'SHADOW_COURIER'
+        ]);
+
+        this.dynamicNewsEventTypes = new Set([
+            'LOST_SHIPMENT', 'FACTION_SKIRMISH', 'VIP_CONVOY', 'MINING_OPERATION',
+            'FORCED_CONVERSION', 'HERETIC_HUNT', 'DOOMSDAY_PROPHET', 'ASCENSION_RITUAL',
+            'ARTIFACT_WORSHIP', 'CLEANSING_FIRE', 'TECH_CRUSADE', 'IMPERIAL_INTERDICTION',
+            'SEPARATIST_AMBUSH', 'DEFECTOR_ESCORT', 'DIPLOMATIC_STANDOFF', 'PROTOTYPE_HEIST',
+            'HARLEQUIN_PARADE', 'JESTERS_TRAP', 'COLOR_WAR', 'MAD_BOMBER', 'CARNIVAL_DROP',
+            'PROTOTYPE_TESTING', 'INTERSTELLAR_RALLY', 'ROGUE_SECURITY', 'ALIEN_SCOUT',
+            'FALSE_IDOLS', 'SIN_EATER', 'MISSIONARY_CONVOY', 'ALIEN_ARTIFACT',
+            'IMPERIAL_TAX_CONVOY', 'SEPARATIST_PRIVATEERS', 'PILGRIM_ESCORT',
+            'ALIEN_RELIC_HUNTERS', 'BLACK_OPS_INTERCEPTORS', 'STATION_EXTORTION_RING',
+            'IMPERIAL_RETRIBUTION_WING', 'SEPARATIST_SIGNAL_JAMMERS', 'HARLEQUIN_FLASHMOB',
+            'MISSIONARY_RECLAMATION_FLEET', 'BORDER_MILITIA_DRILL', 'ALIEN_BIO_PROSPECTORS',
+            'DEFENSE_DRONE_SWEEP', 'SHADOW_COURIER', 'ORBITAL_WRECKFIELD',
+            'PILGRIM_OFFERINGS', 'SEPARATIST_ARMS_CACHE', 'ALIEN_RELIC_CACHE',
+            'VOID_CHOIR_STORM', 'SUNSPIKE_TURBULENCE'
+        ]);
+    }
+
+    _buildLoreExpansionEvents() {
+        const newEvent = (type, probabilityPerFrame, minCooldownMs, warningDurationMs, warningConfig, spawnConfig) => ({
+            type,
+            probabilityPerFrame,
+            minCooldownMs,
+            warningDurationMs,
+            lastTriggeredTime: -Infinity,
+            isWarningActive: false,
+            eventTriggerTime: 0,
+            warningConfig,
+            spawnConfig
+        });
+
+        return [
+            newEvent("IMPERIAL_TAX_CONVOY", 0.000006, 40 * 60 * 1000, 5000, { message: "AUTHORITY: Imperial tax convoy sweeping trade lanes.", color: "cyan" }, {
+                entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.IMPERIAL, fallbackShip: "ImperialCourier" }, aiRole: AI_ROLE.POLICE, spawnRadiusMin: 1600, spawnRadiusMax: 2200,
+                additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Tax Frigate"; e.faction = 'IMPERIAL'; }
+            }),
+            newEvent("SEPARATIST_PRIVATEERS", 0.000006, 38 * 60 * 1000, 5000, { message: "ALERT: Separatist privateers targeting independent shipping.", color: "orange" }, {
+                entityType: 'enemy', minEntities: 2, maxEntities: 4, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.SEPARATIST, fallbackShip: "SeparatistPartisan" }, aiRole: AI_ROLE.PIRATE, spawnRadiusMin: 1700, spawnRadiusMax: 2400,
+                additionalEnemySetup: (e) => { e.displayName = "Rebel Privateer"; e.faction = 'SEPARATIST'; }
+            }),
+            newEvent("PILGRIM_ESCORT", 0.000007, 30 * 60 * 1000, 5000, { message: "CONVOY: Pilgrim procession requests right of passage.", color: "cyan" }, {
+                entityType: 'enemy', minEntities: 3, maxEntities: 4, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"], fallbackShip: "PosthumanMissionary" }, aiRole: AI_ROLE.MISSIONARY, spawnRadiusMin: 1500, spawnRadiusMax: 2200,
+                additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Pilgrim Convoy"; }
+            }),
+            newEvent("ALIEN_RELIC_HUNTERS", 0.000005, 45 * 60 * 1000, 6000, { message: "[ALIEN] ANOMALY: Alien relic hunters entering system.", color: "magenta" }, {
+                entityType: 'enemy', minEntities: 1, maxEntities: 2, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.ALIEN, fallbackShip: "Thargoid" }, aiRole: AI_ROLE.ALIEN, spawnRadiusMin: 1800, spawnRadiusMax: 2500,
+                additionalEnemySetup: (e) => { e.displayName = "Relic Hunter"; }
+            }),
+            newEvent("BLACK_OPS_INTERCEPTORS", 0.000005, 50 * 60 * 1000, 6000, { message: "INTEL: Black-ops interceptors operating without transponders.", color: "red" }, {
+                entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.BOUNTY_HUNTER, fallbackShip: "ViperBH" }, aiRole: AI_ROLE.BOUNTY_HUNTER, spawnRadiusMin: 1800, spawnRadiusMax: 2400,
+                additionalEnemySetup: (e) => { e.currentState = AI_STATE.APPROACHING; e.displayName = "Black Ops Interceptor"; }
+            }),
+            newEvent("STATION_EXTORTION_RING", 0.000006, 35 * 60 * 1000, 5000, { message: "CRIME: Protection racketeers extorting dock traffic.", color: "red" }, {
+                entityType: 'enemy', minEntities: 3, maxEntities: 4, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.PIRATE, fallbackShip: "Sidewinder" }, aiRole: AI_ROLE.PIRATE, spawnRadiusMin: 1200, spawnRadiusMax: 1900,
+                additionalEnemySetup: (e) => { e.displayName = "Extortionist"; }
+            }),
+            newEvent("IMPERIAL_RETRIBUTION_WING", 0.000004, 55 * 60 * 1000, 6000, { message: "MILITARY: Imperial retribution wing hunting dissidents.", color: "cyan" }, {
+                entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.IMPERIAL, fallbackShip: "ImperialLancer" }, aiRole: AI_ROLE.COMBAT, spawnRadiusMin: 1900, spawnRadiusMax: 2600,
+                additionalEnemySetup: (e) => { e.displayName = "Imperial Retributor"; e.faction = 'IMPERIAL'; }
+            }),
+            newEvent("SEPARATIST_SIGNAL_JAMMERS", 0.0000045, 45 * 60 * 1000, 6000, { message: "INTERFERENCE: Separatist jamming flotilla detected.", color: "orange" }, {
+                entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.SEPARATIST, fallbackShip: "SeparatistShadow" }, aiRole: AI_ROLE.COMBAT, spawnRadiusMin: 1800, spawnRadiusMax: 2500,
+                additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Signal Jammer"; e.faction = 'SEPARATIST'; }
+            }),
+            newEvent("HARLEQUIN_FLASHMOB", 0.000006, 30 * 60 * 1000, 5000, { message: "CIRCUS: Harlequin flashmob strobing local traffic lanes.", color: "white" }, {
+                entityType: 'enemy', minEntities: 3, maxEntities: 4, shipSelection: { strategy: 'randomFromList', shipList: ["HarlequinPulcinella", "HarlequinPierrot", "HarlequinColumbine"], fallbackShip: "HarlequinPulcinella" }, aiRole: AI_ROLE.PIRATE, spawnRadiusMin: 1300, spawnRadiusMax: 2000,
+                additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Flashmob Marauder"; e.faction = 'HARLEQUIN'; }
+            }),
+            newEvent("MISSIONARY_RECLAMATION_FLEET", 0.0000055, 33 * 60 * 1000, 5000, { message: "SERMON: Reclamation fleet demanding ideological compliance.", color: "purple" }, {
+                entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"], fallbackShip: "PosthumanMissionary" }, aiRole: AI_ROLE.MISSIONARY, spawnRadiusMin: 1500, spawnRadiusMax: 2100,
+                additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Reclamation Missionary"; }
+            }),
+            newEvent("BORDER_MILITIA_DRILL", 0.000005, 42 * 60 * 1000, 5000, { message: "EXERCISE: Border militia conducting live-fire drills.", color: "blue" }, {
+                entityType: 'enemy', minEntities: 3, maxEntities: 4, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.MILITARY, fallbackShip: "Viper" }, aiRole: AI_ROLE.COMBAT, spawnRadiusMin: 1700, spawnRadiusMax: 2400,
+                additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Militia Patrol"; }
+            }),
+            newEvent("ALIEN_BIO_PROSPECTORS", 0.0000045, 48 * 60 * 1000, 6000, { message: "[ALIEN] BIOSCAN: Prospectors sampling local biosignatures.", color: "magenta" }, {
+                entityType: 'enemy', minEntities: 1, maxEntities: 2, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.ALIEN, fallbackShip: "BioFrigate" }, aiRole: AI_ROLE.ALIEN, spawnRadiusMin: 1900, spawnRadiusMax: 2600,
+                additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Bio Prospector"; }
+            }),
+            newEvent("DEFENSE_DRONE_SWEEP", 0.0000065, 28 * 60 * 1000, 5000, { message: "SECURITY: Autonomous defense drones sweeping traffic lanes.", color: "cyan" }, {
+                entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.POLICE, fallbackShip: "ViperPol" }, aiRole: AI_ROLE.POLICE, spawnRadiusMin: 1400, spawnRadiusMax: 2100,
+                additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Defense Drone"; }
+            }),
+            newEvent("SHADOW_COURIER", 0.000005, 40 * 60 * 1000, 5000, { message: "INTEL: Unmarked courier running dark through the sector.", color: "gold" }, {
+                entityType: 'enemy', minEntities: 1, maxEntities: 1, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.TRADER, fallbackShip: "CobraMkIII" }, aiRole: AI_ROLE.HAULER, spawnRadiusMin: 2000, spawnRadiusMax: 2600,
+                additionalEnemySetup: (e) => { e.currentState = AI_STATE.FLEEING; e.displayName = "Shadow Courier"; }
+            }),
+            newEvent("ORBITAL_WRECKFIELD", 0.000008, 22 * 60 * 1000, 5000, { message: "SALVAGE: Fresh orbital wreckfield shedding valuables.", color: "silver" }, { entityType: 'cargo', minEntities: 2, maxEntities: 4, spawnRadiusMin: 1400, spawnRadiusMax: 2600, cargoType: 'Metals', quantity: 3 }),
+            newEvent("PILGRIM_OFFERINGS", 0.000007, 24 * 60 * 1000, 5000, { message: "RITUAL: Pilgrims jettisoning tribute crates.", color: "gold" }, { entityType: 'cargo', minEntities: 2, maxEntities: 3, spawnRadiusMin: 1300, spawnRadiusMax: 2200, cargoType: 'Luxury Goods', quantity: 2 }),
+            newEvent("SEPARATIST_ARMS_CACHE", 0.000006, 30 * 60 * 1000, 5000, { message: "BLACKSITE: Hidden separatist arms cache exposed.", color: "orange" }, { entityType: 'cargo', minEntities: 1, maxEntities: 2, spawnRadiusMin: 1700, spawnRadiusMax: 2600, cargoType: 'Weapons', quantity: 2 }),
+            newEvent("ALIEN_RELIC_CACHE", 0.000004, 55 * 60 * 1000, 6000, { message: "[ALIEN] SIGNAL: Relic cache pulse detected.", color: "magenta" }, { entityType: 'cargo', minEntities: 1, maxEntities: 1, spawnRadiusMin: 1900, spawnRadiusMax: 3000, cargoType: 'Alien Artifact', quantity: 1 }),
+            newEvent("VOID_CHOIR_STORM", 0.0000035, 60 * 60 * 1000, 8000, { message: "[STORM] ANOMALY: Harmonic void storm forming.", color: "purple" }, { entityType: 'cosmicStorm', minEntities: 1, maxEntities: 1, spawnRadiusMin: 1400, spawnRadiusMax: 2400, radius: 700, type: 'electromagnetic' }),
+            newEvent("SUNSPIKE_TURBULENCE", 0.000004, 55 * 60 * 1000, 8000, { message: "[STORM] SPACE WEATHER: Sunspike turbulence front incoming.", color: "yellow" }, { entityType: 'cosmicStorm', minEntities: 1, maxEntities: 1, spawnRadiusMin: 1200, spawnRadiusMax: 2200, radius: 620, type: 'electromagnetic' })
+        ];
     }
 
     initializeReferences(starSystem, player, uiManager) {
@@ -1651,7 +1767,7 @@ class EventManager {
                 const cy = this.player.pos.y + sin(angle) * dist;
 
                 let defector = null;
-                this._spawnAdHocEnemy(cx, cy, AI_ROLE.FLEEING, (e) => {
+                this._spawnAdHocEnemy(cx, cy, AI_ROLE.HAULER, (e) => {
                     e.currentState = AI_STATE.FLEEING;
                     e.displayName = "Imperial Defector";
                     defector = e;
@@ -1718,7 +1834,7 @@ class EventManager {
                 const cy = this.player.pos.y + sin(angle) * dist;
 
                 let stolenShip = null;
-                this._spawnAdHocEnemy(cx, cy, AI_ROLE.FLEEING, (e) => {
+                this._spawnAdHocEnemy(cx, cy, AI_ROLE.HAULER, (e) => {
                     e.currentState = AI_STATE.FLEEING;
                     e.displayName = "Stolen Prototype";
                     e.faction = 'SEPARATIST'; // Override faction to ensure guards attack
@@ -2182,8 +2298,7 @@ class EventManager {
             this._addEventMarkerSafely(`${event.type}_${frameCount}`, baseSpawnRadius * cos(baseSpawnAngle) + this.player.pos.x, baseSpawnRadius * sin(baseSpawnAngle) + this.player.pos.y, label, 'red', this._extendDurationMs(60000));
 
             // Trigger news for high-level dynamic events that use spawnConfig
-            const dynamicSpawnEvents = ['ROGUE_SECURITY', 'INTERSTELLAR_RALLY', 'ALIEN_SCOUT', 'PROTOTYPE_TESTING', 'FALSE_IDOLS', 'SIN_EATER', 'MISSIONARY_CONVOY', 'ALIEN_RAID', 'PIRATE_SWARM', 'BOUNTY_HUNTER_AMBUSH'];
-            if (dynamicSpawnEvents.includes(event.type)) {
+            if (this.dynamicSpawnNotifyEventTypes.has(event.type)) {
                 let prefix = '';
                 if (event.type === 'ALIEN_RAID' || event.type === 'ALIEN_SCOUT') prefix = '[ALIEN] ';
                 if (event.type === 'PIRATE_SWARM' || event.type === 'BOUNTY_HUNTER_AMBUSH') prefix = '[SKULL] ';
@@ -2230,8 +2345,27 @@ class EventManager {
             if (typeof config.additionalEnemySetup === 'function') {
                 config.additionalEnemySetup(newEnemy, this.player, this.starSystem);
             }
+            this._stabilizeSpawnedEventEnemy(newEnemy, event);
 
             this.starSystem.addEnemy(newEnemy);
+        }
+    }
+
+    _stabilizeSpawnedEventEnemy(enemy, event) {
+        if (!enemy || enemy.immobilized) return;
+
+        const eventType = event?.type || '';
+        if (this.allowIdleStabilizeEventTypes.has(eventType)) return;
+
+        if (this.stabilizeHostileRoles.has(enemy.role) && !enemy.target && this.player) {
+            enemy.target = this.player;
+        }
+
+        if (enemy.currentState !== AI_STATE.IDLE) return;
+        if (this.stabilizeHostileRoles.has(enemy.role)) {
+            enemy.currentState = AI_STATE.APPROACHING;
+        } else if (this.stabilizePatrolRoles.has(enemy.role)) {
+            enemy.currentState = AI_STATE.PATROLLING;
         }
     }
 
@@ -2258,7 +2392,7 @@ class EventManager {
                 if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                     this.uiManager.addEventMarker(`COSMIC_STORM_${frameCount}_${i}`, spawnX, spawnY, label, 'cyan', this._extendDurationMs(180000));
                 }
-                this._notifyEvent(`[STORM] ${this.starSystem?.name || 'Local sector'}: Cosmic storm detected near ${this._formatStationLabel(this._pickRandomStation())}`, 'cyan');
+                this._notifyEvent(`[STORM] ${this.starSystem?.name || 'Local sector'}: Cosmic storm detected near ${this._formatStationLabel(this._pickRandomStation())}`, 'cyan', 4000, event.type);
             } catch (e) { }
         }
     }
@@ -2294,7 +2428,7 @@ class EventManager {
                 }
                 let prefix = '';
                 if (config.cargoType === 'Alien Artifact') prefix = '[ALIEN] ';
-                this._notifyEvent(`${prefix}${this.starSystem?.name || 'Local sector'}: ${config.cargoType || 'Cargo'} cache appears near ${anchorLabel}`, 'gold');
+                this._notifyEvent(`${prefix}${this.starSystem?.name || 'Local sector'}: ${config.cargoType || 'Cargo'} cache appears near ${anchorLabel}`, 'gold', 4000, event.type);
             } catch (e) {
                 // Fallback: if anything goes wrong, still add cargo without marker link
                 try { this.starSystem.addCargo(cargo); } catch (err) { }
@@ -2334,10 +2468,7 @@ class EventManager {
 
         if (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager) {
             // Check if this is one of the new dynamic events
-            // Check if this is one of the new dynamic events
-            const newEvents = ['LOST_SHIPMENT', 'FACTION_SKIRMISH', 'VIP_CONVOY', 'MINING_OPERATION', 'FORCED_CONVERSION', 'HERETIC_HUNT', 'DOOMSDAY_PROPHET', 'ASCENSION_RITUAL', 'ARTIFACT_WORSHIP', 'CLEANSING_FIRE', 'TECH_CRUSADE', 'IMPERIAL_INTERDICTION', 'SEPARATIST_AMBUSH', 'DEFECTOR_ESCORT', 'DIPLOMATIC_STANDOFF', 'PROTOTYPE_HEIST', 'HARLEQUIN_PARADE', 'JESTERS_TRAP', 'COLOR_WAR', 'MAD_BOMBER', 'CARNIVAL_DROP', 'PROTOTYPE_TESTING', 'INTERSTELLAR_RALLY', 'ROGUE_SECURITY', 'ALIEN_SCOUT', 'FALSE_IDOLS', 'SIN_EATER', 'MISSIONARY_CONVOY', 'ALIEN_ARTIFACT'];
-
-            if (newEvents.includes(type)) {
+            if (this.dynamicNewsEventTypes.has(type)) {
                 GameGlobals.newsManager.addDynamicEventNews(type, {
                     systemName: this.starSystem?.name,
                     stationName: details.stationName
