@@ -51,14 +51,18 @@ const INPUT_ACTIONS = {
     WEAPON_SLOT_9: 'WEAPON_SLOT_9'
 };
 
-const DEFAULT_BEAM_ANCHOR_PLAYER_SIZE = 60;
-const MIN_BEAM_ANCHOR_DISTANCE = 120;
-
 class InputManager {
     constructor(gamepadManager) {
         this.gamepad = gamepadManager || null;
-        this._beamCursor = { x: 0, y: 0 };
-        this._beamModeActive = false;
+
+        // ── Twin-stick beam aiming state ──
+        // The smoothed aim angle that the beam fires along.
+        // Initialized to null so it seeds from the ship angle on first use.
+        this._beamAimAngle = null;
+        // Whether the gamepad is actively aiming the beam (right stick deflected while firing)
+        this._beamGamepadAiming = false;
+        // Visual reticle screen position (for HUD drawing)
+        this._beamReticle = { x: 0, y: 0, active: false, alpha: 0 };
         this._keyboardMap = this._buildKeyboardMap();
         this._gamepadMap = this._buildGamepadMap();
     }
@@ -121,9 +125,8 @@ class InputManager {
                 KeyR: INPUT_ACTIONS.ACTIVATE_BURST,
                 ...weaponSlotBindings
             },
-            [INPUT_CONTEXTS.BEAM_TARGETING]: {
-                Space: INPUT_ACTIONS.FIRE_PRIMARY
-            },
+            // BEAM_TARGETING keyboard context removed — beam now aims via mouse position
+            // in all contexts. Space fires the beam in the normal IN_FLIGHT context.
             [INPUT_CONTEXTS.SURFACE_SHIP]: {
                 Space: INPUT_ACTIONS.FIRE_PRIMARY,
                 KeyI: INPUT_ACTIONS.TOGGLE_INVENTORY,
@@ -251,9 +254,8 @@ class InputManager {
                 includeSecretNav,
                 includeMinimapZoom: includeFlightMinimapZoom
             }),
-            [INPUT_CONTEXTS.BEAM_TARGETING]: {
-                [INPUT_ACTIONS.FIRE_PRIMARY]: ['a', 'r1']
-            },
+            // BEAM_TARGETING gamepad context removed — twin-stick aiming uses
+            // the right stick direction directly while holding fire in IN_FLIGHT.
             [INPUT_CONTEXTS.SURFACE_SHIP]: buildSurfaceShipContext({
                 firePrimary: surfaceShipFirePrimary,
                 missionToggle: includeSurfaceMissionToggle ? missionToggle : null,
@@ -322,7 +324,7 @@ class InputManager {
         return 'D';
     }
 
-    resolveContext({ gameState, showingMissionOverlay, showingInventory, isSurfaceShipControl, isSurfaceAstronautControl, beamWeaponActive, beamTargetingRequested }) {
+    resolveContext({ gameState, showingMissionOverlay, showingInventory, isSurfaceShipControl, isSurfaceAstronautControl }) {
         if (showingMissionOverlay && (gameState === 'IN_FLIGHT' || gameState === 'SURFACE_MODE')) return INPUT_CONTEXTS.MISSION_OVERLAY;
         if (showingInventory && (gameState === 'IN_FLIGHT' || gameState === 'SURFACE_MODE')) return INPUT_CONTEXTS.INVENTORY;
 
@@ -334,9 +336,7 @@ class InputManager {
         if (typeof STATION_STATES !== 'undefined' && STATION_STATES.includes(gameState)) return INPUT_CONTEXTS.STATION_MENU;
         if (isSurfaceAstronautControl) return INPUT_CONTEXTS.SURFACE_ASTRONAUT;
 
-        const shipContext = isSurfaceShipControl ? INPUT_CONTEXTS.SURFACE_SHIP : INPUT_CONTEXTS.IN_FLIGHT;
-        if (beamWeaponActive && beamTargetingRequested) return INPUT_CONTEXTS.BEAM_TARGETING;
-        return shipContext;
+        return isSurfaceShipControl ? INPUT_CONTEXTS.SURFACE_SHIP : INPUT_CONTEXTS.IN_FLIGHT;
     }
 
     getKeyboardAction(keyValue, keyCodeValue, context) {
@@ -365,50 +365,134 @@ class InputManager {
         return inputs.some(i => this._isMappedGamepadInputActive(i, false));
     }
 
-    getGamepadShipControls(context) {
+    getGamepadShipControls() {
         const s = this.gamepad?.state;
-        const beamTargeting = context === INPUT_CONTEXTS.BEAM_TARGETING;
         return {
             strafeX: s?.ls?.x || 0,
             thrustY: s?.ls?.y || 0,
-            rotateX: beamTargeting ? 0 : (s?.rs?.x || 0),
-            rotateY: beamTargeting ? 0 : (s?.rs?.y || 0),
-            forwardThrottle: s?.r2 || 0,
-            beamAimX: beamTargeting ? (s?.rs?.x || 0) : 0,
-            beamAimY: beamTargeting ? (s?.rs?.y || 0) : 0
+            rotateX: s?.rs?.x || 0,
+            rotateY: s?.rs?.y || 0,
+            forwardThrottle: s?.r2 || 0
         };
     }
 
-    updateBeamTargetCursor(context, playerRef = null) {
-        if (context !== INPUT_CONTEXTS.BEAM_TARGETING || !this.gamepad?.state) {
-            this._beamModeActive = false;
+    // ── Twin-stick beam aiming ────────────────────────────────────────────────
+
+    /**
+     * Update the beam aim angle from the right stick.
+     * Call every frame while in a ship-control context.
+     *
+     * Design:
+     * - The right stick always steers the ship (unchanged).
+     * - When the player holds fire with a beam weapon, the right stick's angle
+     *   is ALSO used as the beam's aim direction.
+     * - If the stick is near center while firing, the beam fires along the
+     *   ship's facing angle.
+     * - An exponential ease smooths rapid aim changes for a premium feel.
+     * - A visible reticle is projected at the aim point for visual feedback.
+     *
+     * @param {boolean} isFiringBeam - true when fire is held and current weapon is beam
+     * @param {Object}  playerRef    - the player object (for angle & position)
+     * @param {number}  dt           - deltaTime in ms
+     */
+    updateBeamAim(isFiringBeam, playerRef, dt = 16.67) {
+        const s = this.gamepad?.state;
+        const rsX = s?.rs?.x || 0;
+        const rsY = s?.rs?.y || 0;
+        const rsMag = Math.sqrt(rsX * rsX + rsY * rsY);
+        const stickActive = rsMag > 0.15;
+        const playerAngle = typeof playerRef?.angle === 'number' ? playerRef.angle : 0;
+
+        if (!isFiringBeam || !s) {
+            // Not firing beam — reset tracking so it re-seeds cleanly next time
+            this._beamAimAngle = null;
+            this._beamGamepadAiming = false;
+            // Fade reticle out
+            this._beamReticle.active = false;
+            this._beamReticle.alpha = Math.max(0, (this._beamReticle.alpha || 0) - dt * 0.008);
             return;
         }
 
-        if (!this._beamModeActive) {
-            this._beamModeActive = true;
-            const playerSize = typeof playerRef?.size === 'number' ? playerRef.size : DEFAULT_BEAM_ANCHOR_PLAYER_SIZE;
-            const anchorDistance = Math.max(MIN_BEAM_ANCHOR_DISTANCE, playerSize * 2);
-            const anchorAngle = typeof playerRef?.angle === 'number' ? playerRef.angle : 0;
-            this._beamCursor.x = constrain(width * 0.5 + Math.cos(anchorAngle) * anchorDistance, 0, width);
-            this._beamCursor.y = constrain(height * 0.5 + Math.sin(anchorAngle) * anchorDistance, 0, height);
+        // ── Determine raw target angle ──
+        let targetAngle;
+        if (stickActive) {
+            // Stick is deflected: use stick direction as aim
+            targetAngle = Math.atan2(rsY, rsX);
+            this._beamGamepadAiming = true;
+        } else {
+            // Stick centered while firing: aim along ship facing
+            targetAngle = playerAngle;
+            this._beamGamepadAiming = true;
         }
 
-        const shipControls = this.getGamepadShipControls(context);
-        const speed = 14;
-        const mx = shipControls.beamAimX * speed;
-        const my = shipControls.beamAimY * speed;
-        this._beamCursor.x = constrain(this._beamCursor.x + mx, 0, width);
-        this._beamCursor.y = constrain(this._beamCursor.y + my, 0, height);
+        // ── Seed the smoothed angle on first frame ──
+        if (this._beamAimAngle === null) {
+            this._beamAimAngle = stickActive ? targetAngle : playerAngle;
+        }
+
+        // ── Smooth angular interpolation ──
+        // Exponential ease (60fps-normalised) gives a ~4-frame lag at 60fps.
+        // Higher stick deflection = snappier response, giving fine aim at
+        // small deflections and fast sweeps at full tilt.
+        const baseLerpSpeed = 0.18;
+        const magnitudeBoost = stickActive ? (0.5 + rsMag * 0.5) : 0.4;
+        const lerpFactor = 1 - Math.pow(1 - baseLerpSpeed * magnitudeBoost, dt / 16.67);
+
+        // Shortest-arc angular error
+        let err = targetAngle - this._beamAimAngle;
+        while (err > Math.PI) err -= 2 * Math.PI;
+        while (err < -Math.PI) err += 2 * Math.PI;
+
+        this._beamAimAngle += err * lerpFactor;
+
+        // Normalise to [0, 2PI)
+        const TWO_PI_VAL = Math.PI * 2;
+        this._beamAimAngle = ((this._beamAimAngle % TWO_PI_VAL) + TWO_PI_VAL) % TWO_PI_VAL;
+
+        // ── Update reticle screen position ──
+        const reticleDistance = 200; // pixels from screen centre
+        const cx = (typeof width !== 'undefined' ? width : 800) * 0.5;
+        const cy = (typeof height !== 'undefined' ? height : 600) * 0.5;
+        this._beamReticle.x = cx + Math.cos(this._beamAimAngle) * reticleDistance;
+        this._beamReticle.y = cy + Math.sin(this._beamAimAngle) * reticleDistance;
+        this._beamReticle.active = true;
+        this._beamReticle.alpha = Math.min(1, (this._beamReticle.alpha || 0) + dt * 0.012);
     }
 
+    /**
+     * Returns the beam aim angle for gamepad, or null if gamepad isn't aiming.
+     * When non-null, player.fireWeapon() should use this angle instead of the mouse.
+     */
+    getBeamAimAngle() {
+        if (!this._beamGamepadAiming || this._beamAimAngle === null) return null;
+        return this._beamAimAngle;
+    }
+
+    /**
+     * Returns reticle draw info for the HUD to render.
+     * @returns {{ x: number, y: number, active: boolean, alpha: number }}
+     */
+    getBeamReticle() {
+        return this._beamReticle;
+    }
+
+    /** @deprecated — kept for backward compat; now always returns false */
     isBeamTargetingActive() {
-        return this._beamModeActive;
+        return this._beamGamepadAiming;
     }
 
+    /** @deprecated — replaced by getBeamAimAngle() */
     getBeamTargetScreenPoint() {
-        if (!this._beamModeActive) return null;
-        return { x: this._beamCursor.x, y: this._beamCursor.y };
+        // Legacy callers: if the gamepad is aiming, synthesise a screen point from the angle
+        if (this._beamGamepadAiming && this._beamAimAngle !== null) {
+            const cx = (typeof width !== 'undefined' ? width : 800) * 0.5;
+            const cy = (typeof height !== 'undefined' ? height : 600) * 0.5;
+            return {
+                x: cx + Math.cos(this._beamAimAngle) * 300,
+                y: cy + Math.sin(this._beamAimAngle) * 300
+            };
+        }
+        return null;
     }
 
     describeBindings(context) {

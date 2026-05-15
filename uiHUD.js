@@ -499,6 +499,7 @@ class UIHUD {
         if (gameStateManager?.currentState !== "GALAXY_MAP") {
             this.drawTargetOverlay(player);
             this.drawTargetReticle(player);
+            this.drawBeamReticle(player);
         }
     }
 
@@ -1942,6 +1943,66 @@ class UIHUD {
         line(offset, offset, offset - bracketSize, offset);
         line(offset, offset, offset, offset - bracketSize);
 
+        pop();
+    }
+
+    /**
+     * Draws a reticle at the gamepad's twin-stick beam aim point
+     * @param {Player} player - The player object
+     */
+    drawBeamReticle(player) {
+        if (!player || player.destroyed) return;
+        
+        const inputMgr = globalThis._inputManager || globalThis.window?._inputManager;
+        if (!inputMgr) return;
+        
+        const reticle = inputMgr.getBeamReticle?.();
+        if (!reticle || reticle.alpha <= 0) return;
+
+        // Only draw if current weapon is actually a beam (prevents ghost reticle on switch)
+        if (player.currentWeapon?.type !== WEAPON_TYPE.BEAM) return;
+
+        push();
+        translate(reticle.x, reticle.y);
+        
+        // Use the beam's color for the reticle
+        const colorArr = player.currentWeapon.color || [255, 100, 100];
+        const r = colorArr[0], g = colorArr[1], b = colorArr[2];
+        
+        // Slow rotation for the reticle
+        rotate(millis() * 0.002);
+        
+        const alpha = reticle.alpha * 255;
+        
+        // Glow
+        if (typeof drawingContext !== 'undefined') {
+            drawingContext.shadowBlur = 10;
+            drawingContext.shadowColor = `rgba(${r},${g},${b},${reticle.alpha * 0.8})`;
+        }
+        
+        // Draw diamond cross
+        stroke(r, g, b, alpha);
+        strokeWeight(2);
+        noFill();
+        
+        const size = 12;
+        line(-size, 0, -size/3, 0);
+        line(size/3, 0, size, 0);
+        line(0, -size, 0, -size/3);
+        line(0, size/3, 0, size);
+        
+        // Center dot
+        strokeWeight(3);
+        point(0, 0);
+        
+        // Outer brackets
+        stroke(255, 255, 255, alpha * 0.7);
+        strokeWeight(1);
+        const dist = size * 1.5 + sin(millis() * 0.008) * 3;
+        
+        arc(0, 0, dist*2, dist*2, -PI/6, PI/6);
+        arc(0, 0, dist*2, dist*2, PI - PI/6, PI + PI/6);
+        
         pop();
     }
 }

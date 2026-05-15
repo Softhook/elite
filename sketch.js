@@ -388,20 +388,12 @@ function getActiveInputContext() {
     const state = gameStateManager.currentState;
     const isSurfaceShipControl = state === 'SURFACE_MODE' && surfaceMode?.controlMode === 'SHIP';
     const isSurfaceAstronautControl = state === 'SURFACE_MODE' && surfaceMode?.controlMode === 'ASTRONAUT';
-    const beamWeaponActive = !!(player?.currentWeapon?.type === WEAPON_TYPE.BEAM);
-    const shipContext = isSurfaceShipControl ? INPUT_CONTEXTS.SURFACE_SHIP : INPUT_CONTEXTS.IN_FLIGHT;
-    const beamTargetingRequested = !!(
-        inputManager.isGamepadActionHeld(INPUT_ACTIONS.FIRE_PRIMARY, shipContext) ||
-        keyIsDown(32)
-    );
     return inputManager.resolveContext({
         gameState: state,
         showingMissionOverlay: !!gameStateManager.showingMissionOverlay,
         showingInventory: !!gameStateManager.showingInventory,
         isSurfaceShipControl,
-        isSurfaceAstronautControl,
-        beamWeaponActive,
-        beamTargetingRequested
+        isSurfaceAstronautControl
     });
 }
 
@@ -598,10 +590,19 @@ function dispatchStationMenuKeyboardAction(action) {
  */
 function handleContinuousFiring() {
     const context = getActiveInputContext();
-    inputManager?.updateBeamTargetCursor(context, player);
     const gpFiring = !!(inputManager && context && inputManager.isGamepadActionHeld(INPUT_ACTIONS.FIRE_PRIMARY, context));
+    const isFiring = isShipControlState() && !player.destroyed && (keyIsDown(32) || gpFiring);
 
-    if (isShipControlState() && !player.destroyed && (keyIsDown(32) || gpFiring)) {
+    // ── Twin-stick beam aiming update ──
+    // Runs every frame to maintain smooth aim tracking and reticle fade.
+    // Only activates the aim angle when actually firing a beam weapon.
+    const hasBeam = !!(player?.currentWeapon?.type === WEAPON_TYPE.BEAM);
+    const gpConnected = !!(window._gamepadManager?.connected);
+    if (inputManager && gpConnected) {
+        inputManager.updateBeamAim(isFiring && hasBeam && gpFiring, player, deltaTime || 16.67);
+    }
+
+    if (isFiring) {
         player.handleFireInput();
     }
 }
@@ -715,8 +716,7 @@ function handleGamepadContinuousInput() {
     // exactly when control input becomes active — no earlier, no later.
     const rsMag = Math.sqrt(rsX * rsX + rsY * rsY);
     const lsMag = Math.sqrt(lsX * lsX + lsY * lsY);
-    const hasGamepadInput = rsMag > 0.08 || lsMag > 0.05 || r2Val > 0.08 ||
-                           Math.abs(shipControls.beamAimX) > 0.1 || Math.abs(shipControls.beamAimY) > 0.1;
+    const hasGamepadInput = rsMag > 0.08 || lsMag > 0.05 || r2Val > 0.08;
 
     // Disable autopilot on gamepad input
     if (player.autopilotEnabled && hasGamepadInput) {
