@@ -54,7 +54,7 @@ const STARFIELD_CONFIG = {
         {
             // Layer 2 – deep nebula cloud puffs; still subtle but above base speed.
             type: 'nebula',
-            parallax: 1.05,
+            parallax: 1.04,
             cellSize: 950,
             chance: 0.32,
             maxPerCell: 1,
@@ -70,7 +70,7 @@ const STARFIELD_CONFIG = {
             // Layer 3 – mid-field stars. Slightly larger, warmer hues; provides separation
             // from the deep star layer and the near-field layers.
             type: 'star',
-            parallax: 1.10,
+            parallax: 1.05,
             cellSize: 320,
             chance: 0.55,
             maxPerCell: 1,
@@ -83,7 +83,7 @@ const STARFIELD_CONFIG = {
         {
             // Layer 4 – near-field dust: cold micro-motes at mid-high parallax.
             type: 'dust',
-            parallax: 1.18,
+            parallax: 1.08,
             cellSize: 160,
             chance: 0.58,
             maxPerCell: 1,
@@ -96,7 +96,7 @@ const STARFIELD_CONFIG = {
             // Layer 5 – visible foreground specks with patchy dense/sparse pockets.
             // Bright + tiny + non-glowing, with stronger parallax for readability.
             type: 'particle',
-            parallax: 1.28,
+            parallax: 1.18,
             cellSize: 120,
             chance: 0.54,
             maxPerCell: 2,
@@ -113,7 +113,7 @@ const STARFIELD_CONFIG = {
         {
             // Layer 6 – sparse micro-specks with occasional denser clusters.
             type: 'particle',
-            parallax: 1.42,
+            parallax: 1.20,
             cellSize: 190,
             chance: 0.24,
             maxPerCell: 1,
