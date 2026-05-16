@@ -2239,8 +2239,9 @@ class GameStateManager {
      * Delegate to saveLoadSystem.js so all callers use the current multi-slot format.
      */
     saveGame() {
-        if (typeof saveGame === 'function') {
-            saveGame();
+        const globalSaveGame = (typeof globalThis !== 'undefined') ? globalThis.saveGame : undefined;
+        if (typeof globalSaveGame === 'function') {
+            globalSaveGame();
             return true;
         }
         return false;
@@ -2251,8 +2252,9 @@ class GameStateManager {
      * Delegate to saveLoadSystem.js so all callers use the current multi-slot format.
      */
     loadGame(slotIndex = (typeof window !== 'undefined' ? window.activeSaveSlotIndex : 0)) {
-        if (typeof loadGame === 'function') {
-            return !!loadGame(slotIndex);
+        const globalLoadGame = (typeof globalThis !== 'undefined') ? globalThis.loadGame : undefined;
+        if (typeof globalLoadGame === 'function') {
+            return !!globalLoadGame(slotIndex);
         }
         return false;
     }
