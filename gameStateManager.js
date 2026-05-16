@@ -2234,25 +2234,27 @@ class GameStateManager {
         this.currentStationMissions = []; return false;
     } // End fetchStationMissions
 
-    /** Saves the current game state to local storage. */
+    /**
+     * Legacy compatibility shim.
+     * Delegate to saveLoadSystem.js so all callers use the current multi-slot format.
+     */
     saveGame() {
-        const saveData = {
-            player: player.getSaveData(),
-            galaxy: galaxy.getSaveData(),
-            // ...other data as needed...
-        };
-        localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+        if (typeof saveGame === 'function') {
+            saveGame();
+            return true;
+        }
+        return false;
     }
 
-    /** Loads the game state from local storage. */
-    loadGame() {
-        const saveStr = localStorage.getItem(SAVE_KEY);
-        if (!saveStr) return false;
-        const saveData = JSON.parse(saveStr);
-        if (saveData.player) player.loadSaveData(saveData.player);
-        if (saveData.galaxy) galaxy.loadSaveData(saveData.galaxy);
-        // ...other data as needed...
-        return true;
+    /**
+     * Legacy compatibility shim.
+     * Delegate to saveLoadSystem.js so all callers use the current multi-slot format.
+     */
+    loadGame(slotIndex = (typeof window !== 'undefined' ? window.activeSaveSlotIndex : 0)) {
+        if (typeof loadGame === 'function') {
+            return !!loadGame(slotIndex);
+        }
+        return false;
     }
 
     // Add a method to toggle the inventory screen

@@ -301,3 +301,70 @@ describe('GameStateManager Save Selection Transition', () => {
         expect(global.saveSelectionScreen.resetActionSelection).toHaveBeenCalled();
     });
 });
+
+describe('GameStateManager save/load compatibility shims', () => {
+    let gameStateManager;
+
+    beforeEach(() => {
+        global.galaxy = {
+            systems: [],
+            getCurrentSystem: jest.fn(() => null),
+            getSystemByIndex: jest.fn(),
+            jumpToSystem: jest.fn(),
+            teleportToRandomSystem: jest.fn(),
+            currentSystemIndex: 0
+        };
+        global.player = {
+            pos: { x: 0, y: 0 },
+            vel: { mult: jest.fn(), set: jest.fn() },
+            currentSystem: null
+        };
+        global.uiManager = { addMessage: jest.fn(), clearEventMarkers: jest.fn() };
+        global.soundManager = { playSound: jest.fn() };
+        global.deltaTime = 16;
+        global.millis = jest.fn(() => 1000);
+        global.width = 1000;
+        global.height = 800;
+        global.STATION_TEXT_SIZE = { BODY: 12 };
+        global.GS_LOG = jest.fn();
+        global.MISSION_LOG = jest.fn();
+        global.window = { activeSaveSlotIndex: 2 };
+        gameStateManager = new GameStateManager();
+    });
+
+    afterEach(() => {
+        delete global.galaxy;
+        delete global.player;
+        delete global.uiManager;
+        delete global.soundManager;
+        delete global.window;
+        delete global.saveGame;
+        delete global.loadGame;
+    });
+
+    test('saveGame delegates to global saveGame implementation', () => {
+        global.saveGame = jest.fn();
+
+        const result = gameStateManager.saveGame();
+
+        expect(result).toBe(true);
+        expect(global.saveGame).toHaveBeenCalledTimes(1);
+    });
+
+    test('loadGame delegates to global loadGame implementation using active slot by default', () => {
+        global.loadGame = jest.fn(() => true);
+
+        const result = gameStateManager.loadGame();
+
+        expect(result).toBe(true);
+        expect(global.loadGame).toHaveBeenCalledWith(2);
+    });
+
+    test('loadGame forwards explicit slot index', () => {
+        global.loadGame = jest.fn(() => true);
+
+        gameStateManager.loadGame(1);
+
+        expect(global.loadGame).toHaveBeenCalledWith(1);
+    });
+});
