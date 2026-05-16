@@ -351,6 +351,15 @@ describe('GameStateManager save/load compatibility shims', () => {
         expect(global.saveGame).toHaveBeenCalledTimes(1);
     });
 
+    test('saveGame forwards explicit slot index through activeSaveSlotIndex', () => {
+        global.saveGame = jest.fn();
+
+        gameStateManager.saveGame(1);
+
+        expect(global.window.activeSaveSlotIndex).toBe(1);
+        expect(global.saveGame).toHaveBeenCalledTimes(1);
+    });
+
     test('loadGame delegates to global loadGame implementation using active slot by default', () => {
         global.loadGame = jest.fn(() => true);
 

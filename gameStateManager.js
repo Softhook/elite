@@ -2238,9 +2238,10 @@ class GameStateManager {
      * Legacy compatibility shim.
      * Delegate to saveLoadSystem.js so all callers use the current multi-slot format.
      */
-    saveGame() {
+    saveGame(slotIndex = globalThis.window.activeSaveSlotIndex) {
         const globalSaveGame = globalThis.saveGame;
         if (typeof globalSaveGame === 'function') {
+            globalThis.window.activeSaveSlotIndex = slotIndex;
             globalSaveGame();
             return true;
         }
@@ -2251,7 +2252,7 @@ class GameStateManager {
      * Legacy compatibility shim.
      * Delegate to saveLoadSystem.js so all callers use the current multi-slot format.
      */
-    loadGame(slotIndex = window.activeSaveSlotIndex) {
+    loadGame(slotIndex = globalThis.window.activeSaveSlotIndex) {
         const globalLoadGame = globalThis.loadGame;
         if (typeof globalLoadGame === 'function') {
             return !!globalLoadGame(slotIndex);
