@@ -6784,9 +6784,9 @@ class StarSystem {
                     return createVector(safeX, safeY);
                 }
 
-                return {
-                    x: safeX,
-                    y: safeY,
+                const createFallbackVector = (xValue, yValue) => ({
+                    x: xValue,
+                    y: yValue,
                     add(other) {
                         this.x += Number(other?.x) || 0;
                         this.y += Number(other?.y) || 0;
@@ -6807,9 +6807,11 @@ class StarSystem {
                         return this;
                     },
                     copy() {
-                        return makeVector({ x: this.x, y: this.y });
+                        return createFallbackVector(this.x, this.y);
                     }
-                };
+                });
+
+                return createFallbackVector(safeX, safeY);
             };
 
             const idMap = new Map();
