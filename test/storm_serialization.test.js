@@ -127,4 +127,17 @@ describe('CosmicStorm Serialization', () => {
         const restoredEnemy = restoredSystem.enemies.find(e => e.id === enemy.id);
         expect(restoredStorm.attachedTo).toBe(restoredEnemy);
     });
+
+    test('should rehydrate asteroid and cargo vectors from legacy string coordinates', () => {
+        const json = system.toJSON();
+        json.asteroids = [{ pos: { x: '120', y: '-45' }, vel: { x: '1.5', y: '0' } }];
+        json.cargo = [{ pos: { x: '10', y: '20' }, vel: { x: '0', y: '0' }, type: 'Food', quantity: 1 }];
+
+        const restoredSystem = StarSystem.fromJSON(json);
+
+        expect(typeof restoredSystem.asteroids[0].pos.add).toBe('function');
+        expect(typeof restoredSystem.cargo[0].pos.add).toBe('function');
+        expect(restoredSystem.asteroids[0].pos.x).toBe(120);
+        expect(restoredSystem.cargo[0].pos.y).toBe(20);
+    });
 });

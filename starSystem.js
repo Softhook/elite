@@ -6768,7 +6768,43 @@ class StarSystem {
         sys._postLoadRelink = function () {
             const makeVector = (v) => {
                 if (!v) return null;
-                return (typeof createVector === 'function' && v && typeof v.x === 'number') ? createVector(v.x, v.y) : { x: (v.x || 0), y: (v.y || 0) };
+                if (typeof v.add === 'function' && typeof v.copy === 'function') return v;
+
+                const x = Number(v.x);
+                const y = Number(v.y);
+                const safeX = Number.isFinite(x) ? x : 0;
+                const safeY = Number.isFinite(y) ? y : 0;
+
+                if (typeof createVector === 'function') {
+                    return createVector(safeX, safeY);
+                }
+
+                return {
+                    x: safeX,
+                    y: safeY,
+                    add(other) {
+                        this.x += Number(other?.x) || 0;
+                        this.y += Number(other?.y) || 0;
+                        return this;
+                    },
+                    mult(scalar) {
+                        const s = Number(scalar);
+                        const safeScalar = Number.isFinite(s) ? s : 1;
+                        this.x *= safeScalar;
+                        this.y *= safeScalar;
+                        return this;
+                    },
+                    set(nx, ny) {
+                        const nextX = Number(nx);
+                        const nextY = Number(ny);
+                        this.x = Number.isFinite(nextX) ? nextX : this.x;
+                        this.y = Number.isFinite(nextY) ? nextY : this.y;
+                        return this;
+                    },
+                    copy() {
+                        return makeVector({ x: this.x, y: this.y });
+                    }
+                };
             };
 
             const idMap = new Map();
