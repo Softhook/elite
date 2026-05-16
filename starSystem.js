@@ -6768,7 +6768,12 @@ class StarSystem {
         sys._postLoadRelink = function () {
             const makeVector = (v) => {
                 if (!v) return null;
-                if (typeof v.add === 'function' && typeof v.copy === 'function') return v;
+                if (
+                    typeof v.add === 'function' &&
+                    typeof v.copy === 'function' &&
+                    typeof v.mult === 'function' &&
+                    typeof v.set === 'function'
+                ) return v;
 
                 const x = Number(v.x);
                 const y = Number(v.y);
