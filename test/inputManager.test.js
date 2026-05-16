@@ -111,23 +111,6 @@ describe('InputManager', () => {
         expect(input.isGamepadActionPressed(exported.INPUT_ACTIONS.BACK, exported.INPUT_CONTEXTS.SAVE_SELECTION)).toBe(true);
     });
 
-    test('anchors beam targeting forward from the ship and swivels with the right stick', () => {
-        gp._state = { mode: 'D-MODE', ls: { x: 0.25, y: -0.75 }, rs: { x: 0.5, y: -0.5 }, r2: 0.8, l2: 0 };
-        input.updateBeamTargetCursor(exported.INPUT_CONTEXTS.BEAM_TARGETING, { angle: 0, size: 40 });
-        const target = input.getBeamTargetScreenPoint();
-        expect(target).not.toBeNull();
-        expect(target.x).toBeGreaterThan(width / 2);
-        expect(target.y).toBeLessThan(height / 2);
-
-        const shipControls = input.getGamepadShipControls(exported.INPUT_CONTEXTS.BEAM_TARGETING);
-        expect(shipControls.strafeX).toBeCloseTo(0.25);
-        expect(shipControls.thrustY).toBeCloseTo(-0.75);
-        expect(shipControls.forwardThrottle).toBeCloseTo(0.8);
-        expect(shipControls.rotateX).toBe(0);
-        expect(shipControls.beamAimX).toBeCloseTo(0.5);
-        expect(shipControls.beamAimY).toBeCloseTo(-0.5);
-    });
-
     test('supports contextual surface altitude actions in S and D gamepad modes', () => {
         gp._state = { mode: 'D-MODE', dpad: { up: true }, l1: false };
         expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.ALTITUDE_UP, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(true);

@@ -9,8 +9,7 @@ const INPUT_CONTEXTS = {
     INVENTORY: 'INVENTORY',
     IN_FLIGHT: 'IN_FLIGHT',
     SURFACE_SHIP: 'SURFACE_SHIP',
-    SURFACE_ASTRONAUT: 'SURFACE_ASTRONAUT',
-    BEAM_TARGETING: 'BEAM_TARGETING'
+    SURFACE_ASTRONAUT: 'SURFACE_ASTRONAUT'
 };
 
 const INPUT_ACTIONS = {
@@ -474,25 +473,6 @@ class InputManager {
      */
     getBeamReticle() {
         return this._beamReticle;
-    }
-
-    /** @deprecated — kept for backward compat; now always returns false */
-    isBeamTargetingActive() {
-        return this._beamGamepadAiming;
-    }
-
-    /** @deprecated — replaced by getBeamAimAngle() */
-    getBeamTargetScreenPoint() {
-        // Legacy callers: if the gamepad is aiming, synthesise a screen point from the angle
-        if (this._beamGamepadAiming && this._beamAimAngle !== null) {
-            const cx = (typeof width !== 'undefined' ? width : 800) * 0.5;
-            const cy = (typeof height !== 'undefined' ? height : 600) * 0.5;
-            return {
-                x: cx + Math.cos(this._beamAimAngle) * 300,
-                y: cy + Math.sin(this._beamAimAngle) * 300
-            };
-        }
-        return null;
     }
 
     describeBindings(context) {
