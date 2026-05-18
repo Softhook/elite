@@ -1,7 +1,7 @@
 // ****** scriptDependencyGuard.js ******
 // Generic startup dependency validation helpers for script-order/global dependency checks.
 
-function isNameDefined(name, scope, lexicalNameResolver) {
+function isDependencyDefined(name, scope, lexicalNameResolver) {
     if (typeof scope[name] !== 'undefined') {
         return true;
     }
@@ -18,7 +18,7 @@ function isNameDefined(name, scope, lexicalNameResolver) {
 }
 
 function getMissingGlobals(requiredGlobals = [], scope = globalThis, lexicalNameResolver) {
-    return requiredGlobals.filter((name) => !isNameDefined(name, scope, lexicalNameResolver));
+    return requiredGlobals.filter((name) => !isDependencyDefined(name, scope, lexicalNameResolver));
 }
 
 function validateRequiredGlobals(requiredGlobals = [], scope = globalThis, contextName = 'setup', lexicalNameResolver) {

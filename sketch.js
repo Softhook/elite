@@ -127,7 +127,7 @@ function resolveSetupDependencyName(name) {
     }
 
     try {
-        return eval(`typeof ${name} !== "undefined"`);
+        return Function(`return typeof ${name} !== "undefined";`)();
     } catch (_) {
         return false;
     }
