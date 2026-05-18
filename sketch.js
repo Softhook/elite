@@ -121,14 +121,34 @@ function runSetupInitializationPhases() {
     ], globalThis, resolveSetupDependencyName);
 }
 
+const setupLexicalDependencyCheckers = Object.freeze({
+    SoundManager: () => typeof SoundManager !== 'undefined',
+    AmbientSoundManager: () => typeof AmbientSoundManager !== 'undefined',
+    StationMusicManager: () => typeof StationMusicManager !== 'undefined',
+    SpaceMusicManager: () => typeof SpaceMusicManager !== 'undefined',
+    EventManager: () => typeof EventManager !== 'undefined',
+    WeaponSystem: () => typeof WeaponSystem !== 'undefined',
+    ObjectPool: () => typeof ObjectPool !== 'undefined',
+    SHIP_DEFINITIONS: () => typeof SHIP_DEFINITIONS !== 'undefined',
+    GameStateManager: () => typeof GameStateManager !== 'undefined',
+    Galaxy: () => typeof Galaxy !== 'undefined',
+    Player: () => typeof Player !== 'undefined',
+    UIManager: () => typeof UIManager !== 'undefined',
+    TitleScreen: () => typeof TitleScreen !== 'undefined',
+    InventoryScreen: () => typeof InventoryScreen !== 'undefined',
+    MissionOverlay: () => typeof MissionOverlay !== 'undefined',
+    SaveSelectionScreen: () => typeof SaveSelectionScreen !== 'undefined',
+    CommunicationSystem: () => typeof CommunicationSystem !== 'undefined',
+    NewsManager: () => typeof NewsManager !== 'undefined'
+});
+
 function resolveSetupDependencyName(name) {
-    // Regex validation is the security boundary for the dynamic identifier probe below.
-    if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name)) {
+    const checker = setupLexicalDependencyCheckers[name];
+    if (typeof checker !== 'function') {
         return false;
     }
-
     try {
-        return Function(`return typeof ${name} !== "undefined";`)();
+        return checker();
     } catch (_) {
         return false;
     }
