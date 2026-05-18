@@ -63,19 +63,94 @@ function preload() {
 // --- p5.js Setup Function ---
 function setup() {
     try {
-        initializeCanvas();
-        initializeManagers();
-        initializeWeaponSystem();
-        validateShipDefinitions();
-        initializeGameObjects();
-        configurePlayerShip();
-        setInitialGameState();
-        setupAudioGestures();
-        initializeGamepad();
+        runSetupInitializationPhases();
 
         UI_LOG("--- Setup Complete ---");
     } catch (error) {
         handleCriticalSetupError(error);
+    }
+}
+
+/**
+ * Run setup phases with explicit per-phase dependency validation.
+ */
+function runSetupInitializationPhases() {
+    if (typeof ScriptDependencyGuard === 'undefined') {
+        throw new Error(
+            'FATAL ERROR: scriptDependencyGuard.js must load before sketch.js. ' +
+            'Add <script src="scriptDependencyGuard.js"></script> before sketch.js in index.htm.'
+        );
+    }
+
+    ScriptDependencyGuard.runInitializationPhases([
+        {
+            name: 'initializeCanvas',
+            requiredGlobals: [
+                'displayDensity', 'pixelDensity', 'createCanvas', 'angleMode', 'textAlign', 'textSize', 'frameRate',
+                'RADIANS', 'CENTER', 'UI_LOG', 'STATION_TEXT_SIZE'
+            ],
+            run: initializeCanvas
+        },
+        {
+            name: 'initializeManagers',
+            requiredGlobals: ['SoundManager', 'AmbientSoundManager', 'StationMusicManager', 'SpaceMusicManager', 'EventManager'],
+            run: initializeManagers
+        },
+        {
+            name: 'initializeWeaponSystem',
+            requiredGlobals: ['WeaponSystem', 'ObjectPool'],
+            run: initializeWeaponSystem
+        },
+        {
+            name: 'validateShipDefinitions',
+            requiredGlobals: ['SHIP_DEFINITIONS'],
+            run: validateShipDefinitions
+        },
+        {
+            name: 'initializeGameObjects',
+            requiredGlobals: [
+                'GameStateManager', 'Galaxy', 'Player', 'UIManager', 'TitleScreen', 'InventoryScreen',
+                'MissionOverlay', 'SaveSelectionScreen', 'CommunicationSystem', 'NewsManager'
+            ],
+            run: initializeGameObjects
+        },
+        { name: 'configurePlayerShip', requiredGlobals: [], run: configurePlayerShip },
+        { name: 'setInitialGameState', requiredGlobals: [], run: setInitialGameState },
+        { name: 'setupAudioGestures', requiredGlobals: [], run: setupAudioGestures },
+        { name: 'initializeGamepad', requiredGlobals: [], run: initializeGamepad }
+    ], globalThis, resolveSetupDependencyName);
+}
+
+const setupLexicalDependencyCheckers = Object.freeze({
+    SoundManager: () => typeof SoundManager !== 'undefined',
+    AmbientSoundManager: () => typeof AmbientSoundManager !== 'undefined',
+    StationMusicManager: () => typeof StationMusicManager !== 'undefined',
+    SpaceMusicManager: () => typeof SpaceMusicManager !== 'undefined',
+    EventManager: () => typeof EventManager !== 'undefined',
+    WeaponSystem: () => typeof WeaponSystem !== 'undefined',
+    ObjectPool: () => typeof ObjectPool !== 'undefined',
+    SHIP_DEFINITIONS: () => typeof SHIP_DEFINITIONS !== 'undefined',
+    GameStateManager: () => typeof GameStateManager !== 'undefined',
+    Galaxy: () => typeof Galaxy !== 'undefined',
+    Player: () => typeof Player !== 'undefined',
+    UIManager: () => typeof UIManager !== 'undefined',
+    TitleScreen: () => typeof TitleScreen !== 'undefined',
+    InventoryScreen: () => typeof InventoryScreen !== 'undefined',
+    MissionOverlay: () => typeof MissionOverlay !== 'undefined',
+    SaveSelectionScreen: () => typeof SaveSelectionScreen !== 'undefined',
+    CommunicationSystem: () => typeof CommunicationSystem !== 'undefined',
+    NewsManager: () => typeof NewsManager !== 'undefined'
+});
+
+function resolveSetupDependencyName(name) {
+    const checker = setupLexicalDependencyCheckers[name];
+    if (typeof checker !== 'function') {
+        return false;
+    }
+    try {
+        return checker();
+    } catch (_) {
+        return false;
     }
 }
 
