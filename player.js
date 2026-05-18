@@ -2943,9 +2943,9 @@ class Player {
         let typeToLoad = data.shipTypeName || "Sidewinder";
         this.applyShipDefinition(typeToLoad);
 
-        // Restore upgrades from the save payload.
-        if (data.installedUpgrades) {
-            this.installedUpgrades = cloneSerializableState(data.installedUpgrades, createDefaultInstalledUpgrades());
+        // Restore upgrades from the save payload when explicitly present.
+        if (data.installedUpgrades !== undefined && data.installedUpgrades !== null) {
+            this.installedUpgrades = cloneSerializableState(data.installedUpgrades);
             // Recalculate stats immediately to apply bonuses (hull, slots, etc.)
             this.recalculateStats();
         }
