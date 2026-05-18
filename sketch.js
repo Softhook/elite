@@ -122,6 +122,7 @@ function runSetupInitializationPhases() {
 }
 
 function resolveSetupDependencyName(name) {
+    // Regex validation is the security boundary for the dynamic identifier probe below.
     if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name)) {
         return false;
     }

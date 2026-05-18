@@ -1,15 +1,16 @@
 // ****** scriptDependencyGuard.js ******
 // Generic startup dependency validation helpers for script-order/global dependency checks.
 
-function isDependencyDefined(name, scope, lexicalNameResolver) {
+function isDependencyDefined(name, scope, lexicalIdentifierChecker) {
     if (typeof scope[name] !== 'undefined') {
         return true;
     }
 
-    if (typeof lexicalNameResolver === 'function') {
+    if (typeof lexicalIdentifierChecker === 'function') {
         try {
-            return Boolean(lexicalNameResolver(name));
+            return Boolean(lexicalIdentifierChecker(name));
         } catch (_) {
+            // A checker may throw for malformed/unresolvable names; treat as missing.
             return false;
         }
     }
@@ -17,12 +18,12 @@ function isDependencyDefined(name, scope, lexicalNameResolver) {
     return false;
 }
 
-function getMissingGlobals(requiredGlobals = [], scope = globalThis, lexicalNameResolver) {
-    return requiredGlobals.filter((name) => !isDependencyDefined(name, scope, lexicalNameResolver));
+function getMissingGlobals(requiredGlobals = [], scope = globalThis, lexicalIdentifierChecker) {
+    return requiredGlobals.filter((name) => !isDependencyDefined(name, scope, lexicalIdentifierChecker));
 }
 
-function validateRequiredGlobals(requiredGlobals = [], scope = globalThis, contextName = 'setup', lexicalNameResolver) {
-    const missingGlobals = getMissingGlobals(requiredGlobals, scope, lexicalNameResolver);
+function validateRequiredGlobals(requiredGlobals = [], scope = globalThis, contextName = 'setup', lexicalIdentifierChecker) {
+    const missingGlobals = getMissingGlobals(requiredGlobals, scope, lexicalIdentifierChecker);
     if (missingGlobals.length > 0) {
         throw new Error(
             `FATAL ERROR: Missing global dependencies required for ${contextName}: ${missingGlobals.join(', ')}. ` +
@@ -32,7 +33,7 @@ function validateRequiredGlobals(requiredGlobals = [], scope = globalThis, conte
     return true;
 }
 
-function runInitializationPhases(phases = [], scope = globalThis, lexicalNameResolver) {
+function runInitializationPhases(phases = [], scope = globalThis, lexicalIdentifierChecker) {
     phases.forEach((phase, index) => {
         const phaseName = phase?.name || `phase[${index}]`;
 
@@ -43,7 +44,7 @@ function runInitializationPhases(phases = [], scope = globalThis, lexicalNameRes
             );
         }
 
-        validateRequiredGlobals(phase.requiredGlobals || [], scope, phaseName, lexicalNameResolver);
+        validateRequiredGlobals(phase.requiredGlobals || [], scope, phaseName, lexicalIdentifierChecker);
         phase.run();
     });
 }
