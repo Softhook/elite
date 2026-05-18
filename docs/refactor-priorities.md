@@ -27,6 +27,7 @@ Ordered by **importance first**, then **ease of fixing**.
 
 - Completed item **#1** by updating Jest setup path resolution in `package.json`.
 - Completed item **#3** by adding `scriptDependencyGuard.js` and running setup-time dependency validation in `sketch.js`.
+- Refined item **#3** from a static global checklist to a **phase-based startup manifest**: dependency requirements now live next to each setup phase in `sketch.js`, while `scriptDependencyGuard.js` remains a generic validator/runner utility.
 
 ## Why item #3 was the next urgent cleanup
 
@@ -34,3 +35,9 @@ Ordered by **importance first**, then **ease of fixing**.
 - **Stability impact:** Failing fast at setup with an explicit missing-global list prevents hard-to-debug partial initialization states.
 - **Cleaner architecture now:** Dependency assumptions are now centralized in one guard module instead of being implicit and scattered.
 - **Risk level:** Low. Normal behavior is unchanged when dependencies are present; only misconfigured load order now errors earlier with clearer diagnostics.
+
+## Professionalization follow-up
+
+- **Why this is less "band-aid":** startup dependencies are declared per setup phase (single source of truth for boot flow), rather than maintained as one detached global list.
+- **More fundamental direction:** this phase manifest can evolve into dependency injection/module boundaries incrementally without changing gameplay flow now.
+- **Practical reliability:** Jest setup path now uses `<rootDir>/test/jest.setup.js` for deterministic default `npm test` resolution.

@@ -63,16 +63,7 @@ function preload() {
 // --- p5.js Setup Function ---
 function setup() {
     try {
-        validateSetupDependencies();
-        initializeCanvas();
-        initializeManagers();
-        initializeWeaponSystem();
-        validateShipDefinitions();
-        initializeGameObjects();
-        configurePlayerShip();
-        setInitialGameState();
-        setupAudioGestures();
-        initializeGamepad();
+        runSetupInitializationPhases();
 
         UI_LOG("--- Setup Complete ---");
     } catch (error) {
@@ -81,16 +72,53 @@ function setup() {
 }
 
 /**
- * Validate critical globals needed by setup to catch script-order issues early.
+ * Run setup phases with explicit per-phase dependency validation.
  */
-function validateSetupDependencies() {
+function runSetupInitializationPhases() {
     if (typeof ScriptDependencyGuard === 'undefined') {
         throw new Error(
             'FATAL ERROR: scriptDependencyGuard.js must load before sketch.js. ' +
             'Add <script src="scriptDependencyGuard.js"></script> before sketch.js in index.htm.'
         );
     }
-    ScriptDependencyGuard.validateRequiredGlobals();
+
+    ScriptDependencyGuard.runInitializationPhases([
+        {
+            name: 'initializeCanvas',
+            requiredGlobals: [
+                'displayDensity', 'pixelDensity', 'createCanvas', 'angleMode', 'textAlign', 'textSize', 'frameRate',
+                'RADIANS', 'CENTER', 'UI_LOG', 'STATION_TEXT_SIZE'
+            ],
+            run: initializeCanvas
+        },
+        {
+            name: 'initializeManagers',
+            requiredGlobals: ['SoundManager', 'AmbientSoundManager', 'StationMusicManager', 'SpaceMusicManager', 'EventManager'],
+            run: initializeManagers
+        },
+        {
+            name: 'initializeWeaponSystem',
+            requiredGlobals: ['WeaponSystem', 'ObjectPool'],
+            run: initializeWeaponSystem
+        },
+        {
+            name: 'validateShipDefinitions',
+            requiredGlobals: ['SHIP_DEFINITIONS'],
+            run: validateShipDefinitions
+        },
+        {
+            name: 'initializeGameObjects',
+            requiredGlobals: [
+                'GameStateManager', 'Galaxy', 'Player', 'UIManager', 'TitleScreen', 'InventoryScreen',
+                'MissionOverlay', 'SaveSelectionScreen', 'CommunicationSystem', 'NewsManager'
+            ],
+            run: initializeGameObjects
+        },
+        { name: 'configurePlayerShip', run: configurePlayerShip },
+        { name: 'setInitialGameState', run: setInitialGameState },
+        { name: 'setupAudioGestures', run: setupAudioGestures },
+        { name: 'initializeGamepad', run: initializeGamepad }
+    ]);
 }
 
 /**

@@ -1,43 +1,37 @@
 // ****** scriptDependencyGuard.js ******
-// Validates critical global dependencies so script load-order failures fail fast with clear errors.
+// Generic startup dependency validation helpers for script-order/global dependency checks.
 
-// Keep this list in sync with setup() dependencies in sketch.js initialize path.
-// When setup() starts using a new global constructor/function/constant, add it here,
-// then run `npm test -- --runInBand test/scriptDependencyGuard.test.js` to validate guard behavior.
-const SETUP_REQUIRED_GLOBALS = Object.freeze([
-    // Phase 1: p5.js primitives used by initializeCanvas()
-    'displayDensity', 'pixelDensity', 'createCanvas', 'angleMode', 'textAlign', 'textSize', 'frameRate',
-    'RADIANS', 'CENTER',
-
-    // Phase 1: logging + text constants referenced while initializing canvas/setup logs
-    'UI_LOG', 'STATION_TEXT_SIZE',
-
-    // Phase 2+: constructors/functions used by initializeManagers(), initializeWeaponSystem(),
-    // validateShipDefinitions(), and initializeGameObjects()
-    'SoundManager', 'AmbientSoundManager', 'StationMusicManager', 'SpaceMusicManager', 'EventManager',
-    'WeaponSystem', 'ObjectPool', 'SHIP_DEFINITIONS', 'GameStateManager', 'Galaxy', 'Player', 'UIManager',
-    'TitleScreen', 'InventoryScreen', 'MissionOverlay', 'SaveSelectionScreen', 'CommunicationSystem', 'NewsManager'
-]);
-
-function getMissingGlobals(requiredGlobals = SETUP_REQUIRED_GLOBALS, scope = globalThis) {
+function getMissingGlobals(requiredGlobals = [], scope = globalThis) {
     return requiredGlobals.filter((name) => typeof scope[name] === 'undefined');
 }
 
-function validateRequiredGlobals(requiredGlobals = SETUP_REQUIRED_GLOBALS, scope = globalThis) {
+function validateRequiredGlobals(requiredGlobals = [], scope = globalThis, contextName = 'setup') {
     const missingGlobals = getMissingGlobals(requiredGlobals, scope);
     if (missingGlobals.length > 0) {
         throw new Error(
-            `FATAL ERROR: Missing global dependencies required for setup: ${missingGlobals.join(', ')}. ` +
+            `FATAL ERROR: Missing global dependencies required for ${contextName}: ${missingGlobals.join(', ')}. ` +
             'Check script inclusion order in index.htm.'
         );
     }
     return true;
 }
 
+function runInitializationPhases(phases = [], scope = globalThis) {
+    phases.forEach((phase) => {
+        if (!phase || typeof phase.run !== 'function') {
+            throw new Error('FATAL ERROR: Invalid initialization phase definition.');
+        }
+
+        const phaseName = phase.name || 'unnamed phase';
+        validateRequiredGlobals(phase.requiredGlobals || [], scope, phaseName);
+        phase.run();
+    });
+}
+
 const ScriptDependencyGuard = {
-    SETUP_REQUIRED_GLOBALS,
     getMissingGlobals,
-    validateRequiredGlobals
+    validateRequiredGlobals,
+    runInitializationPhases
 };
 
 if (typeof globalThis !== 'undefined') {

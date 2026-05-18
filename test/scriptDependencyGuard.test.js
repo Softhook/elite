@@ -9,8 +9,8 @@ describe('ScriptDependencyGuard', () => {
 
     test('throws a clear error when required globals are missing', () => {
         expect(() => {
-            ScriptDependencyGuard.validateRequiredGlobals(['Exists', 'MissingThing'], { Exists: true });
-        }).toThrow(/Missing global dependencies required for setup: MissingThing/);
+            ScriptDependencyGuard.validateRequiredGlobals(['Exists', 'MissingThing'], { Exists: true }, 'initializeManagers');
+        }).toThrow(/Missing global dependencies required for initializeManagers: MissingThing/);
     });
 
     test('passes when all required globals exist', () => {
@@ -25,5 +25,26 @@ describe('ScriptDependencyGuard', () => {
             UndefinedValue: undefined
         });
         expect(missing).toEqual(['UndefinedValue']);
+    });
+
+    test('runs initialization phases in order when dependencies are present', () => {
+        const calls = [];
+        ScriptDependencyGuard.runInitializationPhases(
+            [
+                { name: 'first', requiredGlobals: ['A'], run: () => calls.push('first') },
+                { name: 'second', requiredGlobals: ['B'], run: () => calls.push('second') }
+            ],
+            { A: true, B: true }
+        );
+        expect(calls).toEqual(['first', 'second']);
+    });
+
+    test('fails with phase-specific message when phase dependencies are missing', () => {
+        expect(() => {
+            ScriptDependencyGuard.runInitializationPhases(
+                [{ name: 'initializeCanvas', requiredGlobals: ['createCanvas'], run: () => { } }],
+                {}
+            );
+        }).toThrow(/Missing global dependencies required for initializeCanvas: createCanvas/);
     });
 });
