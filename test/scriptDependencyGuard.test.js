@@ -2,9 +2,9 @@ const { ScriptDependencyGuard } = require('../scriptDependencyGuard');
 
 describe('ScriptDependencyGuard', () => {
     test('returns missing globals from provided scope', () => {
-        const scope = { Foo: () => { }, Bar: 1 };
-        const missing = ScriptDependencyGuard.getMissingGlobals(['Foo', 'Bar', 'Baz'], scope);
-        expect(missing).toEqual(['Baz']);
+        const scope = { SoundManager: () => { }, Galaxy: 1 };
+        const missing = ScriptDependencyGuard.getMissingGlobals(['SoundManager', 'Galaxy', 'MissingGlobal'], scope);
+        expect(missing).toEqual(['MissingGlobal']);
     });
 
     test('throws a clear error when required globals are missing', () => {
