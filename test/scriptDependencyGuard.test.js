@@ -47,4 +47,10 @@ describe('ScriptDependencyGuard', () => {
             );
         }).toThrow(/Missing global dependencies required for initializeCanvas: createCanvas/);
     });
+
+    test('fails with explicit phase context for malformed phase definitions', () => {
+        expect(() => {
+            ScriptDependencyGuard.runInitializationPhases([{ name: 'badPhase' }], {});
+        }).toThrow(/Invalid initialization phase definition for badPhase: missing run\(\) function/);
+    });
 });

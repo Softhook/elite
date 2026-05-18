@@ -114,10 +114,10 @@ function runSetupInitializationPhases() {
             ],
             run: initializeGameObjects
         },
-        { name: 'configurePlayerShip', run: configurePlayerShip },
-        { name: 'setInitialGameState', run: setInitialGameState },
-        { name: 'setupAudioGestures', run: setupAudioGestures },
-        { name: 'initializeGamepad', run: initializeGamepad }
+        { name: 'configurePlayerShip', requiredGlobals: [], run: configurePlayerShip },
+        { name: 'setInitialGameState', requiredGlobals: [], run: setInitialGameState },
+        { name: 'setupAudioGestures', requiredGlobals: [], run: setupAudioGestures },
+        { name: 'initializeGamepad', requiredGlobals: [], run: initializeGamepad }
     ]);
 }
 

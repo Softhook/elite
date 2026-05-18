@@ -17,12 +17,16 @@ function validateRequiredGlobals(requiredGlobals = [], scope = globalThis, conte
 }
 
 function runInitializationPhases(phases = [], scope = globalThis) {
-    phases.forEach((phase) => {
+    phases.forEach((phase, index) => {
+        const phaseName = phase?.name || `phase[${index}]`;
+
         if (!phase || typeof phase.run !== 'function') {
-            throw new Error('FATAL ERROR: Invalid initialization phase definition.');
+            throw new Error(
+                `FATAL ERROR: Invalid initialization phase definition for ${phaseName}: ` +
+                'missing run() function.'
+            );
         }
 
-        const phaseName = phase.name || 'unnamed phase';
         validateRequiredGlobals(phase.requiredGlobals || [], scope, phaseName);
         phase.run();
     });
