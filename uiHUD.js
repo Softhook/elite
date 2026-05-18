@@ -436,6 +436,16 @@ class UIHUD {
         textAlign(CENTER, CENTER);
         text(this._cachedStatusText, width / 2, statusLineY);
 
+        const inputMgr = globalThis._inputManager || globalThis.window?._inputManager;
+        if (gameStateManager?.currentState === 'IN_FLIGHT' && inputMgr?.isTargetSelectionModeEnabled?.()) {
+            const pulse = 180 + Math.sin(millis() * 0.012) * 60;
+            fill(120, 255, 160, pulse);
+            textAlign(CENTER, CENTER);
+            textSize(STATION_TEXT_SIZE.HELPER + 1);
+            text("TARGET SELECT: LEFT STICK", width / 2, statusLineY + 16);
+            textSize(STATION_TEXT_SIZE.BODY);
+        }
+
         // Right side - Ship info
         fill(255);
         textAlign(RIGHT, CENTER);

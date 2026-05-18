@@ -185,6 +185,30 @@ describe('GamepadManager', () => {
         expect(state.r2).toBeCloseTo(0.9, 3);
     });
 
+    test('_parse reads D-mode L3/R3 from their dedicated indices', () => {
+        gp._map = GP_MAPS.D;
+        const mockGP = _createMockGamepad();
+        mockGP.buttons[13].pressed = true;
+        mockGP.buttons[14].pressed = true;
+
+        const state = gp._parse(mockGP);
+
+        expect(state.l3).toBe(true);
+        expect(state.r3).toBe(true);
+    });
+
+    test('_parse reads S-mode L3/R3 from their dedicated indices', () => {
+        gp._map = GP_MAPS.S;
+        const mockGP = _createMockGamepad();
+        mockGP.buttons[10].pressed = true;
+        mockGP.buttons[11].pressed = true;
+
+        const state = gp._parse(mockGP);
+
+        expect(state.l3).toBe(true);
+        expect(state.r3).toBe(true);
+    });
+
     test('_parse keeps X-mode triggers independent from right-stick axes', () => {
         gp._map = GP_MAPS.X;
         const mockGP = _createMockGamepad();

@@ -109,6 +109,12 @@ describe('InputManager', () => {
         gp._prev = { b: false };
         gp._state = { mode: 'D-MODE', b: true };
         expect(input.isGamepadActionPressed(exported.INPUT_ACTIONS.BACK, exported.INPUT_CONTEXTS.SAVE_SELECTION)).toBe(true);
+
+        gp._state = { mode: 'D-MODE', l3: true };
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.TOGGLE_TARGET_SELECTION_MODE, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(true);
+
+        gp._state = { mode: 'S-MODE (Switch)', l3: true };
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.TOGGLE_TARGET_SELECTION_MODE, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(true);
     });
 
     test('supports contextual surface altitude actions in S and D gamepad modes', () => {
@@ -162,5 +168,29 @@ describe('InputManager', () => {
             expect(bindings[exported.INPUT_ACTIONS.NAV_LEFT]).toEqual(['dpad.left']);
             expect(bindings[exported.INPUT_ACTIONS.NAV_RIGHT]).toEqual(['dpad.right']);
         }
+    });
+
+    test('toggles and consumes analog target-selection stick directions', () => {
+        expect(input.isTargetSelectionModeEnabled()).toBe(false);
+
+        input.toggleTargetSelectionMode();
+        expect(input.isTargetSelectionModeEnabled()).toBe(true);
+
+        const first = input.consumeTargetSelectionStickDirection(0.8, 0);
+        expect(first).toEqual({ x: 0.8, y: 0 });
+
+        const sameDirectionHeld = input.consumeTargetSelectionStickDirection(0.82, 0.05);
+        expect(sameDirectionHeld).toBeNull();
+
+        const rotatedDirection = input.consumeTargetSelectionStickDirection(0, 0.9);
+        expect(rotatedDirection).toEqual({ x: 0, y: 0.9 });
+
+        input.consumeTargetSelectionStickDirection(0.1, 0.1); // release latch
+        const relatched = input.consumeTargetSelectionStickDirection(-0.9, 0);
+        expect(relatched).toEqual({ x: -0.9, y: 0 });
+
+        input.toggleTargetSelectionMode();
+        expect(input.isTargetSelectionModeEnabled()).toBe(false);
+        expect(input.consumeTargetSelectionStickDirection(1, 0)).toBeNull();
     });
 });

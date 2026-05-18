@@ -35,6 +35,7 @@ const INPUT_ACTIONS = {
     WEAPON_PREV: 'WEAPON_PREV',
     TARGET_NEXT: 'TARGET_NEXT',
     TARGET_PREV: 'TARGET_PREV',
+    TOGGLE_TARGET_SELECTION_MODE: 'TOGGLE_TARGET_SELECTION_MODE',
     MAP_MARKET_TOGGLE: 'MAP_MARKET_TOGGLE',
     ALTITUDE_UP: 'ALTITUDE_UP',
     ALTITUDE_DOWN: 'ALTITUDE_DOWN',
@@ -62,6 +63,9 @@ class InputManager {
         this._beamGamepadAiming = false;
         // Visual reticle screen position (for HUD drawing)
         this._beamReticle = { x: 0, y: 0, active: false, alpha: 0 };
+        this._targetSelectionModeEnabled = false;
+        this._targetSelectionStickLatched = false;
+        this._targetSelectionStickAngle = null;
         this._keyboardMap = this._buildKeyboardMap();
         this._gamepadMap = this._buildGamepadMap();
     }
@@ -184,6 +188,7 @@ class InputManager {
                 [INPUT_ACTIONS.WEAPON_PREV]: ['dpad.left'],
                 [INPUT_ACTIONS.TARGET_NEXT]: ['dpad.up'],
                 [INPUT_ACTIONS.TARGET_PREV]: ['dpad.down'],
+                [INPUT_ACTIONS.TOGGLE_TARGET_SELECTION_MODE]: ['l3'],
                 [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
             };
 
@@ -473,6 +478,50 @@ class InputManager {
      */
     getBeamReticle() {
         return this._beamReticle;
+    }
+
+    toggleTargetSelectionMode() {
+        this._targetSelectionModeEnabled = !this._targetSelectionModeEnabled;
+        this._targetSelectionStickLatched = false;
+        this._targetSelectionStickAngle = null;
+        return this._targetSelectionModeEnabled;
+    }
+
+    isTargetSelectionModeEnabled() {
+        return !!this._targetSelectionModeEnabled;
+    }
+
+    consumeTargetSelectionStickDirection(x, y) {
+        if (!this._targetSelectionModeEnabled) {
+            this._targetSelectionStickLatched = false;
+            this._targetSelectionStickAngle = null;
+            return null;
+        }
+
+        const magnitude = Math.sqrt((x * x) + (y * y));
+        if (magnitude < 0.35) {
+            this._targetSelectionStickLatched = false;
+            this._targetSelectionStickAngle = null;
+            return null;
+        }
+
+        const angle = Math.atan2(y, x);
+        if (!this._targetSelectionStickLatched) {
+            this._targetSelectionStickLatched = true;
+            this._targetSelectionStickAngle = angle;
+            return { x, y };
+        }
+
+        let delta = angle - (this._targetSelectionStickAngle || 0);
+        while (delta > Math.PI) delta -= (Math.PI * 2);
+        while (delta < -Math.PI) delta += (Math.PI * 2);
+
+        if (Math.abs(delta) >= (Math.PI / 4)) {
+            this._targetSelectionStickAngle = angle;
+            return { x, y };
+        }
+
+        return null;
     }
 
     describeBindings(context) {

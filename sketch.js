@@ -744,8 +744,9 @@ function handleGamepadContinuousInput() {
     // up always moves the ship toward the top of the screen regardless of heading.
     //   fwd   = dot((lsX, lsY), ship-facing (cos a, sin a))
     //   right = dot((lsX, lsY), ship-right  (-sin a, cos a))
+    const isTargetSelectionMode = (state === 'IN_FLIGHT') && !!(inputManager?.isTargetSelectionModeEnabled?.());
     let stickForwardAmount = 0, stickReverseAmount = 0;
-    if (Math.abs(lsX) > 0.05 || Math.abs(lsY) > 0.05) {
+    if (!isTargetSelectionMode && (Math.abs(lsX) > 0.05 || Math.abs(lsY) > 0.05)) {
         const cosA = cos(player.angle), sinA = sin(player.angle);
         const fwd   =  lsX * cosA + lsY * sinA;
         const right = -lsX * sinA + lsY * cosA;
@@ -806,6 +807,22 @@ function handleGamepadContinuousInput() {
 
     // Flight-only shortcuts
     if (state === 'IN_FLIGHT') {
+        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.TOGGLE_TARGET_SELECTION_MODE, context)) {
+            const enabled = inputManager.toggleTargetSelectionMode();
+            uiManager?.addMessage(
+                enabled ? 'Target selection mode: Left Stick' : 'Target selection mode: OFF',
+                enabled ? [120, 255, 160] : [200, 200, 200]
+            );
+            soundManager?.playSound('click');
+        }
+
+        if (inputManager.isTargetSelectionModeEnabled?.()) {
+            const targetDirection = inputManager.consumeTargetSelectionStickDirection(lsX, lsY);
+            if (targetDirection && typeof player.selectTargetByDirection === 'function') {
+                player.selectTargetByDirection(targetDirection.x, targetDirection.y);
+            }
+        }
+
         // Target cycling with D-pad up/down is flight-only (surface D-pad up/down controls altitude).
         if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.TARGET_NEXT, context)) {
             player.cycleTarget(1);
