@@ -84,7 +84,7 @@ function setup() {
  * Validate critical globals needed by setup to catch script-order issues early.
  */
 function validateSetupDependencies() {
-    if (typeof ScriptDependencyGuard === 'undefined' || typeof ScriptDependencyGuard.validateRequiredGlobals !== 'function') {
+    if (typeof ScriptDependencyGuard === 'undefined') {
         throw new Error("FATAL ERROR: scriptDependencyGuard.js must load before sketch.js.");
     }
     ScriptDependencyGuard.validateRequiredGlobals();

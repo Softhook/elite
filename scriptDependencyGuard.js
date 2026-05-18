@@ -1,8 +1,9 @@
 // ****** scriptDependencyGuard.js ******
 // Validates critical global dependencies so script load-order failures fail fast with clear errors.
 
-// Keep this list in sync with setup() dependencies in sketch.js.
-// When setup() starts using a new global constructor/function/constant, add it here.
+// Keep this list in sync with setup() dependencies in sketch.js initialize path.
+// When setup() starts using a new global constructor/function/constant, add it here,
+// then run `npm test -- --runInBand test/scriptDependencyGuard.test.js` to validate guard behavior.
 const SETUP_REQUIRED_GLOBALS = Object.freeze([
     // p5.js primitives used during setup initialization
     'displayDensity', 'pixelDensity', 'createCanvas', 'angleMode', 'textAlign', 'textSize', 'frameRate',
