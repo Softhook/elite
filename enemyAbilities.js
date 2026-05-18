@@ -7,6 +7,14 @@
  * These methods handle cloak and booster AI decisions
  */
 class EnemyAbilities {
+    /** Returns true when a probabilistic ability action should trigger for this rank. */
+    _rollAbilityChance(baseChance) {
+        const rankMods = this._getRankModifiers ? this._getRankModifiers() : null;
+        const triggerMult = rankMods?.abilityTriggerChanceMultiplier ?? 1.0;
+        const adjustedChance = Math.max(0, Math.min(1, baseChance * triggerMult));
+        return random() < adjustedChance;
+    }
+
     // --- CLOAK METHODS ---
 
     /** Check if cloak is available to use */
@@ -59,12 +67,12 @@ class EnemyAbilities {
         const recentlyDamaged = this.lastAttackTime && (now - this.lastAttackTime < 2000);
         if (recentlyDamaged && this.hull < this.maxHull * 0.7) {
             // High chance to emergency cloak when hurt
-            return random() < 0.7;
+            return this._rollAbilityChance(0.7);
         }
 
         // FLEE CLOAK: Higher chance when fleeing
         if (this.currentState === AI_STATE.FLEEING) {
-            return random() < 0.6;
+            return this._rollAbilityChance(0.6);
         }
 
         // WEAPON COOLDOWN CLOAK: Cloak while waiting for weapon to recharge
@@ -78,7 +86,7 @@ class EnemyAbilities {
             const idealCloakRange = this.detectionRange * 0.8;
             const tooFar = distanceToTarget > idealCloakRange;
             if (!tooFar) {
-                return random() < 0.4;
+                return this._rollAbilityChance(0.4);
             }
         }
 
@@ -118,7 +126,7 @@ class EnemyAbilities {
         const longCooldown = this.fireCooldown > 2.0;
         const cloakChance = longCooldown ? 0.6 : 0.35;
 
-        return random() < cloakChance;
+        return this._rollAbilityChance(cloakChance);
     }
 
     /** AI decision: should we decloak to attack? */
@@ -224,7 +232,7 @@ class EnemyAbilities {
         // Random chance (more likely if we have grudge - want to get back in the fight)
         const grudgeLevel = this._getGrudgeLevel ? this._getGrudgeLevel(this.target) : 0;
         const boostChance = 0.35 + (grudgeLevel * 0.1); // 35% base, +10% per grudge level
-        return random() < boostChance;
+        return this._rollAbilityChance(boostChance);
     }
 
     /**
@@ -255,7 +263,7 @@ class EnemyAbilities {
         const longCooldown = this.fireCooldown > 2.5;
         const boostChance = longCooldown ? 0.5 : 0.25;
 
-        return random() < boostChance;
+        return this._rollAbilityChance(boostChance);
     }
 
     /**
@@ -276,7 +284,11 @@ class EnemyAbilities {
         // PERFORMANCE: Throttle ability decisions to once per second
         // This prevents expensive random rolls and calculations every frame
         const now = typeof millis === 'function' ? millis() : Date.now();
-        if (this._lastAbilityUpdateTime && now - this._lastAbilityUpdateTime < 1000) {
+        const rankMods = this._getRankModifiers ? this._getRankModifiers() : null;
+        const abilityDecisionMult = rankMods?.abilityDecisionIntervalMultiplier ?? 1.0;
+        const abilityDecisionIntervalMs = Math.max(250, 1000 * abilityDecisionMult);
+
+        if (this._lastAbilityUpdateTime && now - this._lastAbilityUpdateTime < abilityDecisionIntervalMs) {
             // Still need to check decloak conditions more frequently for responsiveness
             if (this.isCloaked && this.shouldDecloakToAttack(distanceToTarget)) {
                 this.deactivateCloak();
@@ -305,7 +317,7 @@ class EnemyAbilities {
             const recentlyDamaged = this.lastAttackTime && (now - this.lastAttackTime < 2000);
             if (recentlyDamaged && this.hull < this.maxHull * 0.5) {
                 // Emergency boost to escape - high chance
-                if (random() < 0.6) {
+                if (this._rollAbilityChance(0.6)) {
                     this.activateBoost();
                     return; // Exit early after emergency boost
                 }

@@ -308,17 +308,26 @@ class EnemyCombat {
     selectBestWeapon(distanceToTarget) {
         if (!this.weapons || this.weapons.length <= 1) return;
 
+        const rankMods = this._getRankModifiers ? this._getRankModifiers() : null;
+        const minSwitchIntervalSeconds = rankMods?.weaponSwitchMinInterval ?? 0.6;
+        const nowMs = (typeof millis === 'function') ? millis() : Date.now();
+
+        if (this._nextWeaponSwitchAllowedAtMs === undefined) {
+            this._nextWeaponSwitchAllowedAtMs = 0;
+        }
+
         // Use our new optimal weapon selection algorithm
         const optimalWeapon = this.selectOptimalWeapon(distanceToTarget, this.target);
 
         // If we got a different weapon, switch to it
-        if (optimalWeapon !== this.currentWeapon) {
+        if (optimalWeapon !== this.currentWeapon && nowMs >= this._nextWeaponSwitchAllowedAtMs) {
             // Find the index of the optimal weapon
             const newIndex = this.weapons.indexOf(optimalWeapon);
             if (newIndex !== -1) {
                 this.weaponIndex = newIndex;
                 this.currentWeapon = this.weapons[this.weaponIndex];
                 this.fireRate = this.currentWeapon.fireRate;
+                this._nextWeaponSwitchAllowedAtMs = nowMs + minSwitchIntervalSeconds * 1000;
                 // EXPLOIT FIX: Preserve existing cooldown when switching weapons
                 // This prevents bypassing fire rate by rapidly switching weapons
 
@@ -561,6 +570,14 @@ class EnemyCombat {
                 return;
             }
             if (this.canFireAtTarget(shootingAngle)) {
+                const rankMods = this._getRankModifiers ? this._getRankModifiers() : null;
+                const fireDisciplineChance = rankMods?.fireDisciplineChance ?? 1.0;
+                if (fireDisciplineChance < 1.0 && random() > fireDisciplineChance) {
+                    // Low-skill hesitation: occasionally fail to commit even with a valid firing solution.
+                    this.fireCooldown = Math.max(this.fireCooldown || 0, 0.04);
+                    return;
+                }
+
                 // Player-specific targeting debug (throttled to reduce spam)
                 if (targetingPlayer) {
                     // Only log first shot or after 2 second cooldown

@@ -171,6 +171,9 @@ class EnemyAIBehaviors {
     }
 
     _shouldConsiderCover(distanceToTarget) {
+        const rankMods = this._getRankModifiers ? this._getRankModifiers() : null;
+        if (rankMods?.useCover === false) return false;
+
         const lowHull = this.maxHull > 0 ? (this.hull / this.maxHull) < 0.80 : false;
         const lowShield = this.maxShield > 0 ? (this.shield / this.maxShield) < 0.50 : false;
         const stateWantsCover = this.currentState === AI_STATE.REPOSITIONING; // only actively look for cover while repositioning or when damaged
@@ -392,6 +395,16 @@ class EnemyAIBehaviors {
     }
 
     _updateCoverBehavior(system, targetExists, distanceToTarget) {
+        const rankMods = this._getRankModifiers ? this._getRankModifiers() : null;
+        if (rankMods?.useCover === false) {
+            if (this.coverTarget) {
+                this.repositionTarget = null;
+            }
+            this.coverTarget = null;
+            this.coverPeekTimer = 0;
+            return false;
+        }
+
         const dtSeconds = (typeof deltaTime === 'number' && isFinite(deltaTime)) ? (deltaTime / 1000) : DEFAULT_DELTA_SECONDS;
         if (this.coverEvalTimer > 0 && dtSeconds > 0) {
             this.coverEvalTimer = Math.max(0, this.coverEvalTimer - dtSeconds);
@@ -2648,6 +2661,12 @@ class EnemyAIBehaviors {
     _avoidObstaclesAndAdjustTarget(system, desiredMovementTargetPos) {
         if (!system || !desiredMovementTargetPos) return desiredMovementTargetPos;
 
+        const rankMods = this._getRankModifiers ? this._getRankModifiers() : null;
+        const avoidanceStrength = rankMods?.obstacleAvoidanceStrength ?? 1.0;
+        if (avoidanceStrength <= 0) {
+            return desiredMovementTargetPos;
+        }
+
         // Quick guards
         const toX = desiredMovementTargetPos.x - this.pos.x;
         const toY = desiredMovementTargetPos.y - this.pos.y;
@@ -2703,7 +2722,8 @@ class EnemyAIBehaviors {
                 return; // Skip smaller or equal-sized obstacles
             }
 
-            const safety = Math.max(this.size, 16) + r + 12; // padding
+            const baseSafety = Math.max(this.size, 16) + r + 12; // padding
+            const safety = baseSafety * avoidanceStrength;
 
             if (perpSq <= safety * safety) {
                 if (proj < threatProj) {
@@ -2745,10 +2765,10 @@ class EnemyAIBehaviors {
         if (!threat) return desiredMovementTargetPos;
 
         // If threat is very close, prefer to slow briefly rather than sharp steering
-        const closeThresh = Math.max(threatRadius, this.size) + 60;
+        const closeThresh = (Math.max(threatRadius, this.size) + 60) * avoidanceStrength;
         if (threatProj < closeThresh) {
             // Set a short avoidance timer so we damp velocity for a moment
-            this._asteroidAvoidTimer = 0.6;
+            this._asteroidAvoidTimer = 0.6 * avoidanceStrength;
             return desiredMovementTargetPos; // keep target but slow ship in wrapper
         }
 
@@ -2762,7 +2782,7 @@ class EnemyAIBehaviors {
         const dot = ax * perpX + ay * perpY;
         if (dot < 0) { perpX = -perpX; perpY = -perpY; }
 
-        const offset = Math.max(threatRadius, this.size) + 48;
+        const offset = (Math.max(threatRadius, this.size) + 48) * avoidanceStrength;
         return createVector(desiredMovementTargetPos.x + perpX * offset, desiredMovementTargetPos.y + perpY * offset);
     }
 
@@ -2771,8 +2791,11 @@ class EnemyAIBehaviors {
      * Also applies gentle damping while avoidance timer is active.
      */
     performSafeRotationAndThrust(system, desiredMovementTargetPos) {
+        const rankMods = this._getRankModifiers ? this._getRankModifiers() : null;
+        const avoidanceStrength = rankMods?.obstacleAvoidanceStrength ?? 1.0;
+
         // OPTIMIZATION: Off-screen enemies skip obstacle avoidance
-        if (this._isOnScreen === false) {
+        if (this._isOnScreen === false || avoidanceStrength <= 0) {
             this.performRotationAndThrust(desiredMovementTargetPos);
             return;
         }

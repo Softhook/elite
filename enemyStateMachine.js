@@ -228,14 +228,17 @@ class EnemyStateMachine {
         const grudgeLevel = this._getGrudgeLevel ? this._getGrudgeLevel(this.target) : 0;
         const baseTimerMin = Math.max(0.5, GRUDGE_DECISION_TIMER_MIN_BASE - grudgeLevel * GRUDGE_TIMER_MIN_REDUCTION_PER_LEVEL);
         const baseTimerMax = Math.max(1.5, GRUDGE_DECISION_TIMER_MAX_BASE - grudgeLevel * GRUDGE_TIMER_MAX_REDUCTION_PER_LEVEL);
+        const decisionIntervalMult = rankMods?.decisionIntervalMultiplier ?? 1.0;
+        const adjustedTimerMin = Math.max(0.2, baseTimerMin * decisionIntervalMult);
+        const adjustedTimerMax = Math.max(adjustedTimerMin + 0.1, baseTimerMax * decisionIntervalMult);
 
         if (this._snipingDecisionTimer === null || this._snipingDecisionTimer === undefined) {
-            this._snipingDecisionTimer = random(baseTimerMin, baseTimerMax);
+            this._snipingDecisionTimer = random(adjustedTimerMin, adjustedTimerMax);
         }
         this._snipingDecisionTimer = Math.max(0, this._snipingDecisionTimer - this._getDeltaSeconds());
 
         if (this._snipingDecisionTimer <= 0) {
-            this._snipingDecisionTimer = random(baseTimerMin, baseTimerMax);
+            this._snipingDecisionTimer = random(adjustedTimerMin, adjustedTimerMax);
 
             const tacticChangeChance = this._getGrudgeBasedTacticChance(this.target);
             const repositionChance = this._getGrudgeBasedRepositionChance(this.target);
@@ -300,8 +303,9 @@ class EnemyStateMachine {
 
         // Tactical decision: Snipe (stationary turret) or Attack Pass (dynamic movement)
         // Choose sniping if we have suitable weapons and a random tactical choice
+        const snipingChanceMult = rankMods?.snipingChanceMultiplier ?? 1.0;
         const shouldSnipe = this.hasGoodSnipingWeapon() &&
-            random() < SNIPE_VS_ATTACK_CHANCE;
+            random() < constrain(SNIPE_VS_ATTACK_CHANCE * snipingChanceMult, 0, 1);
 
         // RANK-BASED ENGAGE DISTANCE: Rookies get too close, Elites maintain range
         const distMult = rankMods?.engageDistanceMultiplier ?? 1.0;
@@ -741,9 +745,11 @@ class EnemyStateMachine {
             case AI_STATE.ATTACK_PASS:
                 // Initialize attack pass with timer
                 // GRUDGE-BASED: Higher grudge = longer attack passes
+                const rankMods = this._getRankModifiers();
                 const grudgeLevel = this._getGrudgeLevel ? this._getGrudgeLevel(this.target) : 0;
                 const grudgeMultiplier = 1 + Math.min(grudgeLevel * GRUDGE_PASS_DURATION_MULT_PER_LEVEL, GRUDGE_PASS_DURATION_MULT_CAP);
-                const basePassDuration = this.passDuration;
+                const passDurationMult = rankMods?.attackPassDurationMultiplier ?? 1.0;
+                const basePassDuration = this.passDuration * passDurationMult;
                 this.passTimer = basePassDuration * random(0.85, 1.25) * grudgeMultiplier;
                 this.strafeDirection = random([-1, 1]); // -1 for left, 1 for right
 
@@ -766,9 +772,14 @@ class EnemyStateMachine {
                 break;
 
             case AI_STATE.SNIPING:
+                const rankSnipingMods = this._getRankModifiers();
+                const decisionIntervalMult = rankSnipingMods?.decisionIntervalMultiplier ?? 1.0;
                 this.vel.mult(0.5); // Slow down upon entering stationary turret mode
                 this.shieldPlusHullAtStateEntry = this.shield + this.hull; // Store health for damage checking
-                this._snipingDecisionTimer = random(GRUDGE_DECISION_TIMER_MIN_BASE, GRUDGE_DECISION_TIMER_MAX_BASE);
+                this._snipingDecisionTimer = random(
+                    Math.max(0.2, GRUDGE_DECISION_TIMER_MIN_BASE * decisionIntervalMult),
+                    Math.max(GRUDGE_DECISION_TIMER_MIN_BASE * decisionIntervalMult + 0.1, GRUDGE_DECISION_TIMER_MAX_BASE * decisionIntervalMult)
+                );
                 break;
 
             case AI_STATE.NEAR_STATION:

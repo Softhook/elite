@@ -10,9 +10,10 @@
  * Pilot rank enumeration - represents skill/experience level
  */
 const PILOT_RANK = {
-    ROOKIE: 1,
-    VETERAN: 2,
-    ELITE: 3
+    GREEN: 1,
+    ROOKIE: 2,
+    VETERAN: 3,
+    ELITE: 4
 };
 
 /**
@@ -20,12 +21,20 @@ const PILOT_RANK = {
  * Each rank has a name, colors, and medal/badge styling
  */
 const PILOT_RANK_DEFS = {
+    [PILOT_RANK.GREEN]: {
+        name: 'Green',
+        color: [255],
+        badgeColor: null,
+        iconColor: null,
+        symbol: '',
+        description: 'Very inexperienced pilot'
+    },
     [PILOT_RANK.ROOKIE]: {
         name: 'Rookie',
         color: [255],
         badgeColor: null,
         iconColor: null,
-        symbol: '',
+        symbol: '★',
         description: 'Inexperienced pilot'
     },
     [PILOT_RANK.VETERAN]: {
@@ -33,7 +42,7 @@ const PILOT_RANK_DEFS = {
         color: [255],                   // Pure white text
         badgeColor: [255],              // White badge
         iconColor: [255],               // White icon
-        symbol: '★',                    // Single star
+        symbol: '★★',                    // Two stars
         description: 'Experienced combat pilot'
     },
     [PILOT_RANK.ELITE]: {
@@ -49,11 +58,37 @@ const PILOT_RANK_DEFS = {
 /**
  * Pilot rank behavior modifiers for AI differentiation
  * These modifiers create distinct combat feels for each rank:
+ * - Green: Very slow reactions, poor awareness, weak tactical decisions
  * - Rookies: Predictable, slow reactions, poor aim, stubborn (no retreat)
  * - Veterans: Balanced baseline behavior
  * - Elites: Sharp reflexes, accurate, tactical retreats, controls engagement range
  */
 const PILOT_RANK_MODIFIERS = {
+    [PILOT_RANK.GREEN]: {
+        canStrafe: false,                   // No side thrusters / kiting
+        reactionDelayBonus: 0.70,           // +700ms slower reactions
+        aimToleranceMultiplier: 2.3,        // Extremely poor accuracy
+        fleeHullThreshold: 0.08,            // Flees very late (reckless)
+        tacticChangeMultiplier: 0.20,       // Rarely adapts tactics
+        predictionMultiplier: 0.0,          // No target lead
+        pursuitAbandonMultiplier: 2.7,      // Won't give up chase easily
+        engageDistanceMultiplier: 0.55,     // Gets too close
+        detectionRangeMultiplier: 0.6,      // Weak awareness
+        scanInterval: 3.0,                  // Very slow sensor sweep
+        longRangeSensorMultiplier: 1.0,     // Very harsh acquisition cutoff
+        decisionIntervalMultiplier: 1.35,   // Slower tactical decision updates
+        snipingChanceMultiplier: 0.65,      // Less likely to pick stable sniping tactics
+        attackPassDurationMultiplier: 1.2,  // Overcommits once it starts a pass
+        targetSwitchCooldownMultiplier: 1.5,// Slower to react to better targets
+        targetSwitchScoreMultiplier: 1.4,   // Needs bigger score delta to retarget
+        weaponSwitchMinInterval: 2.0,       // Slow weapon adaptation
+        useCover: false,                    // Never uses asteroid cover
+        obstacleAvoidanceStrength: 0.0,     // Does not steer away from obstacles
+        fireDisciplineChance: 0.72,         // Often hesitates even with a valid shot
+        abilityDecisionIntervalMultiplier: 1.4, // Slower ability decisions
+        abilityTriggerChanceMultiplier: 0.8, // Less confidence using abilities
+        retaliationAggressionMultiplier: 0.75 // Less committed retaliation scoring
+    },
     [PILOT_RANK.ROOKIE]: {
         canStrafe: false,                   // No side thrusters / kiting
         reactionDelayBonus: 0.35,           // +350ms slower reactions
@@ -65,7 +100,19 @@ const PILOT_RANK_MODIFIERS = {
         engageDistanceMultiplier: 0.7,      // Gets too close (reckless)
         detectionRangeMultiplier: 0.8,      // Reduced awareness
         scanInterval: 2.0,                  // Lazy sensor sweep
-        longRangeSensorMultiplier: 1.5      // Hard cutoff for acquisition
+        longRangeSensorMultiplier: 1.5,     // Hard cutoff for acquisition
+        decisionIntervalMultiplier: 1.15,   // Slightly slower tactical updates
+        snipingChanceMultiplier: 0.85,      // Slightly favors direct attack passes
+        attackPassDurationMultiplier: 1.08, // Mildly overcommits in attack passes
+        targetSwitchCooldownMultiplier: 1.2,// Slower retargeting cadence
+        targetSwitchScoreMultiplier: 1.15,  // Needs better reason to retarget
+        weaponSwitchMinInterval: 1.1,
+        useCover: true,
+        obstacleAvoidanceStrength: 0.9,     // Slightly worse obstacle avoidance
+        fireDisciplineChance: 0.86,
+        abilityDecisionIntervalMultiplier: 1.15,
+        abilityTriggerChanceMultiplier: 0.92,
+        retaliationAggressionMultiplier: 0.9
     },
     [PILOT_RANK.VETERAN]: {
         canStrafe: true,
@@ -78,7 +125,19 @@ const PILOT_RANK_MODIFIERS = {
         engageDistanceMultiplier: 1.0,
         detectionRangeMultiplier: 1.0,      // Standard awareness
         scanInterval: 1.0,                  // Standard sensor sweep
-        longRangeSensorMultiplier: 2.5      // Baseline cutoff
+        longRangeSensorMultiplier: 2.5,     // Baseline cutoff
+        decisionIntervalMultiplier: 1.0,
+        snipingChanceMultiplier: 1.0,
+        attackPassDurationMultiplier: 1.0,
+        targetSwitchCooldownMultiplier: 1.0,
+        targetSwitchScoreMultiplier: 1.0,
+        weaponSwitchMinInterval: 0.6,
+        useCover: true,
+        obstacleAvoidanceStrength: 1.0,
+        fireDisciplineChance: 1.0,
+        abilityDecisionIntervalMultiplier: 1.0,
+        abilityTriggerChanceMultiplier: 1.0,
+        retaliationAggressionMultiplier: 1.0
     },
     [PILOT_RANK.ELITE]: {
         canStrafe: true,
@@ -91,13 +150,25 @@ const PILOT_RANK_MODIFIERS = {
         engageDistanceMultiplier: 1.3,      // Maintains safer distance (controls range)
         detectionRangeMultiplier: 1.5,      // Significantly higher awareness
         scanInterval: 0.4,                  // Agile sensor sweep
-        longRangeSensorMultiplier: 4.0      // Massive sensor reach
+        longRangeSensorMultiplier: 4.0,     // Massive sensor reach
+        decisionIntervalMultiplier: 0.75,   // Faster tactical updates
+        snipingChanceMultiplier: 1.2,       // More likely to leverage sniping posture
+        attackPassDurationMultiplier: 0.9,  // Commits less, reassesses sooner
+        targetSwitchCooldownMultiplier: 0.75,// Faster retargeting
+        targetSwitchScoreMultiplier: 0.8,   // Will switch on smaller score edge
+        weaponSwitchMinInterval: 0.25,      // Rapid weapon adaptation
+        useCover: true,
+        obstacleAvoidanceStrength: 1.15,    // Slightly better obstacle anticipation
+        fireDisciplineChance: 1.0,
+        abilityDecisionIntervalMultiplier: 0.75,
+        abilityTriggerChanceMultiplier: 1.15,
+        retaliationAggressionMultiplier: 1.2
     }
 };
 
 /**
  * Gets behavior modifiers for a given pilot rank
- * @param {number} rank - Pilot rank value (1=Rookie, 2=Veteran, 3=Elite)
+ * @param {number} rank - Pilot rank value (1=Green, 2=Rookie, 3=Veteran, 4=Elite)
  * @returns {Object|null} Modifier object with behavior multipliers, or null if unavailable
  */
 function getPilotRankModifiers(rank) {
@@ -125,31 +196,31 @@ function getPilotRankModifiers(rank) {
  * @param {string} role - AI role (e.g., AI_ROLE.PIRATE)
  * @param {string} securityLevel - System security level
  * @param {number} techLevel - System tech level (1-10)
- * @param {number} [minRank=1] - Minimum rank to allow (default: 1=Rookie)
+ * @param {number} [minRank=1] - Minimum rank to allow (default: 1=Green)
  * @returns {number} Pilot rank value
  */
 function generatePilotRank(role, securityLevel, techLevel, minRank = 1) {
     // Base probability weights for each rank
-    // Default distribution: 85% Rookie, 14% Veteran, 1% Elite
-    let weights = [85, 14, 1];
+     // Default distribution: 70% Green, 24% Rookie, 5% Veteran, 1% Elite
+     let weights = [70, 24, 5, 1];
 
     // Adjust weights based on role
     if (typeof AI_ROLE !== 'undefined') {
         if (role === AI_ROLE.POLICE || role === AI_ROLE.GUARD) {
-            weights = [70, 30, 0];
+            weights = [15, 55, 30, 0];
         } else if (role === AI_ROLE.BOUNTY_HUNTER) {
-            weights = [25, 70, 5];
+            weights = [5, 20, 70, 5];
         } else if (role === AI_ROLE.ALIEN) {
-            weights = [100, 0, 0];
+            weights = [100, 0, 0, 0];
         } else if (role === AI_ROLE.MILITARY) {
             // Military are well-trained
-            weights = [25, 70, 5];
+            weights = [5, 20, 70, 5];
         } else if (role === AI_ROLE.PIRATE || role === AI_ROLE.HAULER) {
             // Pirates and Haulers are slightly less skilled than military
-            weights = [60, 35, 5];
+            weights = [40, 35, 20, 5];
         } else if (role === AI_ROLE.TRANSPORT) {
-            // Transporters are always rookies
-            weights = [100, 0, 0];
+            // Transporters are almost always green pilots
+            weights = [95, 5, 0, 0];
         }
     }
 
@@ -242,12 +313,14 @@ function getPilotRankName(rank) {
 
 /**
  * Gets the symbol/icon string for a pilot rank.
- * Returns empty string for Rookie (rank 1).
+ * Returns empty string for Green pilots.
  * @param {number} rank - Pilot rank value
  * @returns {string} Symbol string
  */
 function getPilotRankSymbol(rank) {
-    if (!rank || rank < PILOT_RANK.VETERAN) return ''; // No symbol for rookies
+    if (!rank || rank < PILOT_RANK.ROOKIE) return ''; // No symbol for green pilots
+    if (rank === PILOT_RANK.ROOKIE) return '★';
+    if (rank === PILOT_RANK.VETERAN) return '★★';
     const def = PILOT_RANK_DEFS[rank];
     return def ? def.symbol : '';
 }
@@ -270,6 +343,8 @@ function _drawRankIconGraphic(rank, x, y, size, ctx) {
     const def = PILOT_RANK_DEFS[rank];
     if (!def) return;
 
+    if (rank < PILOT_RANK.VETERAN || !def.iconColor) return;
+
     const f = (ctx && ctx.fill) ? ctx.fill.bind(ctx) : fill;
     const ns = (ctx && ctx.noStroke) ? ctx.noStroke.bind(ctx) : noStroke;
 
@@ -279,12 +354,13 @@ function _drawRankIconGraphic(rank, x, y, size, ctx) {
     const starR = size * 0.4;
 
     if (rank === PILOT_RANK.VETERAN) {
-        // One Star
-        _drawStar(x, y, starR * 1.2, ctx);
+        // Two stars
+        _drawStar(x - starR * 0.75, y, starR, ctx);
+        _drawStar(x + starR * 0.75, y, starR, ctx);
     } else if (rank === PILOT_RANK.ELITE) {
-        // Three Stars
+        // Three stars
+        _drawStar(x, y, starR * 1.2, ctx);
         _drawStar(x - starR * 1.5, y + starR * 0.2, starR * 0.9, ctx);
-        _drawStar(x, y - starR * 0.2, starR * 1.25, ctx);
         _drawStar(x + starR * 1.5, y + starR * 0.2, starR * 0.9, ctx);
     }
 }
@@ -346,7 +422,7 @@ function getPilotRankIconWidth(rank, size = 12) {
     if (!rank || rank < PILOT_RANK.VETERAN) return 0;
 
     // Width modifiers based on icon types
-    if (rank === PILOT_RANK.VETERAN) return size * 1.0;
+    if (rank === PILOT_RANK.VETERAN) return size * 1.8;
     if (rank === PILOT_RANK.ELITE) return size * 2.5;
 
     return size;
@@ -355,7 +431,7 @@ function getPilotRankIconWidth(rank, size = 12) {
 /**
  * Draws a compact rank indicator (stars, no badge background).
  * For use in space ship labels where space is limited.
- * Does not draw anything for Rookie (rank 1).
+ * Does not draw anything for Green or Rookie ranks.
  * 
  * @param {number} x - X position (left edge)
  * @param {number} y - Y position (vertical center roughly)

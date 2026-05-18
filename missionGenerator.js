@@ -700,7 +700,7 @@ class MissionGenerator {
             source: random(sources),
             background: random(backgrounds),
             pilotRank: (typeof generatePilotRank === 'function')
-                ? generatePilotRank((typeof AI_ROLE !== 'undefined' ? AI_ROLE.PIRATE : 'Pirate'), 'Anarchy', 5, (typeof PILOT_RANK !== 'undefined' ? PILOT_RANK.VETERAN : 2)) // Use default pirate params with minRank Veteran
+                ? generatePilotRank((typeof AI_ROLE !== 'undefined' ? AI_ROLE.PIRATE : 'Pirate'), 'Anarchy', 5, (typeof PILOT_RANK !== 'undefined' ? PILOT_RANK.VETERAN : 3)) // Use default pirate params with minRank Veteran
                 : 2
         };
     }

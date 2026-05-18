@@ -432,7 +432,10 @@ class EnemyTargeting {
 
         // Final target decision
         if (bestTarget && bestScore > 0) {
-            const scoreThresholdForChange = 25;
+            const switchCooldownMult = rankMods?.targetSwitchCooldownMultiplier ?? 1.0;
+            const scoreThresholdMult = rankMods?.targetSwitchScoreMultiplier ?? 1.0;
+            const scoreThresholdForChange = 25 * scoreThresholdMult;
+            const targetSwitchCooldownSeconds = 2.0 * switchCooldownMult;
 
             if (bestTarget !== this.target) {
                 // Switching to a different target
@@ -440,7 +443,7 @@ class EnemyTargeting {
                 if (this.target === null) {
                     // No current target, immediate acquisition allowed
                     this.target = bestTarget;
-                    this.targetSwitchCooldown = 2.0; // Set cooldown for future switches
+                    this.targetSwitchCooldown = targetSwitchCooldownSeconds; // Set cooldown for future switches
                     if (typeof communicationSystem !== 'undefined' && communicationSystem?.handleTargetAcquired) {
                         communicationSystem.handleTargetAcquired(this, bestTarget, { reason: 'initial' });
                     }
@@ -455,7 +458,7 @@ class EnemyTargeting {
                 } else if (this.targetSwitchCooldown <= 0 && bestScore > currentTargetScore + scoreThresholdForChange) {
                     // Have a target, cooldown expired, and new target is significantly better
                     this.target = bestTarget;
-                    this.targetSwitchCooldown = 2.0;
+                    this.targetSwitchCooldown = targetSwitchCooldownSeconds;
                     if (typeof communicationSystem !== 'undefined' && communicationSystem?.handleTargetAcquired) {
                         communicationSystem.handleTargetAcquired(this, bestTarget, { reason: 'retarget' });
                     }
@@ -832,7 +835,9 @@ class EnemyTargeting {
             if (isAttacker) {
                 // Base retaliation + grudge bonus (capped at 3x for 5+ hits)
                 const grudgeMultiplier = Math.min(1 + (hitCount - 1) * 0.5, 3.0);
-                let retaliationBonus = TARGET_SCORE_RETALIATION_PIRATE * grudgeMultiplier;
+                const rankMods = enemy._getRankModifiers ? enemy._getRankModifiers() : null;
+                const retaliationAggroMult = rankMods?.retaliationAggressionMultiplier ?? 1.0;
+                let retaliationBonus = TARGET_SCORE_RETALIATION_PIRATE * grudgeMultiplier * retaliationAggroMult;
 
                 // Apply time-based decay for non-hostile attackers
                 // This allows initial retaliation but ships will eventually give up chasing neutrals
@@ -885,7 +890,7 @@ class EnemyTargeting {
                             // Decay retaliation bonus over time (full bonus until decayStart, then linear decay)
                             if (timeSinceAttack > decayStart) {
                                 const decayProgress = (timeSinceAttack - decayStart) / (RETALIATION_TIMEOUT_MS - decayStart);
-                                retaliationBonus = TARGET_SCORE_RETALIATION_PIRATE * (1 - decayProgress);
+                                retaliationBonus = TARGET_SCORE_RETALIATION_PIRATE * (1 - decayProgress) * retaliationAggroMult;
                             }
                         }
                     }
