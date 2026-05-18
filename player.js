@@ -2943,11 +2943,9 @@ class Player {
         let typeToLoad = data.shipTypeName || "Sidewinder";
         this.applyShipDefinition(typeToLoad);
 
-        // RESTORE UPGRADES - merge with defaults to handle new upgrade types from old saves
-        if (data.installedUpgrades) {
-            // Keep current defaults (which include all upgrade types like booster)
-            // then overlay saved values on top
-            this.installedUpgrades = { ...this.installedUpgrades, ...cloneSerializableState(data.installedUpgrades, {}) };
+        // Restore upgrades from the save payload when explicitly present.
+        this.installedUpgrades = cloneSerializableState(data.installedUpgrades, this.installedUpgrades);
+        if (data.installedUpgrades != null) {
             // Recalculate stats immediately to apply bonuses (hull, slots, etc.)
             this.recalculateStats();
         }
@@ -2985,9 +2983,9 @@ class Player {
         this.hasJoinedFaction = data.hasJoinedFaction || false;
         this.factionShip = data.factionShip || null;
 
-        this.maxShield = data.maxShield ?? this.maxShield;
-        this.shield = data.shield !== undefined ? constrain(data.shield, 0, this.maxShield) : this.maxShield;
-        this.shieldRechargeRate = data.shieldRechargeRate ?? this.shieldRechargeRate;
+        const loadedMaxShield = data.maxShield;
+        const loadedShield = data.shield;
+        const loadedShieldRechargeRate = data.shieldRechargeRate;
 
         this.kills = data.kills ?? 0;
 
@@ -3121,6 +3119,9 @@ class Player {
         this.alienCompanion = Player.sanitizeAlienCompanionData(data.alienCompanion);
         this.alienCompanionIntroShown = !!data.alienCompanionIntroShown;
         this.recalculateStats();
+        this.maxShield = loadedMaxShield ?? this.maxShield;
+        this.shield = loadedShield !== undefined ? constrain(loadedShield, 0, this.maxShield) : this.maxShield;
+        this.shieldRechargeRate = loadedShieldRechargeRate ?? this.shieldRechargeRate;
 
         // Initialize session trade tracking (not saved, always starts fresh)
         this.currentSessionTradedLocations = new Set();

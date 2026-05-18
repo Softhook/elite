@@ -591,6 +591,26 @@ describe('Player Serialization', () => {
         expect(restored.kills).toBe(0);
     });
 
+    test('should keep ship defaults when installedUpgrades are absent from save data', () => {
+        const saveData = player.toJSON();
+        saveData.installedUpgrades = null;
+
+        const restored = Player.fromJSON(saveData);
+        const defaultPlayer = new Player(saveData.shipTypeName);
+
+        expect(restored.installedUpgrades).toEqual(defaultPlayer.installedUpgrades);
+    });
+
+    test('should keep ship defaults when installedUpgrades are undefined in save data', () => {
+        const saveData = player.toJSON();
+        delete saveData.installedUpgrades;
+
+        const restored = Player.fromJSON(saveData);
+        const defaultPlayer = new Player(saveData.shipTypeName);
+
+        expect(restored.installedUpgrades).toEqual(defaultPlayer.installedUpgrades);
+    });
+
     test('should return detached save snapshots for mutable player state', () => {
         player.installedUpgrades.armor = 2;
         player.factionKills.POLICE = 4;
