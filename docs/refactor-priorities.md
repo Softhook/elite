@@ -26,3 +26,11 @@ Ordered by **importance first**, then **ease of fixing**.
 ## Refactor Started
 
 - Completed item **#1** by updating Jest setup path resolution in `package.json`.
+- Completed item **#3** by adding `scriptDependencyGuard.js` and running setup-time dependency validation in `sketch.js`.
+
+## Why item #3 was the next urgent cleanup
+
+- **Urgency:** This codebase depends on global script order in `index.htm`; when a required file is missing or reordered, runtime could fail later with unclear errors.
+- **Stability impact:** Failing fast at setup with an explicit missing-global list prevents hard-to-debug partial initialization states.
+- **Cleaner architecture now:** Dependency assumptions are now centralized in one guard module instead of being implicit and scattered.
+- **Risk level:** Low. Normal behavior is unchanged when dependencies are present; only misconfigured load order now errors earlier with clearer diagnostics.

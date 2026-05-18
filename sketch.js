@@ -63,6 +63,7 @@ function preload() {
 // --- p5.js Setup Function ---
 function setup() {
     try {
+        validateSetupDependencies();
         initializeCanvas();
         initializeManagers();
         initializeWeaponSystem();
@@ -77,6 +78,16 @@ function setup() {
     } catch (error) {
         handleCriticalSetupError(error);
     }
+}
+
+/**
+ * Validate critical globals needed by setup to catch script-order issues early.
+ */
+function validateSetupDependencies() {
+    if (typeof ScriptDependencyGuard === 'undefined' || typeof ScriptDependencyGuard.validateRequiredGlobals !== 'function') {
+        throw new Error("FATAL ERROR: scriptDependencyGuard.js must load before sketch.js.");
+    }
+    ScriptDependencyGuard.validateRequiredGlobals();
 }
 
 /**
