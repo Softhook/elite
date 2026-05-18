@@ -18,4 +18,12 @@ describe('ScriptDependencyGuard', () => {
             ScriptDependencyGuard.validateRequiredGlobals(['A', 'B'], { A: 1, B: 2 })
         ).toBe(true);
     });
+
+    test('treats undefined as missing but accepts null as defined', () => {
+        const missing = ScriptDependencyGuard.getMissingGlobals(['DefinedNull', 'UndefinedValue'], {
+            DefinedNull: null,
+            UndefinedValue: undefined
+        });
+        expect(missing).toEqual(['UndefinedValue']);
+    });
 });

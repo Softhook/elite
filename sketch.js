@@ -85,7 +85,10 @@ function setup() {
  */
 function validateSetupDependencies() {
     if (typeof ScriptDependencyGuard === 'undefined') {
-        throw new Error("FATAL ERROR: scriptDependencyGuard.js must load before sketch.js.");
+        throw new Error(
+            'FATAL ERROR: scriptDependencyGuard.js must load before sketch.js. ' +
+            'Add <script src="scriptDependencyGuard.js"></script> before sketch.js in index.htm.'
+        );
     }
     ScriptDependencyGuard.validateRequiredGlobals();
 }

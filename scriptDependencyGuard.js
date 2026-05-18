@@ -5,14 +5,15 @@
 // When setup() starts using a new global constructor/function/constant, add it here,
 // then run `npm test -- --runInBand test/scriptDependencyGuard.test.js` to validate guard behavior.
 const SETUP_REQUIRED_GLOBALS = Object.freeze([
-    // p5.js primitives used during setup initialization
+    // Phase 1: p5.js primitives used by initializeCanvas()
     'displayDensity', 'pixelDensity', 'createCanvas', 'angleMode', 'textAlign', 'textSize', 'frameRate',
     'RADIANS', 'CENTER',
 
-    // Logging / constants used during setup
+    // Phase 1: logging + text constants referenced while initializing canvas/setup logs
     'UI_LOG', 'STATION_TEXT_SIZE',
 
-    // Constructor/function globals required by setup flow
+    // Phase 2+: constructors/functions used by initializeManagers(), initializeWeaponSystem(),
+    // validateShipDefinitions(), and initializeGameObjects()
     'SoundManager', 'AmbientSoundManager', 'StationMusicManager', 'SpaceMusicManager', 'EventManager',
     'WeaponSystem', 'ObjectPool', 'SHIP_DEFINITIONS', 'GameStateManager', 'Galaxy', 'Player', 'UIManager',
     'TitleScreen', 'InventoryScreen', 'MissionOverlay', 'SaveSelectionScreen', 'CommunicationSystem', 'NewsManager'
