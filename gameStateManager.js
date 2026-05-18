@@ -2234,36 +2234,6 @@ class GameStateManager {
         this.currentStationMissions = []; return false;
     } // End fetchStationMissions
 
-    /**
-     * Legacy compatibility shim.
-     * Delegate to saveLoadSystem.js so all callers use the current multi-slot format.
-     */
-    saveGame(slotIndex) {
-        const resolvedSlotIndex = slotIndex ?? globalThis.window?.activeSaveSlotIndex ?? 0;
-        const globalSaveGame = globalThis.saveGame;
-        if (typeof globalSaveGame === 'function') {
-            if (globalThis.window) {
-                globalThis.window.activeSaveSlotIndex = resolvedSlotIndex;
-            }
-            globalSaveGame();
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Legacy compatibility shim.
-     * Delegate to saveLoadSystem.js so all callers use the current multi-slot format.
-     */
-    loadGame(slotIndex) {
-        const resolvedSlotIndex = slotIndex ?? globalThis.window?.activeSaveSlotIndex ?? 0;
-        const globalLoadGame = globalThis.loadGame;
-        if (typeof globalLoadGame === 'function') {
-            return !!globalLoadGame(resolvedSlotIndex);
-        }
-        return false;
-    }
-
     // Add a method to toggle the inventory screen
     toggleInventory() {
         if (this.currentState === "IN_FLIGHT") {
