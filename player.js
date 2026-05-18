@@ -3403,10 +3403,12 @@ class Player {
     /**
      * Cycle through nearby targets using the D-pad (or keys).
      * Prioritizes nearby hostile targets, then other nearby ships.
-     * @param {number} direction - 1 for next, -1 for previous
+     * Hostile entries are sorted by distance first, then non-hostile nearby entries.
+     * @returns {Array<Object>} Target candidate entries with {target, distSq}
+     * @private
      */
-    cycleTarget(direction = 1) {
-        if (!this.currentSystem) return;
+    _getCycleTargetEntries() {
+        if (!this.currentSystem) return [];
 
         const maxDist = this._getCycleTargetMaxDistance();
         const maxDistSq = maxDist * maxDist;
@@ -3447,12 +3449,42 @@ class Player {
                 this.target = null;
                 if (typeof uiManager !== 'undefined') uiManager.addMessage("No targets in range.", [255, 150, 0]);
             }
-            return;
+            return [];
         }
 
         hostileTargets.sort((a, b) => a.distSq - b.distSq);
         nearbyTargets.sort((a, b) => a.distSq - b.distSq);
-        const targetList = hostileTargets.concat(nearbyTargets).map(entry => entry.target);
+        return hostileTargets.concat(nearbyTargets);
+    }
+
+    /**
+     * @param {Object} newTarget - Target to lock
+     * @private
+     */
+    _setCycleTarget(newTarget) {
+        this.target = newTarget;
+        if (typeof uiManager !== 'undefined') {
+            let label = 'Target';
+            if (newTarget.shipTypeName) label = newTarget.shipTypeName;
+            else if (typeof newTarget.getDisplayName === 'function') label = newTarget.getDisplayName();
+            else if (newTarget.displayName) label = newTarget.displayName;
+            else if (newTarget.type) label = newTarget.type;
+            else if (newTarget.constructor && newTarget.constructor.name === 'Asteroid') label = 'Asteroid';
+
+            uiManager.addMessage(`Target locked: ${label}`, [0, 255, 0]);
+        }
+        if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+    }
+
+    /**
+     * Cycle through nearby targets using the D-pad (or keys).
+     * Prioritizes nearby hostile targets, then other nearby ships.
+     * @param {number} direction - 1 for next, -1 for previous
+     */
+    cycleTarget(direction = 1) {
+        const targetEntries = this._getCycleTargetEntries();
+        if (!targetEntries || targetEntries.length === 0) return;
+        const targetList = targetEntries.map(entry => entry.target);
 
         // 3. Determine current index and move to next
         let currentIndex = targetList.indexOf(this.target);
@@ -3466,18 +3498,53 @@ class Player {
         const newTarget = targetList[nextIndex];
 
         if (newTarget !== this.target) {
-            this.target = newTarget;
-            if (typeof uiManager !== 'undefined') {
-                let label = 'Target';
-                if (newTarget.shipTypeName) label = newTarget.shipTypeName;
-                else if (typeof newTarget.getDisplayName === 'function') label = newTarget.getDisplayName();
-                else if (newTarget.displayName) label = newTarget.displayName;
-                else if (newTarget.type) label = newTarget.type;
-                else if (newTarget.constructor && newTarget.constructor.name === 'Asteroid') label = 'Asteroid';
-                
-                uiManager.addMessage(`Target locked: ${label}`, [0, 255, 0]);
+            this._setCycleTarget(newTarget);
+        }
+    }
+
+    /**
+     * Selects a nearby target in a spatial direction, for analog-stick targeting.
+     * @param {number} dirX - Direction X from left stick
+     * @param {number} dirY - Direction Y from left stick
+     */
+    selectTargetByDirection(dirX, dirY) {
+        const targetEntries = this._getCycleTargetEntries();
+        if (!targetEntries || targetEntries.length === 0) return;
+
+        const MIN_STICK_MAGNITUDE = 0.2;
+        const MIN_ALIGNMENT = 0.2;
+        const MIN_TARGET_DISTANCE = 1;
+        const ALIGNMENT_WEIGHT = 0.8;
+        const PROXIMITY_WEIGHT = 0.2;
+
+        const mag = Math.sqrt((dirX * dirX) + (dirY * dirY));
+        if (mag < MIN_STICK_MAGNITUDE) return;
+        const nx = dirX / mag;
+        const ny = dirY / mag;
+        const maxDist = Math.max(1, this._getCycleTargetMaxDistance());
+
+        let bestEntry = null;
+        let bestScore = -Infinity;
+        for (const entry of targetEntries) {
+            const target = entry.target;
+            const toX = target.pos.x - this.pos.x;
+            const toY = target.pos.y - this.pos.y;
+            const toMag = Math.sqrt((toX * toX) + (toY * toY));
+            if (toMag < MIN_TARGET_DISTANCE) continue;
+
+            const align = ((toX / toMag) * nx) + ((toY / toMag) * ny);
+            if (align < MIN_ALIGNMENT) continue;
+
+            const proximity = 1 - Math.min(toMag / maxDist, 1);
+            const score = (align * ALIGNMENT_WEIGHT) + (proximity * PROXIMITY_WEIGHT);
+            if (score > bestScore) {
+                bestScore = score;
+                bestEntry = target;
             }
-            if (typeof soundManager !== 'undefined') soundManager.playSound('click');
+        }
+
+        if (bestEntry && bestEntry !== this.target) {
+            this._setCycleTarget(bestEntry);
         }
     }
 

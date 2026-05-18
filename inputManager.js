@@ -35,6 +35,7 @@ const INPUT_ACTIONS = {
     WEAPON_PREV: 'WEAPON_PREV',
     TARGET_NEXT: 'TARGET_NEXT',
     TARGET_PREV: 'TARGET_PREV',
+    TOGGLE_TARGET_SELECTION_MODE: 'TOGGLE_TARGET_SELECTION_MODE',
     MAP_MARKET_TOGGLE: 'MAP_MARKET_TOGGLE',
     ALTITUDE_UP: 'ALTITUDE_UP',
     ALTITUDE_DOWN: 'ALTITUDE_DOWN',
@@ -62,6 +63,9 @@ class InputManager {
         this._beamGamepadAiming = false;
         // Visual reticle screen position (for HUD drawing)
         this._beamReticle = { x: 0, y: 0, active: false, alpha: 0 };
+        this._targetSelectionModeEnabled = false;
+        this._targetSelectionStickLatched = false;
+        this._targetSelectionStickAngle = null;
         this._keyboardMap = this._buildKeyboardMap();
         this._gamepadMap = this._buildGamepadMap();
     }
@@ -184,6 +188,7 @@ class InputManager {
                 [INPUT_ACTIONS.WEAPON_PREV]: ['dpad.left'],
                 [INPUT_ACTIONS.TARGET_NEXT]: ['dpad.up'],
                 [INPUT_ACTIONS.TARGET_PREV]: ['dpad.down'],
+                [INPUT_ACTIONS.TOGGLE_TARGET_SELECTION_MODE]: ['l3'],
                 [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
             };
 
@@ -473,6 +478,70 @@ class InputManager {
      */
     getBeamReticle() {
         return this._beamReticle;
+    }
+
+    /**
+     * Toggles flight target-selection mode for left-stick spatial targeting.
+     * Resets stick-latch state so the next deflection immediately emits a direction.
+     * @returns {boolean} True when mode is enabled after toggle, false otherwise
+     */
+    toggleTargetSelectionMode() {
+        this._targetSelectionModeEnabled = !this._targetSelectionModeEnabled;
+        this._targetSelectionStickLatched = false;
+        this._targetSelectionStickAngle = null;
+        return this._targetSelectionModeEnabled;
+    }
+
+    /**
+     * @returns {boolean} Whether left-stick target-selection mode is currently enabled
+     */
+    isTargetSelectionModeEnabled() {
+        return !!this._targetSelectionModeEnabled;
+    }
+
+    /**
+     * Consumes a left-stick direction for target selection.
+     * Returns a direction only when stick deflection is significant and either:
+     * 1) this is a fresh deflection after release, or
+     * 2) the stick angle rotates at least 45° from the previously latched angle.
+     * @param {number} x - Left stick X value
+     * @param {number} y - Left stick Y value
+     * @returns {{x:number, y:number}|null} Spatial direction when a new selection should trigger
+     */
+    consumeTargetSelectionStickDirection(x, y) {
+        const STICK_ACTIVATION_THRESHOLD = 0.35;
+        const STICK_ROTATION_THRESHOLD_RAD = Math.PI / 4;
+
+        if (!this._targetSelectionModeEnabled) {
+            this._targetSelectionStickLatched = false;
+            this._targetSelectionStickAngle = null;
+            return null;
+        }
+
+        const magnitude = Math.sqrt((x * x) + (y * y));
+        if (magnitude < STICK_ACTIVATION_THRESHOLD) {
+            this._targetSelectionStickLatched = false;
+            this._targetSelectionStickAngle = null;
+            return null;
+        }
+
+        const angle = Math.atan2(y, x);
+        if (!this._targetSelectionStickLatched) {
+            this._targetSelectionStickLatched = true;
+            this._targetSelectionStickAngle = angle;
+            return { x, y };
+        }
+
+        let delta = angle - this._targetSelectionStickAngle;
+        while (delta > Math.PI) delta -= (Math.PI * 2);
+        while (delta < -Math.PI) delta += (Math.PI * 2);
+
+        if (Math.abs(delta) >= STICK_ROTATION_THRESHOLD_RAD) {
+            this._targetSelectionStickAngle = angle;
+            return { x, y };
+        }
+
+        return null;
     }
 
     describeBindings(context) {

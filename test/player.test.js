@@ -435,6 +435,19 @@ describe('Player Target Cycling', () => {
         player.cycleTarget(1);
         expect(player.target).toBe(guard);
     });
+
+    test('selectTargetByDirection chooses the nearest viable target in the stick direction', () => {
+        const frontTarget = createTarget({ x: 120, y: 0, role: AI_ROLE.PIRATE, shipTypeName: 'Front Raider' });
+        const belowTarget = createTarget({ x: 0, y: 200, role: AI_ROLE.PIRATE, shipTypeName: 'Below Raider' });
+        const rearTarget = createTarget({ x: -150, y: 0, role: AI_ROLE.PIRATE, shipTypeName: 'Rear Raider' });
+        player.currentSystem.enemies = [rearTarget, belowTarget, frontTarget];
+
+        player.selectTargetByDirection(1, 0);
+        expect(player.target).toBe(frontTarget);
+
+        player.selectTargetByDirection(0, 1);
+        expect(player.target).toBe(belowTarget);
+    });
 });
 
 // ============================================
