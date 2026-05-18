@@ -118,7 +118,19 @@ function runSetupInitializationPhases() {
         { name: 'setInitialGameState', requiredGlobals: [], run: setInitialGameState },
         { name: 'setupAudioGestures', requiredGlobals: [], run: setupAudioGestures },
         { name: 'initializeGamepad', requiredGlobals: [], run: initializeGamepad }
-    ]);
+    ], globalThis, resolveSetupDependencyName);
+}
+
+function resolveSetupDependencyName(name) {
+    if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name)) {
+        return false;
+    }
+
+    try {
+        return eval(`typeof ${name} !== "undefined"`);
+    } catch (_) {
+        return false;
+    }
 }
 
 /**

@@ -27,6 +27,17 @@ describe('ScriptDependencyGuard', () => {
         expect(missing).toEqual(['UndefinedValue']);
     });
 
+    test('can resolve lexical-style dependencies via provided resolver', () => {
+        const resolver = (name) => name === 'LexicalThing';
+        const missing = ScriptDependencyGuard.getMissingGlobals(
+            ['LexicalThing', 'MissingThing'],
+            {},
+            resolver
+        );
+
+        expect(missing).toEqual(['MissingThing']);
+    });
+
     test('runs initialization phases in order when dependencies are present', () => {
         const calls = [];
         ScriptDependencyGuard.runInitializationPhases(

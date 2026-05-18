@@ -1,12 +1,28 @@
 // ****** scriptDependencyGuard.js ******
 // Generic startup dependency validation helpers for script-order/global dependency checks.
 
-function getMissingGlobals(requiredGlobals = [], scope = globalThis) {
-    return requiredGlobals.filter((name) => typeof scope[name] === 'undefined');
+function isNameDefined(name, scope, lexicalNameResolver) {
+    if (typeof scope[name] !== 'undefined') {
+        return true;
+    }
+
+    if (typeof lexicalNameResolver === 'function') {
+        try {
+            return Boolean(lexicalNameResolver(name));
+        } catch (_) {
+            return false;
+        }
+    }
+
+    return false;
 }
 
-function validateRequiredGlobals(requiredGlobals = [], scope = globalThis, contextName = 'setup') {
-    const missingGlobals = getMissingGlobals(requiredGlobals, scope);
+function getMissingGlobals(requiredGlobals = [], scope = globalThis, lexicalNameResolver) {
+    return requiredGlobals.filter((name) => !isNameDefined(name, scope, lexicalNameResolver));
+}
+
+function validateRequiredGlobals(requiredGlobals = [], scope = globalThis, contextName = 'setup', lexicalNameResolver) {
+    const missingGlobals = getMissingGlobals(requiredGlobals, scope, lexicalNameResolver);
     if (missingGlobals.length > 0) {
         throw new Error(
             `FATAL ERROR: Missing global dependencies required for ${contextName}: ${missingGlobals.join(', ')}. ` +
@@ -16,7 +32,7 @@ function validateRequiredGlobals(requiredGlobals = [], scope = globalThis, conte
     return true;
 }
 
-function runInitializationPhases(phases = [], scope = globalThis) {
+function runInitializationPhases(phases = [], scope = globalThis, lexicalNameResolver) {
     phases.forEach((phase, index) => {
         const phaseName = phase?.name || `phase[${index}]`;
 
@@ -27,7 +43,7 @@ function runInitializationPhases(phases = [], scope = globalThis) {
             );
         }
 
-        validateRequiredGlobals(phase.requiredGlobals || [], scope, phaseName);
+        validateRequiredGlobals(phase.requiredGlobals || [], scope, phaseName, lexicalNameResolver);
         phase.run();
     });
 }
