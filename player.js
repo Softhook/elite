@@ -2944,8 +2944,8 @@ class Player {
         this.applyShipDefinition(typeToLoad);
 
         // Restore upgrades from the save payload when explicitly present.
-        if (data.installedUpgrades !== undefined && data.installedUpgrades !== null) {
-            this.installedUpgrades = cloneSerializableState(data.installedUpgrades);
+        this.installedUpgrades = cloneSerializableState(data.installedUpgrades, this.installedUpgrades);
+        if (data.installedUpgrades != null) {
             // Recalculate stats immediately to apply bonuses (hull, slots, etc.)
             this.recalculateStats();
         }
