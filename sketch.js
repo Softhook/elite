@@ -744,7 +744,7 @@ function handleGamepadContinuousInput() {
     // up always moves the ship toward the top of the screen regardless of heading.
     //   fwd   = dot((lsX, lsY), ship-facing (cos a, sin a))
     //   right = dot((lsX, lsY), ship-right  (-sin a, cos a))
-    const isTargetSelectionMode = (state === 'IN_FLIGHT') && !!(inputManager?.isTargetSelectionModeEnabled?.());
+    const isTargetSelectionMode = (state === 'IN_FLIGHT') && inputManager?.isTargetSelectionModeEnabled?.();
     let stickForwardAmount = 0, stickReverseAmount = 0;
     if (!isTargetSelectionMode && (Math.abs(lsX) > 0.05 || Math.abs(lsY) > 0.05)) {
         const cosA = cos(player.angle), sinA = sin(player.angle);

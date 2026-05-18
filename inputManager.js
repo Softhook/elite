@@ -480,6 +480,11 @@ class InputManager {
         return this._beamReticle;
     }
 
+    /**
+     * Toggles flight target-selection mode for left-stick spatial targeting.
+     * Resets stick-latch state so the next deflection immediately emits a direction.
+     * @returns {boolean} True when mode is enabled after toggle, false otherwise
+     */
     toggleTargetSelectionMode() {
         this._targetSelectionModeEnabled = !this._targetSelectionModeEnabled;
         this._targetSelectionStickLatched = false;
@@ -487,11 +492,26 @@ class InputManager {
         return this._targetSelectionModeEnabled;
     }
 
+    /**
+     * @returns {boolean} Whether left-stick target-selection mode is currently enabled
+     */
     isTargetSelectionModeEnabled() {
         return !!this._targetSelectionModeEnabled;
     }
 
+    /**
+     * Consumes a left-stick direction for target selection.
+     * Returns a direction only when stick deflection is significant and either:
+     * 1) this is a fresh deflection after release, or
+     * 2) the stick angle rotates at least 45° from the previously latched angle.
+     * @param {number} x - Left stick X value
+     * @param {number} y - Left stick Y value
+     * @returns {{x:number, y:number}|null} Spatial direction when a new selection should trigger
+     */
     consumeTargetSelectionStickDirection(x, y) {
+        const STICK_ACTIVATION_THRESHOLD = 0.35;
+        const STICK_ROTATION_THRESHOLD_RAD = Math.PI / 4;
+
         if (!this._targetSelectionModeEnabled) {
             this._targetSelectionStickLatched = false;
             this._targetSelectionStickAngle = null;
@@ -499,7 +519,7 @@ class InputManager {
         }
 
         const magnitude = Math.sqrt((x * x) + (y * y));
-        if (magnitude < 0.35) {
+        if (magnitude < STICK_ACTIVATION_THRESHOLD) {
             this._targetSelectionStickLatched = false;
             this._targetSelectionStickAngle = null;
             return null;
@@ -512,11 +532,11 @@ class InputManager {
             return { x, y };
         }
 
-        let delta = angle - (this._targetSelectionStickAngle || 0);
+        let delta = angle - this._targetSelectionStickAngle;
         while (delta > Math.PI) delta -= (Math.PI * 2);
         while (delta < -Math.PI) delta += (Math.PI * 2);
 
-        if (Math.abs(delta) >= (Math.PI / 4)) {
+        if (Math.abs(delta) >= STICK_ROTATION_THRESHOLD_RAD) {
             this._targetSelectionStickAngle = angle;
             return { x, y };
         }

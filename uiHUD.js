@@ -436,9 +436,12 @@ class UIHUD {
         textAlign(CENTER, CENTER);
         text(this._cachedStatusText, width / 2, statusLineY);
 
-        const inputMgr = globalThis._inputManager || globalThis.window?._inputManager;
+        const inputMgr = globalThis._inputManager;
         if (gameStateManager?.currentState === 'IN_FLIGHT' && inputMgr?.isTargetSelectionModeEnabled?.()) {
-            const pulse = 180 + Math.sin(millis() * 0.012) * 60;
+            const PULSE_BASE_ALPHA = 180;
+            const PULSE_FREQUENCY = 0.012;
+            const PULSE_AMPLITUDE = 60;
+            const pulse = PULSE_BASE_ALPHA + Math.sin(millis() * PULSE_FREQUENCY) * PULSE_AMPLITUDE;
             fill(120, 255, 160, pulse);
             textAlign(CENTER, CENTER);
             textSize(STATION_TEXT_SIZE.HELPER + 1);

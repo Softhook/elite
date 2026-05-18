@@ -3403,11 +3403,12 @@ class Player {
     /**
      * Cycle through nearby targets using the D-pad (or keys).
      * Prioritizes nearby hostile targets, then other nearby ships.
-     * @returns {Array<Object>} Ordered target candidate entries with {target, distSq}
+     * Hostile entries are sorted by distance first, then non-hostile nearby entries.
+     * @returns {Array<Object>} Target candidate entries with {target, distSq}
      * @private
      */
     _getCycleTargetEntries() {
-        if (!this.currentSystem) return;
+        if (!this.currentSystem) return [];
 
         const maxDist = this._getCycleTargetMaxDistance();
         const maxDistSq = maxDist * maxDist;
@@ -3510,8 +3511,14 @@ class Player {
         const targetEntries = this._getCycleTargetEntries();
         if (!targetEntries || targetEntries.length === 0) return;
 
+        const MIN_STICK_MAGNITUDE = 0.2;
+        const MIN_ALIGNMENT = 0.2;
+        const MIN_TARGET_DISTANCE = 1;
+        const ALIGNMENT_WEIGHT = 0.8;
+        const PROXIMITY_WEIGHT = 0.2;
+
         const mag = Math.sqrt((dirX * dirX) + (dirY * dirY));
-        if (mag < 0.2) return;
+        if (mag < MIN_STICK_MAGNITUDE) return;
         const nx = dirX / mag;
         const ny = dirY / mag;
         const maxDist = Math.max(1, this._getCycleTargetMaxDistance());
@@ -3523,13 +3530,13 @@ class Player {
             const toX = target.pos.x - this.pos.x;
             const toY = target.pos.y - this.pos.y;
             const toMag = Math.sqrt((toX * toX) + (toY * toY));
-            if (toMag < 1) continue;
+            if (toMag < MIN_TARGET_DISTANCE) continue;
 
             const align = ((toX / toMag) * nx) + ((toY / toMag) * ny);
-            if (align < 0.2) continue;
+            if (align < MIN_ALIGNMENT) continue;
 
             const proximity = 1 - Math.min(toMag / maxDist, 1);
-            const score = (align * 0.8) + (proximity * 0.2);
+            const score = (align * ALIGNMENT_WEIGHT) + (proximity * PROXIMITY_WEIGHT);
             if (score > bestScore) {
                 bestScore = score;
                 bestEntry = target;
