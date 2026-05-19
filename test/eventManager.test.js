@@ -149,6 +149,7 @@ function createMockUIManager() {
     return {
         messages: [],
         persistentMessages: [],
+        eventMarkers: [],
         addMessage(msg, color, duration) {
             this.messages.push({ msg, color, duration });
         },
@@ -157,6 +158,9 @@ function createMockUIManager() {
         },
         removePersistentMessage(id) {
             this.persistentMessages = this.persistentMessages.filter(m => m.id !== id);
+        },
+        addEventMarker(id, x, y, label, color, duration) {
+            this.eventMarkers.push({ id, x, y, label, color, duration });
         }
     };
 }
@@ -256,6 +260,8 @@ describe('EventManager Tests', () => {
             em.executeConfiguredEvent('ALIEN_RAID');
             expect(system.enemies.length).toBeGreaterThan(0);
             expect(system.enemies[0].role).toBe(AI_ROLE.ALIEN);
+            expect(ui.eventMarkers[0].label).toBe('Xeno Incursion');
+            expect(ui.eventMarkers[0].color).toBe('magenta');
         });
 
         test('should execute PIRATE_SWARM', () => {
@@ -353,6 +359,7 @@ describe('EventManager Tests', () => {
             expect(ui.messages.length).toBeGreaterThan(0);
             expect(ui.messages[0].msg).toContain('shortage');
             expect(ui.persistentMessages[0].id).toMatch(/SHORTAGE_/);
+            expect(ui.persistentMessages.find(m => m.id === 'SIGNAGE_MARKET_SHORTAGE')).toBeDefined();
             const after = snapshotStocks(system.station.market);
             const delta = findStockDelta(before, after);
             expect(delta).toBeDefined();

@@ -692,6 +692,56 @@ const HEADLINE_TEMPLATES = {
         "Warning: Missionary vessel broadcasting pirate codes",
         "Betrayal of faith: Pirate raider disguised as gospel ship",
         "False Prophet: Authorities identify masked outlaw vessel"
+    ],
+    EVENT_MEDICAL_RELIEF_CONVOY: [
+        "Medical relief convoy requests priority transit",
+        "Aid freighters rush supplies through {SYSTEM}",
+        "Hospitals await emergency shipment from inbound convoy"
+    ],
+    EVENT_NAV_BEACON_RECALIBRATION: [
+        "Approach beacons recalibrated across local traffic lanes",
+        "Beacon marshals slow traffic for navigation refit",
+        "Pilots warned of temporary guidance drift near {STATION}"
+    ],
+    EVENT_LANTERN_PROCESSION: [
+        "Memorial lantern procession drifts through orbital space",
+        "Candlelit cortege prompts quiet lanes in {SYSTEM}",
+        "Pilots dim lights for solemn procession near {STATION}"
+    ],
+    EVENT_SALVAGE_TUG_LINE: [
+        "Salvage tugs haul wreckage off a busy lane",
+        "Heavy recovery chain clears debris near {SYSTEM}",
+        "Dock authorities praise tug crews after orbital cleanup"
+    ],
+    EVENT_SURVEY_DRONE_SWEEP: [
+        "Survey drones raster local trade lanes",
+        "Cartography sweep maps high-traffic corridor in {SYSTEM}",
+        "Pilots report lidar flashes from dense drone patrol"
+    ],
+    EVENT_REACTOR_PURGE_CANISTERS: [
+        "Hazmat warning issued for drifting purge canisters",
+        "Emergency reactor vent leaves hot cargo adrift",
+        "Recovery crews chase purge canisters through {SYSTEM}"
+    ],
+    EVENT_CRYO_POD_SPILL: [
+        "Cryo-pod spill triggers rescue sweep in {SYSTEM}",
+        "Emergency beacons lead responders to broken transport trail",
+        "Medical teams mobilize after pod spill near {STATION}"
+    ],
+    EVENT_SMUGGLER_DECOY_CACHE: [
+        "Blinking decoy cache raises smuggler trap fears",
+        "Questionable cargo cache tempts scavengers in {SYSTEM}",
+        "Authorities suspect decoy crates are baiting greedy pilots"
+    ],
+    EVENT_SATELLITE_SHRAPNEL_FIELD: [
+        "Satellite breakup leaves shrapnel field in local orbit",
+        "Navigation warning posted after comms hardware explodes",
+        "Fast-moving debris cloud reported near {STATION}"
+    ],
+    EVENT_ION_WAKE_STORM: [
+        "Ion wake storm rolls out of old supercruise lanes",
+        "Residual wake charge forms new electromagnetic hazard",
+        "Pilots warned of violent ion haze in {SYSTEM}"
     ]
 };
 

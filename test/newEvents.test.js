@@ -1,6 +1,6 @@
 /**
  * New Events Tests
- * Jest tests for the 8 new events added to EventManager.
+ * Jest tests for custom and lore expansion random events added to EventManager.
  */
 
 // Load dependencies
@@ -119,6 +119,7 @@ function createMockUIManager() {
     return {
         messages: [],
         persistentMessages: [],
+        eventMarkers: [],
         addMessage(msg, color, duration) {
             this.messages.push({ msg, color, duration });
         },
@@ -127,6 +128,9 @@ function createMockUIManager() {
         },
         removePersistentMessage(id) {
             this.persistentMessages = this.persistentMessages.filter(m => m.id !== id);
+        },
+        addEventMarker(id, x, y, label, color, duration) {
+            this.eventMarkers.push({ id, x, y, label, color, duration });
         }
     };
 }
@@ -560,15 +564,18 @@ describe('New Events Tests', () => {
     });
 
     describe('Lore Expansion Events', () => {
-        test('should execute all 20 new lore events with expected spawn output', () => {
+        test('should execute all 30 lore events with expected spawn output', () => {
             const enemyEvents = [
                 'IMPERIAL_TAX_CONVOY', 'SEPARATIST_PRIVATEERS', 'PILGRIM_ESCORT', 'ALIEN_RELIC_HUNTERS',
                 'BLACK_OPS_INTERCEPTORS', 'STATION_EXTORTION_RING', 'IMPERIAL_RETRIBUTION_WING',
                 'SEPARATIST_SIGNAL_JAMMERS', 'HARLEQUIN_FLASHMOB', 'MISSIONARY_RECLAMATION_FLEET',
-                'BORDER_MILITIA_DRILL', 'ALIEN_BIO_PROSPECTORS', 'DEFENSE_DRONE_SWEEP', 'SHADOW_COURIER'
+                'BORDER_MILITIA_DRILL', 'ALIEN_BIO_PROSPECTORS', 'DEFENSE_DRONE_SWEEP', 'SHADOW_COURIER',
+                'MEDICAL_RELIEF_CONVOY', 'NAV_BEACON_RECALIBRATION', 'LANTERN_PROCESSION',
+                'SALVAGE_TUG_LINE', 'SURVEY_DRONE_SWEEP'
             ];
-            const cargoEvents = ['ORBITAL_WRECKFIELD', 'PILGRIM_OFFERINGS', 'SEPARATIST_ARMS_CACHE', 'ALIEN_RELIC_CACHE'];
-            const stormEvents = ['VOID_CHOIR_STORM', 'SUNSPIKE_TURBULENCE'];
+            const cargoEvents = ['ORBITAL_WRECKFIELD', 'PILGRIM_OFFERINGS', 'SEPARATIST_ARMS_CACHE', 'ALIEN_RELIC_CACHE', 'REACTOR_PURGE_CANISTERS', 'CRYO_POD_SPILL', 'SMUGGLER_DECOY_CACHE'];
+            const asteroidEvents = ['SATELLITE_SHRAPNEL_FIELD'];
+            const stormEvents = ['VOID_CHOIR_STORM', 'SUNSPIKE_TURBULENCE', 'ION_WAKE_STORM'];
 
             enemyEvents.forEach(type => {
                 const before = system.enemies.length;
@@ -582,11 +589,30 @@ describe('New Events Tests', () => {
                 expect(system.cargo.length).toBeGreaterThan(before);
             });
 
+            asteroidEvents.forEach(type => {
+                const before = system.asteroids.length;
+                em.executeConfiguredEvent(type);
+                expect(system.asteroids.length).toBeGreaterThan(before);
+            });
+
             stormEvents.forEach(type => {
                 const before = system.cosmicStorms.length;
                 em.executeConfiguredEvent(type);
                 expect(system.cosmicStorms.length).toBeGreaterThan(before);
             });
+        });
+
+        test('should add signage and custom marker styling for new ambient events', () => {
+            em.executeConfiguredEvent('MEDICAL_RELIEF_CONVOY');
+            expect(system.enemies.length).toBeGreaterThan(0);
+            expect(ui.eventMarkers[0].label).toBe('Relief Convoy');
+            expect(ui.eventMarkers[0].color).toBe('cyan');
+            expect(ui.persistentMessages.find(m => m.id === 'SIGNAGE_MEDICAL_RELIEF_CONVOY')).toBeDefined();
+
+            em.executeConfiguredEvent('SATELLITE_SHRAPNEL_FIELD');
+            expect(system.asteroids.length).toBeGreaterThan(0);
+            expect(ui.eventMarkers.some(m => m.label === 'Shrapnel Field')).toBe(true);
+            expect(ui.persistentMessages.find(m => m.id === 'SIGNAGE_SATELLITE_SHRAPNEL_FIELD')).toBeDefined();
         });
     });
 
@@ -606,14 +632,17 @@ describe('New Events Tests', () => {
             });
         });
 
-        test('should route all 20 lore expansion events to dynamic event news', () => {
+        test('should route all 30 lore expansion events to dynamic event news', () => {
             const loreEvents = [
                 'IMPERIAL_TAX_CONVOY', 'SEPARATIST_PRIVATEERS', 'PILGRIM_ESCORT', 'ALIEN_RELIC_HUNTERS',
                 'BLACK_OPS_INTERCEPTORS', 'STATION_EXTORTION_RING', 'IMPERIAL_RETRIBUTION_WING',
                 'SEPARATIST_SIGNAL_JAMMERS', 'HARLEQUIN_FLASHMOB', 'MISSIONARY_RECLAMATION_FLEET',
                 'BORDER_MILITIA_DRILL', 'ALIEN_BIO_PROSPECTORS', 'DEFENSE_DRONE_SWEEP', 'SHADOW_COURIER',
                 'ORBITAL_WRECKFIELD', 'PILGRIM_OFFERINGS', 'SEPARATIST_ARMS_CACHE', 'ALIEN_RELIC_CACHE',
-                'VOID_CHOIR_STORM', 'SUNSPIKE_TURBULENCE'
+                'VOID_CHOIR_STORM', 'SUNSPIKE_TURBULENCE', 'MEDICAL_RELIEF_CONVOY',
+                'NAV_BEACON_RECALIBRATION', 'LANTERN_PROCESSION', 'SALVAGE_TUG_LINE',
+                'SURVEY_DRONE_SWEEP', 'REACTOR_PURGE_CANISTERS', 'CRYO_POD_SPILL',
+                'SMUGGLER_DECOY_CACHE', 'SATELLITE_SHRAPNEL_FIELD', 'ION_WAKE_STORM'
             ];
 
             loreEvents.forEach(eventType => {
