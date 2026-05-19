@@ -2382,11 +2382,11 @@ class EventManager {
         try {
             const anchorLabel = this._deriveAnchorLabelForPos(baseSpawnX, baseSpawnY);
             // Convert ASTEROID_CLUSTER -> Asteroid Cluster
-            const clusterLabel = event.type.split('_')
+            const fallbackLabel = event.type.split('_')
                 .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
                 .join(' ');
             if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
-                this.uiManager.addEventMarker(`${event.type}_CLUSTER_${frameCount}`, baseSpawnX, baseSpawnY, atmosphere.markerLabel || clusterLabel, atmosphere.markerColor || 'orange', this._extendDurationMs(180000));
+                this.uiManager.addEventMarker(`${event.type}_CLUSTER_${frameCount}`, baseSpawnX, baseSpawnY, atmosphere.markerLabel || fallbackLabel, atmosphere.markerColor || 'orange', this._extendDurationMs(180000));
             }
             this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: ${event.type.replace(/_/g, ' ')} detected near ${anchorLabel}`, atmosphere.markerColor || 'orange', 4000, event.type);
         } catch (e) { }
@@ -2417,9 +2417,9 @@ class EventManager {
                 // Mark the comet on HUD so player knows where to look
                 try {
                     const anchorLabel = this._deriveAnchorLabelForPos(asteroid.pos.x, asteroid.pos.y);
-                    const label = `Comet`;
+                    const fallbackLabel = `Comet`;
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
-                        this.uiManager.addEventMarker(`COMET_${frameCount}`, asteroid.pos.x, asteroid.pos.y, atmosphere.markerLabel || label, atmosphere.markerColor || 'yellow', this._extendDurationMs(240000));
+                        this.uiManager.addEventMarker(`COMET_${frameCount}`, asteroid.pos.x, asteroid.pos.y, atmosphere.markerLabel || fallbackLabel, atmosphere.markerColor || 'yellow', this._extendDurationMs(240000));
                     }
                     this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: Comet detected near ${anchorLabel}`, atmosphere.markerColor || 'yellow', 4000, event.type);
                 } catch (e) { }
@@ -2544,11 +2544,11 @@ class EventManager {
             this.starSystem.cosmicStorms.push(storm);
             // Add HUD marker for storm so player can find it
             try {
-                const label = `Cosmic Storm`;
+                const fallbackLabel = `Cosmic Storm`;
                 if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
-                    this.uiManager.addEventMarker(`COSMIC_STORM_${frameCount}_${i}`, spawnX, spawnY, atmosphere.markerLabel || label, atmosphere.markerColor || 'cyan', this._extendDurationMs(180000));
+                    this.uiManager.addEventMarker(`COSMIC_STORM_${frameCount}_${i}`, spawnX, spawnY, atmosphere.markerLabel || fallbackLabel, atmosphere.markerColor || 'cyan', this._extendDurationMs(180000));
                 }
-                this._notifyEvent(`[STORM] ${this.starSystem?.name || 'Local sector'}: ${atmosphere.markerLabel || label} detected near ${this._formatStationLabel(this._pickRandomStation())}`, atmosphere.markerColor || 'cyan', 4000, event.type);
+                this._notifyEvent(`[STORM] ${this.starSystem?.name || 'Local sector'}: ${atmosphere.markerLabel || fallbackLabel} detected near ${this._formatStationLabel(this._pickRandomStation())}`, atmosphere.markerColor || 'cyan', 4000, event.type);
             } catch (e) { }
         }
     }
