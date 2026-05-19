@@ -121,9 +121,11 @@ class EnemyStateMachine {
         // ANTI-SITTING-DUCK: If we have a lastAttacker that's still valid, react to it
         if (this.lastAttacker && this.isTargetValid(this.lastAttacker)) {
             const distToAttacker = this.distanceTo(this.lastAttacker);
+            const now = millis();
+            const recentlyDamaged = this.lastAttackTime && (now - this.lastAttackTime < 4000);
 
             // If attacker is close, we need to do something
-            if (distToAttacker < this.detectionRange) {
+            if (distToAttacker < this.detectionRange || recentlyDamaged) {
                 // RANK-BASED FLEE THRESHOLD: Rookies stubborn, Elites flee early
                 const rankMods = this._getRankModifiers();
                 const fleeThreshold = rankMods?.fleeHullThreshold ?? IDLE_FLEE_HULL_THRESHOLD;
@@ -399,7 +401,11 @@ class EnemyStateMachine {
      * @private
      */
     _updateState_PATROLLING(targetExists, distanceToTarget) {
-        if (targetExists && distanceToTarget < this.detectionRange) {
+        const now = millis();
+        const recentlyDamaged = this.lastAttackTime && (now - this.lastAttackTime < 4000);
+        const isRecentAttackerTarget = targetExists && this.lastAttacker && this.target === this.lastAttacker && recentlyDamaged;
+
+        if (targetExists && (distanceToTarget < this.detectionRange || isRecentAttackerTarget)) {
             this.changeState(AI_STATE.APPROACHING);
             return;
         }

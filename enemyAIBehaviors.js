@@ -671,12 +671,17 @@ class EnemyAIBehaviors {
         // - Target exists but is VERY far away (beyond detection range), OR
         // - Already in PATROLLING state (mid-reposition)
         // [FIX] Exclude COLLECTING_CARGO state to prevent interrupting cargo collection
+        const now = millis();
+        const recentlyDamaged = this.lastAttackTime && (now - this.lastAttackTime < 4000);
+        const recentlyAttackedByCurrentTarget = targetExists && this.lastAttacker && this.target === this.lastAttacker && recentlyDamaged;
+
         const shouldPirateReposition = this.role === AI_ROLE.PIRATE &&
             this.currentState !== AI_STATE.COLLECTING_CARGO && (
                 !targetExists ||
                 this.currentState === AI_STATE.PATROLLING ||
                 (targetExists && distanceToTarget > this.detectionRange * 1.5) // Target too far to pursue
-            );
+            ) &&
+            !recentlyAttackedByCurrentTarget;
 
         if (shouldPirateReposition) {
             this._updatePirateIdleBehavior(system, stateBeforeCombatUpdate);
