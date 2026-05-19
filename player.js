@@ -3323,9 +3323,7 @@ class Player {
      */
     _getCycleTargetMaxDistance() {
         // Prefer the minimap zoom level as the spatial extent for target cycling.
-        if (typeof uiManager !== 'undefined' && uiManager &&
-            typeof uiManager.minimapWorldViewRange === 'number' &&
-            uiManager.minimapWorldViewRange > 0) {
+        if (typeof uiManager !== 'undefined' && uiManager?.minimapWorldViewRange > 0) {
             return uiManager.minimapWorldViewRange;
         }
 
