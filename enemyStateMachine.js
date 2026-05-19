@@ -105,6 +105,27 @@ class EnemyStateMachine {
      * @private
      */
     _updateState_IDLE(targetExists) {
+        const rankMods = this._getRankModifiers();
+        const fleeDelay = rankMods?.fleeDecisionDelay ?? 0;
+        const fleeThreshold = rankMods?.fleeHullThreshold ?? IDLE_FLEE_HULL_THRESHOLD;
+
+        const shouldFleeForLowHull = this.hull < this.maxHull * fleeThreshold;
+        const hasFleeDelayElapsed = () => {
+            if (!this._fleeDecisionStart) {
+                this._fleeDecisionStart = millis();
+            }
+            return millis() - this._fleeDecisionStart > fleeDelay * 1000;
+        };
+
+        if (shouldFleeForLowHull) {
+            if (hasFleeDelayElapsed()) {
+                this.changeState(AI_STATE.FLEEING);
+                return;
+            }
+        } else {
+            this._fleeDecisionStart = null; // Reset if no longer fleeing
+        }
+
         if (this.immobilized) return;
 
         if (targetExists) {
@@ -126,14 +147,9 @@ class EnemyStateMachine {
 
             // If attacker is close, we need to do something
             if (distToAttacker < this.detectionRange || recentlyDamaged) {
-                // RANK-BASED FLEE THRESHOLD: Rookies stubborn, Elites flee early
-                const rankMods = this._getRankModifiers();
-                const fleeThreshold = rankMods?.fleeHullThreshold ?? IDLE_FLEE_HULL_THRESHOLD;
-
-                // Low hull? Flee again
-                if (this.hull < this.maxHull * fleeThreshold) {
+                // Low hull should respect the same delayed flee decision as the primary IDLE path.
+                if (shouldFleeForLowHull) {
                     this.target = this.lastAttacker;
-                    this.changeState(AI_STATE.FLEEING);
                     return;
                 }
                 // Otherwise, engage if we're armed OR if we are a Healer (who should stay and support)
@@ -145,7 +161,9 @@ class EnemyStateMachine {
                 }
                 // Unarmed? Flee
                 this.target = this.lastAttacker;
-                this.changeState(AI_STATE.FLEEING);
+                if (hasFleeDelayElapsed()) {
+                    this.changeState(AI_STATE.FLEEING);
+                }
                 return;
             }
         }
@@ -402,13 +420,26 @@ class EnemyStateMachine {
      */
     _updateState_PATROLLING(targetExists, distanceToTarget) {
         const now = millis();
+        const rankMods = this._getRankModifiers();
+        const spottingDelay = rankMods?.targetSpottingDelay ?? 0;
         const recentlyDamaged = this.lastAttackTime && (now - this.lastAttackTime < 4000);
         const isRecentAttackerTarget = targetExists && this.lastAttacker && this.target === this.lastAttacker && recentlyDamaged;
 
-        if (targetExists && (distanceToTarget < this.detectionRange || isRecentAttackerTarget)) {
+        // Recent attacker targets should bypass spotting cadence to prevent delayed retaliation.
+        if (isRecentAttackerTarget) {
             this.changeState(AI_STATE.APPROACHING);
             return;
         }
+
+        if (!this._lastSpottingCheck || now - this._lastSpottingCheck > spottingDelay * 1000) {
+            this._lastSpottingCheck = now;
+
+            if (targetExists && distanceToTarget < this.detectionRange) {
+                this.changeState(AI_STATE.APPROACHING);
+                return;
+            }
+        }
+
         // If patrolling and a principal is assigned, switch to GUARDING
         if (this.role === AI_ROLE.GUARD && this.isPrincipalValid(this.principal)) {
             this.changeState(AI_STATE.GUARDING);
@@ -422,9 +453,15 @@ class EnemyStateMachine {
      */
     _updateState_GUARDING() {
         const principal = this.principal;
-        const system = this.getSystem();
+        const system = this.getSystem() || this.currentSystem;
+        const rankMods = this._getRankModifiers();
+        const guardReactionMultiplier = Math.min(Math.max(rankMods?.guardReactionTimeMultiplier ?? 1.0, 0.1), 2.0); // Clamp multiplier
 
-        // Validate principal reference and ensure we can track them
+        if (this.guardReactionTime > 0) {
+            // Multiplier scales cooldown duration (0.8 = faster, 1.6 = slower).
+            this.guardReactionTime = Math.max(0, this.guardReactionTime - (this._getDeltaSeconds() / guardReactionMultiplier));
+        }
+
         const principalValid = this.isPrincipalValid(principal);
         if (!principalValid) {
             AI_LOG(`${this.shipTypeName} (Guard): Principal is invalid/destroyed. Reverting to default state.`);
@@ -462,11 +499,6 @@ class EnemyStateMachine {
                 this.changeState(this._getDefaultStateForRole());
             }
             return;
-        }
-
-        // Maintain guard reaction cooldown so we don't spam engagements
-        if (this.guardReactionTime > 0) {
-            this.guardReactionTime = Math.max(0, this.guardReactionTime - this._getDeltaSeconds());
         }
 
         const guardDistance = (principal.size || 10) * 3;
@@ -711,6 +743,12 @@ class EnemyStateMachine {
         if (newState === this.currentState) return;
 
         const oldState = this.currentState;
+
+        // Prevent stale delayed-flee carry-over when IDLE is interrupted by other states.
+        if (oldState === AI_STATE.IDLE && newState !== AI_STATE.IDLE) {
+            this._fleeDecisionStart = null;
+        }
+
         this.currentState = newState;
 
         // Make the previous state available to entry/exit handlers
@@ -854,7 +892,11 @@ class EnemyStateMachine {
                     console.warn(`${this.shipTypeName} entering GUARDING state without a valid principal. Will likely revert.`);
                 }
                 this.target = null; // Guards focus on principal or its attacker, not general targets initially
-                this.guardReactionTime = 0; // Reset reaction time
+                {
+                    const rankMods = this._getRankModifiers();
+                    const guardReactionMultiplier = Math.min(Math.max(rankMods?.guardReactionTimeMultiplier ?? 1.0, 0.1), 2.0);
+                    this.guardReactionTime = GUARD_REACTION_COOLDOWN * guardReactionMultiplier;
+                }
                 break;
         }
     }

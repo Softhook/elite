@@ -101,7 +101,10 @@ const PILOT_RANK_MODIFIERS = {
         assistanceCallDelayMultiplier: 4.2,      // Very slow to realize they need help
         assistanceResponseDelayMultiplier: 5.0,  // Extremely slow to acknowledge/respond
         moveSpeedMultiplier: 0.82,          // Slow and clumsy
-        turnSpeedMultiplier: 0.75           // Poor ship handling
+        turnSpeedMultiplier: 0.75,          // Poor ship handling
+        targetSpottingDelay: 2.0, // 2 seconds to notice a target
+        guardReactionTimeMultiplier: 1.6, // 8s guard reaction
+        fleeDecisionDelay: 1.5, // 1.5s panic before fleeing
     },
     [PILOT_RANK.GREEN]: {
         canStrafe: false,                   // No side thrusters / kiting
@@ -130,7 +133,10 @@ const PILOT_RANK_MODIFIERS = {
         assistanceCallDelayMultiplier: 2.8,
         assistanceResponseDelayMultiplier: 3.2,
         moveSpeedMultiplier: 0.92,           // Slightly slower movement
-        turnSpeedMultiplier: 0.90            // Slightly slower turning
+        turnSpeedMultiplier: 0.90,            // Slightly slower turning
+        targetSpottingDelay: 1.5, // 1.5 seconds to notice a target
+        guardReactionTimeMultiplier: 1.2, // 6s guard reaction
+        fleeDecisionDelay: 1.0, // 1s panic before fleeing
     },
     [PILOT_RANK.ROOKIE]: {
         canStrafe: false,                   // No side thrusters / kiting
@@ -159,7 +165,10 @@ const PILOT_RANK_MODIFIERS = {
         assistanceCallDelayMultiplier: 2.0,
         assistanceResponseDelayMultiplier: 2.3,
         moveSpeedMultiplier: 0.96,
-        turnSpeedMultiplier: 0.96
+        turnSpeedMultiplier: 0.96,
+        targetSpottingDelay: 1.0, // 1 second to notice a target
+        guardReactionTimeMultiplier: 1.0, // 5s guard reaction
+        fleeDecisionDelay: 0.7, // 0.7s panic before fleeing
     },
     [PILOT_RANK.VETERAN]: {
         canStrafe: true,
@@ -188,7 +197,10 @@ const PILOT_RANK_MODIFIERS = {
         assistanceCallDelayMultiplier: 1.4,
         assistanceResponseDelayMultiplier: 1.5,
         moveSpeedMultiplier: 1.04,
-        turnSpeedMultiplier: 1.05
+        turnSpeedMultiplier: 1.05,
+        targetSpottingDelay: 0.5, // 0.5 seconds to notice a target
+        guardReactionTimeMultiplier: 0.8, // 4s guard reaction
+        fleeDecisionDelay: 0.3, // 0.3s panic before fleeing
     },
     [PILOT_RANK.ELITE]: {
         canStrafe: true,
@@ -217,7 +229,10 @@ const PILOT_RANK_MODIFIERS = {
         assistanceCallDelayMultiplier: 1.0,      // Baseline (current behavior)
         assistanceResponseDelayMultiplier: 1.0,  // Baseline (current behavior)
         moveSpeedMultiplier: 1.08,
-        turnSpeedMultiplier: 1.10
+        turnSpeedMultiplier: 1.10,
+        targetSpottingDelay: 0.0, // Instantaneous target spotting
+        guardReactionTimeMultiplier: 0.1, // 0.5s guard reaction
+        fleeDecisionDelay: 0.0, // No delay before fleeing
     }
 };
 
