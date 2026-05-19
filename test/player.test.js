@@ -397,6 +397,38 @@ describe('Player Target Cycling', () => {
         expect(player._getCycleTargetMaxDistance()).toBe(5000);
     });
 
+    test('uses minimap worldViewRange as target cycle distance when uiManager exposes it', () => {
+        global.uiManager = { addMessage: jest.fn(), minimapWorldViewRange: 20000 };
+
+        expect(player._getCycleTargetMaxDistance()).toBe(20000);
+    });
+
+    test('minimap worldViewRange controls which targets are reachable by cycleTarget', () => {
+        // With a small minimap zoom (3000), only the close pirate is in range.
+        global.uiManager = { addMessage: jest.fn(), minimapWorldViewRange: 3000 };
+
+        const closeTarget = createTarget({ x: 500, role: AI_ROLE.PIRATE, shipTypeName: 'Close Raider' });
+        const farTarget = createTarget({ x: 4000, role: AI_ROLE.PIRATE, shipTypeName: 'Far Raider' });
+        player.currentSystem.enemies = [farTarget, closeTarget];
+
+        player.cycleTarget(1);
+        expect(player.target).toBe(closeTarget);
+        expect(player.target).not.toBe(farTarget);
+    });
+
+    test('minimap worldViewRange controls which targets are reachable by selectTargetByDirection', () => {
+        // With a small minimap zoom (3000), only the close target is in range.
+        global.uiManager = { addMessage: jest.fn(), minimapWorldViewRange: 3000 };
+
+        const closeTarget = createTarget({ x: 500, y: 0, role: AI_ROLE.PIRATE, shipTypeName: 'Close Raider' });
+        const farTarget = createTarget({ x: 4000, y: 0, role: AI_ROLE.PIRATE, shipTypeName: 'Far Raider' });
+        player.currentSystem.enemies = [farTarget, closeTarget];
+
+        player.selectTargetByDirection(1, 0);
+        expect(player.target).toBe(closeTarget);
+        expect(player.target).not.toBe(farTarget);
+    });
+
     test('falls back to ship faction when choosing hostile rivals', () => {
         const separatistHostile = createTarget({ x: 180, role: AI_ROLE.COMBAT, faction: 'SEPARATIST', shipTypeName: 'Separatist Wing' });
         const imperialAlly = createTarget({ x: 90, role: AI_ROLE.COMBAT, faction: 'IMPERIAL', shipTypeName: 'Imperial Wing' });
