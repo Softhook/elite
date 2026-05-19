@@ -2670,7 +2670,7 @@ class EnemyAIBehaviors {
     static get ENV_ESCAPE_MARGIN() { return 150; }                  // Safety buffer (units) beyond zone edge when escaping
     static get ENV_MAX_RETREAT_DIST() { return 1200; }              // Max distance to EMP nebula still worth retreating to
     static get ENV_ROOKIE_ESCAPE_CHANCE_MULT() { return 0.6; }      // Scales Rookie escape probability (awareness * this)
-    static get ENV_RADIATION_ESCAPE_HULL_THRESHOLD() { return 0.6; } // Radiation: only escape in combat when hull ≤ 60%
+    static get ENV_RADIATION_ESCAPE_HULL_THRESHOLD() { return 0.6; } // Radiation: escape in combat when hull at or below 60%
 
     /**
      * Scans nearby environmental hazards and returns a cached summary.

@@ -471,6 +471,19 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
         expect(enemy.repositionTarget).not.toBeNull();
     });
 
+    test('VETERAN in radiation nebula in combat with hull exactly at 60% boundary escapes', () => {
+        setRank(enemy, PILOT_RANK.VETERAN);
+        const neb = new Nebula(0, 0, 300, 'radiation');
+        const system = makeSystem({ nebulae: [neb] });
+        const target = makeTarget(800, 0);
+        enemy.target = target;
+        enemy.hull = enemy.maxHull * 0.60; // exactly at the threshold — should escape (<=)
+        enemy.currentState = AI_STATE.APPROACHING;
+        enemy._envHazardCache = null;
+        enemy._updateEnvironmentalBehavior(system, true);
+        expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
+    });
+
     // --- Ion nebula: disables shields, always escape in combat ---
 
     test('VETERAN in ion nebula in combat escapes regardless of hull percentage', () => {
