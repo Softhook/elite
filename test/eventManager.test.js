@@ -359,7 +359,7 @@ describe('EventManager Tests', () => {
             expect(ui.messages.length).toBeGreaterThan(0);
             expect(ui.messages[0].msg).toContain('shortage');
             expect(ui.persistentMessages[0].id).toMatch(/SHORTAGE_/);
-            expect(ui.persistentMessages.find(m => m.id === 'SIGNAGE_MARKET_SHORTAGE')).toBeDefined();
+            expect(ui.persistentMessages.find(m => m.id === 'BULLETIN_MARKET_SHORTAGE')).toBeDefined();
             const after = snapshotStocks(system.station.market);
             const delta = findStockDelta(before, after);
             expect(delta).toBeDefined();

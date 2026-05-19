@@ -783,8 +783,7 @@ class EventManager {
         };
     }
 
-    _createFallbackEventLabel(eventType, overrideLabel = null) {
-        if (overrideLabel) return overrideLabel;
+    _createFallbackEventLabel(eventType) {
         return eventType.split('_')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
             .join(' ');
@@ -799,7 +798,7 @@ class EventManager {
             : atmosphere.bulletin;
 
         if (!bulletinText) return;
-        this._addPersistentEvent(`SIGNAGE_${eventType}`, bulletinText, atmosphere.markerColor || 'white', this._extendDurationMs(150000));
+        this._addPersistentEvent(`BULLETIN_${eventType}`, bulletinText, atmosphere.markerColor || 'white', this._extendDurationMs(150000));
     }
 
     initializeReferences(starSystem, player, uiManager) {
