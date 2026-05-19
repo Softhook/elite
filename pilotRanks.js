@@ -10,6 +10,7 @@
  * Pilot rank enumeration - represents skill/experience level
  */
 const PILOT_RANK = {
+    INCOMPETENT: 0,
     GREEN: 1,
     ROOKIE: 2,
     VETERAN: 3,
@@ -21,6 +22,14 @@ const PILOT_RANK = {
  * Each rank has a name, colors, and medal/badge styling
  */
 const PILOT_RANK_DEFS = {
+    [PILOT_RANK.INCOMPETENT]: {
+        name: 'Incompetent',
+        color: [180, 140, 140],
+        badgeColor: null,
+        iconColor: null,
+        symbol: '✕',
+        description: 'Barely qualified to sit in a cockpit'
+    },
     [PILOT_RANK.GREEN]: {
         name: 'Green',
         color: [255],
@@ -64,6 +73,33 @@ const PILOT_RANK_DEFS = {
  * - Elites: Sharp reflexes, accurate, tactical retreats, controls engagement range
  */
 const PILOT_RANK_MODIFIERS = {
+    [PILOT_RANK.INCOMPETENT]: {
+        canStrafe: false,                   // No concept of strafing
+        reactionDelayBonus: 1.20,           // +1200ms reactions — dangerously slow
+        aimToleranceMultiplier: 5.0,        // Shoots almost randomly
+        fleeHullThreshold: 0.04,            // Suicidally reckless
+        tacticChangeMultiplier: 0.05,       // Never adapts
+        predictionMultiplier: 0.0,          // Zero target lead
+        pursuitAbandonMultiplier: 4.0,      // Blindly chases forever
+        engageDistanceMultiplier: 0.35,     // Crashes into enemies
+        detectionRangeMultiplier: 0.35,     // Nearly blind
+        scanInterval: 6.0,                  // Glacially slow sensor sweep
+        longRangeSensorMultiplier: 0.5,     // Barely any sensor reach
+        decisionIntervalMultiplier: 2.5,    // Very slow decision loop
+        snipingChanceMultiplier: 0.2,       // Never sniping
+        attackPassDurationMultiplier: 2.5,  // Overcommits massively
+        targetSwitchCooldownMultiplier: 4.0,// Almost never retargets
+        targetSwitchScoreMultiplier: 3.0,   // Needs huge reason to switch target
+        weaponSwitchMinInterval: 8.0,       // Almost never switches weapons
+        useCover: false,                    // No concept of cover
+        obstacleAvoidanceStrength: 0.0,     // Flies straight into asteroids
+        fireDisciplineChance: 0.42,         // Fires erratically at random intervals
+        abilityDecisionIntervalMultiplier: 3.0,
+        abilityTriggerChanceMultiplier: 0.2,
+        retaliationAggressionMultiplier: 0.3,
+        moveSpeedMultiplier: 0.82,          // Slow and clumsy
+        turnSpeedMultiplier: 0.75           // Poor ship handling
+    },
     [PILOT_RANK.GREEN]: {
         canStrafe: false,                   // No side thrusters / kiting
         reactionDelayBonus: 0.70,           // +700ms slower reactions
@@ -182,8 +218,8 @@ const PILOT_RANK_MODIFIERS = {
 function getPilotRankModifiers(rank) {
     if (typeof PILOT_RANK_MODIFIERS === 'undefined') return null;
 
-    // Validate rank exists
-    if (!rank || !PILOT_RANK_MODIFIERS[rank]) {
+    // Validate rank exists (note: rank 0 = INCOMPETENT is valid, so avoid truthy check)
+    if (rank === undefined || rank === null || !PILOT_RANK_MODIFIERS[rank]) {
         if (typeof DEBUG_AI !== 'undefined' && DEBUG_AI) {
             console.warn(`[AI] Invalid pilot rank: ${rank}, defaulting to VETERAN`);
         }
@@ -207,34 +243,35 @@ function getPilotRankModifiers(rank) {
  * @param {number} [minRank=1] - Minimum rank to allow (default: 1=Green)
  * @returns {number} Pilot rank value
  */
-function generatePilotRank(role, securityLevel, techLevel, minRank = 1) {
-    // Base probability weights for each rank
-     // Default distribution: 70% Green, 24% Rookie, 5% Veteran, 1% Elite
-     let weights = [70, 24, 5, 1];
+function generatePilotRank(role, securityLevel, techLevel, minRank = 0) {
+    // Base probability weights indexed by rank value (0=Incompetent, 1=Green, 2=Rookie, 3=Veteran, 4=Elite)
+    // Default distribution: 3% Incompetent, 67% Green, 24% Rookie, 5% Veteran, 1% Elite
+    let weights = [3, 67, 24, 5, 1];
 
     // Adjust weights based on role
     if (typeof AI_ROLE !== 'undefined') {
         if (role === AI_ROLE.POLICE || role === AI_ROLE.GUARD) {
-            weights = [15, 55, 30, 0];
+            // Police rarely incompetent
+            weights = [5, 10, 55, 30, 0];
         } else if (role === AI_ROLE.BOUNTY_HUNTER) {
-            weights = [5, 20, 70, 5];
+            weights = [0, 5, 20, 70, 5];
         } else if (role === AI_ROLE.ALIEN) {
-            weights = [100, 0, 0, 0];
+            weights = [0, 100, 0, 0, 0];
         } else if (role === AI_ROLE.MILITARY) {
             // Military are well-trained
-            weights = [5, 20, 70, 5];
+            weights = [0, 5, 20, 70, 5];
         } else if (role === AI_ROLE.PIRATE || role === AI_ROLE.HAULER) {
-            // Pirates and Haulers are slightly less skilled than military
-            weights = [40, 35, 20, 5];
+            // Pirates and haulers can be incompetent
+            weights = [5, 38, 32, 20, 5];
         } else if (role === AI_ROLE.TRANSPORT) {
-            // Transporters are almost always green pilots
-            weights = [95, 5, 0, 0];
+            // Transporters often barely qualified
+            weights = [10, 85, 5, 0, 0];
         }
     }
 
     // Zero out weights below minRank
-    if (minRank > 1) {
-        for (let i = 0; i < minRank - 1; i++) {
+    if (minRank > 0) {
+        for (let i = 0; i < minRank; i++) {
             if (i < weights.length) weights[i] = 0;
         }
     }
@@ -243,13 +280,13 @@ function generatePilotRank(role, securityLevel, techLevel, minRank = 1) {
     const total = weights.reduce((sum, w) => sum + w, 0);
     if (total <= 0) return Math.max(minRank, PILOT_RANK.VETERAN); // Fallback
 
-    // Generate random value and pick rank
+    // Generate random value and pick rank (weights[i] maps directly to rank i)
     const roll = Math.random() * total;
     let cumulative = 0;
     for (let i = 0; i < weights.length; i++) {
         cumulative += weights[i];
         if (roll < cumulative) {
-            return i + 1; // Ranks are 1-indexed
+            return i; // weights index == rank value
         }
     }
 
@@ -326,6 +363,7 @@ function getPilotRankName(rank) {
  * @returns {string} Symbol string
  */
 function getPilotRankSymbol(rank) {
+    if (rank === PILOT_RANK.INCOMPETENT) return '✕'; // Crossed-out symbol
     if (!rank || rank < PILOT_RANK.ROOKIE) return ''; // No symbol for green pilots
     if (rank === PILOT_RANK.ROOKIE) return '★';
     if (rank === PILOT_RANK.VETERAN) return '★★';
