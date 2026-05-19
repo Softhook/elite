@@ -3451,7 +3451,7 @@ class CommunicationSystem {
         if (!message) return false;
 
         const duration = this.uiManager.communicationDisplayTime || this.uiManager.messageDisplayTime || 6000;
-        const movementDelay = this.getFactionAllyAidMovementResponseDelayMs();
+        const movementDelay = this.getFactionAllyAidMovementResponseDelayMs(responder);
         const scheduledAidTime = now + movementDelay;
 
         // Reserve the pending dispatch time so concurrent events don't queue duplicates.
@@ -3462,7 +3462,9 @@ class CommunicationSystem {
         const msgColor = color;
         setTimeout(() => {
             for (const ally of responders) {
-                this._assignAidTargetWithOptionalDelay(ally, attacker);
+                const allyDelay = this.getFactionAllyAidMovementResponseDelayMs(ally);
+                const additionalDelay = Math.max(0, allyDelay - movementDelay);
+                this._assignAidTargetWithOptionalDelay(ally, attacker, additionalDelay);
             }
 
             const dispatchNow = this._now();
@@ -3494,17 +3496,50 @@ class CommunicationSystem {
         return true;
     }
 
-    getSummonMovementResponseDelayMs(responseIndex = 0) {
-        const callDelay = Number(this._summonCallDelayMs) || 0;
+    getSummonMovementResponseDelayMs(responseIndex = 0, caller = null, responder = null) {
+        // For movement scheduling from summon initiation, model full cognitive pipeline:
+        // caller realization/transmit delay + responder acknowledge/action delay (from call receipt).
+        const callDelay = this._getAssistanceCallDelayMs(caller);
+        const responseDelay = this._getAssistanceResponseDelayMs(responder, responseIndex);
+        return Math.max(0, callDelay + responseDelay);
+    }
+
+    _getAssistanceCallDelayMs(ship) {
+        const baseDelay = Number(this._summonCallDelayMs) || 0;
+        if (!ship || typeof getPilotRankModifiers !== 'function') return Math.max(0, baseDelay);
+
+        const rankMods = getPilotRankModifiers(ship.pilotRank);
+        const mult = Number(rankMods?.assistanceCallDelayMultiplier);
+        const delayMult = Number.isFinite(mult) && mult > 0 ? mult : 1.0;
+        return Math.max(0, baseDelay * delayMult);
+    }
+
+    _getAssistanceResponseDelayMs(responder, responseIndex = 0) {
         const responseDelay = Number(this._summonResponseBaseDelayMs) || 0;
         const stagger = Number(this._summonResponseStaggerMs) || 0;
         const maxResponders = Math.max(1, Number(this._summonResponseMaxCount) || 0);
         const cappedIndex = Math.max(0, Math.min(Math.floor(Number(responseIndex) || 0), maxResponders - 1));
-        return Math.max(0, callDelay + responseDelay + cappedIndex * stagger);
+        // Delay is measured from call receipt (not from summon initiation).
+        const baseTotalDelay = responseDelay + cappedIndex * stagger;
+
+        if (!responder || typeof getPilotRankModifiers !== 'function') return Math.max(0, baseTotalDelay);
+
+        const rankMods = getPilotRankModifiers(responder.pilotRank);
+        const mult = Number(rankMods?.assistanceResponseDelayMultiplier);
+        const delayMult = Number.isFinite(mult) && mult > 0 ? mult : 1.0;
+        return Math.max(0, baseTotalDelay * delayMult);
     }
 
-    getFactionAllyAidMovementResponseDelayMs() {
-        return Math.max(0, Number(this._factionAllyAidMessageDelayMs) || 0);
+    getFactionAllyAidMovementResponseDelayMs(responder = null) {
+        const baseDelay = Number(this._factionAllyAidMessageDelayMs) || 0;
+        if (!responder || typeof getPilotRankModifiers !== 'function') {
+            return Math.max(0, baseDelay);
+        }
+
+        const rankMods = getPilotRankModifiers(responder.pilotRank);
+        const mult = Number(rankMods?.assistanceResponseDelayMultiplier);
+        const delayMult = Number.isFinite(mult) && mult > 0 ? mult : 1.0;
+        return Math.max(0, baseDelay * delayMult);
     }
 
     _assignAidTargetWithOptionalDelay(ally, attacker, delayMs = 0) {
@@ -3578,7 +3613,7 @@ class CommunicationSystem {
         const callMessage = this._applyTokens(callTemplate, callTokens).trim();
         if (!callMessage) return false;
 
-        const callDelay = this._summonCallDelayMs;
+        const callDelay = this._getAssistanceCallDelayMs(caller);
         const scheduledCallTime = now + callDelay;
         // Reserve pending dispatch time so concurrent calls are blocked while waiting for delayed output.
         record.summon_call_pending_until = scheduledCallTime;
@@ -3605,7 +3640,7 @@ class CommunicationSystem {
                 responder,
                 responderKey,
                 responseMessage,
-                responseDelay: Math.max(0, this.getSummonMovementResponseDelayMs(i) - callDelay)
+                responseDelay: this._getAssistanceResponseDelayMs(responder, i)
             });
         }
 

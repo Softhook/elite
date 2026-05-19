@@ -77,7 +77,7 @@ const PILOT_RANK_MODIFIERS = {
     [PILOT_RANK.INCOMPETENT]: {
         canStrafe: false,                   // No concept of strafing
         reactionDelayBonus: 1.20,           // +1200ms reactions — dangerously slow
-        aimToleranceMultiplier: 5.0,        // Shoots almost randomly
+        aimToleranceMultiplier: 6.0,        // Shoots almost randomly
         fleeHullThreshold: 0.04,            // Suicidally reckless
         tacticChangeMultiplier: 0.05,       // Never adapts
         predictionMultiplier: 0.0,          // Zero target lead
@@ -98,13 +98,15 @@ const PILOT_RANK_MODIFIERS = {
         abilityDecisionIntervalMultiplier: 3.0,
         abilityTriggerChanceMultiplier: 0.2,
         retaliationAggressionMultiplier: 0.3,
+        assistanceCallDelayMultiplier: 4.2,      // Very slow to realize they need help
+        assistanceResponseDelayMultiplier: 5.0,  // Extremely slow to acknowledge/respond
         moveSpeedMultiplier: 0.82,          // Slow and clumsy
         turnSpeedMultiplier: 0.75           // Poor ship handling
     },
     [PILOT_RANK.GREEN]: {
         canStrafe: false,                   // No side thrusters / kiting
         reactionDelayBonus: 0.70,           // +700ms slower reactions
-        aimToleranceMultiplier: 2.3,        // Extremely poor accuracy
+        aimToleranceMultiplier: 3.3,        // Extremely poor accuracy
         fleeHullThreshold: 0.08,            // Flees very late (reckless)
         tacticChangeMultiplier: 0.20,       // Rarely adapts tactics
         predictionMultiplier: 0.0,          // No target lead
@@ -125,13 +127,15 @@ const PILOT_RANK_MODIFIERS = {
         abilityDecisionIntervalMultiplier: 1.4, // Slower ability decisions
         abilityTriggerChanceMultiplier: 0.8, // Less confidence using abilities
         retaliationAggressionMultiplier: 0.75, // Less committed retaliation scoring
+        assistanceCallDelayMultiplier: 2.8,
+        assistanceResponseDelayMultiplier: 3.2,
         moveSpeedMultiplier: 0.92,           // Slightly slower movement
         turnSpeedMultiplier: 0.90            // Slightly slower turning
     },
     [PILOT_RANK.ROOKIE]: {
         canStrafe: false,                   // No side thrusters / kiting
         reactionDelayBonus: 0.35,           // +350ms slower reactions
-        aimToleranceMultiplier: 1.5,        // Wider aim tolerance (worse accuracy)
+        aimToleranceMultiplier: 2,        // Wider aim tolerance (worse accuracy)
         fleeHullThreshold: 0.15,            // Only flee at 15% hull (stubborn)
         tacticChangeMultiplier: 0.4,        // Less likely to adapt tactics
         predictionMultiplier: 0.2,          // Poor target lead (misses moving targets)
@@ -152,6 +156,8 @@ const PILOT_RANK_MODIFIERS = {
         abilityDecisionIntervalMultiplier: 1.15,
         abilityTriggerChanceMultiplier: 0.92,
         retaliationAggressionMultiplier: 0.9,
+        assistanceCallDelayMultiplier: 2.0,
+        assistanceResponseDelayMultiplier: 2.3,
         moveSpeedMultiplier: 0.96,
         turnSpeedMultiplier: 0.96
     },
@@ -179,6 +185,8 @@ const PILOT_RANK_MODIFIERS = {
         abilityDecisionIntervalMultiplier: 1.0,
         abilityTriggerChanceMultiplier: 1.0,
         retaliationAggressionMultiplier: 1.0,
+        assistanceCallDelayMultiplier: 1.4,
+        assistanceResponseDelayMultiplier: 1.5,
         moveSpeedMultiplier: 1.04,
         turnSpeedMultiplier: 1.05
     },
@@ -206,6 +214,8 @@ const PILOT_RANK_MODIFIERS = {
         abilityDecisionIntervalMultiplier: 0.75,
         abilityTriggerChanceMultiplier: 1.15,
         retaliationAggressionMultiplier: 1.2,
+        assistanceCallDelayMultiplier: 1.0,      // Baseline (current behavior)
+        assistanceResponseDelayMultiplier: 1.0,  // Baseline (current behavior)
         moveSpeedMultiplier: 1.08,
         turnSpeedMultiplier: 1.10
     }
