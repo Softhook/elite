@@ -1,5 +1,7 @@
 # Elite Game Development TODO
 
+error with alien artefacts should disspwr when collected. and only a single dropped not 10
+
 While zooming, the targeting reticle doesn't fit onto the ship. Fix that 
 
 new navigation with game pad is not right
