@@ -3314,15 +3314,24 @@ class Player {
     }
 
     /**
-     * Gets the target cycling range used by the nearby-hostile D-pad selector.
-     * Matches the minimap's dashed proximity circle when available.
+     * Gets the target cycling range used by the nearby-hostile D-pad selector
+     * and the left-joystick directional target selector.
+     * Uses the current minimap zoom level (worldViewRange) as the spatial extent
+     * when available, falling back to the system proximity radius otherwise.
      * @returns {number} Maximum target distance in world units
      * @private
      */
     _getCycleTargetMaxDistance() {
-        const TARGET_CYCLE_RADIUS_BUFFER = 900;
+        // Prefer the minimap zoom level as the spatial extent for target cycling.
+        if (typeof uiManager !== 'undefined' && uiManager &&
+            typeof uiManager.minimapWorldViewRange === 'number' &&
+            uiManager.minimapWorldViewRange > 0) {
+            return uiManager.minimapWorldViewRange;
+        }
 
         if (!this.currentSystem) return 5000;
+
+        const TARGET_CYCLE_RADIUS_BUFFER = 900;
 
         if (typeof this.currentSystem._getDiagonalDistance === 'function') {
             const diagonalDistance = this.currentSystem._getDiagonalDistance();
