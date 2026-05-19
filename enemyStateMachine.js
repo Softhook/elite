@@ -107,8 +107,8 @@ class EnemyStateMachine {
     _updateState_IDLE(targetExists) {
         const rankMods = this._getRankModifiers();
         const fleeDelay = rankMods?.fleeDecisionDelay ?? 0;
-        const fleeThreshold = rankMods?.fleeHullThreshold
-            ?? (typeof IDLE_FLEE_HULL_THRESHOLD !== 'undefined' ? IDLE_FLEE_HULL_THRESHOLD : 0.4);
+        const defaultIdleFleeThreshold = (typeof IDLE_FLEE_HULL_THRESHOLD !== 'undefined') ? IDLE_FLEE_HULL_THRESHOLD : 0.4;
+        const fleeThreshold = rankMods?.fleeHullThreshold ?? defaultIdleFleeThreshold;
 
         const shouldFleeForLowHull = this.hull < this.maxHull * fleeThreshold;
         const hasFleeDelayElapsed = () => {
