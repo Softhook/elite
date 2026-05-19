@@ -2665,6 +2665,12 @@ class EnemyAIBehaviors {
     // ENVIRONMENTAL HAZARD AWARENESS
     // ========================================
 
+    // Constants for environmental hazard behaviour
+    // Extracted here for clarity and easy tuning
+    static get ENV_ESCAPE_MARGIN() { return 150; }          // Safety buffer (units) beyond zone edge when escaping
+    static get ENV_MAX_RETREAT_DIST() { return 1200; }      // Max distance to EMP nebula still worth retreating to
+    static get ENV_ROOKIE_ESCAPE_CHANCE_MULT() { return 0.6; } // Scales Rookie escape probability (awareness * this)
+
     /**
      * Scans nearby environmental hazards and returns a cached summary.
      * Throttled to ~1 s (2 s off-screen) to keep CPU cost low.
@@ -2728,7 +2734,7 @@ class EnemyAIBehaviors {
                 if (neb.type === 'emp') {
                     const d = Math.sqrt(distSq);
                     const edgeDist = Math.max(0, d - r);
-                    if (edgeDist < info.nearbyRetreatDist && edgeDist < 1000) {
+                    if (edgeDist < info.nearbyRetreatDist && edgeDist < EnemyAIBehaviors.ENV_MAX_RETREAT_DIST) {
                         info.nearbyRetreatDist = edgeDist;
                         info.nearbyRetreatNebula = neb;
                     }
@@ -2805,13 +2811,13 @@ class EnemyAIBehaviors {
             this.currentState !== AI_STATE.FLEEING &&
             this.currentState !== AI_STATE.REPOSITIONING) {
 
-            const shouldEscape = awareness >= 1.0 || random() < awareness * 0.6;
+            const shouldEscape = awareness >= 1.0 || random() < awareness * EnemyAIBehaviors.ENV_ROOKIE_ESCAPE_CHANCE_MULT;
             if (shouldEscape) {
                 // Compute an escape point outside the zone
                 const dx = this.pos.x - envInfo.dangerZonePos.x;
                 const dy = this.pos.y - envInfo.dangerZonePos.y;
                 const mag = Math.hypot(dx, dy) || 1;
-                const escapeR = envInfo.dangerZoneRadius + 150;
+                const escapeR = envInfo.dangerZoneRadius + EnemyAIBehaviors.ENV_ESCAPE_MARGIN;
                 this.repositionTarget = createVector(
                     envInfo.dangerZonePos.x + (dx / mag) * escapeR,
                     envInfo.dangerZonePos.y + (dy / mag) * escapeR
@@ -2827,7 +2833,7 @@ class EnemyAIBehaviors {
             const hullPct = this.maxHull > 0 ? this.hull / this.maxHull : 1;
             const retreatThreshold = awareness >= 1.5 ? 0.25 : 0.15;
 
-            if (hullPct < retreatThreshold && envInfo.nearbyRetreatDist < 1200 &&
+            if (hullPct < retreatThreshold && envInfo.nearbyRetreatDist < EnemyAIBehaviors.ENV_MAX_RETREAT_DIST &&
                 this.currentState !== AI_STATE.FLEEING &&
                 this.currentState !== AI_STATE.REPOSITIONING) {
                 this.repositionTarget = envInfo.nearbyRetreatNebula.pos;

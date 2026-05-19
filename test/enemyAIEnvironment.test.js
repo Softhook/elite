@@ -338,7 +338,7 @@ describe('_getEnvHazardInfo', () => {
     });
 
     test('does NOT locate EMP nebula farther than 1000 units away', () => {
-        const neb = new Nebula(2000, 0, 200, 'emp');
+        const neb = new Nebula(2500, 0, 200, 'emp'); // edge is at 2500-200=2300 > ENV_MAX_RETREAT_DIST (1200)
         const system = makeSystem({ nebulae: [neb] });
         enemy.pos = createVector(0, 0);
         const info = enemy._getEnvHazardInfo(system);
@@ -580,8 +580,8 @@ describe('environmental zone movement avoidance', () => {
 
         // Incompetent has obstacleAvoidanceStrength 0 so no nudge occurs –
         // the function returns the original target unchanged.
-        expect(adjusted.x).toBeCloseTo(desiredTarget.x, 0);
-        expect(adjusted.y).toBeCloseTo(desiredTarget.y, 0);
+        expect(adjusted.x).toBe(desiredTarget.x);
+        expect(adjusted.y).toBe(desiredTarget.y);
     });
 
     test('ROOKIE does NOT avoid zone when movement target is INSIDE it (pursuing target there)', () => {
@@ -595,7 +595,7 @@ describe('environmental zone movement avoidance', () => {
         const adjusted = enemy._avoidObstaclesAndAdjustTarget(system, desiredTarget);
 
         // No avoidance nudge – target is inside, so we skip this nebula
-        expect(adjusted.y).toBeCloseTo(0, 0);
+        expect(adjusted.y).toBe(0);
     });
 
     test('ROOKIE steers away from cosmic storm in movement path', () => {
