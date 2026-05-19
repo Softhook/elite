@@ -775,14 +775,19 @@ class EventManager {
     }
 
     _getEventAtmosphere(eventType) {
-        const fallbackLabel = eventType.split('_')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-            .join(' ');
+        const fallbackLabel = this._createFallbackEventLabel(eventType);
         return this.eventAtmosphere?.[eventType] || {
             markerLabel: fallbackLabel,
             markerColor: 'white',
             bulletin: () => `${fallbackLabel} reported in local space.`
         };
+    }
+
+    _createFallbackEventLabel(eventType, overrideLabel = null) {
+        if (overrideLabel) return overrideLabel;
+        return eventType.split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
     }
 
     _publishEventAtmosphere(eventType) {
@@ -2381,10 +2386,7 @@ class EventManager {
         // Add a single HUD marker for the cluster so player can find it quickly
         try {
             const anchorLabel = this._deriveAnchorLabelForPos(baseSpawnX, baseSpawnY);
-            // Convert ASTEROID_CLUSTER -> Asteroid Cluster
-            const fallbackLabel = event.type.split('_')
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                .join(' ');
+            const fallbackLabel = this._createFallbackEventLabel(event.type);
             if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                 this.uiManager.addEventMarker(`${event.type}_CLUSTER_${frameCount}`, baseSpawnX, baseSpawnY, atmosphere.markerLabel || fallbackLabel, atmosphere.markerColor || 'orange', this._extendDurationMs(180000));
             }
@@ -2417,7 +2419,7 @@ class EventManager {
                 // Mark the comet on HUD so player knows where to look
                 try {
                     const anchorLabel = this._deriveAnchorLabelForPos(asteroid.pos.x, asteroid.pos.y);
-                    const fallbackLabel = `Comet`;
+                    const fallbackLabel = this._createFallbackEventLabel(event.type);
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                         this.uiManager.addEventMarker(`COMET_${frameCount}`, asteroid.pos.x, asteroid.pos.y, atmosphere.markerLabel || fallbackLabel, atmosphere.markerColor || 'yellow', this._extendDurationMs(240000));
                     }
@@ -2447,17 +2449,15 @@ class EventManager {
 
         // Add event marker for the group location (excluding DISTRESS_SIGNAL which handles its own)
         if (event.type !== 'DISTRESS_SIGNAL') {
-            const label = event.type.split('_')
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                .join(' ');
-            this._addEventMarkerSafely(`${event.type}_${frameCount}`, baseSpawnRadius * cos(baseSpawnAngle) + this.player.pos.x, baseSpawnRadius * sin(baseSpawnAngle) + this.player.pos.y, atmosphere.markerLabel || label, atmosphere.markerColor || 'red', this._extendDurationMs(60000));
+            const fallbackLabel = this._createFallbackEventLabel(event.type);
+            this._addEventMarkerSafely(`${event.type}_${frameCount}`, baseSpawnRadius * cos(baseSpawnAngle) + this.player.pos.x, baseSpawnRadius * sin(baseSpawnAngle) + this.player.pos.y, atmosphere.markerLabel || fallbackLabel, atmosphere.markerColor || 'red', this._extendDurationMs(60000));
 
             // Trigger news for high-level dynamic events that use spawnConfig
             if (this.dynamicSpawnNotifyEventTypes.has(event.type)) {
                 let prefix = '';
                 if (event.type === 'ALIEN_RAID' || event.type === 'ALIEN_SCOUT') prefix = '[ALIEN] ';
                 if (event.type === 'PIRATE_SWARM' || event.type === 'BOUNTY_HUNTER_AMBUSH') prefix = '[SKULL] ';
-                this._notifyEvent(`${prefix}${this.starSystem?.name || 'Local sector'}: ${atmosphere.markerLabel || label} detected`, atmosphere.markerColor || 'orange', 4000, event.type);
+                this._notifyEvent(`${prefix}${this.starSystem?.name || 'Local sector'}: ${atmosphere.markerLabel || fallbackLabel} detected`, atmosphere.markerColor || 'orange', 4000, event.type);
             }
         }
 
@@ -2544,7 +2544,7 @@ class EventManager {
             this.starSystem.cosmicStorms.push(storm);
             // Add HUD marker for storm so player can find it
             try {
-                const fallbackLabel = `Cosmic Storm`;
+                const fallbackLabel = this._createFallbackEventLabel(event.type);
                 if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
                     this.uiManager.addEventMarker(`COSMIC_STORM_${frameCount}_${i}`, spawnX, spawnY, atmosphere.markerLabel || fallbackLabel, atmosphere.markerColor || 'cyan', this._extendDurationMs(180000));
                 }
