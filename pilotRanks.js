@@ -67,6 +67,7 @@ const PILOT_RANK_DEFS = {
 /**
  * Pilot rank behavior modifiers for AI differentiation
  * These modifiers create distinct combat feels for each rank:
+ * - Incompetent: Nearly random aim, flies into obstacles, glacial reactions
  * - Green: Very slow reactions, poor awareness, weak tactical decisions
  * - Rookies: Predictable, slow reactions, poor aim, stubborn (no retreat)
  * - Veterans: Balanced baseline behavior
@@ -212,7 +213,7 @@ const PILOT_RANK_MODIFIERS = {
 
 /**
  * Gets behavior modifiers for a given pilot rank
- * @param {number} rank - Pilot rank value (1=Green, 2=Rookie, 3=Veteran, 4=Elite)
+ * @param {number} rank - Pilot rank value (0=Incompetent, 1=Green, 2=Rookie, 3=Veteran, 4=Elite)
  * @returns {Object|null} Modifier object with behavior multipliers, or null if unavailable
  */
 function getPilotRankModifiers(rank) {
@@ -240,7 +241,7 @@ function getPilotRankModifiers(rank) {
  * @param {string} role - AI role (e.g., AI_ROLE.PIRATE)
  * @param {string} securityLevel - System security level
  * @param {number} techLevel - System tech level (1-10)
- * @param {number} [minRank=1] - Minimum rank to allow (default: 1=Green)
+ * @param {number} [minRank=0] - Minimum rank to allow (default: 0=Incompetent)
  * @returns {number} Pilot rank value
  */
 function generatePilotRank(role, securityLevel, techLevel, minRank = 0) {
