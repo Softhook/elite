@@ -56,8 +56,18 @@ class EnemyDamageSystem {
         // Skip recording for friendly fire and same-faction
         if (this._shouldIgnoreAttacker(attacker)) return;
 
-        // Track attacker in grudge system
         const now = millis();
+        const retaliationDelayMs = this._getCognitiveRetaliationDelayMs();
+
+        // Lower-rank pilots should not instantly process incoming threats.
+        // Buffer retaliation context and apply it after a cognitive delay.
+        if (retaliationDelayMs > 0) {
+            this._scheduleDelayedRetaliation(attacker, system, now, retaliationDelayMs);
+            DAMAGE_LOG(`🧠 ${this.shipTypeName} delaying retaliation by ${retaliationDelayMs.toFixed(0)}ms (rank cognitive delay)`);
+            return;
+        }
+
+        // Track attacker in grudge system (elite / zero-delay fallback)
         this._updateAttackerHistory(attacker, now);
 
         // Smart lastAttacker update to prevent oscillation
@@ -68,6 +78,62 @@ class EnemyDamageSystem {
 
         // Handle targeting update and combat reactions
         this._handleTargetingAfterHit(attacker, system);
+    }
+
+    /**
+     * Returns the rank-based cognitive delay (ms) before reacting to incoming damage.
+     * Elite and Veteran remain effectively immediate; lower ranks react slower.
+     * @returns {number}
+     */
+    _getCognitiveRetaliationDelayMs() {
+        const rankMods = (typeof this._getRankModifiers === 'function') ? this._getRankModifiers() : null;
+        const reactionDelayBonusSec = Number(rankMods?.reactionDelayBonus ?? 0);
+        if (!Number.isFinite(reactionDelayBonusSec)) return 0;
+        return Math.max(0, reactionDelayBonusSec * 1000);
+    }
+
+    /**
+     * Schedules delayed retaliation processing for lower-rank cognitive realism.
+     * Newer hits replace pending retaliation context but do NOT extend
+     * the original delay window started by the first hit.
+     */
+    _scheduleDelayedRetaliation(attacker, system, now, delayMs) {
+        this._pendingRetaliationAttacker = attacker;
+        this._pendingRetaliationSystem = system || this.getSystem();
+
+        // Preserve the first-hit response window. Additional hits update context
+        // only, preventing sustained fire from postponing retaliation forever.
+        if (this._pendingRetaliationTimerId) {
+            return;
+        }
+
+        this._pendingRetaliationReadyAt = now + Math.max(0, delayMs);
+        const waitMs = Math.max(0, this._pendingRetaliationReadyAt - now);
+        this._pendingRetaliationTimerId = setTimeout(() => {
+            this._pendingRetaliationTimerId = null;
+
+            if (this.destroyed) {
+                this._pendingRetaliationAttacker = null;
+                this._pendingRetaliationSystem = null;
+                this._pendingRetaliationReadyAt = 0;
+                return;
+            }
+
+            const pendingAttacker = this._pendingRetaliationAttacker;
+            const pendingSystem = this._pendingRetaliationSystem || this.getSystem();
+            this._pendingRetaliationAttacker = null;
+            this._pendingRetaliationSystem = null;
+            this._pendingRetaliationReadyAt = 0;
+
+            if (!pendingAttacker) return;
+
+            const reactionNow = millis();
+            this._updateAttackerHistory(pendingAttacker, reactionNow);
+            this._updateLastAttacker(pendingAttacker, reactionNow);
+
+            DAMAGE_LOG(`🧠 ${this.shipTypeName} cognitive delay elapsed; processing retaliation now`);
+            this._handleTargetingAfterHit(pendingAttacker, pendingSystem);
+        }, waitMs);
     }
 
     /**
@@ -336,6 +402,15 @@ class EnemyDamageSystem {
         this.destroyed = true;
         this.hull = 0; // Ensure hull is exactly 0
         this.target = null; // Prevent corpse targeting
+
+        // Clear any delayed retaliation work once the ship is destroyed.
+        if (this._pendingRetaliationTimerId) {
+            clearTimeout(this._pendingRetaliationTimerId);
+            this._pendingRetaliationTimerId = null;
+        }
+        this._pendingRetaliationAttacker = null;
+        this._pendingRetaliationSystem = null;
+        this._pendingRetaliationReadyAt = 0;
 
         // Add these lines to clear all combat flags
         this.inCombat = false;

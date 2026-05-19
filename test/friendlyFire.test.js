@@ -169,4 +169,43 @@ describe('Friendly Fire & Faction Collision Tests', () => {
         const score = imperialShip.evaluateTargetScore(mockPlayer, mockSystem);
         expect(score).toBeGreaterThan(-100);
     });
+
+    describe('Cognitive retaliation delay scheduling', () => {
+        beforeEach(() => {
+            jest.useFakeTimers();
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+        });
+
+        test('should keep first delayed response window under sustained hits while using latest attacker context', () => {
+            const defender = createEnemy(AI_ROLE.COMBAT, 'IMPERIAL', 100, 0);
+            const attackerA = createMockPlayer({ x: 0, y: 0, faction: 'SEPARATIST' });
+            const attackerB = createMockPlayer({ x: 10, y: 0, faction: 'SEPARATIST' });
+
+            attackerA.playerFaction = 'SEPARATIST';
+            attackerB.playerFaction = 'SEPARATIST';
+            attackerA.isPlayer = true;
+            attackerB.isPlayer = true;
+
+            // Force delayed retaliation behavior independent of rank fixture setup.
+            defender._getRankModifiers = () => ({ reactionDelayBonus: 0.70 });
+            defender._handleTargetingAfterHit = jest.fn();
+
+            defender.takeDamage(1, attackerA, mockSystem);
+
+            // A second hit before the first delay expires should update context,
+            // not push the retaliation deadline outward.
+            jest.advanceTimersByTime(300);
+            defender.takeDamage(1, attackerB, mockSystem);
+
+            jest.advanceTimersByTime(399);
+            expect(defender._handleTargetingAfterHit).not.toHaveBeenCalled();
+
+            jest.advanceTimersByTime(1);
+            expect(defender._handleTargetingAfterHit).toHaveBeenCalledTimes(1);
+            expect(defender._handleTargetingAfterHit).toHaveBeenCalledWith(attackerB, mockSystem);
+        });
+    });
 });

@@ -106,7 +106,7 @@ const PILOT_RANK_MODIFIERS = {
     [PILOT_RANK.GREEN]: {
         canStrafe: false,                   // No side thrusters / kiting
         reactionDelayBonus: 0.70,           // +700ms slower reactions
-        aimToleranceMultiplier: 3.3,        // Extremely poor accuracy
+        aimToleranceMultiplier: 2.3,        // Extremely poor accuracy
         fleeHullThreshold: 0.08,            // Flees very late (reckless)
         tacticChangeMultiplier: 0.20,       // Rarely adapts tactics
         predictionMultiplier: 0.0,          // No target lead
@@ -135,7 +135,7 @@ const PILOT_RANK_MODIFIERS = {
     [PILOT_RANK.ROOKIE]: {
         canStrafe: false,                   // No side thrusters / kiting
         reactionDelayBonus: 0.35,           // +350ms slower reactions
-        aimToleranceMultiplier: 2,        // Wider aim tolerance (worse accuracy)
+        aimToleranceMultiplier: 1.5,        // Wider aim tolerance (worse accuracy)
         fleeHullThreshold: 0.15,            // Only flee at 15% hull (stubborn)
         tacticChangeMultiplier: 0.4,        // Less likely to adapt tactics
         predictionMultiplier: 0.2,          // Poor target lead (misses moving targets)

@@ -98,6 +98,12 @@ class Enemy {
         // Add forced combat timer
         this.forcedCombatTimer = 0;
 
+        // Cognitive retaliation delay state (used for rank-based delayed reaction to being attacked)
+        this._pendingRetaliationAttacker = null;
+        this._pendingRetaliationSystem = null;
+        this._pendingRetaliationTimerId = null;
+        this._pendingRetaliationReadyAt = 0;
+
         // After setting role in the constructor
         if (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN) {
             // Pirates and Aliens are automatically wanted
