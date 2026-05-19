@@ -24,7 +24,9 @@ require('../enemyStateMachine.js');
 require('../enemyAIBehaviors.js');
 require('../enemyCargo.js');
 require('../thrustParticles.js');
-const { PILOT_RANK } = require('../pilotRanks.js');
+const { PILOT_RANK, getPilotRankModifiers } = require('../pilotRanks.js');
+global.PILOT_RANK = PILOT_RANK;
+global.getPilotRankModifiers = getPilotRankModifiers;
 
 // Ensure essential globals are defined if they weren't in setups
 if (typeof WEAPON_TYPE === 'undefined') {
