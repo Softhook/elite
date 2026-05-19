@@ -1123,7 +1123,7 @@ class UIHUD {
         let nameWidth = textWidth(pilotName);
 
         // Draw Pilot Rank Indicator (standardized with world view)
-        if (target.pilotRank && typeof drawPilotRankIndicator === 'function') {
+        if (target.pilotRank !== undefined && target.pilotRank !== null && typeof drawPilotRankIndicator === 'function') {
             const rankW = drawPilotRankIndicator(cursorX + nameWidth + 4, cursorY + 9, target.pilotRank, 14);
             if (rankW > 0) nameWidth += rankW + 4;
         }

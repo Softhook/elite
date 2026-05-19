@@ -422,14 +422,15 @@ class EnemyRendering {
 
             // 2. Calculate Rank Icon width (if applicable)
             let rankW = 0;
-            if (this.pilotRank && this.pilotRank >= 2) {
+            if (this.pilotRank !== undefined && this.pilotRank !== null) {
                 if (typeof getPilotRankIconWidth === 'function') {
                     rankW = getPilotRankIconWidth(this.pilotRank, STATION_TEXT_SIZE.BODY);
                 } else {
                     // Fallback
                     const baseSize = STATION_TEXT_SIZE.BODY;
-                    if (this.pilotRank === 2) rankW = baseSize * 1.0; // Veteran
-                    else if (this.pilotRank === 3) rankW = baseSize * 2.5; // Elite
+                    if (this.pilotRank === 0) rankW = baseSize * 1.0; // Incompetent cross
+                    else if (this.pilotRank === 3) rankW = baseSize * 1.8; // Veteran
+                    else if (this.pilotRank === 4) rankW = baseSize * 2.5; // Elite
                     else rankW = baseSize;
                 }
             }

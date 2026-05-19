@@ -253,20 +253,21 @@ function generatePilotRank(role, securityLevel, techLevel, minRank = 0) {
     if (typeof AI_ROLE !== 'undefined') {
         if (role === AI_ROLE.POLICE || role === AI_ROLE.GUARD) {
             // Police rarely incompetent
-            weights = [5, 10, 55, 30, 0];
+            weights = [5, 55, 30, 10, 0];
         } else if (role === AI_ROLE.BOUNTY_HUNTER) {
             weights = [0, 5, 20, 70, 5];
         } else if (role === AI_ROLE.ALIEN) {
             weights = [0, 100, 0, 0, 0];
         } else if (role === AI_ROLE.MILITARY) {
-            // Military are well-trained
-            weights = [0, 5, 20, 70, 5];
+            // Military are trained
+            weights = [5, 10, 40, 40, 5];
         } else if (role === AI_ROLE.PIRATE || role === AI_ROLE.HAULER) {
             // Pirates and haulers can be incompetent
-            weights = [5, 38, 32, 20, 5];
+            weights = [30, 35, 20, 10, 5];
+
         } else if (role === AI_ROLE.TRANSPORT) {
             // Transporters often barely qualified
-            weights = [10, 85, 5, 0, 0];
+            weights = [20, 75, 5, 0, 0];
         }
     }
 
@@ -390,6 +391,24 @@ function _drawRankIconGraphic(rank, x, y, size, ctx) {
     const def = PILOT_RANK_DEFS[rank];
     if (!def) return;
 
+    // Incompetent rank uses a dedicated cross mark instead of stars.
+    if (rank === PILOT_RANK.INCOMPETENT) {
+        const s = (ctx && ctx.stroke) ? ctx.stroke.bind(ctx) : stroke;
+        const sw = (ctx && ctx.strokeWeight) ? ctx.strokeWeight.bind(ctx) : strokeWeight;
+        const lc = (ctx && ctx.strokeCap) ? ctx.strokeCap.bind(ctx) : strokeCap;
+        const ln = (ctx && ctx.line) ? ctx.line.bind(ctx) : line;
+        const ns = (ctx && ctx.noStroke) ? ctx.noStroke.bind(ctx) : noStroke;
+
+        const arm = size * 0.45;
+        s(220, 170, 170);
+        sw(Math.max(1.5, size * 0.16));
+        lc(ROUND);
+        ln(x - arm, y - arm, x + arm, y + arm);
+        ln(x - arm, y + arm, x + arm, y - arm);
+        ns();
+        return;
+    }
+
     if (rank < PILOT_RANK.VETERAN || !def.iconColor) return;
 
     const f = (ctx && ctx.fill) ? ctx.fill.bind(ctx) : fill;
@@ -466,7 +485,9 @@ function _drawRing(x, y, r, ctx) {
  * @returns {number} Width in pixels
  */
 function getPilotRankIconWidth(rank, size = 12) {
-    if (!rank || rank < PILOT_RANK.VETERAN) return 0;
+    if (rank === undefined || rank === null) return 0;
+    if (rank === PILOT_RANK.INCOMPETENT) return size * 1.0;
+    if (rank < PILOT_RANK.VETERAN) return 0;
 
     // Width modifiers based on icon types
     if (rank === PILOT_RANK.VETERAN) return size * 1.8;
@@ -487,8 +508,11 @@ function getPilotRankIconWidth(rank, size = 12) {
  * @returns {number} Width of drawn indicator
  */
 function drawPilotRankIndicator(x, y, rank, size = 12) {
-    // No indicator for rookies
-    if (!rank || rank < PILOT_RANK.VETERAN) return 0;
+    // Show only explicit Incompetent marker and high-rank stars.
+    if (rank === undefined || rank === null) return 0;
+    const showIncompetent = rank === PILOT_RANK.INCOMPETENT;
+    const showHighRank = rank >= PILOT_RANK.VETERAN;
+    if (!showIncompetent && !showHighRank) return 0;
 
     const def = PILOT_RANK_DEFS[rank];
     if (!def) return 0;
