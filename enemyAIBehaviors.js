@@ -2667,9 +2667,10 @@ class EnemyAIBehaviors {
 
     // Constants for environmental hazard behaviour
     // Extracted here for clarity and easy tuning
-    static get ENV_ESCAPE_MARGIN() { return 150; }          // Safety buffer (units) beyond zone edge when escaping
-    static get ENV_MAX_RETREAT_DIST() { return 1200; }      // Max distance to EMP nebula still worth retreating to
-    static get ENV_ROOKIE_ESCAPE_CHANCE_MULT() { return 0.6; } // Scales Rookie escape probability (awareness * this)
+    static get ENV_ESCAPE_MARGIN() { return 150; }                  // Safety buffer (units) beyond zone edge when escaping
+    static get ENV_MAX_RETREAT_DIST() { return 1200; }              // Max distance to EMP nebula still worth retreating to
+    static get ENV_ROOKIE_ESCAPE_CHANCE_MULT() { return 0.6; }      // Scales Rookie escape probability (awareness * this)
+    static get ENV_RADIATION_ESCAPE_HULL_THRESHOLD() { return 0.6; } // Radiation: only escape in combat when hull ≤ 60%
 
     /**
      * Scans nearby environmental hazards and returns a cached summary.
@@ -2681,6 +2682,7 @@ class EnemyAIBehaviors {
      *   inDangerousZone   {boolean}        - Ship is currently inside a hazardous zone
      *   dangerZonePos     {p5.Vector|null}  - Center of the occupied dangerous zone
      *   dangerZoneRadius  {number}          - Radius of that zone (for escape vector)
+     *   dangerZoneType    {string|null}     - Type: 'radiation', 'ion', or 'storm'
      *   nearbyRetreatNebula {Object|null}   - Nearest EMP nebula usable for defensive retreat
      *   nearbyRetreatDist   {number}        - Distance to that nebula edge
      *   targetInDangerZone  {boolean}       - Whether the current target is inside a dangerous zone
@@ -2697,6 +2699,7 @@ class EnemyAIBehaviors {
             inDangerousZone: false,
             dangerZonePos: null,
             dangerZoneRadius: 0,
+            dangerZoneType: null,
             nearbyRetreatNebula: null,
             nearbyRetreatDist: Infinity,
             targetInDangerZone: false,
@@ -2727,6 +2730,7 @@ class EnemyAIBehaviors {
                         info.inDangerousZone = true;
                         info.dangerZonePos = neb.pos;
                         info.dangerZoneRadius = r;
+                        info.dangerZoneType = neb.type;
                     }
                 }
 
@@ -2765,6 +2769,7 @@ class EnemyAIBehaviors {
                     info.inDangerousZone = true;
                     info.dangerZonePos = storm.pos;
                     info.dangerZoneRadius = r;
+                    info.dangerZoneType = 'storm';
                 }
 
                 if (targetPos) {
@@ -2783,14 +2788,22 @@ class EnemyAIBehaviors {
 
     /**
      * Evaluates environmental hazards and adjusts AI behaviour accordingly.
+     * Only applies during active combat (targetExists = true); ships freely
+     * cross nebulae when patrolling or navigating to stations / jump zones.
+     *
      * Scaled by the pilot's environmentAwareness modifier:
      *
-     *   awareness < 0.3  (Incompetent/Green) – no reaction, flies into hazards
-     *   awareness >= 0.5 (Rookie)  – exits current dangerous zone; movement avoidance
-     *                                already handled in _avoidObstaclesAndAdjustTarget
-     *   awareness >= 1.0 (Veteran) – also retreats to nearby EMP nebula at 15% hull
-     *   awareness >= 1.5 (Elite)   – retreat threshold raised to 25% hull; tactically
-     *                                approaches targets already inside dangerous zones
+     *   awareness < 0.3  (Incompetent/Green) – no reaction at all
+     *   awareness >= 0.5 (Rookie)  – probabilistic escape from ion/radiation zones when engaged
+     *   awareness >= 1.0 (Veteran) – always escapes; also retreats to EMP nebula at ≤ 15% hull
+     *   awareness >= 1.5 (Elite)   – EMP retreat threshold raised to 25% hull; opportunistically
+     *                                approaches targets already suffering inside dangerous zones
+     *
+     * Zone-specific escape rules (Rule 1):
+     *   radiation  – slow damage; only escape in combat when hull ≤ 60 % to avoid disrupting
+     *                normal combat manoeuvres for minor exposure
+     *   ion        – disables shields; immediately dangerous in any fight → always escape
+     *   storm      – severe / multiple effects; always escape in combat
      *
      * @param {Object}  system       - The current star system
      * @param {boolean} targetExists - Whether a valid combat target exists
@@ -2805,25 +2818,41 @@ class EnemyAIBehaviors {
         const envInfo = this._getEnvHazardInfo(system);
 
         // --- Rule 1: Escape from currently occupied dangerous zone ---
-        // Rookies have a chance to escape; Veterans/Elites always do.
-        // Don't interrupt an in-progress environmental escape reposition.
-        if (envInfo.inDangerousZone && envInfo.dangerZonePos &&
+        // Only applies during active combat; ships crossing nebulae while
+        // patrolling or navigating to stations/jump zones should not be interrupted.
+        //
+        // Radiation is slow — only escape when hull has already dropped to ≤ 60 %
+        // (the radiation is then contributing meaningfully to danger).
+        // Ion disables shields — escape immediately in any fight.
+        // Storms have severe effects — always escape in combat.
+        if (envInfo.inDangerousZone && envInfo.dangerZonePos && targetExists &&
             this.currentState !== AI_STATE.FLEEING &&
             this.currentState !== AI_STATE.REPOSITIONING) {
 
-            const shouldEscape = awareness >= 1.0 || random() < awareness * EnemyAIBehaviors.ENV_ROOKIE_ESCAPE_CHANCE_MULT;
-            if (shouldEscape) {
-                // Compute an escape point outside the zone
-                const dx = this.pos.x - envInfo.dangerZonePos.x;
-                const dy = this.pos.y - envInfo.dangerZonePos.y;
-                const mag = Math.hypot(dx, dy) || 1;
-                const escapeR = envInfo.dangerZoneRadius + EnemyAIBehaviors.ENV_ESCAPE_MARGIN;
-                this.repositionTarget = createVector(
-                    envInfo.dangerZonePos.x + (dx / mag) * escapeR,
-                    envInfo.dangerZonePos.y + (dy / mag) * escapeR
-                );
-                this.changeState(AI_STATE.REPOSITIONING);
-                return;
+            const hullPct = this.maxHull > 0 ? this.hull / this.maxHull : 1;
+            const zoneType = envInfo.dangerZoneType;
+
+            // Radiation: slow damage — only worth escaping if hull is already degraded
+            const radiationEscapeNeeded = zoneType === 'radiation' &&
+                hullPct <= EnemyAIBehaviors.ENV_RADIATION_ESCAPE_HULL_THRESHOLD;
+            // Ion or storm: immediate threat — always escape when engaged
+            const immediateEscapeNeeded = zoneType === 'ion' || zoneType === 'storm';
+
+            if (radiationEscapeNeeded || immediateEscapeNeeded) {
+                const shouldEscape = awareness >= 1.0 || random() < awareness * EnemyAIBehaviors.ENV_ROOKIE_ESCAPE_CHANCE_MULT;
+                if (shouldEscape) {
+                    // Compute an escape point outside the zone
+                    const dx = this.pos.x - envInfo.dangerZonePos.x;
+                    const dy = this.pos.y - envInfo.dangerZonePos.y;
+                    const mag = Math.hypot(dx, dy) || 1;
+                    const escapeR = envInfo.dangerZoneRadius + EnemyAIBehaviors.ENV_ESCAPE_MARGIN;
+                    this.repositionTarget = createVector(
+                        envInfo.dangerZonePos.x + (dx / mag) * escapeR,
+                        envInfo.dangerZonePos.y + (dy / mag) * escapeR
+                    );
+                    this.changeState(AI_STATE.REPOSITIONING);
+                    return;
+                }
             }
         }
 
@@ -2961,34 +2990,6 @@ class EnemyAIBehaviors {
         if (this.role !== AI_ROLE.TRANSPORT && this.role !== AI_ROLE.POLICE && Array.isArray(system.spaceObjects)) {
             for (const spaceObj of system.spaceObjects) {
                 checkObstacle(spaceObj, true); // true = always avoid (immovable)
-            }
-        }
-
-        // Check environmental hazards (dangerous nebulae and cosmic storms)
-        // Pilots with sufficient environmentAwareness (Rookie+) steer away from dangerous zones.
-        // Skip if the movement target is already inside the zone (e.g., pursuing a target there).
-        const envAwareness = rankMods?.environmentAwareness ?? 0.0;
-        if (envAwareness >= 0.5) {
-            if (Array.isArray(system.nebulae)) {
-                for (const neb of system.nebulae) {
-                    if (!neb?.pos || (neb.type !== 'radiation' && neb.type !== 'ion')) continue;
-                    const r = neb.effectRadius || neb.radius || 200;
-                    // Don't steer away if the movement target is inside this zone
-                    const tx = desiredMovementTargetPos.x - neb.pos.x;
-                    const ty = desiredMovementTargetPos.y - neb.pos.y;
-                    if (tx * tx + ty * ty < r * r) continue;
-                    checkObstacle({ pos: neb.pos, maxRadius: r }, true);
-                }
-            }
-            if (Array.isArray(system.cosmicStorms)) {
-                for (const storm of system.cosmicStorms) {
-                    if (!storm?.pos) continue;
-                    const r = storm.effectRadius || storm.radius || 500;
-                    const tx = desiredMovementTargetPos.x - storm.pos.x;
-                    const ty = desiredMovementTargetPos.y - storm.pos.y;
-                    if (tx * tx + ty * ty < r * r) continue;
-                    checkObstacle({ pos: storm.pos, maxRadius: r }, true);
-                }
             }
         }
 

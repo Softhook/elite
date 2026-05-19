@@ -310,6 +310,7 @@ describe('_getEnvHazardInfo', () => {
         const info = enemy._getEnvHazardInfo(system);
         expect(info.inDangerousZone).toBe(true);
         expect(info.dangerZonePos).not.toBeNull();
+        expect(info.dangerZoneType).toBe('radiation');
     });
 
     test('detects ion nebula at current position', () => {
@@ -318,6 +319,7 @@ describe('_getEnvHazardInfo', () => {
         enemy.pos = createVector(0, 0);
         const info = enemy._getEnvHazardInfo(system);
         expect(info.inDangerousZone).toBe(true);
+        expect(info.dangerZoneType).toBe('ion');
     });
 
     test('EMP nebula does NOT mark inDangerousZone (it is a retreat option)', () => {
@@ -351,6 +353,7 @@ describe('_getEnvHazardInfo', () => {
         enemy.pos = createVector(0, 0);
         const info = enemy._getEnvHazardInfo(system);
         expect(info.inDangerousZone).toBe(true);
+        expect(info.dangerZoneType).toBe('storm');
     });
 
     test('detects that target is inside a dangerous zone', () => {
@@ -405,7 +408,7 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
         const neb = new Nebula(0, 0, 300, 'radiation');
         const system = makeSystem({ nebulae: [neb] });
         enemy.currentState = AI_STATE.IDLE;
-        enemy._updateEnvironmentalBehavior(system, false);
+        enemy._updateEnvironmentalBehavior(system, true);
         expect(enemy.currentState).toBe(AI_STATE.IDLE);
     });
 
@@ -414,37 +417,99 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
         const neb = new Nebula(0, 0, 300, 'ion');
         const system = makeSystem({ nebulae: [neb] });
         enemy.currentState = AI_STATE.IDLE;
-        enemy._updateEnvironmentalBehavior(system, false);
+        enemy._updateEnvironmentalBehavior(system, true);
         expect(enemy.currentState).toBe(AI_STATE.IDLE);
     });
 
-    // --- Veteran: always escapes dangerous zones ---
+    // --- No target: ships must not interrupt patrol / navigation ---
 
-    test('VETERAN inside radiation nebula transitions to REPOSITIONING', () => {
+    test('VETERAN inside radiation nebula WITHOUT a target does NOT escape (patrol route)', () => {
         setRank(enemy, PILOT_RANK.VETERAN);
         const neb = new Nebula(0, 0, 300, 'radiation');
         const system = makeSystem({ nebulae: [neb] });
         enemy.currentState = AI_STATE.IDLE;
+        // targetExists = false – simulates patrolling or navigating through a nebula
         enemy._updateEnvironmentalBehavior(system, false);
+        expect(enemy.currentState).toBe(AI_STATE.IDLE);
+    });
+
+    test('VETERAN inside ion nebula WITHOUT a target does NOT escape (navigating to station)', () => {
+        setRank(enemy, PILOT_RANK.VETERAN);
+        const neb = new Nebula(0, 0, 300, 'ion');
+        const system = makeSystem({ nebulae: [neb] });
+        enemy.currentState = AI_STATE.IDLE;
+        enemy._updateEnvironmentalBehavior(system, false);
+        expect(enemy.currentState).toBe(AI_STATE.IDLE);
+    });
+
+    // --- Radiation nebula: slow damage, only escape in combat at hull ≤ 60 % ---
+
+    test('VETERAN in radiation nebula in combat with hull above 60% does NOT escape', () => {
+        setRank(enemy, PILOT_RANK.VETERAN);
+        const neb = new Nebula(0, 0, 300, 'radiation');
+        const system = makeSystem({ nebulae: [neb] });
+        const target = makeTarget(800, 0);
+        enemy.target = target;
+        enemy.hull = enemy.maxHull * 0.80; // 80% — above threshold
+        enemy.currentState = AI_STATE.APPROACHING;
+        enemy._envHazardCache = null;
+        enemy._updateEnvironmentalBehavior(system, true);
+        expect(enemy.currentState).toBe(AI_STATE.APPROACHING);
+    });
+
+    test('VETERAN in radiation nebula in combat with hull at or below 60% escapes', () => {
+        setRank(enemy, PILOT_RANK.VETERAN);
+        const neb = new Nebula(0, 0, 300, 'radiation');
+        const system = makeSystem({ nebulae: [neb] });
+        const target = makeTarget(800, 0);
+        enemy.target = target;
+        enemy.hull = enemy.maxHull * 0.55; // 55% — below threshold
+        enemy.currentState = AI_STATE.APPROACHING;
+        enemy._envHazardCache = null;
+        enemy._updateEnvironmentalBehavior(system, true);
         expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
         expect(enemy.repositionTarget).not.toBeNull();
     });
 
-    test('VETERAN inside ion storm transitions to REPOSITIONING', () => {
+    // --- Ion nebula: disables shields, always escape in combat ---
+
+    test('VETERAN in ion nebula in combat escapes regardless of hull percentage', () => {
+        setRank(enemy, PILOT_RANK.VETERAN);
+        const neb = new Nebula(0, 0, 300, 'ion');
+        const system = makeSystem({ nebulae: [neb] });
+        const target = makeTarget(800, 0);
+        enemy.target = target;
+        enemy.hull = enemy.maxHull * 0.90; // 90% — well above radiation threshold
+        enemy.currentState = AI_STATE.APPROACHING;
+        enemy._envHazardCache = null;
+        enemy._updateEnvironmentalBehavior(system, true);
+        // Ion disables shields — escape regardless of hull health
+        expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
+    });
+
+    // --- Cosmic storm: always escape in combat ---
+
+    test('VETERAN inside cosmic storm in combat transitions to REPOSITIONING', () => {
         setRank(enemy, PILOT_RANK.VETERAN);
         const storm = new CosmicStorm(0, 0, 300, 'ion');
         const system = makeSystem({ cosmicStorms: [storm] });
+        const target = makeTarget(800, 0);
+        enemy.target = target;
         enemy.currentState = AI_STATE.IDLE;
-        enemy._updateEnvironmentalBehavior(system, false);
+        enemy._envHazardCache = null;
+        enemy._updateEnvironmentalBehavior(system, true);
         expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
     });
 
     test('VETERAN does NOT escape if already FLEEING', () => {
         setRank(enemy, PILOT_RANK.VETERAN);
-        const neb = new Nebula(0, 0, 300, 'radiation');
+        const neb = new Nebula(0, 0, 300, 'ion');
         const system = makeSystem({ nebulae: [neb] });
+        const target = makeTarget(800, 0);
+        enemy.target = target;
         enemy.currentState = AI_STATE.FLEEING;
-        enemy._updateEnvironmentalBehavior(system, false);
+        enemy._envHazardCache = null;
+        enemy._updateEnvironmentalBehavior(system, true);
         expect(enemy.currentState).toBe(AI_STATE.FLEEING);
     });
 
@@ -541,10 +606,11 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Environmental zone avoidance during movement (_avoidObstaclesAndAdjustTarget)
+// Movement avoidance: nebulae / storms are NOT treated as path obstacles
+// (stations and jump zones often sit inside nebulae; patrol routes cross them)
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('environmental zone movement avoidance', () => {
+describe('nebulae are NOT treated as movement obstacles', () => {
     let player, enemy;
 
     beforeEach(() => {
@@ -555,56 +621,38 @@ describe('environmental zone movement avoidance', () => {
         enemy.thrustVector = createVector(0, 0);
     });
 
-    test('ROOKIE steers away from radiation nebula in movement path', () => {
+    test('ROOKIE does NOT steer around a radiation nebula in movement path', () => {
         setRank(enemy, PILOT_RANK.ROOKIE);
-        // Nebula is directly ahead of the enemy on the path to its target
-        const neb = new Nebula(300, 0, 200, 'radiation');
-        const system = makeSystem({ nebulae: [neb] });
-        enemy.pos = createVector(0, 0);
-
-        // Desired target is at (600, 0) – the nebula (centre 300, radius 200) is in the way
-        const desiredTarget = createVector(600, 0);
-        const adjusted = enemy._avoidObstaclesAndAdjustTarget(system, desiredTarget);
-
-        // The adjusted target should be offset in Y to go around the nebula
-        expect(Math.abs(adjusted.y)).toBeGreaterThan(0);
-    });
-
-    test('INCOMPETENT does NOT steer away from radiation nebula (obstacleAvoidanceStrength = 0)', () => {
-        setRank(enemy, PILOT_RANK.INCOMPETENT);
+        // Nebula sits directly between ship and its target
         const neb = new Nebula(300, 0, 200, 'radiation');
         const system = makeSystem({ nebulae: [neb] });
         enemy.pos = createVector(0, 0);
         const desiredTarget = createVector(600, 0);
         const adjusted = enemy._avoidObstaclesAndAdjustTarget(system, desiredTarget);
-
-        // Incompetent has obstacleAvoidanceStrength 0 so no nudge occurs –
-        // the function returns the original target unchanged.
+        // Target should be unchanged — nebulae are not physical obstacles
         expect(adjusted.x).toBe(desiredTarget.x);
         expect(adjusted.y).toBe(desiredTarget.y);
     });
 
-    test('ROOKIE does NOT avoid zone when movement target is INSIDE it (pursuing target there)', () => {
-        setRank(enemy, PILOT_RANK.ROOKIE);
-        const neb = new Nebula(300, 0, 200, 'radiation');
+    test('ELITE does NOT steer around an ion nebula in movement path', () => {
+        setRank(enemy, PILOT_RANK.ELITE);
+        const neb = new Nebula(300, 0, 200, 'ion');
         const system = makeSystem({ nebulae: [neb] });
         enemy.pos = createVector(0, 0);
-
-        // Target IS inside the nebula
-        const desiredTarget = createVector(300, 0);
+        const desiredTarget = createVector(600, 0);
         const adjusted = enemy._avoidObstaclesAndAdjustTarget(system, desiredTarget);
-
-        // No avoidance nudge – target is inside, so we skip this nebula
-        expect(adjusted.y).toBe(0);
+        expect(adjusted.x).toBe(desiredTarget.x);
+        expect(adjusted.y).toBe(desiredTarget.y);
     });
 
-    test('ROOKIE steers away from cosmic storm in movement path', () => {
-        setRank(enemy, PILOT_RANK.ROOKIE);
+    test('VETERAN does NOT steer around a cosmic storm in movement path', () => {
+        setRank(enemy, PILOT_RANK.VETERAN);
         const storm = new CosmicStorm(300, 0, 200, 'radiation');
         const system = makeSystem({ cosmicStorms: [storm] });
         enemy.pos = createVector(0, 0);
         const desiredTarget = createVector(700, 0);
         const adjusted = enemy._avoidObstaclesAndAdjustTarget(system, desiredTarget);
-        expect(Math.abs(adjusted.y)).toBeGreaterThan(0);
+        expect(adjusted.x).toBe(desiredTarget.x);
+        expect(adjusted.y).toBe(desiredTarget.y);
     });
 });
