@@ -107,7 +107,8 @@ class EnemyStateMachine {
     _updateState_IDLE(targetExists) {
         const rankMods = this._getRankModifiers();
         const fleeDelay = rankMods?.fleeDecisionDelay ?? 0;
-        const fleeThreshold = rankMods?.fleeHullThreshold ?? IDLE_FLEE_HULL_THRESHOLD;
+        const fleeThreshold = rankMods?.fleeHullThreshold
+            ?? (typeof IDLE_FLEE_HULL_THRESHOLD !== 'undefined' ? IDLE_FLEE_HULL_THRESHOLD : 0.4);
 
         const shouldFleeForLowHull = this.hull < this.maxHull * fleeThreshold;
         const hasFleeDelayElapsed = () => {
@@ -868,7 +869,7 @@ class EnemyStateMachine {
 
             case AI_STATE.FLEEING:
                 // Show message when enemy starts fleeing
-                if (typeof uiManager !== 'undefined' && this.target === window.player) {
+                if (typeof uiManager !== 'undefined' && typeof window !== 'undefined' && this.target === window.player) {
                     const shipName = this.displayName || this.shipTypeName || "Enemy ship";
                     uiManager.addMessage(`${shipName} is fleeing!`, [255, 165, 0]);
                 }

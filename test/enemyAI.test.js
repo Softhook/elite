@@ -24,6 +24,7 @@ require('../enemyStateMachine.js');
 require('../enemyAIBehaviors.js');
 require('../enemyCargo.js');
 require('../thrustParticles.js');
+const { PILOT_RANK } = require('../pilotRanks.js');
 
 // Ensure essential globals are defined if they weren't in setups
 if (typeof WEAPON_TYPE === 'undefined') {
@@ -187,6 +188,36 @@ describe('Enemy State Machine', () => {
         expect(enemy.currentState).toBe(AI_STATE.APPROACHING);
     });
 
+    test('should respect rank-based flee decision delay while idle', () => {
+        const originalMillis = global.millis;
+        let now = 1000;
+        global.millis = jest.fn(() => now);
+        try {
+            enemy.pilotRank = PILOT_RANK.GREEN;
+            enemy.currentState = AI_STATE.IDLE;
+            enemy.hull = enemy.maxHull * 0.05;
+            enemy.target = null;
+
+            enemy._updateState_IDLE(false);
+            expect(enemy.currentState).toBe(AI_STATE.IDLE);
+
+            now += 2000;
+            enemy._updateState_IDLE(false);
+            expect(enemy.currentState).toBe(AI_STATE.FLEEING);
+        } finally {
+            global.millis = originalMillis;
+        }
+    });
+
+    test('should clear pending flee timer when leaving idle for another state', () => {
+        enemy.currentState = AI_STATE.IDLE;
+        enemy._fleeDecisionStart = 1234;
+
+        enemy.changeState(AI_STATE.APPROACHING);
+
+        expect(enemy._fleeDecisionStart).toBeNull();
+    });
+
     test('should track previous state', () => {
         enemy.currentState = AI_STATE.IDLE;
         enemy.changeState(AI_STATE.APPROACHING);
@@ -230,9 +261,11 @@ describe('Enemy Targeting', () => {
         }
     });
 
-    test('should track last attacker for retaliation', () => {
+    test('should track attacker immediately or queue delayed retaliation context', () => {
         enemy.takeDamage(10, mockPlayer);
-        expect(enemy.lastAttacker).toBeDefined();
+        expect(
+            Boolean(enemy.lastAttacker) || Boolean(enemy._pendingRetaliationAttacker)
+        ).toBe(true);
     });
 });
 

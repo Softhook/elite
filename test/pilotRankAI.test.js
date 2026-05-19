@@ -39,6 +39,28 @@ describe('Pilot Rank Modifiers', () => {
         expect(rookieMods.canStrafe).toBe(false);
     });
 
+    test('should define rank-based timing modifiers for spotting, guard reaction, and flee delay', () => {
+        const greenMods = getPilotRankModifiers(PILOT_RANK.GREEN);
+        const rookieMods = getPilotRankModifiers(PILOT_RANK.ROOKIE);
+        const veteranMods = getPilotRankModifiers(PILOT_RANK.VETERAN);
+        const eliteMods = getPilotRankModifiers(PILOT_RANK.ELITE);
+
+        expect(greenMods.targetSpottingDelay).toBeCloseTo(1.5);
+        expect(rookieMods.targetSpottingDelay).toBeCloseTo(1.0);
+        expect(veteranMods.targetSpottingDelay).toBeCloseTo(0.5);
+        expect(eliteMods.targetSpottingDelay).toBeCloseTo(0.0);
+
+        expect(greenMods.guardReactionTimeMultiplier).toBeCloseTo(1.2);
+        expect(rookieMods.guardReactionTimeMultiplier).toBeCloseTo(1.0);
+        expect(veteranMods.guardReactionTimeMultiplier).toBeCloseTo(0.8);
+        expect(eliteMods.guardReactionTimeMultiplier).toBeCloseTo(0.1);
+
+        expect(greenMods.fleeDecisionDelay).toBeCloseTo(1.0);
+        expect(rookieMods.fleeDecisionDelay).toBeCloseTo(0.7);
+        expect(veteranMods.fleeDecisionDelay).toBeCloseTo(0.3);
+        expect(eliteMods.fleeDecisionDelay).toBeCloseTo(0.0);
+    });
+
     describe('Green Modifiers', () => {
         let mods;
         beforeEach(() => {
