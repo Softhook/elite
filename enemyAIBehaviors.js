@@ -656,6 +656,9 @@ class EnemyAIBehaviors {
             this.updateCombatAbilities(distanceToTarget);
         }
 
+        // 4d. Environmental hazard awareness - rank-scaled reactions to nebulae and storms
+        this._updateEnvironmentalBehavior(system, targetExists);
+
         // 5. If just entered (or still in) FLEEING, perform flee logic and exit
         // ← NO MORE "if (FLEEING) updateFleeingAI" here!
         if (this.currentState === AI_STATE.FLEEING) {
@@ -2194,6 +2197,9 @@ class EnemyAIBehaviors {
         // Run state-transition logic
         this.updateCombatState(targetExists, distanceToTarget);
 
+        // Environmental hazard awareness - rank-scaled reactions to nebulae and storms
+        this._updateEnvironmentalBehavior(system, targetExists);
+
         // If in patrol mode (no target), use patrol behavior
         if (!targetExists || this.currentState === AI_STATE.PATROLLING) {
             this._updateCombatPatrolBehavior(system);
@@ -2655,6 +2661,191 @@ class EnemyAIBehaviors {
         this.performSafeRotationAndThrust(system, desiredMovementTargetPos);
     }
 
+    // ========================================
+    // ENVIRONMENTAL HAZARD AWARENESS
+    // ========================================
+
+    /**
+     * Scans nearby environmental hazards and returns a cached summary.
+     * Throttled to ~1 s (2 s off-screen) to keep CPU cost low.
+     * Checks nebulae (radiation, ion) and all cosmic storm types.
+     *
+     * @param {Object} system - The current star system
+     * @returns {Object} Hazard summary:
+     *   inDangerousZone   {boolean}        - Ship is currently inside a hazardous zone
+     *   dangerZonePos     {p5.Vector|null}  - Center of the occupied dangerous zone
+     *   dangerZoneRadius  {number}          - Radius of that zone (for escape vector)
+     *   nearbyRetreatNebula {Object|null}   - Nearest EMP nebula usable for defensive retreat
+     *   nearbyRetreatDist   {number}        - Distance to that nebula edge
+     *   targetInDangerZone  {boolean}       - Whether the current target is inside a dangerous zone
+     */
+    _getEnvHazardInfo(system) {
+        const now = typeof millis === 'function' ? millis() : 0;
+        const interval = this._isOnScreen === false ? 2000 : 1000;
+        if (this._envHazardCache && (now - this._envHazardCacheTime < interval)) {
+            return this._envHazardCache;
+        }
+        this._envHazardCacheTime = now;
+
+        const info = {
+            inDangerousZone: false,
+            dangerZonePos: null,
+            dangerZoneRadius: 0,
+            nearbyRetreatNebula: null,
+            nearbyRetreatDist: Infinity,
+            targetInDangerZone: false,
+        };
+
+        if (!system) {
+            this._envHazardCache = info;
+            return info;
+        }
+
+        const posX = this.pos.x;
+        const posY = this.pos.y;
+        const targetPos = this.target?.pos;
+
+        // --- Nebulae ---
+        if (Array.isArray(system.nebulae)) {
+            for (let i = 0; i < system.nebulae.length; i++) {
+                const neb = system.nebulae[i];
+                if (!neb?.pos) continue;
+                const dx = neb.pos.x - posX;
+                const dy = neb.pos.y - posY;
+                const distSq = dx * dx + dy * dy;
+                const r = neb.effectRadius || neb.radius || 200;
+
+                if (distSq < r * r) {
+                    // Ship is inside this nebula
+                    if ((neb.type === 'radiation' || neb.type === 'ion') && !info.inDangerousZone) {
+                        info.inDangerousZone = true;
+                        info.dangerZonePos = neb.pos;
+                        info.dangerZoneRadius = r;
+                    }
+                }
+
+                // EMP nebula: track as potential defensive retreat target
+                if (neb.type === 'emp') {
+                    const d = Math.sqrt(distSq);
+                    const edgeDist = Math.max(0, d - r);
+                    if (edgeDist < info.nearbyRetreatDist && edgeDist < 1000) {
+                        info.nearbyRetreatDist = edgeDist;
+                        info.nearbyRetreatNebula = neb;
+                    }
+                }
+
+                // Check if current target is inside a dangerous zone (elite tactic awareness)
+                if (targetPos && (neb.type === 'radiation' || neb.type === 'ion')) {
+                    const tdx = neb.pos.x - targetPos.x;
+                    const tdy = neb.pos.y - targetPos.y;
+                    if (tdx * tdx + tdy * tdy < r * r) {
+                        info.targetInDangerZone = true;
+                    }
+                }
+            }
+        }
+
+        // --- Cosmic storms (all types are hazardous) ---
+        if (Array.isArray(system.cosmicStorms)) {
+            for (let i = 0; i < system.cosmicStorms.length; i++) {
+                const storm = system.cosmicStorms[i];
+                if (!storm?.pos) continue;
+                const dx = storm.pos.x - posX;
+                const dy = storm.pos.y - posY;
+                const distSq = dx * dx + dy * dy;
+                const r = storm.effectRadius || storm.radius || 500;
+
+                if (distSq < r * r && !info.inDangerousZone) {
+                    info.inDangerousZone = true;
+                    info.dangerZonePos = storm.pos;
+                    info.dangerZoneRadius = r;
+                }
+
+                if (targetPos) {
+                    const tdx = storm.pos.x - targetPos.x;
+                    const tdy = storm.pos.y - targetPos.y;
+                    if (tdx * tdx + tdy * tdy < r * r) {
+                        info.targetInDangerZone = true;
+                    }
+                }
+            }
+        }
+
+        this._envHazardCache = info;
+        return info;
+    }
+
+    /**
+     * Evaluates environmental hazards and adjusts AI behaviour accordingly.
+     * Scaled by the pilot's environmentAwareness modifier:
+     *
+     *   awareness < 0.3  (Incompetent/Green) – no reaction, flies into hazards
+     *   awareness >= 0.5 (Rookie)  – exits current dangerous zone; movement avoidance
+     *                                already handled in _avoidObstaclesAndAdjustTarget
+     *   awareness >= 1.0 (Veteran) – also retreats to nearby EMP nebula at 15% hull
+     *   awareness >= 1.5 (Elite)   – retreat threshold raised to 25% hull; tactically
+     *                                approaches targets already inside dangerous zones
+     *
+     * @param {Object}  system       - The current star system
+     * @param {boolean} targetExists - Whether a valid combat target exists
+     */
+    _updateEnvironmentalBehavior(system, targetExists) {
+        const rankMods = this._getRankModifiers();
+        const awareness = rankMods?.environmentAwareness ?? 0.0;
+
+        // Incompetent/Green pilots are oblivious to environmental hazards
+        if (awareness < 0.3) return;
+
+        const envInfo = this._getEnvHazardInfo(system);
+
+        // --- Rule 1: Escape from currently occupied dangerous zone ---
+        // Rookies have a chance to escape; Veterans/Elites always do.
+        // Don't interrupt an in-progress environmental escape reposition.
+        if (envInfo.inDangerousZone && envInfo.dangerZonePos &&
+            this.currentState !== AI_STATE.FLEEING &&
+            this.currentState !== AI_STATE.REPOSITIONING) {
+
+            const shouldEscape = awareness >= 1.0 || random() < awareness * 0.6;
+            if (shouldEscape) {
+                // Compute an escape point outside the zone
+                const dx = this.pos.x - envInfo.dangerZonePos.x;
+                const dy = this.pos.y - envInfo.dangerZonePos.y;
+                const mag = Math.hypot(dx, dy) || 1;
+                const escapeR = envInfo.dangerZoneRadius + 150;
+                this.repositionTarget = createVector(
+                    envInfo.dangerZonePos.x + (dx / mag) * escapeR,
+                    envInfo.dangerZonePos.y + (dy / mag) * escapeR
+                );
+                this.changeState(AI_STATE.REPOSITIONING);
+                return;
+            }
+        }
+
+        // --- Rule 2: Defensive retreat to nearby EMP nebula when hull is critical ---
+        // Veterans retreat at 15% hull; Elites (higher awareness) at 25%.
+        if (awareness >= 1.0 && envInfo.nearbyRetreatNebula && targetExists) {
+            const hullPct = this.maxHull > 0 ? this.hull / this.maxHull : 1;
+            const retreatThreshold = awareness >= 1.5 ? 0.25 : 0.15;
+
+            if (hullPct < retreatThreshold && envInfo.nearbyRetreatDist < 1200 &&
+                this.currentState !== AI_STATE.FLEEING &&
+                this.currentState !== AI_STATE.REPOSITIONING) {
+                this.repositionTarget = envInfo.nearbyRetreatNebula.pos;
+                this.changeState(AI_STATE.REPOSITIONING);
+                return;
+            }
+        }
+
+        // --- Rule 3 (Elite): Approach targets that are already inside a dangerous zone ---
+        // An elite pilot recognises that a target suffering radiation/ion damage is weakened.
+        // When the target is in a dangerous zone and the elite is not yet in attack range,
+        // override the IDLE state to begin approach immediately (skip normal decision delay).
+        if (awareness >= 1.5 && envInfo.targetInDangerZone && targetExists &&
+            this.currentState === AI_STATE.IDLE) {
+            this.changeState(AI_STATE.APPROACHING);
+        }
+    }
+
     /**
      * Lightweight obstacle avoidance: nudge movement target away from the nearest
      * asteroid, ship, or space object intersecting the current path, or slightly slow the ship for a short time.
@@ -2764,6 +2955,34 @@ class EnemyAIBehaviors {
         if (this.role !== AI_ROLE.TRANSPORT && this.role !== AI_ROLE.POLICE && Array.isArray(system.spaceObjects)) {
             for (const spaceObj of system.spaceObjects) {
                 checkObstacle(spaceObj, true); // true = always avoid (immovable)
+            }
+        }
+
+        // Check environmental hazards (dangerous nebulae and cosmic storms)
+        // Pilots with sufficient environmentAwareness (Rookie+) steer away from dangerous zones.
+        // Skip if the movement target is already inside the zone (e.g., pursuing a target there).
+        const envAwareness = rankMods?.environmentAwareness ?? 0.0;
+        if (envAwareness >= 0.5) {
+            if (Array.isArray(system.nebulae)) {
+                for (const neb of system.nebulae) {
+                    if (!neb?.pos || (neb.type !== 'radiation' && neb.type !== 'ion')) continue;
+                    const r = neb.effectRadius || neb.radius || 200;
+                    // Don't steer away if the movement target is inside this zone
+                    const tx = desiredMovementTargetPos.x - neb.pos.x;
+                    const ty = desiredMovementTargetPos.y - neb.pos.y;
+                    if (tx * tx + ty * ty < r * r) continue;
+                    checkObstacle({ pos: neb.pos, maxRadius: r }, true);
+                }
+            }
+            if (Array.isArray(system.cosmicStorms)) {
+                for (const storm of system.cosmicStorms) {
+                    if (!storm?.pos) continue;
+                    const r = storm.effectRadius || storm.radius || 500;
+                    const tx = desiredMovementTargetPos.x - storm.pos.x;
+                    const ty = desiredMovementTargetPos.y - storm.pos.y;
+                    if (tx * tx + ty * ty < r * r) continue;
+                    checkObstacle({ pos: storm.pos, maxRadius: r }, true);
+                }
             }
         }
 

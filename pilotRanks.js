@@ -105,6 +105,7 @@ const PILOT_RANK_MODIFIERS = {
         targetSpottingDelay: 2.0, // 2 seconds to notice a target
         guardReactionTimeMultiplier: 1.6, // 8s guard reaction
         fleeDecisionDelay: 1.5, // 1.5s panic before fleeing
+        environmentAwareness: 0.0,          // Completely unaware of environmental hazards
     },
     [PILOT_RANK.GREEN]: {
         canStrafe: false,                   // No side thrusters / kiting
@@ -137,6 +138,7 @@ const PILOT_RANK_MODIFIERS = {
         targetSpottingDelay: 1.5, // 1.5 seconds to notice a target
         guardReactionTimeMultiplier: 1.2, // 6s guard reaction
         fleeDecisionDelay: 1.0, // 1s panic before fleeing
+        environmentAwareness: 0.2,          // Barely notices hazards; rare avoidance
     },
     [PILOT_RANK.ROOKIE]: {
         canStrafe: false,                   // No side thrusters / kiting
@@ -169,6 +171,7 @@ const PILOT_RANK_MODIFIERS = {
         targetSpottingDelay: 1.0, // 1 second to notice a target
         guardReactionTimeMultiplier: 1.0, // 5s guard reaction
         fleeDecisionDelay: 0.7, // 0.7s panic before fleeing
+        environmentAwareness: 0.5,          // Avoids obvious hazards (radiation, ion nebulas)
     },
     [PILOT_RANK.VETERAN]: {
         canStrafe: true,
@@ -201,6 +204,7 @@ const PILOT_RANK_MODIFIERS = {
         targetSpottingDelay: 0.5, // 0.5 seconds to notice a target
         guardReactionTimeMultiplier: 0.8, // 4s guard reaction
         fleeDecisionDelay: 0.3, // 0.3s panic before fleeing
+        environmentAwareness: 1.0,          // Avoids all dangerous zones; retreats to EMP nebula at 15% hull
     },
     [PILOT_RANK.ELITE]: {
         canStrafe: true,
@@ -233,6 +237,7 @@ const PILOT_RANK_MODIFIERS = {
         targetSpottingDelay: 0.0, // Instantaneous target spotting
         guardReactionTimeMultiplier: 0.1, // 0.5s guard reaction
         fleeDecisionDelay: 0.0, // No delay before fleeing
+        environmentAwareness: 1.5,          // Full tactical use: lures, retreat to EMP nebula at 25% hull
     }
 };
 
