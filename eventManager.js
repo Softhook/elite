@@ -25,6 +25,7 @@ class EventManager {
         // if this runs too early. However, in the current load order, ships.js is before sketch.js/eventManager.
         this._initializeShipGroups();
         this._initializeEvents();
+        this.eventAtmosphere = this._buildEventAtmosphereConfig();
 
         this.activeEvents = []; // Track active persistent events { id, expires, type }
         this.eventDurationMultiplier = 1; // Standard duration (was 8)
@@ -547,7 +548,9 @@ class EventManager {
             'PILGRIM_ESCORT', 'ALIEN_RELIC_HUNTERS', 'BLACK_OPS_INTERCEPTORS',
             'STATION_EXTORTION_RING', 'IMPERIAL_RETRIBUTION_WING', 'SEPARATIST_SIGNAL_JAMMERS',
             'HARLEQUIN_FLASHMOB', 'MISSIONARY_RECLAMATION_FLEET', 'BORDER_MILITIA_DRILL',
-            'ALIEN_BIO_PROSPECTORS', 'DEFENSE_DRONE_SWEEP', 'SHADOW_COURIER'
+            'ALIEN_BIO_PROSPECTORS', 'DEFENSE_DRONE_SWEEP', 'SHADOW_COURIER',
+            'MEDICAL_RELIEF_CONVOY', 'NAV_BEACON_RECALIBRATION', 'LANTERN_PROCESSION',
+            'SALVAGE_TUG_LINE', 'SURVEY_DRONE_SWEEP'
         ]);
 
         this.dynamicNewsEventTypes = new Set([
@@ -564,7 +567,10 @@ class EventManager {
             'MISSIONARY_RECLAMATION_FLEET', 'BORDER_MILITIA_DRILL', 'ALIEN_BIO_PROSPECTORS',
             'DEFENSE_DRONE_SWEEP', 'SHADOW_COURIER', 'ORBITAL_WRECKFIELD',
             'PILGRIM_OFFERINGS', 'SEPARATIST_ARMS_CACHE', 'ALIEN_RELIC_CACHE',
-            'VOID_CHOIR_STORM', 'SUNSPIKE_TURBULENCE'
+            'VOID_CHOIR_STORM', 'SUNSPIKE_TURBULENCE', 'MEDICAL_RELIEF_CONVOY',
+            'NAV_BEACON_RECALIBRATION', 'LANTERN_PROCESSION', 'SALVAGE_TUG_LINE',
+            'SURVEY_DRONE_SWEEP', 'REACTOR_PURGE_CANISTERS', 'CRYO_POD_SPILL',
+            'SMUGGLER_DECOY_CACHE', 'SATELLITE_SHRAPNEL_FIELD', 'ION_WAKE_STORM'
         ]);
     }
 
@@ -643,8 +649,156 @@ class EventManager {
             newEvent("SEPARATIST_ARMS_CACHE", 0.000003, 30 * 60 * 1000, 5000, { message: "BLACKSITE: Hidden separatist arms cache exposed.", color: "orange" }, { entityType: 'cargo', minEntities: 1, maxEntities: 2, spawnRadiusMin: 1700, spawnRadiusMax: 2600, cargoType: 'Weapons', quantity: 2 }),
             newEvent("ALIEN_RELIC_CACHE", 0.000002, 55 * 60 * 1000, 6000, { message: "[ALIEN] SIGNAL: Relic cache pulse detected.", color: "magenta" }, { entityType: 'cargo', minEntities: 1, maxEntities: 1, spawnRadiusMin: 1900, spawnRadiusMax: 3000, cargoType: 'Alien Artifact', quantity: 1 }),
             newEvent("VOID_CHOIR_STORM", 0.0000017, 60 * 60 * 1000, 8000, { message: "[STORM] ANOMALY: Harmonic void storm forming.", color: "purple" }, { entityType: 'cosmicStorm', minEntities: 1, maxEntities: 1, spawnRadiusMin: 1400, spawnRadiusMax: 2400, radius: 700, type: 'electromagnetic' }),
-            newEvent("SUNSPIKE_TURBULENCE", 0.000002, 55 * 60 * 1000, 8000, { message: "[STORM] SPACE WEATHER: Sunspike turbulence front incoming.", color: "yellow" }, { entityType: 'cosmicStorm', minEntities: 1, maxEntities: 1, spawnRadiusMin: 1200, spawnRadiusMax: 2200, radius: 620, type: 'electromagnetic' })
+            newEvent("SUNSPIKE_TURBULENCE", 0.000002, 55 * 60 * 1000, 8000, { message: "[STORM] SPACE WEATHER: Sunspike turbulence front incoming.", color: "yellow" }, { entityType: 'cosmicStorm', minEntities: 1, maxEntities: 1, spawnRadiusMin: 1200, spawnRadiusMax: 2200, radius: 620, type: 'electromagnetic' }),
+            newEvent("MEDICAL_RELIEF_CONVOY", 0.000003, 34 * 60 * 1000, 5000, { message: "AID: Medical relief convoy requesting a clear lane.", color: "cyan" }, {
+                entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.TRADER, fallbackShip: "Type6Transporter" }, aiRole: AI_ROLE.HAULER, spawnRadiusMin: 1500, spawnRadiusMax: 2300,
+                additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Relief Freighter"; }
+            }),
+            newEvent("NAV_BEACON_RECALIBRATION", 0.0000028, 38 * 60 * 1000, 5000, { message: "NAV: Beacon marshals recalibrating approach lanes.", color: "blue" }, {
+                entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.POLICE, fallbackShip: "ViperPol" }, aiRole: AI_ROLE.POLICE, spawnRadiusMin: 1400, spawnRadiusMax: 2100,
+                additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Beacon Marshal"; }
+            }),
+            newEvent("LANTERN_PROCESSION", 0.0000025, 42 * 60 * 1000, 5000, { message: "MEMORIAL: Lantern procession crossing the local orbital.", color: "purple" }, {
+                entityType: 'enemy', minEntities: 2, maxEntities: 3, shipSelection: { strategy: 'randomFromList', shipList: ["PosthumanMissionary"], fallbackShip: "PosthumanMissionary" }, aiRole: AI_ROLE.MISSIONARY, spawnRadiusMin: 1400, spawnRadiusMax: 2200,
+                additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Lantern Ship"; }
+            }),
+            newEvent("SALVAGE_TUG_LINE", 0.0000032, 26 * 60 * 1000, 5000, { message: "SALVAGE: Tug chain dragging wreckage off the trade lane.", color: "silver" }, {
+                entityType: 'enemy', minEntities: 2, maxEntities: 4, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.TRADER, fallbackShip: "CobraMkIII" }, aiRole: AI_ROLE.HAULER, spawnRadiusMin: 1500, spawnRadiusMax: 2400,
+                additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Salvage Tug"; }
+            }),
+            newEvent("SURVEY_DRONE_SWEEP", 0.000003, 32 * 60 * 1000, 5000, { message: "SURVEY: Cartography drones rastering the lane network.", color: "teal" }, {
+                entityType: 'enemy', minEntities: 2, maxEntities: 4, shipSelection: { strategy: 'randomFromList', shipList: this.shipGroups.POLICE, fallbackShip: "ViperPol" }, aiRole: AI_ROLE.POLICE, spawnRadiusMin: 1500, spawnRadiusMax: 2200,
+                additionalEnemySetup: (e) => { e.currentState = AI_STATE.PATROLLING; e.displayName = "Survey Drone"; }
+            }),
+            newEvent("REACTOR_PURGE_CANISTERS", 0.0000025, 36 * 60 * 1000, 5000, { message: "HAZMAT: Purged reactor canisters drifting in local space.", color: "orange" }, { entityType: 'cargo', minEntities: 2, maxEntities: 3, spawnRadiusMin: 1500, spawnRadiusMax: 2400, cargoType: 'Machinery', quantity: 2 }),
+            newEvent("CRYO_POD_SPILL", 0.0000022, 44 * 60 * 1000, 5000, { message: "RESCUE: Cryo-pod spill reported from a fractured hauler.", color: "cyan" }, { entityType: 'cargo', minEntities: 2, maxEntities: 3, spawnRadiusMin: 1400, spawnRadiusMax: 2300, cargoType: 'Medicine', quantity: 2 }),
+            newEvent("SMUGGLER_DECOY_CACHE", 0.0000024, 40 * 60 * 1000, 5000, { message: "SCAN: Decoy smuggler cache blinking on and off sensors.", color: "purple" }, { entityType: 'cargo', minEntities: 1, maxEntities: 2, spawnRadiusMin: 1600, spawnRadiusMax: 2600, cargoType: 'Narcotics', quantity: 1 }),
+            newEvent("SATELLITE_SHRAPNEL_FIELD", 0.0000023, 46 * 60 * 1000, 5000, { message: "DEBRIS: Satellite shrapnel field drifting through orbital space.", color: "orange" }, { entityType: 'asteroid', minEntities: 12, maxEntities: 18, useRankFactorForCount: false, spawnRadiusMin: 1500, spawnRadiusMax: 2200, clusterSpreadRadius: 650, asteroidSizeMin: 15, asteroidSizeMax: 55 }),
+            newEvent("ION_WAKE_STORM", 0.0000019, 58 * 60 * 1000, 7000, { message: "[STORM] HAZARD: Ion wake storm boiling out of supercruise lanes.", color: "cyan" }, { entityType: 'cosmicStorm', minEntities: 1, maxEntities: 1, spawnRadiusMin: 1300, spawnRadiusMax: 2300, radius: 560, type: 'electromagnetic' })
         ];
+    }
+
+    _buildEventAtmosphereConfig() {
+        const event = (markerLabel, markerColor, bulletin) => ({ markerLabel, markerColor, bulletin });
+        return {
+            ASTEROID_CLUSTER: event("Prospector Breakup", "orange", () => "NAVSCREEN: Prospectors are flagging a dense rubble knot off the main lane."),
+            ALIEN_RAID: event("Xeno Incursion", "magenta", () => "TRAFFIC ALERT: Civilian craft are being routed around a live non-human contact."),
+            PIRATE_SWARM: event("Pirate Killbox", "red", () => "PIRATE CHATTER: Multiple drive signatures just went dark in ambush formation."),
+            BOUNTY_HUNTER_AMBUSH: event("Contract Sweep", "orange", () => "BOUNTY BOARD: Hot contracts have pulled armed freelancers into the sector."),
+            COMET: event("Observation Comet", "yellow", () => "ASTROGRAPHY NET: Civilian traffic is advised to clear the comet observation corridor."),
+            METEOR_SHOWER: event("Meteor Front", "orange", () => "PORT AUTHORITY: Micrometeor alarms are cycling across the outer lanes."),
+            COSMIC_STORM: event("EM Squall", "cyan", () => "WEATHER WATCH: Shielded traffic only beyond the current storm perimeter."),
+            DISTRESS_SIGNAL: event("Distress Beacon", "red", () => "RESCUE CHANNEL: A disabled ship is broadcasting on emergency repeat."),
+            TRADER_CONVOY: event("Merchant String", "green", () => "TRADE LOG: A scheduled merchant string is inbound with stacked cargo holds."),
+            NAVAL_PATROL: event("Naval Patrol Box", "blue", () => "PATROL NET: Navy pickets are running visible security circuits."),
+            ALIEN_ARTIFACT: event("Relic Echo", "magenta", () => "SCIENCE FEED: Anomalous relic telemetry is drawing scavengers and cultists alike."),
+            MARKET_SHORTAGE: event("Ration Board", "orange", () => "MARKET BOARD: Quartermasters are rationing stock after a sharp local shortage."),
+            MARKET_SURPLUS: event("Discount Board", "green", () => "MARKET BOARD: Warehouse brokers are slashing prices to clear excess inventory."),
+            BLACK_MARKET_AUCTION: event("Dead Drop Cluster", "purple", () => "WHISPER NET: Disposable beacons are guiding bidders toward hidden caches."),
+            SMUGGLING_BUST: event("Customs Net", "red", () => "CUSTOMS ALERT: Inspection corvettes are working a live contraband interdiction."),
+            BLOCKADE: event("Checkpoint Wall", "blue", () => "TRAFFIC CONTROL: Military checkpoints are forcing ships into narrow approach lanes."),
+            DIPLOMATIC_VISIT: event("Envoy Corridor", "teal", () => "CIVIC FEED: Dockworkers have polished a priority corridor for the visiting envoy."),
+            TECH_BREAKTHROUGH: event("Prototype Demo", "magenta", () => "RESEARCH TICKER: Engineers are quietly shopping a fresh prototype to trusted buyers."),
+            STATION_STRIKE: event("Labor Picket", "orange", () => "PORT UNION: Dock crews are projecting strike slogans across the concourse."),
+            POWER_OUTAGE: event("Dark Dock", "yellow", () => "MAINTENANCE FEED: Backup strips are the only thing keeping half the berths lit."),
+            SABOTAGE: event("Damage Zone", "crimson", () => "SECURITY MEMO: Engineers report shaped-charge scars on local infrastructure."),
+            MINING_BOOM: event("Ore Rush", "olive", () => "MINER CHATTER: Fresh assay numbers have every prospector in the system rerouting."),
+            MINE_ACCIDENT: event("Emergency Drift", "orange", () => "RESCUE NET: Work tugs are still combing the field for survivors and loose ore."),
+            SOLAR_FLARE: event("Solar Hazard", "yellow", () => "SOLAR WATCH: Radiation shutters are cycling as flare energy spills across the system."),
+            QUARANTINE: event("Bio Checkpoint", "purple", () => "HEALTH AUTHORITY: Dockside med teams are scanning every hull that requests clearance."),
+            REFUGEE_INFLUX: event("Refugee Queue", "brown", () => "CIVIC FEED: Overflow shelters and ration queues are stretching along the docks."),
+            RARE_COMMODITY: event("Rare Find", "gold", () => "BROKER NET: Independent scouts are whispering about a high-margin local discovery."),
+            HACKER_ATTACK: event("Signal Intrusion", "purple", () => "SYSADMIN ALERT: Spoofed transponders and dead screens are rippling through traffic control."),
+            SALVAGE_OPPORTUNITY: event("Salvage Plot", "silver", () => "SALVAGE BOARD: Tug crews are marking profitable wreck fragments for fast pickups."),
+            BOUNTY_INCREASE: event("Priority Warrant", "red", () => "BOUNTY BOARD: Emergency multipliers just went up on several wanted hulls."),
+            REPUTATION_SCANDAL: event("Rumor Feed", "pink", () => "MEDIA FEED: Fresh scandal copy is rolling across every cheap concourse display."),
+            SKIRMISH_SEPARATIST_IMPERIAL: event("Border Skirmish", "orange", () => "WAR DESK: Frontier observers report fresh tracer fire between rebel and Imperial patrols."),
+            SKIRMISH_ALIEN_MILITARY: event("Xeno Front", "magenta", () => "WAR DESK: Military screens are tracking aggressive alien contacts."),
+            WAR_SEPARATIST_IMPERIAL: event("War Front", "red", () => "WAR DESK: Fleet traffic is being diverted around an active separatist war corridor."),
+            WAR_ALIEN_MILITARY: event("Invasion Front", "crimson", () => "WAR DESK: Emergency bulletins now treat the local xeno engagement as a warzone."),
+            PLAGUE: event("Medical Emergency", "magenta", () => "HEALTH FEED: Sterile corridors and triage decks are now running around the clock."),
+            FAMINE: event("Relief Ledger", "orange", () => "RELIEF BOARD: Grain allotments have replaced open market sales at the dock exchange."),
+            LOST_SHIPMENT: event("Salvage Beacon", "gold", () => "SCAVENGER CHATTER: A freight ping keeps resurfacing just far enough off the lane to feel wrong."),
+            FACTION_SKIRMISH: event("Running Gunfight", "red", () => "PATROL FEED: Local security and raiders are burning fuel in a live pursuit spiral."),
+            VIP_CONVOY: event("Priority Convoy", "cyan", () => "TRAFFIC CONTROL: Civilian ships are being told to keep clear of a plated executive transport."),
+            MINING_OPERATION: event("Claim Stakers", "yellow", () => "MINER NET: Temporary claim buoys and ore lights have blossomed around a rich seam."),
+            FORCED_CONVERSION: event("Conversion Raid", "purple", () => "PUBLIC SAFETY: Zealot broadcasts are spiking around a harassed civilian freighter."),
+            HERETIC_HUNT: event("Purge Chase", "red", () => "SERMON FEED: Mission vessels are painting one ship as a public example."),
+            DOOMSDAY_PROPHET: event("Prophet Spiral", "purple", () => "CIVIC FEED: Pilots are trading recordings of a preacher ranting beside a storm front."),
+            ASCENSION_RITUAL: event("Ascension Ring", "cyan", () => "PILGRIM NET: Worship craft are circling in a precise solar-facing pattern."),
+            ARTIFACT_WORSHIP: event("Relic Shrine", "magenta", () => "PILGRIM NET: Drifting candles and hymns are gathering around an alien relic."),
+            FALSE_IDOLS: event("False Prophet", "red", () => "SECURITY FEED: One missionary transponder is layering gospel over pirate handshake codes."),
+            CLEANSING_FIRE: event("Purifier Wing", "orange", () => "SERMON FEED: The so-called cleansing crews are painting targets onto civilian hulls."),
+            SIN_EATER: event("Sin Eater", "red", () => "BOUNTY BOARD: An uncompromising zealot hunter is stalking marked criminals."),
+            TECH_CRUSADE: event("Crusade Spear", "cyan", () => "WAR DESK: Posthuman fighters are framing the local alien contact as a holy war."),
+            IMPERIAL_INTERDICTION: event("Imperial Checkpoint", "cyan", () => "CUSTOMS FEED: Imperial inspectors are slowing traffic to crawl-speed document checks."),
+            SEPARATIST_AMBUSH: event("Rebel Crossfire", "orange", () => "REBELLION RUMOR: Logistics hulls are being hit anywhere the escorts look thin."),
+            DEFECTOR_ESCORT: event("Defector Run", "gold", () => "INTEL FEED: A frightened courier is running hot with Navy pursuers on its tail."),
+            DIPLOMATIC_STANDOFF: event("Standoff Bubble", "cyan", () => "POLITICAL DESK: Rival delegates are holding position inside an armed no-trust bubble."),
+            PROTOTYPE_HEIST: event("Prototype Escape", "red", () => "SECURITY MEMO: Every scanner in the system is watching for a stolen experimental hull."),
+            HARLEQUIN_PARADE: event("Masquerade Lane", "white", () => "ENTERTAINMENT FEED: Harlequin lights are spilling glitter trails through controlled space."),
+            JESTERS_TRAP: event("Bait Ship", "cyan", () => "PILOT WARNING: One harmless-looking contact is sitting just a little too still."),
+            COLOR_WAR: event("Motley Assault", "red", () => "CARNIVAL RADIO: Harlequins are loudly insisting another ship needs 'improvement'."),
+            MAD_BOMBER: event("Bomb Threat", "red", () => "STATION ALERT: Dock speakers keep cutting out under a manic countdown broadcast."),
+            CARNIVAL_DROP: event("Prize Scatter", "lime", () => "SCAVENGER CHATTER: Carnival crates are tumbling free with no guarantee they are safe."),
+            IMPERIAL_TAX_CONVOY: event("Tax Sweep", "cyan", () => "REVENUE FEED: Assessors are escorting a tax convoy through the busiest lanes."),
+            SEPARATIST_PRIVATEERS: event("Privateer Knot", "orange", () => "FREIGHT LOG: Rebel raiders are orbiting merchant routes like sharks."),
+            PILGRIM_ESCORT: event("Pilgrim Chain", "cyan", () => "PILGRIM NET: Chanting escorts are asking traffic to keep respectful distance."),
+            ALIEN_RELIC_HUNTERS: event("Relic Hunters", "magenta", () => "SCIENCE FEED: Xeno signatures suggest dedicated relic hunters are probing the sector."),
+            BLACK_OPS_INTERCEPTORS: event("Black-Ops Sweep", "red", () => "INTEL LEAK: Unmarked interceptors are working the area without any transponder honesty."),
+            STATION_EXTORTION_RING: event("Protection Ring", "red", () => "PORT RUMOR: Racketeers are charging nervous captains for safe docking windows."),
+            IMPERIAL_RETRIBUTION_WING: event("Retribution Wing", "cyan", () => "WAR DESK: Imperial punishers are making a loud example of dissident traffic."),
+            SEPARATIST_SIGNAL_JAMMERS: event("Jammer Screen", "orange", () => "COMMS FEED: Rebel interference is chewing holes in ordinary navigation traffic."),
+            HARLEQUIN_FLASHMOB: event("Flashmob Bloom", "white", () => "ENTERTAINMENT FEED: Strobing Harlequin ships are turning a flight lane into a stage."),
+            MISSIONARY_RECLAMATION_FLEET: event("Reclamation Fleet", "purple", () => "SERMON FEED: Reclamation ships are demanding ideological paperwork from passersby."),
+            BORDER_MILITIA_DRILL: event("Militia Drill", "blue", () => "BORDER WATCH: Local militia units are treating live rounds as a training exercise."),
+            ALIEN_BIO_PROSPECTORS: event("Bio Prospectors", "magenta", () => "SCIENCE FEED: Alien samplers are combing the region for fresh biosignatures."),
+            DEFENSE_DRONE_SWEEP: event("Drone Sweep", "cyan", () => "SECURITY FEED: Autonomous defense drones are sweeping hulls in careful raster lines."),
+            SHADOW_COURIER: event("Dark Courier", "gold", () => "INTEL LEAK: An unmarked courier is trying to cross the sector without leaving a trail."),
+            ORBITAL_WRECKFIELD: event("Wreckfield", "silver", () => "SALVAGE BOARD: Fresh debris is still spinning fast enough to glitter on scopes."),
+            PILGRIM_OFFERINGS: event("Offering Crates", "gold", () => "PILGRIM NET: Tribute crates are being cut loose as part of a devotional rite."),
+            SEPARATIST_ARMS_CACHE: event("Arms Cache", "orange", () => "INTEL FEED: A rebel weapons cache has surfaced just beyond polite traffic."),
+            ALIEN_RELIC_CACHE: event("Relic Cache", "magenta", () => "SCIENCE FEED: A compact alien cache is pulsing on a repeating artifact cadence."),
+            VOID_CHOIR_STORM: event("Void Choir", "purple", () => "WEATHER WATCH: Pilots swear the storm front is singing across their shield coils."),
+            SUNSPIKE_TURBULENCE: event("Sunspike Front", "yellow", () => "SOLAR WATCH: A bright turbulence front is flaring off the star and into shipping."),
+            MEDICAL_RELIEF_CONVOY: event("Relief Convoy", "cyan", () => "HOSPITAL FEED: Medical freighters are asking everyone to keep the approach corridor open."),
+            NAV_BEACON_RECALIBRATION: event("Beacon Refit", "blue", () => "PORT AUTHORITY: Beacon marshals are recalibrating guidance buoys one lane at a time."),
+            LANTERN_PROCESSION: event("Lantern Procession", "purple", () => "MEMORIAL CHANNEL: Civilian ships are being asked to dim lights for a lantern cortege."),
+            SALVAGE_TUG_LINE: event("Tug Line", "silver", () => "SALVAGE BOARD: Heavy tugs are hauling broken hull plates clear of approach traffic."),
+            SURVEY_DRONE_SWEEP: event("Survey Sweep", "teal", () => "CARTOGRAPHY FEED: Survey drones are painting the sector with lidar passes."),
+            REACTOR_PURGE_CANISTERS: event("Hazmat Drift", "orange", () => "HAZMAT FEED: Warm purge canisters are floating free after an emergency vent."),
+            CRYO_POD_SPILL: event("Cryo Spill", "cyan", () => "RESCUE CHANNEL: Recovery teams are tracing cryo beacons from a ruptured transport."),
+            SMUGGLER_DECOY_CACHE: event("Decoy Cache", "purple", () => "WHISPER NET: Someone left blinking crates out where smugglers expect curious scavengers."),
+            SATELLITE_SHRAPNEL_FIELD: event("Shrapnel Field", "orange", () => "DEBRIS WATCH: Satellite fragments are tumbling with enough speed to scar a hull."),
+            ION_WAKE_STORM: event("Ion Wake", "cyan", () => "WEATHER WATCH: Residual wake charge is collapsing into a violent ion haze.")
+        };
+    }
+
+    _getEventAtmosphere(eventType) {
+        const fallbackLabel = this._createFallbackEventLabel(eventType);
+        return this.eventAtmosphere?.[eventType] || {
+            markerLabel: fallbackLabel,
+            markerColor: 'white',
+            bulletin: () => `${fallbackLabel} reported in local space.`
+        };
+    }
+
+    _createFallbackEventLabel(eventType) {
+        return eventType.split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    }
+
+    _publishEventAtmosphere(eventType) {
+        const atmosphere = this._getEventAtmosphere(eventType);
+        if (!atmosphere?.bulletin) return;
+
+        const bulletinText = typeof atmosphere.bulletin === 'function'
+            ? atmosphere.bulletin()
+            : atmosphere.bulletin;
+
+        if (!bulletinText) return;
+        this._addPersistentEvent(`BULLETIN_${eventType}`, bulletinText, atmosphere.markerColor || 'white', this._extendDurationMs(150000));
     }
 
     initializeReferences(starSystem, player, uiManager) {
@@ -808,6 +962,8 @@ class EventManager {
         } else {
             this._executeCustomEvent(eventType);
         }
+
+        this._publishEventAtmosphere(eventType);
     }
 
     _executeCustomEvent(eventType) {
@@ -2214,6 +2370,7 @@ class EventManager {
 
     _executeAsteroidSpawn(event) {
         const config = event.spawnConfig;
+        const atmosphere = this._getEventAtmosphere(event.type);
         const rankFactor = config.useRankFactorForCount ? this._getEliteRankFactor() : 0;
         const numToSpawn = this._calculateNumberOfEntities(config.minEntities, config.maxEntities, config.useRankFactorForCount, rankFactor);
 
@@ -2228,14 +2385,11 @@ class EventManager {
         // Add a single HUD marker for the cluster so player can find it quickly
         try {
             const anchorLabel = this._deriveAnchorLabelForPos(baseSpawnX, baseSpawnY);
-            // Convert ASTEROID_CLUSTER -> Asteroid Cluster
-            const clusterLabel = event.type.split('_')
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                .join(' ');
+            const fallbackLabel = this._createFallbackEventLabel(event.type);
             if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
-                this.uiManager.addEventMarker(`${event.type}_CLUSTER_${frameCount}`, baseSpawnX, baseSpawnY, clusterLabel, 'orange', this._extendDurationMs(180000));
+                this.uiManager.addEventMarker(`${event.type}_CLUSTER_${frameCount}`, baseSpawnX, baseSpawnY, atmosphere.markerLabel || fallbackLabel, atmosphere.markerColor || 'orange', this._extendDurationMs(180000));
             }
-            this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: ${event.type.replace(/_/g, ' ')} detected near ${anchorLabel}`, 'orange');
+            this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: ${event.type.replace(/_/g, ' ')} detected near ${anchorLabel}`, atmosphere.markerColor || 'orange', 4000, event.type);
         } catch (e) { }
 
         for (let i = 0; i < numToSpawn; i++) {
@@ -2264,11 +2418,11 @@ class EventManager {
                 // Mark the comet on HUD so player knows where to look
                 try {
                     const anchorLabel = this._deriveAnchorLabelForPos(asteroid.pos.x, asteroid.pos.y);
-                    const label = `Comet`;
+                    const fallbackLabel = this._createFallbackEventLabel(event.type);
                     if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
-                        this.uiManager.addEventMarker(`COMET_${frameCount}`, asteroid.pos.x, asteroid.pos.y, label, 'yellow', this._extendDurationMs(240000));
+                        this.uiManager.addEventMarker(`COMET_${frameCount}`, asteroid.pos.x, asteroid.pos.y, atmosphere.markerLabel || fallbackLabel, atmosphere.markerColor || 'yellow', this._extendDurationMs(240000));
                     }
-                    this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: Comet detected near ${anchorLabel}`, 'yellow');
+                    this._notifyEvent(`${this.starSystem?.name || 'Local sector'}: Comet detected near ${anchorLabel}`, atmosphere.markerColor || 'yellow', 4000, event.type);
                 } catch (e) { }
             }
 
@@ -2278,6 +2432,7 @@ class EventManager {
 
     _executeEnemySpawn(event) {
         const config = event.spawnConfig;
+        const atmosphere = this._getEventAtmosphere(event.type);
         const rankFactor = this._getEliteRankFactor();
 
         const numToSpawn = this._calculateNumberOfEntities(config.minEntities, config.maxEntities, config.useRankFactorForCount, rankFactor);
@@ -2293,17 +2448,15 @@ class EventManager {
 
         // Add event marker for the group location (excluding DISTRESS_SIGNAL which handles its own)
         if (event.type !== 'DISTRESS_SIGNAL') {
-            const label = event.type.split('_')
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                .join(' ');
-            this._addEventMarkerSafely(`${event.type}_${frameCount}`, baseSpawnRadius * cos(baseSpawnAngle) + this.player.pos.x, baseSpawnRadius * sin(baseSpawnAngle) + this.player.pos.y, label, 'red', this._extendDurationMs(60000));
+            const fallbackLabel = this._createFallbackEventLabel(event.type);
+            this._addEventMarkerSafely(`${event.type}_${frameCount}`, baseSpawnRadius * cos(baseSpawnAngle) + this.player.pos.x, baseSpawnRadius * sin(baseSpawnAngle) + this.player.pos.y, atmosphere.markerLabel || fallbackLabel, atmosphere.markerColor || 'red', this._extendDurationMs(60000));
 
             // Trigger news for high-level dynamic events that use spawnConfig
             if (this.dynamicSpawnNotifyEventTypes.has(event.type)) {
                 let prefix = '';
                 if (event.type === 'ALIEN_RAID' || event.type === 'ALIEN_SCOUT') prefix = '[ALIEN] ';
                 if (event.type === 'PIRATE_SWARM' || event.type === 'BOUNTY_HUNTER_AMBUSH') prefix = '[SKULL] ';
-                this._notifyEvent(`${prefix}${this.starSystem?.name || 'Local sector'}: ${label} detected`, 'orange', 4000, event.type);
+                this._notifyEvent(`${prefix}${this.starSystem?.name || 'Local sector'}: ${atmosphere.markerLabel || fallbackLabel} detected`, atmosphere.markerColor || 'orange', 4000, event.type);
             }
         }
 
@@ -2372,6 +2525,7 @@ class EventManager {
 
     _executeCosmicStormSpawn(event) {
         const config = event.spawnConfig;
+        const atmosphere = this._getEventAtmosphere(event.type);
         const numToSpawn = this._calculateNumberOfEntities(config.minEntities, config.maxEntities, config.useRankFactorForCount, 0);
 
         // Add storm radius so the edge (not center) spawns beyond view
@@ -2389,17 +2543,18 @@ class EventManager {
             this.starSystem.cosmicStorms.push(storm);
             // Add HUD marker for storm so player can find it
             try {
-                const label = `Cosmic Storm`;
+                const fallbackLabel = this._createFallbackEventLabel(event.type);
                 if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
-                    this.uiManager.addEventMarker(`COSMIC_STORM_${frameCount}_${i}`, spawnX, spawnY, label, 'cyan', this._extendDurationMs(180000));
+                    this.uiManager.addEventMarker(`COSMIC_STORM_${frameCount}_${i}`, spawnX, spawnY, atmosphere.markerLabel || fallbackLabel, atmosphere.markerColor || 'cyan', this._extendDurationMs(180000));
                 }
-                this._notifyEvent(`[STORM] ${this.starSystem?.name || 'Local sector'}: Cosmic storm detected near ${this._formatStationLabel(this._pickRandomStation())}`, 'cyan', 4000, event.type);
+                this._notifyEvent(`[STORM] ${this.starSystem?.name || 'Local sector'}: ${atmosphere.markerLabel || fallbackLabel} detected near ${this._formatStationLabel(this._pickRandomStation())}`, atmosphere.markerColor || 'cyan', 4000, event.type);
             } catch (e) { }
         }
     }
 
     _executeCargoSpawn(event) {
         const config = event.spawnConfig;
+        const atmosphere = this._getEventAtmosphere(event.type);
         const numToSpawn = this._calculateNumberOfEntities(config.minEntities, config.maxEntities, config.useRankFactorForCount, 0);
 
         const spawnRadius = this._getDiagonalDistance() + random(config.spawnRadiusMin, config.spawnRadiusMax);
@@ -2423,13 +2578,13 @@ class EventManager {
                 this.starSystem.addCargo(cargo);
                 // Add an HUD marker + notify player where the cargo appeared
                 const anchorLabel = this._deriveAnchorLabelForPos(spawnX, spawnY);
-                const label = `${config.cargoType || 'Cargo'}`;
+                const label = atmosphere.markerLabel || `${config.cargoType || 'Cargo'}`;
                 if (this.uiManager && typeof this.uiManager.addEventMarker === 'function') {
-                    this.uiManager.addEventMarker(markerId, spawnX, spawnY, label, 'gold', this._extendDurationMs(180000));
+                    this.uiManager.addEventMarker(markerId, spawnX, spawnY, label, atmosphere.markerColor || 'gold', this._extendDurationMs(180000));
                 }
                 let prefix = '';
                 if (config.cargoType === 'Alien Artifact') prefix = '[ALIEN] ';
-                this._notifyEvent(`${prefix}${this.starSystem?.name || 'Local sector'}: ${config.cargoType || 'Cargo'} cache appears near ${anchorLabel}`, 'gold', 4000, event.type);
+                this._notifyEvent(`${prefix}${this.starSystem?.name || 'Local sector'}: ${label} appears near ${anchorLabel}`, atmosphere.markerColor || 'gold', 4000, event.type);
             } catch (e) {
                 // Fallback: if anything goes wrong, still add cargo without marker link
                 try { this.starSystem.addCargo(cargo); } catch (err) { }
