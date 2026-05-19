@@ -171,6 +171,8 @@ class Enemy {
         // AI Tuning Parameters
         const rankMods = (typeof getPilotRankModifiers === 'function') ? getPilotRankModifiers(this.pilotRank) : null;
         const detMult = rankMods?.detectionRangeMultiplier ?? 1.0;
+        this._rankMoveSpeedMultiplier = rankMods?.moveSpeedMultiplier ?? 1.0;
+        this._rankTurnSpeedMultiplier = rankMods?.turnSpeedMultiplier ?? 1.0;
 
         this.detectionRange = (450 + this.size) * detMult;
         this.engageDistance = 180 + this.size * 0.5;
@@ -389,6 +391,11 @@ class Enemy {
         if (shipDef.upgrades && Array.isArray(shipDef.upgrades)) {
             this.applyUpgrades(shipDef.upgrades);
         }
+
+        // Apply rank-based handling profile after role setup and upgrades.
+        this.maxSpeed *= this._rankMoveSpeedMultiplier;
+        this.thrustForce *= this._rankMoveSpeedMultiplier;
+        this.rotationSpeed *= this._rankTurnSpeedMultiplier;
     }
 
     // -----------------------------
@@ -405,6 +412,7 @@ class Enemy {
             // No need to recalculate baseTurnRate - it's already in radians from constructor
             // Just set the derived properties:
             this.rotationSpeed = this.baseTurnRate * (this.role === AI_ROLE.HAULER ? 0.7 : 0.9);
+            this.rotationSpeed *= (this._rankTurnSpeedMultiplier ?? 1.0);
             this.angleTolerance = 15 * PI / 180; // This still converts 15 degrees to radians
         } catch (e) {
             console.error(`Error calc radians for Enemy ${this.shipTypeName}: ${e}`);

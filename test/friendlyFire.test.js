@@ -5,6 +5,8 @@ require('../enemyConstants');
 require('../enemyUtils');
 require('../enemyDamageSystem');
 require('../enemyTargeting');
+require('../enemyCombat');
+require('../enemyStateMachine');
 require('../enemyAIBehaviors');
 require('../enemyCargo');
 
@@ -26,6 +28,8 @@ if (typeof applyEnemyDamageSystemMethods === 'function') applyEnemyDamageSystemM
 if (typeof applyEnemyTargetingMethods === 'function') applyEnemyTargetingMethods();
 if (typeof applyEnemyCargoMethods === 'function') applyEnemyCargoMethods();
 if (typeof applyEnemyAIBehaviorMethods === 'function') applyEnemyAIBehaviorMethods();
+if (typeof applyEnemyCombatMethods === 'function') applyEnemyCombatMethods();
+if (typeof applyEnemyStateMachineMethods === 'function') applyEnemyStateMachineMethods();
 
 describe('Friendly Fire & Faction Collision Tests', () => {
     let mockSystem;

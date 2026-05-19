@@ -87,7 +87,9 @@ const PILOT_RANK_MODIFIERS = {
         fireDisciplineChance: 0.72,         // Often hesitates even with a valid shot
         abilityDecisionIntervalMultiplier: 1.4, // Slower ability decisions
         abilityTriggerChanceMultiplier: 0.8, // Less confidence using abilities
-        retaliationAggressionMultiplier: 0.75 // Less committed retaliation scoring
+        retaliationAggressionMultiplier: 0.75, // Less committed retaliation scoring
+        moveSpeedMultiplier: 0.92,           // Slightly slower movement
+        turnSpeedMultiplier: 0.90            // Slightly slower turning
     },
     [PILOT_RANK.ROOKIE]: {
         canStrafe: false,                   // No side thrusters / kiting
@@ -112,7 +114,9 @@ const PILOT_RANK_MODIFIERS = {
         fireDisciplineChance: 0.86,
         abilityDecisionIntervalMultiplier: 1.15,
         abilityTriggerChanceMultiplier: 0.92,
-        retaliationAggressionMultiplier: 0.9
+        retaliationAggressionMultiplier: 0.9,
+        moveSpeedMultiplier: 0.96,
+        turnSpeedMultiplier: 0.96
     },
     [PILOT_RANK.VETERAN]: {
         canStrafe: true,
@@ -137,7 +141,9 @@ const PILOT_RANK_MODIFIERS = {
         fireDisciplineChance: 1.0,
         abilityDecisionIntervalMultiplier: 1.0,
         abilityTriggerChanceMultiplier: 1.0,
-        retaliationAggressionMultiplier: 1.0
+        retaliationAggressionMultiplier: 1.0,
+        moveSpeedMultiplier: 1.04,
+        turnSpeedMultiplier: 1.05
     },
     [PILOT_RANK.ELITE]: {
         canStrafe: true,
@@ -162,7 +168,9 @@ const PILOT_RANK_MODIFIERS = {
         fireDisciplineChance: 1.0,
         abilityDecisionIntervalMultiplier: 0.75,
         abilityTriggerChanceMultiplier: 1.15,
-        retaliationAggressionMultiplier: 1.2
+        retaliationAggressionMultiplier: 1.2,
+        moveSpeedMultiplier: 1.08,
+        turnSpeedMultiplier: 1.10
     }
 };
 

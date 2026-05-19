@@ -245,11 +245,23 @@ class EnemyDamageSystem {
                     (typeof distToAttacker === 'number' ? ` @${distToAttacker.toFixed(0)}u` : '');
             });
 
-            // Immediate combat reaction for aggressive roles when idle
-            const aggressiveRole = (this.role === AI_ROLE.PIRATE || this.role === AI_ROLE.ALIEN || this.role === AI_ROLE.BOUNTY_HUNTER);
-            const passiveState = (this.currentState === AI_STATE.IDLE || this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.NEAR_STATION || this.currentState === AI_STATE.COLLECTING_CARGO);
-            if (aggressiveRole && passiveState && this.isTargetValid(this.target) && this.isArmed()) {
-                this.changeState(AI_STATE.APPROACHING);
+            // ============================================
+            // UNIVERSAL DAMAGE REACTION: Acquire attacker as target
+            // All enemies should acquire their attacker as a target when damaged
+            // State machine will handle appropriate response on next update
+            // ============================================
+            
+            // Ensure target is set to the attacker if updateTargeting found them
+            if (this.isTargetValid(this.target)) {
+                // Target was successfully acquired - state machine will respond on next frame
+                DAMAGE_LOG(`🎯 ${this.shipTypeName} acquired target ${this.target.shipTypeName || 'Unknown'}`);
+            }
+            // FALLBACK: If target acquisition failed but we have lastAttacker, force acquisition
+            // This handles the case where updateTargeting couldn't find the attacker
+            else if (this.lastAttacker && this.isTargetValid(this.lastAttacker)) {
+                // Try to acquire lastAttacker even if updateTargeting failed
+                this.target = this.lastAttacker;
+                DAMAGE_LOG(`⚠️ FALLBACK: ${this.shipTypeName} forced target to lastAttacker (${this.lastAttacker.shipTypeName || 'Unknown'})`);
             }
         } else {
             if (DEBUG_DAMAGE || DEBUG_TARGETING) console.warn(`⚠️ NO SYSTEM available for ${this.shipTypeName} targeting update!`);
