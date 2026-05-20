@@ -746,7 +746,10 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
         const system = makeSystem({ cosmicStorms: [storm] });
         const originalMillisDescriptor = Object.getOwnPropertyDescriptor(global, 'millis');
         const originalPerformance = global.performance;
-        const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(1000);
+        const mockedNowMs = 1000;
+        const expectedGraceUntil = mockedNowMs + EnemyAIBehaviors.ENV_REPOSITION_STALL_GRACE_MS;
+        const unreachablyHighStallTriggerSeconds = 999;
+        const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(mockedNowMs);
 
         try {
             Object.defineProperty(global, 'millis', {
@@ -765,12 +768,12 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
             enemy._envHazardCache = null;
 
             enemy._updateEnvironmentalBehavior(system, true);
-            expect(enemy._envRepositionStallGraceUntil).toBe(5500);
+            expect(enemy._envRepositionStallGraceUntil).toBe(expectedGraceUntil);
 
-            enemy._envRepositionStallGraceUntil = 500;
+            enemy._envRepositionStallGraceUntil = mockedNowMs - 1;
             enemy._rangeStallCooldown = 0;
             enemy._rangeStallTimer = 10;
-            enemy._rangeStallTriggerTime = 999;
+            enemy._rangeStallTriggerTime = unreachablyHighStallTriggerSeconds;
             enemy._lastRangeSample = 100;
             enemy._rangeStallState = AI_STATE.REPOSITIONING;
 
