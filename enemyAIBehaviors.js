@@ -532,6 +532,7 @@ class EnemyAIBehaviors {
             if (this.target && this.isTargetValid(this.target)) {
                 // Determine rough distance/angle (renamed to avoid shadowing global dist())
                 const distToTarget = this.distanceTo(this.target);
+                this._updateEnvironmentalBehavior(system, true);
 
                 // [FIX] Use simplified predictive aiming for off-screen - half the prediction time
                 // This improves off-screen combat accuracy without full computation cost
@@ -556,6 +557,8 @@ class EnemyAIBehaviors {
                     const fleeDir = createVector(this.pos.x - this.target.pos.x, this.pos.y - this.target.pos.y);
                     fleeDir.normalize().mult(1000); // Project far away
                     moveTarget = createVector(this.pos.x + fleeDir.x, this.pos.y + fleeDir.y);
+                } else if (this.currentState === AI_STATE.REPOSITIONING && this.repositionTarget) {
+                    moveTarget = this.repositionTarget;
                 } else if (this.currentState === AI_STATE.SNIPING) {
                     // Stay put, maybe drift slightly
                     moveTarget = this.pos;
@@ -585,6 +588,7 @@ class EnemyAIBehaviors {
                 // [FIX] Store firing intent for persistence during skipped frames
                 this._persistedFiring = { distance: distToTarget, angle: shootingAngle };
             } else {
+                this._updateEnvironmentalBehavior(system, false);
                 // If no target off-screen, clear firing persistence
                 this._persistedFiring = null;
 
@@ -2671,6 +2675,8 @@ class EnemyAIBehaviors {
     static get ENV_MAX_RETREAT_DIST() { return 1200; }              // Max distance to EMP nebula still worth retreating to
     static get ENV_ROOKIE_ESCAPE_CHANCE_MULT() { return 0.6; }      // Scales Rookie escape probability (awareness * this)
     static get ENV_RADIATION_ESCAPE_HULL_THRESHOLD() { return 0.6; } // Radiation: escape in combat when hull at or below 60%
+    static get ENV_IDLE_ESCAPE_CHANCE_MULT() { return 0.35; }        // Lower urgency for idle hazard exit vs combat exit
+    static get ENV_EDGE_STANDOFF_MARGIN() { return 120; }            // High-rank tactical hold offset outside zone edge
 
     /**
      * Scans nearby environmental hazards and returns a cached summary.
@@ -2685,9 +2691,13 @@ class EnemyAIBehaviors {
      *   dangerZonePos     {p5.Vector|null}  - Center of the occupied dangerous zone
      *   dangerZoneRadius  {number}          - Radius of that zone (for escape vector)
      *   dangerZoneType    {string|null}     - Type: 'radiation', 'ion', or 'storm'
+     *   inEmpZone         {boolean}         - Ship is currently inside an EMP nebula
      *   nearbyRetreatNebula {Object|null}   - Nearest EMP nebula usable for defensive retreat
      *   nearbyRetreatDist   {number}        - Distance to that nebula edge
      *   targetInDangerZone  {boolean}       - Whether the current target is inside a dangerous zone
+     *   targetInEmpZone     {boolean}       - Whether the current target is inside an EMP nebula
+     *   targetEmpZonePos    {p5.Vector|null} - Center of that EMP zone (for tactical standoff)
+     *   targetEmpZoneRadius {number}         - Radius of that EMP zone
      */
     _getEnvHazardInfo(system) {
         const now = typeof millis === 'function' ? millis() : 0;
@@ -2702,9 +2712,13 @@ class EnemyAIBehaviors {
             dangerZonePos: null,
             dangerZoneRadius: 0,
             dangerZoneType: null,
+            inEmpZone: false,
             nearbyRetreatNebula: null,
             nearbyRetreatDist: Infinity,
             targetInDangerZone: false,
+            targetInEmpZone: false,
+            targetEmpZonePos: null,
+            targetEmpZoneRadius: 0,
         };
 
         if (!system) {
@@ -2754,6 +2768,9 @@ class EnemyAIBehaviors {
 
                 // EMP nebula: track as potential defensive retreat target
                 if (neb.type === 'emp') {
+                    if (distSq < r * r) {
+                        info.inEmpZone = true;
+                    }
                     const d = Math.sqrt(distSq);
                     const edgeDist = Math.max(0, d - r);
                     if (edgeDist < info.nearbyRetreatDist && edgeDist < EnemyAIBehaviors.ENV_MAX_RETREAT_DIST) {
@@ -2768,6 +2785,16 @@ class EnemyAIBehaviors {
                     const tdy = neb.pos.y - targetPos.y;
                     if (tdx * tdx + tdy * tdy < r * r) {
                         info.targetInDangerZone = true;
+                    }
+                }
+
+                if (targetPos && neb.type === 'emp') {
+                    const tdx = neb.pos.x - targetPos.x;
+                    const tdy = neb.pos.y - targetPos.y;
+                    if (tdx * tdx + tdy * tdy < r * r) {
+                        info.targetInEmpZone = true;
+                        info.targetEmpZonePos = neb.pos;
+                        info.targetEmpZoneRadius = r;
                     }
                 }
             }
@@ -2803,9 +2830,6 @@ class EnemyAIBehaviors {
 
     /**
      * Evaluates environmental hazards and adjusts AI behaviour accordingly.
-     * Only applies during active combat (targetExists = true); ships freely
-     * cross nebulae when patrolling or navigating to stations / jump zones.
-     *
      * Scaled by the pilot's environmentAwareness modifier:
      *
      *   awareness < 1.0  (Incompetent/Green/Rookie) – probabilistic reactive escapes when engaged
@@ -2818,6 +2842,7 @@ class EnemyAIBehaviors {
      *                normal combat manoeuvres for minor exposure
      *   ion        – disables shields; immediately dangerous in any fight → always escape
      *   storm      – severe / multiple effects; always escape in combat
+     *   idle       – if loitering in a dangerous zone without a target, may drift out probabilistically
      *
      * @param {Object}  system       - The current star system
      * @param {boolean} targetExists - Whether a valid combat target exists
@@ -2828,7 +2853,7 @@ class EnemyAIBehaviors {
 
         const envInfo = this._getEnvHazardInfo(system);
 
-        // --- Rule 1: Escape from currently occupied dangerous zone ---
+        // --- Rule 1a: Escape from currently occupied dangerous zone in active combat ---
         // Only applies during active combat; ships crossing nebulae while
         // patrolling or navigating to stations/jump zones should not be interrupted.
         //
@@ -2867,6 +2892,25 @@ class EnemyAIBehaviors {
             }
         }
 
+        // --- Rule 1b: Avoid loitering inside dangerous zones when idle ---
+        // Keeps awareness active outside combat without interrupting patrol/navigation movement.
+        if (envInfo.inDangerousZone && envInfo.dangerZonePos && !targetExists &&
+            this.currentState === AI_STATE.IDLE) {
+            const shouldExitIdleHazard = awareness >= 1.0 || random() < awareness * EnemyAIBehaviors.ENV_IDLE_ESCAPE_CHANCE_MULT;
+            if (shouldExitIdleHazard) {
+                const dx = this.pos.x - envInfo.dangerZonePos.x;
+                const dy = this.pos.y - envInfo.dangerZonePos.y;
+                const mag = Math.hypot(dx, dy) || 1;
+                const escapeR = envInfo.dangerZoneRadius + EnemyAIBehaviors.ENV_ESCAPE_MARGIN;
+                this.repositionTarget = createVector(
+                    envInfo.dangerZonePos.x + (dx / mag) * escapeR,
+                    envInfo.dangerZonePos.y + (dy / mag) * escapeR
+                );
+                this.changeState(AI_STATE.REPOSITIONING);
+                return;
+            }
+        }
+
         // --- Rule 2: Defensive retreat to nearby EMP nebula when hull is critical ---
         // Veterans retreat at 15% hull; Elites (higher awareness) at 25%.
         if (awareness >= 1.0 && envInfo.nearbyRetreatNebula && targetExists) {
@@ -2889,6 +2933,24 @@ class EnemyAIBehaviors {
         if (awareness >= 1.5 && envInfo.targetInDangerZone && targetExists &&
             this.currentState === AI_STATE.IDLE) {
             this.changeState(AI_STATE.APPROACHING);
+        }
+
+        // --- Rule 4 (Veteran+): Hold just outside EMP edge when target is inside ---
+        // Uses EMP as tactical cover: remain outside suppression zone and fire inward.
+        if (awareness >= 1.0 && targetExists && envInfo.targetInEmpZone && !envInfo.inEmpZone &&
+            envInfo.targetEmpZonePos && envInfo.targetEmpZoneRadius > 0 &&
+            this.currentState !== AI_STATE.FLEEING &&
+            this.currentState !== AI_STATE.REPOSITIONING) {
+            const dx = this.pos.x - envInfo.targetEmpZonePos.x;
+            const dy = this.pos.y - envInfo.targetEmpZonePos.y;
+            const mag = Math.hypot(dx, dy) || 1;
+            const holdR = envInfo.targetEmpZoneRadius + EnemyAIBehaviors.ENV_EDGE_STANDOFF_MARGIN;
+            this.repositionTarget = createVector(
+                envInfo.targetEmpZonePos.x + (dx / mag) * holdR,
+                envInfo.targetEmpZonePos.y + (dy / mag) * holdR
+            );
+            this.changeState(AI_STATE.REPOSITIONING);
+            return;
         }
     }
 

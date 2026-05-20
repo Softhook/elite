@@ -87,6 +87,8 @@ global.DRAG_EFFECT_DEFAULT_DURATION = 3.0;
 global.DRAG_EFFECT_DEFAULT_MULTIPLIER = 2.0;
 global.DRAG_CONSECUTIVE_HIT_MULT = 1.5;
 global.DEFAULT_DELTA_SECONDS = 0.016;
+global.OFF_SCREEN_PREDICTION_FACTOR = 0.5;
+global.OFF_SCREEN_OPTIMAL_RANGE_FACTOR = 0.8;
 
 global.color = () => ({});
 global.uiManager = { addMessage: jest.fn() };
@@ -328,6 +330,14 @@ describe('_getEnvHazardInfo', () => {
         expect(info.inDangerousZone).toBe(false);
     });
 
+    test('tracks when ship is inside an EMP nebula', () => {
+        const neb = new Nebula(0, 0, 300, 'emp');
+        const system = makeSystem({ nebulae: [neb] });
+        enemy.pos = createVector(0, 0);
+        const info = enemy._getEnvHazardInfo(system);
+        expect(info.inEmpZone).toBe(true);
+    });
+
     test('locates a nearby EMP nebula for defensive retreat', () => {
         const neb = new Nebula(500, 0, 200, 'emp');
         const system = makeSystem({ nebulae: [neb] });
@@ -387,6 +397,18 @@ describe('_getEnvHazardInfo', () => {
         expect(info.targetInDangerZone).toBe(true);
     });
 
+    test('tracks EMP zone occupancy for the current target', () => {
+        const emp = new Nebula(0, 0, 300, 'emp');
+        const system = makeSystem({ nebulae: [emp] });
+        enemy.pos = createVector(800, 0);
+        enemy.target = makeTarget(0, 0);
+        enemy._envHazardCache = null;
+        const info = enemy._getEnvHazardInfo(system);
+        expect(info.targetInEmpZone).toBe(true);
+        expect(info.targetEmpZonePos).toBe(emp.pos);
+        expect(info.targetEmpZoneRadius).toBe(300);
+    });
+
     test('caches the result so second call within 1 s returns same object', () => {
         const system = makeSystem();
         const info1 = enemy._getEnvHazardInfo(system);
@@ -444,25 +466,25 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
         expect(enemy.currentState).toBe(AI_STATE.APPROACHING);
     });
 
-    // --- No target: ships must not interrupt patrol / navigation ---
+    // --- No target: idle loitering exits hazards, active navigation is not interrupted ---
 
-    test('VETERAN inside radiation nebula WITHOUT a target does NOT escape (patrol route)', () => {
+    test('VETERAN idling in radiation nebula WITHOUT a target repositions out of hazard', () => {
         setRank(enemy, PILOT_RANK.VETERAN);
         const neb = new Nebula(0, 0, 300, 'radiation');
         const system = makeSystem({ nebulae: [neb] });
         enemy.currentState = AI_STATE.IDLE;
         // targetExists = false – simulates patrolling or navigating through a nebula
         enemy._updateEnvironmentalBehavior(system, false);
-        expect(enemy.currentState).toBe(AI_STATE.IDLE);
+        expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
     });
 
-    test('VETERAN inside ion nebula WITHOUT a target does NOT escape (navigating to station)', () => {
+    test('VETERAN navigating in ion nebula WITHOUT a target does NOT get interrupted', () => {
         setRank(enemy, PILOT_RANK.VETERAN);
         const neb = new Nebula(0, 0, 300, 'ion');
         const system = makeSystem({ nebulae: [neb] });
-        enemy.currentState = AI_STATE.IDLE;
+        enemy.currentState = AI_STATE.APPROACHING;
         enemy._updateEnvironmentalBehavior(system, false);
-        expect(enemy.currentState).toBe(AI_STATE.IDLE);
+        expect(enemy.currentState).toBe(AI_STATE.APPROACHING);
     });
 
     // --- Radiation nebula: slow damage, only escape in combat at hull ≤ 60 % ---
@@ -638,6 +660,45 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
         enemy._updateEnvironmentalBehavior(system, true);
         // Veterans do not have the Rule-3 elite tactic
         expect(enemy.currentState).toBe(AI_STATE.IDLE);
+    });
+
+    test('VETERAN repositions to hold just outside EMP edge when target is inside EMP', () => {
+        setRank(enemy, PILOT_RANK.VETERAN);
+        const emp = new Nebula(0, 0, 300, 'emp');
+        const system = makeSystem({ nebulae: [emp] });
+        enemy.pos = createVector(700, 0); // outside EMP
+        enemy.target = makeTarget(0, 0);  // inside EMP
+        enemy.currentState = AI_STATE.APPROACHING;
+        enemy._envHazardCache = null;
+        enemy._updateEnvironmentalBehavior(system, true);
+        expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
+        expect(enemy.repositionTarget).not.toBeNull();
+        expect(enemy.repositionTarget.x).toBeGreaterThan(350); // radius + margin = 420
+    });
+});
+
+describe('off-screen environmental behavior path', () => {
+    let player, enemy;
+
+    beforeEach(() => {
+        player = new Player('Sidewinder');
+        player.pos = createVector(0, 0);
+        enemy = new Enemy(0, 0, player, 'Krait', 'PIRATE');
+        enemy.pos = createVector(700, 0);
+        enemy._isOnScreen = false;
+        enemy._envHazardCache = null;
+        enemy._envHazardCacheTime = 0;
+        enemy.currentState = AI_STATE.APPROACHING;
+        enemy.target = makeTarget(0, 0);
+        enemy.weapons = [{ type: WEAPON_TYPE.PROJECTILE, name: 'Test Weapon', fireRate: 1 }];
+        enemy.currentWeapon = enemy.weapons[0];
+    });
+
+    test('off-screen updateCombatAI still applies EMP edge tactic', () => {
+        setRank(enemy, PILOT_RANK.VETERAN);
+        const system = makeSystem({ nebulae: [new Nebula(0, 0, 300, 'emp')] });
+        enemy.updateCombatAI(system);
+        expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
     });
 });
 
