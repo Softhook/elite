@@ -2675,8 +2675,8 @@ class EnemyAIBehaviors {
     static get ENV_MAX_RETREAT_DIST() { return 1200; }              // Max distance to EMP nebula still worth retreating to
     static get ENV_ROOKIE_ESCAPE_CHANCE_MULT() { return 0.6; }      // Scales Rookie escape probability (awareness * this)
     static get ENV_RADIATION_ESCAPE_HULL_THRESHOLD() { return 0.6; } // Radiation: escape in combat when hull at or below 60%
-    static get ENV_IDLE_ESCAPE_CHANCE_MULT() { return 0.35; }        // Lower urgency for idle hazard exit vs combat exit
-    static get ENV_EDGE_STANDOFF_MARGIN() { return 120; }            // High-rank tactical hold offset outside zone edge
+    static get ENV_IDLE_ESCAPE_CHANCE_MULT() { return 0.35; }        // Idle hazard exit is less urgent than combat (35% of rookie combat escape scaling)
+    static get ENV_EDGE_STANDOFF_MARGIN() { return 120; }            // Hold point outside zone edge: close enough to fire in, far enough to avoid sitting on boundary
 
     /**
      * Scans nearby environmental hazards and returns a cached summary.
@@ -2892,7 +2892,9 @@ class EnemyAIBehaviors {
         // Keeps awareness active outside combat without interrupting patrol/navigation movement.
         if (envInfo.inDangerousZone && envInfo.dangerZonePos && !targetExists &&
             this.currentState === AI_STATE.IDLE) {
-            const shouldExitIdleHazard = awareness >= 1.0 || random() < awareness * EnemyAIBehaviors.ENV_IDLE_ESCAPE_CHANCE_MULT;
+            const hasGuaranteedIdleExit = awareness >= 1.0;
+            const shouldExitIdleHazard = hasGuaranteedIdleExit ||
+                random() < awareness * EnemyAIBehaviors.ENV_IDLE_ESCAPE_CHANCE_MULT;
             if (shouldExitIdleHazard) {
                 const dx = this.pos.x - envInfo.dangerZonePos.x;
                 const dy = this.pos.y - envInfo.dangerZonePos.y;

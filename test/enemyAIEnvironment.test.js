@@ -468,7 +468,7 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
 
     // --- No target: idle loitering exits hazards, active navigation is not interrupted ---
 
-    test('VETERAN idling in radiation nebula WITHOUT a target repositions out of hazard', () => {
+    test('VETERAN idle in radiation nebula WITHOUT a target repositions out of hazard', () => {
         setRank(enemy, PILOT_RANK.VETERAN);
         const neb = new Nebula(0, 0, 300, 'radiation');
         const system = makeSystem({ nebulae: [neb] });
