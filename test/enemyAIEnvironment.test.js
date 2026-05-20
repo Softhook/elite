@@ -744,12 +744,16 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
         setRank(enemy, PILOT_RANK.VETERAN);
         const storm = new CosmicStorm(0, 0, 300, 'ion');
         const system = makeSystem({ cosmicStorms: [storm] });
-        const originalMillis = global.millis;
+        const originalMillisDescriptor = Object.getOwnPropertyDescriptor(global, 'millis');
         const originalPerformance = global.performance;
         const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(1000);
 
         try {
-            delete global.millis;
+            Object.defineProperty(global, 'millis', {
+                value: undefined,
+                configurable: true,
+                writable: true,
+            });
             Object.defineProperty(global, 'performance', {
                 value: undefined,
                 configurable: true,
@@ -776,7 +780,11 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
             expect(enemy._rangeStallTimer).toBeGreaterThan(10);
         } finally {
             dateNowSpy.mockRestore();
-            global.millis = originalMillis;
+            if (originalMillisDescriptor) {
+                Object.defineProperty(global, 'millis', originalMillisDescriptor);
+            } else {
+                delete global.millis;
+            }
             Object.defineProperty(global, 'performance', {
                 value: originalPerformance,
                 configurable: true,
