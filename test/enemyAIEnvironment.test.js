@@ -702,6 +702,98 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
         const holdDistance = dist(enemy.repositionTarget.x, enemy.repositionTarget.y, emp.pos.x, emp.pos.y);
         expect(holdDistance).toBeCloseTo(expectedHoldDistance, 3);
     });
+
+    test('hazard-driven reposition sets temporary range-stall grace to prevent approach/retreat oscillation', () => {
+        setRank(enemy, PILOT_RANK.VETERAN);
+        const storm = new CosmicStorm(0, 0, 300, 'ion');
+        const system = makeSystem({ cosmicStorms: [storm] });
+        enemy.pos = createVector(0, 0); // inside storm, so environmental reposition is forced
+        enemy.target = makeTarget(800, 0);
+        enemy.currentState = AI_STATE.APPROACHING;
+        enemy._envHazardCache = null;
+        enemy._updateEnvironmentalBehavior(system, true);
+
+        expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
+        expect(enemy._envRepositionStallGraceUntil).toBeGreaterThan(0);
+    });
+
+    test('range-stall breaker does not interrupt active hazard-driven repositioning', () => {
+        setRank(enemy, PILOT_RANK.VETERAN);
+        const storm = new CosmicStorm(0, 0, 300, 'ion');
+        const system = makeSystem({ cosmicStorms: [storm] });
+        enemy.pos = createVector(0, 0);
+        enemy.target = makeTarget(800, 0);
+        enemy.currentState = AI_STATE.APPROACHING;
+        enemy._envHazardCache = null;
+        enemy._updateEnvironmentalBehavior(system, true);
+
+        // Simulate a stale range sample that would normally force REPOSITIONING -> APPROACHING.
+        enemy._rangeStallCooldown = 0;
+        enemy._rangeStallTimer = 10;
+        enemy._rangeStallTriggerTime = 0;
+        enemy._lastRangeSample = 700;
+        enemy._rangeStallState = AI_STATE.REPOSITIONING;
+
+        enemy._handleRangeStall(700);
+
+        expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
+        expect(enemy._rangeStallTimer).toBe(0);
+    });
+
+    test('hazard-driven reposition grace uses real-time fallback when millis is unavailable', () => {
+        setRank(enemy, PILOT_RANK.VETERAN);
+        const storm = new CosmicStorm(0, 0, 300, 'ion');
+        const system = makeSystem({ cosmicStorms: [storm] });
+        const originalMillisDescriptor = Object.getOwnPropertyDescriptor(global, 'millis');
+        const originalPerformance = global.performance;
+        const mockedNowMs = 1000;
+        const expectedGraceUntil = mockedNowMs + EnemyAIBehaviors.ENV_REPOSITION_STALL_GRACE_MS;
+        const unreachablyHighStallTriggerSeconds = 999;
+        const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(mockedNowMs);
+
+        try {
+            Object.defineProperty(global, 'millis', {
+                value: undefined,
+                configurable: true,
+                writable: true,
+            });
+            Object.defineProperty(global, 'performance', {
+                value: undefined,
+                configurable: true,
+            });
+
+            enemy.pos = createVector(0, 0);
+            enemy.target = makeTarget(800, 0);
+            enemy.currentState = AI_STATE.APPROACHING;
+            enemy._envHazardCache = null;
+
+            enemy._updateEnvironmentalBehavior(system, true);
+            expect(enemy._envRepositionStallGraceUntil).toBe(expectedGraceUntil);
+
+            enemy._envRepositionStallGraceUntil = mockedNowMs - 1;
+            enemy._rangeStallCooldown = 0;
+            enemy._rangeStallTimer = 10;
+            enemy._rangeStallTriggerTime = unreachablyHighStallTriggerSeconds;
+            enemy._lastRangeSample = 100;
+            enemy._rangeStallState = AI_STATE.REPOSITIONING;
+
+            enemy._handleRangeStall(100);
+
+            expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
+            expect(enemy._rangeStallTimer).toBeGreaterThan(10);
+        } finally {
+            dateNowSpy.mockRestore();
+            if (originalMillisDescriptor) {
+                Object.defineProperty(global, 'millis', originalMillisDescriptor);
+            } else {
+                delete global.millis;
+            }
+            Object.defineProperty(global, 'performance', {
+                value: originalPerformance,
+                configurable: true,
+            });
+        }
+    });
 });
 
 describe('off-screen environmental behavior path', () => {

@@ -78,6 +78,17 @@ class EnemyAIBehaviors {
             return;
         }
 
+        // Environmental hazard repositioning is intentionally "hold/withdraw" behavior.
+        // Do not let generic stall-break logic flip it back to APPROACHING immediately,
+        // or ships can oscillate between approach/retreat near hazard boundaries.
+        if (this.currentState === AI_STATE.REPOSITIONING && this._envRepositionStallGraceUntil) {
+            const now = (typeof millis === 'function') ? millis() : (performance?.now?.() || Date.now());
+            if (now < this._envRepositionStallGraceUntil) {
+                this._resetRangeStall();
+                return;
+            }
+        }
+
         // Only detect stalls when ships are close enough for it to matter
         // (within effective firing range + some margin)
         const maxStallRange = this.visualFiringRange * 1.5;
@@ -2677,6 +2688,7 @@ class EnemyAIBehaviors {
     static get ENV_RADIATION_ESCAPE_HULL_THRESHOLD() { return 0.6; } // Radiation: escape in combat when hull at or below 60%
     static get ENV_IDLE_ESCAPE_CHANCE_MULT() { return 0.35; }        // Idle hazard exit is less urgent than combat (35% of rookie combat escape scaling)
     static get ENV_EDGE_STANDOFF_MARGIN() { return 120; }            // Hold point outside zone edge: close enough to fire in, far enough to avoid sitting on boundary
+    static get ENV_REPOSITION_STALL_GRACE_MS() { return 4500; }      // Suppress range-stall overrides briefly after hazard-driven repositioning
 
     /**
      * Scans nearby environmental hazards and returns a cached summary.
@@ -2848,10 +2860,13 @@ class EnemyAIBehaviors {
         const awareness = rankMods?.environmentAwareness ?? 0.0;
 
         const envInfo = this._getEnvHazardInfo(system);
+        const markEnvRepositionGrace = () => {
+            this._envRepositionStallGraceUntil = now + EnemyAIBehaviors.ENV_REPOSITION_STALL_GRACE_MS;
+        };
 
         // Throttle probabilistic rolls to at most once per cache interval (~1 s on-screen,
         // ~2 s off-screen) so low-awareness enemies don't near-guarantee a reaction every second.
-        const now = typeof millis === 'function' ? millis() : 0;
+        const now = (typeof millis === 'function') ? millis() : (performance?.now?.() || Date.now());
         const evalInterval = this._isOnScreen === false ? 2000 : 1000;
         const canRollProb = !this._envBehaviorEvalTime ||
             (now - this._envBehaviorEvalTime >= evalInterval);
@@ -2893,6 +2908,7 @@ class EnemyAIBehaviors {
                         envInfo.dangerZonePos.x + (dx / mag) * escapeR,
                         envInfo.dangerZonePos.y + (dy / mag) * escapeR
                     );
+                    markEnvRepositionGrace();
                     this.changeState(AI_STATE.REPOSITIONING, { repositionTarget: this.repositionTarget });
                     return;
                 }
@@ -2919,6 +2935,7 @@ class EnemyAIBehaviors {
                     envInfo.dangerZonePos.x + (dx / mag) * escapeR,
                     envInfo.dangerZonePos.y + (dy / mag) * escapeR
                 );
+                markEnvRepositionGrace();
                 this.changeState(AI_STATE.REPOSITIONING, { repositionTarget: this.repositionTarget });
                 return;
             }
@@ -2934,6 +2951,7 @@ class EnemyAIBehaviors {
                 this.currentState !== AI_STATE.FLEEING &&
                 this.currentState !== AI_STATE.REPOSITIONING) {
                 this.repositionTarget = envInfo.nearbyRetreatNebula.pos;
+                markEnvRepositionGrace();
                 this.changeState(AI_STATE.REPOSITIONING, { repositionTarget: this.repositionTarget });
                 return;
             }
@@ -2962,6 +2980,7 @@ class EnemyAIBehaviors {
                 envInfo.targetEmpZonePos.x + (dx / mag) * holdR,
                 envInfo.targetEmpZonePos.y + (dy / mag) * holdR
             );
+            markEnvRepositionGrace();
             this.changeState(AI_STATE.REPOSITIONING, { repositionTarget: this.repositionTarget });
             return;
         }
