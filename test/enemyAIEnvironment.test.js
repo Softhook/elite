@@ -5,12 +5,10 @@
  * proportionally to their pilot rank / environmentAwareness modifier.
  *
  * Behaviour rules under test:
- *   1. Incompetent/Green pilots (awareness < 0.3) ignore all hazards.
- *   2. Rookie pilots (awareness 0.5) escape from radiation/ion zones and steer
- *      around them during movement (obstacle-avoidance integration).
- *   3. Veteran pilots (awareness 1.0) always escape dangerous zones and retreat
+ *   1. All ranks have environmental awareness; lower ranks react probabilistically.
+ *   2. Veteran pilots (awareness 1.0) always escape dangerous zones and retreat
  *      to a nearby EMP nebula when hull drops to ≤ 15 %.
- *   4. Elite pilots (awareness 1.5) retreat to EMP nebula at ≤ 25 % hull and
+ *   3. Elite pilots (awareness 1.5) retreat to EMP nebula at ≤ 25 % hull and
  *      immediately begin approaching a target that is inside a dangerous zone.
  */
 
@@ -255,19 +253,19 @@ function makeTarget(px, py) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('environmentAwareness modifier values', () => {
-    test('INCOMPETENT has environmentAwareness 0.0', () => {
+    test('INCOMPETENT has environmentAwareness 0.1', () => {
         const mods = getPilotRankModifiers(PILOT_RANK.INCOMPETENT);
-        expect(mods.environmentAwareness).toBe(0.0);
+        expect(mods.environmentAwareness).toBe(0.1);
     });
 
-    test('GREEN has environmentAwareness 0.2', () => {
+    test('GREEN has environmentAwareness 0.3', () => {
         const mods = getPilotRankModifiers(PILOT_RANK.GREEN);
-        expect(mods.environmentAwareness).toBe(0.2);
+        expect(mods.environmentAwareness).toBe(0.3);
     });
 
-    test('ROOKIE has environmentAwareness 0.5', () => {
+    test('ROOKIE has environmentAwareness 0.6', () => {
         const mods = getPilotRankModifiers(PILOT_RANK.ROOKIE);
-        expect(mods.environmentAwareness).toBe(0.5);
+        expect(mods.environmentAwareness).toBe(0.6);
     });
 
     test('VETERAN has environmentAwareness 1.0', () => {
@@ -356,6 +354,26 @@ describe('_getEnvHazardInfo', () => {
         expect(info.dangerZoneType).toBe('storm');
     });
 
+    test('overlapping radiation+ion picks ion as the active danger zone', () => {
+        const radiationNeb = new Nebula(0, 0, 300, 'radiation');
+        const ionNeb = new Nebula(0, 0, 300, 'ion');
+        const system = makeSystem({ nebulae: [radiationNeb, ionNeb] });
+        enemy.pos = createVector(0, 0);
+        const info = enemy._getEnvHazardInfo(system);
+        expect(info.inDangerousZone).toBe(true);
+        expect(info.dangerZoneType).toBe('ion');
+    });
+
+    test('overlapping radiation+storm picks storm as the active danger zone', () => {
+        const radiationNeb = new Nebula(0, 0, 300, 'radiation');
+        const storm = new CosmicStorm(0, 0, 300, 'electromagnetic');
+        const system = makeSystem({ nebulae: [radiationNeb], cosmicStorms: [storm] });
+        enemy.pos = createVector(0, 0);
+        const info = enemy._getEnvHazardInfo(system);
+        expect(info.inDangerousZone).toBe(true);
+        expect(info.dangerZoneType).toBe('storm');
+    });
+
     test('detects that target is inside a dangerous zone', () => {
         const neb = new Nebula(0, 0, 300, 'radiation');
         const system = makeSystem({ nebulae: [neb] });
@@ -401,24 +419,29 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
         enemy.currentWeapon = enemy.weapons[0];
     });
 
-    // --- Incompetent/Green: no reaction ---
+    // --- Lower ranks: awareness exists but is probabilistic ---
 
-    test('INCOMPETENT inside radiation nebula does NOT change state', () => {
+    test('INCOMPETENT can react to ion hazard when roll is favorable', () => {
         setRank(enemy, PILOT_RANK.INCOMPETENT);
-        const neb = new Nebula(0, 0, 300, 'radiation');
-        const system = makeSystem({ nebulae: [neb] });
-        enemy.currentState = AI_STATE.IDLE;
-        enemy._updateEnvironmentalBehavior(system, true);
-        expect(enemy.currentState).toBe(AI_STATE.IDLE);
-    });
-
-    test('GREEN inside ion nebula does NOT change state', () => {
-        setRank(enemy, PILOT_RANK.GREEN);
         const neb = new Nebula(0, 0, 300, 'ion');
         const system = makeSystem({ nebulae: [neb] });
         enemy.currentState = AI_STATE.IDLE;
+        const randomSpy = jest.spyOn(global, 'random').mockReturnValue(0);
         enemy._updateEnvironmentalBehavior(system, true);
-        expect(enemy.currentState).toBe(AI_STATE.IDLE);
+        randomSpy.mockRestore();
+        expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
+    });
+
+    test('GREEN does NOT use tactical EMP retreat behavior', () => {
+        setRank(enemy, PILOT_RANK.GREEN);
+        const neb = new Nebula(400, 0, 200, 'emp');
+        const system = makeSystem({ nebulae: [neb] });
+        const target = makeTarget(800, 0);
+        enemy.target = target;
+        enemy.hull = enemy.maxHull * 0.05;
+        enemy.currentState = AI_STATE.APPROACHING;
+        enemy._updateEnvironmentalBehavior(system, true);
+        expect(enemy.currentState).toBe(AI_STATE.APPROACHING);
     });
 
     // --- No target: ships must not interrupt patrol / navigation ---

@@ -2676,6 +2676,8 @@ class EnemyAIBehaviors {
      * Scans nearby environmental hazards and returns a cached summary.
      * Throttled to ~1 s (2 s off-screen) to keep CPU cost low.
      * Checks nebulae (radiation, ion) and all cosmic storm types.
+     * If multiple hazards overlap, picks the most dangerous one for reaction
+     * priority (storm > ion > radiation), then nearest if tied.
      *
      * @param {Object} system - The current star system
      * @returns {Object} Hazard summary:
@@ -2713,6 +2715,25 @@ class EnemyAIBehaviors {
         const posX = this.pos.x;
         const posY = this.pos.y;
         const targetPos = this.target?.pos;
+        let bestDangerPriority = -1;
+        let bestDangerDistSq = Infinity;
+        const getDangerPriority = (type) => {
+            if (type === 'storm') return 3;
+            if (type === 'ion') return 2;
+            if (type === 'radiation') return 1;
+            return 0;
+        };
+        const considerDangerZone = (zoneType, zonePos, zoneRadius, distSq) => {
+            const priority = getDangerPriority(zoneType);
+            if (priority > bestDangerPriority || (priority === bestDangerPriority && distSq < bestDangerDistSq)) {
+                bestDangerPriority = priority;
+                bestDangerDistSq = distSq;
+                info.inDangerousZone = true;
+                info.dangerZonePos = zonePos;
+                info.dangerZoneRadius = zoneRadius;
+                info.dangerZoneType = zoneType;
+            }
+        };
 
         // --- Nebulae ---
         if (Array.isArray(system.nebulae)) {
@@ -2726,11 +2747,8 @@ class EnemyAIBehaviors {
 
                 if (distSq < r * r) {
                     // Ship is inside this nebula
-                    if ((neb.type === 'radiation' || neb.type === 'ion') && !info.inDangerousZone) {
-                        info.inDangerousZone = true;
-                        info.dangerZonePos = neb.pos;
-                        info.dangerZoneRadius = r;
-                        info.dangerZoneType = neb.type;
+                    if (neb.type === 'radiation' || neb.type === 'ion') {
+                        considerDangerZone(neb.type, neb.pos, r, distSq);
                     }
                 }
 
@@ -2765,11 +2783,8 @@ class EnemyAIBehaviors {
                 const distSq = dx * dx + dy * dy;
                 const r = storm.effectRadius || storm.radius || 500;
 
-                if (distSq < r * r && !info.inDangerousZone) {
-                    info.inDangerousZone = true;
-                    info.dangerZonePos = storm.pos;
-                    info.dangerZoneRadius = r;
-                    info.dangerZoneType = 'storm';
+                if (distSq < r * r) {
+                    considerDangerZone('storm', storm.pos, r, distSq);
                 }
 
                 if (targetPos) {
@@ -2793,8 +2808,7 @@ class EnemyAIBehaviors {
      *
      * Scaled by the pilot's environmentAwareness modifier:
      *
-     *   awareness < 0.3  (Incompetent/Green) – no reaction at all
-     *   awareness >= 0.5 (Rookie)  – probabilistic escape from ion/radiation zones when engaged
+     *   awareness < 1.0  (Incompetent/Green/Rookie) – probabilistic reactive escapes when engaged
      *   awareness >= 1.0 (Veteran) – always escapes; also retreats to EMP nebula at ≤ 15% hull
      *   awareness >= 1.5 (Elite)   – EMP retreat threshold raised to 25% hull; opportunistically
      *                                approaches targets already suffering inside dangerous zones
@@ -2811,9 +2825,6 @@ class EnemyAIBehaviors {
     _updateEnvironmentalBehavior(system, targetExists) {
         const rankMods = this._getRankModifiers();
         const awareness = rankMods?.environmentAwareness ?? 0.0;
-
-        // Incompetent/Green pilots are oblivious to environmental hazards
-        if (awareness < 0.3) return;
 
         const envInfo = this._getEnvHazardInfo(system);
 
