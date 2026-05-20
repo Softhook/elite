@@ -670,10 +670,13 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
         enemy.target = makeTarget(0, 0);  // inside EMP
         enemy.currentState = AI_STATE.APPROACHING;
         enemy._envHazardCache = null;
+        const infoBefore = enemy._getEnvHazardInfo(system);
+        const expectedHoldDistance = infoBefore.targetEmpZoneRadius + 120;
         enemy._updateEnvironmentalBehavior(system, true);
         expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
         expect(enemy.repositionTarget).not.toBeNull();
-        expect(enemy.repositionTarget.x).toBeGreaterThan(400); // radius + margin = 420
+        const holdDistance = dist(enemy.repositionTarget.x, enemy.repositionTarget.y, emp.pos.x, emp.pos.y);
+        expect(holdDistance).toBeCloseTo(expectedHoldDistance, 3);
     });
 });
 

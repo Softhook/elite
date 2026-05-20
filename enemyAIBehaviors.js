@@ -2882,7 +2882,7 @@ class EnemyAIBehaviors {
                         envInfo.dangerZonePos.x + (dx / mag) * escapeR,
                         envInfo.dangerZonePos.y + (dy / mag) * escapeR
                     );
-                    this.changeState(AI_STATE.REPOSITIONING);
+                    this.changeState(AI_STATE.REPOSITIONING, { repositionTarget: this.repositionTarget });
                     return;
                 }
             }
@@ -2892,9 +2892,9 @@ class EnemyAIBehaviors {
         // Keeps awareness active outside combat without interrupting patrol/navigation movement.
         if (envInfo.inDangerousZone && envInfo.dangerZonePos && !targetExists &&
             this.currentState === AI_STATE.IDLE) {
-            const hasGuaranteedIdleExit = awareness >= 1.0;
-            const shouldExitIdleHazard = hasGuaranteedIdleExit ||
-                random() < awareness * EnemyAIBehaviors.ENV_IDLE_ESCAPE_CHANCE_MULT;
+            const idleEscapeRoll = random();
+            const shouldExitIdleHazard = awareness >= 1.0 ||
+                idleEscapeRoll < awareness * EnemyAIBehaviors.ENV_IDLE_ESCAPE_CHANCE_MULT;
             if (shouldExitIdleHazard) {
                 const dx = this.pos.x - envInfo.dangerZonePos.x;
                 const dy = this.pos.y - envInfo.dangerZonePos.y;
@@ -2904,7 +2904,7 @@ class EnemyAIBehaviors {
                     envInfo.dangerZonePos.x + (dx / mag) * escapeR,
                     envInfo.dangerZonePos.y + (dy / mag) * escapeR
                 );
-                this.changeState(AI_STATE.REPOSITIONING);
+                this.changeState(AI_STATE.REPOSITIONING, { repositionTarget: this.repositionTarget });
                 return;
             }
         }
@@ -2919,7 +2919,7 @@ class EnemyAIBehaviors {
                 this.currentState !== AI_STATE.FLEEING &&
                 this.currentState !== AI_STATE.REPOSITIONING) {
                 this.repositionTarget = envInfo.nearbyRetreatNebula.pos;
-                this.changeState(AI_STATE.REPOSITIONING);
+                this.changeState(AI_STATE.REPOSITIONING, { repositionTarget: this.repositionTarget });
                 return;
             }
         }
@@ -2947,7 +2947,7 @@ class EnemyAIBehaviors {
                 envInfo.targetEmpZonePos.x + (dx / mag) * holdR,
                 envInfo.targetEmpZonePos.y + (dy / mag) * holdR
             );
-            this.changeState(AI_STATE.REPOSITIONING);
+            this.changeState(AI_STATE.REPOSITIONING, { repositionTarget: this.repositionTarget });
             return;
         }
     }
