@@ -473,7 +473,7 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
         const neb = new Nebula(0, 0, 300, 'radiation');
         const system = makeSystem({ nebulae: [neb] });
         enemy.currentState = AI_STATE.IDLE;
-        // targetExists = false – simulates patrolling or navigating through a nebula
+        // targetExists = false + IDLE state: should not loiter in hazard
         enemy._updateEnvironmentalBehavior(system, false);
         expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
     });
@@ -673,7 +673,7 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
         enemy._updateEnvironmentalBehavior(system, true);
         expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
         expect(enemy.repositionTarget).not.toBeNull();
-        expect(enemy.repositionTarget.x).toBeGreaterThan(350); // radius + margin = 420
+        expect(enemy.repositionTarget.x).toBeGreaterThan(400); // radius + margin = 420
     });
 });
 

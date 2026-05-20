@@ -2779,22 +2779,18 @@ class EnemyAIBehaviors {
                     }
                 }
 
-                // Check if current target is inside a dangerous zone (elite tactic awareness)
-                if (targetPos && (neb.type === 'radiation' || neb.type === 'ion')) {
+                if (targetPos) {
                     const tdx = neb.pos.x - targetPos.x;
                     const tdy = neb.pos.y - targetPos.y;
                     if (tdx * tdx + tdy * tdy < r * r) {
-                        info.targetInDangerZone = true;
-                    }
-                }
-
-                if (targetPos && neb.type === 'emp') {
-                    const tdx = neb.pos.x - targetPos.x;
-                    const tdy = neb.pos.y - targetPos.y;
-                    if (tdx * tdx + tdy * tdy < r * r) {
-                        info.targetInEmpZone = true;
-                        info.targetEmpZonePos = neb.pos;
-                        info.targetEmpZoneRadius = r;
+                        // Check if current target is inside a dangerous zone (elite tactic awareness)
+                        if (neb.type === 'radiation' || neb.type === 'ion') {
+                            info.targetInDangerZone = true;
+                        } else if (neb.type === 'emp') {
+                            info.targetInEmpZone = true;
+                            info.targetEmpZonePos = neb.pos;
+                            info.targetEmpZoneRadius = r;
+                        }
                     }
                 }
             }
@@ -2892,7 +2888,7 @@ class EnemyAIBehaviors {
             }
         }
 
-        // --- Rule 1b: Avoid loitering inside dangerous zones when idle ---
+        // --- Rule 1b: Avoid idling inside dangerous zones when idle ---
         // Keeps awareness active outside combat without interrupting patrol/navigation movement.
         if (envInfo.inDangerousZone && envInfo.dangerZonePos && !targetExists &&
             this.currentState === AI_STATE.IDLE) {
