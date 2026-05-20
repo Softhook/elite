@@ -739,6 +739,50 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
         expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
         expect(enemy._rangeStallTimer).toBe(0);
     });
+
+    test('hazard-driven reposition grace uses real-time fallback when millis is unavailable', () => {
+        setRank(enemy, PILOT_RANK.VETERAN);
+        const storm = new CosmicStorm(0, 0, 300, 'ion');
+        const system = makeSystem({ cosmicStorms: [storm] });
+        const originalMillis = global.millis;
+        const originalPerformance = global.performance;
+        const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(1000);
+
+        try {
+            delete global.millis;
+            Object.defineProperty(global, 'performance', {
+                value: undefined,
+                configurable: true,
+            });
+
+            enemy.pos = createVector(0, 0);
+            enemy.target = makeTarget(800, 0);
+            enemy.currentState = AI_STATE.APPROACHING;
+            enemy._envHazardCache = null;
+
+            enemy._updateEnvironmentalBehavior(system, true);
+            expect(enemy._envRepositionStallGraceUntil).toBe(5500);
+
+            enemy._envRepositionStallGraceUntil = 500;
+            enemy._rangeStallCooldown = 0;
+            enemy._rangeStallTimer = 10;
+            enemy._rangeStallTriggerTime = 999;
+            enemy._lastRangeSample = 100;
+            enemy._rangeStallState = AI_STATE.REPOSITIONING;
+
+            enemy._handleRangeStall(100);
+
+            expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
+            expect(enemy._rangeStallTimer).toBeGreaterThan(10);
+        } finally {
+            dateNowSpy.mockRestore();
+            global.millis = originalMillis;
+            Object.defineProperty(global, 'performance', {
+                value: originalPerformance,
+                configurable: true,
+            });
+        }
+    });
 });
 
 describe('off-screen environmental behavior path', () => {

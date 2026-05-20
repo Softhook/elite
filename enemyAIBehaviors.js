@@ -82,7 +82,7 @@ class EnemyAIBehaviors {
         // Do not let generic stall-break logic flip it back to APPROACHING immediately,
         // or ships can oscillate between approach/retreat near hazard boundaries.
         if (this.currentState === AI_STATE.REPOSITIONING && this._envRepositionStallGraceUntil) {
-            const now = typeof millis === 'function' ? millis() : 0;
+            const now = (typeof millis === 'function') ? millis() : (performance?.now?.() || Date.now());
             if (now < this._envRepositionStallGraceUntil) {
                 this._resetRangeStall();
                 return;
@@ -2866,7 +2866,7 @@ class EnemyAIBehaviors {
 
         // Throttle probabilistic rolls to at most once per cache interval (~1 s on-screen,
         // ~2 s off-screen) so low-awareness enemies don't near-guarantee a reaction every second.
-        const now = typeof millis === 'function' ? millis() : 0;
+        const now = (typeof millis === 'function') ? millis() : (performance?.now?.() || Date.now());
         const evalInterval = this._isOnScreen === false ? 2000 : 1000;
         const canRollProb = !this._envBehaviorEvalTime ||
             (now - this._envBehaviorEvalTime >= evalInterval);
