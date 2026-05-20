@@ -2829,7 +2829,7 @@ class EnemyAIBehaviors {
      * Scaled by the pilot's environmentAwareness modifier:
      *
      *   awareness < 1.0  (Incompetent/Green/Rookie) – probabilistic reactive escapes when engaged
-     *   awareness >= 1.0 (Veteran) – always escapes; also retreats to EMP nebula at ≤ 15% hull
+     *   awareness >= 1.0 (Veteran) – always escapes; also retreats to EMP nebula at < 15% hull
      *   awareness >= 1.5 (Elite)   – EMP retreat threshold raised to 25% hull; opportunistically
      *                                approaches targets already suffering inside dangerous zones
      *
@@ -2848,6 +2848,16 @@ class EnemyAIBehaviors {
         const awareness = rankMods?.environmentAwareness ?? 0.0;
 
         const envInfo = this._getEnvHazardInfo(system);
+
+        // Throttle probabilistic rolls to at most once per cache interval (~1 s on-screen,
+        // ~2 s off-screen) so low-awareness enemies don't near-guarantee a reaction every second.
+        const now = typeof millis === 'function' ? millis() : 0;
+        const evalInterval = this._isOnScreen === false ? 2000 : 1000;
+        const canRollProb = !this._envBehaviorEvalTime ||
+            (now - this._envBehaviorEvalTime >= evalInterval);
+        if (canRollProb) {
+            this._envBehaviorEvalTime = now;
+        }
 
         // --- Rule 1a: Escape from currently occupied dangerous zone in active combat ---
         // Only applies during active combat; ships crossing nebulae while
@@ -2871,7 +2881,8 @@ class EnemyAIBehaviors {
             const immediateEscapeNeeded = zoneType === 'ion' || zoneType === 'storm';
 
             if (radiationEscapeNeeded || immediateEscapeNeeded) {
-                const shouldEscape = awareness >= 1.0 || random() < awareness * EnemyAIBehaviors.ENV_ROOKIE_ESCAPE_CHANCE_MULT;
+                const shouldEscape = awareness >= 1.0 ||
+                    (canRollProb && random() < awareness * EnemyAIBehaviors.ENV_ROOKIE_ESCAPE_CHANCE_MULT);
                 if (shouldEscape) {
                     // Compute an escape point outside the zone
                     const dx = this.pos.x - envInfo.dangerZonePos.x;
@@ -2892,9 +2903,8 @@ class EnemyAIBehaviors {
         // Keeps awareness active outside combat without interrupting patrol/navigation movement.
         if (envInfo.inDangerousZone && envInfo.dangerZonePos && !targetExists &&
             this.currentState === AI_STATE.IDLE) {
-            const idleEscapeRoll = random();
             const shouldExitIdleHazard = awareness >= 1.0 ||
-                idleEscapeRoll < awareness * EnemyAIBehaviors.ENV_IDLE_ESCAPE_CHANCE_MULT;
+                (canRollProb && random() < awareness * EnemyAIBehaviors.ENV_IDLE_ESCAPE_CHANCE_MULT);
             if (shouldExitIdleHazard) {
                 const dx = this.pos.x - envInfo.dangerZonePos.x;
                 const dy = this.pos.y - envInfo.dangerZonePos.y;

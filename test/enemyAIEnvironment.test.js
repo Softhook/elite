@@ -7,8 +7,8 @@
  * Behaviour rules under test:
  *   1. All ranks have environmental awareness; lower ranks react probabilistically.
  *   2. Veteran pilots (awareness 1.0) always escape dangerous zones and retreat
- *      to a nearby EMP nebula when hull drops to ≤ 15 %.
- *   3. Elite pilots (awareness 1.5) retreat to EMP nebula at ≤ 25 % hull and
+ *      to a nearby EMP nebula when hull drops to < 15 %.
+ *   3. Elite pilots (awareness 1.5) retreat to EMP nebula at < 25 % hull and
  *      immediately begin approaching a target that is inside a dangerous zone.
  */
 
@@ -347,7 +347,7 @@ describe('_getEnvHazardInfo', () => {
         expect(info.nearbyRetreatDist).toBeLessThan(1000);
     });
 
-    test('does NOT locate EMP nebula farther than 1000 units away', () => {
+    test('does NOT locate EMP nebula farther than 1200 units away', () => {
         const neb = new Nebula(2500, 0, 200, 'emp'); // edge is at 2500-200=2300 > ENV_MAX_RETREAT_DIST (1200)
         const system = makeSystem({ nebulae: [neb] });
         enemy.pos = createVector(0, 0);
