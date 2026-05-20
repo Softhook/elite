@@ -105,7 +105,7 @@ const PILOT_RANK_MODIFIERS = {
         targetSpottingDelay: 2.0, // 2 seconds to notice a target
         guardReactionTimeMultiplier: 1.6, // 8s guard reaction
         fleeDecisionDelay: 1.5, // 1.5s panic before fleeing
-        environmentAwareness: 0.1,          // Minimal awareness; rare reactive escapes only
+        environmentAwareness: 0.2,          // Minimal awareness; rare reactive escapes only
     },
     [PILOT_RANK.GREEN]: {
         canStrafe: false,                   // No side thrusters / kiting
@@ -138,7 +138,7 @@ const PILOT_RANK_MODIFIERS = {
         targetSpottingDelay: 1.5, // 1.5 seconds to notice a target
         guardReactionTimeMultiplier: 1.2, // 6s guard reaction
         fleeDecisionDelay: 1.0, // 1s panic before fleeing
-        environmentAwareness: 0.3,          // Low awareness; occasional reactive escapes
+        environmentAwareness: 0.5,          // Low awareness; occasional reactive escapes
     },
     [PILOT_RANK.ROOKIE]: {
         canStrafe: false,                   // No side thrusters / kiting
@@ -171,7 +171,7 @@ const PILOT_RANK_MODIFIERS = {
         targetSpottingDelay: 1.0, // 1 second to notice a target
         guardReactionTimeMultiplier: 1.0, // 5s guard reaction
         fleeDecisionDelay: 0.7, // 0.7s panic before fleeing
-        environmentAwareness: 0.6,          // Reliable reactive escapes from obvious hazards
+        environmentAwareness: 0.8,          // Reliable reactive escapes from obvious hazards
     },
     [PILOT_RANK.VETERAN]: {
         canStrafe: true,
