@@ -2837,7 +2837,7 @@ class EnemyAIBehaviors {
      *   radiation  – slow damage; only escape in combat when hull ≤ 60 % to avoid disrupting
      *                normal combat manoeuvres for minor exposure
      *   ion        – disables shields; immediately dangerous in any fight → always escape
-     *   storm      – severe / multiple effects; always escape in combat
+     *   storm      – severe / multiple effects; always escape in combat; also interrupts patrol
      *   idle       – if loitering in a dangerous zone without a target, may drift out probabilistically
      *
      * @param {Object}  system       - The current star system
@@ -2899,10 +2899,15 @@ class EnemyAIBehaviors {
             }
         }
 
-        // --- Rule 1b: Avoid idling inside dangerous zones when idle ---
-        // Keeps awareness active outside combat without interrupting patrol/navigation movement.
+        // --- Rule 1b: Exit dangerous zones when idle or when patrolling through a storm ---
+        // Idle ships exit all dangerous zones.
+        // Patrolling ships only redirect for cosmic storms (immediate/severe hazard) —
+        // radiation/ion nebulae are NOT interrupted during patrol since stations and jump zones
+        // may sit inside them and patrol routes legitimately cross them.
+        const inStormWhilePatrolling = envInfo.dangerZoneType === 'storm' &&
+            this.currentState === AI_STATE.PATROLLING;
         if (envInfo.inDangerousZone && envInfo.dangerZonePos && !targetExists &&
-            this.currentState === AI_STATE.IDLE) {
+            (this.currentState === AI_STATE.IDLE || inStormWhilePatrolling)) {
             const shouldExitIdleHazard = awareness >= 1.0 ||
                 (canRollProb && random() < awareness * EnemyAIBehaviors.ENV_IDLE_ESCAPE_CHANCE_MULT);
             if (shouldExitIdleHazard) {
@@ -3074,11 +3079,35 @@ class EnemyAIBehaviors {
             }
         }
 
+        // Check cosmic storms as navigation hazards with extended lookahead.
+        // Nebulae are intentionally NOT checked here: stations/jump zones often sit inside them.
+        if (Array.isArray(system.cosmicStorms)) {
+            const stormCheckDist = Math.min(1200, toDist);
+            for (const storm of system.cosmicStorms) {
+                if (!storm?.pos) continue;
+                const r = storm.effectRadius || storm.radius || 500; // 500: fallback when storm has no radius set
+                const dx = storm.pos.x - this.pos.x;
+                const dy = storm.pos.y - this.pos.y;
+                const proj = dx * dirX + dy * dirY;
+                if (proj <= 0 || proj > stormCheckDist) continue;
+                const perpSq = dx * dx + dy * dy - proj * proj;
+                // 80: larger safety buffer than asteroids to begin steering well clear of large storm radii
+                const safety = (r + Math.max(this.size, 16) + 80) * avoidanceStrength;
+                if (perpSq <= safety * safety && proj < threatProj) {
+                    threat = storm;
+                    threatProj = proj;
+                    threatRadius = r;
+                }
+            }
+        }
+
         if (!threat) return desiredMovementTargetPos;
 
-        // If threat is very close, prefer to slow briefly rather than sharp steering
+        // For large hazards (storms, radius > 150) always apply the lateral nudge.
+        // For small obstacles (asteroids, ships) prefer a brief slow-down when too close.
+        const isLargeHazard = threatRadius > 150;
         const closeThresh = (Math.max(threatRadius, this.size) + 60) * avoidanceStrength;
-        if (threatProj < closeThresh) {
+        if (!isLargeHazard && threatProj < closeThresh) {
             // Set a short avoidance timer so we damp velocity for a moment
             this._asteroidAvoidTimer = 0.6 * avoidanceStrength;
             return desiredMovementTargetPos; // keep target but slow ship in wrapper

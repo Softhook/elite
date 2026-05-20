@@ -487,6 +487,30 @@ describe('_updateEnvironmentalBehavior state transitions', () => {
         expect(enemy.currentState).toBe(AI_STATE.APPROACHING);
     });
 
+    test('VETERAN patrolling inside a cosmic storm redirects out of the storm', () => {
+        setRank(enemy, PILOT_RANK.VETERAN);
+        const storm = new CosmicStorm(0, 0, 300, 'electromagnetic');
+        const system = makeSystem({ cosmicStorms: [storm] });
+        enemy.pos = createVector(0, 0); // ship starts inside the storm radius
+        enemy.currentState = AI_STATE.PATROLLING;
+        enemy._envHazardCache = null;
+        enemy._updateEnvironmentalBehavior(system, false);
+        expect(enemy.currentState).toBe(AI_STATE.REPOSITIONING);
+        expect(enemy.repositionTarget).not.toBeNull();
+    });
+
+    test('VETERAN patrolling inside a radiation nebula is NOT interrupted (may contain stations)', () => {
+        setRank(enemy, PILOT_RANK.VETERAN);
+        const neb = new Nebula(0, 0, 300, 'radiation');
+        const system = makeSystem({ nebulae: [neb] });
+        enemy.pos = createVector(0, 0); // ship starts inside the nebula radius
+        enemy.currentState = AI_STATE.PATROLLING;
+        enemy._envHazardCache = null;
+        enemy._updateEnvironmentalBehavior(system, false);
+        // Stations/jump zones may be inside nebulae; patrol routes legitimately cross them
+        expect(enemy.currentState).toBe(AI_STATE.PATROLLING);
+    });
+
     // --- Radiation nebula: slow damage, only escape in combat at hull ≤ 60 % ---
 
     test('VETERAN in radiation nebula in combat with hull above 60% does NOT escape', () => {
@@ -706,11 +730,12 @@ describe('off-screen environmental behavior path', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Movement avoidance: nebulae / storms are NOT treated as path obstacles
-// (stations and jump zones often sit inside nebulae; patrol routes cross them)
+// Movement avoidance: nebulae passable, cosmic storms steered around by Rookie+
+// (Stations and jump zones often sit inside nebulae; patrol routes cross them.
+//  Storms are free-floating severe hazards with no essential structures inside.)
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('nebulae are NOT treated as movement obstacles', () => {
+describe('movement obstacle avoidance: nebulae passable, storms steered around by Rookie+', () => {
     let player, enemy;
 
     beforeEach(() => {
@@ -745,13 +770,25 @@ describe('nebulae are NOT treated as movement obstacles', () => {
         expect(adjusted.y).toBe(desiredTarget.y);
     });
 
-    test('VETERAN does NOT steer around a cosmic storm in movement path', () => {
+    test('VETERAN steers around a cosmic storm directly in movement path', () => {
         setRank(enemy, PILOT_RANK.VETERAN);
         const storm = new CosmicStorm(300, 0, 200, 'radiation');
         const system = makeSystem({ cosmicStorms: [storm] });
         enemy.pos = createVector(0, 0);
         const desiredTarget = createVector(700, 0);
         const adjusted = enemy._avoidObstaclesAndAdjustTarget(system, desiredTarget);
+        // Storm is directly in path; movement target should be nudged laterally
+        expect(adjusted.y).not.toBe(0);
+    });
+
+    test('INCOMPETENT does NOT steer around a cosmic storm (no obstacle avoidance)', () => {
+        setRank(enemy, PILOT_RANK.INCOMPETENT);
+        const storm = new CosmicStorm(300, 0, 200, 'radiation');
+        const system = makeSystem({ cosmicStorms: [storm] });
+        enemy.pos = createVector(0, 0);
+        const desiredTarget = createVector(700, 0);
+        const adjusted = enemy._avoidObstaclesAndAdjustTarget(system, desiredTarget);
+        // INCOMPETENT has obstacleAvoidanceStrength = 0, ignores all obstacles including storms
         expect(adjusted.x).toBe(desiredTarget.x);
         expect(adjusted.y).toBe(desiredTarget.y);
     });
