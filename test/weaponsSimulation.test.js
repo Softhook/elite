@@ -130,19 +130,24 @@ describe('Weapon Simulation Utilities', () => {
         expect(overSuggestion.recommendedFireRate).toBeGreaterThan(0.2);
     });
 
-    test('rebalance pass updates representative weapon damage and price values', () => {
+    test('verifies rebalanced weapon damage/price/cooldown values from simulation pass', () => {
         const byName = (name) => WEAPON_UPGRADES.find(w => w.name === name);
+        const expectedValues = [
+            { name: 'Heavy Cannon', damage: 45, fireRate: 1.1, price: 4313 },
+            { name: 'Multi-Cannon', damage: 7, fireRate: 0.284, price: 3450 },
+            { name: 'Railgun Turret', damage: 40, fireRate: 1.109, price: 6469 },
+            { name: 'Twin Pulse', damage: 5, fireRate: 0.333, price: 510 },
+            { name: 'Guardian Missile', damage: 73, fireRate: 3.741, price: 1148 },
+            { name: 'Harpoon Launcher', damage: 11, fireRate: 1.338, price: 2678 },
+            { name: 'Sniper Rail', damage: 29, fireRate: 0.75, price: 3594 },
+            { name: 'Burst Blaster', damage: 5, fireRate: 0.213, price: 2875 },
+            { name: 'Heavy Mine', damage: 218, fireRate: 5.75, price: 6469 },
+            { name: 'Jedi Force', damage: 81, fireRate: 2.3, price: 58363 },
+            { name: 'Tangle Projector', damage: 7, fireRate: 0.451, price: 1403 }
+        ];
 
-        expect(byName('Heavy Cannon')).toMatchObject({ damage: 48, price: 3750 });
-        expect(byName('Multi-Cannon')).toMatchObject({ damage: 8, price: 3000 });
-        expect(byName('Railgun Turret')).toMatchObject({ damage: 43, price: 5625 });
-        expect(byName('Twin Pulse')).toMatchObject({ damage: 5, price: 600 });
-        expect(byName('Guardian Missile')).toMatchObject({ damage: 69, price: 1350 });
-        expect(byName('Harpoon Launcher')).toMatchObject({ damage: 10, price: 3150 });
-        expect(byName('Sniper Rail')).toMatchObject({ damage: 30, price: 3125 });
-        expect(byName('Burst Blaster')).toMatchObject({ damage: 5, price: 2500 });
-        expect(byName('Loiter Munition')).toMatchObject({ damage: 111, price: 1800 });
-        expect(byName('Heavy Mine')).toMatchObject({ damage: 240, price: 5625 });
-        expect(byName('Force Blaster')).toMatchObject({ damage: 63, price: 26823 });
+        expectedValues.forEach(({ name, ...expected }) => {
+            expect(byName(name)).toMatchObject(expected);
+        });
     });
 });

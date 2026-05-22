@@ -242,7 +242,7 @@ const WEAPON_UPGRADES = [
         name: "Jedi Force",
         type: "force",
         damage: 81,
-        color: [255, 255, 0], // Purple
+        color: [255, 255, 0], // Yellow
         fireRate: 2.3,
         price: 58363,
         maxRadius: 750,
@@ -498,7 +498,7 @@ const WEAPON_UPGRADES = [
 ];
 
 // Matches exact multi-shot weapon type strings like "spread3" or "straight4" only.
-// Group 1 is the pattern family, group 2 is projectile count.
+// Capture group 1 is the pattern family (straight/spread), capture group 2 is projectile count.
 const WEAPON_MULTI_SHOT_TYPE_REGEX = /^(straight|spread)(\d+)$/;
 const DEFAULT_SIM_AIM_QUALITY = 0.78;
 const BASE_TARGET_RADIUS = 18;
