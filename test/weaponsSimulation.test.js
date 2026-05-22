@@ -1,4 +1,5 @@
 const {
+    WEAPON_UPGRADES,
     getWeaponProjectileCount,
     simulateWeaponPerformance,
     rankWeaponsBySimulation,
@@ -63,5 +64,21 @@ describe('Weapon Simulation Utilities', () => {
         expect(overSuggestion).toBeDefined();
         expect(overSuggestion.recommendedPrice).toBeGreaterThan(1000);
         expect(overSuggestion.suggestedDamageMultiplier).toBeLessThan(1);
+    });
+
+    test('rebalance pass updates representative weapon damage and price values', () => {
+        const byName = (name) => WEAPON_UPGRADES.find(w => w.name === name);
+
+        expect(byName('Heavy Cannon')).toMatchObject({ damage: 48, price: 3750 });
+        expect(byName('Multi-Cannon')).toMatchObject({ damage: 8, price: 3000 });
+        expect(byName('Railgun Turret')).toMatchObject({ damage: 43, price: 5625 });
+        expect(byName('Twin Pulse')).toMatchObject({ damage: 5, price: 600 });
+        expect(byName('Guardian Missile')).toMatchObject({ damage: 69, price: 1350 });
+        expect(byName('Harpoon Launcher')).toMatchObject({ damage: 10, price: 3150 });
+        expect(byName('Sniper Rail')).toMatchObject({ damage: 30, price: 3125 });
+        expect(byName('Burst Blaster')).toMatchObject({ damage: 5, price: 2500 });
+        expect(byName('Loiter Munition')).toMatchObject({ damage: 111, price: 1800 });
+        expect(byName('Heavy Mine')).toMatchObject({ damage: 240, price: 5625 });
+        expect(byName('Force Blaster')).toMatchObject({ damage: 63, price: 26823 });
     });
 });

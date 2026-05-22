@@ -23,26 +23,26 @@ const WEAPON_UPGRADES = [
         damage: 10,
         color: [0, 255, 0], // Green
         fireRate: 0.4,
-        price: 1200,
+        price: 1044,
         desc: "Standard-issue energy weapon found across the galaxy. Faulcon DeLacy's best-selling model for three centuries running."
     },
     {
 
         name: "Sniper Rail",
         type: "projectile",
-        damage: 35,
+        damage: 30,
         color: [200, 200, 255], // Pale blue
         fireRate: 0.7,
-        price: 2500,
+        price: 3125,
         desc: "Electromagnetic accelerator that trades fire rate for devastating penetration power. Preferred by bounty hunters who value the one-shot kill."
     },
     {
         name: "Heavy Cannon",
         type: "projectile",
-        damage: 60,
+        damage: 48,
         color: [180, 80, 80], // Brownish
         fireRate: 1.0,
-        price: 3000,
+        price: 3750,
         desc: "Military-grade kinetic cannon delivering massive damage per shot. Gutamaya discontinued civilian sales, but black market units remain plentiful."
     },
 
@@ -59,7 +59,7 @@ const WEAPON_UPGRADES = [
         heatPerShot: 0.12,
         heatDissipation: 0.35,
         heatRecoveryFactor: 0.3,
-        price: 1600,
+        price: 1404,
         desc: "Sustained coherent light projection derived from alien technology. Watch the heat gauge—overheating can be catastrophic."
     },
     {
@@ -72,7 +72,7 @@ const WEAPON_UPGRADES = [
         heatPerShot: 0.08, // More efficient than combat beam
         heatDissipation: 0.35,
         heatRecoveryFactor: 0.3,
-        price: 2200,
+        price: 1840,
         desc: "High-intensity industrial beam tuned for mineral extraction. Exceptionally effective against asteroids."
     },
     {
@@ -85,7 +85,7 @@ const WEAPON_UPGRADES = [
         heatPerShot: 0.08,
         heatDissipation: 0.42,
         heatRecoveryFactor: 0.28,
-        price: 2200,
+        price: 2587,
         desc: "High-frequency micro-pulse beam reverse-engineered from Thargoid weapons. Optimized for sustained fire with minimal heat."
     },
     {
@@ -98,7 +98,7 @@ const WEAPON_UPGRADES = [
         heatPerShot: 0.18,
         heatDissipation: 0.32,
         heatRecoveryFactor: 0.35,
-        price: 1400,
+        price: 1133,
         desc: "Specialized beam tuned to destabilize shield harmonics. Based on xeno-tech recovered from frontier conflicts."
     },
 
@@ -108,28 +108,28 @@ const WEAPON_UPGRADES = [
     {
         name: "Twin Pulse",
         type: "straight2",
-        damage: 4,
+        damage: 5,
         color: [0, 180, 255], // Blue
         fireRate: 0.35,
-        price: 800,
+        price: 600,
         desc: "Dual-barrel configuration providing improved hit probability. A Lakon Spaceways classic found on traders and fighters alike."
     },
     {
         name: "Triple Pulse",
         type: "straight3",
-        damage: 6,
+        damage: 7,
         color: [255, 0, 255], // Purple
         fireRate: 0.4,
-        price: 1100,
+        price: 825,
         desc: "Triple parallel emitters delivering concentrated firepower in a tight formation. Popular with escort pilots."
     },
     {
         name: "Quad Pulse",
         type: "straight4",
-        damage: 7,
+        damage: 8,
         color: [0, 255, 180], // Aqua
         fireRate: 0.5,
-        price: 1300,
+        price: 975,
         desc: "Four-barrel array creating a wall of plasma. Saud Kruger originally designed it for asteroid clearing."
     },
 
@@ -139,19 +139,19 @@ const WEAPON_UPGRADES = [
     {
         name: "V Spread",
         type: "spread2",
-        damage: 12,
+        damage: 11,
         color: [255, 255, 0], // Yellow
         fireRate: 0.4,
-        price: 1700,
+        price: 2125,
         desc: "Diverging twin shots ideal for close-quarters engagements. Federation Navy standard issue for boarding defense."
     },
     {
         name: "V Punch",
         type: "spread2",
-        damage: 18,
+        damage: 17,
         color: [120, 120, 255], // Violet
         fireRate: 0.7,
-        price: 1400,
+        price: 1690,
         desc: "Heavy-hitting spread variant sacrificing fire rate for substantial damage per volley. Manticore Arms' signature design."
     },
 
@@ -161,19 +161,19 @@ const WEAPON_UPGRADES = [
     {
         name: "Multi-Cannon",
         type: "spread3",
-        damage: 10,
+        damage: 8,
         color: [200, 200, 100], // Yellow
         fireRate: 0.25,
-        price: 2400,
+        price: 3000,
         desc: "Kinetic projectile weapon that bypasses shields effectively. Remlock manufactures these under exclusive military contract."
     },
     {
         name: "Burst Blaster",
         type: "spread3",
-        damage: 6,
+        damage: 5,
         color: [255, 100, 100], // Pinkish
         fireRate: 0.2,
-        price: 2000,
+        price: 2500,
         desc: "Rapid-fire spread weapon designed for engaging multiple hostiles. Achilles Corporation's answer to pirate swarms."
     },
 
@@ -186,7 +186,7 @@ const WEAPON_UPGRADES = [
         damage: 6,
         color: [255, 200, 0], // Orange
         fireRate: 0.3,
-        price: 1400,
+        price: 1715,
         desc: "Wide-angle dispersal pattern providing excellent area coverage. Pilots call it 'the wall' for good reason."
     },
 
@@ -199,7 +199,7 @@ const WEAPON_UPGRADES = [
         damage: 6,
         color: [255, 0, 0], // Red
         fireRate: 0.3,
-        price: 1600,
+        price: 2000,
         desc: "Five-way cone pattern maximizing hit probability. Devastatingly effective at close range."
     },
 
@@ -209,19 +209,19 @@ const WEAPON_UPGRADES = [
     {
         name: "Mini-Turret",
         type: "turret",
-        damage: 18,
+        damage: 19,
         color: [80, 255, 80], // Light green
         fireRate: 0.7,
-        price: 2300,
+        price: 1844,
         desc: "Automated targeting system that tracks and engages hostiles independently. Whatt and Pritney's entry-level turret."
     },
     {
         name: "Railgun Turret",
         type: "turret",
-        damage: 50,
+        damage: 43,
         color: [255, 80, 255], // Magenta
         fireRate: 1.0,
-        price: 4500,
+        price: 5625,
         desc: "Heavy auto-tracking railgun mounting. Expensive, but Vodel's precision engineering justifies every credit."
     },
 
@@ -231,20 +231,20 @@ const WEAPON_UPGRADES = [
     {
         name: "Force Blaster",
         type: "force",
-        damage: 60,
+        damage: 63,
         color: [255, 0, 0], // Red
         fireRate: 2,
-        price: 32500,
+        price: 26823,
         maxRadius: 300,
         desc: "Generates an expanding kinetic shockwave affecting all nearby vessels. Reverse-engineered from recovered alien artifacts."
     },
     {
         name: "Jedi Force",
         type: "force",
-        damage: 100,
+        damage: 89,
         color: [255, 255, 0], // Purple
         fireRate: 2,
-        price: 40600,
+        price: 50750,
         maxRadius: 750,
         desc: "Advanced force projection technology with extended range and devastating power. Derived from Thargoid weapon systems."
     },
@@ -254,11 +254,11 @@ const WEAPON_UPGRADES = [
     {
         name: "Loiter Munition",
         type: "missile",
-        damage: 100,
+        damage: 111,
         color: [0, 255, 255],
         projectileSize: 7,
         fireRate: 5.0,         // Long reload
-        price: 2400,
+        price: 1800,
         speed: 2,              // Missile projectile speed
         turnRate: 0.3,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 400,         // Longer life to find target (frames or time units)
@@ -268,11 +268,11 @@ const WEAPON_UPGRADES = [
     {
         name: "Kalibr Missile",
         type: "missile",
-        damage: 100,
+        damage: 111,
         color: [255, 255, 255], // White
         projectileSize: 5,
         fireRate: 5.0,         // Long reload
-        price: 2400,
+        price: 1800,
         speed: 10,              // Missile projectile speed
         turnRate: 0.2,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 400,         // Longer life to find target (frames or time units)
@@ -282,11 +282,11 @@ const WEAPON_UPGRADES = [
     {
         name: "Guardian Missile",
         type: "missile",
-        damage: 60,
+        damage: 69,
         color: [255, 150, 50], // Orange-ish
         projectileSize: 5,
         fireRate: 4.0,         // Long reload
-        price: 1800,
+        price: 1350,
         speed: 5,              // Missile projectile speed
         turnRate: 0.08,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 240,         // Longer life to find target (frames or time units)
@@ -296,11 +296,11 @@ const WEAPON_UPGRADES = [
     {
         name: "Avenger Missile",
         type: "missile",
-        damage: 200,
+        damage: 208,
         color: [255, 100, 100], // Reddish
         projectileSize: 5,
         fireRate: 7.0,          // Very long reload
-        price: 3400,
+        price: 2905,
         speed: 4,               // Slightly slower, heavier
         turnRate: 0.08,
         lifespan: 300,
@@ -313,10 +313,10 @@ const WEAPON_UPGRADES = [
     {
         name: "Tangle Projector",
         type: "tangle",
-        damage: 5,           // low direct damage
+        damage: 6,           // low direct damage
         color: [20, 200, 100], // Green
         fireRate: 0.5,       // Good firing rate (slightly faster)
-        price: 2200,
+        price: 1650,
         tangleDuration: 8.0, // Seconds target is affected by tangle
         dragMultiplier: 2.0, // Strong drag effect
         rotationBlockMultiplier: 0.1, // Severely reduces rotation speed
@@ -326,10 +326,10 @@ const WEAPON_UPGRADES = [
     {
         name: "Harpoon Launcher",
         type: "harpoon",
-        damage: 8,
+        damage: 10,
         color: [180, 220, 255], // pale cyan
         fireRate: 1.5,
-        price: 4200,
+        price: 3150,
         projectileSize: 6,
         speed: 30,
         desc: "Magnetic grapple that creates a physical tether between ships. Derived from deep-space salvage equipment."
@@ -337,10 +337,10 @@ const WEAPON_UPGRADES = [
     {
         name: "Heavy Tangle",
         type: "tangle",
-        damage: 10,           //Direct damage
+        damage: 12,           //Direct damage
         color: [30, 240, 120], // Brighter green
         fireRate: 1.0,       // Slower firing rate
-        price: 2200,
+        price: 1650,
         tangleDuration: 15.0, // Longer tangle effect
         dragMultiplier: 5.0, // Nearly stops ships completely
         rotationBlockMultiplier: 0.01, // Almost completely blocks rotation
@@ -366,25 +366,25 @@ const WEAPON_UPGRADES = [
     {
         name: "Advanced Mine",
         type: "mine",
-        damage: 150,
+        damage: 144,
         blastRadius: 180,
         triggerRadius: 90,
         mineHealth: 40,
         color: [255, 50, 0], // Red-orange
         fireRate: 4.0,
-        price: 2800,
+        price: 3200,
         desc: "Enhanced mine variant with increased blast radius and improved damage output. Popular in pirate ambushes."
     },
     {
         name: "Heavy Mine",
         type: "mine",
-        damage: 300,
+        damage: 240,
         blastRadius: 250,
         triggerRadius: 150,
         mineHealth: 60,
         color: [200, 0, 0], // Dark red
         fireRate: 5.0,
-        price: 4500,
+        price: 5625,
         desc: "Heavily armored high-yield mine resistant to point defense fire. One well-placed unit can end a pursuit."
     },
 
@@ -497,7 +497,7 @@ const WEAPON_UPGRADES = [
 
 ];
 
-// Matches multi-shot weapon type strings like "spread3" or "straight4".
+// Matches exact multi-shot weapon type strings like "spread3" or "straight4" only.
 // Group 1 is the pattern family, group 2 is projectile count.
 const WEAPON_MULTI_SHOT_TYPE_REGEX = /^(straight|spread)(\d+)$/;
 const DEFAULT_SIM_AIM_QUALITY = 0.78;
@@ -531,12 +531,13 @@ const MIN_BALANCE_TOLERANCE = 0.05;
 const DEFAULT_BALANCE_TOLERANCE = 0.22;
 
 function getWeaponProjectileCount(weaponType) {
-    if (typeof weaponType !== 'string') return 1;
+    const defaultProjectileCount = 1;
+    if (typeof weaponType !== 'string') return defaultProjectileCount;
     const match = WEAPON_MULTI_SHOT_TYPE_REGEX.exec(weaponType);
-    if (!match) return 1;
+    if (!match) return defaultProjectileCount;
 
     const parsedCount = parseInt(match[2], 10);
-    return !Number.isNaN(parsedCount) && parsedCount > 0 ? parsedCount : 1;
+    return !Number.isNaN(parsedCount) && parsedCount > 0 ? parsedCount : defaultProjectileCount;
 }
 
 function _getSpreadCoverageMultiplier(weaponType, projectileCount, targetSpeed) {
