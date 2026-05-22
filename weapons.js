@@ -108,27 +108,27 @@ const WEAPON_UPGRADES = [
     {
         name: "Twin Pulse",
         type: "straight2",
-        damage: 4,
+        damage: 6,
         color: [0, 180, 255], // Blue
-        fireRate: 0.35,
+        fireRate: 0.3,
         price: 800,
         desc: "Dual-barrel configuration providing improved hit probability. A Lakon Spaceways classic found on traders and fighters alike."
     },
     {
         name: "Triple Pulse",
         type: "straight3",
-        damage: 6,
+        damage: 8,
         color: [255, 0, 255], // Purple
-        fireRate: 0.4,
+        fireRate: 0.35,
         price: 1100,
         desc: "Triple parallel emitters delivering concentrated firepower in a tight formation. Popular with escort pilots."
     },
     {
         name: "Quad Pulse",
         type: "straight4",
-        damage: 7,
+        damage: 10,
         color: [0, 255, 180], // Aqua
-        fireRate: 0.5,
+        fireRate: 0.39,
         price: 1300,
         desc: "Four-barrel array creating a wall of plasma. Saud Kruger originally designed it for asteroid clearing."
     },
@@ -172,7 +172,7 @@ const WEAPON_UPGRADES = [
         type: "spread3",
         damage: 6,
         color: [255, 100, 100], // Pinkish
-        fireRate: 0.2,
+        fireRate: 0.22,
         price: 2000,
         desc: "Rapid-fire spread weapon designed for engaging multiple hostiles. Achilles Corporation's answer to pirate swarms."
     },
@@ -183,7 +183,7 @@ const WEAPON_UPGRADES = [
     {
         name: "Wide Scatter",
         type: "spread4",
-        damage: 6,
+        damage: 7,
         color: [255, 200, 0], // Orange
         fireRate: 0.3,
         price: 1400,
