@@ -28,9 +28,9 @@ describe('Weapon Simulation Utilities', () => {
             price: 1000
         };
 
-        const movingTarget = { targetSpeed: 6, engagementRange: 280, aimQuality: 0.78 };
-        const singleResult = simulateWeaponPerformance(projectileWeapon, movingTarget);
-        const spreadResult = simulateWeaponPerformance(spreadWeapon, movingTarget);
+        const movingTargetOptions = { targetSpeed: 6, engagementRange: 280, aimQuality: 0.78 };
+        const singleResult = simulateWeaponPerformance(projectileWeapon, movingTargetOptions);
+        const spreadResult = simulateWeaponPerformance(spreadWeapon, movingTargetOptions);
 
         expect(spreadResult.projectileCount).toBe(3);
         expect(spreadResult.expectedHitsPerShot).toBeGreaterThan(singleResult.expectedHitsPerShot);

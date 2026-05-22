@@ -497,6 +497,8 @@ const WEAPON_UPGRADES = [
 
 ];
 
+// Matches multi-shot weapon type strings like "spread3" or "straight4".
+// Group 1 is the pattern family, group 2 is projectile count.
 const WEAPON_MULTI_SHOT_TYPE_REGEX = /^(straight|spread)(\d+)$/;
 const DEFAULT_SIM_AIM_QUALITY = 0.78;
 const BASE_TARGET_RADIUS = 18;
@@ -524,6 +526,9 @@ const MIN_DAMAGE_MULTIPLIER = 0.8;
 const MAX_DAMAGE_MULTIPLIER = 1.2;
 const MAX_DAMAGE_ADJUSTMENT = 0.2;
 const DAMAGE_ADJUSTMENT_SCALE = 0.3;
+const VALUE_SCORE_SCALE = 1000;
+const MIN_BALANCE_TOLERANCE = 0.05;
+const DEFAULT_BALANCE_TOLERANCE = 0.22;
 
 function getWeaponProjectileCount(weaponType) {
     if (typeof weaponType !== 'string') return 1;
@@ -584,7 +589,7 @@ function simulateWeaponPerformance(weapon, options = {}) {
     const expectedHitsPerShot = Math.min(projectileCount, Math.max(MIN_HIT_CHANCE, hitChance * spreadCoverage));
     const shotsPerSecond = Number.isFinite(fireRate) ? (1 / fireRate) : 0;
     const expectedDps = damage * shotsPerSecond * expectedHitsPerShot;
-    const valueScore = expectedDps / price * 1000;
+    const valueScore = expectedDps / price * VALUE_SCORE_SCALE;
 
     return {
         expectedDps,
@@ -614,7 +619,7 @@ function suggestWeaponBalanceChanges(weapons, options = {}) {
     if (ranked.length === 0) return [];
 
     const averageScore = ranked.reduce((sum, entry) => sum + entry.score, 0) / ranked.length;
-    const tolerance = Number.isFinite(options.tolerance) ? Math.max(0.05, options.tolerance) : 0.22;
+    const tolerance = Number.isFinite(options.tolerance) ? Math.max(MIN_BALANCE_TOLERANCE, options.tolerance) : DEFAULT_BALANCE_TOLERANCE;
 
     return ranked
         .map((entry) => {
