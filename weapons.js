@@ -290,7 +290,7 @@ const WEAPON_UPGRADES = [
         speed: 5,              // Missile projectile speed
         turnRate: 0.08,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 240,         // Longer life to find target (frames or time units)
-        missileHull: 10,       // Hull for destructible missiles
+        missileHull: 5,       // Hull for destructible missiles
         desc: "Standard guided missile platform with balanced performance. Reliable Ramsay Industries engineering."
     },
     {
