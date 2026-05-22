@@ -463,7 +463,11 @@ class Player {
         MISSION_LOG("--- Player.acceptMission() called ---");
 
         // Check if player already has an active mission
-        if (this.activeMission) {
+        // Special cargo sale missions are instant transactions and do not occupy activeMission
+        const incomingType = missionInput instanceof Mission
+            ? missionInput.type
+            : (missionInput && missionInput.type);
+        if (this.activeMission && incomingType !== MISSION_TYPE.SPECIAL_CARGO_SALE) {
             console.warn("Cannot accept mission: Player already has an active mission");
             if (typeof uiManager !== 'undefined') {
                 uiManager.addMessage("Cannot accept mission: You already have an active mission", [255, 100, 100]);
@@ -479,6 +483,10 @@ class Player {
 
         MISSION_LOG(`   Attempting to accept mission: ${missionInput.title}`);
 
+        // Preserve existing active mission — special cargo sales are instant
+        // transactions that must not displace a regular mission slot.
+        const previousMission = this.activeMission;
+
         // Handle both Mission objects and mission data objects
         if (missionInput instanceof Mission) {
             // Already a Mission object, use it directly
@@ -491,7 +499,7 @@ class Player {
                 MISSION_LOG(`   Mission object created: ${this.activeMission.title}`);
             } catch (e) {
                 console.error("   Failed to create Mission object:", e);
-                this.activeMission = null;
+                this.activeMission = previousMission;
                 return false;
             }
         }
@@ -505,7 +513,7 @@ class Player {
                 if (typeof uiManager !== 'undefined') {
                     uiManager.addMessage(`Cannot complete sale: missing ${cargoQuantity}t ${cargoType}`, [255, 100, 100]);
                 }
-                this.activeMission = null;
+                this.activeMission = previousMission;
                 return false;
             }
         }
@@ -518,12 +526,12 @@ class Player {
             // Check if activation failed (e.g., not enough cargo space)
             if (activateResult === false) {
                 console.error("   Mission activation failed (returned false)");
-                this.activeMission = null;
+                this.activeMission = previousMission;
                 return false;
             }
         } catch (e) {
             console.error("   !!! ERROR during mission.activate():", e);
-            this.activeMission = null; // Clear mission if activation failed critically
+            this.activeMission = previousMission; // Restore mission if activation failed critically
             return false; // Indicate failure
         }
 
@@ -539,17 +547,17 @@ class Player {
                 if (typeof uiManager !== 'undefined') {
                     uiManager.addMessage(`Cannot complete sale: missing ${cargoQuantity}t ${cargoType}`, [255, 100, 100]);
                 }
-                this.activeMission = null;
+                this.activeMission = previousMission;
                 return false;
             }
 
             this.activeMission.complete(this);
-            this.activeMission = null;
+            // Restore pre-existing mission; complete() already persists via _recordCompletion
+            this.activeMission = previousMission;
 
             if (soundManager?.playSound) {
                 soundManager.playSound('missionComplete');
             }
-            if (typeof saveGame === 'function') saveGame();
             return true;
         }
 
