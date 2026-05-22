@@ -498,6 +498,18 @@ class Player {
 
         MISSION_LOG(`   BEFORE activate() call: Mission Title = ${this.activeMission?.title}, Status = ${this.activeMission?.status}`);
 
+        if (this.activeMission?.type === MISSION_TYPE.SPECIAL_CARGO_SALE) {
+            const cargoType = this.activeMission.cargoType;
+            const cargoQuantity = this.activeMission.cargoQuantity;
+            if (!this.hasCargo(cargoType, cargoQuantity)) {
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage(`Cannot complete sale: missing ${cargoQuantity}t ${cargoType}`, [255, 100, 100]);
+                }
+                this.activeMission = null;
+                return false;
+            }
+        }
+
         try {
             MISSION_LOG(`   >>> Calling this.activeMission.activate() <<<`);
             const activateResult = this.activeMission.activate(); // <<< EXECUTE THE STATUS CHANGE
@@ -523,7 +535,7 @@ class Player {
             const cargoType = this.activeMission.cargoType;
             const cargoQuantity = this.activeMission.cargoQuantity;
 
-            if (!this.hasCargo(cargoType, cargoQuantity) || !this.removeCargo(cargoType, cargoQuantity)) {
+            if (!this.removeCargo(cargoType, cargoQuantity)) {
                 if (typeof uiManager !== 'undefined') {
                     uiManager.addMessage(`Cannot complete sale: missing ${cargoQuantity}t ${cargoType}`, [255, 100, 100]);
                 }

@@ -6,7 +6,7 @@
 
 const LEGAL_CARGO = getLegalCommodities();
 const ILLEGAL_CARGO = getIllegalCommodities();
-const STANDARD_CARGO_TYPES = new Set([...LEGAL_CARGO, ...ILLEGAL_CARGO]);
+const STANDARD_CARGO_TYPE_SET = new Set([...LEGAL_CARGO, ...ILLEGAL_CARGO]);
 const PIRATE_SHIP_TYPES = ['Krait', 'Adder', 'Sidewinder', 'CobraMkIII'];
 const SPECIAL_CARGO_BUYER_OFFERS = {
     'Alien Artifact': { buyer: 'a mysterious xeno-curator', rewardPerTon: 5000 },
@@ -233,7 +233,6 @@ class MissionGenerator {
             }
         }
 
-        this._addSpecialCargoSaleMissions(missions, currentSystem, currentStation, player);
         return missions;
     }
 
@@ -243,7 +242,7 @@ class MissionGenerator {
         const systemData = this._getSystemData(currentSystem);
         const probabilities = this._calculateMissionProbabilities(systemData);
 
-        // Special cargo buy offers only appear when carrying special cargo
+        // Special cargo sale offers only appear when carrying special cargo
         this._addSpecialCargoSaleMissions(availableMissions, currentSystem, currentStation, player);
 
         // Special missions
@@ -285,7 +284,7 @@ class MissionGenerator {
         for (const item of player.cargo) {
             const name = item?.name || item?.type;
             const quantity = Number(item?.quantity) || 0;
-            if (!name || quantity <= 0 || STANDARD_CARGO_TYPES.has(name)) continue;
+            if (!name || quantity <= 0 || STANDARD_CARGO_TYPE_SET.has(name)) continue;
             merged.set(name, (merged.get(name) || 0) + Math.floor(quantity));
         }
 
