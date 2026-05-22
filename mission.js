@@ -8,6 +8,7 @@ const MISSION_TYPE = {
     // Standard missions
     DELIVERY_LEGAL: 'Legal delivery',
     DELIVERY_ILLEGAL: 'Illegal delivery',
+    SPECIAL_CARGO_SALE: 'Special Cargo Sale',
     BOUNTY_PIRATE: 'Pirate Bounty',
     BOUNTY_POLICE: 'Police Bounty',
     BOUNTY_ALIEN: 'Alien Bounty',

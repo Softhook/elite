@@ -6,7 +6,14 @@
 
 const LEGAL_CARGO = getLegalCommodities();
 const ILLEGAL_CARGO = getIllegalCommodities();
+const STANDARD_CARGO_TYPE_SET = new Set([...LEGAL_CARGO, ...ILLEGAL_CARGO]);
 const PIRATE_SHIP_TYPES = ['Krait', 'Adder', 'Sidewinder', 'CobraMkIII'];
+const SPECIAL_CARGO_BUYER_OFFERS = {
+    'Alien Artifact': { buyer: 'a mysterious xeno-curator', rewardPerTon: 5000 },
+    'Biohazard': { buyer: 'a covert bio-containment broker', rewardPerTon: 4200 },
+    'Rare Ore': { buyer: 'an anonymous refinery syndicate', rewardPerTon: 2800 },
+    'Special Ore': { buyer: 'an anonymous refinery syndicate', rewardPerTon: 2800 }
+};
 
 // Economy-specific cargo exports (goods they produce/sell cheaply)
 const ECONOMY_EXPORTS = {
@@ -235,6 +242,9 @@ class MissionGenerator {
         const systemData = this._getSystemData(currentSystem);
         const probabilities = this._calculateMissionProbabilities(systemData);
 
+        // Special cargo sale offers only appear when carrying special cargo
+        this._addSpecialCargoSaleMissions(availableMissions, currentSystem, currentStation, player);
+
         // Special missions
         this._addSpecialMissions(availableMissions, currentSystem, currentStation, galaxy, player, systemData);
 
@@ -257,6 +267,49 @@ class MissionGenerator {
 
         this._logMissionCounts(availableMissions, systemData);
         return availableMissions;
+    }
+
+    static _addSpecialCargoSaleMissions(missions, system, station, player) {
+        const specialCargo = this._getSpecialCargoInventory(player);
+        for (const cargoItem of specialCargo) {
+            const mission = this.createSpecialCargoSaleMission(system, station, cargoItem.name, cargoItem.quantity);
+            if (mission) missions.push(mission);
+        }
+    }
+
+    static _getSpecialCargoInventory(player) {
+        if (!player || !Array.isArray(player.cargo) || player.cargo.length === 0) return [];
+
+        const merged = new Map();
+        for (const item of player.cargo) {
+            const name = item?.name || item?.type;
+            const quantity = Number(item?.quantity) || 0;
+            if (!name || quantity <= 0 || STANDARD_CARGO_TYPE_SET.has(name)) continue;
+            merged.set(name, (merged.get(name) || 0) + Math.floor(quantity));
+        }
+
+        return Array.from(merged, ([name, quantity]) => ({ name, quantity }));
+    }
+
+    static createSpecialCargoSaleMission(originSystem, originStation, cargoType, cargoQuantity) {
+        if (!originSystem || !originStation || !cargoType || cargoQuantity <= 0) return null;
+
+        const offer = SPECIAL_CARGO_BUYER_OFFERS[cargoType] || {
+            buyer: 'a mysterious private collector',
+            rewardPerTon: 2000
+        };
+        const totalReward = Math.max(1, Math.floor(offer.rewardPerTon * cargoQuantity));
+
+        return new Mission({
+            type: MISSION_TYPE.SPECIAL_CARGO_SALE,
+            title: `Mysterious Buyer: ${cargoType}`,
+            description: `A discreet contact at ${originStation.name} claims ${offer.buyer} will buy your ${cargoQuantity}t of ${cargoType}. Payment is immediate if you accept the offer.`,
+            ...this.getOriginData(originSystem, originStation),
+            cargoType,
+            cargoQuantity,
+            rewardCredits: totalReward,
+            isIllegal: false
+        });
     }
 
     /** Extract system data for mission generation */

@@ -463,7 +463,11 @@ class Player {
         MISSION_LOG("--- Player.acceptMission() called ---");
 
         // Check if player already has an active mission
-        if (this.activeMission) {
+        // Special cargo sale missions are instant transactions and do not occupy activeMission
+        const incomingType = missionInput instanceof Mission
+            ? missionInput.type
+            : (missionInput && missionInput.type);
+        if (this.activeMission && incomingType !== MISSION_TYPE.SPECIAL_CARGO_SALE) {
             console.warn("Cannot accept mission: Player already has an active mission");
             if (typeof uiManager !== 'undefined') {
                 uiManager.addMessage("Cannot accept mission: You already have an active mission", [255, 100, 100]);
@@ -479,6 +483,10 @@ class Player {
 
         MISSION_LOG(`   Attempting to accept mission: ${missionInput.title}`);
 
+        // Preserve existing active mission — special cargo sales are instant
+        // transactions that must not displace a regular mission slot.
+        const previousMission = this.activeMission;
+
         // Handle both Mission objects and mission data objects
         if (missionInput instanceof Mission) {
             // Already a Mission object, use it directly
@@ -491,12 +499,24 @@ class Player {
                 MISSION_LOG(`   Mission object created: ${this.activeMission.title}`);
             } catch (e) {
                 console.error("   Failed to create Mission object:", e);
-                this.activeMission = null;
+                this.activeMission = previousMission;
                 return false;
             }
         }
 
         MISSION_LOG(`   BEFORE activate() call: Mission Title = ${this.activeMission?.title}, Status = ${this.activeMission?.status}`);
+
+        if (this.activeMission?.type === MISSION_TYPE.SPECIAL_CARGO_SALE) {
+            const cargoType = this.activeMission.cargoType;
+            const cargoQuantity = this.activeMission.cargoQuantity;
+            if (!this.hasCargo(cargoType, cargoQuantity)) {
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage(`Cannot complete sale: missing ${cargoQuantity}t ${cargoType}`, [255, 100, 100]);
+                }
+                this.activeMission = previousMission;
+                return false;
+            }
+        }
 
         try {
             MISSION_LOG(`   >>> Calling this.activeMission.activate() <<<`);
@@ -506,17 +526,40 @@ class Player {
             // Check if activation failed (e.g., not enough cargo space)
             if (activateResult === false) {
                 console.error("   Mission activation failed (returned false)");
-                this.activeMission = null;
+                this.activeMission = previousMission;
                 return false;
             }
         } catch (e) {
             console.error("   !!! ERROR during mission.activate():", e);
-            this.activeMission = null; // Clear mission if activation failed critically
+            this.activeMission = previousMission; // Restore mission if activation failed critically
             return false; // Indicate failure
         }
 
         MISSION_LOG(`   AFTER activate() call: Mission Status = ${this.activeMission?.status}`); // Check status immediately after
         // --- End Activation ---
+
+        // Special cargo sale missions complete immediately upon acceptance
+        if (this.activeMission?.type === MISSION_TYPE.SPECIAL_CARGO_SALE) {
+            const cargoType = this.activeMission.cargoType;
+            const cargoQuantity = this.activeMission.cargoQuantity;
+
+            if (!this.removeCargo(cargoType, cargoQuantity)) {
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage(`Cannot complete sale: missing ${cargoQuantity}t ${cargoType}`, [255, 100, 100]);
+                }
+                this.activeMission = previousMission;
+                return false;
+            }
+
+            this.activeMission.complete(this);
+            // Restore pre-existing mission; complete() already persists via _recordCompletion
+            this.activeMission = previousMission;
+
+            if (soundManager?.playSound) {
+                soundManager.playSound('missionComplete');
+            }
+            return true;
+        }
 
         if (this.activeMission.status === 'Active') {
             MISSION_LOG(`--- Mission "${this.activeMission.title}" ACCEPTED & ACTIVATED successfully. ---`);
