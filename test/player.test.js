@@ -552,6 +552,27 @@ describe('Player Missions', () => {
         player.abandonMission();
         expect(player.activeMission).toBeFalsy();
     });
+
+    test('should immediately complete special cargo sale mission on accept', () => {
+        player.cargo = [{ name: 'Alien Artifact', quantity: 1 }];
+        player.credits = 1000;
+
+        const missionData = {
+            id: 7788,
+            title: 'Mysterious Buyer: Alien Artifact',
+            type: MISSION_TYPE.SPECIAL_CARGO_SALE,
+            cargoType: 'Alien Artifact',
+            cargoQuantity: 1,
+            rewardCredits: 5000
+        };
+
+        const result = player.acceptMission(missionData);
+
+        expect(result).toBe(true);
+        expect(player.activeMission).toBeFalsy();
+        expect(player.credits).toBe(6000);
+        expect(player.hasCargo('Alien Artifact', 1)).toBe(false);
+    });
 });
 
 // ============================================

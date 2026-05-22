@@ -112,6 +112,10 @@ describe('Mission Type Constants', () => {
         expect(MISSION_TYPE.DELIVERY_ILLEGAL).toBe('Illegal delivery');
     });
 
+    test('should have special cargo sale type', () => {
+        expect(MISSION_TYPE.SPECIAL_CARGO_SALE).toBe('Special Cargo Sale');
+    });
+
     test('should have bounty types', () => {
         expect(MISSION_TYPE.BOUNTY_PIRATE).toBe('Pirate Bounty');
         expect(MISSION_TYPE.BOUNTY_ALIEN).toBe('Alien Bounty');
@@ -1421,6 +1425,36 @@ describe('MissionGenerator Mission Creation', () => {
         expect(mission.destinationSystem).toBeDefined();
         // Should have backstory generated
         expect(mission.description).toBeTruthy();
+    });
+
+    test('should create special cargo sale missions for non-standard cargo', () => {
+        player.cargo = [
+            { name: 'Alien Artifact', quantity: 1 },
+            { name: 'Rare Ore', quantity: 2 },
+            { name: 'Food', quantity: 4 }
+        ];
+
+        const missions = MissionGenerator.generateMissions(system, station, galaxy, player);
+        const specialSaleMissions = missions.filter(m => m.type === MISSION_TYPE.SPECIAL_CARGO_SALE);
+
+        expect(specialSaleMissions.length).toBe(2);
+
+        const cargoTypes = specialSaleMissions.map(m => m.cargoType);
+        expect(cargoTypes).toContain('Alien Artifact');
+        expect(cargoTypes).toContain('Rare Ore');
+    });
+
+    test('should not create special cargo sale missions for standard market cargo', () => {
+        player.cargo = [
+            { name: 'Food', quantity: 5 },
+            { name: 'Textiles', quantity: 3 },
+            { name: 'Narcotics', quantity: 1 }
+        ];
+
+        const missions = MissionGenerator.generateMissions(system, station, galaxy, player);
+        const specialSaleMissions = missions.filter(m => m.type === MISSION_TYPE.SPECIAL_CARGO_SALE);
+
+        expect(specialSaleMissions.length).toBe(0);
     });
 });
 

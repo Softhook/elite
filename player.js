@@ -518,6 +518,29 @@ class Player {
         MISSION_LOG(`   AFTER activate() call: Mission Status = ${this.activeMission?.status}`); // Check status immediately after
         // --- End Activation ---
 
+        // Special cargo sale missions complete immediately upon acceptance
+        if (this.activeMission?.type === MISSION_TYPE.SPECIAL_CARGO_SALE) {
+            const cargoType = this.activeMission.cargoType;
+            const cargoQuantity = this.activeMission.cargoQuantity;
+
+            if (!this.hasCargo(cargoType, cargoQuantity) || !this.removeCargo(cargoType, cargoQuantity)) {
+                if (typeof uiManager !== 'undefined') {
+                    uiManager.addMessage(`Cannot complete sale: missing ${cargoQuantity}t ${cargoType}`, [255, 100, 100]);
+                }
+                this.activeMission = null;
+                return false;
+            }
+
+            this.activeMission.complete(this);
+            this.activeMission = null;
+
+            if (soundManager?.playSound) {
+                soundManager.playSound('missionComplete');
+            }
+            if (typeof saveGame === 'function') saveGame();
+            return true;
+        }
+
         if (this.activeMission.status === 'Active') {
             MISSION_LOG(`--- Mission "${this.activeMission.title}" ACCEPTED & ACTIVATED successfully. ---`);
             if (typeof saveGame === 'function') saveGame();

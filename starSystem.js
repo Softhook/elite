@@ -4891,15 +4891,6 @@ class StarSystem {
                         uiManager.addMessage(`Collected ${addResult.added}t ${cargoItem.type}`);
                     }
 
-                    // Special: Alien Artifact grants credits on pickup
-                    try {
-                        if (cargoItem.type === 'Alien Artifact' && this.player && typeof this.player.addCredits === 'function') {
-                            this.player.addCredits(5000);
-                            if (typeof uiManager !== 'undefined') uiManager.addMessage('+5000cr (Alien Artifact)', 'magenta');
-                            console.log('Alien Artifact collected: awarded 5000 credits to player');
-                        }
-                    } catch (e) { console.error('Error granting Alien Artifact reward:', e); }
-
                     // If the full quantity wasn't added (partial add), update the cargo item's quantity
                     if (addResult.added < cargoItem.quantity) {
                         cargoItem.quantity -= addResult.added;
