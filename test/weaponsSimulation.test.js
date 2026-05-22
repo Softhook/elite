@@ -38,6 +38,68 @@ describe('Weapon Simulation Utilities', () => {
         expect(spreadResult.expectedDps).toBeGreaterThan(singleResult.expectedDps);
     });
 
+    test('simulation accounts for missile tracking and utility properties', () => {
+        const weakMissile = {
+            name: 'Weak Missile',
+            type: 'missile',
+            damage: 90,
+            fireRate: 5,
+            price: 1600,
+            speed: 4,
+            turnRate: 0.05,
+            lifespan: 180,
+            missileHull: 8
+        };
+        const guidedMissile = {
+            name: 'Guided Missile',
+            type: 'missile',
+            damage: 90,
+            fireRate: 5,
+            price: 1600,
+            speed: 7,
+            turnRate: 0.22,
+            lifespan: 400,
+            missileHull: 35
+        };
+
+        const weakResult = simulateWeaponPerformance(weakMissile, { targetSpeed: 6, engagementRange: 330 });
+        const guidedResult = simulateWeaponPerformance(guidedMissile, { targetSpeed: 6, engagementRange: 330 });
+
+        expect(guidedResult.typeUtilityMultiplier).toBeGreaterThan(weakResult.typeUtilityMultiplier);
+        expect(guidedResult.expectedDps).toBeGreaterThan(weakResult.expectedDps);
+    });
+
+    test('beam sustain multiplier penalizes overheating beam profiles', () => {
+        const efficientBeam = {
+            name: 'Efficient Beam',
+            type: 'beam',
+            damage: 5,
+            fireRate: 0.12,
+            price: 1500,
+            maxHeat: 1,
+            heatPerShot: 0.06,
+            heatDissipation: 0.5,
+            heatRecoveryFactor: 0.4
+        };
+        const hotBeam = {
+            name: 'Hot Beam',
+            type: 'beam',
+            damage: 5,
+            fireRate: 0.12,
+            price: 1500,
+            maxHeat: 1,
+            heatPerShot: 0.2,
+            heatDissipation: 0.2,
+            heatRecoveryFactor: 0.2
+        };
+
+        const efficientResult = simulateWeaponPerformance(efficientBeam, { targetSpeed: 4, engagementRange: 300 });
+        const hotResult = simulateWeaponPerformance(hotBeam, { targetSpeed: 4, engagementRange: 300 });
+
+        expect(efficientResult.beamSustainMultiplier).toBeGreaterThan(hotResult.beamSustainMultiplier);
+        expect(efficientResult.expectedDps).toBeGreaterThan(hotResult.expectedDps);
+    });
+
     test('ranking combines cooldown-adjusted damage and cost efficiency', () => {
         const weapons = [
             { name: 'Cheap', type: 'projectile', damage: 10, fireRate: 0.4, price: 700 },
@@ -64,6 +126,8 @@ describe('Weapon Simulation Utilities', () => {
         expect(overSuggestion).toBeDefined();
         expect(overSuggestion.recommendedPrice).toBeGreaterThan(1000);
         expect(overSuggestion.suggestedDamageMultiplier).toBeLessThan(1);
+        expect(overSuggestion.suggestedFireRateMultiplier).toBeGreaterThan(1);
+        expect(overSuggestion.recommendedFireRate).toBeGreaterThan(0.2);
     });
 
     test('rebalance pass updates representative weapon damage and price values', () => {

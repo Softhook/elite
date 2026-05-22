@@ -30,19 +30,19 @@ const WEAPON_UPGRADES = [
 
         name: "Sniper Rail",
         type: "projectile",
-        damage: 30,
+        damage: 29,
         color: [200, 200, 255], // Pale blue
-        fireRate: 0.7,
-        price: 3125,
+        fireRate: 0.75,
+        price: 3594,
         desc: "Electromagnetic accelerator that trades fire rate for devastating penetration power. Preferred by bounty hunters who value the one-shot kill."
     },
     {
         name: "Heavy Cannon",
         type: "projectile",
-        damage: 48,
+        damage: 45,
         color: [180, 80, 80], // Brownish
-        fireRate: 1.0,
-        price: 3750,
+        fireRate: 1.1,
+        price: 4313,
         desc: "Military-grade kinetic cannon delivering massive damage per shot. Gutamaya discontinued civilian sales, but black market units remain plentiful."
     },
 
@@ -54,12 +54,12 @@ const WEAPON_UPGRADES = [
         type: "beam",
         damage: 4,
         color: [0, 200, 255], // Cyan
-        fireRate: 0.15,
+        fireRate: 0.137,
         maxHeat: 1.0,
         heatPerShot: 0.12,
         heatDissipation: 0.35,
         heatRecoveryFactor: 0.3,
-        price: 1404,
+        price: 1193,
         desc: "Sustained coherent light projection derived from alien technology. Watch the heat gauge—overheating can be catastrophic."
     },
     {
@@ -67,12 +67,12 @@ const WEAPON_UPGRADES = [
         type: "beam",
         damage: 4,
         color: [255, 165, 0], // Orange
-        fireRate: 0.15,
+        fireRate: 0.14,
         maxHeat: 1.0,
         heatPerShot: 0.08, // More efficient than combat beam
         heatDissipation: 0.35,
         heatRecoveryFactor: 0.3,
-        price: 1840,
+        price: 1564,
         desc: "High-intensity industrial beam tuned for mineral extraction. Exceptionally effective against asteroids."
     },
     {
@@ -80,12 +80,12 @@ const WEAPON_UPGRADES = [
         type: "beam",
         damage: 3,
         color: [255, 255, 180], // Pale yellow
-        fireRate: 0.08,
+        fireRate: 0.074,
         maxHeat: 1.0,
         heatPerShot: 0.08,
         heatDissipation: 0.42,
         heatRecoveryFactor: 0.28,
-        price: 2587,
+        price: 2199,
         desc: "High-frequency micro-pulse beam reverse-engineered from Thargoid weapons. Optimized for sustained fire with minimal heat."
     },
     {
@@ -93,12 +93,12 @@ const WEAPON_UPGRADES = [
         type: "beam",
         damage: 6,
         color: [255, 0, 80], // Hot pink
-        fireRate: 0.25,
+        fireRate: 0.228,
         maxHeat: 1.1,
         heatPerShot: 0.18,
         heatDissipation: 0.32,
         heatRecoveryFactor: 0.35,
-        price: 1133,
+        price: 963,
         desc: "Specialized beam tuned to destabilize shield harmonics. Based on xeno-tech recovered from frontier conflicts."
     },
 
@@ -110,8 +110,8 @@ const WEAPON_UPGRADES = [
         type: "straight2",
         damage: 5,
         color: [0, 180, 255], // Blue
-        fireRate: 0.35,
-        price: 600,
+        fireRate: 0.333,
+        price: 510,
         desc: "Dual-barrel configuration providing improved hit probability. A Lakon Spaceways classic found on traders and fighters alike."
     },
     {
@@ -161,10 +161,10 @@ const WEAPON_UPGRADES = [
     {
         name: "Multi-Cannon",
         type: "spread3",
-        damage: 8,
+        damage: 7,
         color: [200, 200, 100], // Yellow
-        fireRate: 0.25,
-        price: 3000,
+        fireRate: 0.284,
+        price: 3450,
         desc: "Kinetic projectile weapon that bypasses shields effectively. Remlock manufactures these under exclusive military contract."
     },
     {
@@ -172,8 +172,8 @@ const WEAPON_UPGRADES = [
         type: "spread3",
         damage: 5,
         color: [255, 100, 100], // Pinkish
-        fireRate: 0.2,
-        price: 2500,
+        fireRate: 0.213,
+        price: 2875,
         desc: "Rapid-fire spread weapon designed for engaging multiple hostiles. Achilles Corporation's answer to pirate swarms."
     },
 
@@ -198,8 +198,8 @@ const WEAPON_UPGRADES = [
         type: "spread5",
         damage: 6,
         color: [255, 0, 0], // Red
-        fireRate: 0.3,
-        price: 2000,
+        fireRate: 0.322,
+        price: 2300,
         desc: "Five-way cone pattern maximizing hit probability. Devastatingly effective at close range."
     },
 
@@ -218,10 +218,10 @@ const WEAPON_UPGRADES = [
     {
         name: "Railgun Turret",
         type: "turret",
-        damage: 43,
+        damage: 40,
         color: [255, 80, 255], // Magenta
-        fireRate: 1.0,
-        price: 5625,
+        fireRate: 1.109,
+        price: 6469,
         desc: "Heavy auto-tracking railgun mounting. Expensive, but Vodel's precision engineering justifies every credit."
     },
 
@@ -241,10 +241,10 @@ const WEAPON_UPGRADES = [
     {
         name: "Jedi Force",
         type: "force",
-        damage: 89,
+        damage: 81,
         color: [255, 255, 0], // Purple
-        fireRate: 2,
-        price: 50750,
+        fireRate: 2.3,
+        price: 58363,
         maxRadius: 750,
         desc: "Advanced force projection technology with extended range and devastating power. Derived from Thargoid weapon systems."
     },
@@ -282,11 +282,11 @@ const WEAPON_UPGRADES = [
     {
         name: "Guardian Missile",
         type: "missile",
-        damage: 69,
+        damage: 73,
         color: [255, 150, 50], // Orange-ish
         projectileSize: 5,
-        fireRate: 4.0,         // Long reload
-        price: 1350,
+        fireRate: 3.741,         // Long reload
+        price: 1148,
         speed: 5,              // Missile projectile speed
         turnRate: 0.08,        // How sharply it can turn (radians per update step, adjust based on deltaTime scaling)
         lifespan: 240,         // Longer life to find target (frames or time units)
@@ -313,10 +313,10 @@ const WEAPON_UPGRADES = [
     {
         name: "Tangle Projector",
         type: "tangle",
-        damage: 6,           // low direct damage
+        damage: 7,           // low direct damage
         color: [20, 200, 100], // Green
-        fireRate: 0.5,       // Good firing rate (slightly faster)
-        price: 1650,
+        fireRate: 0.451,       // Good firing rate (slightly faster)
+        price: 1403,
         tangleDuration: 8.0, // Seconds target is affected by tangle
         dragMultiplier: 2.0, // Strong drag effect
         rotationBlockMultiplier: 0.1, // Severely reduces rotation speed
@@ -326,10 +326,10 @@ const WEAPON_UPGRADES = [
     {
         name: "Harpoon Launcher",
         type: "harpoon",
-        damage: 10,
+        damage: 11,
         color: [180, 220, 255], // pale cyan
-        fireRate: 1.5,
-        price: 3150,
+        fireRate: 1.338,
+        price: 2678,
         projectileSize: 6,
         speed: 30,
         desc: "Magnetic grapple that creates a physical tether between ships. Derived from deep-space salvage equipment."
@@ -337,10 +337,10 @@ const WEAPON_UPGRADES = [
     {
         name: "Heavy Tangle",
         type: "tangle",
-        damage: 12,           //Direct damage
+        damage: 13,           //Direct damage
         color: [30, 240, 120], // Brighter green
-        fireRate: 1.0,       // Slower firing rate
-        price: 1650,
+        fireRate: 0.933,       // Slower firing rate
+        price: 1403,
         tangleDuration: 15.0, // Longer tangle effect
         dragMultiplier: 5.0, // Nearly stops ships completely
         rotationBlockMultiplier: 0.01, // Almost completely blocks rotation
@@ -378,13 +378,13 @@ const WEAPON_UPGRADES = [
     {
         name: "Heavy Mine",
         type: "mine",
-        damage: 240,
+        damage: 218,
         blastRadius: 250,
         triggerRadius: 150,
         mineHealth: 60,
         color: [200, 0, 0], // Dark red
-        fireRate: 5.0,
-        price: 5625,
+        fireRate: 5.75,
+        price: 6469,
         desc: "Heavily armored high-yield mine resistant to point defense fire. One well-placed unit can end a pursuit."
     },
 
@@ -529,6 +529,21 @@ const DAMAGE_ADJUSTMENT_SCALE = 0.3;
 const VALUE_SCORE_SCALE = 1000;
 const MIN_BALANCE_TOLERANCE = 0.05;
 const DEFAULT_BALANCE_TOLERANCE = 0.22;
+const BASE_FIRE_RATE_RECOMMENDATION = 0.5;
+const MIN_FIRE_RATE_SHIFT = -0.18;
+const MAX_FIRE_RATE_SHIFT = 0.25;
+const MIN_RECOMMENDED_FIRE_RATE = 0.05;
+
+function _clampNumber(value, min, max) {
+    if (!Number.isFinite(value)) return min;
+    return Math.min(max, Math.max(min, value));
+}
+
+function _getWeaponBaseType(weaponType) {
+    if (typeof weaponType !== 'string') return '';
+    if (weaponType.startsWith('spread') || weaponType.startsWith('straight')) return 'projectile';
+    return weaponType;
+}
 
 function getWeaponProjectileCount(weaponType) {
     const defaultProjectileCount = 1;
@@ -552,6 +567,69 @@ function _getSpreadCoverageMultiplier(weaponType, projectileCount, targetSpeed) 
 
     if (weaponType.startsWith('straight')) {
         return 1 + Math.min(MAX_STRAIGHT_COVERAGE_BONUS, (projectileCount - 1) * STRAIGHT_COVERAGE_BONUS_SCALE);
+    }
+
+    return 1;
+}
+
+function _getBeamSustainMultiplier(weapon, baseShotsPerSecond) {
+    if (_getWeaponBaseType(weapon?.type) !== 'beam') return 1;
+
+    const maxHeat = Number.isFinite(weapon.maxHeat) && weapon.maxHeat > 0 ? weapon.maxHeat : 1;
+    const heatPerShot = Number.isFinite(weapon.heatPerShot) && weapon.heatPerShot > 0 ? weapon.heatPerShot : 0;
+    const heatDissipation = Number.isFinite(weapon.heatDissipation) && weapon.heatDissipation > 0 ? weapon.heatDissipation : 0;
+    const heatRecoveryFactor = Number.isFinite(weapon.heatRecoveryFactor) ? weapon.heatRecoveryFactor : 0.3;
+    if (heatPerShot <= 0 || baseShotsPerSecond <= 0) return 1;
+
+    const heatAddedPerSecond = heatPerShot * baseShotsPerSecond;
+    if (heatAddedPerSecond <= heatDissipation) return 1;
+
+    const sustainableShotsPerSecond = heatDissipation / heatPerShot;
+    const sustainRatio = _clampNumber(sustainableShotsPerSecond / baseShotsPerSecond, 0.1, 1);
+    const recoveryModifier = _clampNumber(0.85 + heatRecoveryFactor * 0.3, 0.8, 1.15);
+    const heatCapacityModifier = _clampNumber(0.8 + maxHeat * 0.25, 0.8, 1.2);
+    return _clampNumber(sustainRatio * recoveryModifier * heatCapacityModifier, 0.1, 1);
+}
+
+function _getTypeUtilityMultiplier(weapon, options = {}) {
+    const weaponType = _getWeaponBaseType(weapon?.type || '');
+
+    if (weaponType === 'turret') {
+        return 1.18;
+    }
+
+    if (weaponType === 'force') {
+        const radiusNorm = _clampNumber((Number(weapon?.maxRadius) || 300) / 350, 0.6, 2);
+        return _clampNumber(0.9 + radiusNorm * 0.25, 0.85, 1.4);
+    }
+
+    if (weaponType === 'missile') {
+        const targetSpeed = _clampNumber(Number(options.targetSpeed) || 4, 0, 20);
+        const turnRateNorm = _clampNumber((Number(weapon?.turnRate) || DEFAULT_WEAPON_CONFIG.MISSILE_TURN_RATE) / 0.15, 0.45, 2.2);
+        const lifespanNorm = _clampNumber((Number(weapon?.lifespan) || DEFAULT_WEAPON_CONFIG.MISSILE_LIFESPAN) / 240, 0.6, 2.2);
+        const hullNorm = _clampNumber((Number(weapon?.missileHull) || 20) / 20, 0.6, 2.5);
+        const speed = Number(weapon?.speed) || DEFAULT_WEAPON_CONFIG.MISSILE_SPEED;
+        const speedPenalty = _clampNumber(Math.max(0, targetSpeed - speed) * 0.05, 0, 0.35);
+        return _clampNumber((0.72 + turnRateNorm * 0.2 + lifespanNorm * 0.08 + hullNorm * 0.05) * (1 - speedPenalty), 0.55, 1.45);
+    }
+
+    if (weaponType === 'mine') {
+        const blastNorm = _clampNumber((Number(weapon?.blastRadius) || 140) / 160, 0.5, 2.2);
+        const triggerNorm = _clampNumber((Number(weapon?.triggerRadius) || 70) / 90, 0.5, 2.2);
+        const healthNorm = _clampNumber((Number(weapon?.mineHealth) || 25) / 35, 0.5, 2.2);
+        return _clampNumber(0.72 + blastNorm * 0.15 + triggerNorm * 0.13 + healthNorm * 0.12, 0.6, 1.5);
+    }
+
+    if (weaponType === 'tangle') {
+        const durationNorm = _clampNumber((Number(weapon?.tangleDuration) || 8) / 10, 0.4, 2.5);
+        const dragNorm = _clampNumber((Number(weapon?.dragMultiplier) || 2) / 2, 0.5, 3.2);
+        const rotationLockNorm = _clampNumber(0.1 / Math.max(0.01, Number(weapon?.rotationBlockMultiplier) || 0.1), 0.5, 3.2);
+        return _clampNumber(0.5 + durationNorm * 0.16 + dragNorm * 0.12 + rotationLockNorm * 0.1, 0.55, 1.8);
+    }
+
+    if (weaponType === 'harpoon') {
+        const speedNorm = _clampNumber((Number(weapon?.speed) || DEFAULT_WEAPON_CONFIG.HARPOON_SPEED) / 24, 0.6, 2);
+        return _clampNumber(0.85 + speedNorm * 0.18, 0.75, 1.25);
     }
 
     return 1;
@@ -588,8 +666,11 @@ function simulateWeaponPerformance(weapon, options = {}) {
 
     const spreadCoverage = _getSpreadCoverageMultiplier(weapon.type || '', projectileCount, targetSpeed);
     const expectedHitsPerShot = Math.min(projectileCount, Math.max(MIN_HIT_CHANCE, hitChance * spreadCoverage));
-    const shotsPerSecond = Number.isFinite(fireRate) ? (1 / fireRate) : 0;
-    const expectedDps = damage * shotsPerSecond * expectedHitsPerShot;
+    const baseShotsPerSecond = Number.isFinite(fireRate) ? (1 / fireRate) : 0;
+    const beamSustainMultiplier = _getBeamSustainMultiplier(weapon, baseShotsPerSecond);
+    const shotsPerSecond = baseShotsPerSecond * beamSustainMultiplier;
+    const typeUtilityMultiplier = _getTypeUtilityMultiplier(weapon, options);
+    const expectedDps = damage * shotsPerSecond * expectedHitsPerShot * typeUtilityMultiplier;
     const valueScore = expectedDps / price * VALUE_SCORE_SCALE;
 
     return {
@@ -598,7 +679,9 @@ function simulateWeaponPerformance(weapon, options = {}) {
         projectileCount,
         valueScore,
         hitChance,
-        shotsPerSecond
+        shotsPerSecond,
+        typeUtilityMultiplier,
+        beamSustainMultiplier
     };
 }
 
@@ -634,13 +717,26 @@ function suggestWeaponBalanceChanges(weapons, options = {}) {
             const damageAdjustment = scoreDeltaRatio > 0
                 ? Math.max(MIN_DAMAGE_MULTIPLIER, 1 - Math.min(MAX_DAMAGE_ADJUSTMENT, scoreDeltaRatio * DAMAGE_ADJUSTMENT_SCALE))
                 : Math.min(MAX_DAMAGE_MULTIPLIER, 1 + Math.min(MAX_DAMAGE_ADJUSTMENT, Math.abs(scoreDeltaRatio) * DAMAGE_ADJUSTMENT_SCALE));
+            const fireRateShift = scoreDeltaRatio > 0
+                ? Math.min(MAX_FIRE_RATE_SHIFT, scoreDeltaRatio * 0.35)
+                : -Math.min(Math.abs(MIN_FIRE_RATE_SHIFT), Math.abs(scoreDeltaRatio) * 0.25);
+            const hasFireRate = Number.isFinite(entry.weapon.fireRate) && entry.weapon.fireRate > 0;
+            const currentFireRate = hasFireRate ? entry.weapon.fireRate : BASE_FIRE_RATE_RECOMMENDATION;
+            const suggestedFireRateMultiplier = hasFireRate
+                ? _clampNumber(1 + fireRateShift, 1 + MIN_FIRE_RATE_SHIFT, 1 + MAX_FIRE_RATE_SHIFT)
+                : 1;
+            const recommendedFireRate = hasFireRate
+                ? Math.max(MIN_RECOMMENDED_FIRE_RATE, Number((currentFireRate * suggestedFireRateMultiplier).toFixed(3)))
+                : null;
 
             return {
                 name: entry.weapon.name,
                 rank: entry.rank,
                 scoreDeltaRatio,
                 recommendedPrice,
-                suggestedDamageMultiplier: damageAdjustment
+                suggestedDamageMultiplier: damageAdjustment,
+                suggestedFireRateMultiplier,
+                recommendedFireRate
             };
         })
         .filter(Boolean);
