@@ -498,6 +498,32 @@ const WEAPON_UPGRADES = [
 ];
 
 const WEAPON_MULTI_SHOT_TYPE_REGEX = /^(straight|spread)(\d+)$/;
+const DEFAULT_SIM_AIM_QUALITY = 0.78;
+const BASE_TARGET_RADIUS = 18;
+const RANGE_PENALTY_DIVISOR = 1200;
+const MAX_RANGE_PENALTY = 0.75;
+const SPEED_PENALTY_DIVISOR = 18;
+const MAX_SPEED_PENALTY = 0.7;
+const MAX_SIZE_BONUS = 0.35;
+const MIN_SIZE_BONUS = -0.25;
+const SIZE_BONUS_DIVISOR = 100;
+const MIN_HIT_CHANCE = 0.05;
+const MAX_HIT_CHANCE = 0.99;
+const MAX_SPREAD_PELLET_BONUS = 0.7;
+const SPREAD_PELLET_BONUS_SCALE = 0.18;
+const MAX_SPREAD_MOVEMENT_BONUS = 0.45;
+const SPREAD_MOVEMENT_BONUS_SCALE = 0.045;
+const MAX_STRAIGHT_COVERAGE_BONUS = 0.3;
+const STRAIGHT_COVERAGE_BONUS_SCALE = 0.08;
+const DPS_RANK_WEIGHT = 0.75;
+const VALUE_RANK_WEIGHT = 0.25;
+const MIN_PRICE_SHIFT = -0.25;
+const MAX_PRICE_SHIFT = 0.25;
+const MIN_PRICE_RECOMMENDATION = 100;
+const MIN_DAMAGE_MULTIPLIER = 0.8;
+const MAX_DAMAGE_MULTIPLIER = 1.2;
+const MAX_DAMAGE_ADJUSTMENT = 0.2;
+const DAMAGE_ADJUSTMENT_SCALE = 0.3;
 
 function getWeaponProjectileCount(weaponType) {
     if (typeof weaponType !== 'string') return 1;
@@ -505,7 +531,7 @@ function getWeaponProjectileCount(weaponType) {
     if (!match) return 1;
 
     const parsedCount = parseInt(match[2], 10);
-    return Number.isFinite(parsedCount) && parsedCount > 0 ? parsedCount : 1;
+    return !Number.isNaN(parsedCount) && parsedCount > 0 ? parsedCount : 1;
 }
 
 function _getSpreadCoverageMultiplier(weaponType, projectileCount, targetSpeed) {
@@ -513,13 +539,13 @@ function _getSpreadCoverageMultiplier(weaponType, projectileCount, targetSpeed) 
 
     const clampedSpeed = Math.max(0, Number.isFinite(targetSpeed) ? targetSpeed : 0);
     if (weaponType.startsWith('spread')) {
-        const pelletCoverageBonus = 1 + Math.min(0.7, (projectileCount - 1) * 0.18);
-        const movementCoverageBonus = 1 + Math.min(0.45, clampedSpeed * 0.045);
+        const pelletCoverageBonus = 1 + Math.min(MAX_SPREAD_PELLET_BONUS, (projectileCount - 1) * SPREAD_PELLET_BONUS_SCALE);
+        const movementCoverageBonus = 1 + Math.min(MAX_SPREAD_MOVEMENT_BONUS, clampedSpeed * SPREAD_MOVEMENT_BONUS_SCALE);
         return pelletCoverageBonus * movementCoverageBonus;
     }
 
     if (weaponType.startsWith('straight')) {
-        return 1 + Math.min(0.3, (projectileCount - 1) * 0.08);
+        return 1 + Math.min(MAX_STRAIGHT_COVERAGE_BONUS, (projectileCount - 1) * STRAIGHT_COVERAGE_BONUS_SCALE);
     }
 
     return 1;
@@ -544,18 +570,18 @@ function simulateWeaponPerformance(weapon, options = {}) {
     const fireRate = Number.isFinite(weapon.fireRate) && weapon.fireRate > 0 ? weapon.fireRate : Infinity;
     const price = Number.isFinite(weapon.price) && weapon.price > 0 ? weapon.price : 1;
     const targetSpeed = Number.isFinite(options.targetSpeed) ? options.targetSpeed : 4;
-    const targetRadius = Number.isFinite(options.targetRadius) ? options.targetRadius : 18;
+    const targetRadius = Number.isFinite(options.targetRadius) ? options.targetRadius : BASE_TARGET_RADIUS;
     const engagementRange = Number.isFinite(options.engagementRange) ? options.engagementRange : 320;
-    const aimQuality = Number.isFinite(options.aimQuality) ? Math.min(1, Math.max(0.05, options.aimQuality)) : 0.78;
+    const aimQuality = Number.isFinite(options.aimQuality) ? Math.min(1, Math.max(MIN_HIT_CHANCE, options.aimQuality)) : DEFAULT_SIM_AIM_QUALITY;
 
     const projectileCount = getWeaponProjectileCount(weapon.type);
-    const rangePenalty = Math.min(0.75, Math.max(0, engagementRange) / 1200);
-    const speedPenalty = Math.min(0.7, Math.max(0, targetSpeed) / 18);
-    const sizeBonus = Math.min(0.35, Math.max(-0.25, (targetRadius - 18) / 100));
-    const hitChance = Math.min(0.99, Math.max(0.05, (aimQuality + sizeBonus) * (1 - rangePenalty) * (1 - speedPenalty)));
+    const rangePenalty = Math.min(MAX_RANGE_PENALTY, Math.max(0, engagementRange) / RANGE_PENALTY_DIVISOR);
+    const speedPenalty = Math.min(MAX_SPEED_PENALTY, Math.max(0, targetSpeed) / SPEED_PENALTY_DIVISOR);
+    const sizeBonus = Math.min(MAX_SIZE_BONUS, Math.max(MIN_SIZE_BONUS, (targetRadius - BASE_TARGET_RADIUS) / SIZE_BONUS_DIVISOR));
+    const hitChance = Math.min(MAX_HIT_CHANCE, Math.max(MIN_HIT_CHANCE, (aimQuality + sizeBonus) * (1 - rangePenalty) * (1 - speedPenalty)));
 
     const spreadCoverage = _getSpreadCoverageMultiplier(weapon.type || '', projectileCount, targetSpeed);
-    const expectedHitsPerShot = Math.min(projectileCount, Math.max(0.05, hitChance * spreadCoverage));
+    const expectedHitsPerShot = Math.min(projectileCount, Math.max(MIN_HIT_CHANCE, hitChance * spreadCoverage));
     const shotsPerSecond = Number.isFinite(fireRate) ? (1 / fireRate) : 0;
     const expectedDps = damage * shotsPerSecond * expectedHitsPerShot;
     const valueScore = expectedDps / price * 1000;
@@ -576,7 +602,7 @@ function rankWeaponsBySimulation(weapons, options = {}) {
     return list
         .map((weapon) => {
             const simulation = simulateWeaponPerformance(weapon, options);
-            const score = simulation.expectedDps * 0.75 + simulation.valueScore * 0.25;
+            const score = simulation.expectedDps * DPS_RANK_WEIGHT + simulation.valueScore * VALUE_RANK_WEIGHT;
             return { weapon, simulation, score };
         })
         .sort((a, b) => b.score - a.score)
@@ -597,11 +623,11 @@ function suggestWeaponBalanceChanges(weapons, options = {}) {
             const scoreDeltaRatio = averageScore > 0 ? ((entry.score - averageScore) / averageScore) : 0;
             if (Math.abs(scoreDeltaRatio) <= tolerance) return null;
 
-            const priceShift = Math.max(-0.25, Math.min(0.25, scoreDeltaRatio));
-            const recommendedPrice = Math.max(100, Math.round(entry.weapon.price * (1 + priceShift)));
+            const priceShift = Math.max(MIN_PRICE_SHIFT, Math.min(MAX_PRICE_SHIFT, scoreDeltaRatio));
+            const recommendedPrice = Math.max(MIN_PRICE_RECOMMENDATION, Math.round(entry.weapon.price * (1 + priceShift)));
             const damageAdjustment = scoreDeltaRatio > 0
-                ? Math.max(0.8, 1 - Math.min(0.2, scoreDeltaRatio * 0.3))
-                : Math.min(1.2, 1 + Math.min(0.2, Math.abs(scoreDeltaRatio) * 0.3));
+                ? Math.max(MIN_DAMAGE_MULTIPLIER, 1 - Math.min(MAX_DAMAGE_ADJUSTMENT, scoreDeltaRatio * DAMAGE_ADJUSTMENT_SCALE))
+                : Math.min(MAX_DAMAGE_MULTIPLIER, 1 + Math.min(MAX_DAMAGE_ADJUSTMENT, Math.abs(scoreDeltaRatio) * DAMAGE_ADJUSTMENT_SCALE));
 
             return {
                 name: entry.weapon.name,
