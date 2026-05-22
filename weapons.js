@@ -497,12 +497,144 @@ const WEAPON_UPGRADES = [
 
 ];
 
+const WEAPON_MULTI_SHOT_TYPE_REGEX = /^(straight|spread)(\d+)$/;
+
+function getWeaponProjectileCount(weaponType) {
+    if (typeof weaponType !== 'string') return 1;
+    const match = WEAPON_MULTI_SHOT_TYPE_REGEX.exec(weaponType);
+    if (!match) return 1;
+
+    const parsedCount = parseInt(match[2], 10);
+    return Number.isFinite(parsedCount) && parsedCount > 0 ? parsedCount : 1;
+}
+
+function _getSpreadCoverageMultiplier(weaponType, projectileCount, targetSpeed) {
+    if (projectileCount <= 1) return 1;
+
+    const clampedSpeed = Math.max(0, Number.isFinite(targetSpeed) ? targetSpeed : 0);
+    if (weaponType.startsWith('spread')) {
+        const pelletCoverageBonus = 1 + Math.min(0.7, (projectileCount - 1) * 0.18);
+        const movementCoverageBonus = 1 + Math.min(0.45, clampedSpeed * 0.045);
+        return pelletCoverageBonus * movementCoverageBonus;
+    }
+
+    if (weaponType.startsWith('straight')) {
+        return 1 + Math.min(0.3, (projectileCount - 1) * 0.08);
+    }
+
+    return 1;
+}
+
+/**
+ * Deterministic weapon simulation helper for balancing/ranking.
+ * Models cooldown (fireRate), projectile count, spread utility against moving targets, and cost.
+ */
+function simulateWeaponPerformance(weapon, options = {}) {
+    if (!weapon || typeof weapon !== 'object') {
+        return {
+            expectedDps: 0,
+            expectedHitsPerShot: 0,
+            projectileCount: 1,
+            valueScore: 0,
+            hitChance: 0
+        };
+    }
+
+    const damage = Number.isFinite(weapon.damage) ? weapon.damage : 0;
+    const fireRate = Number.isFinite(weapon.fireRate) && weapon.fireRate > 0 ? weapon.fireRate : Infinity;
+    const price = Number.isFinite(weapon.price) && weapon.price > 0 ? weapon.price : 1;
+    const targetSpeed = Number.isFinite(options.targetSpeed) ? options.targetSpeed : 4;
+    const targetRadius = Number.isFinite(options.targetRadius) ? options.targetRadius : 18;
+    const engagementRange = Number.isFinite(options.engagementRange) ? options.engagementRange : 320;
+    const aimQuality = Number.isFinite(options.aimQuality) ? Math.min(1, Math.max(0.05, options.aimQuality)) : 0.78;
+
+    const projectileCount = getWeaponProjectileCount(weapon.type);
+    const rangePenalty = Math.min(0.75, Math.max(0, engagementRange) / 1200);
+    const speedPenalty = Math.min(0.7, Math.max(0, targetSpeed) / 18);
+    const sizeBonus = Math.min(0.35, Math.max(-0.25, (targetRadius - 18) / 100));
+    const hitChance = Math.min(0.99, Math.max(0.05, (aimQuality + sizeBonus) * (1 - rangePenalty) * (1 - speedPenalty)));
+
+    const spreadCoverage = _getSpreadCoverageMultiplier(weapon.type || '', projectileCount, targetSpeed);
+    const expectedHitsPerShot = Math.min(projectileCount, Math.max(0.05, hitChance * spreadCoverage));
+    const shotsPerSecond = Number.isFinite(fireRate) ? (1 / fireRate) : 0;
+    const expectedDps = damage * shotsPerSecond * expectedHitsPerShot;
+    const valueScore = expectedDps / price * 1000;
+
+    return {
+        expectedDps,
+        expectedHitsPerShot,
+        projectileCount,
+        valueScore,
+        hitChance,
+        shotsPerSecond
+    };
+}
+
+function rankWeaponsBySimulation(weapons, options = {}) {
+    const list = Array.isArray(weapons) ? weapons : [];
+
+    return list
+        .map((weapon) => {
+            const simulation = simulateWeaponPerformance(weapon, options);
+            const score = simulation.expectedDps * 0.75 + simulation.valueScore * 0.25;
+            return { weapon, simulation, score };
+        })
+        .sort((a, b) => b.score - a.score)
+        .map((entry, index) => ({ ...entry, rank: index + 1 }));
+}
+
+function suggestWeaponBalanceChanges(weapons, options = {}) {
+    const ranked = rankWeaponsBySimulation(weapons, options);
+    if (ranked.length === 0) return [];
+
+    const averageScore = ranked.reduce((sum, entry) => sum + entry.score, 0) / ranked.length;
+    const tolerance = Number.isFinite(options.tolerance) ? Math.max(0.05, options.tolerance) : 0.22;
+
+    return ranked
+        .map((entry) => {
+            if (!entry.weapon || !Number.isFinite(entry.weapon.price) || entry.weapon.price <= 0) return null;
+
+            const scoreDeltaRatio = averageScore > 0 ? ((entry.score - averageScore) / averageScore) : 0;
+            if (Math.abs(scoreDeltaRatio) <= tolerance) return null;
+
+            const priceShift = Math.max(-0.25, Math.min(0.25, scoreDeltaRatio));
+            const recommendedPrice = Math.max(100, Math.round(entry.weapon.price * (1 + priceShift)));
+            const damageAdjustment = scoreDeltaRatio > 0
+                ? Math.max(0.8, 1 - Math.min(0.2, scoreDeltaRatio * 0.3))
+                : Math.min(1.2, 1 + Math.min(0.2, Math.abs(scoreDeltaRatio) * 0.3));
+
+            return {
+                name: entry.weapon.name,
+                rank: entry.rank,
+                scoreDeltaRatio,
+                recommendedPrice,
+                suggestedDamageMultiplier: damageAdjustment
+            };
+        })
+        .filter(Boolean);
+}
+
 // Export for module systems and browsers
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { WEAPON_UPGRADES, DEFAULT_WEAPON_CONFIG };
+    module.exports = {
+        WEAPON_UPGRADES,
+        DEFAULT_WEAPON_CONFIG,
+        getWeaponProjectileCount,
+        simulateWeaponPerformance,
+        rankWeaponsBySimulation,
+        suggestWeaponBalanceChanges
+    };
     global.WEAPON_UPGRADES = WEAPON_UPGRADES;
     global.DEFAULT_WEAPON_CONFIG = DEFAULT_WEAPON_CONFIG;
+    global.getWeaponProjectileCount = getWeaponProjectileCount;
+    global.simulateWeaponPerformance = simulateWeaponPerformance;
+    global.rankWeaponsBySimulation = rankWeaponsBySimulation;
+    global.suggestWeaponBalanceChanges = suggestWeaponBalanceChanges;
 } else if (typeof window !== 'undefined') {
     window.WEAPON_UPGRADES = WEAPON_UPGRADES;
     window.DEFAULT_WEAPON_CONFIG = DEFAULT_WEAPON_CONFIG;
+    window.getWeaponProjectileCount = getWeaponProjectileCount;
+    window.simulateWeaponPerformance = simulateWeaponPerformance;
+    window.rankWeaponsBySimulation = rankWeaponsBySimulation;
+    window.suggestWeaponBalanceChanges = suggestWeaponBalanceChanges;
 }
