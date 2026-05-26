@@ -37,7 +37,7 @@
       "**/test/**/*.test.js"
     ],
     "setupFilesAfterEnv": [
-      "./test/jest.setup.js"
+      "<rootDir>/test/jest.setup.js"
     ],
     "verbose": true,
     "collectCoverageFrom": [
