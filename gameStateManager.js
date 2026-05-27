@@ -116,6 +116,7 @@ class GameStateManager {
         this.postLoadFadeOutMs = 900; // fade-out duration in ms
         this.postLoadFadeInMs = 700;  // fade-in duration in ms
         this.pendingPostLoadState = null;
+        this.postLoadFadeJustStarted = false;
 
         // Docked entity tracking
         this.currentDockedStation = null;    // Tracks which station player is docked at (main or secret)
@@ -789,8 +790,13 @@ class GameStateManager {
                     GS_LOG(`Post-load transition: FADE_OUT -> setState(${target})`);
                     this.setState(target);
                     this.postLoadFadeState = "FADE_IN";
+                    this.postLoadFadeJustStarted = true;
                 }
             } else if (this.postLoadFadeState === "FADE_IN") {
+                if (this.postLoadFadeJustStarted) {
+                    this.postLoadFadeJustStarted = false;
+                    return;
+                }
                 const dec = (deltaTime || 16) / Math.max(1, this.postLoadFadeInMs);
                 this.postLoadFadeOpacity = Math.max(0, this.postLoadFadeOpacity - dec);
 

@@ -713,7 +713,7 @@ class StarSystem {
 
     /**
      * Dynamically adjusts faction influence in the system and triggers news if threshold met.
-     * After adjusting the target faction, re-normalizes all factions so they sum to 1.0.
+     * After adjusting the target faction, re-normalizes all factions so they sum to exactly 1.0.
      * @param {string} factionName - Name of the faction ('Imperial', 'Separatist', 'Military')
      * @param {number} amount - Amount to adjust (positive or negative)
      * @param {boolean} [silent=false] - If true, suppress news generation (used for background shifts)
@@ -731,22 +731,35 @@ class StarSystem {
 
         this.factionInfluence[factionName] = newInfluence;
 
-        // Re-normalize other factions so the total stays at 1.0
+        // Re-normalize other factions so the total stays at exactly 1.0
         const otherFactions = Object.keys(this.factionInfluence).filter(f => f !== factionName);
         const otherTotal = otherFactions.reduce((sum, f) => sum + this.factionInfluence[f], 0);
         const remainingBudget = Math.max(0, 1.0 - newInfluence);
 
         if (otherTotal > 0) {
             // Scale other factions proportionally to fill the remaining budget
-            for (const f of otherFactions) {
-                this.factionInfluence[f] = Math.round((this.factionInfluence[f] / otherTotal) * remainingBudget * 100) / 100;
+            let allocated = 0;
+            for (let i = 0; i < otherFactions.length - 1; i++) {
+                const f = otherFactions[i];
+                const val = Math.round((this.factionInfluence[f] / otherTotal) * remainingBudget * 100) / 100;
+                this.factionInfluence[f] = val;
+                allocated += val;
+            }
+            if (otherFactions.length > 0) {
+                const finalFaction = otherFactions[otherFactions.length - 1];
+                this.factionInfluence[finalFaction] = Math.max(0, Math.round((remainingBudget - allocated) * 100) / 100);
             }
         } else if (otherFactions.length > 0) {
             // All other factions are at 0; distribute remaining budget equally
+            let allocated = 0;
             const share = Math.round((remainingBudget / otherFactions.length) * 100) / 100;
-            for (const f of otherFactions) {
+            for (let i = 0; i < otherFactions.length - 1; i++) {
+                const f = otherFactions[i];
                 this.factionInfluence[f] = share;
+                allocated += share;
             }
+            const finalFaction = otherFactions[otherFactions.length - 1];
+            this.factionInfluence[finalFaction] = Math.max(0, Math.round((remainingBudget - allocated) * 100) / 100);
         }
 
         let diff = Math.abs(newInfluence - oldInfluence);
@@ -757,6 +770,102 @@ class StarSystem {
             const direction = amount > 0 ? 'increase' : 'decrease';
             if (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager && typeof GameGlobals.newsManager.addFactionInfluenceNews === 'function') {
                 GameGlobals.newsManager.addFactionInfluenceNews(this.name, factionName, direction, newInfluence);
+            }
+        }
+    }
+
+    /**
+     * Batch adjusts faction influence values and normalizes them once.
+     * @param {Object} adjustments - Map of faction keys ('Imperial', 'Separatist', 'Military') to delta amounts
+     * @param {boolean} [silent=false] - If true, suppress news alerts
+     */
+    adjustFactionInfluenceBatch(adjustments, silent = false) {
+        if (!this.factionInfluence) return;
+
+        // Apply all deltas first and clamp values temporarily to [0, 1]
+        const oldInfluences = { ...this.factionInfluence };
+        const updatedFactions = [];
+
+        for (const [factionName, amount] of Object.entries(adjustments)) {
+            if (this.factionInfluence[factionName] !== undefined) {
+                let val = this.factionInfluence[factionName] + amount;
+                this.factionInfluence[factionName] = Math.max(0, Math.min(1.0, val));
+                updatedFactions.push(factionName);
+            }
+        }
+
+        // Renormalize so the total is exactly 1.0.
+        const allFactions = Object.keys(this.factionInfluence);
+        const nonUpdatedFactions = allFactions.filter(f => !updatedFactions.includes(f));
+
+        const updatedSum = updatedFactions.reduce((sum, f) => sum + this.factionInfluence[f], 0);
+        const remainingBudget = Math.max(0, 1.0 - updatedSum);
+
+        if (nonUpdatedFactions.length > 0) {
+            const nonUpdatedTotal = nonUpdatedFactions.reduce((sum, f) => sum + this.factionInfluence[f], 0);
+            if (nonUpdatedTotal > 0) {
+                // Distribute remainingBudget proportionally among non-updated factions
+                let allocated = 0;
+                for (let i = 0; i < nonUpdatedFactions.length - 1; i++) {
+                    const f = nonUpdatedFactions[i];
+                    const val = Math.round((this.factionInfluence[f] / nonUpdatedTotal) * remainingBudget * 100) / 100;
+                    this.factionInfluence[f] = val;
+                    allocated += val;
+                }
+                const finalF = nonUpdatedFactions[nonUpdatedFactions.length - 1];
+                this.factionInfluence[finalF] = Math.max(0, Math.round((remainingBudget - allocated) * 100) / 100);
+            } else {
+                // Non-updated factions are 0; distribute remaining budget equally
+                let allocated = 0;
+                const share = Math.round((remainingBudget / nonUpdatedFactions.length) * 100) / 100;
+                for (let i = 0; i < nonUpdatedFactions.length - 1; i++) {
+                    const f = nonUpdatedFactions[i];
+                    this.factionInfluence[f] = share;
+                    allocated += share;
+                }
+                const finalF = nonUpdatedFactions[nonUpdatedFactions.length - 1];
+                this.factionInfluence[finalF] = Math.max(0, Math.round((remainingBudget - allocated) * 100) / 100);
+            }
+        } else {
+            // All factions were updated. Scale all of them so they sum to 1.0.
+            const totalSum = allFactions.reduce((sum, f) => sum + this.factionInfluence[f], 0);
+            if (totalSum > 0) {
+                let allocated = 0;
+                for (let i = 0; i < allFactions.length - 1; i++) {
+                    const f = allFactions[i];
+                    const val = Math.round((this.factionInfluence[f] / totalSum) * 100) / 100;
+                    this.factionInfluence[f] = val;
+                    allocated += val;
+                }
+                const finalF = allFactions[allFactions.length - 1];
+                this.factionInfluence[finalF] = Math.max(0, Math.round((1.0 - allocated) * 100) / 100);
+            } else {
+                // Fallback: distribute equally
+                const share = Math.round((1.0 / allFactions.length) * 100) / 100;
+                let allocated = 0;
+                for (let i = 0; i < allFactions.length - 1; i++) {
+                    const f = allFactions[i];
+                    this.factionInfluence[f] = share;
+                    allocated += share;
+                }
+                const finalF = allFactions[allFactions.length - 1];
+                this.factionInfluence[finalF] = Math.max(0, Math.round((1.0 - allocated) * 100) / 100);
+            }
+        }
+
+        // Trigger news for any significant shifts (>= 0.05 shift) in the primary updated faction
+        if (!silent) {
+            for (const factionName of updatedFactions) {
+                let diff = Math.abs(this.factionInfluence[factionName] - oldInfluences[factionName]);
+                diff = Math.round(diff * 100) / 100;
+                if (diff >= 0.05) {
+                    const amount = adjustments[factionName];
+                    const direction = amount > 0 ? 'increase' : 'decrease';
+                    if (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager && typeof GameGlobals.newsManager.addFactionInfluenceNews === 'function') {
+                        GameGlobals.newsManager.addFactionInfluenceNews(this.name, factionName, direction, this.factionInfluence[factionName]);
+                    }
+                    break; // Just trigger one news alert per batch to avoid spam
+                }
             }
         }
     }
@@ -812,21 +921,26 @@ class StarSystem {
         this.combatStats.total++;
 
         // Adjust faction influence based on destroyed ship
+        const deltas = {};
         if (faction === 'IMPERIAL') {
-            this.adjustFactionInfluence('Imperial', -0.05);
-            this.adjustFactionInfluence('Separatist', 0.02);
+            deltas.Imperial = -0.05;
+            deltas.Separatist = 0.02;
         } else if (faction === 'SEPARATIST') {
-            this.adjustFactionInfluence('Separatist', -0.05);
-            this.adjustFactionInfluence('Imperial', 0.02);
+            deltas.Separatist = -0.05;
+            deltas.Imperial = 0.02;
         } else if (faction === 'MILITARY') {
-            this.adjustFactionInfluence('Military', -0.05);
-            this.adjustFactionInfluence('Separatist', 0.02);
+            deltas.Military = -0.05;
+            deltas.Separatist = 0.02;
         }
 
         // If the destroyed ship was a notorious pirate, reward dominant system faction
         if (destroyedEnemy.isNotoriousPirate) {
             const dominantFaction = this._getDominantFaction();
-            this.adjustFactionInfluence(dominantFaction, 0.05);
+            deltas[dominantFaction] = (deltas[dominantFaction] || 0) + 0.05;
+        }
+
+        if (Object.keys(deltas).length > 0) {
+            this.adjustFactionInfluenceBatch(deltas);
         }
 
         // Track recent death names for headlines
@@ -1844,13 +1958,8 @@ class StarSystem {
                 const affected = em.getAffectedSystemsForCrisis('famine');
                 if (affected.includes(systemIndex)) {
                     const r = random();
-                    if (r < 0.45) {
-                        return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length ? HAULER_SHIPS : ['CobraMkIII']) };
-                    } else if (r < 0.80) {
-                        return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS.length ? PIRATE_SHIPS : ['Krait']) };
-                    } else {
-                        return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length ? POLICE_SHIPS : ['ViperPol']) };
-                    }
+                    const roleKey = r < 0.45 ? 'HAULER' : (r < 0.80 ? 'PIRATE' : 'POLICE');
+                    return this._resolveShipForRole(roleKey, economy);
                 }
             }
             // Check Plague
@@ -1858,13 +1967,8 @@ class StarSystem {
                 const affected = em.getAffectedSystemsForCrisis('plague');
                 if (affected.includes(systemIndex)) {
                     const r = random();
-                    if (r < 0.45) {
-                        return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length ? HAULER_SHIPS : ['CobraMkIII']) };
-                    } else if (r < 0.75) {
-                        return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS.length ? PIRATE_SHIPS : ['Krait']) };
-                    } else {
-                        return { role: AI_ROLE.HEALER, ship: random(HEALER_SHIPS.length ? HEALER_SHIPS : ['Krait']), faction: 'SEPARATIST' };
-                    }
+                    const roleKey = r < 0.45 ? 'HAULER' : (r < 0.75 ? 'PIRATE' : 'HEALER');
+                    return this._resolveShipForRole(roleKey, economy);
                 }
             }
         }

@@ -441,14 +441,6 @@ function loadGame(slotIndex) {
                             restoredDockState = true;
                         }
                     }
-
-                    // Start a fade-in from black when restoring a docked state.
-                    // This prevents the exterior station view from flashing briefly
-                    // before the interior station menu renders on top.
-                    if (restoredDockState) {
-                        gameStateManager.postLoadFadeState = "FADE_IN";
-                        gameStateManager.postLoadFadeOpacity = 1;
-                    }
                 }
 
                 // 9. Restore surface mode if saved
@@ -573,6 +565,13 @@ function loadGame(slotIndex) {
                 // 13. Clear any locked jump destination to prevent stale jump targets
                 if (uiManager) {
                     uiManager.lockedDestinationIndex = -1;
+                }
+
+                // Start a fade-in from black for all immediate successful loads to prevent visual flashes
+                if (gameStateManager && gameStateManager.currentState !== "LOADING") {
+                    gameStateManager.postLoadFadeState = "FADE_IN";
+                    gameStateManager.postLoadFadeOpacity = 1;
+                    gameStateManager.postLoadFadeJustStarted = true;
                 }
 
                 window.activeSaveSlotIndex = (slotIndex !== undefined ? slotIndex : 0);

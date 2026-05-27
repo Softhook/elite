@@ -539,19 +539,37 @@ class MissionGenerator {
 
         if (em && em.activeCrisisState) {
             const destIndex = destinationInfo.system.systemIndex;
+            let faminePossible = false;
+            let plaguePossible = false;
+
             if (em.activeCrisisState.famine && typeof em.getAffectedSystemsForCrisis === 'function') {
                 const affected = em.getAffectedSystemsForCrisis('famine');
                 if (affected.includes(destIndex)) {
-                    isFamineRelief = true;
-                    cargo = 'Food';
+                    faminePossible = true;
                 }
             }
             if (em.activeCrisisState.plague && typeof em.getAffectedSystemsForCrisis === 'function') {
                 const affected = em.getAffectedSystemsForCrisis('plague');
                 if (affected.includes(destIndex)) {
+                    plaguePossible = true;
+                }
+            }
+
+            if (faminePossible && plaguePossible) {
+                // If both crises affect the destination, randomly choose one (50% chance)
+                if (random() < 0.5) {
+                    isFamineRelief = true;
+                    cargo = 'Food';
+                } else {
                     isPlagueRelief = true;
                     cargo = 'Medicine';
                 }
+            } else if (faminePossible) {
+                isFamineRelief = true;
+                cargo = 'Food';
+            } else if (plaguePossible) {
+                isPlagueRelief = true;
+                cargo = 'Medicine';
             }
         }
 

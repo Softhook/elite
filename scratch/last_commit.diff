@@ -1,0 +1,1428 @@
+commit fbdc80805817a826b93eeb57855c6f8e5c4d1ce0
+Author: Christian Nold <christian@softhook.com>
+Date:   Wed May 27 18:23:22 2026 +0100
+
+    make system more alive and fix load visual bug
+
+diff --git a/.DS_Store b/.DS_Store
+index 387f212..544886c 100644
+Binary files a/.DS_Store and b/.DS_Store differ
+diff --git a/communicationSystem.js b/communicationSystem.js
+index c066c77..eef1173 100644
+--- a/communicationSystem.js
++++ b/communicationSystem.js
+@@ -10,6 +10,9 @@ class CommunicationSystem {
+         this._lastGlobalMessageTime = -Infinity;
+         this._pendingGlobalMessageUntil = -Infinity;
+         this._playerTitle = "Commander";
++        this.notoriousPirates = (typeof NOTORIOUS_PIRATE_NAMES !== 'undefined' && NOTORIOUS_PIRATE_NAMES.length > 0)
++            ? NOTORIOUS_PIRATE_NAMES
++            : Array.from({ length: 15 }, () => (typeof generateNPCName === 'function' ? generateNPCName() : "Unknown Pirate"));
+ 
+         // Speech synthesis properties
+         this._speechQueue = [];           // Queue of messages to speak
+@@ -2131,6 +2134,59 @@ class CommunicationSystem {
+                 "{enemyName}: Boom goes the dynamite! Hehehee!",
+                 "{enemyName}: Fire! Fire! Everything must BURN!",
+                 "{enemyName}: Can you hear the countdown? It's singing!"
++            ],
++            // Event-Aware Crisis/War templates
++            famineHauler: [
++                "{enemyName}: Running grain to {haulerDestination}. Rations are critically low.",
++                "{enemyName}: Grain shipment inbound. People are starving out there.",
++                "{enemyName}: Emergency supplies on board. Cease fire, lives are on the line!",
++                "{enemyName}: Transporting emergency rations. Famine prices are high, but the risk is higher.",
++                "{enemyName}: Running grain to the relief stations. Every crate counts."
++            ],
++            faminePirate: [
++                "{enemyName}: Relief convoys? Perfect. Fat cargo, thin escorts.",
++                "{enemyName}: Famine means high margins for black market food!",
++                "{enemyName}: Hand over the rations! We have buyers waiting in the starving systems.",
++                "{enemyName}: Emergency supplies are worth triple on the black market! Dump them!",
++                "{enemyName}: Easy prey. Those relief ships aren't even armed."
++            ],
++            faminePolice: [
++                "{enemyName}: Fleet command has authorized priority clearance for relief convoys.",
++                "{enemyName}: Guarding the shipping lanes. The starving systems depend on these shipments.",
++                "{enemyName}: Scanning for black-market food smugglers. Comply."
++            ],
++            plagueHauler: [
++                "{enemyName}: Carrying medicine to the quarantine zone in {haulerDestination}.",
++                "{enemyName}: Quarantine guidelines are strict. Medical supplies must get through.",
++                "{enemyName}: Epidemic relief shipment on board. Let us pass!",
++                "{enemyName}: Medicine prices are soaring, but these people are desperate."
++            ],
++            plaguePirate: [
++                "{enemyName}: Medicine cargo? We'll take it. Desperate people pay anything.",
++                "{enemyName}: Hand over the vaccines! They're worth their weight in gold now.",
++                "{enemyName}: We don't care about quarantine. Hand over the med-kits!"
++            ],
++            plaguePolice: [
++                "{enemyName}: All vessels: quarantine measures in effect. Prepare for inspection.",
++                "{enemyName}: Securing the quarantine borders. Stay clear of the infected sector.",
++                "{enemyName}: Priority escort for medical aid transports. Stand aside."
++            ],
++            warImperial: [
++                "{enemyName}: Crown forces securing the corridor. Keep moving, civilian.",
++                "{enemyName}: Imperial dominance will be established in this war.",
++                "{enemyName}: Crush the Separatist rebellion! Glory to the Emperor!",
++                "{enemyName}: Order of the Crown: All non-aligned vessels clear the combat zone."
++            ],
++            warSeparatist: [
++                "{enemyName}: Freedom flights active. Watch for Imperial patrols.",
++                "{enemyName}: Down with the Emperor! Freedom for the Outer Systems!",
++                "{enemyName}: Republic forces will break the Imperial blockade!",
++                "{enemyName}: Fighting for our independence! Support the revolution!"
++            ],
++            warMilitary: [
++                "{enemyName}: Xeno containment in effect. All contacts are hostile.",
++                "{enemyName}: Military emergency declared. Civil traffic rerouted.",
++                "{enemyName}: Combat zones are active. Weapons free on all unregistered ships."
+             ]
+         };
+     }
+@@ -2999,7 +3055,57 @@ class CommunicationSystem {
+             console.log('DEBUG: _maybeSend enemy cooldown', { now, lastTime, cooldown });
+             return false;
+         }
+-        const template = this._pickTemplate(templates);
++        let activeTemplates = templates;
++
++        // Check for event-aware chatter injection (30% chance)
++        if (this._random() < 0.3 && typeof eventManager !== 'undefined' && eventManager) {
++            const currentIdx = (typeof galaxy !== 'undefined' && galaxy) ? galaxy.currentSystemIndex : -1;
++            const getAffectedSystems = (typeof eventManager.getAffectedSystemsForCrisis === 'function')
++                ? eventManager.getAffectedSystemsForCrisis.bind(eventManager)
++                : null;
++            
++            // Famine
++            if (getAffectedSystems && eventManager.activeCrisisState?.famine && millis() < eventManager.activeCrisisState.famine.expires) {
++                const affectedByFamine = getAffectedSystems('famine');
++                if (currentIdx !== -1 && affectedByFamine.includes(currentIdx)) {
++                    if (enemy.role === 'HAULER' || enemy.role === 'TRANSPORT') {
++                        activeTemplates = this.templates.famineHauler || templates;
++                    } else if (enemy.role === 'PIRATE') {
++                        activeTemplates = this.templates.faminePirate || templates;
++                    } else if (enemy.role === 'POLICE') {
++                        activeTemplates = this.templates.faminePolice || templates;
++                    }
++                }
++            }
++            
++            // Plague (only check if templates weren't overridden by famine)
++            if (activeTemplates === templates && getAffectedSystems && eventManager.activeCrisisState?.plague && millis() < eventManager.activeCrisisState.plague.expires) {
++                const affectedByPlague = getAffectedSystems('plague');
++                if (currentIdx !== -1 && affectedByPlague.includes(currentIdx)) {
++                    if (enemy.role === 'HAULER' || enemy.role === 'TRANSPORT') {
++                        activeTemplates = this.templates.plagueHauler || templates;
++                    } else if (enemy.role === 'PIRATE') {
++                        activeTemplates = this.templates.plaguePirate || templates;
++                    } else if (enemy.role === 'POLICE') {
++                        activeTemplates = this.templates.plaguePolice || templates;
++                    }
++                }
++            }
++            
++            // War state
++            if (activeTemplates === templates && eventManager.activeWarState?.isActive && millis() < eventManager.activeWarState.expires) {
++                const myFaction = this._getShipFaction(enemy);
++                if (myFaction === 'IMPERIAL') {
++                    activeTemplates = this.templates.warImperial || templates;
++                } else if (myFaction === 'SEPARATIST') {
++                    activeTemplates = this.templates.warSeparatist || templates;
++                } else if (enemy.role === 'POLICE' || enemy.role === 'COMBAT') {
++                    activeTemplates = this.templates.warMilitary || templates;
++                }
++            }
++        }
++
++        const template = this._pickTemplate(activeTemplates);
+         if (!template) {
+             return false;
+         }
+@@ -3032,6 +3138,11 @@ class CommunicationSystem {
+         // If a specific target is provided (e.g. for missionary to NPC comms), use it for "player" tokens
+         const target = options.target || this.player;
+ 
++        // Ensure trade route is initialized for haulers/transports
++        if (enemy && (enemy.role === 'HAULER' || enemy.role === 'TRANSPORT') && !enemy._tradeRoute) {
++            this._initializeTradeRoute(enemy);
++        }
++
+         tokens.enemyName = tokens.enemyName ?? this._getEnemyName(enemy);
+         tokens.enemyShip = tokens.enemyShip ?? (enemy?.shipTypeName || "ship");
+         tokens.playerShip = tokens.playerShip ?? (target?.shipTypeName || "ship");
+@@ -3042,8 +3153,18 @@ class CommunicationSystem {
+         tokens.pirateGroup = tokens.pirateGroup ?? this._pick(this._pirateGroups);
+         tokens.pirateDemand = tokens.pirateDemand ?? this._pick(this._pirateDemands);
+         tokens.pirateInsult = tokens.pirateInsult ?? this._pick(this._pirateInsults);
+-        tokens.haulerCargo = tokens.haulerCargo ?? this._describeHaulerCargo(enemy);
+-        tokens.haulerDestination = tokens.haulerDestination ?? this._pick(this._haulerDestinations);
++        
++        // Trade route tokens
++        if (enemy && enemy._tradeRoute) {
++            tokens.haulerDestination = tokens.haulerDestination ?? enemy._tradeRoute.to;
++            tokens.haulerOrigin = tokens.haulerOrigin ?? enemy._tradeRoute.from;
++            tokens.haulerCargo = tokens.haulerCargo ?? enemy._tradeRoute.cargo;
++        } else {
++            tokens.haulerDestination = tokens.haulerDestination ?? this._pick(this._haulerDestinations);
++            tokens.haulerOrigin = tokens.haulerOrigin ?? "a nearby star";
++            tokens.haulerCargo = tokens.haulerCargo ?? this._describeHaulerCargo(enemy);
++        }
++
+         tokens.haulerJob = tokens.haulerJob ?? this._pick(this._haulerJobs);
+         tokens.haulerExcuse = tokens.haulerExcuse ?? this._pick(this._haulerExcuses);
+         tokens.policeWing = tokens.policeWing ?? this._generatePoliceWingId(enemy);
+@@ -3052,6 +3173,10 @@ class CommunicationSystem {
+         tokens.militaryUnit = tokens.militaryUnit ?? this._pick(this._militaryUnits);
+         tokens.imperialRank = tokens.imperialRank ?? this._pick(this._imperialRanks);
+         tokens.separatistSlogan = tokens.separatistSlogan ?? this._pick(this._separatistSlogans);
++        
++        // Notorious pirate tokens
++        tokens.notoriousPirate = tokens.notoriousPirate ?? this._pick(this.notoriousPirates);
++
+         return this._resolveTokenEntries(tokens);
+     }
+ 
+@@ -3166,12 +3291,88 @@ class CommunicationSystem {
+             return this._pick(this._haulerFallbackCargo);
+         }
+         const sorted = enemy.cargoHold
+-            .filter(entry => entry && entry.name && entry.quantity > 0)
++            .filter(entry => entry && (entry.name || entry.type) && entry.quantity > 0)
+             .sort((a, b) => b.quantity - a.quantity);
+         if (sorted.length === 0) {
+             return this._pick(this._haulerFallbackCargo);
+         }
+-        return sorted[0].name;
++        return sorted[0].name || sorted[0].type;
++    }
++
++    _initializeTradeRoute(enemy) {
++        if (!enemy) return;
++        const currentSystem = enemy.currentSystem;
++        let from = "a nearby star";
++        let to = "a neighboring system";
++        let cargo = this._describeHaulerCargo(enemy);
++
++        if (currentSystem && typeof galaxy !== 'undefined' && galaxy.systems) {
++            const connectedIndices = currentSystem.connectedSystemIndices || [];
++            if (connectedIndices.length > 0) {
++                // Pick a random connected system as the destination/origin
++                const connectedIdx = connectedIndices[Math.floor(this._random() * connectedIndices.length)];
++                const connectedSystem = galaxy.systems[connectedIdx];
++                if (connectedSystem) {
++                    to = connectedSystem.name;
++                }
++                
++                // Pick another connected system (or if only 1, the current system/jump zone)
++                if (connectedIndices.length > 1) {
++                    let otherIdx = connectedIdx;
++                    let attempts = 0;
++                    while (otherIdx === connectedIdx && attempts < 10) {
++                        otherIdx = connectedIndices[Math.floor(this._random() * connectedIndices.length)];
++                        attempts++;
++                    }
++                    const otherSystem = galaxy.systems[otherIdx];
++                    if (otherSystem) {
++                        from = otherSystem.name;
++                    }
++                } else {
++                    from = currentSystem.name;
++                }
++            }
++        }
++        
++        // Famine override: cargo is food, destination is famine origin system
++        if (typeof eventManager !== 'undefined' && eventManager && eventManager.activeCrisisState?.famine) {
++            const famineState = eventManager.activeCrisisState.famine;
++            const getAffectedSystems = (typeof eventManager.getAffectedSystemsForCrisis === 'function')
++                ? eventManager.getAffectedSystemsForCrisis.bind(eventManager)
++                : null;
++            if (getAffectedSystems && millis() < famineState.expires && typeof galaxy !== 'undefined' && galaxy.systems) {
++                const affectedByFamine = getAffectedSystems('famine');
++                const currentIndex = galaxy.currentSystemIndex;
++                if (affectedByFamine.includes(currentIndex)) {
++                    cargo = "Food";
++                    const originSystem = galaxy.systems[famineState.originSystemIndex];
++                    if (originSystem) {
++                        to = originSystem.name;
++                    }
++                }
++            }
++        }
++
++        // Plague override: cargo is medicine, destination is plague origin system
++        if (typeof eventManager !== 'undefined' && eventManager && eventManager.activeCrisisState?.plague) {
++            const plagueState = eventManager.activeCrisisState.plague;
++            const getAffectedSystems = (typeof eventManager.getAffectedSystemsForCrisis === 'function')
++                ? eventManager.getAffectedSystemsForCrisis.bind(eventManager)
++                : null;
++            if (getAffectedSystems && millis() < plagueState.expires && typeof galaxy !== 'undefined' && galaxy.systems) {
++                const affectedByPlague = getAffectedSystems('plague');
++                const currentIndex = galaxy.currentSystemIndex;
++                if (affectedByPlague.includes(currentIndex)) {
++                    cargo = "Medicine";
++                    const originSystem = galaxy.systems[plagueState.originSystemIndex];
++                    if (originSystem) {
++                        to = originSystem.name;
++                    }
++                }
++            }
++        }
++
++        enemy._tradeRoute = { from, to, cargo };
+     }
+ 
+     _generatePoliceWingId(enemy) {
+diff --git a/enemy.js b/enemy.js
+index 498a368..8dfa0c7 100644
+--- a/enemy.js
++++ b/enemy.js
+@@ -80,6 +80,17 @@ class Enemy {
+             this.gender = nameData.gender; // 'male' or 'female'
+         }
+ 
++        // Notorious pirate logic
++        this.isNotoriousPirate = false;
++        if (this.role === AI_ROLE.PIRATE && Math.random() < 0.05) {
++            const namesList = (typeof NOTORIOUS_PIRATE_NAMES !== 'undefined' && NOTORIOUS_PIRATE_NAMES.length > 0)
++                ? NOTORIOUS_PIRATE_NAMES
++                : Array.from({ length: 15 }, () => (typeof generateNPCName === 'function' ? generateNPCName() : "Unknown Pirate"));
++            this.displayName = namesList[Math.floor(Math.random() * namesList.length)];
++            this.isNotoriousPirate = true;
++            this.isWanted = true;
++        }
++
+         // Generate pilot rank (skill/experience level)
+         // Uses weighted distribution based on role and system properties
+         this.pilotRank = (typeof generatePilotRank === 'function')
+diff --git a/enemyConstants.js b/enemyConstants.js
+index 2dcaf2b..d6b9384 100644
+--- a/enemyConstants.js
++++ b/enemyConstants.js
+@@ -551,6 +551,12 @@ function generateTitledNPCName() {
+     return `${title} ${generateNPCName()}`;
+ }
+ 
++// Generate a fixed pool of notorious pirate names at startup using the existing NPC name system
++const NOTORIOUS_PIRATE_NAMES = [];
++for (let i = 0; i < 15; i++) {
++    NOTORIOUS_PIRATE_NAMES.push(generateNPCName());
++}
++
+ // Export for module systems
+ if (typeof module !== 'undefined' && module.exports) {
+     module.exports = {
+@@ -563,6 +569,7 @@ if (typeof module !== 'undefined' && module.exports) {
+         NPC_FIRST_NAMES,
+         NPC_LAST_NAMES,
+         NPC_TITLES,
++        NOTORIOUS_PIRATE_NAMES,
+         generateNPCName,
+         generateTitledNPCName,
+         DEFAULT_DELTA_SECONDS,
+@@ -630,6 +637,7 @@ if (typeof module !== 'undefined' && module.exports) {
+     global.NPC_FIRST_NAMES = NPC_FIRST_NAMES;
+     global.NPC_LAST_NAMES = NPC_LAST_NAMES;
+     global.NPC_TITLES = NPC_TITLES;
++    global.NOTORIOUS_PIRATE_NAMES = NOTORIOUS_PIRATE_NAMES;
+     global.generateNPCName = generateNPCName;
+     global.generateTitledNPCName = generateTitledNPCName;
+     global.DEFAULT_DELTA_SECONDS = DEFAULT_DELTA_SECONDS;
+diff --git a/enemyDamageSystem.js b/enemyDamageSystem.js
+index 0210eb9..3bf545f 100644
+--- a/enemyDamageSystem.js
++++ b/enemyDamageSystem.js
+@@ -451,6 +451,11 @@ class EnemyDamageSystem {
+             const playerAttacker = this._resolvePlayerAttacker(attacker);
+             if (playerAttacker && system.player === playerAttacker) {
+                 this._handlePlayerKillConsequences(playerAttacker, system);
++                
++                // Add news item if player destroyed a notorious pirate
++                if (this.isNotoriousPirate && typeof newsManager !== 'undefined' && newsManager) {
++                    newsManager.addAssassinationNews(this.displayName, this.currentSystem?.name || 'Unknown Sector');
++                }
+             }
+         }
+     }
+@@ -610,6 +615,19 @@ class EnemyDamageSystem {
+         let bountyAmount = 0;
+         let bountyMessage = null;
+ 
++        // Notorious pirate extra bounty
++        if (this.isNotoriousPirate) {
++            bountyAmount = 10000;
++            bountyMessage = `Notorious Pirate Bounty: 10,000 cr`;
++            attacker.addCredits(bountyAmount);
++            if (typeof uiManager !== 'undefined') {
++                uiManager.addMessage(bountyMessage, [100, 255, 100]);
++            }
++            // Reset so standard faction bounty below adds to it if applicable, or we just award this one
++            bountyAmount = 0;
++            bountyMessage = null;
++        }
++
+         // Use unified pirate detection helper (consistent with addKill and mission checks)
+         const isPirateEnemy = isPirateShip(this);
+ 
+diff --git a/missionGenerator.js b/missionGenerator.js
+index 497750e..da8447c 100644
+--- a/missionGenerator.js
++++ b/missionGenerator.js
+@@ -530,9 +530,31 @@ class MissionGenerator {
+         const destinationInfo = this.findNearbyDestination(originSystem, galaxy, true, 4);
+         if (!destinationInfo) return null;
+ 
+-        const cargo = this._selectDeliveryCargo(originSystem, destinationInfo.system, LEGAL_CARGO);
++        let cargo = this._selectDeliveryCargo(originSystem, destinationInfo.system, LEGAL_CARGO);
+         if (!cargo) return null;
+ 
++        const em = typeof eventManager !== 'undefined' ? eventManager : null;
++        let isFamineRelief = false;
++        let isPlagueRelief = false;
++
++        if (em && em.activeCrisisState) {
++            const destIndex = destinationInfo.system.systemIndex;
++            if (em.activeCrisisState.famine && typeof em.getAffectedSystemsForCrisis === 'function') {
++                const affected = em.getAffectedSystemsForCrisis('famine');
++                if (affected.includes(destIndex)) {
++                    isFamineRelief = true;
++                    cargo = 'Food';
++                }
++            }
++            if (em.activeCrisisState.plague && typeof em.getAffectedSystemsForCrisis === 'function') {
++                const affected = em.getAffectedSystemsForCrisis('plague');
++                if (affected.includes(destIndex)) {
++                    isPlagueRelief = true;
++                    cargo = 'Medicine';
++                }
++            }
++        }
++
+         const quantity = floor(random(5, 16));
+         const jumpDistance = this.getJumpDistance(originSystem, destinationInfo.system, galaxy);
+         if (!this.isValidJumpDistance(jumpDistance)) return null;
+@@ -540,6 +562,10 @@ class MissionGenerator {
+         const baseCargoValue = this.getCargoValue(originStation, cargo, 50);
+         let reward = Math.floor(100 + jumpDistance * 250 + quantity * baseCargoValue * 0.15 + floor(random(50, 250)));
+ 
++        if (isFamineRelief || isPlagueRelief) {
++            reward = Math.floor(reward * 1.8);
++        }
++
+         // Apply Alien system bonus
+         const alienBonus = this.getAlienSystemBonus(destinationInfo.system, reward);
+         reward += alienBonus;
+@@ -548,10 +574,21 @@ class MissionGenerator {
+         const economyKnown = this.getEconomyInfoText(destinationInfo.system);
+         const economyText = economyKnown ? `Destination economy: ${economyKnown}.` : 'Intelligence on the destination economy is unavailable.';
+ 
++        let title = `Deliver ${quantity}t ${cargo} to ${destinationInfo.station.name} (${jumpText})`;
++        let description = `Transport ${quantity}t of ${cargo} to ${destinationInfo.station.name} station in ${destinationInfo.system.name} (${jumpText} away). ${economyText} Standard contract. Payment upon delivery.`;
++
++        if (isFamineRelief) {
++            title = `Famine Relief: Deliver ${quantity}t Food to ${destinationInfo.station.name} (${jumpText})`;
++            description = `CRITICAL: The ${destinationInfo.system.name} system is suffering a catastrophic famine. Transport ${quantity}t of Food immediately to ${destinationInfo.station.name} to help the population. Payment is subsidised at a premium rate.`;
++        } else if (isPlagueRelief) {
++            title = `Medical Relief: Deliver ${quantity}t Medicine to ${destinationInfo.station.name} (${jumpText})`;
++            description = `CRITICAL: A severe plague outbreak has been declared in the ${destinationInfo.system.name} system. Deliver ${quantity}t of Medicine to ${destinationInfo.station.name} to aid the medical response. Premium reward offered by the local relief committee.`;
++        }
++
+         return new Mission({
+             type: MISSION_TYPE.DELIVERY_LEGAL,
+-            title: `Deliver ${quantity}t ${cargo} to ${destinationInfo.station.name} (${jumpText})`,
+-            description: `Transport ${quantity}t of ${cargo} to ${destinationInfo.station.name} station in ${destinationInfo.system.name} (${jumpText} away). ${economyText} Standard contract. Payment upon delivery.`,
++            title,
++            description,
+             ...this.getOriginData(originSystem, originStation),
+             destinationSystem: destinationInfo.system.name,
+             destinationStation: destinationInfo.station.name,
+diff --git a/newsManager.js b/newsManager.js
+index aec475a..8028534 100644
+--- a/newsManager.js
++++ b/newsManager.js
+@@ -1092,6 +1092,62 @@ class NewsManager {
+         });
+     }
+ 
++    /**
++     * Report a faction influence shift
++     */
++    addFactionInfluenceNews(systemName, factionName, direction, value) {
++        const faction = this._selectFaction();
++        let headline = "";
++        let body = "";
++
++        const system = systemName || "Unknown Sector";
++        const valPct = Math.round(value * 100);
++
++        if (factionName === 'Imperial') {
++            if (direction === 'increase') {
++                headline = `IMPERIAL INFLUENCE EXPANDS IN ${system.toUpperCase()}`;
++                body = `The Empire has consolidated its presence in the ${system} system, with influence rising to ${valPct}%. Local commanders have deployed additional heavy patrols to secure vital trade corridors and enforce Imperial order.`;
++            } else {
++                headline = `IMPERIAL RETREAT IN ${system.toUpperCase()}`;
++                body = `Imperial presence in the ${system} system has waned to ${valPct}% following recent skirmishes and political friction. Local planetary councils report a scale-back of Imperial patrols.`;
++            }
++        } else if (factionName === 'Separatist') {
++            if (direction === 'increase') {
++                headline = `SEPARATIST MOVEMENT GAINS GROUND IN ${system.toUpperCase()}`;
++                body = `Separatist sentiment is on the rise in the ${system} system, with their influence reaching ${valPct}%. Local activist groups and militia units have declared new autonomous zones.`;
++            } else {
++                headline = `SEPARATIST CONTROL WEAKENS IN ${system.toUpperCase()}`;
++                body = `Separatist factions in the ${system} system have lost significant leverage, dropping to ${valPct}% influence. Joint security forces continue to crack down on separatist training cells.`;
++            }
++        } else if (factionName === 'Military') {
++            if (direction === 'increase') {
++                headline = `MILITARY GARRISON EXPANDED IN ${system.toUpperCase()}`;
++                body = `Security forces have fortified their garrison in the ${system} system, elevating Military influence to ${valPct}%. Heavy task forces have been sighted patrolling key asteroid belts.`;
++            } else {
++                headline = `MILITARY FORCES REDEPLOYED FROM ${system.toUpperCase()}`;
++                body = `System defense forces have redeployed several fleet assets away from the ${system} system, reducing military influence to ${valPct}%. Local security levels are expected to drop.`;
++            }
++        } else {
++            // General independent/independent corporate
++            if (direction === 'increase') {
++                headline = `LOCAL INDEPENDENTS CONSOLIDATE POWER IN ${system.toUpperCase()}`;
++                body = `Local corporate and independent syndicates have strengthened their grip on the ${system} system. Independent patrols have assumed control over station checkpoints.`;
++            } else {
++                headline = `INDEPENDENT SYSTEM CONTROL FALTERS IN ${system.toUpperCase()}`;
++                body = `The alliance of independent planetary governors in the ${system} system has reported a decline in local coordination, leading to increased faction vulnerability.`;
++            }
++        }
++
++        this._addNews({
++            headline,
++            body,
++            source: faction.name,
++            sourceColor: faction.color,
++            category: NEWS_CATEGORY.LOCAL_EVENT,
++            priority: NEWS_PRIORITY.MEDIUM
++        });
++    }
++
+     /**
+      * Report a successful sabotage mission
+      */
+diff --git a/saveLoadSystem.js b/saveLoadSystem.js
+index 46618b9..98c475b 100644
+--- a/saveLoadSystem.js
++++ b/saveLoadSystem.js
+@@ -441,6 +441,14 @@ function loadGame(slotIndex) {
+                             restoredDockState = true;
+                         }
+                     }
++
++                    // Start a fade-in from black when restoring a docked state.
++                    // This prevents the exterior station view from flashing briefly
++                    // before the interior station menu renders on top.
++                    if (restoredDockState) {
++                        gameStateManager.postLoadFadeState = "FADE_IN";
++                        gameStateManager.postLoadFadeOpacity = 1;
++                    }
+                 }
+ 
+                 // 9. Restore surface mode if saved
+diff --git a/starSystem.js b/starSystem.js
+index 0cd3c04..02ef0ba 100644
+--- a/starSystem.js
++++ b/starSystem.js
+@@ -610,6 +610,8 @@ class StarSystem {
+         };
+         this._combatReportThreshold = 5; // Generate news after this many kills
+         this._heroReportThreshold = 3; // Generate hero news after this many kills by one pilot
++        this.residentNPCs = []; // Roster of recurring resident NPCs in this system
++        this.factionInfluence = { Imperial: 0.10, Separatist: 0.10, Military: 0.10 };
+     }
+ 
+     /**
+@@ -709,6 +711,56 @@ class StarSystem {
+         });
+     }
+ 
++    /**
++     * Dynamically adjusts faction influence in the system and triggers news if threshold met.
++     * After adjusting the target faction, re-normalizes all factions so they sum to 1.0.
++     * @param {string} factionName - Name of the faction ('Imperial', 'Separatist', 'Military')
++     * @param {number} amount - Amount to adjust (positive or negative)
++     * @param {boolean} [silent=false] - If true, suppress news generation (used for background shifts)
++     */
++    adjustFactionInfluence(factionName, amount, silent = false) {
++        if (!this.factionInfluence || this.factionInfluence[factionName] === undefined) return;
++
++        const oldInfluence = this.factionInfluence[factionName];
++        let newInfluence = Math.max(0, Math.min(1.0, oldInfluence + amount));
++        
++        // Round to 2 decimal places to avoid floating point issues
++        newInfluence = Math.round(newInfluence * 100) / 100;
++        
++        if (newInfluence === oldInfluence) return;
++
++        this.factionInfluence[factionName] = newInfluence;
++
++        // Re-normalize other factions so the total stays at 1.0
++        const otherFactions = Object.keys(this.factionInfluence).filter(f => f !== factionName);
++        const otherTotal = otherFactions.reduce((sum, f) => sum + this.factionInfluence[f], 0);
++        const remainingBudget = Math.max(0, 1.0 - newInfluence);
++
++        if (otherTotal > 0) {
++            // Scale other factions proportionally to fill the remaining budget
++            for (const f of otherFactions) {
++                this.factionInfluence[f] = Math.round((this.factionInfluence[f] / otherTotal) * remainingBudget * 100) / 100;
++            }
++        } else if (otherFactions.length > 0) {
++            // All other factions are at 0; distribute remaining budget equally
++            const share = Math.round((remainingBudget / otherFactions.length) * 100) / 100;
++            for (const f of otherFactions) {
++                this.factionInfluence[f] = share;
++            }
++        }
++
++        let diff = Math.abs(newInfluence - oldInfluence);
++        diff = Math.round(diff * 100) / 100;
++
++        // Check if the change is significant enough to report (>= 0.05 shift)
++        if (!silent && diff >= 0.05) {
++            const direction = amount > 0 ? 'increase' : 'decrease';
++            if (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager && typeof GameGlobals.newsManager.addFactionInfluenceNews === 'function') {
++                GameGlobals.newsManager.addFactionInfluenceNews(this.name, factionName, direction, newInfluence);
++            }
++        }
++    }
++
+     /**
+      * Records the destruction of an NPC for combat news tracking.
+      * Tracks deaths by faction and kills by attacker pilot.
+@@ -759,6 +811,24 @@ class StarSystem {
+         }
+         this.combatStats.total++;
+ 
++        // Adjust faction influence based on destroyed ship
++        if (faction === 'IMPERIAL') {
++            this.adjustFactionInfluence('Imperial', -0.05);
++            this.adjustFactionInfluence('Separatist', 0.02);
++        } else if (faction === 'SEPARATIST') {
++            this.adjustFactionInfluence('Separatist', -0.05);
++            this.adjustFactionInfluence('Imperial', 0.02);
++        } else if (faction === 'MILITARY') {
++            this.adjustFactionInfluence('Military', -0.05);
++            this.adjustFactionInfluence('Separatist', 0.02);
++        }
++
++        // If the destroyed ship was a notorious pirate, reward dominant system faction
++        if (destroyedEnemy.isNotoriousPirate) {
++            const dominantFaction = this._getDominantFaction();
++            this.adjustFactionInfluence(dominantFaction, 0.05);
++        }
++
+         // Track recent death names for headlines
+         if (enemyName) {
+             this.combatStats.recentDeaths.push(enemyName);
+@@ -1105,6 +1175,81 @@ class StarSystem {
+             }
+         } catch (e) { console.error("Error initializing ambient sounds:", e); }
+ 
++        // --- Deterministic Resident NPC Roster Generation ---
++        this.residentNPCs = [];
++        const createDeterministicRandom = (seedVal) => {
++            let s = seedVal;
++            return () => {
++                s = Math.sin(s) * 10000;
++                return s - Math.floor(s);
++            };
++        };
++        const rng = createDeterministicRandom(seedToUse);
++
++        const firstNamesList = (typeof NPC_FIRST_NAMES !== 'undefined') ? NPC_FIRST_NAMES : ["Alex", "River", "Jordan", "Gray", "Parker", "Taylor", "Morgan"];
++        const lastNamesList = (typeof NPC_LAST_NAMES !== 'undefined') ? NPC_LAST_NAMES : ["Stone", "Reed", "Vale", "West", "Smith", "Nguyen", "Kim", "Patel"];
++
++        // Use the same spawn ratios as normal system spawning, but with deterministic RNG.
++        const spawnProbabilities = (typeof SpawnConfig !== 'undefined' && SpawnConfig && typeof SpawnConfig.getProbabilities === 'function')
++            ? SpawnConfig.getProbabilities(this.economyType, this.securityLevel)
++            : null;
++
++        const weightedRoleEntries = spawnProbabilities
++            ? Object.entries(spawnProbabilities).filter(([, weight]) => typeof weight === 'number' && weight > 0)
++            : [];
++
++        const pickByRng = (list, fallbackValue) => {
++            if (Array.isArray(list) && list.length > 0) {
++                return list[Math.floor(rng() * list.length)];
++            }
++            return fallbackValue;
++        };
++
++        const deterministicPicker = (list) => pickByRng(list, Array.isArray(list) && list.length > 0 ? list[0] : null);
++
++        const getRoleAndShip = () => {
++            if (weightedRoleEntries.length === 0) {
++                // Fallback to normal selection path only when SpawnConfig is available.
++                if (typeof SpawnConfig !== 'undefined' && SpawnConfig && typeof SpawnConfig.getProbabilities === 'function') {
++                    const fallbackSelection = this._selectShipForEconomy(this.economyType, this.securityLevel);
++                    if (fallbackSelection && fallbackSelection.role && fallbackSelection.ship) {
++                        return { role: fallbackSelection.role, shipType: fallbackSelection.ship };
++                    }
++                }
++                const fallbackResolved = this._resolveShipForRole('HAULER', this.economyType, deterministicPicker);
++                return {
++                    role: fallbackResolved?.role || 'HAULER',
++                    shipType: fallbackResolved?.ship || pickByRng(HAULER_SHIPS, 'CobraMkIII')
++                };
++            }
++
++            const roleProbabilityMap = Object.fromEntries(weightedRoleEntries);
++            const fallbackRoleKey = weightedRoleEntries[weightedRoleEntries.length - 1][0] || 'HAULER';
++            const selectedRoleKey = this._selectRoleFromProbabilities(roleProbabilityMap, rng);
++            const roleKey = selectedRoleKey || fallbackRoleKey;
++
++            const resolved = this._resolveShipForRole(roleKey, this.economyType, deterministicPicker);
++            return {
++                role: resolved?.role || 'HAULER',
++                shipType: resolved?.ship || pickByRng(HAULER_SHIPS, 'CobraMkIII')
++            };
++        };
++
++        for (let idx = 0; idx < 12; idx++) {
++            const firstIdx = Math.floor(rng() * firstNamesList.length);
++            const lastIdx = Math.floor(rng() * lastNamesList.length);
++            const fullName = `${firstNamesList[firstIdx]} ${lastNamesList[lastIdx]}`;
++            const { role, shipType } = getRoleAndShip();
++            this.residentNPCs.push({
++                name: fullName,
++                role: role,
++                shipType: shipType
++            });
++        }
++
++        // --- Deterministic Faction Influence Generation ---
++        this.factionInfluence = this._buildInitialFactionInfluence(rng);
++
+         // --- CRITICAL: Reset Seed AFTER generating all static seeded elements ---
+         // NOTE: We intentionally DO NOT enqueue planet buffer creation here. Enqueuing
+         // all system planet buffers at once causes large startup load (and the UI hang
+@@ -1404,6 +1549,16 @@ class StarSystem {
+      */
+     enterSystem(player) {
+         this.discover();
++
++        // Simulate minor faction background shifts on entry (35% chance)
++        // Silent=true to avoid spamming the news feed with routine background drift
++        if (Math.random() < 0.35) {
++            const factions = ['Imperial', 'Separatist', 'Military'];
++            const faction = factions[Math.floor(Math.random() * factions.length)];
++            const direction = Math.random() < 0.5 ? 0.05 : -0.05;
++            this.adjustFactionInfluence(faction, direction, true);
++        }
++
+         this.enemies = []; this.enemiesById.clear(); // Clear both array and Map
+         this.projectiles = []; this.mines = []; this.asteroids = []; this.harpoons = [];
+         this.summonPings = [];
+@@ -1681,6 +1836,39 @@ class StarSystem {
+             if (warSelection) return warSelection;
+         }
+ 
++        // Check for active crises (famine or plague) - adjusts spawn distribution
++        if (em && em.activeCrisisState) {
++            const systemIndex = this.systemIndex;
++            // Check Famine
++            if (em.activeCrisisState.famine && typeof em.getAffectedSystemsForCrisis === 'function') {
++                const affected = em.getAffectedSystemsForCrisis('famine');
++                if (affected.includes(systemIndex)) {
++                    const r = random();
++                    if (r < 0.45) {
++                        return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length ? HAULER_SHIPS : ['CobraMkIII']) };
++                    } else if (r < 0.80) {
++                        return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS.length ? PIRATE_SHIPS : ['Krait']) };
++                    } else {
++                        return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length ? POLICE_SHIPS : ['ViperPol']) };
++                    }
++                }
++            }
++            // Check Plague
++            if (em.activeCrisisState.plague && typeof em.getAffectedSystemsForCrisis === 'function') {
++                const affected = em.getAffectedSystemsForCrisis('plague');
++                if (affected.includes(systemIndex)) {
++                    const r = random();
++                    if (r < 0.45) {
++                        return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length ? HAULER_SHIPS : ['CobraMkIII']) };
++                    } else if (r < 0.75) {
++                        return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS.length ? PIRATE_SHIPS : ['Krait']) };
++                    } else {
++                        return { role: AI_ROLE.HEALER, ship: random(HEALER_SHIPS.length ? HEALER_SHIPS : ['Krait']), faction: 'SEPARATIST' };
++                    }
++                }
++            }
++        }
++
+         // Use centralized SpawnConfig for all spawn probabilities
+         const probs = SpawnConfig.getProbabilities(economy, security);
+ 
+@@ -1697,11 +1885,12 @@ class StarSystem {
+      * @returns {string} Selected role key
+      * @private
+      */
+-    _selectRoleFromProbabilities(probs) {
++    _selectRoleFromProbabilities(probs, rollProvider = random) {
+         // Validation for safety
+         if (!probs) return 'HAULER';
+ 
+-        let r = random();
++        const getRoll = (typeof rollProvider === 'function') ? rollProvider : random;
++        let r = getRoll();
+         let cumulative = 0;
+ 
+         for (const [key, chance] of Object.entries(probs)) {
+@@ -1713,70 +1902,149 @@ class StarSystem {
+         return Object.keys(probs).pop() || 'HAULER';
+     }
+ 
++    /**
++     * Returns the currently dominant faction in this system.
++     * Ties default to Military for deterministic behavior.
++     * @returns {'Imperial'|'Separatist'|'Military'}
++     * @private
++     */
++    _getDominantFaction() {
++        const influence = this.factionInfluence || { Imperial: 0, Separatist: 0, Military: 0 };
++        if (influence.Imperial > influence.Military && influence.Imperial > influence.Separatist) {
++            return 'Imperial';
++        }
++        if (influence.Separatist > influence.Imperial && influence.Separatist > influence.Military) {
++            return 'Separatist';
++        }
++        return 'Military';
++    }
++
++    /**
++     * Builds the initial faction influence map for this system.
++     * @param {() => number} [rng] - Optional deterministic RNG used during static init
++     * @returns {{Imperial:number, Separatist:number, Military:number}}
++     * @private
++     */
++    _buildInitialFactionInfluence(rng = random) {
++        const econLower = (this.economyType || '').toLowerCase();
++        if (econLower === 'imperial') {
++            return { Imperial: 0.70, Separatist: 0.10, Military: 0.20 };
++        }
++        if (econLower === 'separatist') {
++            return { Imperial: 0.10, Separatist: 0.70, Military: 0.20 };
++        }
++        if (econLower === 'military') {
++            return { Imperial: 0.20, Separatist: 0.10, Military: 0.70 };
++        }
++
++        // Independent systems still have full control distributed across factions.
++        const getRoll = (typeof rng === 'function') ? rng : random;
++        const w1 = getRoll() + 0.01;
++        const w2 = getRoll() + 0.01;
++        const w3 = getRoll() + 0.01;
++        const total = w1 + w2 + w3;
++        const imperial = Math.round((w1 / total) * 100) / 100;
++        const separatist = Math.round((w2 / total) * 100) / 100;
++        const military = Math.max(0, Math.round((1 - imperial - separatist) * 100) / 100);
++
++        return { Imperial: imperial, Separatist: separatist, Military: military };
++    }
++
+     /**
+      * Resolves a configuration role key to a concrete ship and AI role.
+      * Maps abstract config roles (FACTION_COMBAT) to specific game data.
+      * 
+      * @param {string} roleKey - The selected role key from config
+      * @param {string} economy - The current economy (context for specific arrays)
++     * @param {(list: string[]) => string} [picker] - Optional ship picker (defaults to random)
+      * @returns {{role: string, ship: string, faction?: string}}
+      * @private
+      */
+-    _resolveShipForRole(roleKey, economy) {
++    _resolveShipForRole(roleKey, economy, picker = random) {
+         const econ = (economy || '').toUpperCase();
+ 
++        const pickShip = (preferredList, fallbackListOrValue = null) => {
++            const hasPreferred = Array.isArray(preferredList) && preferredList.length > 0;
++            let pool = hasPreferred ? preferredList : null;
++
++            if (!pool) {
++                if (Array.isArray(fallbackListOrValue)) {
++                    pool = fallbackListOrValue.length > 0 ? fallbackListOrValue : null;
++                } else if (fallbackListOrValue) {
++                    pool = [fallbackListOrValue];
++                }
++            }
++
++            if (!pool || pool.length === 0) {
++                return null;
++            }
++
++            if (typeof picker === 'function') {
++                try {
++                    const chosen = picker(pool);
++                    if (chosen !== undefined && chosen !== null) {
++                        return chosen;
++                    }
++                } catch (_) {
++                    // Fall through to default random choice.
++                }
++            }
++
++            return random(pool);
++        };
++
+         switch (roleKey) {
+             case 'COMBAT':
+                 // Context-aware combat ships
+-                if (econ === 'MILITARY') return { role: AI_ROLE.COMBAT, ship: random(MILITARY_SHIPS.length ? MILITARY_SHIPS : COMBAT_SHIPS) };
+-                if (econ === 'POST HUMAN') return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
+-                if (econ === 'OFFWORLD') return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
+-                return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
++                if (econ === 'MILITARY') return { role: AI_ROLE.COMBAT, ship: pickShip(MILITARY_SHIPS, COMBAT_SHIPS) };
++                if (econ === 'POST HUMAN') return { role: AI_ROLE.COMBAT, ship: pickShip(COMBAT_SHIPS, 'Sidewinder') };
++                if (econ === 'OFFWORLD') return { role: AI_ROLE.COMBAT, ship: pickShip(COMBAT_SHIPS, 'Sidewinder') };
++                return { role: AI_ROLE.COMBAT, ship: pickShip(COMBAT_SHIPS, 'Sidewinder') };
+ 
+             case 'FACTION_COMBAT':
+-                if (econ === 'SEPARATIST') return { role: AI_ROLE.COMBAT, ship: random(SEPARATIST_SHIPS) };
+-                if (econ === 'IMPERIAL') return { role: AI_ROLE.COMBAT, ship: random(IMPERIAL_SHIPS) };
+-                return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
++                if (econ === 'SEPARATIST') return { role: AI_ROLE.COMBAT, ship: pickShip(SEPARATIST_SHIPS, COMBAT_SHIPS) };
++                if (econ === 'IMPERIAL') return { role: AI_ROLE.COMBAT, ship: pickShip(IMPERIAL_SHIPS, COMBAT_SHIPS) };
++                return { role: AI_ROLE.COMBAT, ship: pickShip(COMBAT_SHIPS, 'Sidewinder') };
+ 
+             case 'RIVAL_COMBAT':
+-                if (econ === 'SEPARATIST') return { role: AI_ROLE.COMBAT, ship: random(IMPERIAL_SHIPS) }; // Imperials invading Separatist
+-                if (econ === 'IMPERIAL') return { role: AI_ROLE.COMBAT, ship: random(SEPARATIST_SHIPS) }; // Separatists invading Imperial
+-                return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS) };
++                if (econ === 'SEPARATIST') return { role: AI_ROLE.COMBAT, ship: pickShip(IMPERIAL_SHIPS, COMBAT_SHIPS) }; // Imperials invading Separatist
++                if (econ === 'IMPERIAL') return { role: AI_ROLE.COMBAT, ship: pickShip(SEPARATIST_SHIPS, COMBAT_SHIPS) }; // Separatists invading Imperial
++                return { role: AI_ROLE.PIRATE, ship: pickShip(PIRATE_SHIPS, 'Krait') };
+ 
+             case 'PIRATE':
+-                return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS.length ? PIRATE_SHIPS : ['Krait']) };
++                return { role: AI_ROLE.PIRATE, ship: pickShip(PIRATE_SHIPS, 'Krait') };
+ 
+             case 'POLICE':
+-                return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length ? POLICE_SHIPS : ['ViperPol']) };
++                return { role: AI_ROLE.POLICE, ship: pickShip(POLICE_SHIPS, 'ViperPol') };
+ 
+             case 'HAULER':
+                 // Context-aware haulers
+-                if (econ === 'MILITARY' && MILITARY_HAULERS.length) return { role: AI_ROLE.HAULER, ship: random(MILITARY_HAULERS) };
+-                return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length ? HAULER_SHIPS : ['CobraMkIII']) };
++                if (econ === 'MILITARY') return { role: AI_ROLE.HAULER, ship: pickShip(MILITARY_HAULERS, HAULER_SHIPS.length ? HAULER_SHIPS : ['CobraMkIII']) };
++                return { role: AI_ROLE.HAULER, ship: pickShip(HAULER_SHIPS, 'CobraMkIII') };
+ 
+             case 'FACTION_HAULER':
+-                if (econ === 'SEPARATIST' && SEPARATIST_HAULERS.length) return { role: AI_ROLE.HAULER, ship: random(SEPARATIST_HAULERS) };
+-                if (econ === 'IMPERIAL' && IMPERIAL_HAULERS.length) return { role: AI_ROLE.HAULER, ship: random(IMPERIAL_HAULERS) };
+-                return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
++                if (econ === 'SEPARATIST') return { role: AI_ROLE.HAULER, ship: pickShip(SEPARATIST_HAULERS, HAULER_SHIPS.length ? HAULER_SHIPS : ['CobraMkIII']) };
++                if (econ === 'IMPERIAL') return { role: AI_ROLE.HAULER, ship: pickShip(IMPERIAL_HAULERS, HAULER_SHIPS.length ? HAULER_SHIPS : ['CobraMkIII']) };
++                return { role: AI_ROLE.HAULER, ship: pickShip(HAULER_SHIPS, 'CobraMkIII') };
+ 
+             case 'MINER':
+-                return { role: AI_ROLE.MINER, ship: random(MINER_SHIPS.length ? MINER_SHIPS : ['Krait']) };
++                return { role: AI_ROLE.MINER, ship: pickShip(MINER_SHIPS, 'Krait') };
+ 
+             case 'TRANSPORT':
+-                return { role: AI_ROLE.TRANSPORT, ship: random(TRANSPORT_SHIPS.length ? TRANSPORT_SHIPS : ['Type6Transporter']) };
++                return { role: AI_ROLE.TRANSPORT, ship: pickShip(TRANSPORT_SHIPS, 'Type6Transporter') };
+ 
+             case 'ALIEN':
+-                return { role: AI_ROLE.ALIEN, ship: random(ALIEN_SHIPS.length ? ALIEN_SHIPS : ['Thargoid']) };
++                return { role: AI_ROLE.ALIEN, ship: pickShip(ALIEN_SHIPS, 'Thargoid') };
+ 
+             case 'HEALER':
+-                return { role: AI_ROLE.HEALER, ship: random(HEALER_SHIPS.length ? HEALER_SHIPS : ['Krait']), faction: 'SEPARATIST' };
++                return { role: AI_ROLE.HEALER, ship: pickShip(HEALER_SHIPS, 'Krait'), faction: 'SEPARATIST' };
+ 
+             case 'MISSIONARY':
+-                return { role: AI_ROLE.MISSIONARY, ship: random(MISSIONARY_SHIPS.length ? MISSIONARY_SHIPS : ['Krait']), faction: 'POSTHUMAN' };
++                return { role: AI_ROLE.MISSIONARY, ship: pickShip(MISSIONARY_SHIPS, 'Krait'), faction: 'POSTHUMAN' };
+ 
+             default:
+                 console.warn(`Unresolved role key: ${roleKey}, defaulting to Hauler`);
+-                return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
++                return { role: AI_ROLE.HAULER, ship: pickShip(HAULER_SHIPS, 'CobraMkIII') };
+         }
+     }
+ 
+@@ -1981,6 +2249,19 @@ class StarSystem {
+      * @private
+      */
+     _createEnemy(x, y, shipTypeName, role) {
++        let residentName = null;
++        if (this.residentNPCs && this.residentNPCs.length > 0 && Math.random() < 0.60) {
++            // Find resident NPCs matching this role that are NOT currently active
++            const activeNames = new Set(this.enemies.map(e => e.displayName).filter(Boolean));
++            const availableResidents = this.residentNPCs.filter(r => r.role === role && !activeNames.has(r.name));
++            if (availableResidents.length > 0) {
++                // Pick a random available resident
++                const resident = availableResidents[Math.floor(Math.random() * availableResidents.length)];
++                shipTypeName = resident.shipType;
++                residentName = resident.name;
++            }
++        }
++
+         // Check if the ship definition has a specialized aiRole that should override the generic role
+         // This ensures ships like SeparatistMedic (aiRoles: ["HEALER"]) get the correct AI_ROLE.HEALER
+         let effectiveRole = role;
+@@ -1999,6 +2280,9 @@ class StarSystem {
+         }
+ 
+         const newEnemy = new Enemy(x, y, this.player, shipTypeName, effectiveRole);
++        if (residentName) {
++            newEnemy.displayName = residentName;
++        }
+         newEnemy.calculateRadianProperties();
+         newEnemy.initializeColors();
+         this.addEnemy(newEnemy);
+diff --git a/test/enemyAIEnvironment.test.js b/test/enemyAIEnvironment.test.js
+index 031ad76..a0755cc 100644
+--- a/test/enemyAIEnvironment.test.js
++++ b/test/enemyAIEnvironment.test.js
+@@ -255,19 +255,19 @@ function makeTarget(px, py) {
+ // ─────────────────────────────────────────────────────────────────────────────
+ 
+ describe('environmentAwareness modifier values', () => {
+-    test('INCOMPETENT has environmentAwareness 0.1', () => {
++    test('INCOMPETENT has environmentAwareness 0.2', () => {
+         const mods = getPilotRankModifiers(PILOT_RANK.INCOMPETENT);
+-        expect(mods.environmentAwareness).toBe(0.1);
++        expect(mods.environmentAwareness).toBe(0.2);
+     });
+ 
+-    test('GREEN has environmentAwareness 0.3', () => {
++    test('GREEN has environmentAwareness 0.5', () => {
+         const mods = getPilotRankModifiers(PILOT_RANK.GREEN);
+-        expect(mods.environmentAwareness).toBe(0.3);
++        expect(mods.environmentAwareness).toBe(0.5);
+     });
+ 
+-    test('ROOKIE has environmentAwareness 0.6', () => {
++    test('ROOKIE has environmentAwareness 0.8', () => {
+         const mods = getPilotRankModifiers(PILOT_RANK.ROOKIE);
+-        expect(mods.environmentAwareness).toBe(0.6);
++        expect(mods.environmentAwareness).toBe(0.8);
+     });
+ 
+     test('VETERAN has environmentAwareness 1.0', () => {
+diff --git a/test/factionBounty.test.js b/test/factionBounty.test.js
+index 54708a2..a8a8f2f 100644
+--- a/test/factionBounty.test.js
++++ b/test/factionBounty.test.js
+@@ -45,11 +45,13 @@ function makeEnemy(role, faction) {
+     const e = new Enemy(0, 0, null, 'Sidewinder', role);
+     e.faction = faction || null;
+     e.destroyed = false;
++    e.isNotoriousPirate = false; // Ensure not notorious for bounty tests
+     return e;
+ }
+ 
+ describe('_awardFactionBounty — credits reach the player wallet', () => {
+     let player;
++    const NOTORIOUS_PIRATE_BOUNTY = 10000;
+ 
+     beforeEach(() => {
+         player = new Player();
+@@ -157,6 +159,21 @@ describe('_awardFactionBounty — credits reach the player wallet', () => {
+         expect(player.credits).toBe(0);
+     });
+ 
++    test('notorious pirate awards 10,000 cr even for unaffiliated player', () => {
++        const enemy = makeEnemy(AI_ROLE.PIRATE, null);
++        enemy.isNotoriousPirate = true;
++        enemy._awardFactionBounty(player);
++        expect(player.credits).toBe(NOTORIOUS_PIRATE_BOUNTY);
++    });
++
++    test('notorious pirate bounty stacks with police pirate bounty', () => {
++        player.isPolice = true;
++        const enemy = makeEnemy(AI_ROLE.PIRATE, null);
++        enemy.isNotoriousPirate = true;
++        enemy._awardFactionBounty(player);
++        expect(player.credits).toBe(NOTORIOUS_PIRATE_BOUNTY + BOUNTY_POLICE_ALIEN_PIRATE);
++    });
++
+     // ── No duplicate credits ──────────────────────────────────────────────────
+ 
+     test('credits are awarded exactly once per kill (no duplication)', () => {
+diff --git a/test/integration.test.js b/test/integration.test.js
+index 6fc13ab..e6708c5 100644
+--- a/test/integration.test.js
++++ b/test/integration.test.js
+@@ -45,13 +45,14 @@ describe('Integration Tests', () => {
+         system = {
+             name: "Test System",
+             station: station,
+-            systemIndex: 1,
++            systemIndex: 0,
+             securityLevel: "Medium",
+             economyType: "Industrial",
+             techLevel: 5,
+             enemies: [],
+             spaceObjects: [],
+             planets: [{ name: "Test Planet", pos: { x: 1000, y: 1000 }, size: 200 }],
++            connectedSystemIndices: [1],
+             addEnemy: (e) => system.enemies.push(e),
+             _getDiagonalDistance: () => 1000,
+             addProjectile: function (proj) { if (this.projectiles) this.projectiles.push(proj); },
+@@ -71,13 +72,15 @@ describe('Integration Tests', () => {
+ 
+         const secondSystem = {
+             name: "Second System",
+-            systemIndex: 2,
++            systemIndex: 1,
+             securityLevel: "Medium",
+             economyType: "Industrial",
+             techLevel: 5,
+             enemies: [],
+             spaceObjects: [],
+-            planets: []
++            planets: [],
++            connectedSystemIndices: [0],
++            station: { name: "Second Station" }
+         };
+ 
+         galaxy = {
+@@ -200,6 +203,7 @@ describe('Integration Tests', () => {
+ 
+             // Simulate an actual pirate kill through the destruction path
+             const enemy = new Enemy(0, 0, player, "Sidewinder", AI_ROLE.PIRATE);
++            enemy.isNotoriousPirate = false;
+             enemy.faction = "PIRATE";
+             enemy.currentSystem = system;
+             enemy.getSystem = () => system;
+@@ -228,6 +232,7 @@ describe('Integration Tests', () => {
+             const startCredits = player.credits;
+ 
+             const enemy = new Enemy(0, 0, player, "Sidewinder", AI_ROLE.PIRATE);
++            enemy.isNotoriousPirate = false;
+             enemy.faction = "PIRATE";
+             enemy.currentSystem = system;
+             enemy.getSystem = () => system;
+diff --git a/test/livingGalaxyIntegrations.test.js b/test/livingGalaxyIntegrations.test.js
+new file mode 100644
+index 0000000..5004fd6
+--- /dev/null
++++ b/test/livingGalaxyIntegrations.test.js
+@@ -0,0 +1,319 @@
++global.STARFIELD_CONFIG = { WORKER_ENABLED: false };
++global.SPAWN_CONFIG = { SPAWN_INTERVAL_MS: 5000, FIXED_LARGE_DESPAWN_RADIUS: 5000 };
++global.JUMP_ZONE_CONFIG = { DEFAULT_RADIUS: 1000 };
++
++require('./jest.setup');
++require('../debug.js');
++require('../ships.js');
++require('../weapons.js');
++require('../shipUpgrades.js');
++require('../enemyConstants.js');
++require('../mission.js');
++require('../objectPool.js');
++require('../thrustParticles.js');
++require('../player.js');
++
++const { Enemy } = require('../enemy');
++require('../enemyUtils');
++require('../enemyDamageSystem');
++require('../enemyTargeting');
++require('../enemyAIBehaviors');
++require('../enemyCargo');
++
++const { StarSystem } = require('../starSystem');
++const { MissionGenerator } = require('../missionGenerator');
++const { Mission } = require('../mission');
++const { EventManager } = require('../eventManager');
++const { NewsManager } = require('../newsManager');
++
++if (typeof applyEnemyUtilityMethods === 'function') applyEnemyUtilityMethods();
++if (typeof applyEnemyDamageSystemMethods === 'function') applyEnemyDamageSystemMethods();
++if (typeof applyEnemyTargetingMethods === 'function') applyEnemyTargetingMethods();
++if (typeof applyEnemyCargoMethods === 'function') applyEnemyCargoMethods();
++if (typeof applyEnemyAIBehaviorMethods === 'function') applyEnemyAIBehaviorMethods();
++
++describe('Living Galaxy Integrations', () => {
++    let system;
++    let player;
++    let eventMgr;
++    let newsMgr;
++
++    beforeEach(() => {
++        // Mock randomSeed function
++        global.randomSeed = jest.fn();
++
++        // Instantiate real NewsManager and EventManager, set them on globals
++        newsMgr = new NewsManager();
++        global.newsManager = newsMgr;
++        
++        // Also associate GameGlobals.newsManager
++        global.GameGlobals = {
++            newsManager: newsMgr
++        };
++        
++        eventMgr = new EventManager();
++        global.eventManager = eventMgr;
++
++        // Mock galaxy
++        global.galaxy = {
++            currentSystemIndex: 0,
++            systems: [],
++            getJumpDistance: (a, b) => 1
++        };
++
++        player = new Player();
++        player.pos = createVector(0, 0);
++
++        system = new StarSystem("Artemis");
++        system.systemIndex = 0;
++        global.galaxy.systems.push(system);
++    });
++
++    afterEach(() => {
++        delete global.randomSeed;
++        delete global.newsManager;
++        delete global.eventManager;
++        delete global.galaxy;
++        delete global.GameGlobals;
++            jest.restoreAllMocks();
++    });
++
++    describe('Deterministic Resident NPC Roster', () => {
++        test('generates exactly 12 resident NPCs deterministically', () => {
++            const systemA1 = new StarSystem("Sol");
++            systemA1.systemIndex = 1;
++            systemA1.initStaticElements(12345);
++
++            const systemA2 = new StarSystem("Sol");
++            systemA2.systemIndex = 1;
++            systemA2.initStaticElements(12345);
++
++            const systemB = new StarSystem("Sol");
++            systemB.systemIndex = 2;
++            systemB.initStaticElements(67890);
++
++            expect(systemA1.residentNPCs).toHaveLength(12);
++            expect(systemA2.residentNPCs).toHaveLength(12);
++
++            // A1 and A2 should be identical because of same seed
++            for (let i = 0; i < 12; i++) {
++                expect(systemA1.residentNPCs[i].name).toBe(systemA2.residentNPCs[i].name);
++                expect(systemA1.residentNPCs[i].role).toBe(systemA2.residentNPCs[i].role);
++                expect(systemA1.residentNPCs[i].shipType).toBe(systemA2.residentNPCs[i].shipType);
++            }
++
++            // systemB should have a different roster due to different seed
++            let differenceFound = false;
++            for (let i = 0; i < 12; i++) {
++                if (systemA1.residentNPCs[i].name !== systemB.residentNPCs[i].name) {
++                    differenceFound = true;
++                    break;
++                }
++            }
++            expect(differenceFound).toBe(true);
++        });
++    });
++
++    describe('Faction Influence Tracking & Dynamic Shifts', () => {
++        test('initializes faction influence based on economy', () => {
++            const impSystem = new StarSystem("Imperial Capital");
++            impSystem.systemIndex = 1;
++            impSystem.economyType = "Imperial";
++            impSystem.initStaticElements(100);
++            expect(impSystem.factionInfluence.Imperial).toBe(0.70);
++            expect(impSystem.factionInfluence.Separatist).toBe(0.10);
++
++            const sepSystem = new StarSystem("Separatist Outpost");
++            sepSystem.systemIndex = 2;
++            sepSystem.economyType = "Separatist";
++            sepSystem.initStaticElements(200);
++            expect(sepSystem.factionInfluence.Separatist).toBe(0.70);
++            expect(sepSystem.factionInfluence.Imperial).toBe(0.10);
++
++            const milSystem = new StarSystem("Military Garrison");
++            milSystem.systemIndex = 3;
++            milSystem.economyType = "Military";
++            milSystem.initStaticElements(300);
++            expect(milSystem.factionInfluence.Military).toBe(0.70);
++
++            const indSystem = new StarSystem("Independent Mining");
++            indSystem.systemIndex = 4;
++            indSystem.economyType = "Mining";
++            indSystem.initStaticElements(400);
++            // Independent systems still distribute full influence across all factions.
++            expect(indSystem.factionInfluence.Imperial).toBeGreaterThanOrEqual(0);
++            expect(indSystem.factionInfluence.Separatist).toBeGreaterThanOrEqual(0);
++            expect(indSystem.factionInfluence.Military).toBeGreaterThanOrEqual(0);
++            expect(indSystem.factionInfluence.Imperial + indSystem.factionInfluence.Separatist + indSystem.factionInfluence.Military).toBeCloseTo(1, 2);
++        });
++
++        test('adjusts faction influence on enemy destruction', () => {
++            system.factionInfluence = { Imperial: 0.50, Separatist: 0.20, Military: 0.30 };
++            system.combatStats = {
++                pirates: 0,
++                police: 0,
++                aliens: 0,
++                military: 0,
++                separatists: 0,
++                total: 0,
++                pilotKills: new Map(),
++                recentDeaths: [],
++                lastReportTime: 0
++            };
++
++            const enemy = new Enemy(0, 0, player, 'Sidewinder', AI_ROLE.COMBAT);
++            enemy.faction = 'IMPERIAL';
++            enemy.isNotoriousPirate = false;
++
++            system.recordDestruction(enemy);
++
++            // Imperial influence drops by 0.05, Separatist increases by 0.02
++            // After normalization, other factions are re-scaled so total = 1.0
++            expect(system.factionInfluence.Imperial).toBe(0.44);
++            expect(system.factionInfluence.Separatist).toBe(0.24);
++            // Verify total still sums to 1.0 after adjustments
++            const total = system.factionInfluence.Imperial + system.factionInfluence.Separatist + system.factionInfluence.Military;
++            expect(total).toBeCloseTo(1.0, 2);
++        });
++
++        test('triggers news reports on significant faction influence shifts', () => {
++            const spy = jest.spyOn(newsMgr, 'addFactionInfluenceNews');
++            system.factionInfluence = { Imperial: 0.50, Separatist: 0.20, Military: 0.30 };
++
++            // Adjusting by a significant amount (>= 0.05) triggers news
++            system.adjustFactionInfluence('Imperial', -0.05);
++
++            expect(spy).toHaveBeenCalledWith('Artemis', 'Imperial', 'decrease', 0.45);
++            
++            // Adjusting by a small amount (< 0.05) does not trigger news
++            spy.mockClear();
++            system.adjustFactionInfluence('Separatist', 0.02);
++            expect(spy).not.toHaveBeenCalled();
++
++            spy.mockRestore();
++        });
++    });
++
++    describe('Crisis Spawning & Crisis Missions', () => {
++        test('adjusts ship spawn distribution in crisis affected systems', () => {
++            const originalRandom = global.random;
++
++            // Set up famine crisis on our system
++            eventMgr.activeCrisisState = {
++                famine: {
++                    originSystemIndex: 0,
++                    expires: Date.now() + 100000,
++                    priceMultiplier: 2.0
++                }
++            };
++            // Mock getAffectedSystemsForCrisis to return our system
++            eventMgr.getAffectedSystemsForCrisis = jest.fn().mockReturnValue([0]);
++
++            // Override random to guarantee certain branches are tested
++            // Under famine, we roll random() in _selectShipForEconomy:
++            // r < 0.45 -> Hauler
++            // r < 0.80 -> Pirate
++            // r >= 0.80 -> Police
++            
++            // Test Hauler roll
++            global.random = jest.fn().mockReturnValue(0.2);
++            let selection = system._selectShipForEconomy('Industrial', 'Medium');
++            expect(selection.role).toBe(AI_ROLE.HAULER);
++
++            // Test Pirate roll
++            global.random = jest.fn().mockReturnValue(0.6);
++            selection = system._selectShipForEconomy('Industrial', 'Medium');
++            expect(selection.role).toBe(AI_ROLE.PIRATE);
++
++            // Test Police roll
++            global.random = jest.fn().mockReturnValue(0.9);
++            selection = system._selectShipForEconomy('Industrial', 'Medium');
++            expect(selection.role).toBe(AI_ROLE.POLICE);
++
++            // Restore global.random from test harness.
++            global.random = originalRandom;
++        });
++
++        test('generates famine relief and plague relief missions', () => {
++            // Set up destinations
++            const destSystem = new StarSystem("Oasis");
++            destSystem.systemIndex = 1;
++            
++            const destStation = { name: "Oasis Port", market: { commodities: [] } };
++            destSystem.planets = [{ name: "Oasis Prime", stations: [destStation] }];
++            global.galaxy.systems.push(destSystem);
++
++            // Mock findNearbyDestination to return our destination system/station
++            const originalFindNearbyDestination = MissionGenerator.findNearbyDestination;
++            const originalGetCargoValue = MissionGenerator.getCargoValue;
++            const originalGetAlienSystemBonus = MissionGenerator.getAlienSystemBonus;
++            MissionGenerator.findNearbyDestination = jest.fn().mockReturnValue({
++                system: destSystem,
++                station: destStation
++            });
++            MissionGenerator.getCargoValue = jest.fn().mockReturnValue(100);
++            MissionGenerator.getAlienSystemBonus = jest.fn().mockReturnValue(0);
++
++            const originalRandom = global.random;
++            global.random = jest.fn((a, b) => {
++                if (Array.isArray(a)) return a[0];
++                if (b === undefined) {
++                    if (a === undefined) return 0.5;
++                    return a * 0.5;
++                }
++                return a + (b - a) * 0.5;
++            });
++
++            // Baseline (no crisis) for reward comparison
++            eventMgr.activeCrisisState = null;
++            const baselineMission = MissionGenerator.createLegalDelivery(system, { name: "Artemis Station" }, global.galaxy, player);
++            expect(baselineMission).toBeDefined();
++
++            // 1. Famine Crisis
++            eventMgr.activeCrisisState = {
++                famine: {
++                    originSystemIndex: 1,
++                    expires: Date.now() + 100000,
++                    priceMultiplier: 2.0
++                }
++            };
++            eventMgr.getAffectedSystemsForCrisis = jest.fn().mockImplementation((type) => {
++                if (type === 'famine') return [1];
++                return [];
++            });
++
++            let mission = MissionGenerator.createLegalDelivery(system, { name: "Artemis Station" }, global.galaxy, player);
++            expect(mission).toBeDefined();
++            expect(mission.cargoType).toBe('Food');
++            expect(mission.title).toContain('Famine Relief');
++            expect(mission.description).toContain('suffering a catastrophic famine');
++            expect(mission.rewardCredits).toBe(Math.floor(baselineMission.rewardCredits * 1.8));
++
++            // 2. Plague Crisis
++            eventMgr.activeCrisisState = {
++                plague: {
++                    originSystemIndex: 1,
++                    expires: Date.now() + 100000,
++                    priceMultiplier: 2.0
++                }
++            };
++            eventMgr.getAffectedSystemsForCrisis = jest.fn().mockImplementation((type) => {
++                if (type === 'plague') return [1];
++                return [];
++            });
++
++            mission = MissionGenerator.createLegalDelivery(system, { name: "Artemis Station" }, global.galaxy, player);
++            expect(mission).toBeDefined();
++            expect(mission.cargoType).toBe('Medicine');
++            expect(mission.title).toContain('Medical Relief');
++            expect(mission.description).toContain('plague outbreak has been declared');
++            expect(mission.rewardCredits).toBe(Math.floor(baselineMission.rewardCredits * 1.8));
++
++            // Restore mock
++            MissionGenerator.findNearbyDestination = originalFindNearbyDestination;
++            MissionGenerator.getCargoValue = originalGetCargoValue;
++            MissionGenerator.getAlienSystemBonus = originalGetAlienSystemBonus;
++            global.random = originalRandom;
++        });
++    });
++});

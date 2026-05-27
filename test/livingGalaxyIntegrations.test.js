@@ -169,8 +169,8 @@ describe('Living Galaxy Integrations', () => {
 
             // Imperial influence drops by 0.05, Separatist increases by 0.02
             // After normalization, other factions are re-scaled so total = 1.0
-            expect(system.factionInfluence.Imperial).toBe(0.44);
-            expect(system.factionInfluence.Separatist).toBe(0.24);
+            expect(system.factionInfluence.Imperial).toBe(0.45);
+            expect(system.factionInfluence.Separatist).toBe(0.22);
             // Verify total still sums to 1.0 after adjustments
             const total = system.factionInfluence.Imperial + system.factionInfluence.Separatist + system.factionInfluence.Military;
             expect(total).toBeCloseTo(1.0, 2);

@@ -86,7 +86,23 @@ class Enemy {
             const namesList = (typeof NOTORIOUS_PIRATE_NAMES !== 'undefined' && NOTORIOUS_PIRATE_NAMES.length > 0)
                 ? NOTORIOUS_PIRATE_NAMES
                 : Array.from({ length: 15 }, () => (typeof generateNPCName === 'function' ? generateNPCName() : "Unknown Pirate"));
-            this.displayName = namesList[Math.floor(Math.random() * namesList.length)];
+            
+            // Check active notorious pirate names in the current system to prevent duplicates
+            const currentSystem = (playerRef && playerRef.currentSystem) || (typeof galaxy !== 'undefined' && typeof galaxy.getCurrentSystem === 'function' ? galaxy.getCurrentSystem() : null);
+            let chosenName = null;
+            if (currentSystem && Array.isArray(currentSystem.enemies)) {
+                const activeNames = new Set(currentSystem.enemies.map(e => e.displayName).filter(Boolean));
+                const availableNames = namesList.filter(name => !activeNames.has(name));
+                if (availableNames.length > 0) {
+                    chosenName = availableNames[Math.floor(Math.random() * availableNames.length)];
+                }
+            }
+            
+            if (!chosenName) {
+                chosenName = namesList[Math.floor(Math.random() * namesList.length)];
+            }
+            
+            this.displayName = chosenName;
             this.isNotoriousPirate = true;
             this.isWanted = true;
         }
