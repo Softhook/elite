@@ -1093,6 +1093,62 @@ class NewsManager {
     }
 
     /**
+     * Report a faction influence shift
+     */
+    addFactionInfluenceNews(systemName, factionName, direction, value) {
+        const faction = this._selectFaction();
+        let headline = "";
+        let body = "";
+
+        const system = systemName || "Unknown Sector";
+        const valPct = Math.round(value * 100);
+
+        if (factionName === 'Imperial') {
+            if (direction === 'increase') {
+                headline = `IMPERIAL INFLUENCE EXPANDS IN ${system.toUpperCase()}`;
+                body = `The Empire has consolidated its presence in the ${system} system, with influence rising to ${valPct}%. Local commanders have deployed additional heavy patrols to secure vital trade corridors and enforce Imperial order.`;
+            } else {
+                headline = `IMPERIAL RETREAT IN ${system.toUpperCase()}`;
+                body = `Imperial presence in the ${system} system has waned to ${valPct}% following recent skirmishes and political friction. Local planetary councils report a scale-back of Imperial patrols.`;
+            }
+        } else if (factionName === 'Separatist') {
+            if (direction === 'increase') {
+                headline = `SEPARATIST MOVEMENT GAINS GROUND IN ${system.toUpperCase()}`;
+                body = `Separatist sentiment is on the rise in the ${system} system, with their influence reaching ${valPct}%. Local activist groups and militia units have declared new autonomous zones.`;
+            } else {
+                headline = `SEPARATIST CONTROL WEAKENS IN ${system.toUpperCase()}`;
+                body = `Separatist factions in the ${system} system have lost significant leverage, dropping to ${valPct}% influence. Joint security forces continue to crack down on separatist training cells.`;
+            }
+        } else if (factionName === 'Military') {
+            if (direction === 'increase') {
+                headline = `MILITARY GARRISON EXPANDED IN ${system.toUpperCase()}`;
+                body = `Security forces have fortified their garrison in the ${system} system, elevating Military influence to ${valPct}%. Heavy task forces have been sighted patrolling key asteroid belts.`;
+            } else {
+                headline = `MILITARY FORCES REDEPLOYED FROM ${system.toUpperCase()}`;
+                body = `System defense forces have redeployed several fleet assets away from the ${system} system, reducing military influence to ${valPct}%. Local security levels are expected to drop.`;
+            }
+        } else {
+            // General independent/independent corporate
+            if (direction === 'increase') {
+                headline = `LOCAL INDEPENDENTS CONSOLIDATE POWER IN ${system.toUpperCase()}`;
+                body = `Local corporate and independent syndicates have strengthened their grip on the ${system} system. Independent patrols have assumed control over station checkpoints.`;
+            } else {
+                headline = `INDEPENDENT SYSTEM CONTROL FALTERS IN ${system.toUpperCase()}`;
+                body = `The alliance of independent planetary governors in the ${system} system has reported a decline in local coordination, leading to increased faction vulnerability.`;
+            }
+        }
+
+        this._addNews({
+            headline,
+            body,
+            source: faction.name,
+            sourceColor: faction.color,
+            category: NEWS_CATEGORY.LOCAL_EVENT,
+            priority: NEWS_PRIORITY.MEDIUM
+        });
+    }
+
+    /**
      * Report a successful sabotage mission
      */
     addSabotageNews(targetType, locationName, systemName) {

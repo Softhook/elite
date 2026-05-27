@@ -255,19 +255,19 @@ function makeTarget(px, py) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('environmentAwareness modifier values', () => {
-    test('INCOMPETENT has environmentAwareness 0.1', () => {
+    test('INCOMPETENT has environmentAwareness 0.2', () => {
         const mods = getPilotRankModifiers(PILOT_RANK.INCOMPETENT);
-        expect(mods.environmentAwareness).toBe(0.1);
+        expect(mods.environmentAwareness).toBe(0.2);
     });
 
-    test('GREEN has environmentAwareness 0.3', () => {
+    test('GREEN has environmentAwareness 0.5', () => {
         const mods = getPilotRankModifiers(PILOT_RANK.GREEN);
-        expect(mods.environmentAwareness).toBe(0.3);
+        expect(mods.environmentAwareness).toBe(0.5);
     });
 
-    test('ROOKIE has environmentAwareness 0.6', () => {
+    test('ROOKIE has environmentAwareness 0.8', () => {
         const mods = getPilotRankModifiers(PILOT_RANK.ROOKIE);
-        expect(mods.environmentAwareness).toBe(0.6);
+        expect(mods.environmentAwareness).toBe(0.8);
     });
 
     test('VETERAN has environmentAwareness 1.0', () => {

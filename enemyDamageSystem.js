@@ -451,6 +451,11 @@ class EnemyDamageSystem {
             const playerAttacker = this._resolvePlayerAttacker(attacker);
             if (playerAttacker && system.player === playerAttacker) {
                 this._handlePlayerKillConsequences(playerAttacker, system);
+                
+                // Add news item if player destroyed a notorious pirate
+                if (this.isNotoriousPirate && typeof newsManager !== 'undefined' && newsManager) {
+                    newsManager.addAssassinationNews(this.displayName, this.currentSystem?.name || 'Unknown Sector');
+                }
             }
         }
     }
@@ -609,6 +614,19 @@ class EnemyDamageSystem {
 
         let bountyAmount = 0;
         let bountyMessage = null;
+
+        // Notorious pirate extra bounty
+        if (this.isNotoriousPirate) {
+            bountyAmount = 10000;
+            bountyMessage = `Notorious Pirate Bounty: 10,000 cr`;
+            attacker.addCredits(bountyAmount);
+            if (typeof uiManager !== 'undefined') {
+                uiManager.addMessage(bountyMessage, [100, 255, 100]);
+            }
+            // Reset so standard faction bounty below adds to it if applicable, or we just award this one
+            bountyAmount = 0;
+            bountyMessage = null;
+        }
 
         // Use unified pirate detection helper (consistent with addKill and mission checks)
         const isPirateEnemy = isPirateShip(this);

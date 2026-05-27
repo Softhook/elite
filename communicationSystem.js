@@ -10,6 +10,9 @@ class CommunicationSystem {
         this._lastGlobalMessageTime = -Infinity;
         this._pendingGlobalMessageUntil = -Infinity;
         this._playerTitle = "Commander";
+        this.notoriousPirates = (typeof NOTORIOUS_PIRATE_NAMES !== 'undefined' && NOTORIOUS_PIRATE_NAMES.length > 0)
+            ? NOTORIOUS_PIRATE_NAMES
+            : Array.from({ length: 15 }, () => (typeof generateNPCName === 'function' ? generateNPCName() : "Unknown Pirate"));
 
         // Speech synthesis properties
         this._speechQueue = [];           // Queue of messages to speak
@@ -2131,6 +2134,59 @@ class CommunicationSystem {
                 "{enemyName}: Boom goes the dynamite! Hehehee!",
                 "{enemyName}: Fire! Fire! Everything must BURN!",
                 "{enemyName}: Can you hear the countdown? It's singing!"
+            ],
+            // Event-Aware Crisis/War templates
+            famineHauler: [
+                "{enemyName}: Running grain to {haulerDestination}. Rations are critically low.",
+                "{enemyName}: Grain shipment inbound. People are starving out there.",
+                "{enemyName}: Emergency supplies on board. Cease fire, lives are on the line!",
+                "{enemyName}: Transporting emergency rations. Famine prices are high, but the risk is higher.",
+                "{enemyName}: Running grain to the relief stations. Every crate counts."
+            ],
+            faminePirate: [
+                "{enemyName}: Relief convoys? Perfect. Fat cargo, thin escorts.",
+                "{enemyName}: Famine means high margins for black market food!",
+                "{enemyName}: Hand over the rations! We have buyers waiting in the starving systems.",
+                "{enemyName}: Emergency supplies are worth triple on the black market! Dump them!",
+                "{enemyName}: Easy prey. Those relief ships aren't even armed."
+            ],
+            faminePolice: [
+                "{enemyName}: Fleet command has authorized priority clearance for relief convoys.",
+                "{enemyName}: Guarding the shipping lanes. The starving systems depend on these shipments.",
+                "{enemyName}: Scanning for black-market food smugglers. Comply."
+            ],
+            plagueHauler: [
+                "{enemyName}: Carrying medicine to the quarantine zone in {haulerDestination}.",
+                "{enemyName}: Quarantine guidelines are strict. Medical supplies must get through.",
+                "{enemyName}: Epidemic relief shipment on board. Let us pass!",
+                "{enemyName}: Medicine prices are soaring, but these people are desperate."
+            ],
+            plaguePirate: [
+                "{enemyName}: Medicine cargo? We'll take it. Desperate people pay anything.",
+                "{enemyName}: Hand over the vaccines! They're worth their weight in gold now.",
+                "{enemyName}: We don't care about quarantine. Hand over the med-kits!"
+            ],
+            plaguePolice: [
+                "{enemyName}: All vessels: quarantine measures in effect. Prepare for inspection.",
+                "{enemyName}: Securing the quarantine borders. Stay clear of the infected sector.",
+                "{enemyName}: Priority escort for medical aid transports. Stand aside."
+            ],
+            warImperial: [
+                "{enemyName}: Crown forces securing the corridor. Keep moving, civilian.",
+                "{enemyName}: Imperial dominance will be established in this war.",
+                "{enemyName}: Crush the Separatist rebellion! Glory to the Emperor!",
+                "{enemyName}: Order of the Crown: All non-aligned vessels clear the combat zone."
+            ],
+            warSeparatist: [
+                "{enemyName}: Freedom flights active. Watch for Imperial patrols.",
+                "{enemyName}: Down with the Emperor! Freedom for the Outer Systems!",
+                "{enemyName}: Republic forces will break the Imperial blockade!",
+                "{enemyName}: Fighting for our independence! Support the revolution!"
+            ],
+            warMilitary: [
+                "{enemyName}: Xeno containment in effect. All contacts are hostile.",
+                "{enemyName}: Military emergency declared. Civil traffic rerouted.",
+                "{enemyName}: Combat zones are active. Weapons free on all unregistered ships."
             ]
         };
     }
@@ -2999,7 +3055,57 @@ class CommunicationSystem {
             console.log('DEBUG: _maybeSend enemy cooldown', { now, lastTime, cooldown });
             return false;
         }
-        const template = this._pickTemplate(templates);
+        let activeTemplates = templates;
+
+        // Check for event-aware chatter injection (30% chance)
+        if (this._random() < 0.3 && typeof eventManager !== 'undefined' && eventManager) {
+            const currentIdx = (typeof galaxy !== 'undefined' && galaxy) ? galaxy.currentSystemIndex : -1;
+            const getAffectedSystems = (typeof eventManager.getAffectedSystemsForCrisis === 'function')
+                ? eventManager.getAffectedSystemsForCrisis.bind(eventManager)
+                : null;
+            
+            // Famine
+            if (getAffectedSystems && eventManager.activeCrisisState?.famine && millis() < eventManager.activeCrisisState.famine.expires) {
+                const affectedByFamine = getAffectedSystems('famine');
+                if (currentIdx !== -1 && affectedByFamine.includes(currentIdx)) {
+                    if (enemy.role === 'HAULER' || enemy.role === 'TRANSPORT') {
+                        activeTemplates = this.templates.famineHauler || templates;
+                    } else if (enemy.role === 'PIRATE') {
+                        activeTemplates = this.templates.faminePirate || templates;
+                    } else if (enemy.role === 'POLICE') {
+                        activeTemplates = this.templates.faminePolice || templates;
+                    }
+                }
+            }
+            
+            // Plague (only check if templates weren't overridden by famine)
+            if (activeTemplates === templates && getAffectedSystems && eventManager.activeCrisisState?.plague && millis() < eventManager.activeCrisisState.plague.expires) {
+                const affectedByPlague = getAffectedSystems('plague');
+                if (currentIdx !== -1 && affectedByPlague.includes(currentIdx)) {
+                    if (enemy.role === 'HAULER' || enemy.role === 'TRANSPORT') {
+                        activeTemplates = this.templates.plagueHauler || templates;
+                    } else if (enemy.role === 'PIRATE') {
+                        activeTemplates = this.templates.plaguePirate || templates;
+                    } else if (enemy.role === 'POLICE') {
+                        activeTemplates = this.templates.plaguePolice || templates;
+                    }
+                }
+            }
+            
+            // War state
+            if (activeTemplates === templates && eventManager.activeWarState?.isActive && millis() < eventManager.activeWarState.expires) {
+                const myFaction = this._getShipFaction(enemy);
+                if (myFaction === 'IMPERIAL') {
+                    activeTemplates = this.templates.warImperial || templates;
+                } else if (myFaction === 'SEPARATIST') {
+                    activeTemplates = this.templates.warSeparatist || templates;
+                } else if (enemy.role === 'POLICE' || enemy.role === 'COMBAT') {
+                    activeTemplates = this.templates.warMilitary || templates;
+                }
+            }
+        }
+
+        const template = this._pickTemplate(activeTemplates);
         if (!template) {
             return false;
         }
@@ -3032,6 +3138,11 @@ class CommunicationSystem {
         // If a specific target is provided (e.g. for missionary to NPC comms), use it for "player" tokens
         const target = options.target || this.player;
 
+        // Ensure trade route is initialized for haulers/transports
+        if (enemy && (enemy.role === 'HAULER' || enemy.role === 'TRANSPORT') && !enemy._tradeRoute) {
+            this._initializeTradeRoute(enemy);
+        }
+
         tokens.enemyName = tokens.enemyName ?? this._getEnemyName(enemy);
         tokens.enemyShip = tokens.enemyShip ?? (enemy?.shipTypeName || "ship");
         tokens.playerShip = tokens.playerShip ?? (target?.shipTypeName || "ship");
@@ -3042,8 +3153,18 @@ class CommunicationSystem {
         tokens.pirateGroup = tokens.pirateGroup ?? this._pick(this._pirateGroups);
         tokens.pirateDemand = tokens.pirateDemand ?? this._pick(this._pirateDemands);
         tokens.pirateInsult = tokens.pirateInsult ?? this._pick(this._pirateInsults);
-        tokens.haulerCargo = tokens.haulerCargo ?? this._describeHaulerCargo(enemy);
-        tokens.haulerDestination = tokens.haulerDestination ?? this._pick(this._haulerDestinations);
+        
+        // Trade route tokens
+        if (enemy && enemy._tradeRoute) {
+            tokens.haulerDestination = tokens.haulerDestination ?? enemy._tradeRoute.to;
+            tokens.haulerOrigin = tokens.haulerOrigin ?? enemy._tradeRoute.from;
+            tokens.haulerCargo = tokens.haulerCargo ?? enemy._tradeRoute.cargo;
+        } else {
+            tokens.haulerDestination = tokens.haulerDestination ?? this._pick(this._haulerDestinations);
+            tokens.haulerOrigin = tokens.haulerOrigin ?? "a nearby star";
+            tokens.haulerCargo = tokens.haulerCargo ?? this._describeHaulerCargo(enemy);
+        }
+
         tokens.haulerJob = tokens.haulerJob ?? this._pick(this._haulerJobs);
         tokens.haulerExcuse = tokens.haulerExcuse ?? this._pick(this._haulerExcuses);
         tokens.policeWing = tokens.policeWing ?? this._generatePoliceWingId(enemy);
@@ -3052,6 +3173,10 @@ class CommunicationSystem {
         tokens.militaryUnit = tokens.militaryUnit ?? this._pick(this._militaryUnits);
         tokens.imperialRank = tokens.imperialRank ?? this._pick(this._imperialRanks);
         tokens.separatistSlogan = tokens.separatistSlogan ?? this._pick(this._separatistSlogans);
+        
+        // Notorious pirate tokens
+        tokens.notoriousPirate = tokens.notoriousPirate ?? this._pick(this.notoriousPirates);
+
         return this._resolveTokenEntries(tokens);
     }
 
@@ -3166,12 +3291,88 @@ class CommunicationSystem {
             return this._pick(this._haulerFallbackCargo);
         }
         const sorted = enemy.cargoHold
-            .filter(entry => entry && entry.name && entry.quantity > 0)
+            .filter(entry => entry && (entry.name || entry.type) && entry.quantity > 0)
             .sort((a, b) => b.quantity - a.quantity);
         if (sorted.length === 0) {
             return this._pick(this._haulerFallbackCargo);
         }
-        return sorted[0].name;
+        return sorted[0].name || sorted[0].type;
+    }
+
+    _initializeTradeRoute(enemy) {
+        if (!enemy) return;
+        const currentSystem = enemy.currentSystem;
+        let from = "a nearby star";
+        let to = "a neighboring system";
+        let cargo = this._describeHaulerCargo(enemy);
+
+        if (currentSystem && typeof galaxy !== 'undefined' && galaxy.systems) {
+            const connectedIndices = currentSystem.connectedSystemIndices || [];
+            if (connectedIndices.length > 0) {
+                // Pick a random connected system as the destination/origin
+                const connectedIdx = connectedIndices[Math.floor(this._random() * connectedIndices.length)];
+                const connectedSystem = galaxy.systems[connectedIdx];
+                if (connectedSystem) {
+                    to = connectedSystem.name;
+                }
+                
+                // Pick another connected system (or if only 1, the current system/jump zone)
+                if (connectedIndices.length > 1) {
+                    let otherIdx = connectedIdx;
+                    let attempts = 0;
+                    while (otherIdx === connectedIdx && attempts < 10) {
+                        otherIdx = connectedIndices[Math.floor(this._random() * connectedIndices.length)];
+                        attempts++;
+                    }
+                    const otherSystem = galaxy.systems[otherIdx];
+                    if (otherSystem) {
+                        from = otherSystem.name;
+                    }
+                } else {
+                    from = currentSystem.name;
+                }
+            }
+        }
+        
+        // Famine override: cargo is food, destination is famine origin system
+        if (typeof eventManager !== 'undefined' && eventManager && eventManager.activeCrisisState?.famine) {
+            const famineState = eventManager.activeCrisisState.famine;
+            const getAffectedSystems = (typeof eventManager.getAffectedSystemsForCrisis === 'function')
+                ? eventManager.getAffectedSystemsForCrisis.bind(eventManager)
+                : null;
+            if (getAffectedSystems && millis() < famineState.expires && typeof galaxy !== 'undefined' && galaxy.systems) {
+                const affectedByFamine = getAffectedSystems('famine');
+                const currentIndex = galaxy.currentSystemIndex;
+                if (affectedByFamine.includes(currentIndex)) {
+                    cargo = "Food";
+                    const originSystem = galaxy.systems[famineState.originSystemIndex];
+                    if (originSystem) {
+                        to = originSystem.name;
+                    }
+                }
+            }
+        }
+
+        // Plague override: cargo is medicine, destination is plague origin system
+        if (typeof eventManager !== 'undefined' && eventManager && eventManager.activeCrisisState?.plague) {
+            const plagueState = eventManager.activeCrisisState.plague;
+            const getAffectedSystems = (typeof eventManager.getAffectedSystemsForCrisis === 'function')
+                ? eventManager.getAffectedSystemsForCrisis.bind(eventManager)
+                : null;
+            if (getAffectedSystems && millis() < plagueState.expires && typeof galaxy !== 'undefined' && galaxy.systems) {
+                const affectedByPlague = getAffectedSystems('plague');
+                const currentIndex = galaxy.currentSystemIndex;
+                if (affectedByPlague.includes(currentIndex)) {
+                    cargo = "Medicine";
+                    const originSystem = galaxy.systems[plagueState.originSystemIndex];
+                    if (originSystem) {
+                        to = originSystem.name;
+                    }
+                }
+            }
+        }
+
+        enemy._tradeRoute = { from, to, cargo };
     }
 
     _generatePoliceWingId(enemy) {

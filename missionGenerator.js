@@ -530,8 +530,30 @@ class MissionGenerator {
         const destinationInfo = this.findNearbyDestination(originSystem, galaxy, true, 4);
         if (!destinationInfo) return null;
 
-        const cargo = this._selectDeliveryCargo(originSystem, destinationInfo.system, LEGAL_CARGO);
+        let cargo = this._selectDeliveryCargo(originSystem, destinationInfo.system, LEGAL_CARGO);
         if (!cargo) return null;
+
+        const em = typeof eventManager !== 'undefined' ? eventManager : null;
+        let isFamineRelief = false;
+        let isPlagueRelief = false;
+
+        if (em && em.activeCrisisState) {
+            const destIndex = destinationInfo.system.systemIndex;
+            if (em.activeCrisisState.famine && typeof em.getAffectedSystemsForCrisis === 'function') {
+                const affected = em.getAffectedSystemsForCrisis('famine');
+                if (affected.includes(destIndex)) {
+                    isFamineRelief = true;
+                    cargo = 'Food';
+                }
+            }
+            if (em.activeCrisisState.plague && typeof em.getAffectedSystemsForCrisis === 'function') {
+                const affected = em.getAffectedSystemsForCrisis('plague');
+                if (affected.includes(destIndex)) {
+                    isPlagueRelief = true;
+                    cargo = 'Medicine';
+                }
+            }
+        }
 
         const quantity = floor(random(5, 16));
         const jumpDistance = this.getJumpDistance(originSystem, destinationInfo.system, galaxy);
@@ -539,6 +561,10 @@ class MissionGenerator {
 
         const baseCargoValue = this.getCargoValue(originStation, cargo, 50);
         let reward = Math.floor(100 + jumpDistance * 250 + quantity * baseCargoValue * 0.15 + floor(random(50, 250)));
+
+        if (isFamineRelief || isPlagueRelief) {
+            reward = Math.floor(reward * 1.8);
+        }
 
         // Apply Alien system bonus
         const alienBonus = this.getAlienSystemBonus(destinationInfo.system, reward);
@@ -548,10 +574,21 @@ class MissionGenerator {
         const economyKnown = this.getEconomyInfoText(destinationInfo.system);
         const economyText = economyKnown ? `Destination economy: ${economyKnown}.` : 'Intelligence on the destination economy is unavailable.';
 
+        let title = `Deliver ${quantity}t ${cargo} to ${destinationInfo.station.name} (${jumpText})`;
+        let description = `Transport ${quantity}t of ${cargo} to ${destinationInfo.station.name} station in ${destinationInfo.system.name} (${jumpText} away). ${economyText} Standard contract. Payment upon delivery.`;
+
+        if (isFamineRelief) {
+            title = `Famine Relief: Deliver ${quantity}t Food to ${destinationInfo.station.name} (${jumpText})`;
+            description = `CRITICAL: The ${destinationInfo.system.name} system is suffering a catastrophic famine. Transport ${quantity}t of Food immediately to ${destinationInfo.station.name} to help the population. Payment is subsidised at a premium rate.`;
+        } else if (isPlagueRelief) {
+            title = `Medical Relief: Deliver ${quantity}t Medicine to ${destinationInfo.station.name} (${jumpText})`;
+            description = `CRITICAL: A severe plague outbreak has been declared in the ${destinationInfo.system.name} system. Deliver ${quantity}t of Medicine to ${destinationInfo.station.name} to aid the medical response. Premium reward offered by the local relief committee.`;
+        }
+
         return new Mission({
             type: MISSION_TYPE.DELIVERY_LEGAL,
-            title: `Deliver ${quantity}t ${cargo} to ${destinationInfo.station.name} (${jumpText})`,
-            description: `Transport ${quantity}t of ${cargo} to ${destinationInfo.station.name} station in ${destinationInfo.system.name} (${jumpText} away). ${economyText} Standard contract. Payment upon delivery.`,
+            title,
+            description,
             ...this.getOriginData(originSystem, originStation),
             destinationSystem: destinationInfo.system.name,
             destinationStation: destinationInfo.station.name,

@@ -610,6 +610,8 @@ class StarSystem {
         };
         this._combatReportThreshold = 5; // Generate news after this many kills
         this._heroReportThreshold = 3; // Generate hero news after this many kills by one pilot
+        this.residentNPCs = []; // Roster of recurring resident NPCs in this system
+        this.factionInfluence = { Imperial: 0.10, Separatist: 0.10, Military: 0.10 };
     }
 
     /**
@@ -710,6 +712,56 @@ class StarSystem {
     }
 
     /**
+     * Dynamically adjusts faction influence in the system and triggers news if threshold met.
+     * After adjusting the target faction, re-normalizes all factions so they sum to 1.0.
+     * @param {string} factionName - Name of the faction ('Imperial', 'Separatist', 'Military')
+     * @param {number} amount - Amount to adjust (positive or negative)
+     * @param {boolean} [silent=false] - If true, suppress news generation (used for background shifts)
+     */
+    adjustFactionInfluence(factionName, amount, silent = false) {
+        if (!this.factionInfluence || this.factionInfluence[factionName] === undefined) return;
+
+        const oldInfluence = this.factionInfluence[factionName];
+        let newInfluence = Math.max(0, Math.min(1.0, oldInfluence + amount));
+        
+        // Round to 2 decimal places to avoid floating point issues
+        newInfluence = Math.round(newInfluence * 100) / 100;
+        
+        if (newInfluence === oldInfluence) return;
+
+        this.factionInfluence[factionName] = newInfluence;
+
+        // Re-normalize other factions so the total stays at 1.0
+        const otherFactions = Object.keys(this.factionInfluence).filter(f => f !== factionName);
+        const otherTotal = otherFactions.reduce((sum, f) => sum + this.factionInfluence[f], 0);
+        const remainingBudget = Math.max(0, 1.0 - newInfluence);
+
+        if (otherTotal > 0) {
+            // Scale other factions proportionally to fill the remaining budget
+            for (const f of otherFactions) {
+                this.factionInfluence[f] = Math.round((this.factionInfluence[f] / otherTotal) * remainingBudget * 100) / 100;
+            }
+        } else if (otherFactions.length > 0) {
+            // All other factions are at 0; distribute remaining budget equally
+            const share = Math.round((remainingBudget / otherFactions.length) * 100) / 100;
+            for (const f of otherFactions) {
+                this.factionInfluence[f] = share;
+            }
+        }
+
+        let diff = Math.abs(newInfluence - oldInfluence);
+        diff = Math.round(diff * 100) / 100;
+
+        // Check if the change is significant enough to report (>= 0.05 shift)
+        if (!silent && diff >= 0.05) {
+            const direction = amount > 0 ? 'increase' : 'decrease';
+            if (typeof GameGlobals !== 'undefined' && GameGlobals.newsManager && typeof GameGlobals.newsManager.addFactionInfluenceNews === 'function') {
+                GameGlobals.newsManager.addFactionInfluenceNews(this.name, factionName, direction, newInfluence);
+            }
+        }
+    }
+
+    /**
      * Records the destruction of an NPC for combat news tracking.
      * Tracks deaths by faction and kills by attacker pilot.
      * Generates news when thresholds are met.
@@ -758,6 +810,24 @@ class StarSystem {
             }
         }
         this.combatStats.total++;
+
+        // Adjust faction influence based on destroyed ship
+        if (faction === 'IMPERIAL') {
+            this.adjustFactionInfluence('Imperial', -0.05);
+            this.adjustFactionInfluence('Separatist', 0.02);
+        } else if (faction === 'SEPARATIST') {
+            this.adjustFactionInfluence('Separatist', -0.05);
+            this.adjustFactionInfluence('Imperial', 0.02);
+        } else if (faction === 'MILITARY') {
+            this.adjustFactionInfluence('Military', -0.05);
+            this.adjustFactionInfluence('Separatist', 0.02);
+        }
+
+        // If the destroyed ship was a notorious pirate, reward dominant system faction
+        if (destroyedEnemy.isNotoriousPirate) {
+            const dominantFaction = this._getDominantFaction();
+            this.adjustFactionInfluence(dominantFaction, 0.05);
+        }
 
         // Track recent death names for headlines
         if (enemyName) {
@@ -1105,6 +1175,81 @@ class StarSystem {
             }
         } catch (e) { console.error("Error initializing ambient sounds:", e); }
 
+        // --- Deterministic Resident NPC Roster Generation ---
+        this.residentNPCs = [];
+        const createDeterministicRandom = (seedVal) => {
+            let s = seedVal;
+            return () => {
+                s = Math.sin(s) * 10000;
+                return s - Math.floor(s);
+            };
+        };
+        const rng = createDeterministicRandom(seedToUse);
+
+        const firstNamesList = (typeof NPC_FIRST_NAMES !== 'undefined') ? NPC_FIRST_NAMES : ["Alex", "River", "Jordan", "Gray", "Parker", "Taylor", "Morgan"];
+        const lastNamesList = (typeof NPC_LAST_NAMES !== 'undefined') ? NPC_LAST_NAMES : ["Stone", "Reed", "Vale", "West", "Smith", "Nguyen", "Kim", "Patel"];
+
+        // Use the same spawn ratios as normal system spawning, but with deterministic RNG.
+        const spawnProbabilities = (typeof SpawnConfig !== 'undefined' && SpawnConfig && typeof SpawnConfig.getProbabilities === 'function')
+            ? SpawnConfig.getProbabilities(this.economyType, this.securityLevel)
+            : null;
+
+        const weightedRoleEntries = spawnProbabilities
+            ? Object.entries(spawnProbabilities).filter(([, weight]) => typeof weight === 'number' && weight > 0)
+            : [];
+
+        const pickByRng = (list, fallbackValue) => {
+            if (Array.isArray(list) && list.length > 0) {
+                return list[Math.floor(rng() * list.length)];
+            }
+            return fallbackValue;
+        };
+
+        const deterministicPicker = (list) => pickByRng(list, Array.isArray(list) && list.length > 0 ? list[0] : null);
+
+        const getRoleAndShip = () => {
+            if (weightedRoleEntries.length === 0) {
+                // Fallback to normal selection path only when SpawnConfig is available.
+                if (typeof SpawnConfig !== 'undefined' && SpawnConfig && typeof SpawnConfig.getProbabilities === 'function') {
+                    const fallbackSelection = this._selectShipForEconomy(this.economyType, this.securityLevel);
+                    if (fallbackSelection && fallbackSelection.role && fallbackSelection.ship) {
+                        return { role: fallbackSelection.role, shipType: fallbackSelection.ship };
+                    }
+                }
+                const fallbackResolved = this._resolveShipForRole('HAULER', this.economyType, deterministicPicker);
+                return {
+                    role: fallbackResolved?.role || 'HAULER',
+                    shipType: fallbackResolved?.ship || pickByRng(HAULER_SHIPS, 'CobraMkIII')
+                };
+            }
+
+            const roleProbabilityMap = Object.fromEntries(weightedRoleEntries);
+            const fallbackRoleKey = weightedRoleEntries[weightedRoleEntries.length - 1][0] || 'HAULER';
+            const selectedRoleKey = this._selectRoleFromProbabilities(roleProbabilityMap, rng);
+            const roleKey = selectedRoleKey || fallbackRoleKey;
+
+            const resolved = this._resolveShipForRole(roleKey, this.economyType, deterministicPicker);
+            return {
+                role: resolved?.role || 'HAULER',
+                shipType: resolved?.ship || pickByRng(HAULER_SHIPS, 'CobraMkIII')
+            };
+        };
+
+        for (let idx = 0; idx < 12; idx++) {
+            const firstIdx = Math.floor(rng() * firstNamesList.length);
+            const lastIdx = Math.floor(rng() * lastNamesList.length);
+            const fullName = `${firstNamesList[firstIdx]} ${lastNamesList[lastIdx]}`;
+            const { role, shipType } = getRoleAndShip();
+            this.residentNPCs.push({
+                name: fullName,
+                role: role,
+                shipType: shipType
+            });
+        }
+
+        // --- Deterministic Faction Influence Generation ---
+        this.factionInfluence = this._buildInitialFactionInfluence(rng);
+
         // --- CRITICAL: Reset Seed AFTER generating all static seeded elements ---
         // NOTE: We intentionally DO NOT enqueue planet buffer creation here. Enqueuing
         // all system planet buffers at once causes large startup load (and the UI hang
@@ -1404,6 +1549,16 @@ class StarSystem {
      */
     enterSystem(player) {
         this.discover();
+
+        // Simulate minor faction background shifts on entry (35% chance)
+        // Silent=true to avoid spamming the news feed with routine background drift
+        if (Math.random() < 0.35) {
+            const factions = ['Imperial', 'Separatist', 'Military'];
+            const faction = factions[Math.floor(Math.random() * factions.length)];
+            const direction = Math.random() < 0.5 ? 0.05 : -0.05;
+            this.adjustFactionInfluence(faction, direction, true);
+        }
+
         this.enemies = []; this.enemiesById.clear(); // Clear both array and Map
         this.projectiles = []; this.mines = []; this.asteroids = []; this.harpoons = [];
         this.summonPings = [];
@@ -1681,6 +1836,39 @@ class StarSystem {
             if (warSelection) return warSelection;
         }
 
+        // Check for active crises (famine or plague) - adjusts spawn distribution
+        if (em && em.activeCrisisState) {
+            const systemIndex = this.systemIndex;
+            // Check Famine
+            if (em.activeCrisisState.famine && typeof em.getAffectedSystemsForCrisis === 'function') {
+                const affected = em.getAffectedSystemsForCrisis('famine');
+                if (affected.includes(systemIndex)) {
+                    const r = random();
+                    if (r < 0.45) {
+                        return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length ? HAULER_SHIPS : ['CobraMkIII']) };
+                    } else if (r < 0.80) {
+                        return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS.length ? PIRATE_SHIPS : ['Krait']) };
+                    } else {
+                        return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length ? POLICE_SHIPS : ['ViperPol']) };
+                    }
+                }
+            }
+            // Check Plague
+            if (em.activeCrisisState.plague && typeof em.getAffectedSystemsForCrisis === 'function') {
+                const affected = em.getAffectedSystemsForCrisis('plague');
+                if (affected.includes(systemIndex)) {
+                    const r = random();
+                    if (r < 0.45) {
+                        return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length ? HAULER_SHIPS : ['CobraMkIII']) };
+                    } else if (r < 0.75) {
+                        return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS.length ? PIRATE_SHIPS : ['Krait']) };
+                    } else {
+                        return { role: AI_ROLE.HEALER, ship: random(HEALER_SHIPS.length ? HEALER_SHIPS : ['Krait']), faction: 'SEPARATIST' };
+                    }
+                }
+            }
+        }
+
         // Use centralized SpawnConfig for all spawn probabilities
         const probs = SpawnConfig.getProbabilities(economy, security);
 
@@ -1697,11 +1885,12 @@ class StarSystem {
      * @returns {string} Selected role key
      * @private
      */
-    _selectRoleFromProbabilities(probs) {
+    _selectRoleFromProbabilities(probs, rollProvider = random) {
         // Validation for safety
         if (!probs) return 'HAULER';
 
-        let r = random();
+        const getRoll = (typeof rollProvider === 'function') ? rollProvider : random;
+        let r = getRoll();
         let cumulative = 0;
 
         for (const [key, chance] of Object.entries(probs)) {
@@ -1714,69 +1903,148 @@ class StarSystem {
     }
 
     /**
+     * Returns the currently dominant faction in this system.
+     * Ties default to Military for deterministic behavior.
+     * @returns {'Imperial'|'Separatist'|'Military'}
+     * @private
+     */
+    _getDominantFaction() {
+        const influence = this.factionInfluence || { Imperial: 0, Separatist: 0, Military: 0 };
+        if (influence.Imperial > influence.Military && influence.Imperial > influence.Separatist) {
+            return 'Imperial';
+        }
+        if (influence.Separatist > influence.Imperial && influence.Separatist > influence.Military) {
+            return 'Separatist';
+        }
+        return 'Military';
+    }
+
+    /**
+     * Builds the initial faction influence map for this system.
+     * @param {() => number} [rng] - Optional deterministic RNG used during static init
+     * @returns {{Imperial:number, Separatist:number, Military:number}}
+     * @private
+     */
+    _buildInitialFactionInfluence(rng = random) {
+        const econLower = (this.economyType || '').toLowerCase();
+        if (econLower === 'imperial') {
+            return { Imperial: 0.70, Separatist: 0.10, Military: 0.20 };
+        }
+        if (econLower === 'separatist') {
+            return { Imperial: 0.10, Separatist: 0.70, Military: 0.20 };
+        }
+        if (econLower === 'military') {
+            return { Imperial: 0.20, Separatist: 0.10, Military: 0.70 };
+        }
+
+        // Independent systems still have full control distributed across factions.
+        const getRoll = (typeof rng === 'function') ? rng : random;
+        const w1 = getRoll() + 0.01;
+        const w2 = getRoll() + 0.01;
+        const w3 = getRoll() + 0.01;
+        const total = w1 + w2 + w3;
+        const imperial = Math.round((w1 / total) * 100) / 100;
+        const separatist = Math.round((w2 / total) * 100) / 100;
+        const military = Math.max(0, Math.round((1 - imperial - separatist) * 100) / 100);
+
+        return { Imperial: imperial, Separatist: separatist, Military: military };
+    }
+
+    /**
      * Resolves a configuration role key to a concrete ship and AI role.
      * Maps abstract config roles (FACTION_COMBAT) to specific game data.
      * 
      * @param {string} roleKey - The selected role key from config
      * @param {string} economy - The current economy (context for specific arrays)
+     * @param {(list: string[]) => string} [picker] - Optional ship picker (defaults to random)
      * @returns {{role: string, ship: string, faction?: string}}
      * @private
      */
-    _resolveShipForRole(roleKey, economy) {
+    _resolveShipForRole(roleKey, economy, picker = random) {
         const econ = (economy || '').toUpperCase();
+
+        const pickShip = (preferredList, fallbackListOrValue = null) => {
+            const hasPreferred = Array.isArray(preferredList) && preferredList.length > 0;
+            let pool = hasPreferred ? preferredList : null;
+
+            if (!pool) {
+                if (Array.isArray(fallbackListOrValue)) {
+                    pool = fallbackListOrValue.length > 0 ? fallbackListOrValue : null;
+                } else if (fallbackListOrValue) {
+                    pool = [fallbackListOrValue];
+                }
+            }
+
+            if (!pool || pool.length === 0) {
+                return null;
+            }
+
+            if (typeof picker === 'function') {
+                try {
+                    const chosen = picker(pool);
+                    if (chosen !== undefined && chosen !== null) {
+                        return chosen;
+                    }
+                } catch (_) {
+                    // Fall through to default random choice.
+                }
+            }
+
+            return random(pool);
+        };
 
         switch (roleKey) {
             case 'COMBAT':
                 // Context-aware combat ships
-                if (econ === 'MILITARY') return { role: AI_ROLE.COMBAT, ship: random(MILITARY_SHIPS.length ? MILITARY_SHIPS : COMBAT_SHIPS) };
-                if (econ === 'POST HUMAN') return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
-                if (econ === 'OFFWORLD') return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
-                return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
+                if (econ === 'MILITARY') return { role: AI_ROLE.COMBAT, ship: pickShip(MILITARY_SHIPS, COMBAT_SHIPS) };
+                if (econ === 'POST HUMAN') return { role: AI_ROLE.COMBAT, ship: pickShip(COMBAT_SHIPS, 'Sidewinder') };
+                if (econ === 'OFFWORLD') return { role: AI_ROLE.COMBAT, ship: pickShip(COMBAT_SHIPS, 'Sidewinder') };
+                return { role: AI_ROLE.COMBAT, ship: pickShip(COMBAT_SHIPS, 'Sidewinder') };
 
             case 'FACTION_COMBAT':
-                if (econ === 'SEPARATIST') return { role: AI_ROLE.COMBAT, ship: random(SEPARATIST_SHIPS) };
-                if (econ === 'IMPERIAL') return { role: AI_ROLE.COMBAT, ship: random(IMPERIAL_SHIPS) };
-                return { role: AI_ROLE.COMBAT, ship: random(COMBAT_SHIPS) };
+                if (econ === 'SEPARATIST') return { role: AI_ROLE.COMBAT, ship: pickShip(SEPARATIST_SHIPS, COMBAT_SHIPS) };
+                if (econ === 'IMPERIAL') return { role: AI_ROLE.COMBAT, ship: pickShip(IMPERIAL_SHIPS, COMBAT_SHIPS) };
+                return { role: AI_ROLE.COMBAT, ship: pickShip(COMBAT_SHIPS, 'Sidewinder') };
 
             case 'RIVAL_COMBAT':
-                if (econ === 'SEPARATIST') return { role: AI_ROLE.COMBAT, ship: random(IMPERIAL_SHIPS) }; // Imperials invading Separatist
-                if (econ === 'IMPERIAL') return { role: AI_ROLE.COMBAT, ship: random(SEPARATIST_SHIPS) }; // Separatists invading Imperial
-                return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS) };
+                if (econ === 'SEPARATIST') return { role: AI_ROLE.COMBAT, ship: pickShip(IMPERIAL_SHIPS, COMBAT_SHIPS) }; // Imperials invading Separatist
+                if (econ === 'IMPERIAL') return { role: AI_ROLE.COMBAT, ship: pickShip(SEPARATIST_SHIPS, COMBAT_SHIPS) }; // Separatists invading Imperial
+                return { role: AI_ROLE.PIRATE, ship: pickShip(PIRATE_SHIPS, 'Krait') };
 
             case 'PIRATE':
-                return { role: AI_ROLE.PIRATE, ship: random(PIRATE_SHIPS.length ? PIRATE_SHIPS : ['Krait']) };
+                return { role: AI_ROLE.PIRATE, ship: pickShip(PIRATE_SHIPS, 'Krait') };
 
             case 'POLICE':
-                return { role: AI_ROLE.POLICE, ship: random(POLICE_SHIPS.length ? POLICE_SHIPS : ['ViperPol']) };
+                return { role: AI_ROLE.POLICE, ship: pickShip(POLICE_SHIPS, 'ViperPol') };
 
             case 'HAULER':
                 // Context-aware haulers
-                if (econ === 'MILITARY' && MILITARY_HAULERS.length) return { role: AI_ROLE.HAULER, ship: random(MILITARY_HAULERS) };
-                return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS.length ? HAULER_SHIPS : ['CobraMkIII']) };
+                if (econ === 'MILITARY') return { role: AI_ROLE.HAULER, ship: pickShip(MILITARY_HAULERS, HAULER_SHIPS.length ? HAULER_SHIPS : ['CobraMkIII']) };
+                return { role: AI_ROLE.HAULER, ship: pickShip(HAULER_SHIPS, 'CobraMkIII') };
 
             case 'FACTION_HAULER':
-                if (econ === 'SEPARATIST' && SEPARATIST_HAULERS.length) return { role: AI_ROLE.HAULER, ship: random(SEPARATIST_HAULERS) };
-                if (econ === 'IMPERIAL' && IMPERIAL_HAULERS.length) return { role: AI_ROLE.HAULER, ship: random(IMPERIAL_HAULERS) };
-                return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
+                if (econ === 'SEPARATIST') return { role: AI_ROLE.HAULER, ship: pickShip(SEPARATIST_HAULERS, HAULER_SHIPS.length ? HAULER_SHIPS : ['CobraMkIII']) };
+                if (econ === 'IMPERIAL') return { role: AI_ROLE.HAULER, ship: pickShip(IMPERIAL_HAULERS, HAULER_SHIPS.length ? HAULER_SHIPS : ['CobraMkIII']) };
+                return { role: AI_ROLE.HAULER, ship: pickShip(HAULER_SHIPS, 'CobraMkIII') };
 
             case 'MINER':
-                return { role: AI_ROLE.MINER, ship: random(MINER_SHIPS.length ? MINER_SHIPS : ['Krait']) };
+                return { role: AI_ROLE.MINER, ship: pickShip(MINER_SHIPS, 'Krait') };
 
             case 'TRANSPORT':
-                return { role: AI_ROLE.TRANSPORT, ship: random(TRANSPORT_SHIPS.length ? TRANSPORT_SHIPS : ['Type6Transporter']) };
+                return { role: AI_ROLE.TRANSPORT, ship: pickShip(TRANSPORT_SHIPS, 'Type6Transporter') };
 
             case 'ALIEN':
-                return { role: AI_ROLE.ALIEN, ship: random(ALIEN_SHIPS.length ? ALIEN_SHIPS : ['Thargoid']) };
+                return { role: AI_ROLE.ALIEN, ship: pickShip(ALIEN_SHIPS, 'Thargoid') };
 
             case 'HEALER':
-                return { role: AI_ROLE.HEALER, ship: random(HEALER_SHIPS.length ? HEALER_SHIPS : ['Krait']), faction: 'SEPARATIST' };
+                return { role: AI_ROLE.HEALER, ship: pickShip(HEALER_SHIPS, 'Krait'), faction: 'SEPARATIST' };
 
             case 'MISSIONARY':
-                return { role: AI_ROLE.MISSIONARY, ship: random(MISSIONARY_SHIPS.length ? MISSIONARY_SHIPS : ['Krait']), faction: 'POSTHUMAN' };
+                return { role: AI_ROLE.MISSIONARY, ship: pickShip(MISSIONARY_SHIPS, 'Krait'), faction: 'POSTHUMAN' };
 
             default:
                 console.warn(`Unresolved role key: ${roleKey}, defaulting to Hauler`);
-                return { role: AI_ROLE.HAULER, ship: random(HAULER_SHIPS) };
+                return { role: AI_ROLE.HAULER, ship: pickShip(HAULER_SHIPS, 'CobraMkIII') };
         }
     }
 
@@ -1981,6 +2249,19 @@ class StarSystem {
      * @private
      */
     _createEnemy(x, y, shipTypeName, role) {
+        let residentName = null;
+        if (this.residentNPCs && this.residentNPCs.length > 0 && Math.random() < 0.60) {
+            // Find resident NPCs matching this role that are NOT currently active
+            const activeNames = new Set(this.enemies.map(e => e.displayName).filter(Boolean));
+            const availableResidents = this.residentNPCs.filter(r => r.role === role && !activeNames.has(r.name));
+            if (availableResidents.length > 0) {
+                // Pick a random available resident
+                const resident = availableResidents[Math.floor(Math.random() * availableResidents.length)];
+                shipTypeName = resident.shipType;
+                residentName = resident.name;
+            }
+        }
+
         // Check if the ship definition has a specialized aiRole that should override the generic role
         // This ensures ships like SeparatistMedic (aiRoles: ["HEALER"]) get the correct AI_ROLE.HEALER
         let effectiveRole = role;
@@ -1999,6 +2280,9 @@ class StarSystem {
         }
 
         const newEnemy = new Enemy(x, y, this.player, shipTypeName, effectiveRole);
+        if (residentName) {
+            newEnemy.displayName = residentName;
+        }
         newEnemy.calculateRadianProperties();
         newEnemy.initializeColors();
         this.addEnemy(newEnemy);

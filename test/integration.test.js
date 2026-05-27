@@ -45,13 +45,14 @@ describe('Integration Tests', () => {
         system = {
             name: "Test System",
             station: station,
-            systemIndex: 1,
+            systemIndex: 0,
             securityLevel: "Medium",
             economyType: "Industrial",
             techLevel: 5,
             enemies: [],
             spaceObjects: [],
             planets: [{ name: "Test Planet", pos: { x: 1000, y: 1000 }, size: 200 }],
+            connectedSystemIndices: [1],
             addEnemy: (e) => system.enemies.push(e),
             _getDiagonalDistance: () => 1000,
             addProjectile: function (proj) { if (this.projectiles) this.projectiles.push(proj); },
@@ -71,13 +72,15 @@ describe('Integration Tests', () => {
 
         const secondSystem = {
             name: "Second System",
-            systemIndex: 2,
+            systemIndex: 1,
             securityLevel: "Medium",
             economyType: "Industrial",
             techLevel: 5,
             enemies: [],
             spaceObjects: [],
-            planets: []
+            planets: [],
+            connectedSystemIndices: [0],
+            station: { name: "Second Station" }
         };
 
         galaxy = {
@@ -200,6 +203,7 @@ describe('Integration Tests', () => {
 
             // Simulate an actual pirate kill through the destruction path
             const enemy = new Enemy(0, 0, player, "Sidewinder", AI_ROLE.PIRATE);
+            enemy.isNotoriousPirate = false;
             enemy.faction = "PIRATE";
             enemy.currentSystem = system;
             enemy.getSystem = () => system;
@@ -228,6 +232,7 @@ describe('Integration Tests', () => {
             const startCredits = player.credits;
 
             const enemy = new Enemy(0, 0, player, "Sidewinder", AI_ROLE.PIRATE);
+            enemy.isNotoriousPirate = false;
             enemy.faction = "PIRATE";
             enemy.currentSystem = system;
             enemy.getSystem = () => system;

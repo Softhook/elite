@@ -551,6 +551,12 @@ function generateTitledNPCName() {
     return `${title} ${generateNPCName()}`;
 }
 
+// Generate a fixed pool of notorious pirate names at startup using the existing NPC name system
+const NOTORIOUS_PIRATE_NAMES = [];
+for (let i = 0; i < 15; i++) {
+    NOTORIOUS_PIRATE_NAMES.push(generateNPCName());
+}
+
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -563,6 +569,7 @@ if (typeof module !== 'undefined' && module.exports) {
         NPC_FIRST_NAMES,
         NPC_LAST_NAMES,
         NPC_TITLES,
+        NOTORIOUS_PIRATE_NAMES,
         generateNPCName,
         generateTitledNPCName,
         DEFAULT_DELTA_SECONDS,
@@ -630,6 +637,7 @@ if (typeof module !== 'undefined' && module.exports) {
     global.NPC_FIRST_NAMES = NPC_FIRST_NAMES;
     global.NPC_LAST_NAMES = NPC_LAST_NAMES;
     global.NPC_TITLES = NPC_TITLES;
+    global.NOTORIOUS_PIRATE_NAMES = NOTORIOUS_PIRATE_NAMES;
     global.generateNPCName = generateNPCName;
     global.generateTitledNPCName = generateTitledNPCName;
     global.DEFAULT_DELTA_SECONDS = DEFAULT_DELTA_SECONDS;

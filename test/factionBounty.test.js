@@ -45,11 +45,13 @@ function makeEnemy(role, faction) {
     const e = new Enemy(0, 0, null, 'Sidewinder', role);
     e.faction = faction || null;
     e.destroyed = false;
+    e.isNotoriousPirate = false; // Ensure not notorious for bounty tests
     return e;
 }
 
 describe('_awardFactionBounty — credits reach the player wallet', () => {
     let player;
+    const NOTORIOUS_PIRATE_BOUNTY = 10000;
 
     beforeEach(() => {
         player = new Player();
@@ -155,6 +157,21 @@ describe('_awardFactionBounty — credits reach the player wallet', () => {
         const enemy = makeEnemy(AI_ROLE.PIRATE, null);
         enemy._awardFactionBounty(player);
         expect(player.credits).toBe(0);
+    });
+
+    test('notorious pirate awards 10,000 cr even for unaffiliated player', () => {
+        const enemy = makeEnemy(AI_ROLE.PIRATE, null);
+        enemy.isNotoriousPirate = true;
+        enemy._awardFactionBounty(player);
+        expect(player.credits).toBe(NOTORIOUS_PIRATE_BOUNTY);
+    });
+
+    test('notorious pirate bounty stacks with police pirate bounty', () => {
+        player.isPolice = true;
+        const enemy = makeEnemy(AI_ROLE.PIRATE, null);
+        enemy.isNotoriousPirate = true;
+        enemy._awardFactionBounty(player);
+        expect(player.credits).toBe(NOTORIOUS_PIRATE_BOUNTY + BOUNTY_POLICE_ALIEN_PIRATE);
     });
 
     // ── No duplicate credits ──────────────────────────────────────────────────

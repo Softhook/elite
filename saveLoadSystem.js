@@ -441,6 +441,14 @@ function loadGame(slotIndex) {
                             restoredDockState = true;
                         }
                     }
+
+                    // Start a fade-in from black when restoring a docked state.
+                    // This prevents the exterior station view from flashing briefly
+                    // before the interior station menu renders on top.
+                    if (restoredDockState) {
+                        gameStateManager.postLoadFadeState = "FADE_IN";
+                        gameStateManager.postLoadFadeOpacity = 1;
+                    }
                 }
 
                 // 9. Restore surface mode if saved

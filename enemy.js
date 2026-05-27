@@ -80,6 +80,17 @@ class Enemy {
             this.gender = nameData.gender; // 'male' or 'female'
         }
 
+        // Notorious pirate logic
+        this.isNotoriousPirate = false;
+        if (this.role === AI_ROLE.PIRATE && Math.random() < 0.05) {
+            const namesList = (typeof NOTORIOUS_PIRATE_NAMES !== 'undefined' && NOTORIOUS_PIRATE_NAMES.length > 0)
+                ? NOTORIOUS_PIRATE_NAMES
+                : Array.from({ length: 15 }, () => (typeof generateNPCName === 'function' ? generateNPCName() : "Unknown Pirate"));
+            this.displayName = namesList[Math.floor(Math.random() * namesList.length)];
+            this.isNotoriousPirate = true;
+            this.isWanted = true;
+        }
+
         // Generate pilot rank (skill/experience level)
         // Uses weighted distribution based on role and system properties
         this.pilotRank = (typeof generatePilotRank === 'function')
