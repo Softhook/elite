@@ -1055,6 +1055,8 @@ class Enemy {
             currentState: this.currentState,
             shipDisplayName: this.displayName,
             gender: this.gender, // For voice selection
+            pilotRank: this.pilotRank ?? null,
+            isNotoriousPirate: !!this.isNotoriousPirate,
             cargoHold: Array.isArray(this.cargoHold) ? this.cargoHold.map(c => (typeof c.toJSON === 'function' ? c.toJSON() : c)) : [],
             weapons: Array.isArray(this.weapons) ? this.weapons.map(w => (w && w.name) ? w.name : w) : [],
             strokeColorValue: this.strokeColorValue,
@@ -1105,6 +1107,8 @@ class Enemy {
             enemy.displayName = data.shipDisplayName || enemy.displayName;
             enemy.gender = data.gender || enemy.gender; // Restore gender for voice selection
             enemy.faction = data.faction || enemy.faction;
+            if (data.pilotRank != null) enemy.pilotRank = data.pilotRank;
+            enemy.isNotoriousPirate = !!data.isNotoriousPirate;
             enemy.isWanted = !!data.isWanted;
             enemy.isAssassinationTarget = !!data.isAssassinationTarget;
             enemy.isAssassinationGuard = !!data.isAssassinationGuard;

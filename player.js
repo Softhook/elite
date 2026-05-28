@@ -2939,7 +2939,9 @@ class Player {
                 shipType: g.shipType,
                 hull: (typeof g.hull === 'number') ? g.hull : null,
                 maxHull: (typeof g.maxHull === 'number') ? g.maxHull : null,
-                destroyed: !!g.destroyed
+                destroyed: !!g.destroyed,
+                displayName: (typeof g.displayName === 'string') ? g.displayName : (g.enemyRef?.displayName || null),
+                gender: (typeof g.gender === 'string') ? g.gender : (g.enemyRef?.gender || null)
             })),
             // Navigation preferences
             showSecretBaseNavigation: this.showSecretBaseNavigation || false,
@@ -3135,6 +3137,8 @@ class Player {
                     hull: (typeof sb.hull === 'number') ? sb.hull : null,
                     maxHull: (typeof sb.maxHull === 'number') ? sb.maxHull : null,
                     destroyed: !!sb.destroyed,
+                    displayName: (typeof sb.displayName === 'string') ? sb.displayName : null,
+                    gender: (typeof sb.gender === 'string') ? sb.gender : null,
                     enemyRef: null
                 });
             });
@@ -4854,6 +4858,15 @@ class Player {
             const bodyguardEnemy = new Enemy(spawnX, spawnY, this, guard.shipType, AI_ROLE.GUARD);
             bodyguardEnemy.principal = this; // Set player as the principal to protect
             bodyguardEnemy.isPlayerBodyguard = true; // Mark as player bodyguard to exclude from system save
+
+            // Restore persisted identity (name and gender) so bodyguards keep their name across save/load
+            if (guard.displayName) {
+                bodyguardEnemy.displayName = guard.displayName;
+            }
+            if (guard.gender) {
+                bodyguardEnemy.gender = guard.gender;
+            }
+
             bodyguardEnemy.changeState(AI_STATE.GUARDING);
 
             // Restore hull if this bodyguard had previous damage
@@ -4868,6 +4881,14 @@ class Player {
 
             // Store reference
             guard.enemyRef = bodyguardEnemy;
+
+            // Capture identity from spawned enemy if not yet persisted (first hire)
+            if (!guard.displayName && bodyguardEnemy.displayName) {
+                guard.displayName = bodyguardEnemy.displayName;
+            }
+            if (!guard.gender && bodyguardEnemy.gender) {
+                guard.gender = bodyguardEnemy.gender;
+            }
 
             // Add to system enemies (use addEnemy for proper Map tracking)
             system.addEnemy(bodyguardEnemy);
