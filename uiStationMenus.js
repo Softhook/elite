@@ -1168,6 +1168,7 @@ class UIStationMenus {
         const rowH = L.ROW_HEIGHT;
         const startY = contentY + STATION_TEXT_SIZE.BODY + L.BTN_SPACING;
         const visibleRows = floor((pH - (startY - pY) - L.BACK_BUTTON_MARGIN) / rowH);
+        this.shipyardVisibleRows = visibleRows;
         let totalRows = availableShips.length;
         let scrollAreaH = visibleRows * rowH;
         this.shipyardScrollMax = max(0, totalRows - visibleRows);
@@ -1318,6 +1319,7 @@ class UIStationMenus {
         const startY = contentY;
 
         const visibleRows = floor((pH - (startY - pY) - L.BACK_BUTTON_MARGIN) / rowH);
+        this.upgradeVisibleRows = visibleRows;
         let totalRows = allItems.length;
         let scrollAreaH = visibleRows * rowH;
         this.upgradeScrollMax = max(0, totalRows - visibleRows);
@@ -1924,6 +1926,7 @@ class UIStationMenus {
         const totalEntries = events.length;
         const rowH = 40; // Height per entry
         const visibleRows = Math.max(1, Math.floor((contentH - 40) / rowH)); // Subtract header/padding
+        this.recordVisibleRows = visibleRows;
 
         this.recordScrollMax = Math.max(0, totalEntries - visibleRows);
 

@@ -93,9 +93,11 @@ class InputManager {
             },
             [INPUT_CONTEXTS.GAME_OVER]: { Enter: INPUT_ACTIONS.CONFIRM, Space: INPUT_ACTIONS.CONFIRM },
             [INPUT_CONTEXTS.STATION_MENU]: {
-                ArrowUp: INPUT_ACTIONS.NAV_UP, ArrowDown: INPUT_ACTIONS.NAV_DOWN,
-                ArrowLeft: INPUT_ACTIONS.NAV_LEFT, ArrowRight: INPUT_ACTIONS.NAV_RIGHT,
-                Enter: INPUT_ACTIONS.CONFIRM, Escape: INPUT_ACTIONS.BACK
+                ArrowUp: INPUT_ACTIONS.NAV_UP, KeyW: INPUT_ACTIONS.NAV_UP,
+                ArrowDown: INPUT_ACTIONS.NAV_DOWN, KeyS: INPUT_ACTIONS.NAV_DOWN,
+                ArrowLeft: INPUT_ACTIONS.NAV_LEFT, KeyA: INPUT_ACTIONS.NAV_LEFT,
+                ArrowRight: INPUT_ACTIONS.NAV_RIGHT, KeyD: INPUT_ACTIONS.NAV_RIGHT,
+                Enter: INPUT_ACTIONS.CONFIRM, Space: INPUT_ACTIONS.CONFIRM, Escape: INPUT_ACTIONS.BACK
             },
             [INPUT_CONTEXTS.GALAXY_MAP]: {
                 ArrowUp: INPUT_ACTIONS.NAV_UP, KeyW: INPUT_ACTIONS.NAV_UP,

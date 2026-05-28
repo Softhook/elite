@@ -16,6 +16,13 @@ function _handleGamepadStationMenus(gp, state) {
         _gpMenuState = state;
         _gpMissionPanel = 'list';
         _gpMissionDetailIndex = 0;
+        if (uiManager?.stationMenus) {
+            const smObj = uiManager.stationMenus;
+            smObj.newsScrollOffset = 0;
+            smObj.shipyardScrollOffset = 0;
+            smObj.upgradeScrollOffset = 0;
+            smObj.recordScrollOffset = 0;
+        }
         if (state === 'VIEWING_NEWS') {
             _gpMenuIndex = 4;
         } else {
@@ -58,6 +65,7 @@ function _handleGamepadStationMenus(gp, state) {
         return;
     }
 
+    const sm = uiManager?.stationMenus;
     const isMarket = state === 'VIEWING_MARKET' || state === 'VIEWING_SPACE_OBJECT_MARKET';
     const isHorizontalDetail = state === 'VIEWING_SHIP_DETAIL' || state === 'VIEWING_WEAPON_DETAIL';
     const isRecordView = state === 'VIEWING_RECORD';
@@ -80,8 +88,7 @@ function _handleGamepadStationMenus(gp, state) {
     // ── D-pad up/down = navigate selection ──
     if (buttons && buttons.length > 0) {
         if (pressedUp || pressedDown) {
-            if (state === 'VIEWING_NEWS' && uiManager.stationMenus && !uiManager.stationMenus.selectedNewsItem) {
-                const sm = uiManager.stationMenus;
+            if (state === 'VIEWING_NEWS' && sm && !sm.selectedNewsItem) {
                 if (buttons.length >= 6) { // At least one news item exists
                     const firstNewsIdx = 4;
                     const lastNewsIdx = buttons.length - 2;
@@ -117,6 +124,46 @@ function _handleGamepadStationMenus(gp, state) {
                 } else if (buttons.length === 5) {
                     // Only back button is navigatable (index 4)
                     _gpMenuIndex = 4;
+                }
+            } else if ((state === 'VIEWING_SHIPYARD' || state === 'VIEWING_UPGRADES') && sm) {
+                const isShipyard = state === 'VIEWING_SHIPYARD';
+                const scrollOffsetKey = isShipyard ? 'shipyardScrollOffset' : 'upgradeScrollOffset';
+                const scrollMaxKey = isShipyard ? 'shipyardScrollMax' : 'upgradeScrollMax';
+
+                if (buttons.length >= 2) { // At least one list item exists
+                    const firstItemIdx = 0;
+                    const lastItemIdx = buttons.length - 2;
+                    const backBtnIdx = buttons.length - 1;
+
+                    if (pressedDown) {
+                        if (_gpMenuIndex === lastItemIdx) {
+                            if ((sm[scrollOffsetKey] || 0) < (sm[scrollMaxKey] || 0)) {
+                                sm[scrollOffsetKey] = (sm[scrollOffsetKey] || 0) + 1;
+                            } else {
+                                _gpMenuIndex = backBtnIdx;
+                            }
+                        } else if (_gpMenuIndex === backBtnIdx) {
+                            _gpMenuIndex = firstItemIdx;
+                            sm[scrollOffsetKey] = 0;
+                        } else {
+                            _gpMenuIndex++;
+                        }
+                    } else if (pressedUp) {
+                        if (_gpMenuIndex === firstItemIdx) {
+                            if ((sm[scrollOffsetKey] || 0) > 0) {
+                                sm[scrollOffsetKey] = (sm[scrollOffsetKey] || 0) - 1;
+                            } else {
+                                _gpMenuIndex = backBtnIdx;
+                            }
+                        } else if (_gpMenuIndex === backBtnIdx) {
+                            _gpMenuIndex = lastItemIdx;
+                            sm[scrollOffsetKey] = sm[scrollMaxKey] || 0;
+                        } else {
+                            _gpMenuIndex--;
+                        }
+                    }
+                } else if (buttons.length === 1) {
+                    _gpMenuIndex = 0;
                 }
             } else if (isRecordView) {
                 // Keep focus stable on Record view controls while list scrolling is handled above.
@@ -159,7 +206,7 @@ function _handleGamepadStationMenus(gp, state) {
             uiManager.stationMenus.newsScrollOffset = 0; // Reset scroll
             soundManager?.playSound('click');
         } else {
-            _handleGamepadListScroll(state, dir);
+            _handleGamepadListScroll(state, dir, true);
         }
     }
 
@@ -384,7 +431,7 @@ function _objectToButtons(obj) {
 /**
  * Handle D-pad left/right for scrollable lists (market, shipyard, upgrades, news, record)
  */
-function _handleGamepadListScroll(state, direction) {
+function _handleGamepadListScroll(state, direction, isPageScroll = false) {
     if (!uiManager) return;
     const sm = uiManager.stationMenus;
 
@@ -395,32 +442,36 @@ function _handleGamepadListScroll(state, direction) {
             break;
         case 'VIEWING_SHIPYARD':
             if (sm) {
+                const step = isPageScroll ? (sm.shipyardVisibleRows || 5) : 1;
                 sm.shipyardScrollOffset = constrain(
-                    (sm.shipyardScrollOffset || 0) + direction * 3,
+                    (sm.shipyardScrollOffset || 0) + direction * step,
                     0, sm.shipyardScrollMax || 0
                 );
             }
             break;
         case 'VIEWING_UPGRADES':
             if (sm) {
+                const step = isPageScroll ? (sm.upgradeVisibleRows || 5) : 1;
                 sm.upgradeScrollOffset = constrain(
-                    (sm.upgradeScrollOffset || 0) + direction * 3,
+                    (sm.upgradeScrollOffset || 0) + direction * step,
                     0, sm.upgradeScrollMax || 0
                 );
             }
             break;
         case 'VIEWING_NEWS':
             if (sm) {
+                const step = isPageScroll ? 5 : 1;
                 sm.newsScrollOffset = constrain(
-                    (sm.newsScrollOffset || 0) + direction,
+                    (sm.newsScrollOffset || 0) + direction * step,
                     0, sm.newsScrollMax || 0
                 );
             }
             break;
         case 'VIEWING_RECORD':
             if (sm) {
+                const step = isPageScroll ? (sm.recordVisibleRows || 10) : 1;
                 sm.recordScrollOffset = constrain(
-                    (sm.recordScrollOffset || 0) + direction,
+                    (sm.recordScrollOffset || 0) + direction * step,
                     0, sm.recordScrollMax || 0
                 );
             }

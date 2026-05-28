@@ -573,6 +573,9 @@ function _createGamepadProxyFromAction(action) {
                 [INPUT_ACTIONS.NAV_RIGHT]: 'dpad.right'
             };
             return inputName === actionToButton[action];
+        },
+        released(inputName) {
+            return false;
         }
     };
 }
