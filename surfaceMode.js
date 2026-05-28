@@ -210,6 +210,7 @@ class SurfaceMode {
 
         // Reboard cooldown to prevent loop
         this.reboardCooldown = 0;
+        this.boardCooldown = 0;
 
         // Exit fade overlay opacity (persists after exit for smooth fade-in to space)
         this.exitFadeOpacity = 0;
@@ -867,9 +868,12 @@ class SurfaceMode {
         this._smoothDt = this._smoothDt * (1 - alpha) + (deltaTime / 1000) * alpha;
         const dt = this._smoothDt;
 
-        // Update reboard cooldown
+        // Update reboard cooldowns
         if (this.reboardCooldown > 0) {
             this.reboardCooldown -= dt;
+        }
+        if (this.boardCooldown > 0) {
+            this.boardCooldown -= dt;
         }
 
         // Update transition
@@ -1239,17 +1243,19 @@ class SurfaceMode {
      * Check if player is trying to disembark
      */
     _checkDisembarkTrigger() {
+        // Skip check if trying to climb / take off
+        if (this.altitudeInput > 0) return;
         if (!this.isLanded || this.controlMode !== 'SHIP') return;
 
-        // Check for any movement input
-        // Keys: W(87), A(65), S(83), D(68) or Arrows (UP/LEFT/DOWN/RIGHT)
-        const keyboardMoving = keyIsDown(87) || keyIsDown(65) || keyIsDown(83) || keyIsDown(68) ||
-            keyIsDown(UP_ARROW) || keyIsDown(LEFT_ARROW) || keyIsDown(DOWN_ARROW) || keyIsDown(RIGHT_ARROW);
+        // Check for longitudinal (forward/backward) movement input only.
+        // This allows the player to turn/rotate the ship on the ground without ejecting.
+        // Keys: W(87), S(83) or Arrows (UP/DOWN)
+        const keyboardMoving = keyIsDown(87) || keyIsDown(83) ||
+            keyIsDown(UP_ARROW) || keyIsDown(DOWN_ARROW);
 
         const gpState = (typeof window !== 'undefined') ? window?._gamepadManager?.state : null;
         const gamepadMoving = !!gpState && (
-            gpState.dpad?.up || gpState.dpad?.down || gpState.dpad?.left || gpState.dpad?.right ||
-            Math.abs(gpState.ls?.x || 0) > 0.35 ||
+            gpState.dpad?.up || gpState.dpad?.down ||
             Math.abs(gpState.ls?.y || 0) > 0.35 ||
             (gpState.r2 || 0) > 0.35 ||
             (gpState.l2 || 0) > 0.35
@@ -1275,12 +1281,23 @@ class SurfaceMode {
         // Create astronaut at player position
         // Ensure astronaut.js is loaded
         if (typeof Astronaut !== 'undefined') {
-            this.astronaut = new Astronaut(this.player.pos);
+            // Pass skipSpawnOffset: true so we can position them dynamically
+            this.astronaut = new Astronaut(this.player.pos, { skipSpawnOffset: true });
+            this.astronaut.facingAngle = this.player.angle;
             this.astronaut.heading = this.player.angle; // Face same way as ship
+
+            // Position astronaut perpendicular to the ship heading (right side), scaled by ship size
+            const spawnAngle = this.player.angle + Math.PI / 2;
+            const spawnDist = (this.player.size || 30) * 0.5 + 20; // Radius + offset padding
+            this.astronaut.pos.x = this.player.pos.x + Math.cos(spawnAngle) * spawnDist;
+            this.astronaut.pos.y = this.player.pos.y + Math.sin(spawnAngle) * spawnDist;
 
             // Initial surface sync
             const groundH = this._getTerrainHeightAt(this.astronaut.pos.x, this.astronaut.pos.y);
             this.astronaut.altitude = groundH;
+
+            // Cooldown before allowing the player to board again
+            this.boardCooldown = 1.5;
 
             // Message
             if (typeof uiManager !== 'undefined') {
@@ -1301,6 +1318,12 @@ class SurfaceMode {
         this.controlMode = 'SHIP';
         this.targetViewZoom = 1.0; // Zoom out to normal ship view
         this.astronaut = null;
+
+        // Reset ship altitude to local terrain height + MIN_ALTITUDE so it stays landed
+        const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
+        this.altitude = groundH + SURFACE_CONFIG.MIN_ALTITUDE;
+        this.player.altitude = this.altitude;
+        this.isLanded = true;
 
         // Reset player inputs to prevent instant re-deploy or launch
         this.player.thrustInput = 0;
@@ -1526,10 +1549,27 @@ class SurfaceMode {
         this.altitude = groundH + 30; // Camera height above astronaut (closer than ship)
 
         // Check for Boarding (proximity to ship)
-        // Only board if not moving (to avoid accidental trigger while walking past)
-        if (!isMoving) {
-            const dist = p5.Vector.dist(this.astronaut.pos, this.player.pos);
-            if (dist < SURFACE_CONFIG.BOARDING_RANGE) {
+        // Use a dual-distance check to handle both physical and visual/parallax positions,
+        // and allow boarding while moving if not on cooldown.
+        if (this.boardCooldown <= 0) {
+            const dist2D = p5.Vector.dist(this.astronaut.pos, this.player.pos);
+
+            const extrusionAngle = this._getExtrusionAngle();
+            const sinE = Math.sin(extrusionAngle);
+            const cosE = Math.cos(extrusionAngle);
+
+            const shipAlt = this.player.altitude || 0;
+            const shipVisX = this.player.pos.x - shipAlt * sinE;
+            const shipVisY = this.player.pos.y - shipAlt * cosE;
+
+            const astroAlt = this.astronaut.altitude || 0;
+            const astroVisX = this.astronaut.pos.x - astroAlt * sinE;
+            const astroVisY = this.astronaut.pos.y - astroAlt * cosE;
+
+            const distVisual = Math.hypot(astroVisX - shipVisX, astroVisY - shipVisY);
+            const boardingRange = Math.max(SURFACE_CONFIG.BOARDING_RANGE, (this.player.size || 30) * 0.5 + 15);
+
+            if (dist2D < boardingRange || distVisual < boardingRange) {
                 this.boardShip();
                 return; // Immediately return to avoid using this.astronaut after it was nulled
             }

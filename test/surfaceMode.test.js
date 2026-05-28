@@ -950,6 +950,7 @@ describe('SurfaceMode Astronaut Integration', () => {
 
         // Move astronaut close to ship
         sm.astronaut.pos = player.pos.copy();
+        sm.boardCooldown = 0; // Clear boarding cooldown for testing automatic trigger
 
         // Update loop should trigger boardShip (via _updateAstronaut)
         sm._updateAstronaut(0.016);
@@ -1043,6 +1044,88 @@ describe('SurfaceMode Astronaut Integration', () => {
         sm._checkDisembarkTrigger();
 
         expect(sm.controlMode).toBe('SHIP');
+    });
+
+    test('boardShip resets ship altitude and landed status', () => {
+        global.Astronaut = class MockAstronaut {
+            constructor(pos) { this.pos = pos.copy(); this.altitude = 0; }
+            handleInput() { return false; }
+            update() { }
+        };
+        sm.deployAstronaut();
+        sm.altitude = 200; // Visual/camera altitude in EVA
+        
+        const expectedAlt = sm.terrain.getHeightAt(sm.player.pos.x, sm.player.pos.y) + SURFACE_CONFIG.MIN_ALTITUDE;
+        sm.boardShip();
+        expect(sm.altitude).toBeCloseTo(expectedAlt, 2);
+        expect(sm.player.altitude).toBeCloseTo(expectedAlt, 2);
+        expect(sm.isLanded).toBe(true);
+    });
+
+    test('dual-distance boarding check allows boarding at visual coordinates', () => {
+        global.Astronaut = class MockAstronaut {
+            constructor(pos) { this.pos = pos.copy(); this.altitude = 100; }
+            handleInput() { return false; }
+            update() { }
+        };
+        
+        // Mock terrain height: 10 under ship, 100 under astronaut
+        sm.terrain.getHeightAt = jest.fn((x, y) => {
+            if (x > 1020) return 100;
+            return 10;
+        });
+
+        // Re-align player altitude to match mock terrain height + min altitude
+        sm.player.altitude = 10;
+        
+        sm.deployAstronaut();
+        sm.boardCooldown = 0; // Clear cooldown
+        
+        // Position astronaut such that physical dist is large (~90), but visual dist is ~0
+        sm.astronaut.pos.set(1043.14, 128.98);
+        sm.astronaut.altitude = 100;
+        
+        sm._updateAstronaut(0.016);
+        
+        expect(sm.controlMode).toBe('SHIP');
+        expect(sm.astronaut).toBeNull();
+    });
+
+    test('climb inputs prevent disembarkation', () => {
+        sm.altitudeInput = 1; // Climbing
+        sm.playerSpeed = 0;
+        sm.reboardCooldown = 0;
+        global.keyIsDown.mockImplementation((code) => {
+            if (code === 87) return true; // W key
+            return false;
+        });
+
+        sm._checkDisembarkTrigger();
+        expect(sm.controlMode).toBe('SHIP'); // Did not disembark
+    });
+
+    test('only longitudinal movement triggers disembarkation', () => {
+        sm.altitudeInput = 0;
+        sm.playerSpeed = 0;
+        sm.reboardCooldown = 0;
+        
+        // Turn key (A key)
+        global.keyIsDown.mockImplementation((code) => {
+            if (code === 65) return true; // A key
+            return false;
+        });
+
+        sm._checkDisembarkTrigger();
+        expect(sm.controlMode).toBe('SHIP'); // Did not disembark
+
+        // Forward key (W key)
+        global.keyIsDown.mockImplementation((code) => {
+            if (code === 87) return true; // W key
+            return false;
+        });
+
+        sm._checkDisembarkTrigger();
+        expect(sm.controlMode).toBe('ASTRONAUT'); // Disembarked
     });
 });
 
