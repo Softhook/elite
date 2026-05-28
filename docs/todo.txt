@@ -1,8 +1,10 @@
 # Elite Game Development TODO
 
-error with alien artefacts should disspwr when collected. and only a single dropped not 10
+implemnet damage system when hull severly damaged systems stop working. weird behaviours
 
-While zooming, the targeting reticle doesn't fit onto the ship. Fix that 
+
+the reticle is drawn ontop of the targeting overlay whih is a visual error
+While zooming in or zooming out, the targeting reticle doesn't scale. Fix that 
 
 new navigation with game pad is not right
 

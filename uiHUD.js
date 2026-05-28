@@ -510,8 +510,8 @@ class UIHUD {
         this.drawPersistentMessages(player);
 
         if (gameStateManager?.currentState !== "GALAXY_MAP") {
-            this.drawTargetOverlay(player);
             this.drawTargetReticle(player);
+            this.drawTargetOverlay(player);
             this.drawBeamReticle(player);
         }
     }
@@ -1912,11 +1912,20 @@ class UIHUD {
             modifiedTargetSize = drawSize / 1.6;
         } else {
             // --- Space Mode Projection ---
+            // Account for intro/death zoom applied by starSystem.draw()
+            let spaceZoom = 1.0;
+            if (typeof gameStateManager !== 'undefined' && gameStateManager) {
+                if (gameStateManager.deathZoomActive && gameStateManager.deathZoomScale > 1.0) {
+                    spaceZoom = gameStateManager.deathZoomScale;
+                } else if (gameStateManager.introZoomActive && gameStateManager.introZoomScale > 1.0) {
+                    spaceZoom = gameStateManager.introZoomScale;
+                }
+            }
             // Assumes player is the camera focus at the center of screen
-            screenX = width / 2 + (target.pos.x - player.pos.x);
-            screenY = height / 2 + (target.pos.y - player.pos.y);
-            // Space mode uses world units for targetSize with fixed screen scaling in space
-            modifiedTargetSize = targetSize;
+            screenX = width / 2 + (target.pos.x - player.pos.x) * spaceZoom;
+            screenY = height / 2 + (target.pos.y - player.pos.y) * spaceZoom;
+            // Scale target size to match world zoom
+            modifiedTargetSize = targetSize * spaceZoom;
         }
 
         // Visibility Check: Only draw if the center is within a reasonable distance from the viewport
