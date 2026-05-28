@@ -1081,12 +1081,8 @@ class OffworldBuilding extends SurfaceObject {
         this.miningStorage = [];
         this.miningStorageCapacity = 100;
 
-        // Player base identification
-        if (this.variant === 1) { // Hab Unit
-            this.isPlayerBase = true;
-            this.maxHealth = 1000; // Bases are much tougher
-            this.health = 1000;
-        }
+        // Player base identification has been moved to the PlayerBase subclass.
+        // For normal colonies, Hab Unit (variant 1) is just a normal building.
     }
 
     draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
@@ -1266,6 +1262,22 @@ class OffworldBuilding extends SurfaceObject {
             const objAlt = this.altitude || (this.yOffset || 0);
             surfaceMode._createSurfaceExplosion(this.pos.x, this.pos.y, objAlt, this.size * 1.8, [180, 180, 220]);
         }
+    }
+}
+
+/**
+ * PlayerBase - Separate building type for player-built habitation/bases.
+ * Inherits rendering and behavior from OffworldBuilding but is treated as a player base.
+ */
+class PlayerBase extends OffworldBuilding {
+    constructor(x, y, size, seed = 0) {
+        super(x, y, size, seed);
+        this.variant = 1; // Hab Unit
+        this.type = "PlayerBase";
+        this.displayName = 'Hab Unit (Player Built)';
+        this.isPlayerBase = true;
+        this.maxHealth = 1000; // Bases are much tougher
+        this.health = 1000;
     }
 }
 
@@ -2835,7 +2847,7 @@ class DefenseDrone extends SurfaceObject {
 
                     // Check if it's a player base (Hab Unit)
                     const isPlayerBase = (
-                        (obj.constructor && obj.constructor.name === 'OffworldBuilding') &&
+                        (obj.constructor && (obj.constructor.name === 'OffworldBuilding' || obj.constructor.name === 'PlayerBase')) &&
                         obj.variant === 1 &&
                         obj.isPlayerBase === true
                     );
@@ -3234,7 +3246,9 @@ if (typeof module !== 'undefined') {
         Turret,
         SurfaceStation,
         ShieldGenerator,
-        DefenseDrone
+        DefenseDrone,
+        PlayerBase
     };
     global.Turret = Turret;
+    global.PlayerBase = PlayerBase;
 }

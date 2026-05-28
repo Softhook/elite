@@ -32,7 +32,7 @@ describe('Mining Robot Respawn Integration Test', () => {
             robotsInitialized: true, // Was initialized before
             playerBuilt: true,
             destroyed: false,
-            constructor: { name: 'OffworldBuilding' },
+            constructor: { name: 'PlayerBase' },
             variant: 1,
             miningStorage: [],
             miningStorageCapacity: 100
@@ -41,7 +41,7 @@ describe('Mining Robot Respawn Integration Test', () => {
         const descriptor = {
             robotsInitialized: false, // Cleanup set this to false
             robotCount: 2,
-            type: 'OffworldBuilding',
+            type: 'PlayerBase',
             variant: 1,
             destroyed: false
         };
@@ -64,14 +64,14 @@ describe('Mining Robot Respawn Integration Test', () => {
             robotsInitialized: true,
             playerBuilt: true,
             destroyed: false,
-            constructor: { name: 'OffworldBuilding' },
+            constructor: { name: 'PlayerBase' },
             variant: 1
         };
 
         const descriptor = {
             robotsInitialized: true, // Both are true
             robotCount: 2,
-            type: 'OffworldBuilding',
+            type: 'PlayerBase',
             variant: 1
         };
 

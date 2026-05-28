@@ -870,7 +870,7 @@ class UIHUD {
             (target.isSurface === true) || // Explicit flag
             (target.constructor && [
                 'Turret', 'DefenseDrone', 'ShieldGenerator', 'Building', 'SurfaceStation',
-                'OffworldBuilding', 'MiningRobot', 'SurfaceFauna', 'FaunaCreature'
+                'OffworldBuilding', 'PlayerBase', 'MiningRobot', 'SurfaceFauna', 'FaunaCreature'
             ].includes(target.constructor.name))
         );
 

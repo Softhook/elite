@@ -3330,8 +3330,8 @@ class StarSystem {
             for (const desc of planet.playerBuiltSurfaceObjects) {
                 if (!desc || desc.destroyed) continue;
 
-                // Only process Hab Units (Offworld Colony variant 1)
-                if (desc.type !== 'Offworld Colony' || desc.variant !== 1) continue;
+                // Only process Hab Units (Offworld Colony variant 1 or PlayerBase)
+                if (desc.type !== 'PlayerBase' && (desc.type !== 'Offworld Colony' || desc.variant !== 1)) continue;
 
                 // Initialize tick if missing
                 if (!desc.lastBackgroundTick) {

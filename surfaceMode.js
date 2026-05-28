@@ -689,7 +689,7 @@ class SurfaceMode {
                 desc.destroyed = true;
 
                 // If it was a base, clean up associated mining systems
-                if (desc.variant === 1 && (desc.type === 'OffworldBuilding' || desc.type === 'Offworld Colony')) {
+                if (desc.type === 'PlayerBase' || (desc.variant === 1 && (desc.type === 'OffworldBuilding' || desc.type === 'Offworld Colony'))) {
                     // Destroy mining robots associated with this base
                     if (this.miningRobots) {
                         for (let robot of this.miningRobots) {
@@ -1580,7 +1580,7 @@ class SurfaceMode {
         if (this.surfaceObjects && Array.isArray(this.surfaceObjects) && this.astronaut && this.astronaut.pos) {
             for (const obj of this.surfaceObjects) {
                 if (!obj || obj.destroyed || !obj.pos) continue;
-                const isOffworld = (obj.constructor && obj.constructor.name === 'OffworldBuilding') || (obj.type === 'OffworldBuilding');
+                const isOffworld = (obj.constructor && (obj.constructor.name === 'OffworldBuilding' || obj.constructor.name === 'PlayerBase')) || (obj.type === 'OffworldBuilding' || obj.type === 'PlayerBase');
                 if (!isOffworld) continue;
                 if (!obj.playerBuilt) continue;
 
@@ -1677,13 +1677,13 @@ class SurfaceMode {
             }
         }
 
-        if (typeof OffworldBuilding === 'undefined') {
+        if (typeof PlayerBase === 'undefined') {
             if (typeof uiManager !== 'undefined') uiManager.addMessage('Build failed: building module missing', [255, 80, 80]);
             return;
         }
 
         const size = 60;
-        const hab = new OffworldBuilding(bx, by, size, Math.floor(Math.random() * 100000));
+        const hab = new PlayerBase(bx, by, size, Math.floor(Math.random() * 100000));
         hab.variant = 1; // HAB UNIT variant in OffworldBuilding
         hab.displayName = 'Hab Unit (Player Built)';
         hab.yOffset = groundH;
@@ -1697,7 +1697,7 @@ class SurfaceMode {
         // Add to planet persistent descriptors so it survives saves and grid regeneration
         if (this.planet) {
             const descriptor = {
-                type: hab.type || 'OffworldBuilding',
+                type: hab.type || 'PlayerBase',
                 x: hab.pos ? hab.pos.x : hab.x || bx,
                 y: hab.pos ? hab.pos.y : hab.y || by,
                 size: hab.size || size,
@@ -1723,7 +1723,7 @@ class SurfaceMode {
             // CRITICAL: Also add to the runtime map so _spawnObjects can find it when grid shifts
             // Re-use descriptor from above (or create minimal one if this.planet was null)
             const mapDesc = {
-                type: hab.type || 'OffworldBuilding',
+                type: hab.type || 'PlayerBase',
                 x: hab.pos ? hab.pos.x : hab.x || bx,
                 y: hab.pos ? hab.pos.y : hab.y || by,
                 size: hab.size || size,
@@ -1993,7 +1993,7 @@ class SurfaceMode {
 
                     // Check if it's a player base (Hab Unit)
                     const isPlayerBase = (
-                        (obj.constructor && obj.constructor.name === 'OffworldBuilding') &&
+                        (obj.constructor && (obj.constructor.name === 'OffworldBuilding' || obj.constructor.name === 'PlayerBase')) &&
                         obj.variant === 1 &&
                         obj.isPlayerBase === true
                     );
@@ -2290,29 +2290,32 @@ class SurfaceMode {
                 const desc = this.playerBuiltMap.get(cellKey);
                 if (desc && !desc.destroyed) {
                     // Instantiate known types (OffworldBuilding) or fallback to a generic SurfaceObject
-                    if (typeof OffworldBuilding !== 'undefined' && (String(desc.type).toLowerCase().indexOf('offworld') !== -1 || desc.type === 'OffworldBuilding')) {
-                        obj = new OffworldBuilding(desc.x, desc.y, desc.size || 40, desc.seed || 0);
-                        if (typeof desc.variant !== 'undefined') obj.variant = desc.variant;
+                    if (typeof PlayerBase !== 'undefined' && (desc.type === 'PlayerBase' || (desc.type === 'OffworldBuilding' && desc.variant === 1))) {
+                        obj = new PlayerBase(desc.x, desc.y, desc.size || 60, desc.seed || 0);
                         obj.yOffset = (typeof desc.yOffset !== 'undefined') ? desc.yOffset : this._getTerrainHeightAt(desc.x, desc.y);
                         obj.displayName = desc.displayName || obj.displayName;
                         obj.destroyed = !!desc.destroyed;
 
                         // Restore persistent state for mining bases
-                        if (desc.variant === 1) {
-                            obj.robotsInitialized = !!desc.robotsInitialized;
-                            obj.miningStorage = Array.isArray(desc.miningStorage) ? desc.miningStorage : [];
-                            obj.miningStorageCapacity = desc.miningStorageCapacity || 100;
-                            // CRITICAL: Don't default to 0! Keep undefined if not set so initialization calculates it
-                            obj.robotCount = desc.robotCount;  // May be undefined, 0, or a positive number
-                            if (typeof desc.health === 'number') obj.health = desc.health;
-                            // CRITICAL: Ensure isPlayerBase is set (for health bar rendering and other logic)
-                            obj.isPlayerBase = true;
-                        }
+                        obj.robotsInitialized = !!desc.robotsInitialized;
+                        obj.miningStorage = Array.isArray(desc.miningStorage) ? desc.miningStorage : [];
+                        obj.miningStorageCapacity = desc.miningStorageCapacity || 100;
+                        // CRITICAL: Don't default to 0! Keep undefined if not set so initialization calculates it
+                        obj.robotCount = desc.robotCount;  // May be undefined, 0, or a positive number
+                        if (typeof desc.health === 'number') obj.health = desc.health;
 
                         // Flag instances spawned from saved player descriptors
                         obj.playerBuilt = true;
 
                         // CRITICAL: Set cellKey for player-built objects (needed for robot initialization)
+                        obj.cellKey = cellKey;
+                    } else if (typeof OffworldBuilding !== 'undefined' && (String(desc.type).toLowerCase().indexOf('offworld') !== -1 || desc.type === 'OffworldBuilding')) {
+                        obj = new OffworldBuilding(desc.x, desc.y, desc.size || 40, desc.seed || 0);
+                        if (typeof desc.variant !== 'undefined') obj.variant = desc.variant;
+                        obj.yOffset = (typeof desc.yOffset !== 'undefined') ? desc.yOffset : this._getTerrainHeightAt(desc.x, desc.y);
+                        obj.displayName = desc.displayName || obj.displayName;
+                        obj.destroyed = !!desc.destroyed;
+                        obj.playerBuilt = true;
                         obj.cellKey = cellKey;
                     } else if (typeof SurfaceObject !== 'undefined') {
                         obj = new SurfaceObject(desc.x, desc.y, desc.size || 40);
@@ -2766,7 +2769,7 @@ class SurfaceMode {
             // Check if it's a player-built Hab Unit
             const isHabUnit = obj.playerBuilt &&
                 obj.constructor &&
-                obj.constructor.name === 'OffworldBuilding' &&
+                (obj.constructor.name === 'OffworldBuilding' || obj.constructor.name === 'PlayerBase') &&
                 obj.variant === 1;
 
             if (!isHabUnit) continue;
@@ -3827,8 +3830,8 @@ class SurfaceMode {
         let destroyedCount = 0;
 
         for (const desc of this.planet.playerBuiltSurfaceObjects) {
-            // Check for both type strings for backward compatibility
-            if ((desc.type !== 'Offworld Colony' && desc.type !== 'OffworldBuilding') || desc.variant !== 1) continue;
+            // Check for PlayerBase, plus backward compatibility for Offworld type variants
+            if (desc.type !== 'PlayerBase' && ((desc.type !== 'Offworld Colony' && desc.type !== 'OffworldBuilding') || desc.variant !== 1)) continue;
 
             baseCount++;
             const cellKey = this._getCellKeyForPosition(desc.x, desc.y);
@@ -4070,7 +4073,7 @@ function debugBases(planetName) {
             console.log(`[Debug] Base types found:`, bases.map(b => `${b.type} variant:${b.variant}`));
         }
 
-        const habBases = bases.filter(b => (b.type === 'Offworld Colony' || b.type === 'OffworldBuilding') && b.variant === 1);
+        const habBases = bases.filter(b => b.type === 'PlayerBase' || ((b.type === 'Offworld Colony' || b.type === 'OffworldBuilding') && b.variant === 1));
 
         if (habBases.length === 0) {
             if (planetsToCheck.length === 1) {

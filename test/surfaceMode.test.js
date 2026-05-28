@@ -1479,7 +1479,7 @@ describe('SurfaceMode Base Loading Zoom', () => {
     test('saveLoadSystem relinks currentBaseObject using playerBuiltSurfaceObjects position when loading inside a base', () => {
         const mockPlanet = {
             playerBuiltSurfaceObjects: [
-                { type: 'OffworldBuilding', x: 200, y: 200, displayName: 'My Base' }
+                { type: 'PlayerBase', x: 200, y: 200, displayName: 'My Base' }
             ]
         };
 

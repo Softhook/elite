@@ -41,6 +41,18 @@ global.OffworldBuilding = class {
     }
 };
 
+global.PlayerBase = class {
+    constructor(x, y, size, seed) {
+        this.pos = { x, y };
+        this.size = size || 60;
+        this.seed = seed || 0;
+        this.type = 'PlayerBase';
+        this.variant = 1;
+        this.isPlayerBase = true;
+        this.destroyed = false;
+    }
+};
+
 global.Building = class {
     constructor(x, y, size, type, seed) {
         this.pos = { x, y };
@@ -186,7 +198,7 @@ describe('Base Persistence', () => {
         sm.enter(mockPlayer, mockPlanet, mockStarSystem, { force: true });
 
         const cellKey = '0,0';
-        const playerDesc = { x: 0, y: 0, type: 'OffworldBuilding', playerBuilt: true };
+        const playerDesc = { x: 0, y: 0, type: 'PlayerBase', playerBuilt: true };
         sm.playerBuiltMap.set(cellKey, playerDesc);
 
         // Noise returns 0.9 -> Settlement zone.
@@ -202,6 +214,6 @@ describe('Base Persistence', () => {
 
         expect(objectsAt00.length).toBe(1);
         expect(objectsAt00[0].playerBuilt).toBe(true);
-        expect(objectsAt00[0].type).toBe('OffworldBuilding');
+        expect(objectsAt00[0].type).toBe('PlayerBase');
     });
 });

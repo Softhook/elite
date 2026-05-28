@@ -1771,8 +1771,8 @@ class WeaponSystem {
             }
         }
 
-        // Check if OffworldBuilding class exists
-        if (typeof OffworldBuilding === 'undefined') {
+        // Check if PlayerBase class exists
+        if (typeof PlayerBase === 'undefined') {
             if (owner === player && typeof uiManager !== 'undefined') {
                 uiManager.addMessage('Build failed: building module missing', [255, 80, 80]);
             }
@@ -1780,7 +1780,7 @@ class WeaponSystem {
         }
 
         // Create the Hab Unit with proper configuration (matching original _attemptBuildHabUnit)
-        const hab = new OffworldBuilding(bx, by, HAB_SIZE, Math.floor(Math.random() * 100000));
+        const hab = new PlayerBase(bx, by, HAB_SIZE, Math.floor(Math.random() * 100000));
         hab.variant = 1; // HAB UNIT variant in OffworldBuilding
         hab.displayName = 'Hab Unit (Player Built)';
         hab.yOffset = groundH;
@@ -1804,7 +1804,7 @@ class WeaponSystem {
         // Add to planet persistent descriptors so it survives saves and grid regeneration
         if (surfaceMode.planet) {
             const descriptor = {
-                type: hab.type || 'Offworld Colony',
+                type: hab.type || 'PlayerBase',
                 x: hab.pos ? hab.pos.x : hab.x || bx,
                 y: hab.pos ? hab.pos.y : hab.y || by,
                 size: hab.size || HAB_SIZE,
@@ -1845,7 +1845,7 @@ class WeaponSystem {
             // CRITICAL: Also add to the runtime map so _spawnObjects can find it when grid shifts
             // Must include mining fields so _updateBackgroundActivity() works for newly built bases
             const mapDesc = {
-                type: hab.type || 'Offworld Colony',
+                type: hab.type || 'PlayerBase',
                 x: hab.pos ? hab.pos.x : hab.x || bx,
                 y: hab.pos ? hab.pos.y : hab.y || by,
                 size: hab.size || HAB_SIZE,
