@@ -24,9 +24,9 @@ const PILOT_RANK = {
 const PILOT_RANK_DEFS = {
     [PILOT_RANK.INCOMPETENT]: {
         name: 'Incompetent',
-        color: [180, 140, 140],
-        badgeColor: null,
-        iconColor: null,
+        color: [255],
+        badgeColor: [255],
+        iconColor: [255],
         symbol: '✕',
         description: 'Barely qualified to sit in a cockpit'
     },
@@ -429,9 +429,9 @@ function _drawRankIconGraphic(rank, x, y, size, ctx) {
         const ln = (ctx && ctx.line) ? ctx.line.bind(ctx) : line;
         const ns = (ctx && ctx.noStroke) ? ctx.noStroke.bind(ctx) : noStroke;
 
-        const arm = size * 0.45;
-        s(220, 170, 170);
-        sw(Math.max(1.5, size * 0.16));
+        const arm = size * 0.35;
+        s(255);
+        sw(Math.max(1.2, size * 0.12));
         lc(ROUND);
         ln(x - arm, y - arm, x + arm, y + arm);
         ln(x - arm, y + arm, x + arm, y - arm);
@@ -516,7 +516,7 @@ function _drawRing(x, y, r, ctx) {
  */
 function getPilotRankIconWidth(rank, size = 12) {
     if (rank === undefined || rank === null) return 0;
-    if (rank === PILOT_RANK.INCOMPETENT) return size * 1.0;
+    if (rank === PILOT_RANK.INCOMPETENT) return size * 0.8;
     if (rank < PILOT_RANK.VETERAN) return 0;
 
     // Width modifiers based on icon types
