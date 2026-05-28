@@ -1149,6 +1149,16 @@ class SurfaceMode {
     _updatePhysics(dt) {
         if (!this.player) return;
 
+        if (typeof gameStateManager !== 'undefined' && gameStateManager && gameStateManager.currentState !== 'SURFACE_MODE') {
+            if (this.player && this.player.vel) {
+                this.player.vel.mult(0);
+            }
+            if (this.player) {
+                this.player.isDockedAndInvulnerable = true;
+            }
+            return;
+        }
+
         // Use exact same physics as space
         // [STORM CRITICAL FIX]
         // Reset environment flags that were removed from Player.update().
@@ -1459,6 +1469,19 @@ class SurfaceMode {
      * Update astronaut physics and logic
      */
     _updateAstronaut(dt) {
+        if (typeof gameStateManager !== 'undefined' && gameStateManager && gameStateManager.currentState !== 'SURFACE_MODE') {
+            if (this.player && this.player.vel) {
+                this.player.vel.mult(0);
+            }
+            if (this.player) {
+                this.player.isDockedAndInvulnerable = true;
+            }
+            if (this.astronaut && this.astronaut.vel) {
+                this.astronaut.vel.mult(0);
+            }
+            return;
+        }
+
         // Defensive guard: if astronaut or essential positions are missing,
         // fall back to ship control to avoid null-dereferences during update.
         if (!this.astronaut || !this.astronaut.pos || !this.player || !this.player.pos) {
@@ -1553,6 +1576,10 @@ class SurfaceMode {
         if (!this.astronaut || !this.surfaceObjects) return;
 
         let nearest = specificTarget || null;
+
+        if (nearest && (nearest.destroyed || p5.Vector.dist(this.astronaut.pos, nearest.pos) > 60)) {
+            nearest = null;
+        }
 
         if (!nearest) {
             let minDist = 60; // Interaction range

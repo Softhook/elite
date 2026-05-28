@@ -160,6 +160,12 @@ global.SURFACE_STATE = SURFACE_STATE;
 // Test Helpers
 // ============================================
 
+beforeEach(() => {
+    if (global.gameStateManager) {
+        global.gameStateManager.currentState = 'SURFACE_MODE';
+    }
+});
+
 /**
  * Creates a mock player for surface mode testing
  */
@@ -631,6 +637,38 @@ describe('SurfaceMode Physics', () => {
         expect(player.shieldsDisabled).toBe(false);
         expect(player.weaponsDisabled).toBe(false);
         expect(player.inNebula).toBe(false);
+    });
+
+    test('_updatePhysics returns early when state is not SURFACE_MODE', () => {
+        global.gameStateManager.currentState = 'VIEWING_BASE';
+        player.vel.set(5, 5);
+        player.isDockedAndInvulnerable = false;
+        
+        sm._updatePhysics(16.67);
+        
+        expect(player.vel.x).toBe(0);
+        expect(player.vel.y).toBe(0);
+        expect(player.isDockedAndInvulnerable).toBe(true);
+    });
+
+    test('_updateAstronaut returns early when state is not SURFACE_MODE', () => {
+        global.gameStateManager.currentState = 'VIEWING_BASE';
+        sm.astronaut = {
+            pos: createVector(100, 100),
+            vel: createVector(5, 5),
+            handleInput: jest.fn()
+        };
+        player.vel.set(5, 5);
+        player.isDockedAndInvulnerable = false;
+        
+        sm._updateAstronaut(16.67);
+        
+        expect(player.vel.x).toBe(0);
+        expect(player.vel.y).toBe(0);
+        expect(player.isDockedAndInvulnerable).toBe(true);
+        expect(sm.astronaut.vel.x).toBe(0);
+        expect(sm.astronaut.vel.y).toBe(0);
+        expect(sm.astronaut.handleInput).not.toHaveBeenCalled();
     });
 });
 

@@ -50,8 +50,11 @@ describe('Astronaut', () => {
         mockSurfaceMode = {
             starSystem: {
                 projectiles: []
-            }
+            },
+            _attemptBefriend: jest.fn()
         };
+        global.keyIsDown.mockReset();
+        global.keyIsDown.mockReturnValue(false);
     });
 
     test('initializes with offset from ship position', () => {
@@ -101,5 +104,81 @@ describe('Astronaut', () => {
         // Cooldown tick
         astronaut.update(1);
         expect(astronaut.grenadeCooldown).toBeLessThan(60);
+    });
+
+    test('Space key near fauna (befriend popup visible) triggers _attemptBefriend instead of throwGrenade', () => {
+        const mockFauna = { isFauna: true, isFriend: false, destroyed: false, pos: createVector(130, 100) };
+        global.surfaceHud = {
+            _befriendButtonBounds: { target: mockFauna }
+        };
+        global.keyIsDown.mockImplementation((k) => k === 32); // Space
+
+        astronaut.handleInput(mockSurfaceMode);
+
+        expect(mockSurfaceMode._attemptBefriend).toHaveBeenCalledWith(mockFauna);
+        expect(mockSurfaceMode.starSystem.projectiles.length).toBe(0); // No grenade thrown
+        expect(astronaut.grenadeCooldown).toBe(0.5);
+    });
+
+    test('Space key far from fauna (befriend popup not visible) triggers throwGrenade', () => {
+        global.surfaceHud = {
+            _befriendButtonBounds: null
+        };
+        global.keyIsDown.mockImplementation((k) => k === 32); // Space
+
+        astronaut.handleInput(mockSurfaceMode);
+
+        expect(mockSurfaceMode._attemptBefriend).not.toHaveBeenCalled();
+        expect(mockSurfaceMode.starSystem.projectiles.length).toBe(1); // Grenade thrown
+    });
+
+    test('gamepad FIRE_PRIMARY near fauna (befriend popup visible) triggers _attemptBefriend instead of throwGrenade', () => {
+        global.INPUT_CONTEXTS = { SURFACE_ASTRONAUT: 'SURFACE_ASTRONAUT' };
+        global.INPUT_ACTIONS = { FIRE_PRIMARY: 'FIRE_PRIMARY' };
+        global._inputManager = {
+            isGamepadActionPressed: jest.fn((act) => act === 'FIRE_PRIMARY')
+        };
+        global._gamepadManager = {
+            connected: true,
+            state: {
+                ls: { x: 0, y: 0 },
+                dpad: { left: false, right: false, up: false, down: false }
+            }
+        };
+
+        const mockFauna = { isFauna: true, isFriend: false, destroyed: false, pos: createVector(130, 100) };
+        global.surfaceHud = {
+            _befriendButtonBounds: { target: mockFauna }
+        };
+
+        astronaut.handleInput(mockSurfaceMode);
+
+        expect(mockSurfaceMode._attemptBefriend).toHaveBeenCalledWith(mockFauna);
+        expect(mockSurfaceMode.starSystem.projectiles.length).toBe(0); // No grenade thrown
+        expect(astronaut.grenadeCooldown).toBe(0.5);
+    });
+
+    test('gamepad FIRE_PRIMARY far from fauna (befriend popup not visible) triggers throwGrenade', () => {
+        global.INPUT_CONTEXTS = { SURFACE_ASTRONAUT: 'SURFACE_ASTRONAUT' };
+        global.INPUT_ACTIONS = { FIRE_PRIMARY: 'FIRE_PRIMARY' };
+        global._inputManager = {
+            isGamepadActionPressed: jest.fn((act) => act === 'FIRE_PRIMARY')
+        };
+        global._gamepadManager = {
+            connected: true,
+            state: {
+                ls: { x: 0, y: 0 },
+                dpad: { left: false, right: false, up: false, down: false }
+            }
+        };
+
+        global.surfaceHud = {
+            _befriendButtonBounds: null
+        };
+
+        astronaut.handleInput(mockSurfaceMode);
+
+        expect(mockSurfaceMode._attemptBefriend).not.toHaveBeenCalled();
+        expect(mockSurfaceMode.starSystem.projectiles.length).toBe(1); // Grenade thrown
     });
 });

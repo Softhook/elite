@@ -57,6 +57,25 @@ function _handleGamepadStationMenus(gp, state) {
             if (gameStateManager) gameStateManager._returnFromRecordState = null;
             if (gameStateManager) gameStateManager.setState(returnState);
             soundManager?.playSound('click_off');
+        } else if (state === 'VIEWING_BASE') {
+            const returnState = gameStateManager?._returnFromBaseState || 'SURFACE_MODE';
+            if (gameStateManager) gameStateManager._returnFromBaseState = null;
+
+            // If we're returning to surface, nudge the astronaut away from the base
+            if (returnState === 'SURFACE_MODE' && uiManager && uiManager.currentBaseObject && typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.astronaut) {
+                try {
+                    const base = uiManager.currentBaseObject;
+                    const moveDistance = (base.size ? (base.size / 2) : 30) + 60; // safe clearance
+                    surfaceMode.astronaut.pos.y = (base.pos && typeof base.pos.y === 'number') ? (base.pos.y - moveDistance) : (surfaceMode.astronaut.pos.y - moveDistance);
+                    surfaceMode.surfaceX = surfaceMode.astronaut.pos.x;
+                    surfaceMode.surfaceY = surfaceMode.astronaut.pos.y;
+                    uiManager.currentBaseObject = null;
+                } catch (e) {
+                    // Non-fatal
+                }
+            }
+            gameStateManager.setState(returnState);
+            soundManager?.playSound('click_off');
         } else {
             const isSpaceObj = state.startsWith('VIEWING_SPACE_OBJECT');
             gameStateManager.setState(isSpaceObj ? 'DOCKED_SPACE_OBJECT' : 'DOCKED');

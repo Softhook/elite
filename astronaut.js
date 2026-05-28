@@ -65,9 +65,14 @@ class Astronaut {
             if (s.dpad.up) dy -= 1;
             if (s.dpad.down) dy += 1;
             
-            // Grenade (contextual fire action)
+            // Primary fire / befriend contextual action
             if (globalThis._inputManager.isGamepadActionPressed(INPUT_ACTIONS.FIRE_PRIMARY, context)) {
-                this.throwGrenade(surfaceMode);
+                if (typeof surfaceHud !== 'undefined' && surfaceHud && surfaceHud._befriendButtonBounds) {
+                    surfaceMode._attemptBefriend(surfaceHud._befriendButtonBounds.target);
+                    this.grenadeCooldown = 0.5; // Short cooldown after befriend to prevent accidental firing
+                } else {
+                    this.throwGrenade(surfaceMode);
+                }
             }
         }
 
@@ -104,9 +109,14 @@ class Astronaut {
             this.walkCycle = 0;
         }
 
-        // Grenade Throw (Space)
+        // Grenade Throw or Befriend (Space)
         if (keyIsDown(32)) { // Space
-            this.throwGrenade(surfaceMode);
+            if (typeof surfaceHud !== 'undefined' && surfaceHud && surfaceHud._befriendButtonBounds) {
+                surfaceMode._attemptBefriend(surfaceHud._befriendButtonBounds.target);
+                this.grenadeCooldown = 0.5; // Short cooldown after befriend to prevent accidental firing
+            } else {
+                this.throwGrenade(surfaceMode);
+            }
         }
 
         return isMoving;

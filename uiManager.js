@@ -878,7 +878,7 @@ class UIManager {
             if (result === 'BACK') {
                 if (typeof soundManager !== 'undefined') soundManager.playSound('click_off');
                 if (gameStateManager) {
-                    const returnState = gameStateManager._returnFromBaseState || 'DOCKED';
+                    const returnState = gameStateManager._returnFromBaseState || 'SURFACE_MODE';
                     gameStateManager._returnFromBaseState = null;
 
                     // If we're returning to surface, nudge the astronaut away from the base
