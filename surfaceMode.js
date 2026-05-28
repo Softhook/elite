@@ -2121,9 +2121,8 @@ class SurfaceMode {
 
         // 2. Perspective scaling (everything world-side scales together)
         // Apply view zoom multiplier (for automatic EVA zoom)
-        // [ZOOM FIX] Disable zoom during transitions for a cleaner visual hand-off
         const isTransitioning = this.state === SURFACE_STATE.ENTERING || this.state === SURFACE_STATE.EXITING;
-        const currentZoom = isTransitioning ? 1.0 : this.viewZoom;
+        const currentZoom = (isTransitioning && this.controlMode !== 'ASTRONAUT') ? 1.0 : this.viewZoom;
         scale(this._cachedPerspectiveScale * currentZoom);
 
         // 3. World translation (camera follows player's visual top position)

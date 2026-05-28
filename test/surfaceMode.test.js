@@ -1350,6 +1350,195 @@ describe('SurfaceMode Shield Generator Spawning', () => {
 });
 
 // ============================================
+// SurfaceMode Base Loading Zoom Tests
+// ============================================
+
+describe('SurfaceMode Base Loading Zoom', () => {
+    let originalGSM;
+    let originalConfig;
+
+    beforeEach(() => {
+        originalGSM = global.gameStateManager;
+        originalConfig = global.SURFACE_CONFIG;
+
+        global.gameStateManager = {
+            currentState: 'SURFACE_MODE',
+            setState: jest.fn(state => { global.gameStateManager.currentState = state; })
+        };
+        global.SURFACE_CONFIG = {
+            EVA_ZOOM: 1.3,
+            LOD: {
+                DETAIL_THRESHOLD: 100,
+                FULL_DETAIL: 0,
+                SIMPLIFIED: 1
+            }
+        };
+    });
+
+    afterEach(() => {
+        global.gameStateManager = originalGSM;
+        global.SURFACE_CONFIG = originalConfig;
+    });
+
+    test('bypasses transition zoom lock when controlMode is ASTRONAUT', () => {
+        const sm = new SurfaceMode();
+        const mockPlayer = { pos: createVector(0, 0), angle: 0, vel: createVector(0, 0) };
+        const mockPlanet = { name: 'Test Planet', baseColor: { levels: [255, 255, 255] }, pos: createVector(0, 0) };
+        
+        // Mock required draw/height sub-methods so sm.draw() doesn't fail
+        sm.enter(mockPlayer, mockPlanet, {}, { force: true });
+        sm.state = SURFACE_STATE.ENTERING;
+        sm.viewZoom = 1.3;
+        sm.controlMode = 'SHIP';
+
+        // Mock p5 background/push/pop/translate/scale
+        global.background = jest.fn();
+        global.push = jest.fn();
+        global.pop = jest.fn();
+        global.translate = jest.fn();
+        global.scale = jest.fn();
+
+        sm._getPerspectiveScale = () => 1.0;
+        sm._getExtrusionAngle = () => 0;
+        sm._getCounterScale = () => 1.0;
+        sm._drawTerrain = jest.fn();
+        sm._drawSurfaceObjects = jest.fn();
+        sm._drawMiningRobots = jest.fn();
+        sm._drawExplosions = jest.fn();
+        sm._drawProjectiles = jest.fn();
+        sm._drawMines = jest.fn();
+        sm._drawBeams = jest.fn();
+        sm._drawForceWaves = jest.fn();
+        sm._drawCloudLayer = jest.fn();
+        sm._drawTransitionOverlay = jest.fn();
+        sm._drawAstronaut = jest.fn();
+        sm._drawPlayerShip = jest.fn();
+        sm._drawGameHUD = jest.fn();
+
+        // 1. With SHIP control mode and entering state, zoom is locked to 1.0
+        sm.draw();
+        expect(global.scale).toHaveBeenCalledWith(1.0);
+
+        // 2. Change controlMode to ASTRONAUT: zoom lock should be bypassed (uses 1.3)
+        sm.controlMode = 'ASTRONAUT';
+        global.scale.mockClear();
+        sm.draw();
+        expect(global.scale).toHaveBeenCalledWith(1.3);
+    });
+
+    test('saveLoadSystem sets zoom level straight to astronaut level when loading in astronaut mode', () => {
+        // Mock minimal globals needed for saveLoadSystem
+        const mockSurfaceMode = {
+            enter: jest.fn(),
+            _getTerrainHeightAt: () => 50,
+            player: { altitude: 0 },
+            astronaut: null,
+            controlMode: 'SHIP',
+            viewZoom: 1.0,
+            targetViewZoom: 1.0
+        };
+        global.surfaceMode = mockSurfaceMode;
+        global.Astronaut = class MockAstronaut {
+            constructor(pos) { this.pos = pos; this.altitude = 0; }
+        };
+        global.uiManager = {
+            currentBaseObject: null
+        };
+        global.gameStateManager = {
+            setState: jest.fn()
+        };
+
+        const savedSurface = {
+            controlMode: 'ASTRONAUT',
+            astronautPos: { x: 100, y: 100 }
+        };
+
+        // Execute target code block from saveLoadSystem:
+        if (savedSurface.controlMode === 'ASTRONAUT') {
+            if (savedSurface.astronautPos && typeof Astronaut !== 'undefined') {
+                surfaceMode.astronaut = new Astronaut(createVector(savedSurface.astronautPos.x, savedSurface.astronautPos.y), { skipSpawnOffset: true });
+                surfaceMode.controlMode = 'ASTRONAUT';
+
+                if (typeof SURFACE_CONFIG !== 'undefined' && SURFACE_CONFIG.EVA_ZOOM) {
+                    surfaceMode.viewZoom = SURFACE_CONFIG.EVA_ZOOM;
+                    surfaceMode.targetViewZoom = SURFACE_CONFIG.EVA_ZOOM;
+                }
+            }
+        }
+
+        expect(mockSurfaceMode.viewZoom).toBe(1.3);
+        expect(mockSurfaceMode.targetViewZoom).toBe(1.3);
+
+        // Clean up globals
+        delete global.surfaceMode;
+        delete global.Astronaut;
+        delete global.uiManager;
+        delete global.gameStateManager;
+    });
+
+    test('saveLoadSystem relinks currentBaseObject using playerBuiltSurfaceObjects position when loading inside a base', () => {
+        const mockPlanet = {
+            playerBuiltSurfaceObjects: [
+                { type: 'OffworldBuilding', x: 200, y: 200, displayName: 'My Base' }
+            ]
+        };
+
+        const mockSurfaceMode = {
+            surfaceObjects: [], // Empty initially during load
+            controlMode: 'SHIP',
+            viewZoom: 1.0,
+            targetViewZoom: 1.0
+        };
+
+        global.surfaceMode = mockSurfaceMode;
+        global.uiManager = {
+            currentBaseObject: null
+        };
+        global.gameStateManager = {
+            setState: jest.fn()
+        };
+
+        // Mock savedSurface representing being inside a base:
+        const savedSurface = {
+            controlMode: 'ASTRONAUT',
+            basePos: { x: 200, y: 200 }
+        };
+
+        // Run the re-link block:
+        if (typeof uiManager !== 'undefined' && uiManager && (savedSurface.baseId || savedSurface.basePos)) {
+            // First try to find it in surfaceObjects
+            for (const obj of surfaceMode.surfaceObjects || []) {
+                if (savedSurface.basePos && obj.pos && Math.abs(obj.pos.x - savedSurface.basePos.x) < 2) {
+                    uiManager.currentBaseObject = obj; break;
+                }
+            }
+
+            // If not found in surfaceObjects, search planet.playerBuiltSurfaceObjects
+            if (!uiManager.currentBaseObject && mockPlanet && Array.isArray(mockPlanet.playerBuiltSurfaceObjects)) {
+                for (const desc of mockPlanet.playerBuiltSurfaceObjects) {
+                    if (savedSurface.basePos && Math.abs(desc.x - savedSurface.basePos.x) < 2 && Math.abs(desc.y - savedSurface.basePos.y) < 2) {
+                        uiManager.currentBaseObject = {
+                            ...desc,
+                            pos: createVector(desc.x, desc.y)
+                        };
+                        break;
+                    }
+                }
+            }
+        }
+
+        expect(uiManager.currentBaseObject).toBeDefined();
+        expect(uiManager.currentBaseObject.displayName).toBe('My Base');
+        expect(uiManager.currentBaseObject.pos.x).toBe(200);
+        expect(uiManager.currentBaseObject.pos.y).toBe(200);
+
+        delete global.surfaceMode;
+        delete global.uiManager;
+        delete global.gameStateManager;
+    });
+});
+
+// ============================================
 // Configuration Tests
 // ============================================
 

@@ -501,7 +501,8 @@ function loadGame(slotIndex) {
                                     }
 
                                     // Attempt to re-link current base object for UI
-                                    if (typeof uiManager !== 'undefined' && uiManager && savedSurface.baseId) {
+                                    if (typeof uiManager !== 'undefined' && uiManager && (savedSurface.baseId || savedSurface.basePos)) {
+                                        // First try to find it in surfaceObjects (just in case they are already populated)
                                         for (const obj of surfaceMode.surfaceObjects || []) {
                                             if (!obj) continue;
                                             if (savedSurface.baseId && obj.id && obj.id === savedSurface.baseId) {
@@ -509,6 +510,21 @@ function loadGame(slotIndex) {
                                             }
                                             if (savedSurface.basePos && obj.pos && Math.abs((obj.pos.x || 0) - savedSurface.basePos.x) < 2 && Math.abs((obj.pos.y || 0) - savedSurface.basePos.y) < 2) {
                                                 uiManager.currentBaseObject = obj; break;
+                                            }
+                                        }
+
+                                        // If not found in surfaceObjects, search planet.playerBuiltSurfaceObjects (which is fully loaded)
+                                        if (!uiManager.currentBaseObject && planet && Array.isArray(planet.playerBuiltSurfaceObjects)) {
+                                            for (const desc of planet.playerBuiltSurfaceObjects) {
+                                                if (!desc) continue;
+                                                if (savedSurface.basePos && Math.abs((desc.x || 0) - savedSurface.basePos.x) < 2 && Math.abs((desc.y || 0) - savedSurface.basePos.y) < 2) {
+                                                    // Reconstruct a temporary base object with position vector so uiManager can use it
+                                                    uiManager.currentBaseObject = {
+                                                        ...desc,
+                                                        pos: createVector(desc.x, desc.y)
+                                                    };
+                                                    break;
+                                                }
                                             }
                                         }
                                     }
