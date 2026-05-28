@@ -2,13 +2,14 @@
 
 implemnet damage system when hull severly damaged systems stop working. weird behaviours
 
+There are now a huge amount of central information messages that should perhaps be in use instead. They need to be centralized at the very least 
 
-the reticle is drawn ontop of the targeting overlay whih is a visual error
-While zooming in or zooming out, the targeting reticle doesn't scale. Fix that 
+Use the A and yellow button for changing weapons and use all the for D direction. Keys for the targeting 
 
-new navigation with game pad is not right
+news navigation with game pad is not right. A right press should shift between the categories while the up and down should move. Up and down through the news  
 
-cand drop cargo in invetory screen
+The personal log should be scrolled to the bottom showing the most recent entries instead of at the top. 
+
 
 Create some secret asteroids that are actually drug stashes.
 these are mission objective to retrieve the drugs.

@@ -1915,10 +1915,10 @@ class UIStationMenus {
         }
 
         events.sort((a, b) => {
-            const aTs = Number.isFinite(a.timestamp) ? a.timestamp : Infinity;
-            const bTs = Number.isFinite(b.timestamp) ? b.timestamp : Infinity;
-            if (aTs === bTs) return a.description.localeCompare(b.description);
-            return aTs - bTs;
+            const aTs = Number.isFinite(a.timestamp) ? a.timestamp : -Infinity;
+            const bTs = Number.isFinite(b.timestamp) ? b.timestamp : -Infinity;
+            if (aTs === bTs) return b.description.localeCompare(a.description);
+            return bTs - aTs;
         });
 
         const totalEntries = events.length;

@@ -13,10 +13,14 @@ let _gpCargoSelectedIndex = -1; // selected cargo item in inventory (-1 = close 
 function _handleGamepadStationMenus(gp, state) {
     // Reset selection index when entering a new menu state
     if (state !== _gpMenuState) {
-        _gpMenuIndex = 0;
         _gpMenuState = state;
         _gpMissionPanel = 'list';
         _gpMissionDetailIndex = 0;
+        if (state === 'VIEWING_NEWS') {
+            _gpMenuIndex = 4;
+        } else {
+            _gpMenuIndex = 0;
+        }
     }
 
     // Mission board uses dedicated two-panel navigation
@@ -69,14 +73,52 @@ function _handleGamepadStationMenus(gp, state) {
     // Personal log has a long scrollable list and usually only one actionable button.
     // Prioritize vertical D-pad/left-stick as list scroll so gamepad users can browse entries.
     if (isRecordView && (pressedUp || pressedDown)) {
-        _handleGamepadListScroll(state, pressedDown ? -1 : 1);
+        _handleGamepadListScroll(state, pressedDown ? 1 : -1);
         soundManager?.playSound('click');
     }
 
     // ── D-pad up/down = navigate selection ──
     if (buttons && buttons.length > 0) {
         if (pressedUp || pressedDown) {
-            if (isRecordView) {
+            if (state === 'VIEWING_NEWS' && uiManager.stationMenus && !uiManager.stationMenus.selectedNewsItem) {
+                const sm = uiManager.stationMenus;
+                if (buttons.length >= 6) { // At least one news item exists
+                    const firstNewsIdx = 4;
+                    const lastNewsIdx = buttons.length - 2;
+                    const backBtnIdx = buttons.length - 1;
+
+                    if (pressedDown) {
+                        if (_gpMenuIndex === lastNewsIdx) {
+                            if ((sm.newsScrollOffset || 0) < (sm.newsScrollMax || 0)) {
+                                sm.newsScrollOffset = (sm.newsScrollOffset || 0) + 1;
+                            } else {
+                                _gpMenuIndex = backBtnIdx;
+                            }
+                        } else if (_gpMenuIndex === backBtnIdx) {
+                            _gpMenuIndex = firstNewsIdx;
+                            sm.newsScrollOffset = 0;
+                        } else {
+                            _gpMenuIndex++;
+                        }
+                    } else if (pressedUp) {
+                        if (_gpMenuIndex === firstNewsIdx) {
+                            if ((sm.newsScrollOffset || 0) > 0) {
+                                sm.newsScrollOffset = (sm.newsScrollOffset || 0) - 1;
+                            } else {
+                                _gpMenuIndex = backBtnIdx;
+                            }
+                        } else if (_gpMenuIndex === backBtnIdx) {
+                            _gpMenuIndex = lastNewsIdx;
+                            sm.newsScrollOffset = sm.newsScrollMax || 0;
+                        } else {
+                            _gpMenuIndex--;
+                        }
+                    }
+                } else if (buttons.length === 5) {
+                    // Only back button is navigatable (index 4)
+                    _gpMenuIndex = 4;
+                }
+            } else if (isRecordView) {
                 // Keep focus stable on Record view controls while list scrolling is handled above.
             } else if (isHorizontalDetail && !isWeaponSlotPicker) {
                 _handleGamepadListScroll(state, pressedDown ? -1 : 1);
@@ -108,6 +150,14 @@ function _handleGamepadStationMenus(gp, state) {
             const newSubIdx = (subIdx + dir + 4) % 4;
             _gpMenuIndex = baseRowIdx + newSubIdx;
             soundManager?.playSound('click');
+        } else if (state === 'VIEWING_NEWS' && uiManager.stationMenus && !uiManager.stationMenus.selectedNewsItem) {
+            const categories = ['ALL', 'The Core Echo', 'Freedom', 'The Freight Log'];
+            let currentIdx = categories.indexOf(uiManager.stationMenus.newsSourceFilter || 'ALL');
+            if (currentIdx === -1) currentIdx = 0;
+            const newIdx = (currentIdx + dir + categories.length) % categories.length;
+            uiManager.stationMenus.newsSourceFilter = categories[newIdx];
+            uiManager.stationMenus.newsScrollOffset = 0; // Reset scroll
+            soundManager?.playSound('click');
         } else {
             _handleGamepadListScroll(state, dir);
         }
@@ -115,7 +165,11 @@ function _handleGamepadStationMenus(gp, state) {
 
     // Clamp index to valid range
     if (buttons && buttons.length > 0) {
-        _gpMenuIndex = constrain(_gpMenuIndex, 0, buttons.length - 1);
+        if (state === 'VIEWING_NEWS' && uiManager.stationMenus && !uiManager.stationMenus.selectedNewsItem && buttons.length >= 5) {
+            _gpMenuIndex = constrain(_gpMenuIndex, 4, buttons.length - 1);
+        } else {
+            _gpMenuIndex = constrain(_gpMenuIndex, 0, buttons.length - 1);
+        }
     }
 
     // ── A button = click the selected button ──
