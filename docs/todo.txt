@@ -1,15 +1,17 @@
 # Elite Game Development TODO
 
+the habitation module is being treated as player owned and targeted by enemies even when part of normal surface buildings.
+have player base be a seperate building type
+
 implemnet damage system when hull severly damaged systems stop working. weird behaviours
 
 There are now a huge amount of central information messages that should perhaps be in use instead. They need to be centralized at the very least 
 
 Use the A and yellow button for changing weapons and use all the for D direction. Keys for the targeting 
 
-news navigation with game pad is not right. A right press should shift between the categories while the up and down should move. Up and down through the news  
 
-The personal log should be scrolled to the bottom showing the most recent entries instead of at the top. 
 
+I'd like to implement a ship order function. that connects to the nearest station in the same system. and allows the player to buy a ship from there at a 10 % increased cost. Once ordered, it takes some time for the ship to be delivered and the ship is placed next to the surface base. 
 
 Create some secret asteroids that are actually drug stashes.
 these are mission objective to retrieve the drugs.
@@ -21,8 +23,6 @@ Make this shield generator appear on the  Compass locked to the direction. So a 
 
 demand missions if a commodicty is mission create demand missions that pay well
 Add Mining missions that pay well for asteroid ore.
-
-personal record should not be linked on the station screen but a link from inventory
 
 on the station screen add a link to the galaxy map.
 
