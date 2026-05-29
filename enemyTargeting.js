@@ -962,7 +962,7 @@ class EnemyTargeting {
                             _score += cargoBonus;
                         }
                     } else if (target.isPlayerHull) {
-                        // Player's drifting hull: pirates treat it like a high-value player ship
+                        // Player's drifting hull: pirates score it as hauler prey (same as any commerce ship)
                         _score += TARGET_SCORE_PIRATE_PREY_HAULER;
                         _interesting = true;
                     } else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT || target.role === AI_ROLE.MINER || target.role === AI_ROLE.MISSIONARY) {
