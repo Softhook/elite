@@ -980,6 +980,12 @@ class UIStationMenus {
 
         // Take off in Pod button click
         if (this.baseTakeoffButtonArea && UIComponents.isClickInArea(mx, my, this.baseTakeoffButtonArea)) {
+            if (player.shipTypeName === "EscapeCapsule") {
+                addMessageFn('You are already in the Escape Capsule.', [255, 180, 100]);
+                if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                return true;
+            }
+
             // Position the player offset from the base and set flight altitude
             const baseObj = (typeof uiManager !== 'undefined') ? uiManager.currentBaseObject : null;
             
