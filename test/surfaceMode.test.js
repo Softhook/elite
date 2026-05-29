@@ -193,7 +193,8 @@ function createMockPlayer(options = {}) {
         handleInput: jest.fn(),
         update: jest.fn(),
         draw: jest.fn(),
-        takeDamage: jest.fn()
+        takeDamage: jest.fn(),
+        applyShipDefinition: jest.fn()
     };
 }
 
@@ -1579,5 +1580,239 @@ describe('SURFACE_STATE', () => {
         const states = Object.values(SURFACE_STATE);
         const uniqueStates = new Set(states);
         expect(uniqueStates.size).toBe(states.length);
+    });
+});
+
+describe('SurfaceMode ParkedPlayerShip Re-boarding', () => {
+    let sm, player, planet, starSystem;
+
+    beforeEach(() => {
+        sm = new SurfaceMode();
+        player = createMockPlayer({ x: 1000, y: 50 });
+        planet = createMockPlanet({ x: 1000, y: 0, radius: 200 });
+        starSystem = createMockStarSystem();
+        sm.enter(player, planet, starSystem);
+        sm.state = SURFACE_STATE.ACTIVE;
+
+        // Mock p5 input functions
+        global.keyIsDown = jest.fn(() => false);
+        global.surfaceMode = sm;
+    });
+
+    afterEach(() => {
+        delete global.surfaceMode;
+    });
+
+    test('should board parked player ship when astronaut is in boarding range', () => {
+        const { ParkedPlayerShip } = require('../surfaceObjects');
+        
+        // Mock original ship state
+        const mockOrigState = {
+            shipTypeName: 'Vulture',
+            hull: 80,
+            shield: 100,
+            installedUpgrades: { engine: 2 },
+            weapons: [{ name: 'Pulse Laser' }],
+            cargo: [{ name: 'Gold', quantity: 2 }]
+        };
+
+        // Create parked ship object on ground and register it in persistent descriptor
+        const parkedShip = new ParkedPlayerShip(1020, 50, mockOrigState);
+        sm.surfaceObjects = [parkedShip];
+
+        const descriptor = { type: 'ParkedPlayerShip', x: 1020, y: 50, shipState: mockOrigState };
+        sm.planet.playerBuiltSurfaceObjects = [descriptor];
+        sm.parkedShipDescriptor = descriptor;
+
+        // Ensure Astronaut class is available
+        global.Astronaut = class MockAstronaut {
+            constructor(pos) { this.pos = pos.copy(); this.altitude = 0; }
+            handleInput() { return false; }
+            update() { }
+        };
+
+        sm.player.applyShipDefinition = jest.fn();
+
+        sm.deployAstronaut();
+        expect(sm.controlMode).toBe('ASTRONAUT');
+
+        // Move astronaut close to the parked ship (pos: 1020, 50)
+        sm.astronaut.pos.set(1025, 50);
+        sm.boardCooldown = 0;
+
+        // Run updates, which should trigger boardParkedShip
+        sm._updateAstronaut(0.016);
+
+        expect(sm.controlMode).toBe('SHIP');
+        expect(sm.astronaut).toBeNull();
+        expect(sm.player.shipTypeName).toBe('Vulture');
+        expect(sm.player.hull).toBe(80);
+        expect(sm.player.shield).toBe(100);
+        expect(sm.player.installedUpgrades.engine).toBe(2);
+        expect(sm.player.weapons[0].name).toBe('Pulse Laser');
+        expect(sm.player.cargo[0].name).toBe('Gold');
+        expect(sm.surfaceObjects.length).toBe(1); // Sidewinder left parked on ground
+        expect(sm.surfaceObjects[0].shipTypeName).toBe('Sidewinder');
+        expect(sm.surfaceObjects[0].pos.x).toBe(1000);
+        expect(sm.surfaceObjects[0].pos.y).toBe(50);
+        expect(sm.parkedShipDescriptor).toBeNull(); // Clear descriptor of boarded ship
+        expect(sm.planet.playerBuiltSurfaceObjects.length).toBe(1); // One ship remains parked (Sidewinder)
+        expect(sm.planet.playerBuiltSurfaceObjects[0].shipState.shipTypeName).toBe('Sidewinder');
+    });
+
+    test('should allow multiple parked player ships and swap between them correctly', () => {
+        const { ParkedPlayerShip } = require('../surfaceObjects');
+        
+        // Reset surfaceMode state
+        sm.surfaceObjects = [];
+        sm.planet.playerBuiltSurfaceObjects = [];
+        sm.parkedShipDescriptor = null;
+        if (sm.parkedShipsMap) sm.parkedShipsMap.clear();
+
+        // Setup two parked ships on the ground:
+        // Ship A: 'Vulture' at (1000, 1000)
+        // Ship B: 'Cobra' at (2000, 2000)
+        const stateA = { shipTypeName: 'Vulture', hull: 100, shield: 100, installedUpgrades: {}, weapons: [], cargo: [] };
+        const stateB = { shipTypeName: 'Cobra', hull: 80, shield: 50, installedUpgrades: {}, weapons: [], cargo: [] };
+        
+        const descA = { type: 'ParkedPlayerShip', x: 1000, y: 1000, shipState: stateA };
+        const descB = { type: 'ParkedPlayerShip', x: 2000, y: 2000, shipState: stateB };
+        
+        sm.planet.playerBuiltSurfaceObjects = [descA, descB];
+        
+        // Pre-populate maps
+        sm.parkedShipsMap = new Map();
+        sm.parkedShipsMap.set('28,28', [descA]);
+        sm.parkedShipsMap.set('57,57', [descB]);
+
+        const shipA = new ParkedPlayerShip(1000, 1000, stateA);
+        const shipB = new ParkedPlayerShip(2000, 2000, stateB);
+        sm.surfaceObjects = [shipA, shipB];
+
+        // Player starts in a 'Sidewinder' at (0, 0)
+        sm.player.shipTypeName = 'Sidewinder';
+        sm.player.pos.set(0, 0);
+        sm.player.hull = 100;
+        sm.player.shield = 50;
+
+        // Deploy astronaut and move near Ship A (Vulture)
+        sm.deployAstronaut();
+        sm.astronaut.pos.set(1005, 1000);
+        sm.boardCooldown = 0;
+
+        // Update astronaut to trigger boarding Ship A (Vulture)
+        sm._updateAstronaut(0.016);
+
+        // Player should now be in the Vulture
+        expect(sm.controlMode).toBe('SHIP');
+        expect(sm.player.shipTypeName).toBe('Vulture');
+        expect(sm.player.pos.x).toBe(1000);
+        expect(sm.player.pos.y).toBe(1000);
+
+        // The Sidewinder should be left parked at (0, 0)
+        // And Ship B (Cobra) should still be parked at (2000, 2000)
+        expect(sm.surfaceObjects.length).toBe(2);
+        
+        const parkedSidewinder = sm.surfaceObjects.find(s => s.shipTypeName === 'Sidewinder');
+        const parkedCobra = sm.surfaceObjects.find(s => s.shipTypeName === 'Cobra');
+        
+        expect(parkedSidewinder).toBeDefined();
+        expect(parkedSidewinder.pos.x).toBe(0);
+        expect(parkedSidewinder.pos.y).toBe(0);
+        
+        expect(parkedCobra).toBeDefined();
+        expect(parkedCobra.pos.x).toBe(2000);
+        expect(parkedCobra.pos.y).toBe(2000);
+
+        // Verify descriptors in planet state
+        expect(sm.planet.playerBuiltSurfaceObjects.length).toBe(2);
+        const descSidewinder = sm.planet.playerBuiltSurfaceObjects.find(d => d.shipState.shipTypeName === 'Sidewinder');
+        const descCobra = sm.planet.playerBuiltSurfaceObjects.find(d => d.shipState.shipTypeName === 'Cobra');
+        expect(descSidewinder).toBeDefined();
+        expect(descCobra).toBeDefined();
+    });
+
+    test('should discard EscapeCapsule when boarding a parked ship', () => {
+        const { ParkedPlayerShip } = require('../surfaceObjects');
+
+        // Reset state
+        sm.surfaceObjects = [];
+        sm.planet.playerBuiltSurfaceObjects = [];
+        sm.parkedShipDescriptor = null;
+
+        // One parked ship A (Vulture) at (1000, 1000)
+        const stateA = { shipTypeName: 'Vulture', hull: 100, shield: 100, installedUpgrades: {}, weapons: [], cargo: [] };
+        const descA = { type: 'ParkedPlayerShip', x: 1000, y: 1000, shipState: stateA };
+        sm.planet.playerBuiltSurfaceObjects = [descA];
+
+        const shipA = new ParkedPlayerShip(1000, 1000, stateA);
+        sm.surfaceObjects = [shipA];
+
+        // Player starts in 'EscapeCapsule' at (0, 0)
+        sm.player.shipTypeName = 'EscapeCapsule';
+        sm.player.pos.set(0, 0);
+        sm.player.hull = 15;
+        sm.player.shield = 0;
+
+        // Deploy astronaut and move near Ship A (Vulture)
+        sm.deployAstronaut();
+        sm.astronaut.pos.set(1005, 1000);
+        sm.boardCooldown = 0;
+
+        // Trigger update to board the ship
+        sm._updateAstronaut(0.016);
+
+        // Player is now in the Vulture
+        expect(sm.controlMode).toBe('SHIP');
+        expect(sm.player.shipTypeName).toBe('Vulture');
+
+        // Escape capsule should be discarded, meaning there should be NO parked ships on the surface
+        // (the array should be empty since Vulture was boarded and EscapeCapsule was not parked)
+        expect(sm.surfaceObjects.length).toBe(0);
+        expect(sm.planet.playerBuiltSurfaceObjects.length).toBe(0);
+    });
+
+    test('should correctly clean up ParkedPlayerShip and its descriptors when the parked ship is destroyed', () => {
+        const { ParkedPlayerShip } = require('../surfaceObjects');
+
+        // Reset state
+        sm.surfaceObjects = [];
+        sm.planet.playerBuiltSurfaceObjects = [];
+        sm.destroyedCells.clear();
+
+        const stateA = { shipTypeName: 'Vulture', hull: 100, shield: 100, installedUpgrades: {}, weapons: [], cargo: [] };
+        const descA = { type: 'ParkedPlayerShip', x: 1000, y: 1000, shipState: stateA };
+        sm.planet.playerBuiltSurfaceObjects = [descA];
+
+        const shipA = new ParkedPlayerShip(1000, 1000, stateA);
+        shipA.cellKey = '28,28';
+        sm.surfaceObjects = [shipA];
+
+        sm.objectCache = new Map();
+        sm.objectCache.set('28,28_parkedShip_0', shipA);
+
+        sm.parkedShipsMap = new Map();
+        sm.parkedShipsMap.set('28,28', [descA]);
+
+        // Destroy the parked ship
+        shipA.takeDamage(100);
+
+        // Verify it was marked destroyed
+        expect(shipA.destroyed).toBe(true);
+
+        // Verify it was cleaned up from active surfaceObjects
+        expect(sm.surfaceObjects.length).toBe(0);
+
+        // Verify it was cleaned up from planet playerBuiltSurfaceObjects
+        expect(sm.planet.playerBuiltSurfaceObjects.length).toBe(0);
+
+        // Verify it was cleaned up from parkedShipsMap
+        expect(sm.parkedShipsMap.has('28,28')).toBe(false);
+
+        // Verify it was cleaned up from object cache
+        expect(sm.objectCache.has('28,28_parkedShip_0')).toBe(false);
+
+        // CRITICAL: Verify that the cell key was NOT registered in destroyedCells (avoiding base-blocking bug)
+        expect(sm.destroyedCells.has('28,28')).toBe(false);
     });
 });

@@ -2889,6 +2889,51 @@ const SHIP_DEFINITIONS = {
     },
 
     // --- TRANSPORTS ---
+    "EscapeCapsule": {
+        name: "Escape Capsule", role: "Survival Pod", upgrades: [], sizeCategory: "Tiny", size: 20,
+        baseMaxSpeed: 2.5, baseThrust: 0.03, baseTurnRate: 0.04,
+        baseHull: 15, baseShield: 0, shieldRecharge: 0.0, cargoCapacity: 0,
+        armament: [],
+        costCategory: "None", description: "A cramped survival capsule with virtually no cargo space, no weapons, and no shields. It has no trade-in value.",
+        vertexLayers: [
+            {
+                vertexData: [
+                    { x: 1.0, y: 0.5 },
+                    { x: 0.5, y: 1.0 },
+                    { x: -0.5, y: 1.0 },
+                    { x: -1.0, y: 0.5 },
+                    { x: -1.0, y: -0.5 },
+                    { x: -0.5, y: -1.0 },
+                    { x: 0.5, y: -1.0 },
+                    { x: 1.0, y: -0.5 }
+                ],
+                fillColor: [240, 100, 50]
+            },
+            {
+                vertexData: [
+                    { x: 0.7, y: 0.3 },
+                    { x: 0.3, y: 0.5 },
+                    { x: 0.3, y: -0.5 },
+                    { x: 0.7, y: -0.3 }
+                ],
+                fillColor: [100, 200, 255]
+            },
+            {
+                vertexData: [
+                    { x: -0.2, y: 0.8 },
+                    { x: -0.4, y: 0.8 },
+                    { x: -0.4, y: -0.8 },
+                    { x: -0.2, y: -0.8 }
+                ],
+                fillColor: [100, 100, 100]
+            }
+        ],
+        typicalCargo: [],
+        price: 0,
+        aiRoles: [],
+        faction: "",
+        techLevel: 1,
+    },
     "LocalHopper": {
         name: "Local Hopper", role: "Light Transport", upgrades: [], sizeCategory: "Tiny", size: 18,
         baseMaxSpeed: 3.5, baseThrust: 0.04, baseTurnRate: 0.05,

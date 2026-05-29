@@ -505,6 +505,12 @@ class SurfaceMode {
         this.planet = planet;
         this.starSystem = starSystem;
 
+        // Reset control mode and camera zoom to default ship settings
+        this.controlMode = 'SHIP';
+        this.astronaut = null;
+        this.targetViewZoom = 1.0;
+        this.viewZoom = 1.0;
+
         // Set transition color to planet's base color for immersive fade
         if (this.planet && this.planet.baseColor) {
             const c = this.planet.baseColor;
@@ -531,11 +537,24 @@ class SurfaceMode {
         }
 
         // Optimization: Pre-index player-built objects by cellKey for O(1) lookups during mesh generation
+        this.parkedShipDescriptor = null;
+        this.parkedShipsMap = new Map(); // Map of cellKey -> Array of ParkedPlayerShip descriptors
         if (Array.isArray(this.planet.playerBuiltSurfaceObjects)) {
             // CRITICAL: Use fixed SPAWN_CELL_SIZE (35) for consistent indexing across modes/sessions
             const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || 35;
             for (const desc of this.planet.playerBuiltSurfaceObjects) {
                 if (!desc || typeof desc.x !== 'number') continue;
+                if (desc.type === 'ParkedPlayerShip') {
+                    this.parkedShipDescriptor = desc; // keep legacy single property for compatibility
+                    const descCellX = Math.floor(desc.x / cellSize);
+                    const descCellY = Math.floor(desc.y / cellSize);
+                    const key = `${descCellX},${descCellY}`;
+                    if (!this.parkedShipsMap.has(key)) {
+                        this.parkedShipsMap.set(key, []);
+                    }
+                    this.parkedShipsMap.get(key).push(desc);
+                    continue;
+                }
                 // Use floor for consistent grid keying with _spawnObjects and construction
                 const descCellX = Math.floor(desc.x / cellSize);
                 const descCellY = Math.floor(desc.y / cellSize);
@@ -1387,6 +1406,189 @@ class SurfaceMode {
         }
     }
 
+    /**
+     * Board a parked player ship, restoring the original ship state
+     */
+    boardParkedShip(parkedShip) {
+        if (this.controlMode !== 'ASTRONAUT') return;
+
+        // Park the current active ship we are leaving behind before we overwrite it
+        // Do NOT park the escape capsule; it's discarded when the player returns to a real ship
+        if (this.player && this.player.shipTypeName !== "EscapeCapsule" && typeof ParkedPlayerShip !== 'undefined') {
+            const currentShipState = {
+                shipTypeName: this.player.shipTypeName,
+                hull: this.player.hull,
+                shield: this.player.shield,
+                installedUpgrades: JSON.parse(JSON.stringify(this.player.installedUpgrades || {})),
+                weapons: this.player.weapons ? this.player.weapons.map(w => w ? { ...w } : null) : [],
+                cargo: this.player.cargo ? this.player.cargo.map(c => c ? { ...c } : null) : [],
+                angle: this.player.angle || 0
+            };
+
+            const oldShip = new ParkedPlayerShip(this.player.pos.x, this.player.pos.y, currentShipState);
+            oldShip.yOffset = this.player.altitude || this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
+            
+            if (!this.surfaceObjects) {
+                this.surfaceObjects = [];
+            }
+            this.surfaceObjects.push(oldShip);
+
+            // Add descriptor to planet.playerBuiltSurfaceObjects
+            const descriptor = {
+                type: 'ParkedPlayerShip',
+                x: this.player.pos.x,
+                y: this.player.pos.y,
+                size: oldShip.size,
+                yOffset: oldShip.yOffset,
+                shipState: currentShipState,
+                destroyed: false
+            };
+
+            if (this.planet) {
+                if (!Array.isArray(this.planet.playerBuiltSurfaceObjects)) {
+                    this.planet.playerBuiltSurfaceObjects = [];
+                }
+                this.planet.playerBuiltSurfaceObjects.push(descriptor);
+            }
+
+            // Also update the local map
+            if (this.parkedShipsMap) {
+                const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || 35;
+                const cellX = Math.floor(this.player.pos.x / cellSize);
+                const cellY = Math.floor(this.player.pos.y / cellSize);
+                const cellKey = `${cellX},${cellY}`;
+                if (!this.parkedShipsMap.has(cellKey)) {
+                    this.parkedShipsMap.set(cellKey, []);
+                }
+                this.parkedShipsMap.get(cellKey).push(descriptor);
+            }
+
+            // Cache it immediately so it doesn't disappear when grid shifts/loads
+            if (this.objectCache) {
+                const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || 35;
+                const cellX = Math.floor(this.player.pos.x / cellSize);
+                const cellY = Math.floor(this.player.pos.y / cellSize);
+                const cellKey = `${cellX},${cellY}`;
+                
+                let idx = 0;
+                while (this.objectCache.has(cellKey + "_parkedShip_" + idx)) {
+                    idx++;
+                }
+                this.objectCache.set(cellKey + "_parkedShip_" + idx, oldShip);
+                oldShip.cellKey = cellKey;
+            }
+        }
+
+        const state = parkedShip.shipState;
+        
+        // Restore player ship properties
+        this.player.shipTypeName = state.shipTypeName;
+        this.player.applyShipDefinition(state.shipTypeName);
+        this.player.hull = state.hull;
+        this.player.shield = state.shield;
+        this.player.installedUpgrades = state.installedUpgrades;
+        this.player.weapons = state.weapons;
+        this.player.cargo = state.cargo;
+        this.player.angle = state.angle || this.astronaut.facingAngle || 0;
+        
+        if (typeof this.player.recalculateStats === 'function') {
+            this.player.recalculateStats();
+        }
+        
+        // Teleport the player ship back to the position where the parked ship was
+        this.player.pos.set(parkedShip.pos.x, parkedShip.pos.y);
+
+        this.controlMode = 'SHIP';
+        this.targetViewZoom = 1.0;
+        this.viewZoom = 1.0;
+        this.astronaut = null;
+
+        // Anchor to ground
+        const groundH = this._getTerrainHeightAt(this.player.pos.x, this.player.pos.y);
+        this.altitude = groundH + SURFACE_CONFIG.MIN_ALTITUDE;
+        this.player.altitude = this.altitude;
+        this.isLanded = true;
+
+        this.player.thrustInput = 0;
+        this.player.turnInput = 0;
+        this.reboardCooldown = SURFACE_CONFIG.REEBOARD_COOLDOWN;
+
+        // Remove the parked ship from surface objects
+        const idx = this.surfaceObjects.indexOf(parkedShip);
+        if (idx !== -1) {
+            this.surfaceObjects.splice(idx, 1);
+        }
+
+        // Clean up from persistent arrays and descriptors
+        if (this.planet && Array.isArray(this.planet.playerBuiltSurfaceObjects)) {
+            const pIdx = this.planet.playerBuiltSurfaceObjects.findIndex(o => 
+                o.type === 'ParkedPlayerShip' && 
+                Math.abs(o.x - parkedShip.pos.x) < 0.1 && 
+                Math.abs(o.y - parkedShip.pos.y) < 0.1
+            );
+            if (pIdx !== -1) {
+                this.planet.playerBuiltSurfaceObjects.splice(pIdx, 1);
+            }
+        }
+
+        // Clean up from the pre-indexed map
+        if (this.parkedShipsMap) {
+            const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || 35;
+            const cellX = Math.floor(parkedShip.pos.x / cellSize);
+            const cellY = Math.floor(parkedShip.pos.y / cellSize);
+            const cellKey = `${cellX},${cellY}`;
+            const list = this.parkedShipsMap.get(cellKey);
+            if (list) {
+                const descIdx = list.findIndex(o => 
+                    Math.abs(o.x - parkedShip.pos.x) < 0.1 && 
+                    Math.abs(o.y - parkedShip.pos.y) < 0.1
+                );
+                if (descIdx !== -1) {
+                    list.splice(descIdx, 1);
+                }
+                if (list.length === 0) {
+                    this.parkedShipsMap.delete(cellKey);
+                }
+            }
+        }
+
+        if (this.parkedShipDescriptor) {
+            if (Math.abs(this.parkedShipDescriptor.x - parkedShip.pos.x) < 0.1 && 
+                Math.abs(this.parkedShipDescriptor.y - parkedShip.pos.y) < 0.1) {
+                this.parkedShipDescriptor = null;
+            }
+        }
+
+        // Clean up from object cache
+        const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || 35;
+        const cellX = Math.floor(parkedShip.pos.x / cellSize);
+        const cellY = Math.floor(parkedShip.pos.y / cellSize);
+        const cellKey = `${cellX},${cellY}`;
+        
+        let cIdx = 0;
+        while (true) {
+            const key = cellKey + "_parkedShip_" + cIdx;
+            if (this.objectCache.has(key)) {
+                if (this.objectCache.get(key) === parkedShip) {
+                    this.objectCache.delete(key);
+                    break;
+                }
+                cIdx++;
+            } else {
+                break;
+            }
+        }
+        this.objectCache.delete(cellKey + "_parkedShip");
+
+        if (typeof uiManager !== 'undefined') {
+            uiManager.addMessage(`Boarded ${this.player.shipTypeName}. Welcome back, pilot!`, [100, 255, 100]);
+        }
+        if (typeof soundManager !== 'undefined') {
+            soundManager.playSound('upgrade');
+        }
+        if (typeof saveGame === 'function') saveGame();
+    }
+
     _buildAlienCompanionProfile(fauna) {
         const defaultColor = [120, 220, 180];
         let portraitColor = defaultColor;
@@ -1552,6 +1754,27 @@ class SurfaceMode {
         // Use a dual-distance check to handle both physical and visual/parallax positions,
         // and allow boarding while moving if not on cooldown.
         if (this.boardCooldown <= 0) {
+            // First check if near a parked original ship
+            let nearParkedShip = null;
+            let closestDist = Infinity;
+            if (this.surfaceObjects) {
+                for (const obj of this.surfaceObjects) {
+                    if (obj && obj.type === "ParkedPlayerShip" && !obj.destroyed) {
+                        const dist2D = p5.Vector.dist(this.astronaut.pos, obj.pos);
+                        const boardingRange = Math.max(SURFACE_CONFIG.BOARDING_RANGE, (obj.size || 30) * 0.5 + 15);
+                        if (dist2D < boardingRange && dist2D < closestDist) {
+                            nearParkedShip = obj;
+                            closestDist = dist2D;
+                        }
+                    }
+                }
+            }
+
+            if (nearParkedShip) {
+                this.boardParkedShip(nearParkedShip);
+                return;
+            }
+
             const dist2D = p5.Vector.dist(this.astronaut.pos, this.player.pos);
 
             const extrusionAngle = this._getExtrusionAngle();
@@ -2264,7 +2487,62 @@ class SurfaceMode {
                 if (this.objectCache.has(cellKey)) {
                     const cachedObj = this.objectCache.get(cellKey);
                     if (cachedObj) this.surfaceObjects.push(cachedObj);
+
+                    // Also check for multiple parked ships in this cell (cache hit)
+                    let idx = 0;
+                    while (true) {
+                        const parkedCacheKey = cellKey + "_parkedShip_" + idx;
+                        if (this.objectCache.has(parkedCacheKey)) {
+                            const pShip = this.objectCache.get(parkedCacheKey);
+                            if (pShip) this.surfaceObjects.push(pShip);
+                            idx++;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    // Also check legacy single parked ship key
+                    const legacyKey = cellKey + "_parkedShip";
+                    if (this.objectCache.has(legacyKey)) {
+                        const pShip = this.objectCache.get(legacyKey);
+                        if (pShip) this.surfaceObjects.push(pShip);
+                    }
                     continue;
+                }
+
+                // If cache miss, check if we need to spawn parked ships in this cell
+                const cellParkedDescs = [];
+                const cellKeyMatch = (desc) => {
+                    const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || 35;
+                    const cellX = Math.floor(desc.x / cellSize);
+                    const cellY = Math.floor(desc.y / cellSize);
+                    return activeGridX === cellX && activeGridY === cellY;
+                };
+
+                // Add descriptors from the pre-indexed map
+                if (this.parkedShipsMap && this.parkedShipsMap.has(cellKey)) {
+                    cellParkedDescs.push(...this.parkedShipsMap.get(cellKey));
+                }
+
+                // Add single parkedShipDescriptor if it matches this cell and isn't already included
+                if (this.parkedShipDescriptor && cellKeyMatch(this.parkedShipDescriptor)) {
+                    if (!cellParkedDescs.some(d => d === this.parkedShipDescriptor || (Math.abs(d.x - this.parkedShipDescriptor.x) < 0.1 && Math.abs(d.y - this.parkedShipDescriptor.y) < 0.1))) {
+                        cellParkedDescs.push(this.parkedShipDescriptor);
+                    }
+                }
+
+                // Spawn each parked ship in this cell
+                if (cellParkedDescs.length > 0 && typeof ParkedPlayerShip !== 'undefined') {
+                    cellParkedDescs.forEach((desc, idx) => {
+                        const pShip = new ParkedPlayerShip(desc.x, desc.y, desc.shipState);
+                        pShip.yOffset = (typeof desc.yOffset !== 'undefined') ? desc.yOffset : this._getTerrainHeightAt(desc.x, desc.y);
+                        pShip.cellKey = cellKey;
+                        pShip._wasCulledLastFrame = false;
+                        this.surfaceObjects.push(pShip);
+                        
+                        const key = cellKey + "_parkedShip_" + idx;
+                        this.objectCache.set(key, pShip);
+                    });
                 }
 
                 // Compute cell values FIRST (needed for both inhabited and uninhabited logic)

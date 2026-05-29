@@ -3228,6 +3228,166 @@ class DefenseDrone extends SurfaceObject {
     }
 }
 
+/**
+ * ParkedPlayerShip class - Represents player's original ship left behind on the surface
+ */
+class ParkedPlayerShip extends SurfaceObject {
+    constructor(x, y, shipState = {}) {
+        const state = shipState || {};
+        const shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[state.shipTypeName] : null;
+        const size = shipDef ? (shipDef.size || 30) : 30;
+        super(x, y, size);
+        this.type = "ParkedPlayerShip";
+        this.shipTypeName = state.shipTypeName || "Sidewinder";
+        this.shipState = state;
+        this.angle = state.angle || 0;
+        this.displayName = shipDef ? shipDef.name : (state.shipTypeName || "Parked Ship");
+        this.maxHealth = state.hull || 100;
+        this.health = state.hull || 100;
+        this.height = size * 0.4;
+    }
+
+    draw(worldX, worldY, sunAngle = -Math.PI / 4, alt = 0, lodLevel = 3) {
+        let extrusionAngle, baseX, baseY;
+        if (typeof getProjectionHelpers === 'function') {
+            ({ extrusionAngle, baseX, baseY } = getProjectionHelpers(worldX, worldY, alt));
+        } else {
+            extrusionAngle = (typeof surfaceMode !== 'undefined' && surfaceMode._getExtrusionAngle)
+                ? surfaceMode._getExtrusionAngle() : 0.5;
+            baseX = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualX)
+                ? surfaceMode._toVisualX(worldX, alt) : worldX - alt * Math.sin(extrusionAngle);
+            baseY = (typeof surfaceMode !== 'undefined' && surfaceMode._toVisualY)
+                ? surfaceMode._toVisualY(worldY, alt) : worldY - alt * Math.cos(extrusionAngle);
+        }
+
+        const sz = this.size;
+
+        // Draw shadow
+        push();
+        translate(baseX, baseY);
+        const shadowOffset = 2;
+        const shadowX = Math.cos(sunAngle + Math.PI) * shadowOffset;
+        const shadowY = Math.sin(sunAngle + Math.PI) * shadowOffset;
+        translate(shadowX, shadowY);
+        fill(0, 0, 0, 100);
+        noStroke();
+        ellipse(0, 0, sz, sz * 0.7);
+        pop();
+
+        // Draw ship model
+        push();
+        translate(baseX, baseY);
+        rotate(this.angle);
+
+        const shipDef = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[this.shipTypeName] : null;
+        if (shipDef && typeof shipDef.drawFunction === 'function') {
+            const localSunAngle = sunAngle - this.angle;
+            shipDef.drawFunction(sz, false, this.angle, localSunAngle);
+        } else {
+            fill(120, 120, 120);
+            stroke(180, 180, 180);
+            strokeWeight(1);
+            triangle(0, -sz/2, -sz/2, sz/2, sz/2, sz/2);
+        }
+        pop();
+    }
+
+    takeDamage(amount) {
+        this.health -= amount;
+        if (this.health <= 0 && !this.destroyed) {
+            this.destroyed = true;
+
+            // Create explosion at object position
+            if (typeof surfaceMode !== 'undefined' && surfaceMode && typeof surfaceMode._createSurfaceExplosion === 'function') {
+                const alt = this.altitude || (this.yOffset || 0);
+                surfaceMode._createSurfaceExplosion(this.pos.x, this.pos.y, alt, this.size * 1.5);
+            }
+
+            // Remove it from the surface objects, planet descriptors, maps, and caches
+            this.onDestroy();
+        }
+    }
+
+    onDestroy() {
+        if (typeof surfaceMode !== 'undefined' && surfaceMode) {
+            // Remove from surfaceObjects
+            const idx = surfaceMode.surfaceObjects.indexOf(this);
+            if (idx !== -1) {
+                surfaceMode.surfaceObjects.splice(idx, 1);
+            }
+
+            // Clean up from planet playerBuiltSurfaceObjects
+            if (surfaceMode.planet && Array.isArray(surfaceMode.planet.playerBuiltSurfaceObjects)) {
+                const pIdx = surfaceMode.planet.playerBuiltSurfaceObjects.findIndex(o => 
+                    o.type === 'ParkedPlayerShip' && 
+                    Math.abs(o.x - this.pos.x) < 0.1 && 
+                    Math.abs(o.y - this.pos.y) < 0.1
+                );
+                if (pIdx !== -1) {
+                    surfaceMode.planet.playerBuiltSurfaceObjects.splice(pIdx, 1);
+                }
+            }
+
+            // Clean up from parkedShipsMap
+            if (surfaceMode.parkedShipsMap) {
+                const cellSize = (typeof SURFACE_CONFIG !== 'undefined' && SURFACE_CONFIG.SPAWN_CELL_SIZE) ? SURFACE_CONFIG.SPAWN_CELL_SIZE : 35;
+                const cellX = Math.floor(this.pos.x / cellSize);
+                const cellY = Math.floor(this.pos.y / cellSize);
+                const cellKey = `${cellX},${cellY}`;
+                const list = surfaceMode.parkedShipsMap.get(cellKey);
+                if (list) {
+                    const descIdx = list.findIndex(o => 
+                        Math.abs(o.x - this.pos.x) < 0.1 && 
+                        Math.abs(o.y - this.pos.y) < 0.1
+                    );
+                    if (descIdx !== -1) {
+                        list.splice(descIdx, 1);
+                    }
+                    if (list.length === 0) {
+                        surfaceMode.parkedShipsMap.delete(cellKey);
+                    }
+                }
+            }
+
+            // Clean up from parkedShipDescriptor if it matches
+            if (surfaceMode.parkedShipDescriptor) {
+                if (Math.abs(surfaceMode.parkedShipDescriptor.x - this.pos.x) < 0.1 && 
+                    Math.abs(surfaceMode.parkedShipDescriptor.y - this.pos.y) < 0.1) {
+                    surfaceMode.parkedShipDescriptor = null;
+                }
+            }
+
+            // Clean up from object cache
+            if (surfaceMode.objectCache) {
+                const cellSize = (typeof SURFACE_CONFIG !== 'undefined' && SURFACE_CONFIG.SPAWN_CELL_SIZE) ? SURFACE_CONFIG.SPAWN_CELL_SIZE : 35;
+                const cellX = Math.floor(this.pos.x / cellSize);
+                const cellY = Math.floor(this.pos.y / cellSize);
+                const cellKey = `${cellX},${cellY}`;
+                
+                let cIdx = 0;
+                while (true) {
+                    const key = cellKey + "_parkedShip_" + cIdx;
+                    if (surfaceMode.objectCache.has(key)) {
+                        if (surfaceMode.objectCache.get(key) === this) {
+                            surfaceMode.objectCache.delete(key);
+                            break;
+                        }
+                        cIdx++;
+                    } else {
+                        break;
+                    }
+                }
+                surfaceMode.objectCache.delete(cellKey + "_parkedShip");
+            }
+
+            if (typeof uiManager !== 'undefined') {
+                uiManager.addMessage(`Parked ship ${this.displayName} was destroyed!`, [255, 100, 100]);
+            }
+            if (typeof saveGame === 'function') saveGame();
+        }
+    }
+}
+
 if (typeof module !== 'undefined') {
     module.exports = {
         SurfaceObject,
@@ -3247,8 +3407,10 @@ if (typeof module !== 'undefined') {
         SurfaceStation,
         ShieldGenerator,
         DefenseDrone,
-        PlayerBase
+        PlayerBase,
+        ParkedPlayerShip
     };
     global.Turret = Turret;
     global.PlayerBase = PlayerBase;
+    global.ParkedPlayerShip = ParkedPlayerShip;
 }

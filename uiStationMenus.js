@@ -751,8 +751,37 @@ class UIStationMenus {
             this.baseMiningStorageButtonArea = null;
         }
 
+        // Take off in Pod option
+        const takeoffRow = UIComponents.drawListRow({
+            x: pX + L.CONTENT_PADDING,
+            y: storageRow.y + rowH,
+            w: pW - L.CONTENT_PADDING * 2,
+            h: rowH,
+            index: 2,
+            isHighlighted: true
+        });
+
+        UIComponents.drawListRowText({
+            leftText: 'Take off in Pod',
+            subText: 'Leave your ship behind and launch in an Escape Capsule',
+            rightText: 'FREE',
+            rowX: takeoffRow.x,
+            rowY: takeoffRow.y,
+            rowW: takeoffRow.w - 100,
+            rowH: takeoffRow.h,
+            leftColor: [255, 180, 100]
+        });
+
+        const takeoffBtn = UIComponents.drawButton(
+            takeoffRow.x + takeoffRow.w - 90, takeoffRow.y + (takeoffRow.h - L.BTN_HEIGHT_SMALL) / 2,
+            80, L.BTN_HEIGHT_SMALL,
+            'LAUNCH', [120, 60, 0], [200, 100, 0], 3, { textSize: STATION_TEXT_SIZE.SMALL }
+        );
+
+        this.baseTakeoffButtonArea = { ...takeoffBtn, action: 'LAUNCH_POD' };
+
         // Additional quick services suggestions (display only for now)
-        const suggestY = storageRow.y + rowH + L.BTN_SPACING;
+        const suggestY = takeoffRow.y + rowH + L.BTN_SPACING;
         UIComponents.setTextStyle({ fill: [220], size: STATION_TEXT_SIZE.BODY, align: [LEFT, TOP] });
         text('Autonomous Mining Operations:', pX + L.CONTENT_PADDING, suggestY);
         UIComponents.setTextStyle({ fill: [180, 200, 180], size: STATION_TEXT_SIZE.SMALL, align: [LEFT, TOP] });
@@ -826,27 +855,228 @@ class UIStationMenus {
             if (baseObj && baseObj.miningStorage) {
                 const mineralsEntry = baseObj.miningStorage.find(i => i.name === 'Minerals');
                 if (mineralsEntry && mineralsEntry.quantity > 0) {
-                    // Try to add minerals to player cargo (allow partial collection)
-                    const result = player.addCargo('Minerals', mineralsEntry.quantity, true);
-                    if (result && result.added > 0) {
-                        const collected = result.added;
-                        mineralsEntry.quantity -= collected;
+                    // Find the nearest player ship on the surface to transfer cargo
+                    let nearestShip = null;
+                    let minDistance = Infinity;
 
-                        // Remove entry if depleted
-                        if (mineralsEntry.quantity <= 0) {
-                            baseObj.miningStorage = baseObj.miningStorage.filter(i => i.name !== 'Minerals');
+                    const astronautPos = (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.astronaut) ? 
+                        surfaceMode.astronaut.pos : 
+                        (player.pos || null);
+
+                    if (astronautPos) {
+                        // Check active ship
+                        if (player && player.pos) {
+                            const d = dist(astronautPos.x, astronautPos.y, player.pos.x, player.pos.y);
+                            nearestShip = {
+                                isPlayer: true,
+                                distance: d,
+                                ref: player,
+                                displayName: player.shipTypeName || 'Active Ship'
+                            };
+                            minDistance = d;
                         }
 
-                        addMessageFn(`Collected ${collected}t of Minerals from mining storage.`);
-                        if (typeof soundManager !== 'undefined') soundManager.playSound('cargo');
-                        if (typeof saveGame === 'function') saveGame();
+                        // Check parked ships
+                        if (typeof surfaceMode !== 'undefined' && surfaceMode && Array.isArray(surfaceMode.surfaceObjects)) {
+                            for (const obj of surfaceMode.surfaceObjects) {
+                                if (obj && obj.type === "ParkedPlayerShip" && !obj.destroyed) {
+                                    const d = dist(astronautPos.x, astronautPos.y, obj.pos.x, obj.pos.y);
+                                    if (d < minDistance) {
+                                        nearestShip = {
+                                            isPlayer: false,
+                                            distance: d,
+                                            ref: obj,
+                                            displayName: obj.displayName || obj.shipTypeName || 'Parked Ship'
+                                        };
+                                        minDistance = d;
+                                    }
+                                }
+                            }
+                        }
                     } else {
-                        addMessageFn('Not enough cargo space!');
+                        // Fallback to active ship if astronaut position is not available
+                        if (player) {
+                            nearestShip = {
+                                isPlayer: true,
+                                distance: 0,
+                                ref: player,
+                                displayName: player.shipTypeName || 'Active Ship'
+                            };
+                        }
+                    }
+
+                    if (nearestShip) {
+                        let result = null;
+                        if (nearestShip.isPlayer) {
+                            result = nearestShip.ref.addCargo('Minerals', mineralsEntry.quantity, true);
+                        } else {
+                            // Parked ship - state is in nearestShip.ref.shipState
+                            const state = nearestShip.ref.shipState;
+                            
+                            // Cargo capacity helper
+                            const getCapacity = (shipState) => {
+                                const shipTypeName = shipState.shipTypeName;
+                                const def = (typeof SHIP_DEFINITIONS !== 'undefined') ? SHIP_DEFINITIONS[shipTypeName] : null;
+                                if (!def) return 0;
+                                let capacity = def.cargoCapacity || 0;
+                                const installedCargo = (shipState.installedUpgrades && shipState.installedUpgrades.cargo) || 0;
+                                if (installedCargo > 0 && typeof SHIP_UPGRADES !== 'undefined') {
+                                    const upg = SHIP_UPGRADES.find(u => u.type === 'cargo' && u.level === installedCargo);
+                                    if (upg) capacity += upg.cargoBonus;
+                                }
+                                return capacity;
+                            };
+                            
+                            const getAmount = (shipState) => {
+                                const cargo = shipState.cargo || [];
+                                return cargo.reduce((sum, item) => sum + (item?.quantity ?? 0), 0);
+                            };
+
+                            const capacity = getCapacity(state);
+                            const currentAmount = getAmount(state);
+                            const spaceAvailable = capacity - currentAmount;
+
+                            if (spaceAvailable > 0) {
+                                const amountToAdd = Math.min(mineralsEntry.quantity, spaceAvailable);
+                                if (!state.cargo) state.cargo = [];
+                                const existingItem = state.cargo.find(item =>
+                                    item?.name === 'Minerals' || item?.type === 'Minerals'
+                                );
+                                if (existingItem) {
+                                    existingItem.quantity += amountToAdd;
+                                } else {
+                                    state.cargo.push({ name: 'Minerals', quantity: amountToAdd });
+                                }
+                                result = { success: true, added: amountToAdd };
+                            } else {
+                                result = { success: false, added: 0 };
+                            }
+                        }
+
+                        if (result && result.added > 0) {
+                            const collected = result.added;
+                            mineralsEntry.quantity -= collected;
+
+                            // Remove entry if depleted
+                            if (mineralsEntry.quantity <= 0) {
+                                baseObj.miningStorage = baseObj.miningStorage.filter(i => i.name !== 'Minerals');
+                            }
+
+                            addMessageFn(`Collected ${collected}t of Minerals into ${nearestShip.displayName}.`);
+                            if (typeof soundManager !== 'undefined') soundManager.playSound('cargo');
+                            if (typeof saveGame === 'function') saveGame();
+                        } else {
+                            addMessageFn(`Not enough cargo space in ${nearestShip.displayName}!`);
+                            if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                        }
+                    } else {
+                        addMessageFn('No player ship found nearby to transfer cargo!');
                         if (typeof soundManager !== 'undefined') soundManager.playSound('error');
                     }
                 }
             }
             return true;
+        }
+
+        // Take off in Pod button click
+        if (this.baseTakeoffButtonArea && UIComponents.isClickInArea(mx, my, this.baseTakeoffButtonArea)) {
+            // Position the player offset from the base and set flight altitude
+            const baseObj = (typeof uiManager !== 'undefined') ? uiManager.currentBaseObject : null;
+            
+            // Store player's original ship details
+            const origShipState = {
+                shipTypeName: player.shipTypeName,
+                hull: player.hull,
+                shield: player.shield,
+                installedUpgrades: JSON.parse(JSON.stringify(player.installedUpgrades || {})),
+                weapons: player.weapons ? player.weapons.map(w => w ? { ...w } : null) : [],
+                cargo: player.cargo ? player.cargo.map(c => c ? { ...c } : null) : [],
+                angle: player.angle || 0
+            };
+
+            // Apply Escape Capsule ship definition
+            player.applyShipDefinition("EscapeCapsule");
+            player.shield = 0;
+            player.maxShield = 0;
+            player.weapons = [];
+            player.currentWeapon = null;
+            player.maxWeapons = 0;
+            player.weaponSlots = 0;
+            player.cargo = [];
+            if (typeof player.recalculateStats === 'function') {
+                player.recalculateStats();
+            }
+
+            // Exit base screen and return to surface mode in the ship
+            if (typeof surfaceMode !== 'undefined' && surfaceMode) {
+                // Instantiate and place the ParkedPlayerShip at the player's current location (where they left it)
+                if (typeof ParkedPlayerShip !== 'undefined') {
+                    const parkedShip = new ParkedPlayerShip(player.pos.x, player.pos.y, origShipState);
+                    const shipGroundH = (typeof surfaceMode._getTerrainHeightAt === 'function') ? surfaceMode._getTerrainHeightAt(player.pos.x, player.pos.y) : 0;
+                    parkedShip.yOffset = shipGroundH;
+                    
+                    if (!surfaceMode.surfaceObjects) {
+                        surfaceMode.surfaceObjects = [];
+                    }
+                    surfaceMode.surfaceObjects.push(parkedShip);
+
+                    // Cache the parked ship immediately to avoid it disappearing during grid checks when takeoff coordinates are already in cache
+                    if (surfaceMode.objectCache) {
+                        const cellSize = (typeof SURFACE_CONFIG !== 'undefined' && SURFACE_CONFIG.SPAWN_CELL_SIZE) ? SURFACE_CONFIG.SPAWN_CELL_SIZE : 35;
+                        const cellX = Math.floor(player.pos.x / cellSize);
+                        const cellY = Math.floor(player.pos.y / cellSize);
+                        const cellKey = `${cellX},${cellY}`;
+                        surfaceMode.objectCache.set(cellKey + "_parkedShip", parkedShip);
+                        parkedShip.cellKey = cellKey;
+                    }
+
+                    // Add descriptor to planet.playerBuiltSurfaceObjects to persist it
+                    const descriptor = {
+                        type: 'ParkedPlayerShip',
+                        x: player.pos.x,
+                        y: player.pos.y,
+                        size: parkedShip.size,
+                        yOffset: shipGroundH,
+                        shipState: origShipState,
+                        destroyed: false
+                    };
+
+                    if (surfaceMode.planet) {
+                        if (!Array.isArray(surfaceMode.planet.playerBuiltSurfaceObjects)) {
+                            surfaceMode.planet.playerBuiltSurfaceObjects = [];
+                        }
+                        surfaceMode.planet.playerBuiltSurfaceObjects.push(descriptor);
+                    }
+
+                    surfaceMode.parkedShipDescriptor = descriptor;
+                }
+
+                surfaceMode.controlMode = 'SHIP';
+                surfaceMode.astronaut = null;
+                
+                if (baseObj && baseObj.pos) {
+                    // Offset by 150 units horizontally from the base
+                    player.pos.set(baseObj.pos.x + 150, baseObj.pos.y + 150);
+                }
+                
+                // Taken to height 150 units above terrain
+                const groundH = (typeof surfaceMode._getTerrainHeightAt === 'function') ? surfaceMode._getTerrainHeightAt(player.pos.x, player.pos.y) : 0;
+                surfaceMode.altitude = groundH + 150;
+                player.altitude = surfaceMode.altitude;
+                surfaceMode.isLanded = false;
+                surfaceMode.surfaceX = player.pos.x;
+                surfaceMode.surfaceY = player.pos.y;
+            }
+
+            if (typeof uiManager !== 'undefined' && uiManager) {
+                uiManager.currentBaseObject = null;
+            }
+
+            addMessageFn('Launched in Escape Capsule! Original ship remains parked on surface.', [100, 255, 100]);
+            if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
+            if (typeof saveGame === 'function') saveGame();
+            
+            return 'BACK';
         }
 
         if (backButtonArea && UIComponents.isClickInArea(mx, my, backButtonArea)) {
@@ -1146,6 +1376,8 @@ class UIStationMenus {
         const isMillitarySystem = economyType === "Military";
 
         const availableShips = typeof SHIP_DEFINITIONS !== 'undefined' ? Object.entries(SHIP_DEFINITIONS).filter(([shipKey, shipData]) => {
+            // Never show Escape Capsule
+            if (shipKey === "EscapeCapsule") return false;
             // Never show alien ships
             if (shipData.aiRoles && shipData.aiRoles.includes("ALIEN")) return false;
             // Never show police, guard, or bounty hunter ships
@@ -1353,7 +1585,11 @@ class UIStationMenus {
             const isShipUpgrade = ['armor', 'engine', 'cargo', 'hardpoints', 'shield', 'cloak', 'booster'].includes(upg.type);
 
             // Check formatted affordability (and specific upgrade constraints if needed)
+            const isCapsuleBlocked = player.shipTypeName === "EscapeCapsule" && (isShipUpgrade || player.maxWeapons === 0);
             let canAfford = player.credits >= upg.price;
+            if (isCapsuleBlocked) {
+                canAfford = false;
+            }
 
             // Allow re-buying same level? Or strictly upgrades?
             // Simple check: if installed level >= this level, maybe grey out or show "Installed"?
@@ -1393,8 +1629,8 @@ class UIStationMenus {
                 leftColor = canAfford ? UIComponents.STATION_COLORS.TEXT_PRIMARY : UIComponents.STATION_COLORS.TEXT_DISABLED;
             }
 
-            const rightText = isInstalled ? "INSTALLED" : `${upg.price} cr`;
-            const rightColor = isInstalled ? UIComponents.STATION_COLORS.TEXT_INSTALLED : null;
+            const rightText = isInstalled ? "INSTALLED" : (isCapsuleBlocked ? "LOCKED" : `${upg.price} cr`);
+            const rightColor = isInstalled ? UIComponents.STATION_COLORS.TEXT_INSTALLED : (isCapsuleBlocked ? [255, 100, 100] : null);
 
             UIComponents.drawListRowText({
                 leftText: upgLeft,
@@ -2769,7 +3005,8 @@ class UIStationMenus {
         // Render action buttons (right column, at standard back button height)
         const BTN_HEIGHT = 30;
         const btnY = pY + pH - BTN_HEIGHT - 15;
-        this.weaponDetailButtons = this._drawWeaponActionButtons(weaponData.canAfford, rightX, rightW, btnY, weaponData.isInstalled);
+        const isShipUpgrade = ['armor', 'engine', 'cargo', 'hardpoints', 'shield', 'cloak', 'booster'].includes(weaponDef.type);
+        this.weaponDetailButtons = this._drawWeaponActionButtons(weaponData.canAfford, rightX, rightW, btnY, weaponData.isInstalled, player, isShipUpgrade);
 
         // Draw slot picker popup overlay if active
         this._drawSlotPickerPopup(player);
@@ -2998,7 +3235,7 @@ class UIStationMenus {
      * Draws weapon action buttons (Prev/Next/Buy/Back).
      * @private
      */
-    _drawWeaponActionButtons(canAfford, columnX, columnW, y, isInstalled = false) {
+    _drawWeaponActionButtons(canAfford, columnX, columnW, y, isInstalled = false, player = null, isShipUpgrade = false) {
         const BTN_WIDTH = 70;
         const BTN_HEIGHT = 30;
         const BTN_SPACING = 8;
@@ -3045,6 +3282,8 @@ class UIStationMenus {
 
         // Buy button
         let buyBtn = null;
+        const isCapsuleBlocked = player && player.shipTypeName === "EscapeCapsule" && (isShipUpgrade || player.maxWeapons === 0);
+
         if (isInstalled) {
             // Draw "OWNED" button for already-installed ship upgrades
             fill(40, 60, 40);
@@ -3056,6 +3295,17 @@ class UIStationMenus {
             textAlign(CENTER, CENTER);
             textSize(STATION_TEXT_SIZE.BODY);
             text("OWNED", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
+        } else if (isCapsuleBlocked) {
+            // Draw locked button
+            fill(40, 40, 40);
+            stroke(120, 60, 60);
+            strokeWeight(1);
+            rect(currentX, y, BTN_WIDTH, BTN_HEIGHT, 5);
+            fill(255, 100, 100);
+            noStroke();
+            textAlign(CENTER, CENTER);
+            textSize(STATION_TEXT_SIZE.BODY);
+            text("LOCKED", currentX + BTN_WIDTH / 2, y + BTN_HEIGHT / 2);
         } else if (canAfford) {
             buyBtn = UIComponents.drawButton(currentX, y, BTN_WIDTH, BTN_HEIGHT, "BUY", [0, 150, 0], [100, 255, 100]);
         } else {
@@ -3287,6 +3537,20 @@ class UIStationMenus {
 
             // Buy/Install
             if (this.weaponDetailButtons.buy && UIComponents.isClickInArea(mx, my, this.weaponDetailButtons.buy)) {
+                // Block Escape Capsule upgrades
+                if (isShipUpgrade && player.shipTypeName === "EscapeCapsule") {
+                    addMessageFn("The Escape Capsule cannot be upgraded!", [255, 100, 100]);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                    return true;
+                }
+
+                // Block Escape Capsule weapon purchases
+                if (!isShipUpgrade && player.maxWeapons === 0) {
+                    addMessageFn("Your ship cannot mount weapons!", [255, 100, 100]);
+                    if (typeof soundManager !== 'undefined') soundManager.playSound('error');
+                    return true;
+                }
+
                 // Check if ship upgrade is already installed
                 if (isShipUpgrade && player.installedUpgrades) {
                     const currentLevel = player.installedUpgrades[def.type] || 0;

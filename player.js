@@ -829,7 +829,7 @@ class Player {
         this.hull = def.baseHull;
         this.cargoCapacity = def.cargoCapacity;
         // Use armament array length as base weapon slots since ships don't have a weaponSlots property
-        this.weaponSlots = (def.armament && def.armament.length) || 1;
+        this.weaponSlots = (def.armament && def.armament.length !== undefined) ? def.armament.length : 1;
         this.maxWeapons = this.weaponSlots; // Sync maxWeapons for UI compatibility
 
         // Update shield properties
@@ -951,7 +951,7 @@ class Player {
         }
 
         // 4. Hardpoint Upgrades (Weapon Slots)
-        let totalSlots = (def.armament && def.armament.length) || 1; // Base slots from armament array
+        let totalSlots = (def.armament && def.armament.length !== undefined) ? def.armament.length : 1; // Base slots from armament array
         if (this.installedUpgrades.hardpoints > 0) {
             const upg = SHIP_UPGRADES.find(u => u.type === 'hardpoints' && u.level === this.installedUpgrades.hardpoints);
             if (upg) {
@@ -986,7 +986,7 @@ class Player {
         }
 
         // 5. Shield Upgrades
-        this.maxShield = def.baseShield || 100; // Reset to base
+        this.maxShield = def.baseShield !== undefined ? def.baseShield : 100; // Reset to base
         if (this.installedUpgrades.shield > 0) {
             const upg = SHIP_UPGRADES.find(u => u.type === 'shield' && u.level === this.installedUpgrades.shield);
             if (upg) {
@@ -1049,7 +1049,7 @@ class Player {
         }
 
         // Fallback if no valid weapons were found
-        if (this.weapons.length === 0) {
+        if (this.weapons.length === 0 && shipTypeName !== "EscapeCapsule") {
             // Add default pulse laser if no weapons defined
             const defaultWeapon = WEAPON_UPGRADES.find(w => w.name === "Pulse Laser");
             if (defaultWeapon) {
@@ -4216,6 +4216,8 @@ class Player {
 
         // No valid weapons found
         console.warn("No valid weapons available");
+        this.currentWeapon = null;
+        this.fireRate = 0.5;
         return false;
     }
 

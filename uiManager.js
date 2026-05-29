@@ -1344,6 +1344,7 @@ class UIManager {
 
         // Sync areas back
         this.baseRepairButtonArea = this.stationMenus.baseRepairButtonArea;
+        this.baseTakeoffButtonArea = this.stationMenus.baseTakeoffButtonArea;
         this.baseBackButtonArea = this.stationMenus.baseBackButtonArea;
         pop();
     }

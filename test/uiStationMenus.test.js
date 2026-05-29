@@ -144,4 +144,260 @@ describe('UIStationMenus handleBaseClick', () => {
         expect(global.soundManager.playSound).toHaveBeenCalledWith('upgrade');
         expect(saveGameMock).toHaveBeenCalled();
     });
+
+    test('should launch in Escape Capsule and park original ship when takeoff button is clicked', () => {
+        // Setup mock takeoff button area
+        const mockTakeoffBtn = { x: 120, y: 10, w: 100, h: 50 };
+        menus.baseTakeoffButtonArea = mockTakeoffBtn;
+
+        // Mock ParkedPlayerShip globally
+        global.ParkedPlayerShip = class {
+            constructor(x, y, state) {
+                this.x = x;
+                this.y = y;
+                this.shipState = state;
+                this.type = "ParkedPlayerShip";
+            }
+        };
+
+        // Augment mock player
+        mockPlayer.applyShipDefinition = jest.fn();
+        mockPlayer.pos = {
+            x: 100,
+            y: 100,
+            set: jest.fn(function(nx, ny) {
+                this.x = nx;
+                this.y = ny;
+            })
+        };
+        mockPlayer.weapons = [];
+        mockPlayer.cargo = [];
+
+        // Setup global uiManager
+        global.uiManager = {
+            currentBaseObject: {
+                pos: { x: 500, y: 500 }
+            }
+        };
+
+        // Initialize surfaceObjects mock array and planet
+        global.surfaceMode.surfaceObjects = [];
+        global.surfaceMode.planet = { playerBuiltSurfaceObjects: [] };
+        global.surfaceMode.objectCache = new Map();
+        global.surfaceMode._getTerrainHeightAt = jest.fn(() => 50);
+
+        // Click takeoff button (x=150, y=25 is inside mockTakeoffBtn)
+        const result = menus.handleBaseClick(150, 25, mockPlayer, mockRepairBtn, mockBackBtn, addMessageMock);
+
+        expect(result).toBe('BACK');
+        expect(mockPlayer.applyShipDefinition).toHaveBeenCalledWith('EscapeCapsule');
+        expect(mockPlayer.shield).toBe(0);
+        expect(mockPlayer.maxShield).toBe(0);
+        expect(mockPlayer.weapons.length).toBe(0);
+        expect(global.surfaceMode.controlMode).toBe('SHIP');
+        expect(global.surfaceMode.astronaut).toBeNull();
+        expect(global.surfaceMode.surfaceObjects.length).toBe(1);
+        expect(global.surfaceMode.surfaceObjects[0]).toBeInstanceOf(global.ParkedPlayerShip);
+        expect(global.surfaceMode.surfaceObjects[0].x).toBe(100);
+        expect(global.surfaceMode.surfaceObjects[0].y).toBe(100);
+        expect(global.surfaceMode.objectCache.get('2,2_parkedShip')).toBe(global.surfaceMode.surfaceObjects[0]);
+        expect(mockPlayer.pos.set).toHaveBeenCalledWith(650, 650); // 500 + 150 offset
+        expect(global.surfaceMode.altitude).toBe(200); // 50 (ground) + 150 height
+        expect(global.surfaceMode.parkedShipDescriptor).toBeDefined();
+        expect(global.surfaceMode.parkedShipDescriptor.type).toBe('ParkedPlayerShip');
+        expect(global.surfaceMode.planet.playerBuiltSurfaceObjects.length).toBe(1);
+        expect(global.surfaceMode.planet.playerBuiltSurfaceObjects[0].type).toBe('ParkedPlayerShip');
+        expect(global.uiManager.currentBaseObject).toBeNull();
+        expect(addMessageMock).toHaveBeenCalledWith('Launched in Escape Capsule! Original ship remains parked on surface.', [100, 255, 100]);
+        expect(global.soundManager.playSound).toHaveBeenCalledWith('upgrade');
+        expect(saveGameMock).toHaveBeenCalled();
+
+        // Clean up global uiManager and ParkedPlayerShip
+        delete global.uiManager;
+        delete global.ParkedPlayerShip;
+    });
+
+    test('should transfer minerals from base storage to nearest ship (active ship)', () => {
+        // Setup mock base storage button
+        const mockStorageBtn = { x: 50, y: 50, w: 100, h: 50 };
+        menus.baseMiningStorageButtonArea = mockStorageBtn;
+
+        // Setup base mining storage with minerals
+        global.uiManager = {
+            currentBaseObject: {
+                miningStorage: [{ name: 'Minerals', quantity: 10 }]
+            }
+        };
+
+        // Active ship has space
+        mockPlayer.shipTypeName = 'Cobra';
+        mockPlayer.pos = { x: 100, y: 100 };
+        mockPlayer.cargo = [];
+        mockPlayer.addCargo = jest.fn((name, qty, partial) => {
+            mockPlayer.cargo.push({ name, quantity: qty });
+            return { success: true, added: qty };
+        });
+
+        // Click storage button (x=100, y=75 is inside mockStorageBtn)
+        const result = menus.handleBaseClick(100, 75, mockPlayer, mockRepairBtn, mockBackBtn, addMessageMock);
+
+        expect(result).toBe(true);
+        expect(mockPlayer.addCargo).toHaveBeenCalledWith('Minerals', 10, true);
+        expect(global.uiManager.currentBaseObject.miningStorage.length).toBe(0); // Depleted
+        expect(addMessageMock).toHaveBeenCalledWith('Collected 10t of Minerals into Cobra.');
+        expect(global.soundManager.playSound).toHaveBeenCalledWith('cargo');
+        expect(saveGameMock).toHaveBeenCalled();
+
+        delete global.uiManager;
+    });
+
+    test('should transfer minerals to nearest ship (parked ship) when active ship is Escape Capsule', () => {
+        // Setup mock base storage button
+        const mockStorageBtn = { x: 50, y: 50, w: 100, h: 50 };
+        menus.baseMiningStorageButtonArea = mockStorageBtn;
+
+        // Setup base mining storage with minerals
+        global.uiManager = {
+            currentBaseObject: {
+                miningStorage: [{ name: 'Minerals', quantity: 10 }]
+            }
+        };
+
+        // Active ship is EscapeCapsule (0 capacity, cannot hold cargo)
+        mockPlayer.shipTypeName = 'EscapeCapsule';
+        mockPlayer.pos = { x: 500, y: 500 };
+        mockPlayer.addCargo = jest.fn(() => ({ success: false, added: 0 }));
+
+        // Setup a parked ship nearby
+        const mockParkedShip = {
+            type: 'ParkedPlayerShip',
+            displayName: 'My Parked Cobra',
+            pos: { x: 110, y: 100 }, // Close to astronaut
+            shipState: {
+                shipTypeName: 'Cobra',
+                installedUpgrades: { cargo: 0 },
+                cargo: [{ name: 'Minerals', quantity: 2 }]
+            }
+        };
+        global.surfaceMode.surfaceObjects = [mockParkedShip];
+
+        // Define global SHIP_DEFINITIONS
+        global.SHIP_DEFINITIONS = {
+            Cobra: { cargoCapacity: 20 },
+            EscapeCapsule: { cargoCapacity: 0 }
+        };
+
+        // Astronaut position is at (100, 100)
+        global.surfaceMode.astronaut = {
+            pos: { x: 100, y: 100 }
+        };
+
+        // Click storage button (x=100, y=75 is inside mockStorageBtn)
+        const result = menus.handleBaseClick(100, 75, mockPlayer, mockRepairBtn, mockBackBtn, addMessageMock);
+
+        expect(result).toBe(true);
+        expect(mockPlayer.addCargo).not.toHaveBeenCalled();
+        expect(mockParkedShip.shipState.cargo[0].quantity).toBe(12); // 2 + 10 = 12
+        expect(global.uiManager.currentBaseObject.miningStorage.length).toBe(0); // Depleted
+        expect(addMessageMock).toHaveBeenCalledWith('Collected 10t of Minerals into My Parked Cobra.');
+        expect(global.soundManager.playSound).toHaveBeenCalledWith('cargo');
+        expect(saveGameMock).toHaveBeenCalled();
+
+        delete global.uiManager;
+        delete global.SHIP_DEFINITIONS;
+    });
+
+    test('should show error if nearest ship does not have enough cargo space', () => {
+        const mockStorageBtn = { x: 50, y: 50, w: 100, h: 50 };
+        menus.baseMiningStorageButtonArea = mockStorageBtn;
+
+        global.uiManager = {
+            currentBaseObject: {
+                miningStorage: [{ name: 'Minerals', quantity: 10 }]
+            }
+        };
+
+        // Active ship has no space
+        mockPlayer.shipTypeName = 'Sidewinder';
+        mockPlayer.pos = { x: 100, y: 100 };
+        mockPlayer.addCargo = jest.fn(() => ({ success: false, added: 0 }));
+
+        const result = menus.handleBaseClick(100, 75, mockPlayer, mockRepairBtn, mockBackBtn, addMessageMock);
+
+        expect(result).toBe(true);
+        expect(addMessageMock).toHaveBeenCalledWith('Not enough cargo space in Sidewinder!');
+        expect(global.soundManager.playSound).toHaveBeenCalledWith('error');
+
+        delete global.uiManager;
+    });
+});
+
+describe('UIStationMenus handleWeaponDetailClick', () => {
+    let menus;
+    let mockPlayer;
+    let addMessageMock;
+
+    beforeEach(() => {
+        menus = new UIStationMenus();
+
+        // Mock UIComponents.isClickInArea
+        global.UIComponents = {
+            isClickInArea: jest.fn(() => true) // Default to clicking the buy button
+        };
+
+        // Mock soundManager
+        global.soundManager = {
+            playSound: jest.fn()
+        };
+
+        // Mock addMessageFn
+        addMessageMock = jest.fn();
+
+        mockPlayer = {
+            shipTypeName: 'EscapeCapsule',
+            maxWeapons: 0,
+            credits: 1000
+        };
+
+        menus.weaponDetailButtons = {
+            buy: { x: 0, y: 0, w: 100, h: 50 }
+        };
+    });
+
+    afterEach(() => {
+        delete global.UIComponents;
+        delete global.soundManager;
+    });
+
+    test('should block ship upgrade purchase for Escape Capsule', () => {
+        menus.selectedWeaponForDetail = {
+            weaponDef: {
+                type: 'engine',
+                name: 'Engine Upgrade L1',
+                price: 100
+            }
+        };
+
+        const result = menus.handleWeaponDetailClick(50, 25, mockPlayer, addMessageMock);
+
+        expect(result).toBe(true);
+        expect(addMessageMock).toHaveBeenCalledWith('The Escape Capsule cannot be upgraded!', [255, 100, 100]);
+        expect(global.soundManager.playSound).toHaveBeenCalledWith('error');
+    });
+
+    test('should block weapon purchase for Escape Capsule', () => {
+        menus.selectedWeaponForDetail = {
+            weaponDef: {
+                type: 'projectile',
+                name: 'Pulse Laser',
+                price: 100
+            }
+        };
+
+        const result = menus.handleWeaponDetailClick(50, 25, mockPlayer, addMessageMock);
+
+        expect(result).toBe(true);
+        expect(addMessageMock).toHaveBeenCalledWith('Your ship cannot mount weapons!', [255, 100, 100]);
+        expect(global.soundManager.playSound).toHaveBeenCalledWith('error');
+    });
 });

@@ -1256,7 +1256,8 @@ class Planet {
                         miningStorage: o.miningStorage || o.storage || null,  // Save as miningStorage (was storage)
                         miningStorageCapacity: o.miningStorageCapacity || null,
                         lastBackgroundTick: o.lastBackgroundTick || null,
-                        robotCount: (typeof o.robotCount !== 'undefined') ? o.robotCount : null
+                        robotCount: (typeof o.robotCount !== 'undefined') ? o.robotCount : null,
+                        shipState: o.shipState || null
                         // NOTE: robotsInitialized is INTENTIONALLY EXCLUDED
                         // It's a runtime session flag, not persistent state
                         // Robots must respawn from robotCount when loading saves

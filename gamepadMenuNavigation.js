@@ -432,6 +432,7 @@ function _getButtonAreasForState(state) {
             return [
                 uiManager.baseRepairButtonArea,
                 uiManager.stationMenus?.baseMiningStorageButtonArea,
+                uiManager.baseTakeoffButtonArea,
                 uiManager.baseBackButtonArea
             ].filter(b => b && b.w > 0);
         default:
