@@ -7506,6 +7506,11 @@ class StarSystem {
         // Event entities (Raids, Swarms) are also protected.
         if (entity.isAssassinationTarget || entity.isAssassinationGuard || entity.isMissionSpecific || entity.isEventEntity) return false;
 
+        // Keep the player's abandoned hull persistent while the player is on a planet surface.
+        // Surface mode moves the player into local terrain coordinates, so normal distance culling
+        // would incorrectly remove the drifting hull in orbital space.
+        if (entity.isPlayerHull && typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) return false;
+
         // Also protect any entity referenced by the player's active mission (if present)
         try {
             const am = this.player.activeMission;

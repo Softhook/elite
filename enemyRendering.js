@@ -306,8 +306,12 @@ class EnemyRendering {
             let stateKey = AI_STATE_NAME[this.currentState] || "UNKNOWN";
             let targetLabel = "None"; // Default
 
+            // Pilotless hulls should present as adrift, never as active AI.
+            if (this.pilotEjected) {
+                targetLabel = "Adrift";
+            }
             // State-based target labeling for non-combat roles
-            if (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.NEAR_STATION) {
+            else if (this.currentState === AI_STATE.PATROLLING || this.currentState === AI_STATE.NEAR_STATION) {
                 // Check if patrol target is the station
                 if (this.patrolTargetPos && this.currentSystem?.station?.pos &&
                     this.patrolTargetPos.dist(this.currentSystem.station.pos) < 50) {
@@ -406,14 +410,14 @@ class EnemyRendering {
             // UPDATED: Add system name to label (unused system reference removed for perf)
 
             // Ensure pilot rank exists (for existing entities or fallback)
-            if (this.pilotRank === undefined) {
+            if (!this.pilotEjected && this.pilotRank === undefined) {
                 this.pilotRank = (typeof generatePilotRank === 'function')
                     ? generatePilotRank(this.role, this.currentSystem?.securityLevel, this.currentSystem?.techLevel || 5)
                     : 2; // Default to Trained
             }
 
             const baseShipName = shipDef?.name || this.shipTypeName;
-            const namePart = this.displayName || baseShipName;
+            const namePart = this.pilotEjected ? baseShipName : (this.displayName || baseShipName);
 
             // 1. Measure widths (using standard font and size)
             textFont(font);
@@ -422,7 +426,7 @@ class EnemyRendering {
 
             // 2. Calculate Rank Icon width (if applicable)
             let rankW = 0;
-            if (this.pilotRank !== undefined && this.pilotRank !== null) {
+            if (!this.pilotEjected && this.pilotRank !== undefined && this.pilotRank !== null) {
                 if (typeof getPilotRankIconWidth === 'function') {
                     rankW = getPilotRankIconWidth(this.pilotRank, STATION_TEXT_SIZE.BODY);
                 } else {

@@ -892,7 +892,9 @@ class Player {
                 hull.vel.x = oldVelX;
                 hull.vel.y = oldVelY;
                 hull.angle = oldAngle;
+                hull.currentState = AI_STATE?.IDLE ?? hull.currentState;
                 hull.target = null;
+                hull.displayName = null;
                 hull.inCombat = false;
                 hull.calculateRadianProperties?.();
                 hull.initializeColors?.();
