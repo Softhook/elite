@@ -885,7 +885,7 @@ class Player {
         // keep shooting it until it is destroyed before searching for the escape capsule.
         if (system && typeof Enemy !== 'undefined' && typeof AI_ROLE !== 'undefined') {
             try {
-                const hull = new Enemy(oldPosX, oldPosY, this, oldShipType, AI_ROLE.HAULER);
+                const hull = new Enemy(oldPosX, oldPosY, null, oldShipType, AI_ROLE.HAULER);
                 hull.pilotEjected = true;   // No AI, no weapons, drifts only
                 hull.isPlayerHull = true;   // Flag used by enemy targeting to prefer the hull
                 hull.hull = oldHull;        // Carry over current hull damage
@@ -929,7 +929,7 @@ class Player {
         this.cargo = [];
 
         if (typeof uiManager !== 'undefined') {
-            uiManager.addMessage('Escape pod ejected! Your ship continues to drift.', [255, 200, 80]);
+            uiManager.addMessage("Escape pod ejected! Your ship's hull continues to drift.", [255, 200, 80]);
         }
     }
 
