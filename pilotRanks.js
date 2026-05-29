@@ -79,6 +79,8 @@ const PILOT_RANK_MODIFIERS = {
         reactionDelayBonus: 1.20,           // +1200ms reactions — dangerously slow
         aimToleranceMultiplier: 6.0,        // Shoots almost randomly
         fleeHullThreshold: 0.04,            // Suicidally reckless
+        ejectChance: 0,                     // Never ejects — too panicked/dumb
+        ejectHullThreshold: 0,              // Eject check disabled
         tacticChangeMultiplier: 0.05,       // Never adapts
         predictionMultiplier: 0.0,          // Zero target lead
         pursuitAbandonMultiplier: 4.0,      // Blindly chases forever
@@ -112,6 +114,8 @@ const PILOT_RANK_MODIFIERS = {
         reactionDelayBonus: 0.70,           // +700ms slower reactions
         aimToleranceMultiplier: 2.3,        // Extremely poor accuracy
         fleeHullThreshold: 0.08,            // Flees very late (reckless)
+        ejectChance: 0,                     // Never ejects — too reckless/inexperienced
+        ejectHullThreshold: 0,              // Eject check disabled
         tacticChangeMultiplier: 0.20,       // Rarely adapts tactics
         predictionMultiplier: 0.0,          // No target lead
         pursuitAbandonMultiplier: 2.7,      // Won't give up chase easily
@@ -145,6 +149,8 @@ const PILOT_RANK_MODIFIERS = {
         reactionDelayBonus: 0.35,           // +350ms slower reactions
         aimToleranceMultiplier: 1.5,        // Wider aim tolerance (worse accuracy)
         fleeHullThreshold: 0.15,            // Only flee at 15% hull (stubborn)
+        ejectChance: 0.08,                  // 8% chance to eject when hull critically low
+        ejectHullThreshold: 0.10,           // Eject check triggers at 10% hull
         tacticChangeMultiplier: 0.4,        // Less likely to adapt tactics
         predictionMultiplier: 0.2,          // Poor target lead (misses moving targets)
         pursuitAbandonMultiplier: 2.0,      // Won't give up chase easily (suicidal)
@@ -178,6 +184,8 @@ const PILOT_RANK_MODIFIERS = {
         reactionDelayBonus: 0,
         aimToleranceMultiplier: 1.0,
         fleeHullThreshold: 0.30,
+        ejectChance: 0.25,                  // 25% chance to eject when hull critically low
+        ejectHullThreshold: 0.20,           // Eject check triggers at 20% hull
         tacticChangeMultiplier: 1.0,
         predictionMultiplier: 1.0,
         pursuitAbandonMultiplier: 1.0,
@@ -211,6 +219,8 @@ const PILOT_RANK_MODIFIERS = {
         reactionDelayBonus: -0.15,          // 150ms faster reactions
         aimToleranceMultiplier: 0.7,        // Tighter aim (better accuracy)
         fleeHullThreshold: 0.50,            // Flee earlier (smart survival)
+        ejectChance: 0.50,                  // 50% chance to eject when hull critically low
+        ejectHullThreshold: 0.35,           // Eject check triggers at 35% hull
         tacticChangeMultiplier: 1.5,        // More adaptable in combat
         predictionMultiplier: 1.3,          // Better target lead (hits moving targets)
         pursuitAbandonMultiplier: 0.6,      // Gives up bad chases faster (tactical)

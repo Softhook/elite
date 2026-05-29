@@ -1409,6 +1409,10 @@ function handleInventoryClick() {
         soundManager?.playSound('mapClose');
         return true;
     }
+    if (res === 'ejectPod') {
+        handleEjectEscapePod();
+        return true;
+    }
     if (res?.action === 'jettison') {
         soundManager?.playSound('click');
         handleJettisonFromInventory(res.idx);
@@ -1466,6 +1470,29 @@ function handleJettisonFromInventory(idx) {
     } else {
         soundManager?.playSound('error');
     }
+}
+
+/**
+ * Handles ejecting the player into an escape pod.
+ * Closes the inventory, transforms the player's ship into an EscapeCapsule,
+ * and fires it in the opposite direction of travel.
+ */
+function handleEjectEscapePod() {
+    if (!player || player.shipTypeName === 'EscapeCapsule') return;
+
+    // Close the inventory screen first
+    if (gameStateManager) {
+        gameStateManager.showingInventory = false;
+    }
+
+    // Clear gamepad eject highlight
+    if (inventoryScreen) {
+        inventoryScreen.gamepadEjectSelected = false;
+    }
+
+    soundManager?.playSound('explosion_medium');
+
+    player.ejectEscapePod(player.currentSystem);
 }
 
 function mouseReleased() {

@@ -4272,6 +4272,43 @@ class EnemyAIBehaviors {
         this.changeState(AI_STATE.PATROLLING);
         this.performSafeRotationAndThrust(system, this.patrolTargetPos);
     }
+
+    /**
+     * AI update for escape pod entities.
+     * An escape pod always flees from any threat (especially the player).
+     * It never attacks. Once no threat is near it transitions to LEAVING_SYSTEM.
+     * @param {Object} system - The current star system
+     */
+    updateEscapePodAI(system) {
+        const player = system?.player;
+
+        // Always target the player as primary threat if present
+        if (player && !player.destroyed && !player.isDying) {
+            this.target = player;
+        } else {
+            // No player — drift toward system edge
+            this.target = null;
+        }
+
+        const targetExists = !!(this.target && !this.target.destroyed);
+        const distanceToTarget = targetExists ? this.distanceTo(this.target) : Infinity;
+
+        if (targetExists) {
+            // Keep in FLEEING state at all times while threat exists
+            if (this.currentState !== AI_STATE.FLEEING) {
+                this.changeState(AI_STATE.FLEEING);
+            }
+            this._updateState_FLEEING(targetExists, distanceToTarget);
+        } else {
+            // No threat — leave the system
+            if (this.currentState !== AI_STATE.LEAVING_SYSTEM) {
+                this.changeState(AI_STATE.LEAVING_SYSTEM);
+            }
+            this.updateHaulerAI(system); // Hauler AI handles LEAVING_SYSTEM logic well
+        }
+
+        this.updatePhysics();
+    }
 }
 
 /**

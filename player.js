@@ -855,6 +855,55 @@ class Player {
     }
 
     /**
+     * Ejects the player into an escape pod.
+     * Transforms the player's ship into an EscapeCapsule in-place,
+     * explodes the original ship at the current position, and fires
+     * the pod in the opposite direction of current travel.
+     * @param {Object} system - The current star system (used for explosion effect)
+     */
+    ejectEscapePod(system) {
+        if (this.shipTypeName === 'EscapeCapsule') return; // Already in a pod
+
+        // Fire the pod opposite to current velocity; default straight back if stationary
+        const speed = 5.0;
+        let ejectionVx, ejectionVy;
+        const velMag = this.vel ? Math.sqrt(this.vel.x ** 2 + this.vel.y ** 2) : 0;
+        if (velMag > 0.1) {
+            ejectionVx = (-this.vel.x / velMag) * speed;
+            ejectionVy = (-this.vel.y / velMag) * speed;
+        } else {
+            // Stationary — fire backwards relative to heading
+            ejectionVx = -Math.cos(this.angle) * speed;
+            ejectionVy = -Math.sin(this.angle) * speed;
+        }
+
+        // Spawn explosion at original ship position
+        if (system && typeof system.addExplosion === 'function') {
+            system.addExplosion(this.pos.x, this.pos.y, this.size, [200, 150, 80]);
+        }
+
+        // Transform player into escape capsule
+        this.applyShipDefinition('EscapeCapsule');
+
+        // Override hull to current (applyShipDefinition resets to max which is fine here)
+        // Apply ejection velocity
+        if (this.vel && typeof this.vel.set === 'function') {
+            this.vel.set(ejectionVx, ejectionVy);
+        } else if (this.vel) {
+            this.vel.x = ejectionVx;
+            this.vel.y = ejectionVy;
+        }
+
+        // Drain cargo — no room in an escape pod
+        this.cargo = [];
+
+        // Notify the player
+        if (typeof uiManager !== 'undefined') {
+            uiManager.addMessage('Escape pod ejected! Your ship is gone.', [255, 200, 80]);
+        }
+    }
+
+    /**
      * Applies a ship upgrade and recalculates stats.
      * @param {string} type - 'armor', 'engine', 'cargo', 'hardpoints'
      * @param {number} level - 1, 2, 3

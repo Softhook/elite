@@ -671,7 +671,10 @@ class EnemyStateMachine {
         let state;
 
         // Determine base state based on role
-        if (this.role === AI_ROLE.GUARD && this.isPrincipalValid(this.principal)) {
+        if (this.role === AI_ROLE.ESCAPE_POD) {
+            // Escape pods always leave the system if they can't keep fleeing
+            state = AI_STATE.LEAVING_SYSTEM;
+        } else if (this.role === AI_ROLE.GUARD && this.isPrincipalValid(this.principal)) {
             state = AI_STATE.GUARDING;
         } else if (this.role === AI_ROLE.GUARD) {
             // Guard without valid principal after fleeing - depart the system

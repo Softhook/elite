@@ -561,6 +561,13 @@ class Enemy {
         // Always update system reference when update is called
         this.currentSystem = system;
 
+        // Pilotless ships (pilot ejected) just drift — no AI, no weapons, no kill credit
+        if (this.pilotEjected) {
+            this.fireCooldown = 999; // prevent any firing
+            this.updatePhysics();
+            return;
+        }
+
         // Cache time values to avoid redundant calculations
         const deltaSeconds = deltaTime / 1000;
         const currentTime = millis();
@@ -959,6 +966,9 @@ class Enemy {
                         break;
                     case AI_ROLE.MISSIONARY:
                         this.updateMissionaryAI(system);
+                        break;
+                    case AI_ROLE.ESCAPE_POD:
+                        this.updateEscapePodAI(system);
                         break;
                     default:
                         // Default behavior for unknown roles: Unified braking
