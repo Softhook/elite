@@ -412,7 +412,7 @@ describe('Player ejectEscapePod()', () => {
 
             expect(cacheParkedPlayerShip).toHaveBeenCalledTimes(1);
             expect(system.enemies.length).toBe(0);
-            expect(system.playerHull).toBeNull();
+            expect(system.playerHull).toBeUndefined();
         } finally {
             delete global.surfaceMode;
         }

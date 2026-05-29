@@ -1418,6 +1418,7 @@ class SurfaceMode {
         if (typeof ParkedPlayerShip === 'undefined' || !shipState || typeof x !== 'number' || typeof y !== 'number') {
             return null;
         }
+        const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || 35;
 
         const parkedShip = new ParkedPlayerShip(x, y, shipState);
         parkedShip.yOffset = (typeof yOffset === 'number')
@@ -1445,9 +1446,7 @@ class SurfaceMode {
             }
             this.planet.playerBuiltSurfaceObjects.push(descriptor);
         }
-
         if (this.parkedShipsMap) {
-            const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || 35;
             const cellX = Math.floor(x / cellSize);
             const cellY = Math.floor(y / cellSize);
             const cellKey = `${cellX},${cellY}`;
@@ -1459,16 +1458,15 @@ class SurfaceMode {
 
         // Cache immediately so the parked ship is stable across grid shifts.
         if (this.objectCache) {
-            const cellSize = SURFACE_CONFIG.SPAWN_CELL_SIZE || 35;
             const cellX = Math.floor(x / cellSize);
             const cellY = Math.floor(y / cellSize);
             const cellKey = `${cellX},${cellY}`;
 
             let idx = 0;
-            while (this.objectCache.has(cellKey + "_parkedShip_" + idx)) {
+            while (this.objectCache.has(`${cellKey}_parkedShip_${idx}`)) {
                 idx++;
             }
-            this.objectCache.set(cellKey + "_parkedShip_" + idx, parkedShip);
+            this.objectCache.set(`${cellKey}_parkedShip_${idx}`, parkedShip);
             parkedShip.cellKey = cellKey;
         }
 
