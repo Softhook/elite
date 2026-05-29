@@ -697,8 +697,9 @@ class EnemyDamageSystem {
      * @param {Object} attacker - The entity that caused the damage
      */
     _tryPilotEject(attacker) {
-        // Escape pods cannot eject again
+        // Escape pods and aliens cannot eject
         if (typeof AI_ROLE !== 'undefined' && this.role === AI_ROLE.ESCAPE_POD) return;
+        if (typeof AI_ROLE !== 'undefined' && this.role === AI_ROLE.ALIEN) return;
 
         const mods = (typeof getPilotRankModifiers === 'function')
             ? getPilotRankModifiers(this.pilotRank)

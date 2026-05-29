@@ -285,6 +285,25 @@ describe('_tryPilotEject', () => {
         // An escape pod should never spawn another escape pod
         expect(system.enemies.length).toBe(0);
     });
+
+    test('alien pilots should never eject into escape pods', () => {
+        const mockPlayer = makeMockPlayer();
+        const system = makeMockSystem(mockPlayer);
+
+        const alien = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.ALIEN);
+        alien.pilotRank = PILOT_RANK.ELITE;
+        alien.hull = 1;
+        alien.maxHull = 100;
+        alien.currentSystem = system;
+
+        for (let i = 0; i < 100; i++) {
+            alien.pilotEjected = false;
+            alien._tryPilotEject(mockPlayer);
+        }
+
+        expect(alien.pilotEjected).toBe(false);
+        expect(system.enemies.length).toBe(0);
+    });
 });
 
 // ============================================
