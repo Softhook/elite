@@ -872,6 +872,14 @@ class Player {
         const oldVelX = this.vel ? this.vel.x : 0;
         const oldVelY = this.vel ? this.vel.y : 0;
         const oldAngle = this.angle;
+        const oldAltitude = this.altitude;
+        const isSurfaceEjection = (
+            typeof surfaceMode !== 'undefined' &&
+            surfaceMode &&
+            typeof surfaceMode.isActive === 'function' &&
+            surfaceMode.isActive() &&
+            surfaceMode.player === this
+        );
 
         // Calculate ejection velocity for the capsule (opposite to current velocity)
         const speed = 5.0;
@@ -879,11 +887,22 @@ class Player {
         const ejectionVx = velMag > 0.1 ? (-oldVelX / velMag) * speed : -Math.cos(oldAngle) * speed;
         const ejectionVy = velMag > 0.1 ? (-oldVelY / velMag) * speed : -Math.sin(oldAngle) * speed;
 
-        // --- Spawn the drifting hull at the player's original position ---
-        // It inherits the ship's current velocity so it continues to drift naturally.
-        // Enemies currently targeting the player are redirected to this hull so they
-        // keep shooting it until it is destroyed before searching for the escape capsule.
-        if (system && typeof Enemy !== 'undefined' && typeof AI_ROLE !== 'undefined') {
+        // In surface mode, cache the abandoned hull as a parked ship descriptor so it remains
+        // visible and persists with the same logic used for other parked player ships.
+        if (isSurfaceEjection && typeof surfaceMode.cacheParkedPlayerShip === 'function') {
+            const abandonedShipState = {
+                shipTypeName: oldShipType,
+                hull: oldHull,
+                shield: this.shield,
+                installedUpgrades: JSON.parse(JSON.stringify(this.installedUpgrades || {})),
+                weapons: this.weapons ? this.weapons.map(w => w ? { ...w } : null) : [],
+                cargo: this.cargo ? this.cargo.map(c => c ? { ...c } : null) : [],
+                angle: oldAngle || 0
+            };
+            surfaceMode.cacheParkedPlayerShip(oldPosX, oldPosY, abandonedShipState, oldAltitude);
+        }
+        // In space, spawn a drifting hull that enemies can continue to engage.
+        else if (system && typeof Enemy !== 'undefined' && typeof AI_ROLE !== 'undefined') {
             try {
                 const hull = new Enemy(oldPosX, oldPosY, null, oldShipType, AI_ROLE.HAULER);
                 hull.pilotEjected = true;   // No AI, no weapons, drifts only

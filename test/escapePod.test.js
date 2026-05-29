@@ -392,4 +392,30 @@ describe('Player ejectEscapePod()', () => {
         expect(p.vel.x).toBeLessThan(0);
     });
 
+    test('should cache abandoned ship on surface instead of spawning drifting space hull', () => {
+        const p = new Player('Sidewinder');
+        const system = makeMockSystem(p);
+        const cacheParkedPlayerShip = jest.fn();
+        p.currentSystem = system;
+        p.pos = createVector(120, 80);
+        p.vel = createVector(1, 0);
+        p.altitude = 42;
+
+        global.surfaceMode = {
+            player: p,
+            isActive: () => true,
+            cacheParkedPlayerShip
+        };
+
+        try {
+            p.ejectEscapePod(system);
+
+            expect(cacheParkedPlayerShip).toHaveBeenCalledTimes(1);
+            expect(system.enemies.length).toBe(0);
+            expect(system.playerHull).toBeNull();
+        } finally {
+            delete global.surfaceMode;
+        }
+    });
+
 });
