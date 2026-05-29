@@ -856,37 +856,68 @@ class Player {
 
     /**
      * Ejects the player into an escape pod.
-     * Transforms the player's ship into an EscapeCapsule in-place,
-     * explodes the original ship at the current position, and fires
-     * the pod in the opposite direction of current travel.
-     * @param {Object} system - The current star system (used for explosion effect)
+     * The original ship is left as a drifting, pilotless hull — enemies that
+     * were targeting the player continue attacking it until it is destroyed.
+     * The player's new EscapeCapsule fires in the opposite direction of travel.
+     * @param {Object} system - The current star system
      */
     ejectEscapePod(system) {
         if (this.shipTypeName === 'EscapeCapsule') return; // Already in a pod
 
-        // Fire the pod opposite to current velocity; default straight back if stationary
+        // Snapshot current state before any transformation
+        const oldShipType = this.shipTypeName;
+        const oldHull = this.hull;
+        const oldPosX = this.pos.x;
+        const oldPosY = this.pos.y;
+        const oldVelX = this.vel ? this.vel.x : 0;
+        const oldVelY = this.vel ? this.vel.y : 0;
+        const oldAngle = this.angle;
+
+        // Calculate ejection velocity for the capsule (opposite to current velocity)
         const speed = 5.0;
-        let ejectionVx, ejectionVy;
-        const velMag = this.vel ? Math.sqrt(this.vel.x ** 2 + this.vel.y ** 2) : 0;
-        if (velMag > 0.1) {
-            ejectionVx = (-this.vel.x / velMag) * speed;
-            ejectionVy = (-this.vel.y / velMag) * speed;
-        } else {
-            // Stationary — fire backwards relative to heading
-            ejectionVx = -Math.cos(this.angle) * speed;
-            ejectionVy = -Math.sin(this.angle) * speed;
+        const velMag = Math.sqrt(oldVelX ** 2 + oldVelY ** 2);
+        const ejectionVx = velMag > 0.1 ? (-oldVelX / velMag) * speed : -Math.cos(oldAngle) * speed;
+        const ejectionVy = velMag > 0.1 ? (-oldVelY / velMag) * speed : -Math.sin(oldAngle) * speed;
+
+        // --- Spawn the drifting hull at the player's original position ---
+        // It inherits the ship's current velocity so it continues to drift naturally.
+        // Enemies currently targeting the player are redirected to this hull so they
+        // keep shooting it until it is destroyed before searching for the escape capsule.
+        if (system && typeof Enemy !== 'undefined' && typeof AI_ROLE !== 'undefined') {
+            try {
+                const hull = new Enemy(oldPosX, oldPosY, this, oldShipType, AI_ROLE.HAULER);
+                hull.pilotEjected = true;   // No AI, no weapons, drifts only
+                hull.isPlayerHull = true;   // Flag used by enemy targeting to prefer the hull
+                hull.hull = oldHull;        // Carry over current hull damage
+                hull.vel.x = oldVelX;
+                hull.vel.y = oldVelY;
+                hull.angle = oldAngle;
+                hull.target = null;
+                hull.inCombat = false;
+                hull.calculateRadianProperties?.();
+                hull.initializeColors?.();
+                system.addEnemy(hull);
+
+                // Redirect every enemy currently targeting the player to the drifting hull
+                if (system.enemies) {
+                    for (const e of system.enemies) {
+                        if (e !== hull && e.target === this) {
+                            e.target = hull;
+                        }
+                    }
+                }
+
+                // Store hull reference so the targeting system can prefer it
+                system.playerHull = hull;
+            } catch (err) {
+                console.error('Failed to spawn player hull:', err);
+            }
         }
 
-        // Spawn explosion at original ship position
-        if (system && typeof system.addExplosion === 'function') {
-            system.addExplosion(this.pos.x, this.pos.y, this.size, [200, 150, 80]);
-        }
-
-        // Transform player into escape capsule
+        // Transform the player object into an EscapeCapsule
         this.applyShipDefinition('EscapeCapsule');
 
-        // Override hull to current (applyShipDefinition resets to max which is fine here)
-        // Apply ejection velocity
+        // Apply ejection velocity to the capsule
         if (this.vel && typeof this.vel.set === 'function') {
             this.vel.set(ejectionVx, ejectionVy);
         } else if (this.vel) {
@@ -897,9 +928,8 @@ class Player {
         // Drain cargo — no room in an escape pod
         this.cargo = [];
 
-        // Notify the player
         if (typeof uiManager !== 'undefined') {
-            uiManager.addMessage('Escape pod ejected! Your ship is gone.', [255, 200, 80]);
+            uiManager.addMessage('Escape pod ejected! Your ship continues to drift.', [255, 200, 80]);
         }
     }
 

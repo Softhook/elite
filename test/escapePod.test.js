@@ -326,7 +326,7 @@ describe('Player ejectEscapePod()', () => {
         expect(p.cargo).toEqual([]);
     });
 
-    test('should create explosion at ship position', () => {
+    test('should spawn drifting hull in system when ejecting', () => {
         const p = new Player('Sidewinder');
         const system = makeMockSystem(p);
         p.currentSystem = system;
@@ -334,7 +334,14 @@ describe('Player ejectEscapePod()', () => {
 
         p.ejectEscapePod(system);
 
-        expect(system.addExplosion).toHaveBeenCalled();
+        // Original ship left as a drifting hull — no explosion
+        expect(system.addExplosion).not.toHaveBeenCalled();
+        // Hull is registered in the system
+        expect(system.enemies.length).toBeGreaterThan(0);
+        expect(system.enemies[0].isPlayerHull).toBe(true);
+        expect(system.enemies[0].pilotEjected).toBe(true);
+        // System holds a reference to the hull for targeting
+        expect(system.playerHull).toBe(system.enemies[0]);
     });
 
     test('should not eject if already in EscapeCapsule', () => {

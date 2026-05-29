@@ -464,6 +464,12 @@ class EnemyDamageSystem {
                     newsManager.addAssassinationNews(this.displayName, this.currentSystem?.name || 'Unknown Sector');
                 }
             }
+
+            // Clear the player hull reference when the hull is destroyed so enemies
+            // can retarget the escape capsule naturally on their next scan cycle.
+            if (this.isPlayerHull && system.playerHull === this) {
+                system.playerHull = null;
+            }
         }
     }
 

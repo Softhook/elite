@@ -3169,6 +3169,10 @@ class StarSystem {
                 if (enemy.id != null && this.enemiesById) {
                     this.enemiesById.delete(enemy.id);
                 }
+                // Clear player hull reference when the hull drifts off-screen or is destroyed
+                if (enemy.isPlayerHull && this.playerHull === enemy) {
+                    this.playerHull = null;
+                }
             }
         );
     }
