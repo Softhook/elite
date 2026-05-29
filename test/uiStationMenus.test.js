@@ -217,6 +217,29 @@ describe('UIStationMenus handleBaseClick', () => {
         delete global.ParkedPlayerShip;
     });
 
+    test('should not create parked ships when already in Escape Capsule', () => {
+        const mockTakeoffBtn = { x: 120, y: 10, w: 100, h: 50 };
+        menus.baseTakeoffButtonArea = mockTakeoffBtn;
+
+        mockPlayer.shipTypeName = 'EscapeCapsule';
+        mockPlayer.applyShipDefinition = jest.fn();
+        mockPlayer.pos = { x: 100, y: 100, set: jest.fn() };
+
+        global.surfaceMode.surfaceObjects = [];
+        global.surfaceMode.planet = { playerBuiltSurfaceObjects: [] };
+        global.surfaceMode.objectCache = new Map();
+
+        const result = menus.handleBaseClick(150, 25, mockPlayer, mockRepairBtn, mockBackBtn, addMessageMock);
+
+        expect(result).toBe(true);
+        expect(mockPlayer.applyShipDefinition).not.toHaveBeenCalled();
+        expect(global.surfaceMode.surfaceObjects).toHaveLength(0);
+        expect(global.surfaceMode.planet.playerBuiltSurfaceObjects).toHaveLength(0);
+        expect(addMessageMock).toHaveBeenCalledWith('You are already in the Escape Capsule.', [255, 180, 100]);
+        expect(global.soundManager.playSound).toHaveBeenCalledWith('error');
+        expect(saveGameMock).not.toHaveBeenCalled();
+    });
+
     test('should transfer minerals from base storage to nearest ship (active ship)', () => {
         // Setup mock base storage button
         const mockStorageBtn = { x: 50, y: 50, w: 100, h: 50 };
