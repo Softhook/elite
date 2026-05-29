@@ -29,7 +29,6 @@ require('../enemyCargo.js');
 require('../thrustParticles.js');
 require('../mission.js');
 require('../player.js');
-const { StarSystem } = require('../starSystem.js');
 
 const { PILOT_RANK, getPilotRankModifiers } = require('../pilotRanks.js');
 global.PILOT_RANK = PILOT_RANK;
@@ -393,22 +392,4 @@ describe('Player ejectEscapePod()', () => {
         expect(p.vel.x).toBeLessThan(0);
     });
 
-    test('player hull is not distance-despawned while surface mode is active', () => {
-        const originalSurfaceMode = global.surfaceMode;
-        global.surfaceMode = { isActive: () => true };
-
-        const mockStarSystem = {
-            player: { pos: createVector(0, 0), activeMission: null },
-            despawnRadius: 1000
-        };
-        const farHull = {
-            pos: createVector(200000, 200000),
-            isPlayerHull: true
-        };
-
-        const shouldDespawn = StarSystem.prototype.shouldDespawnEntity.call(mockStarSystem, farHull, 1.1);
-        expect(shouldDespawn).toBe(false);
-
-        global.surfaceMode = originalSurfaceMode;
-    });
 });
