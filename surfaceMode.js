@@ -2290,7 +2290,7 @@ class SurfaceMode {
                 const desc = this.playerBuiltMap.get(cellKey);
                 if (desc && !desc.destroyed) {
                     // Instantiate known types (OffworldBuilding) or fallback to a generic SurfaceObject
-                    if (typeof PlayerBase !== 'undefined' && (desc.type === 'PlayerBase' || (desc.type === 'OffworldBuilding' && desc.variant === 1))) {
+                    if (typeof PlayerBase !== 'undefined' && (desc.type === 'PlayerBase' || ((desc.type === 'OffworldBuilding' || desc.type === 'Offworld Colony') && desc.variant === 1))) {
                         obj = new PlayerBase(desc.x, desc.y, desc.size || 60, desc.seed || 0);
                         obj.yOffset = (typeof desc.yOffset !== 'undefined') ? desc.yOffset : this._getTerrainHeightAt(desc.x, desc.y);
                         obj.displayName = desc.displayName || obj.displayName;

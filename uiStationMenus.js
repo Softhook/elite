@@ -695,8 +695,8 @@ class UIStationMenus {
         });
 
         UIComponents.drawListRowText({
-            leftText: 'Base Repairs (FREE)',
-            subText: 'Full hull restoration at no cost',
+            leftText: 'Base Repair & Heal (FREE)',
+            subText: 'Restore ship hull and player health to 100%',
             rightText: 'FREE',
             rowX: repairRow.x,
             rowY: repairRow.y,
@@ -786,19 +786,34 @@ class UIStationMenus {
      */
     handleBaseClick(mx, my, player, repairButtonArea, backButtonArea, addMessageFn) {
         if (repairButtonArea && UIComponents.isClickInArea(mx, my, repairButtonArea)) {
-            let missing = player.maxHull - player.hull;
-            if (missing <= 0) {
-                addMessageFn('Your ship is already fully repaired!');
+            const missing = player.maxHull - player.hull;
+            const astronaut = (typeof surfaceMode !== 'undefined' && surfaceMode) ? surfaceMode.astronaut : null;
+            const astroMissing = astronaut ? (astronaut.maxHealth - astronaut.health) : 0;
+
+            if (missing <= 0 && astroMissing <= 0) {
+                if (astronaut) {
+                    addMessageFn('Your ship and astronaut are already fully restored!');
+                } else {
+                    addMessageFn('Your ship is already fully repaired!');
+                }
                 if (typeof soundManager !== 'undefined') soundManager.playSound('error');
             } else {
-                player.hull = player.maxHull;
-
-                // Heal astronaut if present
-                if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.astronaut) {
-                    surfaceMode.astronaut.heal(surfaceMode.astronaut.maxHealth);
+                let msg = '';
+                if (missing > 0) {
+                    player.hull = player.maxHull;
+                    msg += 'Ship fully repaired';
                 }
+                if (astroMissing > 0 && astronaut) {
+                    astronaut.heal(astronaut.maxHealth);
+                    if (msg) {
+                        msg += ' and astronaut fully healed';
+                    } else {
+                        msg = 'Astronaut fully healed';
+                    }
+                }
+                msg += ' at your base (no charge).';
 
-                addMessageFn('Ship fully repaired at your base (no charge).');
+                addMessageFn(msg);
                 if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
                 if (typeof saveGame === 'function') saveGame();
             }
@@ -3585,4 +3600,9 @@ class UIStationMenus {
 // Export for use
 if (typeof window !== 'undefined') {
     window.UIStationMenus = UIStationMenus;
+}
+
+if (typeof module !== 'undefined') {
+    module.exports = UIStationMenus;
+    global.UIStationMenus = UIStationMenus;
 }
