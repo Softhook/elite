@@ -206,7 +206,6 @@ describe('_tryPilotEject', () => {
         // Force 100 eject attempts - none should succeed
         for (let i = 0; i < 100; i++) {
             enemy.pilotEjected = false;
-            enemy._ejectCheckCooldown = 0;
             enemy._tryPilotEject(mockPlayer);
         }
         expect(enemy.pilotEjected).toBe(false);
@@ -225,7 +224,6 @@ describe('_tryPilotEject', () => {
 
         for (let i = 0; i < 100; i++) {
             enemy.pilotEjected = false;
-            enemy._ejectCheckCooldown = 0;
             enemy._tryPilotEject(mockPlayer);
         }
         expect(enemy.pilotEjected).toBe(false);
@@ -246,7 +244,6 @@ describe('_tryPilotEject', () => {
         let ejected = false;
         for (let i = 0; i < 100; i++) {
             if (enemy.pilotEjected) { ejected = true; break; }
-            enemy._ejectCheckCooldown = 0;
             enemy._tryPilotEject(mockPlayer);
         }
         expect(ejected).toBe(true);
@@ -266,10 +263,9 @@ describe('_tryPilotEject', () => {
         enemy.currentSystem = system;
 
         for (let i = 0; i < 50; i++) {
-            enemy._ejectCheckCooldown = 0;
             enemy._tryPilotEject(mockPlayer);
         }
-        expect(enemy.pilotEjected).toBeUndefined(); // Never set
+        expect(enemy.pilotEjected).toBeFalsy(); // Never set above threshold
         expect(system.enemies.length).toBe(0);
     });
 
@@ -284,7 +280,6 @@ describe('_tryPilotEject', () => {
         pod.currentSystem = system;
 
         for (let i = 0; i < 50; i++) {
-            pod._ejectCheckCooldown = 0;
             pod._tryPilotEject(mockPlayer);
         }
         // An escape pod should never spawn another escape pod

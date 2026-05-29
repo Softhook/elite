@@ -703,15 +703,15 @@ class EnemyDamageSystem {
         // Only trigger when hull is below the rank-specific threshold
         if (this.maxHull <= 0 || this.hull / this.maxHull > mods.ejectHullThreshold) return;
 
-        // Cooldown to prevent re-checking on every hit
-        const now = (typeof millis === 'function') ? millis() : Date.now();
-        if (this._ejectCheckCooldown && now < this._ejectCheckCooldown) return;
-        this._ejectCheckCooldown = now + 2000; // 2 second cooldown between checks
-
-        // Roll the dice
+        // Roll the dice — every hit when hull is critical gets a chance
         if (Math.random() > mods.ejectChance) return;
 
         // --- Eject! ---
+        // Set a cooldown so that a successful eject can't fire again
+        // (e.g. if damage is applied in the same frame before pilotEjected is checked)
+        const now = (typeof millis === 'function') ? millis() : Date.now();
+        this._ejectCheckCooldown = now + 2000;
+
         this.pilotEjected = true;
         this.target = null;
         this.inCombat = false;

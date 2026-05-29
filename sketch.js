@@ -1478,7 +1478,7 @@ function handleJettisonFromInventory(idx) {
  * and fires it in the opposite direction of travel.
  */
 function handleEjectEscapePod() {
-    if (!player || player.shipTypeName === 'EscapeCapsule') return;
+    if (!player) return;
 
     // Close the inventory screen first
     if (gameStateManager) {
