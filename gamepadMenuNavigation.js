@@ -574,6 +574,17 @@ function _handleGamepadInventory(gp, player, inventoryScreen) {
         }
     }
 
+    // Y = eject escape pod
+    if (gp.pressed('y') && player.shipTypeName !== 'EscapeCapsule') {
+        if (inventoryScreen) {
+            inventoryScreen.gamepadEjectSelected = true;
+        }
+        if (typeof handleEjectEscapePod === 'function') {
+            handleEjectEscapePod();
+        }
+        return;
+    }
+
     // A = jettison selected cargo
     if (gp.pressed('a') && cargoCount > 0 && _gpCargoSelectedIndex >= 0 && _gpCargoSelectedIndex < cargoCount) {
         if (typeof soundManager !== 'undefined' && soundManager) {

@@ -855,6 +855,106 @@ class Player {
     }
 
     /**
+     * Ejects the player into an escape pod.
+     * The original ship is left as a drifting, pilotless hull — enemies that
+     * were targeting the player continue attacking it until it is destroyed.
+     * The player's new EscapeCapsule fires in the opposite direction of travel.
+     * @param {Object} system - The current star system
+     */
+    ejectEscapePod(system) {
+        if (this.shipTypeName === 'EscapeCapsule') return; // Already in a pod
+
+        // Snapshot current state before any transformation
+        const oldShipType = this.shipTypeName;
+        const oldHull = this.hull;
+        const oldPosX = this.pos.x;
+        const oldPosY = this.pos.y;
+        const oldVelX = this.vel ? this.vel.x : 0;
+        const oldVelY = this.vel ? this.vel.y : 0;
+        const oldAngle = this.angle;
+        const oldAltitude = this.altitude;
+        const isSurfaceEjection = (
+            typeof surfaceMode !== 'undefined' &&
+            surfaceMode &&
+            typeof surfaceMode.isActive === 'function' &&
+            surfaceMode.isActive() &&
+            surfaceMode.player === this
+        );
+
+        // Calculate ejection velocity for the capsule (opposite to current velocity)
+        const speed = 5.0;
+        const velMag = Math.sqrt(oldVelX ** 2 + oldVelY ** 2);
+        const ejectionVx = velMag > 0.1 ? (-oldVelX / velMag) * speed : -Math.cos(oldAngle) * speed;
+        const ejectionVy = velMag > 0.1 ? (-oldVelY / velMag) * speed : -Math.sin(oldAngle) * speed;
+
+        // In surface mode, cache the abandoned hull as a parked ship descriptor so it remains
+        // visible and persists with the same logic used for other parked player ships.
+        if (isSurfaceEjection && typeof surfaceMode.cacheParkedPlayerShip === 'function') {
+            const abandonedShipState = {
+                shipTypeName: oldShipType,
+                hull: oldHull,
+                shield: this.shield,
+                installedUpgrades: JSON.parse(JSON.stringify(this.installedUpgrades || {})),
+                weapons: this.weapons ? this.weapons.map(w => w ? { ...w } : null) : [],
+                cargo: this.cargo ? this.cargo.map(c => c ? { ...c } : null) : [],
+                angle: oldAngle || 0
+            };
+            surfaceMode.cacheParkedPlayerShip(oldPosX, oldPosY, abandonedShipState, oldAltitude);
+        }
+        // In space, spawn a drifting hull that enemies can continue to engage.
+        else if (system && typeof Enemy !== 'undefined' && typeof AI_ROLE !== 'undefined') {
+            try {
+                const hull = new Enemy(oldPosX, oldPosY, null, oldShipType, AI_ROLE.HAULER);
+                hull.pilotEjected = true;   // No AI, no weapons, drifts only
+                hull.isPlayerHull = true;   // Flag used by enemy targeting to prefer the hull
+                hull.hull = oldHull;        // Carry over current hull damage
+                hull.vel.x = oldVelX;
+                hull.vel.y = oldVelY;
+                hull.angle = oldAngle;
+                hull.currentState = AI_STATE.IDLE;
+                hull.target = null;
+                hull.displayName = null;
+                hull.inCombat = false;
+                hull.calculateRadianProperties?.();
+                hull.initializeColors?.();
+                system.addEnemy(hull);
+
+                // Redirect every enemy currently targeting the player to the drifting hull
+                if (system.enemies) {
+                    for (const e of system.enemies) {
+                        if (e !== hull && e.target === this) {
+                            e.target = hull;
+                        }
+                    }
+                }
+
+                // Store hull reference so the targeting system can prefer it
+                system.playerHull = hull;
+            } catch (err) {
+                console.error('Failed to spawn player hull:', err);
+            }
+        }
+
+        // Transform the player object into an EscapeCapsule
+        this.applyShipDefinition('EscapeCapsule');
+
+        // Apply ejection velocity to the capsule
+        if (this.vel && typeof this.vel.set === 'function') {
+            this.vel.set(ejectionVx, ejectionVy);
+        } else if (this.vel) {
+            this.vel.x = ejectionVx;
+            this.vel.y = ejectionVy;
+        }
+
+        // Drain cargo — no room in an escape pod
+        this.cargo = [];
+
+        if (typeof uiManager !== 'undefined') {
+            uiManager.addMessage("Escape pod ejected! Your ship's hull continues to drift.", [255, 200, 80]);
+        }
+    }
+
+    /**
      * Applies a ship upgrade and recalculates stats.
      * @param {string} type - 'armor', 'engine', 'cargo', 'hardpoints'
      * @param {number} level - 1, 2, 3

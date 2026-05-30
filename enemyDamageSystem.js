@@ -30,6 +30,10 @@ class EnemyDamageSystem {
         if (this.hull <= 0 && !this.destroyed) {
             this._processDestruction(attacker);
         } else {
+            // Check if pilot should eject (only if hull is low and pilot hasn't already ejected)
+            if (!this.pilotEjected) {
+                this._tryPilotEject(attacker);
+            }
             // Only check for random cargo drop if not destroyed
             this._checkRandomCargoDrop();
         }
@@ -448,14 +452,23 @@ class EnemyDamageSystem {
             }
 
             // Handle player-related consequences (mission progress, wanted status)
+            // Only award kill credit if the ship still has its pilot aboard.
+            // If the pilot already ejected, the kill credit was/will be given when
+            // the escape pod itself is destroyed.
             const playerAttacker = this._resolvePlayerAttacker(attacker);
-            if (playerAttacker && system.player === playerAttacker) {
+            if (playerAttacker && system.player === playerAttacker && !this.pilotEjected) {
                 this._handlePlayerKillConsequences(playerAttacker, system);
                 
                 // Add news item if player destroyed a notorious pirate
                 if (this.isNotoriousPirate && typeof newsManager !== 'undefined' && newsManager) {
                     newsManager.addAssassinationNews(this.displayName, this.currentSystem?.name || 'Unknown Sector');
                 }
+            }
+
+            // Clear the player hull reference when the hull is destroyed so enemies
+            // can retarget the escape capsule naturally on their next scan cycle.
+            if (this.isPlayerHull && system.playerHull === this) {
+                system.playerHull = null;
             }
         }
     }
@@ -674,6 +687,71 @@ class EnemyDamageSystem {
         // Random cargo drop chance when hit but not destroyed
         if (this.hull < this.maxHull * DAMAGE_CARGO_DROP_HULL_THRESHOLD && Math.random() < DAMAGE_CARGO_DROP_CHANCE) {
             this.jettisonCargo();
+        }
+    }
+
+    /**
+     * Checks whether the pilot should eject based on their rank and hull level.
+     * If the conditions are met, spawns an escape pod enemy and marks the original
+     * ship as pilotless (it drifts from this point on, yielding no kill credit).
+     * @param {Object} attacker - The entity that caused the damage
+     */
+    _tryPilotEject(attacker) {
+        // Escape pods and aliens cannot eject
+        if (typeof AI_ROLE !== 'undefined' && this.role === AI_ROLE.ESCAPE_POD) return;
+        if (typeof AI_ROLE !== 'undefined' && this.role === AI_ROLE.ALIEN) return;
+
+        const mods = (typeof getPilotRankModifiers === 'function')
+            ? getPilotRankModifiers(this.pilotRank)
+            : null;
+        if (!mods || !mods.ejectChance || mods.ejectChance <= 0) return;
+        if (!mods.ejectHullThreshold || mods.ejectHullThreshold <= 0) return;
+
+        // Only trigger when hull is below the rank-specific threshold
+        if (this.maxHull <= 0 || this.hull / this.maxHull > mods.ejectHullThreshold) return;
+
+        // Roll the dice — every hit when hull is critical gets a chance
+        if (Math.random() > mods.ejectChance) return;
+
+        // --- Eject! ---
+        // Set a cooldown so that a successful eject can't fire again
+        // (e.g. if damage is applied in the same frame before pilotEjected is checked)
+        const now = (typeof millis === 'function') ? millis() : Date.now();
+        this._ejectCheckCooldown = now + 2000;
+
+        this.pilotEjected = true;
+        this.target = null;
+        this.inCombat = false;
+
+        const system = this.getSystem();
+        if (!system) return;
+
+        // Notify player
+        if (typeof uiManager !== 'undefined') {
+            uiManager.addMessage(`${this.shipTypeName} pilot ejected!`, [255, 220, 80]);
+        }
+
+        // Spawn escape pod in the opposite direction of the ship's velocity
+        try {
+            const ejectionSpeed = 3.5;
+            const podVel = (this.vel && this.vel.mag() > 0.1)
+                ? p5.Vector.mult(this.vel, -1).normalize().mult(ejectionSpeed)
+                : p5.Vector.random2D().mult(ejectionSpeed);
+
+            const pod = new Enemy(this.pos.x, this.pos.y, system.player, 'EscapeCapsule', AI_ROLE.ESCAPE_POD);
+            pod.vel = podVel;
+            pod.angle = Math.atan2(podVel.y, podVel.x);
+            // Inherit the original pilot's rank (affects eject chance if pod itself takes damage)
+            pod.pilotRank = this.pilotRank;
+            // Carry faction so factions don't fire on their own escape pods
+            pod.faction = this.faction;
+            pod.calculateRadianProperties();
+            pod.initializeColors();
+            // Mark immediately as fleeing
+            pod.changeState(AI_STATE.FLEEING);
+            system.addEnemy(pod);
+        } catch (e) {
+            console.error('Failed to spawn escape pod:', e);
         }
     }
 }

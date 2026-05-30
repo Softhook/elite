@@ -1122,8 +1122,8 @@ class UIHUD {
 
         let nameWidth = textWidth(pilotName);
 
-        // Draw Pilot Rank Indicator (standardized with world view)
-        if (target.pilotRank !== undefined && target.pilotRank !== null && typeof drawPilotRankIndicator === 'function') {
+        // Draw Pilot Rank Indicator (standardized with world view); omit for pilotless hulls
+        if (!target.pilotEjected && target.pilotRank !== undefined && target.pilotRank !== null && typeof drawPilotRankIndicator === 'function') {
             const rankW = drawPilotRankIndicator(cursorX + nameWidth + 4, cursorY + 9, target.pilotRank, 14);
             if (rankW > 0) nameWidth += rankW + 4;
         }
@@ -1251,6 +1251,7 @@ class UIHUD {
     // Helper methods for target overlay
     _getTargetPilotName(target) {
         if (!target) return 'Unknown Pilot';
+        if (target.pilotEjected) return 'No Pilot';
         if (typeof target.displayName === 'string' && target.displayName.trim().length > 0) {
             return target.displayName;
         }
@@ -1373,6 +1374,9 @@ class UIHUD {
     _computeRawActivityStatus(target) {
         const state = target.currentState;
         const role = target.role;
+
+        // Pilotless hulls: always show as abandoned
+        if (target.pilotEjected) return 'Abandoned';
 
         // --- Event-specific thematic overrides ---
 

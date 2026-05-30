@@ -124,20 +124,28 @@ class EnemyTargeting {
             // Track if we already checked player to avoid redundant evaluation in main loop
             this._playerAlreadyChecked = false;
 
-            if ((isHostileToPlayer || isPoliceVsWanted) && system.player && this.isTargetValid(system.player)) {
-                // RANK-BASED SENSOR CUTOFF
-                const sensorMult = rankMods?.longRangeSensorMultiplier ?? 2.5;
-                const sensorMaxDistSq = Math.pow(this.detectionRange * sensorMult, 2);
+            if (isHostileToPlayer || isPoliceVsWanted) {
+                // Prefer the drifting hull (player ejected) over the escape capsule — enemies
+                // should keep attacking the ship until it is destroyed before pursuing the pod.
+                const _hull = system.playerHull && this.isTargetValid(system.playerHull) ? system.playerHull : null;
+                const _scanTarget = _hull || (system.player && this.isTargetValid(system.player) ? system.player : null);
 
-                const dx = this.pos.x - system.player.pos.x;
-                const dy = this.pos.y - system.player.pos.y;
-                const d2 = dx * dx + dy * dy;
+                if (_scanTarget) {
+                    // RANK-BASED SENSOR CUTOFF
+                    const sensorMult = rankMods?.longRangeSensorMultiplier ?? 2.5;
+                    const sensorMaxDistSq = Math.pow(this.detectionRange * sensorMult, 2);
 
-                this._playerAlreadyChecked = true; // Mark checked regardless of range
+                    const dx = this.pos.x - _scanTarget.pos.x;
+                    const dy = this.pos.y - _scanTarget.pos.y;
+                    const d2 = dx * dx + dy * dy;
 
-                if (d2 < sensorMaxDistSq) {
-                    this.target = system.player;
-                    return true;
+                    // Mark player as checked only when the actual player was the scan target
+                    this._playerAlreadyChecked = (_scanTarget === system.player);
+
+                    if (d2 < sensorMaxDistSq) {
+                        this.target = _scanTarget;
+                        return true;
+                    }
                 }
             }
 
@@ -366,6 +374,16 @@ class EnemyTargeting {
 
         // Evaluate Player (with debug) - Skip if already checked in off-screen branch
         if (!this._playerAlreadyChecked) {
+            // Prefer the drifting hull over the escape capsule when the hull is still alive
+            const hullRef = system.playerHull;
+            if (hullRef && hullRef !== bestTarget && this.isTargetValid(hullRef)) {
+                const hullScore = this.evaluateTargetScore(hullRef, system);
+                if (hullScore > bestScore) {
+                    bestScore = hullScore;
+                    bestTarget = hullRef;
+                }
+            }
+
             const playerRef = system.player || this.target;
             if (playerRef instanceof Player && playerRef !== bestTarget && this.isTargetValid(playerRef)) {
                 const playerScore = this.evaluateTargetScore(playerRef, system);
@@ -943,6 +961,10 @@ class EnemyTargeting {
                             const cargoBonus = TARGET_SCORE_PIRATE_CARGO_BASE + cargoAmount * TARGET_SCORE_PIRATE_CARGO_MULT;
                             _score += cargoBonus;
                         }
+                    } else if (target.isPlayerHull) {
+                        // Player's drifting hull: pirates score it as hauler prey (same as any commerce ship)
+                        _score += TARGET_SCORE_PIRATE_PREY_HAULER;
+                        _interesting = true;
                     } else if (target.role === AI_ROLE.HAULER || target.role === AI_ROLE.TRANSPORT || target.role === AI_ROLE.MINER || target.role === AI_ROLE.MISSIONARY) {
                         // Pirates prey on commerce ships and missionaries (easy targets)
                         _score += TARGET_SCORE_PIRATE_PREY_HAULER;
@@ -958,6 +980,10 @@ class EnemyTargeting {
                         _score += TARGET_SCORE_BASE_WANTED;
                         _interesting = true;
                         //console.log(`%c🔍 POLICE TARGETING WANTED PLAYER: ${enemy.shipTypeName} base score: +${TARGET_SCORE_BASE_WANTED}, score now ${_score}`, 'color:green');
+                    } else if (target.isPlayerHull && system?.isPlayerWanted?.()) {
+                        // Drifting hull of a wanted player: police continue pursuing it
+                        _score += TARGET_SCORE_BASE_WANTED;
+                        _interesting = true;
                     } else if (target.isWanted) {
                         _score += TARGET_SCORE_BASE_WANTED;
                         _interesting = true;

@@ -233,3 +233,27 @@ describe('CommunicationSystem Friendly Fire Logic', () => {
         expect(allyWarningCalls.length).toBe(0);
     });
 });
+
+describe('CommunicationSystem abandoned hull filtering', () => {
+    test('pilot-ejected ships should not send communication messages', () => {
+        const commSystem = new CommunicationSystem();
+        const addCommunicationMessage = jest.fn();
+        commSystem.uiManager = { addCommunicationMessage };
+        commSystem.player = { shipTypeName: 'Sidewinder' };
+        commSystem._queueSpeech = jest.fn();
+        commSystem._lastGlobalMessageTime = -Infinity;
+        commSystem._random = () => 0;
+        commSystem._getEnemyKey = () => 'pilotless-1';
+
+        const sent = commSystem._maybeSend(
+            { id: 'pilotless-1', pilotEjected: true, shipTypeName: 'Cobra' },
+            'test',
+            ['No one should hear this.'],
+            { chance: 1, cooldown: 0 }
+        );
+
+        expect(sent).toBe(false);
+        expect(addCommunicationMessage).not.toHaveBeenCalled();
+        expect(commSystem._queueSpeech).not.toHaveBeenCalled();
+    });
+});

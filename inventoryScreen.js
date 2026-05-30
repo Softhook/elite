@@ -2,7 +2,9 @@ class InventoryScreen {
   constructor() {
     this.jettisonButtons = [];
     this.closeButton = {};
+    this.escapePodButton = null;
     this.gamepadSelectedCargoIndex = -1;  // Track gamepad selection
+    this.gamepadEjectSelected = false;    // Track gamepad selection of eject button
   }
 
   draw(player) {
@@ -224,6 +226,39 @@ class InventoryScreen {
       textSize(STATION_TEXT_SIZE.BODY);
       text('No weapons installed', leftColX + 10, curY);
       curY += rowH;
+    }
+
+    curY += sectionGap;
+
+    // --- Eject Escape Pod Section ---
+    // Only show if not already in an escape capsule
+    if (player.shipTypeName !== 'EscapeCapsule') {
+      const btnW = leftColW - 20;
+      const btnH = 30;
+      const btnX = leftColX + 10;
+      const btnY = curY;
+      const isGamepadEjectSelected = !!this.gamepadEjectSelected;
+
+      if (isGamepadEjectSelected) {
+        fill(255, 100, 60);
+        stroke(255, 180, 60);
+      } else {
+        fill(120, 40, 30);
+        stroke(200, 80, 60);
+      }
+      strokeWeight(1);
+      rect(btnX, btnY, btnW, btnH, 4);
+
+      fill(255, 220, 200);
+      noStroke();
+      textAlign(CENTER, CENTER);
+      textSize(STATION_TEXT_SIZE.BODY);
+      text("⚠ Eject Escape Pod", btnX + btnW / 2, btnY + btnH / 2);
+
+      this.escapePodButton = { x: btnX, y: btnY, w: btnW, h: btnH };
+      curY += btnH + sectionGap;
+    } else {
+      this.escapePodButton = null;
     }
 
     // ====== RIGHT COLUMN ======
@@ -557,6 +592,7 @@ class InventoryScreen {
 
   handleClick(mx, my, player) {
     if (this._hit(mx, my, this.closeButton)) return 'close';
+    if (this.escapePodButton && this._hit(mx, my, this.escapePodButton)) return 'ejectPod';
     for (const b of this.jettisonButtons) {
       if (this._hit(mx, my, b)) {
         return { action: 'jettison', idx: b.index };

@@ -3033,6 +3033,10 @@ class CommunicationSystem {
             console.log('DEBUG: _maybeSend invalid args', { uiManager: !!this.uiManager, isArray: Array.isArray(templates), len: templates?.length });
             return false;
         }
+        // Pilotless abandoned hulls should never transmit chatter.
+        if (enemy.pilotEjected || enemy.isPlayerHull) {
+            return false;
+        }
         const now = this._now();
         if (now - this._lastGlobalMessageTime < this._globalCooldownMs) {
             console.log('DEBUG: _maybeSend global cooldown', { now, last: this._lastGlobalMessageTime, ms: this._globalCooldownMs });

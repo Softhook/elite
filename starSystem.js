@@ -3169,6 +3169,10 @@ class StarSystem {
                 if (enemy.id != null && this.enemiesById) {
                     this.enemiesById.delete(enemy.id);
                 }
+                // Clear player hull reference when the hull drifts off-screen or is destroyed
+                if (enemy.isPlayerHull && this.playerHull === enemy) {
+                    this.playerHull = null;
+                }
             }
         );
     }
@@ -7501,6 +7505,11 @@ class StarSystem {
         // Assassination targets/guards are explicitly flagged when spawned.
         // Event entities (Raids, Swarms) are also protected.
         if (entity.isAssassinationTarget || entity.isAssassinationGuard || entity.isMissionSpecific || entity.isEventEntity) return false;
+
+        // Keep the player's abandoned hull persistent while the player is on a planet surface.
+        // Surface mode moves the player into local terrain coordinates, so normal distance culling
+        // would incorrectly remove the drifting hull in orbital space.
+        if (entity.isPlayerHull && typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) return false;
 
         // Also protect any entity referenced by the player's active mission (if present)
         try {

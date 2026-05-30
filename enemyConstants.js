@@ -77,7 +77,8 @@ const AI_ROLE = {
     MINER: 'Miner',  // Mining ships that target asteroids
     REPAIR: 'Repair',  // Field repair tenders that maintain space objects
     HEALER: 'Healer', // Medical ships that heal other ships
-    MISSIONARY: 'Missionary'  // Posthuman missionaries - use tangle to disable and preach
+    MISSIONARY: 'Missionary',  // Posthuman missionaries - use tangle to disable and preach
+    ESCAPE_POD: 'EscapePod'   // Ejected pilot in an escape pod - flees all threats
 };
 
 // -------------------------
