@@ -1815,4 +1815,128 @@ describe('SurfaceMode ParkedPlayerShip Re-boarding', () => {
         // CRITICAL: Verify that the cell key was NOT registered in destroyedCells (avoiding base-blocking bug)
         expect(sm.destroyedCells.has('28,28')).toBe(false);
     });
+
+    test('should cache and restore weaponIndex when re-boarding a parked ship', () => {
+        const { ParkedPlayerShip } = require('../surfaceObjects');
+
+        // Setup mock player with mock weapons and setCurrentWeapon
+        sm.player.weapons = [{ name: 'Beam Laser', fireRate: 0.2 }];
+        sm.player.weaponIndex = 0;
+        sm.player.setCurrentWeapon = jest.fn((idx) => {
+            sm.player.weaponIndex = idx;
+            sm.player.currentWeapon = sm.player.weapons[idx];
+        });
+        sm.player.applyShipDefinition = jest.fn();
+
+        // Swap/leave active ship behind (parks current active ship)
+        const parkedShipState = {
+            shipTypeName: 'Vulture',
+            hull: 80,
+            shield: 100,
+            installedUpgrades: {},
+            weapons: [{ name: 'Pulse Laser', fireRate: 0.5 }],
+            cargo: [],
+            weaponIndex: 0
+        };
+
+        const parkedShip = new ParkedPlayerShip(1020, 50, parkedShipState);
+        sm.surfaceObjects = [parkedShip];
+
+        const descriptor = { type: 'ParkedPlayerShip', x: 1020, y: 50, shipState: parkedShipState };
+        sm.planet.playerBuiltSurfaceObjects = [descriptor];
+        sm.parkedShipDescriptor = descriptor;
+
+        global.Astronaut = class MockAstronaut {
+            constructor(pos) { this.pos = pos.copy(); this.altitude = 0; }
+            handleInput() { return false; }
+            update() { }
+        };
+
+        sm.deployAstronaut();
+
+        // Move astronaut close to the first parked ship and re-board it
+        sm.astronaut.pos.set(1025, 50);
+        sm.boardCooldown = 0;
+
+        sm._updateAstronaut(0.016);
+
+        // Verify that the active ship we left behind was parked, and its cached state has the active weaponIndex.
+        expect(sm.surfaceObjects.length).toBe(1); 
+        expect(sm.surfaceObjects[0].shipState.weaponIndex).toBe(0);
+
+        // Verify that setCurrentWeapon was called to restore weapon selection
+        expect(sm.player.setCurrentWeapon).toHaveBeenCalledWith(0);
+        expect(sm.player.currentWeapon).toEqual({ name: 'Pulse Laser', fireRate: 0.5 });
+    });
+
+    test('should handle surface ejection, cache the ship at landed altitude, and allow re-boarding', () => {
+        global.FRAME_TIME_BASELINE_MS = 16.67;
+        require('../weapons.js');
+        require('../shipUpgrades.js');
+        require('../objectPool.js');
+        require('../thrustParticles.js');
+        require('../ships.js');
+        require('../player.js');
+        const { ParkedPlayerShip } = require('../surfaceObjects');
+
+        // Create player using the real Player class
+        const p = new Player('Sidewinder');
+        p.pos = createVector(1000, 50);
+        p.vel = createVector(2, 1);
+        p.altitude = 150; // flying high
+
+        sm.player = p;
+        global.surfaceMode = sm;
+
+        // Mock terrain height returning 20 for this position
+        sm._getTerrainHeightAt = jest.fn(() => 20);
+
+        // Ensure Astronaut class is available
+        global.Astronaut = class MockAstronaut {
+            constructor(pos) { this.pos = pos.copy(); this.altitude = 20; }
+            handleInput() { return false; }
+            update() { }
+        };
+
+        // Eject escape pod on surface
+        p.ejectEscapePod(starSystem);
+
+        // 1. Verify player is now in EscapeCapsule
+        expect(p.shipTypeName).toBe('EscapeCapsule');
+
+        // 2. Verify parked ship is cached on the ground (terrain height 20 + standard MIN_ALTITUDE 10 = 30)
+        expect(sm.surfaceObjects.length).toBe(1);
+        const parkedShip = sm.surfaceObjects[0];
+        expect(parkedShip.shipTypeName).toBe('Sidewinder');
+        expect(parkedShip.pos.x).toBe(1000);
+        expect(parkedShip.pos.y).toBe(50);
+        expect(parkedShip.yOffset).toBe(30); // 20 + 10 = 30
+
+        // 3. Simulate landing the escape capsule
+        // To disembark, isLanded must be true.
+        // Let's set speed to 0 and altitude to minAbsoluteAlt (20 + 10 = 30)
+        p.vel.set(0, 0);
+        sm.altitude = 30;
+        sm._updatePhysics(0.016);
+        expect(sm.isLanded).toBe(true);
+
+        // 4. Deploy astronaut
+        sm.reboardCooldown = 0;
+        // Pressing W/UP key to trigger disembark
+        global.keyIsDown = jest.fn((k) => k === 87); // W key
+        sm._checkDisembarkTrigger();
+        expect(sm.controlMode).toBe('ASTRONAUT');
+        expect(sm.astronaut).toBeDefined();
+
+        // 5. Move astronaut to the parked ship and re-board
+        sm.astronaut.pos.set(1000, 50);
+        sm.boardCooldown = 0;
+        sm._updateAstronaut(0.016);
+
+        // 6. Verify we are back in the Sidewinder, and escape capsule is discarded
+        expect(sm.controlMode).toBe('SHIP');
+        expect(sm.player.shipTypeName).toBe('Sidewinder');
+        expect(sm.surfaceObjects.length).toBe(0); // Escape capsule discarded, Sidewinder reboarded
+    });
 });
+

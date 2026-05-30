@@ -897,14 +897,19 @@ class Player {
                 installedUpgrades: JSON.parse(JSON.stringify(this.installedUpgrades || {})),
                 weapons: this.weapons ? this.weapons.map(w => w ? { ...w } : null) : [],
                 cargo: this.cargo ? this.cargo.map(c => c ? { ...c } : null) : [],
-                angle: oldAngle || 0
+                angle: oldAngle || 0,
+                weaponIndex: this.weaponIndex || 0
             };
-            surfaceMode.cacheParkedPlayerShip(oldPosX, oldPosY, abandonedShipState, oldAltitude);
+            const groundH = (typeof surfaceMode._getTerrainHeightAt === 'function')
+                ? surfaceMode._getTerrainHeightAt(oldPosX, oldPosY)
+                : 0;
+            const landedAltitude = groundH + ((typeof SURFACE_CONFIG !== 'undefined' && SURFACE_CONFIG.MIN_ALTITUDE !== undefined) ? SURFACE_CONFIG.MIN_ALTITUDE : 10);
+            surfaceMode.cacheParkedPlayerShip(oldPosX, oldPosY, abandonedShipState, landedAltitude);
         }
         // In space, spawn a drifting hull that enemies can continue to engage.
         else if (system && typeof Enemy !== 'undefined' && typeof AI_ROLE !== 'undefined') {
             try {
-                const hull = new Enemy(oldPosX, oldPosY, null, oldShipType, AI_ROLE.HAULER);
+                const hull = new Enemy(oldPosX, oldPosY, this, oldShipType, AI_ROLE.HAULER);
                 hull.pilotEjected = true;   // No AI, no weapons, drifts only
                 hull.isPlayerHull = true;   // Flag used by enemy targeting to prefer the hull
                 hull.hull = oldHull;        // Carry over current hull damage

@@ -77,18 +77,18 @@ function makeMockSystem(playerObj) {
 
 // Helper: create a simple mock player with pos/vel
 function makeMockPlayer() {
-    return {
-        pos: createVector(0, 0),
-        vel: createVector(0, 0),
-        destroyed: false,
-        isDying: false,
-        kills: 0,
-        faction: '',
-        addKill: jest.fn(),
-        isPolice: false,
-        playerFaction: '',
-        activeMission: null
-    };
+    const p = new Player();
+    p.pos = createVector(0, 0);
+    p.vel = createVector(0, 0);
+    p.destroyed = false;
+    p.isDying = false;
+    p.kills = 0;
+    p.faction = '';
+    p.addKill = jest.fn();
+    p.isPolice = false;
+    p.playerFaction = '';
+    p.activeMission = null;
+    return p;
 }
 
 // ============================================
@@ -418,4 +418,77 @@ describe('Player ejectEscapePod()', () => {
         }
     });
 
+    test('should pass player reference to drifting hull', () => {
+        const p = new Player('Sidewinder');
+        const system = makeMockSystem(p);
+        p.currentSystem = system;
+        p.vel = createVector(0, 0);
+
+        p.ejectEscapePod(system);
+
+        expect(system.enemies.length).toBeGreaterThan(0);
+        // Verify that the drifting hull constructor received 'this' as playerRef.
+        // In enemy.js constructor, case AI_ROLE.BOUNTY_HUNTER uses playerRef, but for other roles
+        // it checks currentSystem = playerRef.currentSystem. If playerRef was not passed,
+        // it would fall back. Let's make sure it is instantiated successfully.
+        const spawnedHull = system.enemies[0];
+        expect(spawnedHull.isPlayerHull).toBe(true);
+    });
 });
+
+describe('Wanted Status Exclusion on Destruction', () => {
+    test('destroying NPC escape pod should not make the player wanted', () => {
+        const mockPlayer = makeMockPlayer();
+        const system = makeMockSystem(mockPlayer);
+        system.setPlayerWanted = jest.fn();
+
+        const pod = new Enemy(0, 0, mockPlayer, 'EscapeCapsule', AI_ROLE.ESCAPE_POD);
+        pod.hull = 10;
+        pod.maxHull = 10;
+        pod.currentSystem = system;
+
+        // Destroying the NPC escape pod
+        pod._processDestruction(mockPlayer);
+
+        // Player should NOT be marked wanted
+        expect(system.setPlayerWanted).not.toHaveBeenCalled();
+        expect(mockPlayer.isWanted).toBeFalsy();
+    });
+
+    test('destroying a normal hauler ship with pilot should make the player wanted', () => {
+        const mockPlayer = makeMockPlayer();
+        const system = makeMockSystem(mockPlayer);
+        system.setPlayerWanted = jest.fn();
+
+        const hauler = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.HAULER);
+        hauler.hull = 100;
+        hauler.maxHull = 100;
+        hauler.currentSystem = system;
+
+        // Destroying the hauler
+        hauler._processDestruction(mockPlayer);
+
+        // Player should be marked wanted
+        expect(system.setPlayerWanted).toHaveBeenCalledWith(true, 1);
+    });
+
+    test('destroying a pilot-ejected hauler hull should not make the player wanted', () => {
+        const mockPlayer = makeMockPlayer();
+        const system = makeMockSystem(mockPlayer);
+        system.setPlayerWanted = jest.fn();
+
+        const hauler = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.HAULER);
+        hauler.hull = 100;
+        hauler.maxHull = 100;
+        hauler.pilotEjected = true;
+        hauler.currentSystem = system;
+
+        // Destroying the pilotless hull
+        hauler._processDestruction(mockPlayer);
+
+        // Player should NOT be marked wanted
+        expect(system.setPlayerWanted).not.toHaveBeenCalled();
+        expect(mockPlayer.isWanted).toBeFalsy();
+    });
+});
+

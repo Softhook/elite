@@ -997,7 +997,8 @@ class UIStationMenus {
                 installedUpgrades: JSON.parse(JSON.stringify(player.installedUpgrades || {})),
                 weapons: player.weapons ? player.weapons.map(w => w ? { ...w } : null) : [],
                 cargo: player.cargo ? player.cargo.map(c => c ? { ...c } : null) : [],
-                angle: player.angle || 0
+                angle: player.angle || 0,
+                weaponIndex: player.weaponIndex || 0
             };
 
             // Apply Escape Capsule ship definition

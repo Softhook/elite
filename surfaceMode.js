@@ -1489,7 +1489,8 @@ class SurfaceMode {
                 installedUpgrades: JSON.parse(JSON.stringify(this.player.installedUpgrades || {})),
                 weapons: this.player.weapons ? this.player.weapons.map(w => w ? { ...w } : null) : [],
                 cargo: this.player.cargo ? this.player.cargo.map(c => c ? { ...c } : null) : [],
-                angle: this.player.angle || 0
+                angle: this.player.angle || 0,
+                weaponIndex: this.player.weaponIndex || 0
             };
             this.cacheParkedPlayerShip(
                 this.player.pos.x,
@@ -1513,6 +1514,11 @@ class SurfaceMode {
         
         if (typeof this.player.recalculateStats === 'function') {
             this.player.recalculateStats();
+        }
+
+        if (typeof this.player.setCurrentWeapon === 'function') {
+            const index = (state.weaponIndex !== undefined) ? state.weaponIndex : 0;
+            this.player.setCurrentWeapon(index);
         }
         
         // Teleport the player ship back to the position where the parked ship was

@@ -592,7 +592,12 @@ class EnemyDamageSystem {
         // Set player wanted status if a non-pirate/non-combat was destroyed
         // NOTE: Combat ships are considered legitimate engagement targets and
         // should not make the player wanted when destroyed.
-        if (this.role !== AI_ROLE.PIRATE && this.role !== AI_ROLE.ALIEN && this.role !== AI_ROLE.BOUNTY_HUNTER && this.role !== AI_ROLE.COMBAT) {
+        if (this.role !== AI_ROLE.PIRATE &&
+            this.role !== AI_ROLE.ALIEN &&
+            this.role !== AI_ROLE.BOUNTY_HUNTER &&
+            this.role !== AI_ROLE.COMBAT &&
+            this.role !== AI_ROLE.ESCAPE_POD &&
+            !this.pilotEjected) {
             if (isAnarchySystem) {
                 AI_LOG(`Wanted status skipped in ${system.name} (Anarchy system).`);
                 return;
@@ -714,11 +719,6 @@ class EnemyDamageSystem {
         if (Math.random() > mods.ejectChance) return;
 
         // --- Eject! ---
-        // Set a cooldown so that a successful eject can't fire again
-        // (e.g. if damage is applied in the same frame before pilotEjected is checked)
-        const now = (typeof millis === 'function') ? millis() : Date.now();
-        this._ejectCheckCooldown = now + 2000;
-
         this.pilotEjected = true;
         this.target = null;
         this.inCombat = false;
