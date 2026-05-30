@@ -519,6 +519,12 @@ function executeInputAction(action, context) {
         case INPUT_ACTIONS.FIRE_PRIMARY:
             player?.handleFireInput?.();
             return true;
+        case INPUT_ACTIONS.LAUNCH_ESCAPE_CAPSULE:
+            if (isShipControlState()) {
+                handleEjectEscapePod();
+                return true;
+            }
+            return false;
         case INPUT_ACTIONS.ACTIVATE_BURST:
             return handleSpeedBurstActivation();
         case INPUT_ACTIONS.WEAPON_SLOT_1:
@@ -792,6 +798,7 @@ function handleGamepadContinuousInput() {
     if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.MINIMAP_ZOOM_IN, context)) executeInputAction(INPUT_ACTIONS.MINIMAP_ZOOM_IN, context);
     if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.MINIMAP_ZOOM_OUT, context)) executeInputAction(INPUT_ACTIONS.MINIMAP_ZOOM_OUT, context);
     if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.ACTIVATE_BURST, context)) executeInputAction(INPUT_ACTIONS.ACTIVATE_BURST, context);
+    if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.LAUNCH_ESCAPE_CAPSULE, context)) executeInputAction(INPUT_ACTIONS.LAUNCH_ESCAPE_CAPSULE, context);
 
     // Weapon switching available in space and surface ship mode
     if (isShipControlState()) {

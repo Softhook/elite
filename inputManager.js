@@ -48,7 +48,8 @@ const INPUT_ACTIONS = {
     WEAPON_SLOT_6: 'WEAPON_SLOT_6',
     WEAPON_SLOT_7: 'WEAPON_SLOT_7',
     WEAPON_SLOT_8: 'WEAPON_SLOT_8',
-    WEAPON_SLOT_9: 'WEAPON_SLOT_9'
+    WEAPON_SLOT_9: 'WEAPON_SLOT_9',
+    LAUNCH_ESCAPE_CAPSULE: 'LAUNCH_ESCAPE_CAPSULE'
 };
 
 class InputManager {
@@ -191,7 +192,8 @@ class InputManager {
                 [INPUT_ACTIONS.TARGET_NEXT]: ['dpad.up'],
                 [INPUT_ACTIONS.TARGET_PREV]: ['dpad.down'],
                 [INPUT_ACTIONS.TOGGLE_TARGET_SELECTION_MODE]: ['l3'],
-                [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
+                [INPUT_ACTIONS.ACTIVATE_BURST]: ['x'],
+                [INPUT_ACTIONS.LAUNCH_ESCAPE_CAPSULE]: ['r3']
             };
 
             if (includeSecretNav) actions[INPUT_ACTIONS.TOGGLE_SECRET_NAV] = ['r4'];
@@ -218,7 +220,8 @@ class InputManager {
                 [INPUT_ACTIONS.ALTITUDE_DOWN]: altitudeDown,
                 [INPUT_ACTIONS.WEAPON_NEXT]: ['dpad.right'],
                 [INPUT_ACTIONS.WEAPON_PREV]: ['dpad.left'],
-                [INPUT_ACTIONS.ACTIVATE_BURST]: ['x']
+                [INPUT_ACTIONS.ACTIVATE_BURST]: ['x'],
+                [INPUT_ACTIONS.LAUNCH_ESCAPE_CAPSULE]: ['r3']
             };
 
             if (missionToggle) actions[INPUT_ACTIONS.TOGGLE_MISSION] = [missionToggle];

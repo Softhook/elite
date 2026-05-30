@@ -115,6 +115,12 @@ describe('InputManager', () => {
 
         gp._state = { mode: 'S-MODE (Switch)', l3: true };
         expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.TOGGLE_TARGET_SELECTION_MODE, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(true);
+
+        gp._state = { mode: 'X-MODE (Xbox)', r3: true };
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.LAUNCH_ESCAPE_CAPSULE, exported.INPUT_CONTEXTS.IN_FLIGHT)).toBe(true);
+
+        gp._state = { mode: 'D-MODE', r3: true };
+        expect(input.isGamepadActionHeld(exported.INPUT_ACTIONS.LAUNCH_ESCAPE_CAPSULE, exported.INPUT_CONTEXTS.SURFACE_SHIP)).toBe(true);
     });
 
     test('supports contextual surface altitude actions in S and D gamepad modes', () => {
@@ -140,6 +146,7 @@ describe('InputManager', () => {
         expect(bindings.gamepad[exported.INPUT_ACTIONS.TOGGLE_MISSION]).toEqual(['home']);
         expect(bindings.gamepad[exported.INPUT_ACTIONS.MINIMAP_ZOOM_IN]).toEqual(['pr']);
         expect(bindings.gamepad[exported.INPUT_ACTIONS.TOGGLE_SECRET_NAV]).toEqual(['r4']);
+        expect(bindings.gamepad[exported.INPUT_ACTIONS.LAUNCH_ESCAPE_CAPSULE]).toEqual(['r3']);
 
         gp._state = { mode: 'X-MODE (Xbox)' };
         bindings = input.describeBindings(exported.INPUT_CONTEXTS.SURFACE_SHIP);
