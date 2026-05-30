@@ -428,7 +428,8 @@ class EnemyUtils {
  */
 function isPirateShip(enemy) {
     if (!enemy) return false;
-    return enemy.role === AI_ROLE.PIRATE || enemy.faction === 'PIRATE' || enemy.isPirate === true;
+    const role = enemy.originalRole || enemy.role;
+    return role === AI_ROLE.PIRATE || enemy.faction === 'PIRATE' || enemy.isPirate === true;
 }
 
 /**
@@ -447,7 +448,8 @@ function isShipOfFaction(enemy, factionName) {
         'SEPARATIST': typeof SEPARATIST_SHIPS !== 'undefined' ? SEPARATIST_SHIPS : []
     };
     const factionShips = factionShipsMap[factionName] || [];
-    return Array.isArray(factionShips) && factionShips.includes(enemy.shipTypeName);
+    const shipType = enemy.originalShip ? enemy.originalShip.shipTypeName : enemy.shipTypeName;
+    return Array.isArray(factionShips) && factionShips.includes(shipType);
 }
 
 // Apply utility methods to Enemy prototype

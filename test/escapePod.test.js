@@ -565,6 +565,225 @@ describe('AI Targeting Preference for Drifting Hulls vs Escape Pods', () => {
         combat.updateTargeting(system);
         expect(combat.target).toBe(pod);
     });
+
+    test('NPC escape pod should inherit pilot name and details, and transfer active mission, guards, and bounty hunter links', () => {
+        const mockPlayer = makeMockPlayer();
+        const system = makeMockSystem(mockPlayer);
+        mockPlayer.currentSystem = system;
+
+        // 1. Create a rival (assassination target)
+        const targetShip = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.COMBAT);
+        targetShip.displayName = "Commander Vane";
+        targetShip.gender = "male";
+        targetShip.pilotRank = PILOT_RANK.ELITE;
+        targetShip.isNotoriousPirate = true;
+        targetShip.isAssassinationTarget = true;
+        targetShip.currentSystem = system;
+        system.addEnemy(targetShip);
+
+        // 2. Set up player active assassination mission
+        mockPlayer.activeMission = {
+            type: 'Assassination',
+            _targetEnemyRef: targetShip,
+            _targetEnemyId: targetShip.id
+        };
+
+        // 3. Set up an escort guard protecting targetShip
+        const guard = new Enemy(-50, -50, mockPlayer, 'Sidewinder', AI_ROLE.GUARD);
+        guard.principal = targetShip;
+        guard.currentSystem = system;
+        system.addEnemy(guard);
+
+        // 4. Set up a bounty hunter hunting targetShip
+        const hunter = new Enemy(100, 100, mockPlayer, 'Sidewinder', AI_ROLE.BOUNTY_HUNTER);
+        hunter.bountyTarget = targetShip;
+        hunter.currentSystem = system;
+        system.addEnemy(hunter);
+
+        // 5. Trigger pilot ejection
+        // Force critical hull to ensure ejection happens (with ELITE rank)
+        targetShip.hull = 1;
+        targetShip.maxHull = 100;
+        
+        // Mock Math.random to always succeed eject roll (ejectChance = 0.5 for ELITE)
+        const realRandom = Math.random;
+        Math.random = () => 0.1;
+        try {
+            targetShip._tryPilotEject(mockPlayer);
+        } finally {
+            Math.random = realRandom;
+        }
+
+        // Verify that targetShip pilotEjected is set
+        expect(targetShip.pilotEjected).toBe(true);
+
+        // Find spawned escape pod in system
+        const pod = system.enemies.find(e => e.role === AI_ROLE.ESCAPE_POD);
+        expect(pod).toBeDefined();
+
+        // 6. Verify inheritance of name and details
+        expect(pod.displayName).toBe("Commander Vane");
+        expect(pod.gender).toBe("male");
+        expect(pod.isNotoriousPirate).toBe(true);
+        expect(pod.isAssassinationTarget).toBe(true);
+        expect(targetShip.isAssassinationTarget).toBe(false); // original ship is no longer target
+
+        // 7. Verify link updates
+        // Mission success target reference updated to the pod
+        expect(mockPlayer.activeMission._targetEnemyRef).toBe(pod);
+        expect(mockPlayer.activeMission._targetEnemyId).toBe(pod.id);
+
+        // Guard redirected to protect the escape pod
+        expect(guard.principal).toBe(pod);
+
+        // Bounty hunter redirected to hunt the escape pod
+        expect(hunter.bountyTarget).toBe(pod);
+    });
+
+    test('destroying a police escape pod should advance the police bounty mission and update system combat stats correctly', () => {
+        const mockPlayer = makeMockPlayer();
+        const system = makeMockSystem(mockPlayer);
+        mockPlayer.currentSystem = system;
+
+        // Mock starSystem.recordDestruction implementation
+        system.combatStats = { police: 0, total: 0, recentDeaths: [], pilotKills: new Map() };
+        system.recordDestruction = function(destroyedEnemy, attacker) {
+            const role = destroyedEnemy.originalRole || destroyedEnemy.role;
+            if (role === AI_ROLE.POLICE) {
+                this.combatStats.police++;
+            }
+            this.combatStats.total++;
+        };
+
+        // 1. Create a police ship
+        const policeShip = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.POLICE);
+        policeShip.currentSystem = system;
+        system.addEnemy(policeShip);
+
+        // 2. Set up player active police bounty mission
+        mockPlayer.activeMission = {
+            type: MISSION_TYPE.BOUNTY_POLICE,
+            progressCount: 0,
+            targetCount: 5,
+            updateProgress(amt) { this.progressCount += amt; }
+        };
+
+        // 3. Trigger pilot ejection
+        policeShip.hull = 1;
+        policeShip.maxHull = 100;
+        policeShip.pilotRank = PILOT_RANK.ELITE;
+
+        const realRandom = Math.random;
+        Math.random = () => 0.1;
+        try {
+            policeShip._tryPilotEject(mockPlayer);
+        } finally {
+            Math.random = realRandom;
+        }
+
+        const pod = system.enemies.find(e => e.role === 'EscapePod' || e.role === AI_ROLE.ESCAPE_POD);
+        expect(pod).toBeDefined();
+        expect(pod.originalRole).toBe(AI_ROLE.POLICE);
+        pod.currentSystem = system;
+
+        // 4. Destroy the escape pod
+        pod._processDestruction(mockPlayer);
+
+        // Verify that the police bounty mission advanced
+        expect(mockPlayer.activeMission.progressCount).toBe(1);
+
+        // Verify system combat stats are correctly updated for police role
+        expect(system.combatStats.police).toBe(1);
+        expect(system.combatStats.total).toBe(1);
+    });
+
+    test('destroying a pirate escape pod should advance the pirate bounty mission', () => {
+        const mockPlayer = makeMockPlayer();
+        const system = makeMockSystem(mockPlayer);
+        mockPlayer.currentSystem = system;
+
+        // 1. Create a pirate ship
+        const pirateShip = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+        pirateShip.currentSystem = system;
+        system.addEnemy(pirateShip);
+
+        // 2. Set up player active pirate bounty mission
+        mockPlayer.activeMission = {
+            type: MISSION_TYPE.BOUNTY_PIRATE,
+            progressCount: 0,
+            targetCount: 5,
+            updateProgress(amt) { this.progressCount += amt; }
+        };
+
+        // 3. Trigger pilot ejection
+        pirateShip.hull = 1;
+        pirateShip.maxHull = 100;
+        pirateShip.pilotRank = PILOT_RANK.ELITE;
+
+        const realRandom = Math.random;
+        Math.random = () => 0.1;
+        try {
+            pirateShip._tryPilotEject(mockPlayer);
+        } finally {
+            Math.random = realRandom;
+        }
+
+        const pod = system.enemies.find(e => e.role === 'EscapePod' || e.role === AI_ROLE.ESCAPE_POD);
+        expect(pod).toBeDefined();
+        expect(pod.originalRole).toBe(AI_ROLE.PIRATE);
+        pod.currentSystem = system;
+
+        // 4. Destroy the escape pod
+        pod._processDestruction(mockPlayer);
+
+        // Verify that the pirate bounty mission advanced
+        expect(mockPlayer.activeMission.progressCount).toBe(1);
+    });
+
+    test('destroying a separatist escape pod should advance the imperial strike mission', () => {
+        const mockPlayer = makeMockPlayer();
+        const system = makeMockSystem(mockPlayer);
+        mockPlayer.currentSystem = system;
+
+        // 1. Create a separatist combat ship
+        const separatistShip = new Enemy(0, 0, mockPlayer, 'SeparatistPartisan', AI_ROLE.COMBAT);
+        separatistShip.faction = 'SEPARATIST';
+        separatistShip.currentSystem = system;
+        system.addEnemy(separatistShip);
+
+        // 2. Set up player active imperial strike mission
+        mockPlayer.activeMission = {
+            type: MISSION_TYPE.IMPERIAL_STRIKE,
+            progressCount: 0,
+            targetCount: 5,
+            updateProgress(amt) { this.progressCount += amt; }
+        };
+
+        // 3. Trigger pilot ejection
+        separatistShip.hull = 1;
+        separatistShip.maxHull = 100;
+        separatistShip.pilotRank = PILOT_RANK.ELITE;
+
+        const realRandom = Math.random;
+        Math.random = () => 0.1;
+        try {
+            separatistShip._tryPilotEject(mockPlayer);
+        } finally {
+            Math.random = realRandom;
+        }
+
+        const pod = system.enemies.find(e => e.role === 'EscapePod' || e.role === AI_ROLE.ESCAPE_POD);
+        expect(pod).toBeDefined();
+        expect(pod.originalRole).toBe(AI_ROLE.COMBAT);
+        expect(pod.faction).toBe('SEPARATIST');
+        pod.currentSystem = system;
+
+        // 4. Destroy the escape pod
+        pod._processDestruction(mockPlayer);
+
+        // Verify that the imperial strike mission advanced
+        expect(mockPlayer.activeMission.progressCount).toBe(1);
+    });
 });
 
 

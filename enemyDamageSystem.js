@@ -525,22 +525,22 @@ class EnemyDamageSystem {
                 },
                 // Faction kill missions
                 [MISSION_TYPE.IMPERIAL_ELIMINATION]: {
-                    checkFn: () => isShipOfFaction(this, 'SEPARATIST') || this.role === AI_ROLE.PIRATE,
+                    checkFn: () => isShipOfFaction(this, 'SEPARATIST') || (this.originalRole || this.role) === AI_ROLE.PIRATE,
                     logName: 'Imperial',
                     msgColor: [255, 215, 0]
                 },
                 [MISSION_TYPE.IMPERIAL_STRIKE]: {
-                    checkFn: () => isShipOfFaction(this, 'SEPARATIST') || this.role === AI_ROLE.PIRATE,
+                    checkFn: () => isShipOfFaction(this, 'SEPARATIST') || (this.originalRole || this.role) === AI_ROLE.PIRATE,
                     logName: 'Imperial',
                     msgColor: [255, 215, 0]
                 },
                 [MISSION_TYPE.SEPARATIST_RAID]: {
-                    checkFn: () => isShipOfFaction(this, 'IMPERIAL') || this.role === AI_ROLE.POLICE,
+                    checkFn: () => isShipOfFaction(this, 'IMPERIAL') || (this.originalRole || this.role) === AI_ROLE.POLICE,
                     logName: 'Separatist',
                     msgColor: [100, 200, 100]
                 },
                 [MISSION_TYPE.SEPARATIST_STRIKE]: {
-                    checkFn: () => isShipOfFaction(this, 'IMPERIAL') || this.role === AI_ROLE.POLICE,
+                    checkFn: () => isShipOfFaction(this, 'IMPERIAL') || (this.originalRole || this.role) === AI_ROLE.POLICE,
                     logName: 'Separatist',
                     msgColor: [100, 200, 100]
                 },
@@ -561,7 +561,7 @@ class EnemyDamageSystem {
                 // Check if this kill counts toward the mission
                 const countsForMission = missionConfig.checkFn
                     ? missionConfig.checkFn()
-                    : (missionConfig.validRoles && missionConfig.validRoles.includes(this.role));
+                    : (missionConfig.validRoles && (missionConfig.validRoles.includes(this.role) || (this.originalRole && missionConfig.validRoles.includes(this.originalRole))));
 
                 if (countsForMission) {
                     mission.updateProgress(1);
@@ -741,11 +741,47 @@ class EnemyDamageSystem {
             const pod = new Enemy(this.pos.x, this.pos.y, system.player, 'EscapeCapsule', AI_ROLE.ESCAPE_POD);
             pod.vel = podVel;
             pod.angle = Math.atan2(podVel.y, podVel.x);
-            // Inherit the original pilot's rank (affects eject chance if pod itself takes damage)
+            // Inherit the original pilot's rank, faction, and identity traits
             pod.pilotRank = this.pilotRank;
-            // Carry faction so factions don't fire on their own escape pods
             pod.faction = this.faction;
+            pod.displayName = this.displayName;
+            pod.gender = this.gender;
+            pod.isNotoriousPirate = this.isNotoriousPirate;
+            pod.isAssassinationTarget = this.isAssassinationTarget;
+            pod.isAssassinationGuard = this.isAssassinationGuard;
+            pod.isMissionSpecific = this.isMissionSpecific;
+            pod.isEventEntity = this.isEventEntity;
+            pod.isPirate = this.isPirate;
             pod.originalShip = this;
+            pod.originalRole = this.role;
+
+            // If this ship was an assassination target, transfer the active mission reference to the pod
+            if (this.isAssassinationTarget) {
+                this.isAssassinationTarget = false; // Original drifting hull is no longer the target
+                const playerRef = system.player;
+                if (playerRef && playerRef.activeMission && playerRef.activeMission.type === 'Assassination') {
+                    if (playerRef.activeMission._targetEnemyRef === this) {
+                        playerRef.activeMission._targetEnemyRef = pod;
+                        playerRef.activeMission._targetEnemyId = pod.id;
+                        if (typeof AI_LOG === 'function') {
+                            AI_LOG(`Assassination target reference transferred to escape pod for pilot ${this.displayName}`);
+                        }
+                    }
+                }
+            }
+
+            // Redirect escort guards and bounty hunters to protect/track the escape pod instead of the drifting ship
+            if (system.enemies) {
+                for (const e of system.enemies) {
+                    if (e.role === AI_ROLE.GUARD && e.principal === this) {
+                        e.principal = pod;
+                    }
+                    if (e.role === AI_ROLE.BOUNTY_HUNTER && e.bountyTarget === this) {
+                        e.bountyTarget = pod;
+                    }
+                }
+            }
+
             pod.calculateRadianProperties();
             pod.initializeColors();
             // Mark immediately as fleeing

@@ -900,7 +900,7 @@ class StarSystem {
             uiManager.minimap.addKillIndicator(destroyedEnemy.pos, killColor);
         }
 
-        const role = destroyedEnemy.role;
+        const role = destroyedEnemy.originalRole || destroyedEnemy.role;
         const faction = destroyedEnemy.faction;
         const enemyName = destroyedEnemy.displayName || null;
 
