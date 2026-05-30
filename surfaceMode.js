@@ -3764,7 +3764,8 @@ class SurfaceMode {
             // Only draw surface mode force waves (filter out space combat)
             if (!wave.isSurface) continue;
 
-            // Calculate visual Y position based on altitude
+            // Calculate visual X and Y positions based on altitude
+            const visualX = this._toVisualX(wave.pos.x, wave.altitude);
             const visualY = this._toVisualY(wave.pos.y, wave.altitude);
 
             // Fade out as the wave expands
@@ -3774,23 +3775,23 @@ class SurfaceMode {
             noFill();
             strokeWeight(6);
             stroke(wave.color[0], wave.color[1], wave.color[2], alpha);
-            circle(wave.pos.x, visualY, wave.radius * 2);
+            circle(visualX, visualY, wave.radius * 2);
 
             // Draw secondary ring
             strokeWeight(3);
             stroke(255, 255, 255, alpha * 0.7);
-            circle(wave.pos.x, visualY, wave.radius * 1.9);
+            circle(visualX, visualY, wave.radius * 1.9);
 
             // Draw inner glow
             strokeWeight(10);
             stroke(wave.color[0], wave.color[1], wave.color[2], alpha * 0.5);
-            circle(wave.pos.x, visualY, wave.radius * 1.7);
+            circle(visualX, visualY, wave.radius * 1.7);
 
             // Draw center pulse
             const pulseSize = (millis() - wave.startTime) % 300 / 300 * 50;
             fill(wave.color[0], wave.color[1], wave.color[2], alpha);
             noStroke();
-            circle(wave.pos.x, visualY, pulseSize);
+            circle(visualX, visualY, pulseSize);
         }
 
         pop();

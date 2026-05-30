@@ -1940,3 +1940,171 @@ describe('SurfaceMode ParkedPlayerShip Re-boarding', () => {
     });
 });
 
+// ============================================
+// Force Blaster & Damage Tests
+// ============================================
+
+describe('SurfaceMode Force Blaster & Damage', () => {
+    let sm, player, planet, starSystem;
+
+    beforeAll(() => {
+        global.STARFIELD_CONFIG = { WORKER_ENABLED: false };
+    });
+
+    afterAll(() => {
+        delete global.STARFIELD_CONFIG;
+    });
+
+    beforeEach(() => {
+        sm = new SurfaceMode();
+        player = createMockPlayer({ x: 1000, y: 50 });
+        planet = createMockPlanet({ x: 1000, y: 0, radius: 200 });
+        starSystem = createMockStarSystem();
+        sm.enter(player, planet, starSystem);
+        sm.state = SURFACE_STATE.ACTIVE;
+        global.surfaceMode = sm;
+    });
+
+    afterEach(() => {
+        delete global.surfaceMode;
+    });
+
+    test('should project visual coordinates correctly when drawing force waves', () => {
+        const wave = {
+            pos: createVector(1000, 50),
+            owner: player,
+            radius: 50,
+            maxRadius: 300,
+            color: [255, 0, 0],
+            isSurface: true,
+            altitude: 100,
+            startTime: millis()
+        };
+        starSystem.forceWaves = [wave];
+
+        // Mock p5 draw functions
+        global.push = jest.fn();
+        global.pop = jest.fn();
+        global.noFill = jest.fn();
+        global.strokeWeight = jest.fn();
+        global.stroke = jest.fn();
+        global.circle = jest.fn();
+        global.fill = jest.fn();
+        global.noStroke = jest.fn();
+
+        sm._getExtrusionAngle = jest.fn(() => 0.5);
+        sm._getCounterScale = jest.fn(() => 1.0);
+        
+        // Mock toVisual helpers to apply known offsets
+        sm._toVisualX = jest.fn((x, alt) => x - alt * Math.sin(0.5));
+        sm._toVisualY = jest.fn((y, alt) => y - alt * Math.cos(0.5));
+
+        sm._drawForceWaves();
+
+        expect(sm._toVisualX).toHaveBeenCalledWith(1000, 100);
+        expect(sm._toVisualY).toHaveBeenCalledWith(50, 100);
+
+        const expectedVisualX = 1000 - 100 * Math.sin(0.5);
+        const expectedVisualY = 50 - 100 * Math.cos(0.5);
+
+        // Verify circle is drawn at expectedVisualX instead of wave.pos.x
+        expect(global.circle).toHaveBeenCalledWith(
+            expectedVisualX,
+            expect.closeTo(expectedVisualY, 2),
+            expect.any(Number)
+        );
+    });
+
+    test('should target and damage surfaceObjects with force wave on surface', () => {
+        const { StarSystem } = require('../starSystem');
+        const { Turret } = require('../surfaceObjects');
+        
+        starSystem._updateForceWaves = StarSystem.prototype._updateForceWaves;
+        starSystem._initializeForceWaveTargets = StarSystem.prototype._initializeForceWaveTargets;
+        starSystem._processForceWaveCollisions = StarSystem.prototype._processForceWaveCollisions;
+        starSystem._applyForceWaveDamage = StarSystem.prototype._applyForceWaveDamage;
+        starSystem._fastRemove = StarSystem.prototype._fastRemove;
+        starSystem.enemies = [];
+        starSystem.asteroids = [];
+
+        const targetTurret = new Turret(1010, 50, 40);
+        targetTurret.health = 100;
+        sm.surfaceObjects = [targetTurret];
+
+        // Create a player wave
+        const wave = {
+            pos: createVector(1000, 50),
+            owner: player,
+            radius: 10, // will grow
+            maxRadius: 300,
+            growRate: 20,
+            damage: 60,
+            color: [255, 0, 0],
+            isSurface: true,
+            altitude: 0,
+            startTime: millis()
+        };
+        starSystem.forceWaves = [wave];
+
+        // Run _updateForceWaves
+        // 1. First iteration initializes targets and should include targetTurret
+        sm.starSystem._updateForceWaves();
+        expect(wave.entitiesToProcess).toContain(targetTurret);
+
+        // 2. Grow the wave to cover the distance
+        wave.radius = 200;
+        sm.starSystem._updateForceWaves();
+
+        // 3. Turret should have taken damage
+        expect(targetTurret.health).toBeLessThan(100);
+        expect(wave.processed.has(targetTurret)).toBe(true);
+    });
+
+    test('should respect 3D distance check for force waves on surface', () => {
+        const { StarSystem } = require('../starSystem');
+        const { Turret } = require('../surfaceObjects');
+        
+        starSystem._updateForceWaves = StarSystem.prototype._updateForceWaves;
+        starSystem._initializeForceWaveTargets = StarSystem.prototype._initializeForceWaveTargets;
+        starSystem._processForceWaveCollisions = StarSystem.prototype._processForceWaveCollisions;
+        starSystem._applyForceWaveDamage = StarSystem.prototype._applyForceWaveDamage;
+        starSystem._fastRemove = StarSystem.prototype._fastRemove;
+        starSystem.enemies = [];
+        starSystem.asteroids = [];
+
+        const targetTurret = new Turret(1000, 50, 40); // directly below player horizontally
+        targetTurret.health = 100;
+        sm.surfaceObjects = [targetTurret];
+
+        const wave = {
+            pos: createVector(1000, 50),
+            owner: player,
+            radius: 50, // smaller than altitude difference
+            maxRadius: 300,
+            growRate: 20,
+            damage: 60,
+            color: [255, 0, 0],
+            isSurface: true,
+            altitude: 200, // high above ground turret
+            startTime: millis()
+        };
+        starSystem.forceWaves = [wave];
+
+        // Run updates
+        sm.starSystem._updateForceWaves();
+
+        // Since radius (50) + size/2 is less than altitude (200), it should NOT damage it yet
+        expect(targetTurret.health).toBe(100);
+        expect(wave.processed).toBeDefined();
+        expect(wave.processed.has(targetTurret)).toBe(false);
+
+        // Increase wave radius to cover altitude difference
+        wave.radius = 250;
+        sm.starSystem._updateForceWaves();
+
+        // Now it should be hit and damaged
+        expect(targetTurret.health).toBeLessThan(100);
+        expect(wave.processed.has(targetTurret)).toBe(true);
+    });
+});
+

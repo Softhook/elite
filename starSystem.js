@@ -3695,6 +3695,14 @@ class StarSystem {
         if (wave.owner === this.player) {
             // Player's wave affects enemies and asteroids
             wave.entitiesToProcess = [...this.enemies, ...this.asteroids];
+
+            // Surface mode filter: also target surface objects (turrets, buildings, drones)
+            if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+                const surfaceObjects = surfaceMode.surfaceObjects;
+                if (surfaceObjects && surfaceObjects.length) {
+                    wave.entitiesToProcess = wave.entitiesToProcess.concat(surfaceObjects);
+                }
+            }
         } else {
             // Enemy's wave affects everything too (Player, Asteroids, and potentially other Enemies if friendly fire is valid for this weapon)
             // We want force waves to be chaotic and affect the environment
@@ -3708,6 +3716,18 @@ class StarSystem {
             for (const enemy of this.enemies) {
                 if (enemy !== wave.owner) {
                     wave.entitiesToProcess.push(enemy);
+                }
+            }
+
+            // Surface mode filter: target other surface objects (player structures, robots, etc.)
+            if (typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive()) {
+                const surfaceObjects = surfaceMode.surfaceObjects;
+                if (surfaceObjects && surfaceObjects.length) {
+                    for (const obj of surfaceObjects) {
+                        if (obj !== wave.owner) {
+                            wave.entitiesToProcess.push(obj);
+                        }
+                    }
                 }
             }
         }
@@ -3739,7 +3759,15 @@ class StarSystem {
             // Calculate distance
             const dx = entity.pos.x - wave.pos.x;
             const dy = entity.pos.y - wave.pos.y;
-            const distSq = dx * dx + dy * dy;
+            let distSq = dx * dx + dy * dy;
+
+            // Include altitude / 3D distance on the surface
+            if (wave.isSurface) {
+                const waveAlt = wave.altitude || 0;
+                const entityAlt = (entity.altitude !== undefined) ? entity.altitude : (entity.yOffset || 0);
+                const dz = entityAlt - waveAlt;
+                distSq += dz * dz;
+            }
 
             // Check if wave has reached the entity
             const radiusWithEntity = wave.radius + entity.size / 2;
