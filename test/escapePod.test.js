@@ -492,3 +492,79 @@ describe('Wanted Status Exclusion on Destruction', () => {
     });
 });
 
+describe('AI Targeting Preference for Drifting Hulls vs Escape Pods', () => {
+    test('enemies should target the drifting player hull before the player escape capsule', () => {
+        const mockPlayer = makeMockPlayer();
+        const system = makeMockSystem(mockPlayer);
+
+        // Enemy AI (a pirate)
+        const pirate = new Enemy(100, 100, mockPlayer, 'Sidewinder', AI_ROLE.PIRATE);
+        pirate.currentSystem = system;
+        system.addEnemy(pirate);
+
+        // Player ejects
+        mockPlayer.shipTypeName = 'EscapeCapsule';
+        
+        const driftingHull = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.HAULER);
+        driftingHull.pilotEjected = true;
+        driftingHull.isPlayerHull = true;
+        driftingHull.hull = 20;
+        driftingHull.maxHull = 100;
+        system.addEnemy(driftingHull);
+        system.playerHull = driftingHull;
+
+        // Force targeting update on the pirate
+        pirate.updateTargeting(system);
+
+        // The pirate should target the drifting player hull, not the player's escape pod
+        expect(pirate.target).toBe(driftingHull);
+
+        // Once the player hull is destroyed, the pirate should target the player escape capsule
+        driftingHull.destroyed = true;
+        system.playerHull = null;
+
+        pirate.updateTargeting(system);
+        expect(pirate.target).toBe(mockPlayer);
+    });
+
+    test('enemies should target the drifting NPC hull before the NPC escape pod', () => {
+        const mockPlayer = makeMockPlayer();
+        const system = makeMockSystem(mockPlayer);
+
+        // Combat ship AI
+        const combat = new Enemy(100, 100, mockPlayer, 'Sidewinder', AI_ROLE.COMBAT);
+        combat.faction = 'IMPERIAL';
+        combat.currentSystem = system;
+        system.addEnemy(combat);
+
+        // NPC ship (Separatist)
+        const rival = new Enemy(0, 0, mockPlayer, 'Sidewinder', AI_ROLE.COMBAT);
+        rival.faction = 'SEPARATIST';
+        rival.currentSystem = system;
+        system.addEnemy(rival);
+
+        // Pilot ejects from rival
+        rival.pilotEjected = true;
+        rival.hull = 10;
+
+        // Spawn escape pod for the rival
+        const pod = new Enemy(5, 5, mockPlayer, 'EscapeCapsule', AI_ROLE.ESCAPE_POD);
+        pod.faction = 'SEPARATIST';
+        pod.originalShip = rival;
+        system.addEnemy(pod);
+
+        // Force targeting update on the combat ship
+        combat.updateTargeting(system);
+
+        // Combat ship should target the drifting rival hull, not the escape pod
+        expect(combat.target).toBe(rival);
+
+        // Once the rival ship is destroyed, the combat ship should target the escape pod
+        rival.destroyed = true;
+
+        combat.updateTargeting(system);
+        expect(combat.target).toBe(pod);
+    });
+});
+
+

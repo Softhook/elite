@@ -694,6 +694,25 @@ class EnemyTargeting {
                 return TARGET_SCORE_INVALID;
             }
 
+            // If player is in escape capsule, and their drifting hull is still valid, target the drifting hull first.
+            const isPlayerEscapePod = (typeof Player !== 'undefined' && target instanceof Player && target.shipTypeName === 'EscapeCapsule') || 
+                                      (target && target.isPlayer === true && target.shipTypeName === 'EscapeCapsule');
+            if (isPlayerEscapePod) {
+                if (system && system.playerHull && enemy.isTargetValid(system.playerHull)) {
+                    return TARGET_SCORE_INVALID;
+                }
+            }
+
+            // If NPC is in escape pod, and their original drifting ship is still valid, target the drifting ship first.
+            const isNPCEscapePod = (target.role === 'EscapePod') || 
+                                   (typeof AI_ROLE !== 'undefined' && target.role === AI_ROLE.ESCAPE_POD) || 
+                                   (target.shipTypeName === 'EscapeCapsule' && !isPlayerEscapePod);
+            if (isNPCEscapePod && target.originalShip) {
+                if (enemy.isTargetValid(target.originalShip)) {
+                    return TARGET_SCORE_INVALID;
+                }
+            }
+
             // --- RANGE CHECK: Do not acquire targets beyond detection range ---
             // EXCEPTIONS: 
             // 1. Current target (tracking is more persistent than acquisition)

@@ -745,6 +745,7 @@ class EnemyDamageSystem {
             pod.pilotRank = this.pilotRank;
             // Carry faction so factions don't fire on their own escape pods
             pod.faction = this.faction;
+            pod.originalShip = this;
             pod.calculateRadianProperties();
             pod.initializeColors();
             // Mark immediately as fleeing
