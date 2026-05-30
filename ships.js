@@ -2891,8 +2891,8 @@ const SHIP_DEFINITIONS = {
     // --- TRANSPORTS ---
     "EscapeCapsule": {
         name: "Escape Capsule", role: "Survival Pod", upgrades: [], sizeCategory: "Tiny", size: 10,
-        baseMaxSpeed: 6.0, baseThrust: 0.12, baseTurnRate: 0.08,
-        baseHull: 15, baseShield: 0, shieldRecharge: 0.0, cargoCapacity: 0,
+        baseMaxSpeed: 4.0, baseThrust: 0.12, baseTurnRate: 0.03,
+        baseHull: 15, baseShield: 0, shieldRecharge: 0.0, cargoCapacity: 2,
         armament: [],
         costCategory: "None", description: "A cramped survival capsule with virtually no cargo space, no weapons, and no shields. It has no trade-in value.",
         vertexLayers: [
