@@ -7276,6 +7276,13 @@ class StarSystem {
                                 owner.activeProjectiles.push(p);
                             }
                         }
+                        // Relink stormConfig owner
+                        if (p.stormConfig && p.stormConfig.ownerId) {
+                            const sOwner = resolveOwnerRef(p.stormConfig.ownerId);
+                            if (sOwner) {
+                                p.stormConfig.owner = sOwner;
+                            }
+                        }
                         p.system = this;
                     } catch (e) { console.warn('projectile relink error', e); }
                 }

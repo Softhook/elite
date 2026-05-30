@@ -21,7 +21,30 @@ const Player = require('../player');
 const { Enemy } = require('../enemy');
 
 // Mocks
-global.createVector = (x, y) => ({ x, y, add: () => { }, sub: () => { }, mult: () => { }, normalize: () => { }, copy: function () { return { x: this.x, y: this.y }; } });
+global.createVector = (x, y) => {
+    const vec = {
+        x, y,
+        set: function(nx, ny) { this.x = nx; this.y = ny; return this; },
+        add: function(other) { this.x += other.x; this.y += other.y; return this; },
+        sub: function(other) { this.x -= other.x; this.y -= other.y; return this; },
+        mult: function(n) { this.x *= n; this.y *= n; return this; },
+        rotate: function(angle) {
+            const cosA = Math.cos(angle);
+            const sinA = Math.sin(angle);
+            const nx = this.x * cosA - this.y * sinA;
+            const ny = this.x * sinA + this.y * cosA;
+            this.x = nx;
+            this.y = ny;
+            return this;
+        },
+        heading: () => 0,
+        normalize: function () { return this; },
+        copy: function () {
+            return global.createVector(this.x, this.y);
+        }
+    };
+    return vec;
+};
 global.random = () => 0.5;
 global.floor = Math.floor;
 global.PI = Math.PI;
@@ -53,7 +76,8 @@ global.Explosion = class Explosion { static fromJSON(d) { return d; } };
 global.Harpoon = class Harpoon { static fromJSON(d) { return d; } };
 global.Cargo = class Cargo { static fromJSON(d) { return d; } };
 global.Mine = class Mine { static fromJSON(d) { return d; } };
-global.Projectile = class Projectile { static fromJSON(d) { return d; } };
+const { Projectile } = require('../projectile');
+global.Projectile = Projectile;
 
 describe('CosmicStorm Serialization', () => {
     let system;
@@ -139,5 +163,79 @@ describe('CosmicStorm Serialization', () => {
         expect(typeof restoredSystem.cargo[0].pos.add).toBe('function');
         expect(restoredSystem.asteroids[0].pos.x).toBe(120);
         expect(restoredSystem.cargo[0].pos.y).toBe(20);
+    });
+
+    test('should handle dissipating storm time-independent serialization', () => {
+        const storm = new CosmicStorm(100, 100, 200, 'gravitational');
+        storm.dissipating = true;
+        storm.dissipateStart = 500; // millis was 500 when it started
+        storm.intensity = 0.5;
+        storm.dissipateStartIntensity = 0.8;
+        storm.maxParticles = 15;
+
+        // Mock current millis
+        global.millis = () => 1000; // 500 ms has elapsed since dissipation started
+
+        const serialized = storm.toJSON();
+        expect(serialized.dissipateElapsed).toBe(500);
+        expect(serialized.dissipateStartIntensity).toBe(0.8);
+        expect(serialized.maxParticles).toBe(15);
+
+        // Deserializing in a new session where millis() is, say, 2000
+        global.millis = () => 2000;
+        const restored = CosmicStorm.fromJSON(serialized);
+
+        expect(restored.dissipating).toBe(true);
+        expect(restored.dissipateStart).toBe(1500); // 2000 - 500 = 1500
+        expect(restored.dissipateStartIntensity).toBe(0.8);
+        expect(restored.maxParticles).toBe(15);
+    });
+
+    test('should validate and sanitize corrupt or legacy storm values safely', () => {
+        const corruptData = {
+            pos: { x: 'NaN', y: undefined },
+            radius: 'invalid',
+            effectRadius: NaN,
+            visualRadius: null,
+            intensity: '1.5',
+            velocity: { x: 'abc', y: 0 }
+        };
+
+        const restored = CosmicStorm.fromJSON(corruptData);
+        expect(restored).not.toBeNull();
+        expect(restored.pos.x).toBe(0);
+        expect(restored.pos.y).toBe(0);
+        expect(restored.radius).toBe(100); // Fallback
+        expect(restored.effectRadius).toBe(100); // Re-derived from radius
+        expect(restored.visualRadius).toBe(143); // Re-derived from radius * 1.43
+        expect(restored.intensity).toBe(1.5); // Parsed correctly
+        expect(restored.velocity.x).toBe(0);
+    });
+
+    test('should serialize and deserialize projectile stormConfig and relink its owner', () => {
+        player.currentWeapon = null;
+        const proj = new Projectile(100, 100, 0, player, 5, 0, [255, 255, 255], 'storm');
+        proj.stormConfig = {
+            type: 'electromagnetic',
+            radius: 120,
+            duration: 5000,
+            owner: player
+        };
+        proj._isStorm = true;
+        system.projectiles.push(proj);
+
+        const json = system.toJSON();
+        const restoredSystem = StarSystem.fromJSON(json);
+        restoredSystem.player = player;
+        restoredSystem.enemies = [enemy];
+        restoredSystem.relinkReferences(player);
+
+        expect(restoredSystem.projectiles).toHaveLength(1);
+        const restoredProj = restoredSystem.projectiles[0];
+        expect(restoredProj.type).toBe('storm');
+        expect(restoredProj._isStorm).toBe(true);
+        expect(restoredProj.stormConfig).toBeDefined();
+        expect(restoredProj.stormConfig.radius).toBe(120);
+        expect(restoredProj.stormConfig.owner).toBe(player);
     });
 });

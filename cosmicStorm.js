@@ -81,7 +81,10 @@ class CosmicStorm {
 
             // Use stored start intensity instead of self-referential this.intensity
             const startInt = (this.dissipateStartIntensity !== undefined) ? this.dissipateStartIntensity : 1.0;
-            this.intensity = map(dissipateProgress, 0, 1, startInt, 0);
+            
+            // Constrain to prevent extrapolation outside [0, startInt] in case of negative/huge dissipateProgress on load
+            const rawIntensity = map(dissipateProgress, 0, 1, startInt, 0);
+            this.intensity = Math.max(0, Math.min(startInt, Number.isFinite(rawIntensity) ? rawIntensity : 0));
 
             if (dissipateProgress >= 1) {
                 ENV_LOG(`${this.type} storm has completely dissipated`);
@@ -92,8 +95,8 @@ class CosmicStorm {
         // Follow attached entity if one exists (for weapon-spawned storms)
         if (this.attachedTo) {
             const target = this.attachedTo;
-            // Check if target is still valid
-            if (target.pos && !target.destroyed &&
+            // Check if target is still valid and has finite coordinates
+            if (target.pos && Number.isFinite(target.pos.x) && Number.isFinite(target.pos.y) && !target.destroyed &&
                 (typeof target.isDestroyed !== 'function' || !target.isDestroyed())) {
                 // Move storm to follow attached entity
                 this.pos.set(target.pos.x, target.pos.y);
@@ -215,17 +218,23 @@ class CosmicStorm {
         const ctx = drawingContext;
 
         // Create a radial gradient - using larger visual radius for soft fade
-        const outerRadius = this.visualRadius;
+        const outerRadius = Number.isFinite(this.visualRadius) && this.visualRadius > 0 ? this.visualRadius : 100;
+        
+        // Ensure position coords are valid numbers before calling native canvas API
+        const px = Number.isFinite(this.pos.x) ? this.pos.x : 0;
+        const py = Number.isFinite(this.pos.y) ? this.pos.y : 0;
+        
         const gradient = ctx.createRadialGradient(
-            this.pos.x, this.pos.y, 0,           // Inner circle (center point, radius 0)
-            this.pos.x, this.pos.y, outerRadius  // Outer circle - visual radius
+            px, py, 0,           // Inner circle (center point, radius 0)
+            px, py, outerRadius  // Outer circle - visual radius
         );
 
         // Add color stops for smooth gradient
-        const r = this.color[0];
-        const g = this.color[1];
-        const b = this.color[2];
-        const baseAlpha = 100 * this.intensity / 255; // Convert to 0-1 range for RGBA
+        const r = Number.isFinite(this.color?.[0]) ? this.color[0] : 100;
+        const g = Number.isFinite(this.color?.[1]) ? this.color[1] : 150;
+        const b = Number.isFinite(this.color?.[2]) ? this.color[2] : 255;
+        const intensity = Number.isFinite(this.intensity) ? this.intensity : 1.0;
+        const baseAlpha = 100 * intensity / 255; // Convert to 0-1 range for RGBA
 
         // Create smooth gradient that fades to transparent for natural look
         // FIX: Ensure alpha is finite and clamped between 0 and 1 to prevent canvas crashes
@@ -253,50 +262,57 @@ class CosmicStorm {
     }
 
     drawParticles() {
-        const color0 = this.color[0];
-        const color1 = this.color[1];
-        const color2 = this.color[2];
-        const intensity = this.intensity;
+        const color0 = Number.isFinite(this.color?.[0]) ? this.color[0] : 100;
+        const color1 = Number.isFinite(this.color?.[1]) ? this.color[1] : 150;
+        const color2 = Number.isFinite(this.color?.[2]) ? this.color[2] : 255;
+        const intensity = Number.isFinite(this.intensity) ? this.intensity : 1.0;
         noStroke();
         for (let i = 0, len = this.particles.length; i < len; i++) {
             const particle = this.particles[i];
-            fill(color0, color1, color2, particle.opacity * intensity);
-            ellipse(particle.pos.x, particle.pos.y, particle.size);
+            if (!particle || !particle.pos || !Number.isFinite(particle.pos.x) || !Number.isFinite(particle.pos.y)) continue;
+            fill(color0, color1, color2, (Number.isFinite(particle.opacity) ? particle.opacity : 150) * intensity);
+            ellipse(particle.pos.x, particle.pos.y, Number.isFinite(particle.size) ? particle.size : 4);
         }
     }
 
     drawLightning() {
         if (this.lightningBolts.length === 0) return;
-        const color0 = this.color[0];
-        const color1 = this.color[1];
-        const color2 = this.color[2];
+        const color0 = Number.isFinite(this.color?.[0]) ? this.color[0] : 100;
+        const color1 = Number.isFinite(this.color?.[1]) ? this.color[1] : 150;
+        const color2 = Number.isFinite(this.color?.[2]) ? this.color[2] : 255;
+        const intensity = Number.isFinite(this.intensity) ? this.intensity : 1.0;
 
         for (let i = 0, len = this.lightningBolts.length; i < len; i++) {
             const bolt = this.lightningBolts[i];
+            if (!bolt || !Array.isArray(bolt.basePoints)) continue;
 
             // Simple jitter for flicker effect
-            const jitterAmp = 3 * this.intensity;
+            const jitterAmp = 3 * intensity;
             const points = bolt.basePoints.map(p => ({
                 x: p.x + random(-jitterAmp, jitterAmp),
                 y: p.y + random(-jitterAmp, jitterAmp)
             }));
 
             // Draw outer glow
-            stroke(color0, color1, color2, 150 * bolt.alpha);
-            strokeWeight(bolt.thickness * 2);
+            stroke(color0, color1, color2, 150 * (Number.isFinite(bolt.alpha) ? bolt.alpha : 1.0));
+            strokeWeight(Math.max(1, (Number.isFinite(bolt.thickness) ? bolt.thickness : 3) * 2));
             noFill();
             beginShape();
             for (let p of points) {
-                vertex(p.x, p.y);
+                if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) {
+                    vertex(p.x, p.y);
+                }
             }
             endShape();
 
             // Draw inner core
-            stroke(255, 255, 255, 255 * bolt.alpha);
-            strokeWeight(max(1, bolt.thickness * 0.5));
+            stroke(255, 255, 255, 255 * (Number.isFinite(bolt.alpha) ? bolt.alpha : 1.0));
+            strokeWeight(max(1, (Number.isFinite(bolt.thickness) ? bolt.thickness : 3) * 0.5));
             beginShape();
             for (let p of points) {
-                vertex(p.x, p.y);
+                if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) {
+                    vertex(p.x, p.y);
+                }
             }
             endShape();
         }
@@ -337,11 +353,18 @@ class CosmicStorm {
 
     // --- Utility and Effects ---
     isInView(screenBounds) {
+        if (!screenBounds) return true;
+        const left = Number.isFinite(screenBounds.left) ? screenBounds.left : -Infinity;
+        const right = Number.isFinite(screenBounds.right) ? screenBounds.right : Infinity;
+        const top = Number.isFinite(screenBounds.top) ? screenBounds.top : -Infinity;
+        const bottom = Number.isFinite(screenBounds.bottom) ? screenBounds.bottom : Infinity;
+        const vRadius = Number.isFinite(this.visualRadius) && this.visualRadius > 0 ? this.visualRadius : 100;
+        
         return (
-            this.pos.x + this.visualRadius >= screenBounds.left &&
-            this.pos.x - this.visualRadius <= screenBounds.right &&
-            this.pos.y + this.visualRadius >= screenBounds.top &&
-            this.pos.y - this.visualRadius <= screenBounds.bottom
+            this.pos.x + vRadius >= left &&
+            this.pos.x - vRadius <= right &&
+            this.pos.y + vRadius >= top &&
+            this.pos.y - vRadius <= bottom
         );
     }
 
@@ -465,7 +488,7 @@ class CosmicStorm {
      * Serializes the storm to a JSON-safe object.
      */
     toJSON() {
-        return {
+        const data = {
             pos: { x: this.pos.x, y: this.pos.y },
             radius: this.radius,
             type: this.type,
@@ -474,10 +497,10 @@ class CosmicStorm {
             maxLifetime: this.maxLifetime,
             lifetime: this.lifetime,
             dissipating: this.dissipating,
-            dissipateStart: this.dissipateStart,
             dissipateTime: this.dissipateTime,
             effectRadius: this.effectRadius,
             visualRadius: this.visualRadius,
+            maxParticles: this.maxParticles,
             lastEffectTime: this.lastEffectTime,
             effectCount: this.effectCount,
             // Weapon properties
@@ -485,6 +508,16 @@ class CosmicStorm {
             ownerId: this.owner ? (this.owner.id || this.owner.shipTypeName || null) : null,
             attachedToId: this.attachedTo ? (this.attachedTo.id || this.attachedTo.shipTypeName || null) : null
         };
+
+        if (this.dissipating) {
+            // Save time-independent elapsed duration of dissipation
+            data.dissipateElapsed = millis() - this.dissipateStart;
+            data.dissipateStartIntensity = this.dissipateStartIntensity !== undefined ? this.dissipateStartIntensity : this.intensity;
+        } else {
+            data.dissipateStart = this.dissipateStart;
+        }
+
+        return data;
     }
 
     /**
@@ -492,28 +525,64 @@ class CosmicStorm {
      */
     static fromJSON(data) {
         if (!data) return null;
-        // Use default constructor
-        const storm = new CosmicStorm(
-            data.pos?.x || 0,
-            data.pos?.y || 0,
-            data.radius || 100,
-            data.type || 'electromagnetic'
-        );
+        
+        // Coerce inputs defensively to ensure they are finite numbers and valid types
+        const rx = Number.isFinite(data.pos?.x) ? data.pos.x : 0;
+        const ry = Number.isFinite(data.pos?.y) ? data.pos.y : 0;
+        const rad = Number(data.radius);
+        const safeRadius = (Number.isFinite(rad) && rad > 0) ? rad : 100;
+        const type = data.type || 'electromagnetic';
 
-        // Restore properties
-        if (data.velocity) storm.velocity = (typeof createVector === 'function') ? createVector(data.velocity.x, data.velocity.y) : { x: data.velocity.x, y: data.velocity.y, mult: () => { }, rotate: () => { } };
-        if (data.intensity !== undefined) storm.intensity = data.intensity;
-        if (data.maxLifetime !== undefined) storm.maxLifetime = data.maxLifetime;
-        if (data.lifetime !== undefined) storm.lifetime = data.lifetime;
+        // Use constructor
+        const storm = new CosmicStorm(rx, ry, safeRadius, type);
+
+        // Restore properties with strict type and validity validation
+        if (data.velocity && Number.isFinite(data.velocity.x) && Number.isFinite(data.velocity.y)) {
+            storm.velocity = (typeof createVector === 'function') ? createVector(data.velocity.x, data.velocity.y) : { x: data.velocity.x, y: data.velocity.y, mult: () => { }, rotate: () => { } };
+        } else {
+            storm.velocity = (typeof createVector === 'function') ? createVector(0, 0) : { x: 0, y: 0, mult: () => { }, rotate: () => { } };
+        }
+
+        const intensity = Number(data.intensity);
+        if (Number.isFinite(intensity) && intensity >= 0) storm.intensity = intensity;
+
+        const maxLifetime = Number(data.maxLifetime);
+        if (Number.isFinite(maxLifetime) && maxLifetime > 0) storm.maxLifetime = maxLifetime;
+
+        const lifetime = Number(data.lifetime);
+        if (Number.isFinite(lifetime)) storm.lifetime = lifetime;
 
         storm.dissipating = !!data.dissipating;
-        if (data.dissipateStart !== undefined) storm.dissipateStart = data.dissipateStart;
-        if (data.dissipateTime !== undefined) storm.dissipateTime = data.dissipateTime;
+        
+        const dissipateTime = Number(data.dissipateTime);
+        if (Number.isFinite(dissipateTime) && dissipateTime > 0) storm.dissipateTime = dissipateTime;
 
-        if (data.effectRadius !== undefined) storm.effectRadius = data.effectRadius;
-        if (data.visualRadius !== undefined) storm.visualRadius = data.visualRadius;
-        if (data.lastEffectTime !== undefined) storm.lastEffectTime = data.lastEffectTime;
-        if (data.effectCount !== undefined) storm.effectCount = data.effectCount;
+        if (storm.dissipating) {
+            // Restore dissipation start using current millis and the elapsed time since it began
+            const elapsed = Number(data.dissipateElapsed) || 0;
+            storm.dissipateStart = millis() - elapsed;
+            
+            const startInt = Number(data.dissipateStartIntensity);
+            storm.dissipateStartIntensity = Number.isFinite(startInt) ? startInt : storm.intensity;
+        } else {
+            const dissipateStart = Number(data.dissipateStart);
+            if (Number.isFinite(dissipateStart)) storm.dissipateStart = dissipateStart;
+        }
+
+        const effectRadius = Number(data.effectRadius);
+        storm.effectRadius = (Number.isFinite(effectRadius) && effectRadius > 0) ? effectRadius : safeRadius;
+
+        const visualRadius = Number(data.visualRadius);
+        storm.visualRadius = (Number.isFinite(visualRadius) && visualRadius > 0) ? visualRadius : safeRadius * 1.43;
+
+        const maxParticles = Number(data.maxParticles);
+        if (Number.isFinite(maxParticles) && maxParticles > 0) storm.maxParticles = maxParticles;
+
+        const lastEffectTime = Number(data.lastEffectTime);
+        if (Number.isFinite(lastEffectTime)) storm.lastEffectTime = lastEffectTime;
+
+        const effectCount = Number(data.effectCount);
+        if (Number.isFinite(effectCount)) storm.effectCount = effectCount;
 
         // Restore weapon flags (references will be relinked by StarSystem)
         storm.isWeaponSpawned = !!data.isWeaponSpawned;
@@ -522,7 +591,7 @@ class CosmicStorm {
         storm.attachedToId = data.attachedToId || null;
         storm._attachedToId = data.attachedToId || null; // Backup
 
-        // Re-init particles based on restored intensity/radius
+        // Re-init particles based on restored intensity/radius/maxParticles
         storm.particles = [];
         storm.initParticles();
 

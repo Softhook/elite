@@ -647,7 +647,14 @@ class Projectile {
             _meta: {
                 turnRate: this.turnRate,
                 missileSpeed: this.missileSpeed
-            }
+            },
+            // Persist stormConfig for storm projectiles in flight
+            stormConfig: this.stormConfig ? {
+                type: this.stormConfig.type,
+                radius: this.stormConfig.radius,
+                duration: this.stormConfig.duration,
+                ownerId: this.stormConfig.owner ? (this.stormConfig.owner.id || this.stormConfig.owner.shipTypeName || null) : null
+            } : null
         };
     }
 
@@ -662,6 +669,18 @@ class Projectile {
         if (typeof data.hull === 'number') proj.hull = data.hull;
         if (typeof data.maxHull === 'number') proj.maxHull = data.maxHull;
         proj.destroyed = !!data.destroyed;
+        
+        // Restore stormConfig
+        if (data.stormConfig) {
+            proj.stormConfig = {
+                type: data.stormConfig.type,
+                radius: data.stormConfig.radius,
+                duration: data.stormConfig.duration,
+                ownerId: data.stormConfig.ownerId
+            };
+            proj._isStorm = true;
+        }
+        
         return proj;
     }
 }
