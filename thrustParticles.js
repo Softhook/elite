@@ -65,36 +65,41 @@ class ThrustParticle {
         // Shrink particle (frame-rate independent)
         this.size *= Math.pow(this.shrinkRate, timeScale);
 
-        // Update color alpha based on remaining life
-        const alpha = map(this.life, 0, this.maxLife, 0, 255);
+        // Update color alpha based on remaining life (inline map math)
+        const alpha = Math.max(0, Math.min(255, (this.life / this.maxLife) * 255));
         this.currentColor[3] = alpha;
 
-        // Transition color from yellow/orange core to red/smoke as it ages
+        // Transition color from yellow/orange core to red/smoke as it ages (inline map math)
         if (this.life < this.maxLife * 0.6) {
-            // Gradually shift to darker red/grey
-            this.currentColor[0] = map(this.life, 0, this.maxLife * 0.6, 80, this.baseColor[0]);
-            this.currentColor[1] = map(this.life, 0, this.maxLife * 0.6, 80, this.baseColor[1]);
-            this.currentColor[2] = map(this.life, 0, this.maxLife * 0.6, 80, this.baseColor[2]);
+            const factor = Math.max(0, Math.min(1, this.life / (this.maxLife * 0.6)));
+            this.currentColor[0] = 80 + (this.baseColor[0] - 80) * factor;
+            this.currentColor[1] = 80 + (this.baseColor[1] - 80) * factor;
+            this.currentColor[2] = 80 + (this.baseColor[2] - 80) * factor;
         }
     }
 
     draw() {
-        noStroke();
+        const r = this.currentColor[0];
+        const g = this.currentColor[1];
+        const b = this.currentColor[2];
+        const alpha = this.currentColor[3];
+
+        if (alpha <= 1) return; // Completely invisible
         
         // Layer 1: Very wide, soft outer ambient glow
-        if (this.size > 2.0) {
-            fill(this.currentColor[0], this.currentColor[1], this.currentColor[2], this.currentColor[3] * 0.12);
+        if (this.size > 2.0 && alpha > 8.5) {
+            fill(r, g, b, alpha * 0.12);
             ellipse(this.pos.x, this.pos.y, this.size * 3.5, this.size * 3.5);
         }
         
         // Layer 2: Medium halo glow
-        if (this.size > 1.0) {
-            fill(this.currentColor[0], this.currentColor[1], this.currentColor[2], this.currentColor[3] * 0.35);
+        if (this.size > 1.0 && alpha > 3) {
+            fill(r, g, b, alpha * 0.35);
             ellipse(this.pos.x, this.pos.y, this.size * 2.0, this.size * 2.0);
         }
         
         // Layer 3: Hot inner core
-        fill(this.currentColor[0], this.currentColor[1], this.currentColor[2], this.currentColor[3] * 0.9);
+        fill(r, g, b, alpha * 0.9);
         ellipse(this.pos.x, this.pos.y, this.size, this.size);
     }
 
@@ -245,22 +250,23 @@ class ThrustManager {
     }
 
     update() {
-        // Use a temporary array since we'll be modifying while iterating
-        const activeParticles = Array.from(this.particlePool.active);
-
-        for (let i = 0, len = activeParticles.length; i < len; i++) {
-            const particle = activeParticles[i];
+        const deadParticles = [];
+        for (const particle of this.particlePool.active) {
             particle.update();
-
-            // Return dead particles to the pool
             if (particle.isDead()) {
-                this.particlePool.release(particle);
-                this.particles.delete(particle); // For backward compatibility
+                deadParticles.push(particle);
             }
+        }
+
+        for (let i = 0, len = deadParticles.length; i < len; i++) {
+            const p = deadParticles[i];
+            this.particlePool.release(p);
+            this.particles.delete(p); // For backward compatibility
         }
     }
 
     draw() {
+        noStroke();
         const ctx = drawingContext;
         if (!ctx) {
             for (const particle of this.particlePool.active) {
