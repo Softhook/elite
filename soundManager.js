@@ -26,6 +26,9 @@ class SoundManager {
         this.thrustOsc2 = null;
         this.thrustNoise = null;
         this.thrustFilter = null;
+        this.boostGain = null;
+        this.boostFilter = null;
+        this.boostNoise = null;
         this.lastThrustLevel = -1;
         this.lastThrustShipSize = -1;
 
@@ -2075,6 +2078,9 @@ class SoundManager {
             if (this.thrustGain) {
                 this._rampGain(this.thrustGain.gain, 0, 0.05);
             }
+            if (this.boostGain) {
+                this._rampGain(this.boostGain.gain, 0, 0.05);
+            }
 
             // Don't suspend/resume AudioContext - just let it be
             // Suspending can cause issues with subsequent playback
@@ -2157,13 +2163,47 @@ class SoundManager {
             this.thrustNoise.connect(this.thrustNoiseGain);
             this.thrustNoiseGain.connect(this.thrustFilter);
 
+            // --- Boost / Whoosh "Swish" Audio Graph Setup ---
+            this.boostGain = this.audioContext.createGain();
+            this.boostGain.gain.setValueAtTime(0, this.audioContext.currentTime);
+
+            if (bus && bus.compressor) {
+                try {
+                    this.boostGain.connect(bus.compressor);
+                } catch (e) {
+                    this.boostGain.connect(this.audioContext.destination);
+                }
+            } else {
+                this.boostGain.connect(this.audioContext.destination);
+            }
+
+            // Bandpass filter for sweeping high-frequency wind sound (whistling swish)
+            this.boostFilter = this.audioContext.createBiquadFilter();
+            this.boostFilter.type = 'bandpass';
+            this.boostFilter.frequency.setValueAtTime(400, this.audioContext.currentTime);
+            this.boostFilter.Q.setValueAtTime(3.5, this.audioContext.currentTime);
+            this.boostFilter.connect(this.boostGain);
+
+            // White noise source for air rushing
+            const whiteNoiseBuffer = this.audioContext.createBuffer(1, bufferSize, sampleRate);
+            const whiteChannelData = whiteNoiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                whiteChannelData[i] = Math.random() * 2 - 1;
+            }
+
+            this.boostNoise = this.audioContext.createBufferSource();
+            this.boostNoise.buffer = whiteNoiseBuffer;
+            this.boostNoise.loop = true;
+            this.boostNoise.connect(this.boostFilter);
+
             // Start sources
             this.thrustOsc1.start();
             this.thrustOsc2.start();
             this.thrustNoise.start();
+            this.boostNoise.start();
 
             this.thrustSoundActive = true;
-            AUDIO_LOG("Thrust sound synthesizer initialized successfully (Deepsynth Brown).");
+            AUDIO_LOG("Thrust sound synthesizer initialized successfully (Deepsynth Brown + Boost Swish).");
         } catch (err) {
             console.error("Failed to initialize synthesized thrust sound:", err);
             this.thrustSoundActive = false;
@@ -2193,16 +2233,20 @@ class SoundManager {
         if (!this.thrustSoundActive) return;
 
         const shipSize = player ? (player.size || 30) : 30;
+        const currentSpeed = player ? (player.vel ? player.vel.mag() : 0) : 0;
+        const speedDelta = Math.abs(currentSpeed - (this.lastSpeed || 0));
 
         // Skip Web Audio scheduling if parameters haven't changed meaningfully
         if (this.lastThrustLevel !== -1 && 
             Math.abs(thrustLevel - this.lastThrustLevel) < 0.005 && 
-            shipSize === this.lastThrustShipSize) {
+            shipSize === this.lastThrustShipSize &&
+            speedDelta < 0.05) {
             return;
         }
 
         this.lastThrustLevel = thrustLevel;
         this.lastThrustShipSize = shipSize;
+        this.lastSpeed = currentSpeed;
 
         // Calculate scaling factors based on ship size for a grand/subtle feel
         const shipFactor = Math.min(2.0, Math.max(0.5, shipSize / 30));
@@ -2246,6 +2290,43 @@ class SoundManager {
                 this.thrustOsc1.frequency.value = baseFreq1 * speedMultiplier;
                 this.thrustOsc2.frequency.value = baseFreq2 * speedMultiplier;
             } catch (_) {}
+        }
+
+        // --- Modulate Boost / Whoosh "Swish" Layer ---
+        if (this.boostGain && this.boostFilter) {
+            const trailThresholdSq = (typeof PLAYER_CONFIG !== 'undefined' && PLAYER_CONFIG.TRAIL_SPEED_THRESHOLD_SQ) ? PLAYER_CONFIG.TRAIL_SPEED_THRESHOLD_SQ : 49;
+            const threshold = Math.sqrt(trailThresholdSq);
+
+            let speedRatio = 0.0;
+            if (currentSpeed > threshold) {
+                const maxMultiplier = player ? (player.boostMultiplier || 2.0) : 2.0;
+                const baseMax = player ? (player.baseMaxSpeed || 7.0) : 7.0;
+                const maxExpectedSpeed = baseMax * maxMultiplier;
+                
+                speedRatio = Math.min(1.0, (currentSpeed - threshold) / Math.max(1.0, maxExpectedSpeed - threshold));
+            }
+
+            const isBursting = player ? !!player.isSpeedBursting : false;
+            let targetBoostVolume = speedRatio * 0.22;
+            if (isBursting) {
+                targetBoostVolume += 0.08;
+            }
+
+            // Attenuate if docked
+            targetBoostVolume = this._applyDockedAttenuation(targetBoostVolume);
+            this._rampGain(this.boostGain.gain, targetBoostVolume, 0.1);
+
+            // Sweep bandpass filter from 400Hz up to 2500Hz
+            const targetBoostFreq = 400 + speedRatio * 2100;
+            try {
+                this.boostFilter.frequency.cancelScheduledValues(t);
+                this.boostFilter.frequency.setValueAtTime(this.boostFilter.frequency.value, t);
+                this.boostFilter.frequency.linearRampToValueAtTime(targetBoostFreq, t + 0.15);
+            } catch (e) {
+                try {
+                    this.boostFilter.frequency.value = targetBoostFreq;
+                } catch (_) {}
+            }
         }
     }
 }
