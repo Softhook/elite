@@ -241,6 +241,7 @@ class Player {
         this.isThrusting = false;
         this.isReverseThrusting = false;
         this.isStrafing = false;
+        this.thrustLevel = 0; // Proportional thrust sound level
 
         // Speed burst system (now upgrade-based)
         this.isSpeedBursting = false;
@@ -1359,6 +1360,7 @@ class Player {
         this.isThrusting = false;
         this.isReverseThrusting = false;
         this.isStrafing = false;
+        this.thrustLevel = 0;
 
         // Check for ANY manual input that would disable autopilot
         const hasManualTurning = keyIsDown(LEFT_ARROW) || keyIsDown(81) || keyIsDown(RIGHT_ARROW) || keyIsDown(69);
@@ -1475,6 +1477,7 @@ class Player {
         if (typeof SharedPhysics !== 'undefined') {
             SharedPhysics.thrustStrafe(this, -1, multiplier);
         }
+        this.thrustLevel = Math.max(this.thrustLevel || 0, multiplier);
     }
 
     /** Apply a right-strafe (kite) thrust with optional analog strength. */
@@ -1482,6 +1485,7 @@ class Player {
         if (typeof SharedPhysics !== 'undefined') {
             SharedPhysics.thrustStrafe(this, 1, multiplier);
         }
+        this.thrustLevel = Math.max(this.thrustLevel || 0, multiplier);
     }
 
 
@@ -1501,6 +1505,7 @@ class Player {
             const reducedForce = this.thrustForce * multiplier;
             this.vel.add(cos(reverseAngle) * reducedForce * timeScale, sin(reverseAngle) * reducedForce * timeScale);
         }
+        this.thrustLevel = Math.max(this.thrustLevel || 0, multiplier);
 
         // Create thrust particles at ship's front sides for reverse thrusters
         if (this.thrustManager) {
@@ -1642,6 +1647,7 @@ class Player {
             const force = this.thrustForce * multiplier;
             this.vel.add(cos(this.angle) * force * timeScale, sin(this.angle) * force * timeScale);
         }
+        this.thrustLevel = Math.max(this.thrustLevel || 0, multiplier);
     }
 
     /** Fires a projectile towards the mouse cursor (world coordinates). */
@@ -4399,6 +4405,7 @@ class Player {
             }
 
             this.isThrusting = true;
+            this.thrustLevel = Math.max(this.thrustLevel || 0, AUTOPILOT_THRUST);
         } else {
             this.isThrusting = false;
         }

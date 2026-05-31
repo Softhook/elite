@@ -18,6 +18,17 @@ class SoundManager {
         this.dockedVolumeScale = 0.1; // Global attenuation factor while docked
         this.soundThrottles = {}; // Track last play time for each sound type
         this.minSoundInterval = 50; // Minimum ms between playing same sound type
+        
+        // Thrust Sound Synthesizer properties
+        this.thrustSoundActive = false;
+        this.thrustGain = null;
+        this.thrustOsc1 = null;
+        this.thrustOsc2 = null;
+        this.thrustNoise = null;
+        this.thrustFilter = null;
+        this.lastThrustLevel = -1;
+        this.lastThrustShipSize = -1;
+
         this.soundDefinitions = {
             // --- Sound Definitions ---
             // Proximity mine drop (short mechanical thunk)
@@ -2060,12 +2071,181 @@ class SoundManager {
             // Clear throttle timers
             this.soundThrottles = {};
 
+            // Clear thrust sound smoothly
+            if (this.thrustGain) {
+                this._rampGain(this.thrustGain.gain, 0, 0.05);
+            }
+
             // Don't suspend/resume AudioContext - just let it be
             // Suspending can cause issues with subsequent playback
 
             AUDIO_LOG("All sounds stopped");
         } catch (e) {
             console.warn("Error stopping sounds:", e);
+        }
+    }
+
+    /**
+     * Initializes the Web Audio API nodes for synthesizing the engine thrust sound.
+     * Uses a low-frequency triangle oscillator, a detuned sine oscillator, and a filtered brown noise generator.
+     */
+    initThrustSound() {
+        if (!this.audioContext) return;
+
+        try {
+            // Main thrust gain node
+            this.thrustGain = this.audioContext.createGain();
+            this.thrustGain.gain.setValueAtTime(0, this.audioContext.currentTime);
+
+            // Connect to dynamic compressor if available, else destination
+            const bus = (typeof window !== 'undefined' && window._eliteAudioBus) ? window._eliteAudioBus : null;
+            if (bus && bus.compressor) {
+                try {
+                    this.thrustGain.connect(bus.compressor);
+                } catch (e) {
+                    this.thrustGain.connect(this.audioContext.destination);
+                }
+            } else {
+                this.thrustGain.connect(this.audioContext.destination);
+            }
+
+            // Low-pass filter for warmth and cockpit damping
+            this.thrustFilter = this.audioContext.createBiquadFilter();
+            this.thrustFilter.type = 'lowpass';
+            this.thrustFilter.frequency.setValueAtTime(100, this.audioContext.currentTime);
+            this.thrustFilter.Q.setValueAtTime(1.0, this.audioContext.currentTime);
+            this.thrustFilter.connect(this.thrustGain);
+
+            // Osc 1: Fundamental engine rumble (Triangle)
+            this.thrustOsc1 = this.audioContext.createOscillator();
+            this.thrustOsc1.type = 'triangle';
+            this.thrustOsc1.frequency.setValueAtTime(35, this.audioContext.currentTime); // A0-ish base
+            this.thrustOsc1.connect(this.thrustFilter);
+
+            // Osc 2: Smooth beating engine core (Sine, detuned slightly)
+            this.thrustOsc2 = this.audioContext.createOscillator();
+            this.thrustOsc2.type = 'sine';
+            this.thrustOsc2.frequency.setValueAtTime(35.7, this.audioContext.currentTime); // Detuned slightly
+            
+            this.thrustOsc2Gain = this.audioContext.createGain();
+            this.thrustOsc2Gain.gain.setValueAtTime(0.35, this.audioContext.currentTime);
+            
+            this.thrustOsc2.connect(this.thrustOsc2Gain);
+            this.thrustOsc2Gain.connect(this.thrustFilter);
+
+            // Gas exhaustion rumble (Looped Brown Noise)
+            const sampleRate = this.audioContext.sampleRate || 44100;
+            const bufferSize = 2 * sampleRate;
+            const noiseBuffer = this.audioContext.createBuffer(1, bufferSize, sampleRate);
+            const channelData = noiseBuffer.getChannelData(0);
+            let lastOut = 0.0;
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                // Generate deep brown noise using a random walk leak
+                channelData[i] = (lastOut + (0.02 * white)) / 1.02;
+                lastOut = channelData[i];
+                channelData[i] *= 3.5; // Compensate for loss of gain in random walk
+            }
+
+            this.thrustNoise = this.audioContext.createBufferSource();
+            this.thrustNoise.buffer = noiseBuffer;
+            this.thrustNoise.loop = true;
+
+            this.thrustNoiseGain = this.audioContext.createGain();
+            this.thrustNoiseGain.gain.setValueAtTime(0.5, this.audioContext.currentTime);
+
+            this.thrustNoise.connect(this.thrustNoiseGain);
+            this.thrustNoiseGain.connect(this.thrustFilter);
+
+            // Start sources
+            this.thrustOsc1.start();
+            this.thrustOsc2.start();
+            this.thrustNoise.start();
+
+            this.thrustSoundActive = true;
+            AUDIO_LOG("Thrust sound synthesizer initialized successfully (Deepsynth Brown).");
+        } catch (err) {
+            console.error("Failed to initialize synthesized thrust sound:", err);
+            this.thrustSoundActive = false;
+        }
+    }
+
+    /**
+     * Modulates the volume, filter cutoff, and oscillator frequencies dynamically based on thrustLevel (0.0 to 1.0) and player ship size.
+     * @param {number} thrustLevel - Current applied thrust (0.0 to 1.0)
+     * @param {object} player - Player reference containing size and thrust details
+     */
+    updateThrustSound(thrustLevel, player) {
+        if (!this.audioContext) return;
+
+        // Auto-resume if context is suspended
+        if (this.audioContext.state === 'suspended') {
+            try {
+                this.audioContext.resume();
+            } catch (e) {}
+        }
+
+        // Lazy initialize nodes
+        if (!this.thrustSoundActive && this.audioContext.state !== 'suspended') {
+            this.initThrustSound();
+        }
+
+        if (!this.thrustSoundActive) return;
+
+        const shipSize = player ? (player.size || 30) : 30;
+
+        // Skip Web Audio scheduling if parameters haven't changed meaningfully
+        if (this.lastThrustLevel !== -1 && 
+            Math.abs(thrustLevel - this.lastThrustLevel) < 0.005 && 
+            shipSize === this.lastThrustShipSize) {
+            return;
+        }
+
+        this.lastThrustLevel = thrustLevel;
+        this.lastThrustShipSize = shipSize;
+
+        // Calculate scaling factors based on ship size for a grand/subtle feel
+        const shipFactor = Math.min(2.0, Math.max(0.5, shipSize / 30));
+
+        // Base fundamental rumble frequency: lower for larger ships
+        const baseFreq1 = Math.max(20, Math.min(55, 35 / shipFactor));
+        const baseFreq2 = baseFreq1 * 1.02; // 2% detune for slow rotary engine hum beating
+
+        // Modulate volume: quieter master volume, scaled with ship size
+        const sizeVolumeBonus = 0.5 + 0.5 * shipFactor;
+        let targetVolume = thrustLevel * 0.14 * sizeVolumeBonus;
+        targetVolume = this._applyDockedAttenuation(targetVolume);
+        this._rampGain(this.thrustGain.gain, targetVolume, 0.1);
+
+        // Modulate filter cutoff frequency (from 40Hz to a muffled ceiling that scales down with larger ships)
+        const t = this.audioContext.currentTime;
+        const maxCutoff = Math.max(120, Math.min(300, 200 / shipFactor));
+        const targetCutoff = 40 + thrustLevel * (maxCutoff - 40);
+        try {
+            this.thrustFilter.frequency.cancelScheduledValues(t);
+            this.thrustFilter.frequency.setValueAtTime(this.thrustFilter.frequency.value, t);
+            this.thrustFilter.frequency.linearRampToValueAtTime(targetCutoff, t + 0.1);
+        } catch (e) {
+            try {
+                this.thrustFilter.frequency.value = targetCutoff;
+            } catch (_) {}
+        }
+
+        // Modulate oscillator pitches (pitch goes up by 35% at full thrust for subtle revving)
+        const speedMultiplier = 1.0 + thrustLevel * 0.35;
+        try {
+            this.thrustOsc1.frequency.cancelScheduledValues(t);
+            this.thrustOsc1.frequency.setValueAtTime(this.thrustOsc1.frequency.value, t);
+            this.thrustOsc1.frequency.linearRampToValueAtTime(baseFreq1 * speedMultiplier, t + 0.15);
+
+            this.thrustOsc2.frequency.cancelScheduledValues(t);
+            this.thrustOsc2.frequency.setValueAtTime(this.thrustOsc2.frequency.value, t);
+            this.thrustOsc2.frequency.linearRampToValueAtTime(baseFreq2 * speedMultiplier, t + 0.15);
+        } catch (e) {
+            try {
+                this.thrustOsc1.frequency.value = baseFreq1 * speedMultiplier;
+                this.thrustOsc2.frequency.value = baseFreq2 * speedMultiplier;
+            } catch (_) {}
         }
     }
 }

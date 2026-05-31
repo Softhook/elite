@@ -287,6 +287,14 @@ function draw() {
     updateGameState();
     handleGamepadContinuousInput();
     handleContinuousFiring();
+
+    // Update player thrust sound proportional to applied thrust
+    if (player && !player.destroyed && isShipControlState()) {
+        soundManager?.updateThrustSound(player.thrustLevel, player);
+    } else {
+        soundManager?.updateThrustSound(0);
+    }
+
     renderGameState();
     renderUI();
 }
