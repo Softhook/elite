@@ -1912,8 +1912,17 @@ class UIHUD {
             const objVisualWorldY = target.pos.y - (reticleCenterAlt * cosE);
 
             // Final screen pixels
-            screenX = (objVisualWorldX - camFocusX) * totalScale + (width / 2);
-            screenY = (objVisualWorldY - camFocusY) * totalScale + (height / 2);
+            // [CAMERA SHAKE FIX] Account for screen shake on the surface
+            let shakeX = 0;
+            let shakeY = 0;
+            const camSys = globalThis.cameraSystem || (typeof cameraSystem !== 'undefined' ? cameraSystem : null);
+            if (camSys && camSys.shakeIntensity > 0 && camSys.shakeOffset) {
+                shakeX = camSys.shakeOffset.x;
+                shakeY = camSys.shakeOffset.y;
+            }
+
+            screenX = (objVisualWorldX - camFocusX) * totalScale + (width / 2) + shakeX;
+            screenY = (objVisualWorldY - camFocusY) * totalScale + (height / 2) + shakeY;
 
             // Adjust target size based on height to encompass the whole object
             // Use visual height and width with appropriate padding
@@ -1943,9 +1952,27 @@ class UIHUD {
                     spaceZoom = gameStateManager.introZoomScale;
                 }
             }
-            // Assumes player is the camera focus at the center of screen
-            screenX = width / 2 + (target.pos.x - player.pos.x) * spaceZoom;
-            screenY = height / 2 + (target.pos.y - player.pos.y) * spaceZoom;
+            
+            // Resolve actual camera position and screen shake
+            let camX = player.pos.x;
+            let camY = player.pos.y;
+            let shakeX = 0;
+            let shakeY = 0;
+            
+            const camSys = globalThis.cameraSystem || (typeof cameraSystem !== 'undefined' ? cameraSystem : null);
+            if (camSys && camSys.pos) {
+                camX = camSys.pos.x;
+                camY = camSys.pos.y;
+                if (camSys.shakeIntensity > 0 && camSys.shakeOffset) {
+                    shakeX = camSys.shakeOffset.x;
+                    shakeY = camSys.shakeOffset.y;
+                }
+            }
+            
+            // Projected screen coordinates matching cameraSystem.applyTransform
+            screenX = (target.pos.x - camX) * spaceZoom + (width / 2) - shakeX;
+            screenY = (target.pos.y - camY) * spaceZoom + (height / 2) - shakeY;
+            
             // Scale target size to match world zoom
             modifiedTargetSize = targetSize * spaceZoom;
         }
