@@ -80,7 +80,21 @@ class ThrustParticle {
 
     draw() {
         noStroke();
-        fill(this.currentColor[0], this.currentColor[1], this.currentColor[2], this.currentColor[3]);
+        
+        // Layer 1: Very wide, soft outer ambient glow
+        if (this.size > 2.0) {
+            fill(this.currentColor[0], this.currentColor[1], this.currentColor[2], this.currentColor[3] * 0.12);
+            ellipse(this.pos.x, this.pos.y, this.size * 3.5, this.size * 3.5);
+        }
+        
+        // Layer 2: Medium halo glow
+        if (this.size > 1.0) {
+            fill(this.currentColor[0], this.currentColor[1], this.currentColor[2], this.currentColor[3] * 0.35);
+            ellipse(this.pos.x, this.pos.y, this.size * 2.0, this.size * 2.0);
+        }
+        
+        // Layer 3: Hot inner core
+        fill(this.currentColor[0], this.currentColor[1], this.currentColor[2], this.currentColor[3] * 0.9);
         ellipse(this.pos.x, this.pos.y, this.size, this.size);
     }
 
@@ -134,7 +148,7 @@ class ThrustManager {
         this.particlePool = new ObjectPool(ThrustParticle, 100, this.maxParticles, "ThrustParticle");
     }
 
-    createThrust(shipPos, shipAngle, shipSize, thrustCount = 2) {
+    createThrust(shipPos, shipAngle, shipSize, thrustCount = 2, isBoosting = false) {
         // Create multiple particles per frame when thrusting
         for (let i = 0; i < thrustCount; i++) {
             // Calculate spawn position at ship's rear
@@ -142,14 +156,16 @@ class ThrustManager {
             const offset = -shipSize * 0.65;
             const spawnPoint = p5.Vector.fromAngle(shipAngle).mult(offset);
 
-            // Determine color based on ship type/size
+            // Determine color based on ship type/size/boost
             let baseColor = [255, 120, 30]; // Default orange
 
-            if (shipSize > 60) {
-                baseColor = [200, 180, 255]; // Bluish for large ships
-            }
-            else if (shipSize < 30) {
-                baseColor = [255, 80, 30]; // More red for small ships
+            if (isBoosting) {
+                // Electric blue / hot cyan / white plasma for boosting engines
+                baseColor = random() < 0.45 ? [255, 255, 255] : [0, 160, 255];
+            } else if (shipSize > 60) {
+                baseColor = [170, 190, 255]; // Bluish for large ships
+            } else if (shipSize < 30) {
+                baseColor = [255, 70, 20]; // Hot red-orange for small ships
             }
 
             // Get a particle from the pool
@@ -161,8 +177,21 @@ class ThrustManager {
                 baseColor
             );
 
-            // Maintain backward compatibility with particles set
+            // Adjust particle properties dynamically for dramatic effects
             if (particle) {
+                if (isBoosting) {
+                    particle.size *= random(1.5, 2.4); // Much thicker plumes
+                    particle.vel.mult(random(1.8, 3.2)); // Expel backward much faster
+                    particle.maxLife = random(25, 45); // Longer trail
+                    particle.life = particle.maxLife;
+                    particle.currentColor = [...baseColor, 255];
+                } else {
+                    particle.size *= random(1.0, 1.45); // Richer regular plumes
+                    particle.maxLife = random(18, 32); // Slightly longer trail
+                    particle.life = particle.maxLife;
+                }
+
+                // Maintain backward compatibility with particles set
                 this.particles.add(particle);
             }
         }
@@ -232,10 +261,23 @@ class ThrustManager {
     }
 
     draw() {
+        const ctx = drawingContext;
+        if (!ctx) {
+            for (const particle of this.particlePool.active) {
+                particle.draw();
+            }
+            return;
+        }
+
+        const prevOp = ctx.globalCompositeOperation;
+        ctx.globalCompositeOperation = 'screen';
+
         // Draw all active particles - iterate directly over Set
         for (const particle of this.particlePool.active) {
             particle.draw();
         }
+
+        ctx.globalCompositeOperation = prevOp;
     }
 
     // Add method to get stats about the pool

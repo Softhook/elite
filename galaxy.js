@@ -531,6 +531,12 @@ class Galaxy {
                 console.log(`Player arrived in ${newSystemName} at dist ${arrivalDist.toFixed(0)}`);
                 player.currentSystem = newSystem;
                 newSystem.enterSystem(player);
+
+                // Reset camera system to snap immediately on jump arrival
+                if (typeof cameraSystem !== 'undefined') {
+                    cameraSystem.reset();
+                }
+
                 return true;
             } else {
                 console.error(`Error during jump: Player or New System invalid!`);

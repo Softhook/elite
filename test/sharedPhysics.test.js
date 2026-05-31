@@ -200,7 +200,8 @@ describe('SharedPhysics Analog Thrust Visual Scaling', () => {
             entity.pos,
             entity.angle,
             entity.size,
-            1
+            2,
+            false
         );
     });
 
@@ -216,7 +217,7 @@ describe('SharedPhysics Analog Thrust Visual Scaling', () => {
             entity.pos,
             entity.angle + HALF_PI,
             entity.size * 0.8,
-            2
+            3
         );
     });
 
@@ -231,7 +232,8 @@ describe('SharedPhysics Analog Thrust Visual Scaling', () => {
             entity.pos,
             entity.angle,
             entity.size,
-            3
+            4,
+            false
         );
     });
 
@@ -246,7 +248,8 @@ describe('SharedPhysics Analog Thrust Visual Scaling', () => {
             entity.pos,
             entity.angle,
             entity.size,
-            4
+            6,
+            false
         );
     });
 });

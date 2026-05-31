@@ -763,6 +763,11 @@ class SurfaceMode {
             this.player.pos.set(this.savedPlayerPos.x, this.savedPlayerPos.y);
             this.player.altitude = 0;
 
+            // Reset camera system so it snaps immediately to space coords
+            if (typeof cameraSystem !== 'undefined') {
+                cameraSystem.reset();
+            }
+
             // Clear invulnerability - player is now back in space
             this.player.isDockedAndInvulnerable = false;
             this.player.weaponsDisabled = false; // Ensure weapons are re-enabled
@@ -2364,9 +2369,18 @@ class SurfaceMode {
             this._cachedCounterScale = this._getCounterScale();
         }
 
+        // Update camera shake decay
+        if (typeof cameraSystem !== 'undefined') {
+            cameraSystem.update(null, null, null, deltaTime);
+        }
+
         push();
-        // 1. Center camera on screen
-        translate(width / 2, height / 2);
+        // 1. Center camera on screen + shake offset
+        if (typeof cameraSystem !== 'undefined' && cameraSystem.shakeIntensity > 0) {
+            translate(width / 2 + cameraSystem.shakeOffset.x, height / 2 + cameraSystem.shakeOffset.y);
+        } else {
+            translate(width / 2, height / 2);
+        }
 
         // 2. Perspective scaling (everything world-side scales together)
         // Apply view zoom multiplier (for automatic EVA zoom)

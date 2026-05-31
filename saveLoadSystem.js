@@ -590,6 +590,11 @@ function loadGame(slotIndex) {
                     gameStateManager.postLoadFadeJustStarted = true;
                 }
 
+                // Reset camera system to snap immediately on the next update
+                if (typeof cameraSystem !== 'undefined') {
+                    cameraSystem.reset();
+                }
+
                 window.activeSaveSlotIndex = (slotIndex !== undefined ? slotIndex : 0);
                 localStorage.setItem(LAST_ACTIVE_SLOT_KEY, slotIndex.toString());
                 // Mark the time of a successful load so we can suppress unintended immediate auto-saves

@@ -6471,23 +6471,29 @@ class StarSystem {
 
         push();
 
-        // Calculate translation based on player position
-        const tx = width / 2 - this.player.pos.x;
-        const ty = height / 2 - this.player.pos.y;
+        // Update camera system if available
+        if (typeof cameraSystem !== 'undefined') {
+            cameraSystem.update(this.player.pos, this.player.vel, this.player.angle, deltaTime);
+            cameraSystem.applyTransform(zoomScale);
+        } else {
+            // Fallback translation
+            const tx = width / 2 - this.player.pos.x;
+            const ty = height / 2 - this.player.pos.y;
+            translate(tx, ty);
 
-        // For death zoom effect: 
-        // 1. First translate camera to center player on screen
-        // 2. Then zoom around the screen center (which is now the player position)
-        // This order is important - zoom must happen AFTER camera translation to work correctly
-        translate(tx, ty);
-
-        if (zoomScale > 1.0) {
-            // Translate to player position (screen center), zoom, translate back
-            // This zooms in centered exactly on the player
-            translate(this.player.pos.x, this.player.pos.y);
-            scale(zoomScale);
-            translate(-this.player.pos.x, -this.player.pos.y);
+            if (zoomScale > 1.0) {
+                translate(this.player.pos.x, this.player.pos.y);
+                scale(zoomScale);
+                translate(-this.player.pos.x, -this.player.pos.y);
+            }
         }
+
+        // Calculate translation based on camera/player position for bounds culling
+        const camX = (typeof cameraSystem !== 'undefined') ? cameraSystem.pos.x : this.player.pos.x;
+        const camY = (typeof cameraSystem !== 'undefined') ? cameraSystem.pos.y : this.player.pos.y;
+        const tx = width / 2 - camX;
+        const ty = height / 2 - camY;
+
 
         // Calculate screen bounds once (with margin) - reuse pre-allocated object
         // When zoomed, the visible world area is smaller (divided by zoom)

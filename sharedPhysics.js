@@ -31,9 +31,9 @@ const SHARED_PHYSICS_CONFIG = {
     RETRO_THRUST_ANGLE_OFFSET: 0.15, // Percent of PI
 
     // Analog visual scaling for thrust particles
-    MIN_THRUST_PARTICLES: 1,
-    MAX_THRUST_PARTICLES: 4,
-    THRUST_PARTICLE_SCALE: 2
+    MIN_THRUST_PARTICLES: 2,
+    MAX_THRUST_PARTICLES: 6,
+    THRUST_PARTICLE_SCALE: 3
 };
 
 class SharedPhysics {
@@ -92,8 +92,12 @@ class SharedPhysics {
             const isAlien = (typeof entity._isAlienShip === 'function') ? entity._isAlienShip() : false;
 
             if (!isAlien) {
-                const thrustCount = SharedPhysics._getThrustParticleCount(multiplier);
-                entity.thrustManager.createThrust(entity.pos, entity.angle, entity.size, thrustCount);
+                const isBoosting = !!entity.isSpeedBursting;
+                let thrustCount = SharedPhysics._getThrustParticleCount(multiplier);
+                if (isBoosting) {
+                    thrustCount = Math.ceil(thrustCount * 2.5);
+                }
+                entity.thrustManager.createThrust(entity.pos, entity.angle, entity.size, thrustCount, isBoosting);
             }
         }
     }

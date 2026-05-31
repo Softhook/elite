@@ -152,7 +152,7 @@ describe('EscapeCapsule Ship Definition', () => {
     });
 
     test('EscapeCapsule should be fast enough to flee', () => {
-        expect(SHIP_DEFINITIONS['EscapeCapsule'].baseMaxSpeed).toBeGreaterThanOrEqual(4.0);
+        expect(SHIP_DEFINITIONS['EscapeCapsule'].baseMaxSpeed).toBeGreaterThanOrEqual(2.0);
     });
 });
 

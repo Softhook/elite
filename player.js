@@ -1458,6 +1458,11 @@ class Player {
         const maxBurstSpeed = this.baseMaxSpeed * this.boostMultiplier;
         this.vel.set(cos(this.angle) * maxBurstSpeed, sin(this.angle) * maxBurstSpeed);
 
+        // Trigger initial booster blast shake
+        if (typeof cameraSystem !== 'undefined') {
+            cameraSystem.triggerShake(8.5);
+        }
+
         if (typeof soundManager !== 'undefined') {
             soundManager.playSound('shieldUp');
         }
@@ -1792,6 +1797,11 @@ class Player {
         if (this.isSpeedBursting) {
             // Update boost duration timer
             this.boostDurationTimer -= deltaSeconds;
+
+            // Settle a slight vibration shake while booster is active
+            if (typeof cameraSystem !== 'undefined') {
+                cameraSystem.triggerShake(0.8);
+            }
 
             if (currentTime < this.speedBurstEnd && this.boostDurationTimer > 0) {
                 // Actively bursting: sustain with normal thrust application
@@ -2371,6 +2381,12 @@ class Player {
         }
         const isShieldOnlyHit = shieldHit && hullDamageFromHit <= 0;
         triggerGamepadHitRumble(isShieldOnlyHit, actualDamage);
+
+        // Trigger camera shake on taking damage
+        if (typeof cameraSystem !== 'undefined' && actualDamage > 0) {
+            const shakeAmt = isShieldOnlyHit ? (actualDamage * 0.8) : (actualDamage * 2.5);
+            cameraSystem.triggerShake(shakeAmt);
+        }
 
         // Screen-flash lighting effect for significant hits
         if (typeof LightingEffects !== 'undefined' && actualDamage > 0) {

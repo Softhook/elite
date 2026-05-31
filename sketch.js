@@ -261,6 +261,12 @@ function handleCriticalSetupError(error) {
 
 // --- p5.js Draw Function ---
 function draw() {
+    // Clear any potential canvas shadow leak at the start of every frame
+    if (typeof drawingContext !== 'undefined' && drawingContext) {
+        drawingContext.shadowBlur = 0;
+        drawingContext.shadowColor = 'rgba(0, 0, 0, 0)';
+    }
+
     // Use starfield background color for consistency (fallback if config not available)
     const bg = (typeof STARFIELD_CONFIG !== 'undefined') ? STARFIELD_CONFIG.BACKGROUND_COLOR : { r: 10, g: 15, b: 40 };
     background(bg.r, bg.g, bg.b);

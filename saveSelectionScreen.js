@@ -750,6 +750,11 @@ class SaveSelectionScreen {
             uiManager.clearEventMarkers();
         }
 
+        // Reset camera system so it snaps immediately to starting pos
+        if (typeof cameraSystem !== 'undefined') {
+            cameraSystem.reset();
+        }
+
         // Transition to game
         gameStateManager.setState("IN_FLIGHT");
     }

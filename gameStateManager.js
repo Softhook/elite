@@ -360,6 +360,11 @@ class GameStateManager {
         if (typeof player.clearSessionTradeTracking === 'function') {
             player.clearSessionTradeTracking();
         }
+
+        // Reset camera system so it snaps immediately
+        if (typeof cameraSystem !== 'undefined') {
+            cameraSystem.reset();
+        }
     }
 
     /**

@@ -468,8 +468,17 @@ class UIHUD {
             rect(barX, barMiddleY - barHeight - 2, barWidth, barHeight);
 
             const shieldPercent = player.shield / player.maxShield;
+            push();
+            if (typeof drawingContext !== 'undefined') {
+                drawingContext.shadowColor = `rgba(${SHIELD_BAR_COLORS.FILL[0]}, ${SHIELD_BAR_COLORS.FILL[1]}, ${SHIELD_BAR_COLORS.FILL[2]}, 0.8)`;
+                drawingContext.shadowBlur = 10;
+            }
             fill(SHIELD_BAR_COLORS.FILL);
             rect(barX, barMiddleY - barHeight - 2, barWidth * shieldPercent, barHeight);
+            if (typeof drawingContext !== 'undefined') {
+                drawingContext.shadowBlur = 0;
+            }
+            pop();
 
 
             fill(255);
@@ -493,8 +502,17 @@ class UIHUD {
         }
 
         const healthPercent = hVal / mVal;
+        push();
+        if (typeof drawingContext !== 'undefined') {
+            drawingContext.shadowColor = `rgba(${HEALTH_BAR_COLORS.FILL[0]}, ${HEALTH_BAR_COLORS.FILL[1]}, ${HEALTH_BAR_COLORS.FILL[2]}, 0.8)`;
+            drawingContext.shadowBlur = 10;
+        }
         fill(HEALTH_BAR_COLORS.FILL);
         rect(barX, barMiddleY + 2, barWidth * healthPercent, barHeight);
+        if (typeof drawingContext !== 'undefined') {
+            drawingContext.shadowBlur = 0;
+        }
+        pop();
 
         fill(255);
         noStroke();
@@ -1945,6 +1963,10 @@ class UIHUD {
         // Reticle is ALWAYS upright (no rotation)
 
         noFill();
+        if (typeof drawingContext !== 'undefined') {
+            drawingContext.shadowBlur = 12;
+            drawingContext.shadowColor = 'rgba(0, 255, 0, 0.7)';
+        }
         stroke(0, 255, 0, 200); // Tactical Green
         strokeWeight(2);
 
@@ -1969,6 +1991,9 @@ class UIHUD {
         line(offset, offset, offset - bracketSize, offset);
         line(offset, offset, offset, offset - bracketSize);
 
+        if (typeof drawingContext !== 'undefined') {
+            drawingContext.shadowBlur = 0;
+        }
         pop();
     }
 
@@ -2029,6 +2054,9 @@ class UIHUD {
         arc(0, 0, dist*2, dist*2, -PI/6, PI/6);
         arc(0, 0, dist*2, dist*2, PI - PI/6, PI + PI/6);
         
+        if (typeof drawingContext !== 'undefined') {
+            drawingContext.shadowBlur = 0;
+        }
         pop();
     }
 }

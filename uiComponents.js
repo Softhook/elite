@@ -136,15 +136,34 @@ class UIComponents {
             fillCol = [0, 80, 180];
             strokeCol = [100, 150, 255];
         }
+        
+        const isHovered = mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h;
+        const isHighlighted = extra.highlighted || isHovered;
+
+        push();
+        if (isHighlighted) {
+            UIComponents.applyHUDGlow(strokeCol, 12);
+        }
+
         fill(...fillCol);
         stroke(...strokeCol);
         strokeWeight(2);
         rect(x, y, w, h, radius);
+        UIComponents.clearHUDGlow();
         fill(255);
         noStroke();
+        
+        // Add text glow if highlighted
+        if (isHighlighted) {
+            UIComponents.applyHUDGlow([255, 255, 255], 8);
+        }
+        
         textAlign(CENTER, CENTER);
         textSize(extra.textSize || STATION_TEXT_SIZE.HEADER);
         text(label, x + w / 2, y + h / 2);
+        UIComponents.clearHUDGlow();
+        pop();
+        
         return Object.assign({ x, y, w, h }, extra);
     }
 
@@ -349,12 +368,16 @@ class UIComponents {
     static drawSectionHeader(title, x, y, options = {}) {
         const color = options.color || UIComponents.STATION_COLORS.SECTION_HEADER;
 
+        push();
+        UIComponents.applyHUDGlow(color, 8);
         UIComponents.setTextStyle({
             fill: color,
             size: STATION_TEXT_SIZE.BODY,
             align: [LEFT, TOP]
         });
         text(title, x, y);
+        UIComponents.clearHUDGlow();
+        pop();
 
         return y + STATION_TEXT_SIZE.BODY + STATION_LAYOUT.BTN_SPACING;
     }
@@ -597,9 +620,13 @@ class UIComponents {
      * @param {number} [radius=10] - Corner radius
      */
     static drawPanelBG(x, y, w, h, fillCol = STANDARD_PANEL_BG, strokeCol = [100, 100, 255], radius = 10) {
+        push();
+        UIComponents.applyHUDGlow(strokeCol, 15);
         fill(...fillCol);
         stroke(...strokeCol);
         rect(x, y, w, h, radius);
+        UIComponents.clearHUDGlow();
+        pop();
     }
 
     /**
@@ -1395,6 +1422,37 @@ class UIComponents {
         drawingContext.restore();
 
         pop();
+    }
+
+    /**
+     * Applies an glowing drop-shadow / vector halo effect to the drawing context.
+     * @param {Array|string} rgbColor - Color of the glow
+     * @param {number} [blurAmt=10] - Blur radius in pixels
+     */
+    static applyHUDGlow(rgbColor, blurAmt = 10) {
+        const ctx = drawingContext;
+        if (!ctx) return;
+        
+        let colorStr = 'rgba(0, 180, 255, 0.6)';
+        if (Array.isArray(rgbColor)) {
+            colorStr = `rgba(${rgbColor[0]}, ${rgbColor[1]}, ${rgbColor[2]}, 0.6)`;
+        } else if (typeof rgbColor === 'string') {
+            colorStr = rgbColor;
+        }
+        
+        ctx.shadowColor = colorStr;
+        ctx.shadowBlur = blurAmt;
+    }
+
+    /**
+     * Clears the drop-shadow / glow effect on the drawing context.
+     */
+    static clearHUDGlow() {
+        const ctx = drawingContext;
+        if (ctx) {
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+        }
     }
 }
 
