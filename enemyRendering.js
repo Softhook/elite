@@ -490,7 +490,10 @@ class EnemyRendering {
         fill(this.p5FillColor); stroke(this.p5StrokeColor);
         strokeWeight(1);
         let showThrust = (this.currentState !== AI_STATE.IDLE && this.currentState !== AI_STATE.NEAR_STATION);
-        try { drawFunc(this.size, showThrust, this.angle, localSunAngle); } // Call specific draw function
+        try { 
+            drawFunc(this.size, showThrust, this.angle, localSunAngle);
+            this.drawNavigationLights(now);
+        } // Call specific draw function and draw navigation lights
         catch (e) { console.error(`Error executing draw function ${drawFunc.name || '?'} for ${this.shipTypeName}:`, e); ellipse(0, 0, this.size, this.size); } // Fallback
 
         // Turret drawing removed - bullets fire without visible turret
@@ -834,6 +837,59 @@ class EnemyRendering {
         } else {
             this.hasPlayedLockOnSound = false;
         }
+    }
+
+    /**
+     * Draws wingtip and tail strobe lights in ship-local space.
+     */
+    drawNavigationLights(now) {
+        if (this.destroyed || this.isCloaked) return;
+        
+        // Navigation lights only visible on police and military/combat ships
+        const roleStr = typeof AI_ROLE !== 'undefined' ? AI_ROLE.POLICE : 'Police';
+        const combatStr = typeof AI_ROLE !== 'undefined' ? AI_ROLE.COMBAT : 'Combat';
+        const isPoliceShip = this.isPolice || this.role === roleStr;
+        const isMilitaryShip = this.role === combatStr || this.faction === 'MILITARY';
+        if (!isPoliceShip && !isMilitaryShip) return;
+        
+        if (typeof getShipWingtips !== 'function') return;
+        const tips = getShipWingtips(this.shipTypeName, this.size);
+        if (!tips) return;
+        
+        // Wing lights: alternate flashing every 600ms
+        const wingFlash = (Math.floor(now / 600) % 2) === 0;
+        // Tail light: double blink every 1200ms
+        const tailCycle = Math.floor(now / 150) % 8;
+        const tailFlash = tailCycle === 0 || tailCycle === 2;
+        
+        push();
+        noStroke();
+        
+        // Left Wingtip (Red) - port side (conventionally y < 0 in local coords)
+        if (wingFlash && tips.left) {
+            fill(255, 50, 50);
+            ellipse(tips.left.x, tips.left.y, 1.8, 1.8);
+            fill(255, 50, 50, 80);
+            ellipse(tips.left.x, tips.left.y, 4.0, 4.0);
+        }
+        
+        // Right Wingtip (Green) - starboard side (conventionally y > 0 in local coords)
+        if (wingFlash && tips.right) {
+            fill(50, 255, 50);
+            ellipse(tips.right.x, tips.right.y, 1.8, 1.8);
+            fill(50, 255, 50, 80);
+            ellipse(tips.right.x, tips.right.y, 4.0, 4.0);
+        }
+        
+        // Tail (White double strobe) - stern side (conventionally x < 0 in local coords)
+        if (tailFlash && tips.tail) {
+            fill(255, 255, 255);
+            ellipse(tips.tail.x, tips.tail.y, 1.8, 1.8);
+            fill(255, 255, 255, 100);
+            ellipse(tips.tail.x, tips.tail.y, 4.5, 4.5);
+        }
+        
+        pop();
     }
 
     /**

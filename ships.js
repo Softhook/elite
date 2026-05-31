@@ -4449,4 +4449,96 @@ for (const key in SHIP_DEFINITIONS) {
     }
 }
 
+/**
+ * Calculates ship wingtips and tail/nose points in local coordinates.
+ * Falls back to bounding-circle values if no vertex data exists.
+ * Optimized to cache normalized wingtips on definition, preventing O(N) loops.
+ */
+function getShipWingtips(shipTypeName, size) {
+    const def = typeof SHIP_DEFINITIONS !== 'undefined' ? SHIP_DEFINITIONS[shipTypeName] : null;
+    const r = size * 0.5;
+    
+    // Fallback values
+    const fallback = {
+        left: { x: 0, y: -r },
+        right: { x: 0, y: r },
+        tail: { x: -r, y: 0 },
+        nose: { x: r, y: 0 }
+    };
+    
+    if (!def) return fallback;
+    
+    // Cache normalized unit coordinates to eliminate loops and GC pressure
+    if (!def._normalizedWingtips) {
+        let vertices = [];
+        if (Array.isArray(def.vertexData)) {
+            vertices = def.vertexData;
+        } else if (Array.isArray(def.vertexLayers) && def.vertexLayers.length > 0) {
+            const layer = def.vertexLayers[0];
+            if (layer && Array.isArray(layer.vertexData)) {
+                vertices = layer.vertexData;
+            }
+        }
+        
+        if (vertices.length === 0) {
+            def._normalizedWingtips = {
+                left: { x: 0, y: -1.0 },
+                right: { x: 0, y: 1.0 },
+                tail: { x: -1.0, y: 0 },
+                nose: { x: 1.0, y: 0 }
+            };
+        } else {
+            let leftWing = null;
+            let rightWing = null;
+            let tail = null;
+            let nose = null;
+            
+            let minY = 0;
+            let maxY = 0;
+            let minX = 0;
+            let maxX = 0;
+            
+            for (let i = 0; i < vertices.length; i++) {
+                const v = vertices[i];
+                if (v.y < minY) {
+                    minY = v.y;
+                    leftWing = v;
+                }
+                if (v.y > maxY) {
+                    maxY = v.y;
+                    rightWing = v;
+                }
+                if (v.x < minX) {
+                    minX = v.x;
+                    tail = v;
+                }
+                if (v.x > maxX) {
+                    maxX = v.x;
+                    nose = v;
+                }
+            }
+            
+            def._normalizedWingtips = {
+                left: leftWing ? { x: leftWing.x, y: leftWing.y } : { x: 0, y: -1.0 },
+                right: rightWing ? { x: rightWing.x, y: rightWing.y } : { x: 0, y: 1.0 },
+                tail: tail ? { x: tail.x, y: tail.y } : { x: -1.0, y: 0 },
+                nose: nose ? { x: nose.x, y: nose.y } : { x: 1.0, y: 0 }
+            };
+        }
+    }
+    
+    const nw = def._normalizedWingtips;
+    return {
+        left: { x: nw.left.x * r, y: nw.left.y * r },
+        right: { x: nw.right.x * r, y: nw.right.y * r },
+        tail: { x: nw.tail.x * r, y: nw.tail.y * r },
+        nose: { x: nw.nose.x * r, y: nw.nose.y * r }
+    };
+}
+
+if (typeof window !== 'undefined') {
+    window.getShipWingtips = getShipWingtips;
+}
+
 console.log(`ships.js (Refactored Version with ${Object.keys(SHIP_DEFINITIONS).length} ships) loaded and SHIP_DEFINITIONS initialized.`);
+

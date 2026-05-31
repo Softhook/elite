@@ -425,6 +425,35 @@ class ThrustManager {
                 }
             }
         }
+
+        // Spawn engine sparks occasionally (Hollywood pizzazz!)
+        if (nozzleType === 'rear' && (isBoosting || random() < 0.22)) {
+            const numSparks = isBoosting ? Math.floor(random(1, 4)) : (random() < 0.35 ? 1 : 0);
+            for (let j = 0; j < enginePositions.length; j++) {
+                const enginePos = enginePositions[j];
+                for (let k = 0; k < numSparks; k++) {
+                    const sparkCol = random() < 0.35 ? [255, 255, 255] : [255, 195, 45]; // White or bright gold
+                    const spark = this.particlePool.get(
+                        enginePos.x,
+                        enginePos.y,
+                        particleAngle,
+                        shipSize,
+                        sparkCol
+                    );
+                    if (spark) {
+                        // Sparks fly out at a much wider angle (PI + spread)
+                        const spreadAngle = particleAngle + PI + random(-0.7, 0.7);
+                        const sparkSpeed = random(2.0, 5.0) * (isBoosting ? 1.6 : 1.0);
+                        spark.vel.set(cos(spreadAngle), sin(spreadAngle)).mult(sparkSpeed);
+                        spark.size = random(1.0, 2.3);
+                        spark.maxLife = random(6, 16);
+                        spark.life = spark.maxLife;
+                        spark.shrinkRate = random(0.85, 0.91); // Shrink very rapidly
+                        this.particles.add(spark);
+                    }
+                }
+            }
+        }
     }
 
     createLandingDust(x, y, size, count = 30) {

@@ -205,9 +205,154 @@ class CosmicStorm {
         if (!this.isInView(screenBounds)) return;
         push();
         this.drawAura();
+        this.drawCoreGlowWaves();
+        this.drawFilaments();
         this.drawParticles();
         this.drawLightning();
+        this.drawDischarges();
         if (this.debug) this.drawDebug();
+        pop();
+    }
+
+    drawCoreGlowWaves() {
+        if (!this.color) return;
+        const r = this.color[0], g = this.color[1], b = this.color[2];
+        const intensity = this.intensity;
+        const now = millis();
+        push();
+        noFill();
+        blendMode(ADD);
+        
+        // Render concentric pulsing/expanding energy ripple waves
+        const wavePeriod = 2500; // ms per wave cycle
+        for (let i = 0; i < 2; i++) {
+            const timeOffset = i * (wavePeriod / 2);
+            const cycleProgress = ((now + timeOffset) % wavePeriod) / wavePeriod; // 0 to 1
+            const waveRadius = this.radius * 0.08 + (this.radius * 1.35 * cycleProgress);
+            const alpha = 85 * (1 - cycleProgress) * intensity;
+            
+            if (alpha > 1) {
+                stroke(r, g, b, alpha);
+                strokeWeight(1.4 + (1 - cycleProgress) * 2.2);
+                ellipse(this.pos.x, this.pos.y, waveRadius * 2);
+            }
+        }
+        pop();
+    }
+
+    drawFilaments() {
+        if (!this.color) return;
+        const r = this.color[0], g = this.color[1], b = this.color[2];
+        const intensity = this.intensity;
+        
+        push();
+        noFill();
+        stroke(r, g, b, 125 * intensity);
+        strokeWeight(1);
+        blendMode(ADD);
+        
+        let filamentCount = 0;
+        const maxFilaments = 18;
+        const maxDistSq = 55 * 55; // 55px max connection distance
+        
+        // Loop and check distances, drawing a jittery line representing magnetic force lines
+        for (let i = 0; i < this.particles.length && filamentCount < maxFilaments; i += 3) {
+            const p1 = this.particles[i];
+            if (!p1 || !p1.pos) continue;
+            
+            for (let j = i + 1; j < this.particles.length && filamentCount < maxFilaments; j += 5) {
+                const p2 = this.particles[j];
+                if (!p2 || !p2.pos) continue;
+                
+                const dx = p2.pos.x - p1.pos.x;
+                const dy = p2.pos.y - p1.pos.y;
+                const distSq = dx * dx + dy * dy;
+                
+                if (distSq < maxDistSq) {
+                    beginShape();
+                    const segments = 3;
+                    vertex(p1.pos.x, p1.pos.y);
+                    for (let s = 1; s < segments; s++) {
+                        const t = s / segments;
+                        const mx = lerp(p1.pos.x, p2.pos.x, t);
+                        const my = lerp(p1.pos.y, p2.pos.y, t);
+                        // Add electric wiggle
+                        const rx = mx + random(-2.5, 2.5);
+                        const ry = my + random(-2.5, 2.5);
+                        vertex(rx, ry);
+                    }
+                    vertex(p2.pos.x, p2.pos.y);
+                    endShape();
+                    filamentCount++;
+                }
+            }
+        }
+        pop();
+    }
+
+    drawDischarges() {
+        if (!this.color || this.affectedEntities.size === 0) return;
+        
+        const r = this.color[0], g = this.color[1], b = this.color[2];
+        const intensity = this.intensity;
+        
+        push();
+        blendMode(ADD);
+        
+        for (let entityId of this.affectedEntities) {
+            const entity = this.findEntityById(entityId);
+            if (!entity || !entity.pos || entity.destroyed) continue;
+            
+            // Random chance to arc, creating a natural electrical flicker
+            if (random() < 0.12 * intensity) {
+                // Main arc (colored glow)
+                stroke(r, g, b, 200 * intensity);
+                strokeWeight(2.5);
+                noFill();
+                
+                const start = this.pos;
+                const end = entity.pos;
+                const dist = p5.Vector.dist(start, end);
+                
+                // Segment count scales with distance
+                const segments = Math.max(4, Math.floor(dist / 35));
+                const points = [start];
+                
+                for (let i = 1; i < segments; i++) {
+                    const t = i / segments;
+                    const mx = lerp(start.x, end.x, t);
+                    const my = lerp(start.y, end.y, t);
+                    
+                    // Perpendicular offset for lightning wiggles
+                    const perpX = -(end.y - start.y);
+                    const perpY = end.x - start.x;
+                    const perpLen = Math.max(1, Math.sqrt(perpX * perpX + perpY * perpY));
+                    const jitter = random(-20, 20) * (1 - t * 0.3); // Less jitter near ship
+                    
+                    points.push({
+                        x: mx + (perpX / perpLen) * jitter,
+                        y: my + (perpY / perpLen) * jitter
+                    });
+                }
+                points.push(end);
+                
+                // Draw Outer Glow Arc
+                beginShape();
+                for (let p of points) {
+                    vertex(p.x, p.y);
+                }
+                endShape();
+                
+                // Draw Inner White Core Arc
+                stroke(255, 255, 255, 230 * intensity);
+                strokeWeight(1.0);
+                beginShape();
+                for (let p of points) {
+                    vertex(p.x, p.y);
+                }
+                endShape();
+            }
+        }
         pop();
     }
 

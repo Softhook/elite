@@ -2041,6 +2041,57 @@ class Player {
         pop();
     }
 
+    /**
+     * Draws wingtip and tail strobe lights in ship-local space.
+     */
+    drawNavigationLights(now) {
+        if (this.exploding || this.isCloaked) return;
+        
+        // Navigation lights only visible on police and military/combat ships
+        const isPoliceShip = this.isPolice || this.playerFaction === 'POLICE' || this.faction === 'POLICE';
+        const isMilitaryShip = this.playerFaction === 'MILITARY' || this.faction === 'MILITARY' || this.playerFaction === 'IMPERIAL' || this.playerFaction === 'SEPARATIST';
+        if (!isPoliceShip && !isMilitaryShip) return;
+        
+        if (typeof getShipWingtips !== 'function') return;
+        const tips = getShipWingtips(this.shipTypeName, this.size);
+        if (!tips) return;
+        
+        // Wing lights: alternate flashing every 600ms
+        const wingFlash = (Math.floor(now / 600) % 2) === 0;
+        // Tail light: double blink every 1200ms
+        const tailCycle = Math.floor(now / 150) % 8;
+        const tailFlash = tailCycle === 0 || tailCycle === 2;
+        
+        push();
+        noStroke();
+        
+        // Left Wingtip (Red) - port side (conventionally y < 0 in local coords)
+        if (wingFlash && tips.left) {
+            fill(255, 50, 50);
+            ellipse(tips.left.x, tips.left.y, 1.8, 1.8);
+            fill(255, 50, 50, 80);
+            ellipse(tips.left.x, tips.left.y, 4.0, 4.0);
+        }
+        
+        // Right Wingtip (Green) - starboard side (conventionally y > 0 in local coords)
+        if (wingFlash && tips.right) {
+            fill(50, 255, 50);
+            ellipse(tips.right.x, tips.right.y, 1.8, 1.8);
+            fill(50, 255, 50, 80);
+            ellipse(tips.right.x, tips.right.y, 4.0, 4.0);
+        }
+        
+        // Tail (White double strobe) - stern side (conventionally x < 0 in local coords)
+        if (tailFlash && tips.tail) {
+            fill(255, 255, 255);
+            ellipse(tips.tail.x, tips.tail.y, 1.8, 1.8);
+            fill(255, 255, 255, 100);
+            ellipse(tips.tail.x, tips.tail.y, 4.5, 4.5);
+        }
+        
+        pop();
+    }
+
     _updateVelocityTrail() {
         if (!this._velocityTrail) this._velocityTrail = [];
         const vx = this.vel?.x || 0;
@@ -2138,6 +2189,10 @@ class Player {
 
         rotate(this.angle);
         drawFunc(this.size, this.isThrusting, this.angle, localSunAngle);
+        
+        // Draw wing navigation lights (in ship-local coordinates)
+        const now = millis();
+        this.drawNavigationLights(now);
 
         // Reset alpha after drawing ship
         if (this.isCloaked) {

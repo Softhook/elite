@@ -6686,6 +6686,119 @@ class StarSystem {
         }
 
         pop();
+
+        // Draw screen-space visual post-processing effects (EMP glitch, radiation static, speed lines)
+        this.drawScreenSpaceEffects();
+    }
+
+    /**
+     * Draws screen-space visual overlays representing environmental and flight states
+     * (e.g. electromagnetic glitches, radiation geiger grain, warp speed lines).
+     */
+    drawScreenSpaceEffects() {
+        if (!this.player || !this.player.pos) return;
+        
+        // Cache cosmic storm checks once per frame (optimize check)
+        let inRadiationStorm = false;
+        let radiationIntensity = 0;
+        let emIntensity = 0;
+        
+        const now = millis();
+        
+        const px = this.player.pos.x;
+        const py = this.player.pos.y;
+        
+        for (let i = 0; i < this.cosmicStorms.length; i++) {
+            const storm = this.cosmicStorms[i];
+            if (!storm || !storm.pos) continue;
+            
+            const dx = px - storm.pos.x;
+            const dy = py - storm.pos.y;
+            const distSq = dx * dx + dy * dy;
+            const rSq = storm.effectRadius * storm.effectRadius;
+            
+            if (distSq < rSq) {
+                const dist = Math.sqrt(distSq);
+                const strength = (1 - dist / storm.effectRadius) * storm.intensity;
+                if (storm.type === 'radiation') {
+                    inRadiationStorm = true;
+                    radiationIntensity = Math.max(radiationIntensity, strength);
+                } else if (storm.type === 'electromagnetic') {
+                    emIntensity = Math.max(emIntensity, strength);
+                }
+            }
+        }
+        
+        // 1. EMP Signal Glitch (targeting disruption or electromagnetic interference)
+        const td = Math.max(this.player.targetingDisruption || 0, emIntensity);
+        if (td > 0.05 && random() < td * 0.22) {
+            push();
+            const ctx = drawingContext;
+            const numStrips = Math.floor(random(1, 1 + td * 4));
+            for (let i = 0; i < numStrips; i++) {
+                const sy = random(0, height - 30);
+                const sh = random(10, 45);
+                const offset = random(-20, 20) * td;
+                ctx.drawImage(ctx.canvas, 0, sy, width, sh, offset, sy, width, sh);
+            }
+            if (random() < 0.12 * td) {
+                blendMode(ADD);
+                fill(80, 150 * td, 255 * td, 30);
+                rect(0, 0, width, height);
+            }
+            pop();
+        }
+        
+        // 2. Radiation Geiger Static Overlay
+        if (inRadiationStorm && radiationIntensity > 0.05) {
+            push();
+            blendMode(ADD);
+            noStroke();
+            
+            // Geiger sound frequency triggers ticks, let's render visual green static particles
+            const numGrains = Math.floor(radiationIntensity * 30);
+            fill(120, 255, 50, 45 * radiationIntensity); // Green glowing static
+            for (let i = 0; i < numGrains; i++) {
+                const gx = random(0, width);
+                const gy = random(0, height);
+                const gsize = random(1.5, 3.5);
+                ellipse(gx, gy, gsize, gsize);
+            }
+            
+            // Faint flickering line discharges across screen (visual radiation noise)
+            if (random() < 0.25) {
+                fill(120, 255, 50, 8 * radiationIntensity);
+                const lineY = random(0, height);
+                rect(0, lineY, width, random(1, 6));
+            }
+            pop();
+        }
+        
+        // 3. Speed Burst Radial Motion Speed Lines
+        if (this.player.isSpeedBursting) {
+            push();
+            blendMode(ADD);
+            stroke(255, 255, 255, 30);
+            strokeWeight(1.2);
+            
+            const numLines = 14;
+            const cx = width / 2;
+            const cy = height / 2;
+            
+            for (let i = 0; i < numLines; i++) {
+                const angle = random(TWO_PI);
+                const startR = random(width * 0.15, width * 0.45);
+                const endR = startR + random(40, 100);
+                
+                const sx = cx + cos(angle) * startR;
+                const sy = cy + sin(angle) * startR;
+                const ex = cx + cos(angle) * endR;
+                const ey = cy + sin(angle) * endR;
+                
+                line(sx, sy, ex, ey);
+            }
+            pop();
+        }
     }
 
     /**
