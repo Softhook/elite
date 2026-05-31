@@ -151,53 +151,278 @@ class ThrustManager {
 
         // Initialize particle pool with reasonable sizes
         this.particlePool = new ObjectPool(ThrustParticle, 100, this.maxParticles, "ThrustParticle");
+        this.nozzleCache = {}; // Cache for ship engine nozzle offsets
     }
 
-    createThrust(shipPos, shipAngle, shipSize, thrustCount = 2, isBoosting = false) {
-        // Create multiple particles per frame when thrusting
-        for (let i = 0; i < thrustCount; i++) {
-            // Calculate spawn position at ship's rear
-            // Increased offset to -0.65 to ensure exhaust clears the 3D ship hull
-            const offset = -shipSize * 0.65;
-            const spawnPoint = p5.Vector.fromAngle(shipAngle).mult(offset);
+    getNozzles(shipType, shipSize) {
+        const cacheKey = (shipType || "generic") + "_" + shipSize;
+        if (this.nozzleCache && this.nozzleCache[cacheKey]) {
+            return this.nozzleCache[cacheKey];
+        }
 
-            // Determine color based on ship type/size/boost
-            let baseColor = [255, 120, 30]; // Default orange
+        let nozzles = {
+            rear: [],
+            front: [], // [left_front, right_front]
+            left: [],  // left side nozzle at x = 0
+            right: []  // right side nozzle at x = 0
+        };
 
-            if (isBoosting) {
-                // Electric blue / hot cyan / white plasma for boosting engines
-                baseColor = random() < 0.45 ? [255, 255, 255] : [0, 160, 255];
-            } else if (shipSize > 60) {
-                baseColor = [170, 190, 255]; // Bluish for large ships
-            } else if (shipSize < 30) {
-                baseColor = [255, 70, 20]; // Hot red-orange for small ships
+        let vertices = [];
+        let def = null;
+
+        if (shipType && typeof SHIP_DEFINITIONS !== 'undefined' && SHIP_DEFINITIONS[shipType]) {
+            def = SHIP_DEFINITIONS[shipType];
+            if (Array.isArray(def.vertexData)) {
+                vertices = def.vertexData;
+            } else if (Array.isArray(def.vertexLayers) && def.vertexLayers.length > 0) {
+                const layer = def.vertexLayers[0];
+                if (layer && Array.isArray(layer.vertexData)) {
+                    vertices = layer.vertexData;
+                }
+            }
+        }
+
+        const r = shipSize * 0.5;
+        const margin = -2.0;
+
+        let onlyOneThruster = shipSize < 50;
+        let isType9 = false;
+
+        if (def) {
+            const isInterceptor = (def.role && def.role.toLowerCase().includes("interceptor")) || 
+                                  (def.name && def.name.toLowerCase().includes("interceptor")) ||
+                                  (shipType.toLowerCase().includes("interceptor"));
+            const isLarge = def.sizeCategory === "Large" || def.sizeCategory === "Very Large" || def.size >= 50;
+            onlyOneThruster = isInterceptor || !isLarge;
+            isType9 = shipType === "Type9Heavy" || (def.name && def.name.includes("Type-9"));
+        }
+
+        // 1. REAR NOZZLES
+        if (vertices.length > 0) {
+            let minX = 0;
+            for (let i = 0; i < vertices.length; i++) {
+                const vx = vertices[i].x;
+                if (vx < minX) minX = vx;
             }
 
-            // Get a particle from the pool
-            const particle = this.particlePool.get(
-                shipPos.x + spawnPoint.x,
-                shipPos.y + spawnPoint.y,
-                shipAngle,
-                shipSize,
-                baseColor
-            );
+            if (isType9) {
+                nozzles.rear = [
+                    { x: minX * r + margin, y: -0.6 * r },
+                    { x: minX * r + margin, y: -0.2 * r },
+                    { x: minX * r + margin, y: 0.2 * r },
+                    { x: minX * r + margin, y: 0.6 * r }
+                ];
+            } else if (onlyOneThruster) {
+                nozzles.rear = [{ x: minX * r + margin, y: 0 }];
+            } else {
+                const rearVertices = vertices.filter(v => v.x <= minX + 0.15);
+                nozzles.rear = rearVertices.map(v => ({
+                    x: v.x * r + margin,
+                    y: v.y * r
+                }));
+            }
+        } else {
+            // Fallback rear
+            const offset = -shipSize * 0.5;
+            if (onlyOneThruster || shipType === "generic" || !shipType) {
+                nozzles.rear = [{ x: offset, y: 0 }];
+            } else if (shipType === "Type9Heavy" || (shipType && shipType.includes("Type9"))) {
+                nozzles.rear = [
+                    { x: offset, y: -shipSize * 0.3 },
+                    { x: offset, y: -shipSize * 0.1 },
+                    { x: offset, y: shipSize * 0.1 },
+                    { x: offset, y: shipSize * 0.3 }
+                ];
+            } else {
+                nozzles.rear = [
+                    { x: offset, y: -shipSize * 0.1 },
+                    { x: offset, y: shipSize * 0.1 }
+                ];
+            }
+        }
 
-            // Adjust particle properties dynamically for dramatic effects
-            if (particle) {
+        // 2. FRONT NOZZLES (Left and Right)
+        if (vertices.length > 1) {
+            let maxX = -999;
+            for (let i = 0; i < vertices.length; i++) {
+                const vx = vertices[i].x;
+                if (vx > maxX) maxX = vx;
+            }
+
+            const targetLocalX = maxX * 0.6;
+            let foundLeft = false;
+            let foundRight = false;
+            let y_left = 0;
+            let y_right = 0;
+
+            for (let i = 0; i < vertices.length; i++) {
+                const v1 = vertices[i];
+                const v2 = vertices[(i + 1) % vertices.length];
+                const minEdgeX = Math.min(v1.x, v2.x);
+                const maxEdgeX = Math.max(v1.x, v2.x);
+
+                if (targetLocalX >= minEdgeX && targetLocalX <= maxEdgeX && minEdgeX !== maxEdgeX) {
+                    const t = (targetLocalX - v1.x) / (v2.x - v1.x);
+                    const y_intersect = v1.y + t * (v2.y - v1.y);
+
+                    if (y_intersect < 0) {
+                        if (!foundLeft || y_intersect < y_left) {
+                            y_left = y_intersect;
+                            foundLeft = true;
+                        }
+                    } else {
+                        if (!foundRight || y_intersect > y_right) {
+                            y_right = y_intersect;
+                            foundRight = true;
+                        }
+                    }
+                }
+            }
+
+            if (foundLeft && foundRight) {
+                nozzles.front = [
+                    { x: targetLocalX * r, y: y_left * r - 1.5 },
+                    { x: targetLocalX * r, y: y_right * r + 1.5 }
+                ];
+            }
+        }
+
+        if (nozzles.front.length === 0) {
+            // Fallback front
+            nozzles.front = [
+                { x: shipSize * 0.35, y: -shipSize * 0.15 },
+                { x: shipSize * 0.35, y: shipSize * 0.15 }
+            ];
+        }
+
+        // 3. SIDE NOZZLES (Left and Right at x = 0)
+        if (vertices.length > 1) {
+            const targetLocalX = 0;
+            let foundLeft = false;
+            let foundRight = false;
+            let y_left = 0;
+            let y_right = 0;
+
+            for (let i = 0; i < vertices.length; i++) {
+                const v1 = vertices[i];
+                const v2 = vertices[(i + 1) % vertices.length];
+                const minEdgeX = Math.min(v1.x, v2.x);
+                const maxEdgeX = Math.max(v1.x, v2.x);
+
+                if (targetLocalX >= minEdgeX && targetLocalX <= maxEdgeX && minEdgeX !== maxEdgeX) {
+                    const t = (targetLocalX - v1.x) / (v2.x - v1.x);
+                    const y_intersect = v1.y + t * (v2.y - v1.y);
+
+                    if (y_intersect < 0) {
+                        if (!foundLeft || y_intersect < y_left) {
+                            y_left = y_intersect;
+                            foundLeft = true;
+                        }
+                    } else {
+                        if (!foundRight || y_intersect > y_right) {
+                            y_right = y_intersect;
+                            foundRight = true;
+                        }
+                    }
+                }
+            }
+
+            if (foundLeft && foundRight) {
+                nozzles.left = [{ x: 0, y: y_left * r - 4.5 }];
+                nozzles.right = [{ x: 0, y: y_right * r + 4.5 }];
+            }
+        }
+
+        if (nozzles.left.length === 0) {
+            // Fallback side nozzles
+            nozzles.left = [{ x: 0, y: -shipSize * 0.35 }];
+            nozzles.right = [{ x: 0, y: shipSize * 0.35 }];
+        }
+
+        this.nozzleCache[cacheKey] = nozzles;
+        return nozzles;
+    }
+
+    createThrust(shipPos, shipAngle, shipSize, thrustCount = 2, isBoosting = false, shipType = null, bypassOffset = false, nozzleType = 'rear', multiplier = 1.0) {
+        // Find engine offsets if not bypassed and ship center is passed
+        let enginePositions = [];
+        let particleAngle = shipAngle;
+
+        if (bypassOffset) {
+            // Spawn exactly at shipPos
+            enginePositions = [{ x: shipPos.x, y: shipPos.y }];
+        } else {
+            // Get cached/resolved nozzles
+            const nozzles = this.getNozzles(shipType, shipSize);
+            let engineOffsets = nozzles[nozzleType] || nozzles.rear;
+
+            // Transform local offsets to world coordinates based on position and angle
+            const cosA = cos(shipAngle);
+            const sinA = sin(shipAngle);
+            for (let i = 0; i < engineOffsets.length; i++) {
+                const offset = engineOffsets[i];
+                enginePositions.push({
+                    x: shipPos.x + (offset.x * cosA - offset.y * sinA),
+                    y: shipPos.y + (offset.x * sinA + offset.y * cosA)
+                });
+            }
+
+            // Determine particle velocity angle based on nozzle type
+            if (nozzleType === 'front') {
+                particleAngle = shipAngle + PI;
+            } else if (nozzleType === 'left') {
+                particleAngle = shipAngle + HALF_PI;
+            } else if (nozzleType === 'right') {
+                particleAngle = shipAngle - HALF_PI;
+            }
+        }
+
+        // Determine how many particles to spawn per engine nozzle to ensure all engines fire consistently
+        const particlesPerEngine = Math.max(1, Math.ceil(thrustCount / enginePositions.length));
+
+        for (let j = 0; j < enginePositions.length; j++) {
+            const enginePos = enginePositions[j];
+            for (let i = 0; i < particlesPerEngine; i++) {
+                // Determine color based on ship type/size/boost
+                let baseColor = [255, 120, 30]; // Default orange
+
                 if (isBoosting) {
-                    particle.size *= random(1.5, 2.4); // Much thicker plumes
-                    particle.vel.mult(random(1.8, 3.2)); // Expel backward much faster
-                    particle.maxLife = random(25, 45); // Longer trail
-                    particle.life = particle.maxLife;
-                    particle.currentColor = [...baseColor, 255];
-                } else {
-                    particle.size *= random(1.0, 1.45); // Richer regular plumes
-                    particle.maxLife = random(18, 32); // Slightly longer trail
-                    particle.life = particle.maxLife;
+                    // Electric blue / hot cyan / white plasma for boosting engines
+                    baseColor = random() < 0.45 ? [255, 255, 255] : [0, 160, 255];
+                } else if (shipSize > 60) {
+                    baseColor = [170, 190, 255]; // Bluish for large ships
+                } else if (shipSize < 30) {
+                    baseColor = [255, 70, 20]; // Hot red-orange for small ships
                 }
 
-                // Maintain backward compatibility with particles set
-                this.particles.add(particle);
+                // Get a particle from the pool
+                const particle = this.particlePool.get(
+                    enginePos.x,
+                    enginePos.y,
+                    particleAngle,
+                    shipSize,
+                    baseColor
+                );
+
+                // Adjust particle properties dynamically for dramatic effects
+                if (particle) {
+                    const mult = Math.max(0.15, Math.min(2.5, multiplier));
+                    if (isBoosting) {
+                        particle.size *= random(1.5, 2.4) * mult; // Much thicker plumes
+                        particle.vel.mult(random(1.8, 3.2) * mult); // Expel backward much faster
+                        particle.maxLife = random(25, 45) * mult; // Longer trail
+                        particle.life = particle.maxLife;
+                        particle.currentColor = [...baseColor, 255];
+                    } else {
+                        particle.size *= random(1.0, 1.45) * mult; // Richer regular plumes
+                        particle.vel.mult(mult); // Expel backward proportionally
+                        particle.maxLife = random(18, 32) * mult; // Proportional trail lifetime
+                        particle.life = particle.maxLife;
+                    }
+
+                    // Maintain backward compatibility with particles set
+                    this.particles.add(particle);
+                }
             }
         }
     }

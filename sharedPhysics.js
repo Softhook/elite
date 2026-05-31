@@ -97,7 +97,8 @@ class SharedPhysics {
                 if (isBoosting) {
                     thrustCount = Math.ceil(thrustCount * 2.5);
                 }
-                entity.thrustManager.createThrust(entity.pos, entity.angle, entity.size, thrustCount, isBoosting);
+                const shipType = entity.shipTypeName || entity.shipType || entity.type;
+                entity.thrustManager.createThrust(entity.pos, entity.angle, entity.size, thrustCount, isBoosting, shipType, false, 'rear', multiplier);
             }
         }
     }
@@ -135,12 +136,18 @@ class SharedPhysics {
 
             if (!isAlien) {
                 const thrustCount = SharedPhysics._getThrustParticleCount(multiplier);
+                const shipType = entity.shipTypeName || entity.shipType || entity.type;
 
                 entity.thrustManager.createThrust(
                     entity.pos,
-                    strafeAngle,
+                    entity.angle,
                     entity.size * SHARED_PHYSICS_CONFIG.STRAFE_PARTICLE_SIZE_MULT,
-                    thrustCount
+                    thrustCount,
+                    false,
+                    shipType,
+                    false,
+                    direction === -1 ? 'right' : 'left',
+                    multiplier
                 );
             }
         }
@@ -176,13 +183,12 @@ class SharedPhysics {
             const isAlien = (typeof entity._isAlienShip === 'function') ? entity._isAlienShip() : false;
 
             if (!isAlien) {
-                const offset = PI * SHARED_PHYSICS_CONFIG.RETRO_THRUST_ANGLE_OFFSET;
                 const size = entity.size * SHARED_PHYSICS_CONFIG.REVERSE_PARTICLE_SIZE_MULT;
                 const thrustCount = SharedPhysics._getThrustParticleCount(multiplier);
+                const shipType = entity.shipTypeName || entity.shipType || entity.type;
 
-                // Front-left and Front-right retro thrusters
-                entity.thrustManager.createThrust(entity.pos, entity.angle + PI - offset, size, thrustCount);
-                entity.thrustManager.createThrust(entity.pos, entity.angle + PI + offset, size, thrustCount);
+                // Front-left and Front-right retro thrusters (drawn symmetrically from the front nozzles)
+                entity.thrustManager.createThrust(entity.pos, entity.angle, size, thrustCount, false, shipType, false, 'front', multiplier);
             }
         }
     }

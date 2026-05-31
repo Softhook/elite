@@ -1505,29 +1505,108 @@ class Player {
         // Create thrust particles at ship's front sides for reverse thrusters
         if (this.thrustManager) {
             // Pre-calculate common values
-            const piOver4 = PI * 0.25;
-            const offset = this.size * 0.7;
-            const offsetSide = this.size * 0.4;
-            const thrustSize = this.size * 0.9;
+            const cosA = cos(this.angle);
+            const sinA = sin(this.angle);
+            const thrustSize = this.size * 0.4; // Proportionate flame size
 
-            // Left thruster: 45 degrees from center
-            const leftThrusterAngle = this.angle - piOver4;
-            const leftPosX = this.pos.x + cos(this.angle) * offset + cos(leftThrusterAngle) * offsetSide;
-            const leftPosY = this.pos.y + sin(this.angle) * offset + sin(leftThrusterAngle) * offsetSide;
+            let localX = this.size * 0.35; // Positioned near the front outline (fallback)
+            let localY_left = -this.size * 0.15; // Left side offset (negative Y) (fallback)
+            let localY_right = this.size * 0.15; // Right side offset (positive Y) (fallback)
 
-            // Right thruster: 45 degrees from center
-            const rightThrusterAngle = this.angle + piOver4;
-            const rightPosX = this.pos.x + cos(this.angle) * offset + cos(rightThrusterAngle) * offsetSide;
-            const rightPosY = this.pos.y + sin(this.angle) * offset + sin(rightThrusterAngle) * offsetSide;
+            const cacheKey = this.shipTypeName + "_" + this.size;
+            if (this._cachedFrontKey !== cacheKey) {
+                if (this.shipTypeName && typeof SHIP_DEFINITIONS !== 'undefined' && SHIP_DEFINITIONS[this.shipTypeName]) {
+                    const def = SHIP_DEFINITIONS[this.shipTypeName];
+                    let vertices = [];
+                    if (Array.isArray(def.vertexData)) {
+                        vertices = def.vertexData;
+                    } else if (Array.isArray(def.vertexLayers) && def.vertexLayers.length > 0) {
+                        const layer = def.vertexLayers[0];
+                        if (layer && Array.isArray(layer.vertexData)) {
+                            vertices = layer.vertexData;
+                        }
+                    }
+
+                    if (vertices.length > 1) {
+                        // Find maxX (the front boundary/nose tip)
+                        let maxX = -999;
+                        for (let i = 0; i < vertices.length; i++) {
+                            const vx = vertices[i].x;
+                            if (vx > maxX) maxX = vx;
+                        }
+
+                        // Place front thrusters at 60% of maxX (40% back from nose tip)
+                        const targetLocalX = maxX * 0.6;
+                        let foundLeft = false;
+                        let foundRight = false;
+                        let y_left = 0;
+                        let y_right = 0;
+
+                        for (let i = 0; i < vertices.length; i++) {
+                            const v1 = vertices[i];
+                            const v2 = vertices[(i + 1) % vertices.length];
+
+                            // Check if edge spans across targetLocalX
+                            const minEdgeX = Math.min(v1.x, v2.x);
+                            const maxEdgeX = Math.max(v1.x, v2.x);
+
+                            if (targetLocalX >= minEdgeX && targetLocalX <= maxEdgeX && minEdgeX !== maxEdgeX) {
+                                // Interpolate Y at targetLocalX
+                                const t = (targetLocalX - v1.x) / (v2.x - v1.x);
+                                const y_intersect = v1.y + t * (v2.y - v1.y);
+
+                                if (y_intersect < 0) {
+                                    if (!foundLeft || y_intersect < y_left) {
+                                        y_left = y_intersect;
+                                        foundLeft = true;
+                                    }
+                                } else {
+                                    if (!foundRight || y_intersect > y_right) {
+                                        y_right = y_intersect;
+                                        foundRight = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (foundLeft && foundRight) {
+                            const r = this.size * 0.5;
+                            localX = targetLocalX * r;
+                            // Add a tiny outward margin offset (1.5 units) so nozzle clearance is clean
+                            localY_left = y_left * r - 1.5;
+                            localY_right = y_right * r + 1.5;
+                        }
+                    }
+                }
+                this._cachedFrontKey = cacheKey;
+                this._cachedFrontLocalX = localX;
+                this._cachedFrontLocalYLeft = localY_left;
+                this._cachedFrontLocalYRight = localY_right;
+            } else {
+                localX = this._cachedFrontLocalX;
+                localY_left = this._cachedFrontLocalYLeft;
+                localY_right = this._cachedFrontLocalYRight;
+            }
+
+            // Left nozzle position
+            const leftPosX = this.pos.x + localX * cosA - localY_left * sinA;
+            const leftPosY = this.pos.y + localX * sinA + localY_left * cosA;
+            const leftExhaustAngle = this.angle - PI * 0.25; // Shoots forward-left diagonal
+
+            // Right nozzle position
+            const rightPosX = this.pos.x + localX * cosA - localY_right * sinA;
+            const rightPosY = this.pos.y + localX * sinA + localY_right * cosA;
+            const rightExhaustAngle = this.angle + PI * 0.25; // Shoots forward-right diagonal
 
             // Create thrust using cached position object to avoid allocations
             if (!this._tempThrustPos) this._tempThrustPos = createVector(0, 0);
 
+            // particles fly in direction of exhaustAngle (so createThrust parameter is exhaustAngle - PI)
             this._tempThrustPos.set(leftPosX, leftPosY);
-            this.thrustManager.createThrust(this._tempThrustPos, leftThrusterAngle, thrustSize);
+            this.thrustManager.createThrust(this._tempThrustPos, leftExhaustAngle - PI, thrustSize, 1, false, null, true, 'rear', multiplier);
 
             this._tempThrustPos.set(rightPosX, rightPosY);
-            this.thrustManager.createThrust(this._tempThrustPos, rightThrusterAngle, thrustSize);
+            this.thrustManager.createThrust(this._tempThrustPos, rightExhaustAngle - PI, thrustSize, 1, false, null, true, 'rear', multiplier);
 
             // FALLBACK: Direct visual rendering if thrustManager isn't showing particles
             // This will ensure there's always a visual indicator even if the thrust particles fail
@@ -1535,15 +1614,15 @@ class Player {
             fill(255, 150, 255, 200); // Bright magenta with some transparency
             noStroke();
 
-            // Left thruster triangle
+            // Left thruster triangle (base at nozzle, tip pointing along leftExhaustAngle)
             translate(leftPosX, leftPosY);
-            rotate(leftThrusterAngle);
-            triangle(0, 0, -10, -5, -10, 5);
+            rotate(leftExhaustAngle);
+            triangle(0, -3, 0, 3, 10, 0);
 
-            // Right thruster triangle
+            // Right thruster triangle (base at nozzle, tip pointing along rightExhaustAngle)
             translate(rightPosX - leftPosX, rightPosY - leftPosY); // Relative translation
-            rotate(rightThrusterAngle - leftThrusterAngle); // Relative rotation
-            triangle(0, 0, -10, -5, -10, 5);
+            rotate(rightExhaustAngle - leftExhaustAngle); // Relative rotation
+            triangle(0, -3, 0, 3, 10, 0);
 
             pop();
         }
@@ -4254,7 +4333,13 @@ class Player {
                 this.thrustManager.createThrust(
                     this.pos,
                     this.angle,  // Use facing angle, not reversed
-                    this.size
+                    this.size,
+                    2,
+                    false,
+                    this.shipTypeName,
+                    false,
+                    'rear',
+                    AUTOPILOT_THRUST
                 );
             }
 

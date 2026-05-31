@@ -44,6 +44,7 @@ function createMockEntity(overrides = {}) {
         isCoastingFromBurst: false,
         brakingMultiplier: undefined,
         thrustManager: null,  // No particles in tests
+        shipTypeName: 'Viper',
         ...overrides
     };
 }
@@ -201,7 +202,11 @@ describe('SharedPhysics Analog Thrust Visual Scaling', () => {
             entity.angle,
             entity.size,
             2,
-            false
+            false,
+            'Viper',
+            false,
+            'rear',
+            0.25
         );
     });
 
@@ -215,9 +220,14 @@ describe('SharedPhysics Analog Thrust Visual Scaling', () => {
 
         expect(entity.thrustManager.createThrust).toHaveBeenCalledWith(
             entity.pos,
-            entity.angle + HALF_PI,
+            entity.angle,
             entity.size * 0.8,
-            3
+            3,
+            false,
+            'Viper',
+            false,
+            'left',
+            0.8
         );
     });
 
@@ -233,7 +243,11 @@ describe('SharedPhysics Analog Thrust Visual Scaling', () => {
             entity.angle,
             entity.size,
             4,
-            false
+            false,
+            'Viper',
+            false,
+            'rear',
+            1.2
         );
     });
 
@@ -249,7 +263,11 @@ describe('SharedPhysics Analog Thrust Visual Scaling', () => {
             entity.angle,
             entity.size,
             6,
-            false
+            false,
+            'Viper',
+            false,
+            'rear',
+            2.5
         );
     });
 });
