@@ -167,6 +167,12 @@ describe('Ambient Environmental Effects and Micro-Asteroids', () => {
         expect(p.depth).toBeLessThanOrEqual(1.0);
         expect(p.size).toBeGreaterThanOrEqual(0.6);
         expect(p.size).toBeLessThanOrEqual(3.5);
+
+        for (const particle of hail.particles) {
+            const screenX = particle.relX * particle.depth;
+            const screenY = particle.relY * particle.depth;
+            expect(Math.abs(screenX) > global.width / 2 || Math.abs(screenY) > global.height / 2).toBe(true);
+        }
     });
 
     test('MicroAsteroid particles update position and wrap boundaries', () => {
@@ -262,6 +268,9 @@ describe('Ambient Environmental Effects and Micro-Asteroids', () => {
         // After wrapping, the particle position should be reset, but the object reference should be exactly the same!
         expect(hail.particles[0]).toBe(particleRef);
         expect(hail.particles[0].relX).not.toBe(10000);
+        const wrappedScreenX = hail.particles[0].relX * hail.particles[0].depth;
+        const wrappedScreenY = hail.particles[0].relY * hail.particles[0].depth;
+        expect(Math.abs(wrappedScreenX) > global.width / 2 || Math.abs(wrappedScreenY) > global.height / 2).toBe(true);
 
         // Test collision in-place reuse
         hail.particles[0].relX = 10; // Colliding pos
@@ -273,6 +282,9 @@ describe('Ambient Environmental Effects and Micro-Asteroids', () => {
         // After collision, it should spark and reset, but keep the same object reference!
         expect(hail.particles[0]).toBe(particleRef);
         expect(hail.particles[0].relX).not.toBe(10);
+        const collisionScreenX = hail.particles[0].relX * hail.particles[0].depth;
+        const collisionScreenY = hail.particles[0].relY * hail.particles[0].depth;
+        expect(Math.abs(collisionScreenX) > global.width / 2 || Math.abs(collisionScreenY) > global.height / 2).toBe(true);
     });
 
     test('AmbientCosmicEvent updates active status and ends when duration expires', () => {

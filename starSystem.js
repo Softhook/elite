@@ -9652,10 +9652,17 @@ class MicroAsteroidHail {
         const driftVy = this.streamVy + random(-0.4, 0.4);
 
         if (randomPos) {
-            const sx = random(-halfW - margin, halfW + margin);
-            const sy = random(-halfH - margin, halfH + margin);
-            relX = sx / depth;
-            relY = sy / depth;
+            if (random() > 0.5) {
+                const sx = random() > 0.5 ? -halfW - margin : halfW + margin;
+                const sy = random(-halfH - margin, halfH + margin);
+                relX = sx / depth;
+                relY = sy / depth;
+            } else {
+                const sx = random(-halfW - margin, halfW + margin);
+                const sy = random() > 0.5 ? -halfH - margin : halfH + margin;
+                relX = sx / depth;
+                relY = sy / depth;
+            }
         } else {
             const playerVel = this.system.player?.vel;
             const pvx = playerVel ? playerVel.x : 0;
@@ -9668,21 +9675,25 @@ class MicroAsteroidHail {
             const speedSq = rx * rx + ry * ry;
 
             if (speedSq > 0.05) {
-                const angle = atan2(ry, rx) + PI + random(-HALF_PI, HALF_PI);
-                const spawnDist = max(halfW, halfH) + margin - 20;
-                const sx = cos(angle) * spawnDist;
-                const sy = sin(angle) * spawnDist;
-                
-                relX = sx / depth;
-                relY = sy / depth;
+                if (abs(rx) >= abs(ry)) {
+                    const sx = rx > 0 ? -halfW - margin : halfW + margin;
+                    const sy = random(-halfH - margin, halfH + margin);
+                    relX = sx / depth;
+                    relY = sy / depth;
+                } else {
+                    const sx = random(-halfW - margin, halfW + margin);
+                    const sy = ry > 0 ? -halfH - margin : halfH + margin;
+                    relX = sx / depth;
+                    relY = sy / depth;
+                }
             } else {
                 let sx, sy;
                 if (random() > 0.5) {
-                    sx = random() > 0.5 ? -halfW - margin + 10 : halfW + margin - 10;
-                    sy = random(-halfH, halfH);
+                    sx = random() > 0.5 ? -halfW - margin : halfW + margin;
+                    sy = random(-halfH - margin, halfH + margin);
                 } else {
-                    sx = random(-halfW, halfW);
-                    sy = random() > 0.5 ? -halfH - margin + 10 : halfH + margin - 10;
+                    sx = random(-halfW - margin, halfW + margin);
+                    sy = random() > 0.5 ? -halfH - margin : halfH + margin;
                 }
                 relX = sx / depth;
                 relY = sy / depth;
@@ -9890,4 +9901,3 @@ class MicroAsteroidHail {
 if (typeof module !== 'undefined') {
     module.exports = { StarSystem, AmbientCosmicEvent, MicroAsteroidHail };
 }
-
