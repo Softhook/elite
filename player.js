@@ -2310,22 +2310,74 @@ class Player {
 
         // Surface mode filter: skip force wave effect in surface mode (handled by surfaceMode._drawForceWaves)
         const inSurfaceMode = typeof surfaceMode !== 'undefined' && surfaceMode && surfaceMode.isActive();
-        if (!inSurfaceMode && this.lastForceWave && millis() - this.lastForceWave.time < 300) {
+        if (!inSurfaceMode && this.lastForceWave && millis() - this.lastForceWave.time < 500) {
             const timeSinceForce = millis() - this.lastForceWave.time;
-            const alpha = map(timeSinceForce, 0, 300, 200, 0);
+            const progress = timeSinceForce / 500;
+            const alpha = map(progress, 0, 1, 255, 0);
+            const cr = this.lastForceWave.color[0];
+            const cg = this.lastForceWave.color[1];
+            const cb = this.lastForceWave.color[2];
 
             push();
             translate(this.pos.x, this.pos.y);
-            noFill();
-            strokeWeight(3);
-            stroke(this.lastForceWave.color[0],
-                this.lastForceWave.color[1],
-                this.lastForceWave.color[2],
-                alpha);
+            blendMode(ADD);
 
-            // Expanding circle at ship
-            const radius = map(timeSinceForce, 0, 300, 10, 40);
-            circle(0, 0, radius * 2);
+            // --- Bright white initial flash that fades to weapon color ---
+            const flashIntensity = max(0, 1 - progress * 3);
+            if (flashIntensity > 0) {
+                noStroke();
+                // White-hot core
+                fill(255, 255, 255, flashIntensity * 220);
+                circle(0, 0, 30 * flashIntensity + 8);
+                // Colored halo
+                fill(cr, cg, cb, flashIntensity * 150);
+                circle(0, 0, 50 * flashIntensity + 12);
+            }
+
+            // --- Multiple expanding rings from ship center ---
+            noFill();
+            // Primary ring
+            const radius1 = map(progress, 0, 1, 8, 50);
+            strokeWeight(2.5);
+            stroke(cr, cg, cb, alpha * 0.9);
+            circle(0, 0, radius1 * 2);
+
+            // Secondary ring (slightly delayed)
+            const ring2Progress = max(0, progress - 0.1);
+            const radius2 = map(ring2Progress, 0, 0.9, 5, 40);
+            strokeWeight(1.5);
+            stroke(255, 255, 255, alpha * 0.6);
+            circle(0, 0, radius2 * 2);
+
+            // Tertiary faint ring
+            const ring3Progress = max(0, progress - 0.2);
+            const radius3 = map(ring3Progress, 0, 0.8, 3, 35);
+            strokeWeight(3.5);
+            stroke(cr, cg, cb, alpha * 0.25);
+            circle(0, 0, radius3 * 2);
+
+            // --- Radial burst of energy lines ---
+            const burstAlpha = max(0, 1 - progress * 2) * 200;
+            if (burstAlpha > 0) {
+                strokeWeight(1.2);
+                const overallFlicker = sin(timeSinceForce * 0.02) * 0.2 + 0.8;
+                stroke(cr, cg, cb, burstAlpha * overallFlicker);
+                for (let i = 0; i < 10; i++) {
+                    const angle = (i / 10) * TWO_PI + timeSinceForce * 0.003;
+                    const innerDist = 6 + progress * 10;
+                    const outerDist = 20 + progress * 35;
+                    const cosVal = cos(angle);
+                    const sinVal = sin(angle);
+                    line(
+                        cosVal * innerDist,
+                        sinVal * innerDist,
+                        cosVal * outerDist,
+                        sinVal * outerDist
+                    );
+                }
+            }
+
+            blendMode(BLEND);
             pop();
         }
 

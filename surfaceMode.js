@@ -3771,7 +3771,7 @@ class SurfaceMode {
         this._clearShadow();
 
         const extrusionAngle = this._getExtrusionAngle(); // Consistent with other visual altitude calculations
-        const counterScale = this._getCounterScale(); // For consistent sizing
+        const now = millis();
 
         for (const wave of this.starSystem.forceWaves) {
             if (!wave) continue;
@@ -3779,33 +3779,107 @@ class SurfaceMode {
             if (!wave.isSurface) continue;
 
             // Calculate visual X and Y positions based on altitude
-            const visualX = this._toVisualX(wave.pos.x, wave.altitude);
-            const visualY = this._toVisualY(wave.pos.y, wave.altitude);
+            const cx = this._toVisualX(wave.pos.x, wave.altitude);
+            const cy = this._toVisualY(wave.pos.y, wave.altitude);
 
-            // Fade out as the wave expands
-            const alpha = map(wave.radius, 0, wave.maxRadius, 220, 0);
+            const progress = wave.radius / wave.maxRadius;
+            const alpha = map(progress, 0, 1, 255, 0);
+            const age = now - wave.startTime;
+            const r = wave.color[0], g = wave.color[1], b = wave.color[2];
 
-            // Draw outer ring
+            push();
+
+            // --- Additive glow layer ---
+            blendMode(ADD);
+
+            // Outer leading ring (bright, thin)
             noFill();
-            strokeWeight(6);
-            stroke(wave.color[0], wave.color[1], wave.color[2], alpha);
-            circle(visualX, visualY, wave.radius * 2);
+            strokeWeight(2.5);
+            stroke(r, g, b, alpha * 0.9);
+            circle(cx, cy, wave.radius * 2);
 
-            // Draw secondary ring
-            strokeWeight(3);
+            // Secondary ring slightly behind
+            strokeWeight(4);
+            stroke(r, g, b, alpha * 0.5);
+            circle(cx, cy, wave.radius * 1.85);
+
+            // Hot white edge ring
+            strokeWeight(1.5);
             stroke(255, 255, 255, alpha * 0.7);
-            circle(visualX, visualY, wave.radius * 1.9);
+            circle(cx, cy, wave.radius * 2.02);
 
-            // Draw inner glow
-            strokeWeight(10);
-            stroke(wave.color[0], wave.color[1], wave.color[2], alpha * 0.5);
-            circle(visualX, visualY, wave.radius * 1.7);
+            // Tertiary inner ring
+            strokeWeight(6);
+            stroke(r, g, b, alpha * 0.25);
+            circle(cx, cy, wave.radius * 1.6);
 
-            // Draw center pulse
-            const pulseSize = (millis() - wave.startTime) % 300 / 300 * 50;
-            fill(wave.color[0], wave.color[1], wave.color[2], alpha);
+            // Faint wide aura ring
+            strokeWeight(12);
+            stroke(r, g, b, alpha * 0.1);
+            circle(cx, cy, wave.radius * 1.4);
+
+            // --- Energy crackle lines radiating outward (~12) ---
+            noFill();
+            strokeWeight(1.2);
+            const overallFlicker = sin(age * 0.015) * 0.25 + 0.75;
+            stroke(r, g, b, alpha * 0.55 * overallFlicker);
+            for (let i = 0; i < 12; i++) {
+                const baseAngle = (i / 12) * TWO_PI + age * 0.002;
+                const innerR = wave.radius * 0.5;
+                const outerR = wave.radius * (0.92 + sin(age * 0.01 + i * 2.3) * 0.08);
+                const jitter = sin(age * 0.025 + i * 3.1) * 8;
+
+                const cosVal = cos(baseAngle);
+                const sinVal = sin(baseAngle);
+
+                const innerX = cx + cosVal * innerR;
+                const innerY = cy + sinVal * innerR;
+                const outerX = cx + cosVal * outerR;
+                const outerY = cy + sinVal * outerR;
+
+                const midX = (innerX + outerX) * 0.5 - sinVal * jitter;
+                const midY = (innerY + outerY) * 0.5 + cosVal * jitter;
+
+                line(innerX, innerY, midX, midY);
+                line(midX, midY, outerX, outerY);
+            }
+
+            // --- Center flash (bright white that fades to weapon color) ---
             noStroke();
-            circle(visualX, visualY, pulseSize);
+            const flashIntensity = max(0, 1 - progress * 2.5);
+            if (flashIntensity > 0) {
+                // White-hot center
+                fill(255, 255, 255, flashIntensity * 200);
+                circle(cx, cy, wave.radius * 0.3 * flashIntensity + 15);
+                // Colored halo around center
+                fill(r, g, b, flashIntensity * 120);
+                circle(cx, cy, wave.radius * 0.5 * flashIntensity + 25);
+            }
+
+            // --- Pulsating inner energy ---
+            const pulsePhase = (age % 200) / 200;
+            const pulseRadius = pulsePhase * wave.radius * 0.6;
+            const pulseAlpha = alpha * (1 - pulsePhase) * 0.5;
+            noFill();
+            strokeWeight(2);
+            stroke(255, 255, 255, pulseAlpha);
+            circle(cx, cy, pulseRadius * 2);
+            stroke(r, g, b, pulseAlpha * 0.7);
+            strokeWeight(3);
+            circle(cx, cy, pulseRadius * 1.6);
+
+            // --- Debris dots scattered along wavefront (~8) ---
+            noStroke();
+            fill(r, g, b, alpha * 0.5);
+            for (let i = 0; i < 8; i++) {
+                const dotAngle = (i / 8) * TWO_PI + age * 0.001 + i * 0.5;
+                const dotR = wave.radius * (0.9 + sin(age * 0.008 + i * 4.1) * 0.12);
+                const dotSize = 2 + sin(age * 0.02 + i * 2.7) * 1.5;
+                circle(cx + cos(dotAngle) * dotR, cy + sin(dotAngle) * dotR, dotSize);
+            }
+
+            blendMode(BLEND);
+            pop();
         }
 
         pop();

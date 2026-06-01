@@ -89,29 +89,36 @@ const PARALLAX_TWINKLE_RANGE = 0.3;
 
 // === Summon Ping Visual Configuration ===
 const SUMMON_PING_CONFIG = {
-    DEFAULT_DURATION_MS: 1150,
+    DEFAULT_DURATION_MS: 2800,
     INITIAL_RADIUS: 18,
     ECHO_DELAY_FRACTION: 0.24,
     ECHO_INITIAL_RADIUS: 12,
     ECHO_MAX_SCALE: 0.92,
     ECHO_ALPHA_MULTIPLIER: 0.55,
-    CENTER_GLOW_MIN: 6,
-    CENTER_GLOW_MAX: 12,
-    ARC_SEGMENTS: 3,
-    ARC_SPAN: Math.PI * 0.38,
-    INNER_ARC_SPAN: Math.PI * 0.24,
-    WAVE_OFFSETS: [0, 0.16, 0.33],
-    ROTATION_SPEED: 0.9,
-    RING_SEPARATION: 20,
-    WAVE_ALPHA_DECAY: 0.65,
-    WAVE_INDEX_ALPHA_FACTOR: 0.18,
-    WAVE_ROTATION_OFFSET: 0.42,
-    BASE_STROKE_WEIGHT: 2.1,
-    STROKE_WEIGHT_DECAY: 0.35,
+    CENTER_GLOW_MIN: 4,
+    CENTER_GLOW_MAX: 16,
+    ARC_SEGMENTS: 4,
+    ARC_SPAN: Math.PI * 0.32,
+    INNER_ARC_SPAN: Math.PI * 0.20,
+    WAVE_OFFSETS: [0, 0.11, 0.23, 0.36, 0.50],
+    ROTATION_SPEED: 1.5,
+    RING_SEPARATION: 22,
+    WAVE_ALPHA_DECAY: 0.55,
+    WAVE_INDEX_ALPHA_FACTOR: 0.14,
+    WAVE_ROTATION_OFFSET: 0.52,
+    BASE_STROKE_WEIGHT: 2.4,
+    STROKE_WEIGHT_DECAY: 0.28,
     INNER_ARC_ALPHA_MULTIPLIER: 0.72,
     INNER_ARC_OFFSET: 0.18,
     INNER_ARC_STROKE_WEIGHT: 1.15,
-    MIN_INNER_RADIUS: 8
+    MIN_INNER_RADIUS: 8,
+    // Transmission pulse effect
+    PULSE_LINE_COUNT: 6,
+    PULSE_LINE_LENGTH: 18,
+    PULSE_LINE_ALPHA_MULT: 0.55,
+    CENTER_BLINK_RATE: 4.5,
+    OUTER_DASH_SEGMENTS: 8,
+    OUTER_DASH_SPAN: Math.PI * 0.08
 };
 
 
@@ -4108,34 +4115,109 @@ class StarSystem {
     drawForceWaves() {
         if (!this.forceWaves || this.forceWaves.length === 0) return;
 
-        // No need for push/pop/translate here since we're already in the right coordinate system
-        // from the parent draw() method
+        const now = millis();
 
         for (const wave of this.forceWaves) {
-            // Fade out as the wave expands
-            const alpha = map(wave.radius, 0, wave.maxRadius, 220, 0);
+            const cx = wave.pos.x;
+            const cy = wave.pos.y;
+            const progress = wave.radius / wave.maxRadius;
+            const alpha = map(progress, 0, 1, 255, 0);
+            const age = now - wave.startTime;
+            const r = wave.color[0], g = wave.color[1], b = wave.color[2];
 
-            // Draw outer ring
+            push();
+
+            // --- Additive glow layer ---
+            blendMode(ADD);
+
+            // Outer leading ring (bright, thin)
             noFill();
-            strokeWeight(6);
-            stroke(wave.color[0], wave.color[1], wave.color[2], alpha);
-            circle(wave.pos.x, wave.pos.y, wave.radius * 2);
+            strokeWeight(2.5);
+            stroke(r, g, b, alpha * 0.9);
+            circle(cx, cy, wave.radius * 2);
 
-            // Draw secondary ring
-            strokeWeight(3);
+            // Secondary ring slightly behind
+            strokeWeight(4);
+            stroke(r, g, b, alpha * 0.5);
+            circle(cx, cy, wave.radius * 1.85);
+
+            // Hot white edge ring
+            strokeWeight(1.5);
             stroke(255, 255, 255, alpha * 0.7);
-            circle(wave.pos.x, wave.pos.y, wave.radius * 1.9);
+            circle(cx, cy, wave.radius * 2.02);
 
-            // Draw inner glow
-            strokeWeight(10);
-            stroke(wave.color[0], wave.color[1], wave.color[2], alpha * 0.5);
-            circle(wave.pos.x, wave.pos.y, wave.radius * 1.7);
+            // Tertiary inner ring
+            strokeWeight(6);
+            stroke(r, g, b, alpha * 0.25);
+            circle(cx, cy, wave.radius * 1.6);
 
-            // Draw center pulse
-            const pulseSize = (millis() - wave.startTime) % 300 / 300 * 50;
-            fill(wave.color[0], wave.color[1], wave.color[2], alpha);
+            // Faint wide aura ring
+            strokeWeight(12);
+            stroke(r, g, b, alpha * 0.1);
+            circle(cx, cy, wave.radius * 1.4);
+
+            // --- Energy crackle lines radiating outward (~12) ---
+            noFill();
+            strokeWeight(1.2);
+            const overallFlicker = sin(age * 0.015) * 0.25 + 0.75;
+            stroke(r, g, b, alpha * 0.55 * overallFlicker);
+            for (let i = 0; i < 12; i++) {
+                const baseAngle = (i / 12) * TWO_PI + age * 0.002;
+                const innerR = wave.radius * 0.5;
+                const outerR = wave.radius * (0.92 + sin(age * 0.01 + i * 2.3) * 0.08);
+                const jitter = sin(age * 0.025 + i * 3.1) * 8;
+
+                const cosVal = cos(baseAngle);
+                const sinVal = sin(baseAngle);
+
+                const innerX = cx + cosVal * innerR;
+                const innerY = cy + sinVal * innerR;
+                const outerX = cx + cosVal * outerR;
+                const outerY = cy + sinVal * outerR;
+
+                const midX = (innerX + outerX) * 0.5 - sinVal * jitter;
+                const midY = (innerY + outerY) * 0.5 + cosVal * jitter;
+
+                line(innerX, innerY, midX, midY);
+                line(midX, midY, outerX, outerY);
+            }
+
+            // --- Center flash (bright white that fades to weapon color) ---
             noStroke();
-            circle(wave.pos.x, wave.pos.y, pulseSize);
+            const flashIntensity = max(0, 1 - progress * 2.5);
+            if (flashIntensity > 0) {
+                // White-hot center
+                fill(255, 255, 255, flashIntensity * 200);
+                circle(cx, cy, wave.radius * 0.3 * flashIntensity + 15);
+                // Colored halo around center
+                fill(r, g, b, flashIntensity * 120);
+                circle(cx, cy, wave.radius * 0.5 * flashIntensity + 25);
+            }
+
+            // --- Pulsating inner energy ---
+            const pulsePhase = (age % 200) / 200;
+            const pulseRadius = pulsePhase * wave.radius * 0.6;
+            const pulseAlpha = alpha * (1 - pulsePhase) * 0.5;
+            noFill();
+            strokeWeight(2);
+            stroke(255, 255, 255, pulseAlpha);
+            circle(cx, cy, pulseRadius * 2);
+            stroke(r, g, b, pulseAlpha * 0.7);
+            strokeWeight(3);
+            circle(cx, cy, pulseRadius * 1.6);
+
+            // --- Debris dots scattered along wavefront (~8) ---
+            noStroke();
+            fill(r, g, b, alpha * 0.5);
+            for (let i = 0; i < 8; i++) {
+                const dotAngle = (i / 8) * TWO_PI + age * 0.001 + i * 0.5;
+                const dotR = wave.radius * (0.9 + sin(age * 0.008 + i * 4.1) * 0.12);
+                const dotSize = 2 + sin(age * 0.02 + i * 2.7) * 1.5;
+                circle(cx + cos(dotAngle) * dotR, cy + sin(dotAngle) * dotR, dotSize);
+            }
+
+            blendMode(BLEND);
+            pop();
         }
     }
 
@@ -6843,22 +6925,117 @@ class StarSystem {
         }
     }
 
+
     /** Draw force waves with visibility culling */
     drawForceWavesWithCulling(screenBounds) {
+        const now = millis();
         for (let i = 0; i < this.forceWaves.length; i++) {
             const wave = this.forceWaves[i];
 
             // Only draw if wave intersects screen
             if (this.isInView(wave.pos.x, wave.pos.y, wave.radius, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) {
+                const cx = wave.pos.x;
+                const cy = wave.pos.y;
+                const progress = wave.radius / wave.maxRadius;
+                const alpha = map(progress, 0, 1, 255, 0);
+                const age = now - wave.startTime;
+                const r = wave.color[0], g = wave.color[1], b = wave.color[2];
+
+                push();
+                blendMode(ADD);
+
+                // Outer leading ring (bright, thin)
                 noFill();
-                stroke(wave.color[0], wave.color[1], wave.color[2], 150);
-                strokeWeight(1); // Thinner beams
-                ellipse(wave.pos.x, wave.pos.y, wave.radius * 2);
+                strokeWeight(2.5);
+                stroke(r, g, b, alpha * 0.9);
+                circle(cx, cy, wave.radius * 2);
+
+                // Secondary ring slightly behind
+                strokeWeight(4);
+                stroke(r, g, b, alpha * 0.5);
+                circle(cx, cy, wave.radius * 1.85);
+
+                // Hot white edge ring
+                strokeWeight(1.5);
+                stroke(255, 255, 255, alpha * 0.7);
+                circle(cx, cy, wave.radius * 2.02);
+
+                // Tertiary inner ring
+                strokeWeight(6);
+                stroke(r, g, b, alpha * 0.25);
+                circle(cx, cy, wave.radius * 1.6);
+
+                // Faint wide aura ring
+                strokeWeight(12);
+                stroke(r, g, b, alpha * 0.1);
+                circle(cx, cy, wave.radius * 1.4);
+
+                // --- Energy crackle lines radiating outward (~12) ---
+                noFill();
+                strokeWeight(1.2);
+                const overallFlicker = sin(age * 0.015) * 0.25 + 0.75;
+                stroke(r, g, b, alpha * 0.55 * overallFlicker);
+                for (let j = 0; j < 12; j++) {
+                    const baseAngle = (j / 12) * TWO_PI + age * 0.002;
+                    const innerR = wave.radius * 0.5;
+                    const outerR = wave.radius * (0.92 + sin(age * 0.01 + j * 2.3) * 0.08);
+                    const jitter = sin(age * 0.025 + j * 3.1) * 8;
+
+                    const cosVal = cos(baseAngle);
+                    const sinVal = sin(baseAngle);
+
+                    const innerX = cx + cosVal * innerR;
+                    const innerY = cy + sinVal * innerR;
+                    const outerX = cx + cosVal * outerR;
+                    const outerY = cy + sinVal * outerR;
+
+                    const midX = (innerX + outerX) * 0.5 - sinVal * jitter;
+                    const midY = (innerY + outerY) * 0.5 + cosVal * jitter;
+
+                    line(innerX, innerY, midX, midY);
+                    line(midX, midY, outerX, outerY);
+                }
+
+                // --- Center flash (bright white that fades to weapon color) ---
+                noStroke();
+                const flashIntensity = max(0, 1 - progress * 2.5);
+                if (flashIntensity > 0) {
+                    // White-hot center
+                    fill(255, 255, 255, flashIntensity * 200);
+                    circle(cx, cy, wave.radius * 0.3 * flashIntensity + 15);
+                    // Colored halo around center
+                    fill(r, g, b, flashIntensity * 120);
+                    circle(cx, cy, wave.radius * 0.5 * flashIntensity + 25);
+                }
+
+                // --- Pulsating inner energy ---
+                const pulsePhase = (age % 200) / 200;
+                const pulseRadius = pulsePhase * wave.radius * 0.6;
+                const pulseAlpha = alpha * (1 - pulsePhase) * 0.5;
+                noFill();
+                strokeWeight(2);
+                stroke(255, 255, 255, pulseAlpha);
+                circle(cx, cy, pulseRadius * 2);
+                stroke(r, g, b, pulseAlpha * 0.7);
+                strokeWeight(3);
+                circle(cx, cy, pulseRadius * 1.6);
+
+                // --- Debris dots scattered along wavefront (~8) ---
+                noStroke();
+                fill(r, g, b, alpha * 0.5);
+                for (let j = 0; j < 8; j++) {
+                    const dotAngle = (j / 8) * TWO_PI + age * 0.001 + j * 0.5;
+                    const dotR = wave.radius * (0.9 + sin(age * 0.008 + j * 4.1) * 0.12);
+                    const dotSize = 2 + sin(age * 0.02 + j * 2.7) * 1.5;
+                    circle(cx + cos(dotAngle) * dotR, cy + sin(dotAngle) * dotR, dotSize);
+                }
+
+                blendMode(BLEND);
+                pop();
             }
         }
     }
 
-    /** Draw summon pings with visibility culling. */
     drawSummonPingsWithCulling(screenBounds) {
         const now = this._getCurrentTime();
         for (let i = 0; i < this.summonPings.length; i++) {
@@ -6867,12 +7044,16 @@ class StarSystem {
             if (!this.isInView(ping.x, ping.y, maxR, screenBounds.left, screenBounds.right, screenBounds.top, screenBounds.bottom)) continue;
 
             const t = constrain((now - ping.startTime) / Math.max(1, ping.durationMs || 1), 0, 1);
-            const pulseRadius = lerp(SUMMON_PING_CONFIG.INITIAL_RADIUS, maxR, t);
             const baseAlpha = Math.max(0, 205 * (1 - t));
             const col = ping.color || [210, 210, 255];
             const baseRotation = (ping.arcOffset || 0) + (t * SUMMON_PING_CONFIG.ROTATION_SPEED);
+            // Time-based pulse for transmission flicker
+            const elapsedMs = now - ping.startTime;
+            const blinkPhase = Math.sin(elapsedMs * 0.001 * SUMMON_PING_CONFIG.CENTER_BLINK_RATE * TWO_PI);
 
             noFill();
+
+            // --- Draw staggered transmission pulse waves ---
             for (let waveIndex = 0; waveIndex < SUMMON_PING_CONFIG.WAVE_OFFSETS.length; waveIndex++) {
                 const waveT = t - SUMMON_PING_CONFIG.WAVE_OFFSETS[waveIndex];
                 if (waveT < 0 || waveT > 1) continue;
@@ -6886,6 +7067,7 @@ class StarSystem {
                 );
                 const waveRotation = baseRotation + waveIndex * SUMMON_PING_CONFIG.WAVE_ROTATION_OFFSET;
 
+                // Main outer arc segments
                 stroke(col[0], col[1], col[2], waveAlpha);
                 strokeWeight(SUMMON_PING_CONFIG.BASE_STROKE_WEIGHT - waveIndex * SUMMON_PING_CONFIG.STROKE_WEIGHT_DECAY);
                 for (let segment = 0; segment < SUMMON_PING_CONFIG.ARC_SEGMENTS; segment++) {
@@ -6898,10 +7080,14 @@ class StarSystem {
                         segStart,
                         segStart + SUMMON_PING_CONFIG.ARC_SPAN
                     );
+                }
 
-                    const innerRadius = Math.max(SUMMON_PING_CONFIG.MIN_INNER_RADIUS, waveRadius - SUMMON_PING_CONFIG.RING_SEPARATION);
-                    stroke(col[0], col[1], col[2], waveAlpha * SUMMON_PING_CONFIG.INNER_ARC_ALPHA_MULTIPLIER);
-                    strokeWeight(SUMMON_PING_CONFIG.INNER_ARC_STROKE_WEIGHT);
+                // Inner arc segments (drawn in a separate loop to avoid stroke switches)
+                const innerRadius = Math.max(SUMMON_PING_CONFIG.MIN_INNER_RADIUS, waveRadius - SUMMON_PING_CONFIG.RING_SEPARATION);
+                stroke(col[0], col[1], col[2], waveAlpha * SUMMON_PING_CONFIG.INNER_ARC_ALPHA_MULTIPLIER);
+                strokeWeight(SUMMON_PING_CONFIG.INNER_ARC_STROKE_WEIGHT);
+                for (let segment = 0; segment < SUMMON_PING_CONFIG.ARC_SEGMENTS; segment++) {
+                    const segStart = waveRotation + segment * (TWO_PI / SUMMON_PING_CONFIG.ARC_SEGMENTS);
                     arc(
                         ping.x,
                         ping.y,
@@ -6910,14 +7096,61 @@ class StarSystem {
                         segStart + SUMMON_PING_CONFIG.INNER_ARC_OFFSET,
                         segStart + SUMMON_PING_CONFIG.INNER_ARC_OFFSET + SUMMON_PING_CONFIG.INNER_ARC_SPAN
                     );
-                    stroke(col[0], col[1], col[2], waveAlpha);
-                    strokeWeight(SUMMON_PING_CONFIG.BASE_STROKE_WEIGHT - waveIndex * SUMMON_PING_CONFIG.STROKE_WEIGHT_DECAY);
+                }
+
+                // Outer dashed ring - transmission signal look
+                if (waveIndex < 2) {
+                    const outerR = waveRadius + 8;
+                    const dashAlpha = waveAlpha * 0.45;
+                    stroke(col[0], col[1], col[2], dashAlpha);
+                    strokeWeight(0.8);
+                    const dashCount = SUMMON_PING_CONFIG.OUTER_DASH_SEGMENTS;
+                    const dashSpan = SUMMON_PING_CONFIG.OUTER_DASH_SPAN;
+                    const dashRotation = waveRotation * 1.3 + waveIndex * 0.7;
+                    for (let d = 0; d < dashCount; d++) {
+                        const dStart = dashRotation + d * (TWO_PI / dashCount);
+                        arc(ping.x, ping.y, outerR * 2, outerR * 2, dStart, dStart + dashSpan);
+                    }
                 }
             }
 
+            // --- Radial pulse lines emanating from center (transmission signal look) ---
+            const pulseLineCount = SUMMON_PING_CONFIG.PULSE_LINE_COUNT;
+            const pulseLineLen = SUMMON_PING_CONFIG.PULSE_LINE_LENGTH;
+            const lineAlpha = baseAlpha * SUMMON_PING_CONFIG.PULSE_LINE_ALPHA_MULT * Math.max(0, 0.5 + blinkPhase * 0.5);
+            if (lineAlpha > 2) {
+                stroke(col[0], col[1], col[2], lineAlpha);
+                strokeWeight(1.0);
+                const lineBaseR = lerp(14, maxR * 0.15, t);
+                const lineRot = baseRotation * 0.7;
+                for (let li = 0; li < pulseLineCount; li++) {
+                    const ang = lineRot + li * (TWO_PI / pulseLineCount);
+                    const r1 = lineBaseR;
+                    const r2 = lineBaseR + pulseLineLen * (1 - t * 0.6);
+                    const cosAng = Math.cos(ang);
+                    const sinAng = Math.sin(ang);
+                    line(
+                        ping.x + cosAng * r1,
+                        ping.y + sinAng * r1,
+                        ping.x + cosAng * r2,
+                        ping.y + sinAng * r2
+                    );
+                }
+            }
+
+            // --- Blinking center glow (transmission beacon) ---
             noStroke();
-            fill(col[0], col[1], col[2], Math.max(0, 135 * (1 - t)));
-            circle(ping.x, ping.y, lerp(SUMMON_PING_CONFIG.CENTER_GLOW_MAX, SUMMON_PING_CONFIG.CENTER_GLOW_MIN, t));
+            const centerBlink = Math.max(0, 0.4 + blinkPhase * 0.6);
+            const centerAlpha = Math.max(0, 165 * (1 - t) * centerBlink);
+            fill(col[0], col[1], col[2], centerAlpha);
+            const centerSize = lerp(SUMMON_PING_CONFIG.CENTER_GLOW_MAX, SUMMON_PING_CONFIG.CENTER_GLOW_MIN, t);
+            circle(ping.x, ping.y, centerSize);
+
+            // Bright white core that blinks
+            if (centerBlink > 0.7 && t < 0.6) {
+                fill(255, 255, 255, centerAlpha * 0.7);
+                circle(ping.x, ping.y, centerSize * 0.5);
+            }
         }
     }
 

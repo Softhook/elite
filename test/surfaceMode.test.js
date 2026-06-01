@@ -23,6 +23,9 @@ global.mouseX = 0;
 global.mouseY = 0;
 global.pixelDensity = jest.fn(() => 1);
 global.loadSound = jest.fn();
+global.blendMode = jest.fn();
+global.ADD = 'add';
+global.BLEND = 'blend';
 // Mock p5 color helper functions
 global.color = (r, g, b, a) => ({ levels: [r, g, b, a || 255], toString: () => `rgba(${r},${g},${b},${a || 255})` });
 global.red = (c) => c && c.levels ? c.levels[0] : 0;
