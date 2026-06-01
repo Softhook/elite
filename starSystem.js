@@ -9569,7 +9569,7 @@ class MicroAsteroidHail {
         this.stateDuration = random(6000, 15000); // Storm starts with 6-15 seconds
 
         const defConfig = {
-            particleCount: 80,
+            particleCount: 60,
             baseSpeed: 0.15,
             speedScale: 0.85,
             minDepth: 0.1,
@@ -9586,6 +9586,8 @@ class MicroAsteroidHail {
         this.config = (typeof STARFIELD_CONFIG !== 'undefined' && STARFIELD_CONFIG.AMBIENT_EFFECTS && STARFIELD_CONFIG.AMBIENT_EFFECTS.HAIL)
             ? STARFIELD_CONFIG.AMBIENT_EFFECTS.HAIL
             : defConfig;
+
+        this.currentStormParticleCount = 0;
             
         this.init();
     }
@@ -9593,11 +9595,40 @@ class MicroAsteroidHail {
     init() {
         this.particles = [];
         if (this.state === 'storming') {
-            const count = this.config.particleCount;
+            this.currentStormParticleCount = this._pickStormParticleCount();
+            const count = this.currentStormParticleCount;
             for (let i = 0; i < count; i++) {
                 this.particles.push(this.createParticle(true));
             }
         }
+    }
+
+    _pickStormParticleCount() {
+        const baseCountRaw = Number(this.config.particleCount);
+        const baseCount = Number.isFinite(baseCountRaw) && baseCountRaw > 0 ? baseCountRaw : 60;
+
+        const minCfgRaw = Number(this.config.minParticleCount);
+        const maxCfgRaw = Number(this.config.maxParticleCount);
+        const hasConfiguredRange = Number.isFinite(minCfgRaw) && Number.isFinite(maxCfgRaw) && minCfgRaw > 0 && maxCfgRaw >= minCfgRaw;
+        if (hasConfiguredRange) {
+            return Math.max(2, Math.floor(random(minCfgRaw, maxCfgRaw + 1)));
+        }
+
+        // No explicit range configured: vary between sparse/normal/dense storm bands.
+        const bandRoll = random();
+        let factor;
+        if (bandRoll < 0.30) {
+            factor = random(0.15, 0.45); // Sparse storms
+        } else if (bandRoll < 0.75) {
+            factor = random(0.70, 1.15); // Typical storms
+        } else {
+            factor = random(1.60, 2.80); // Dense storms
+        }
+
+        const minCount = Math.max(4, Math.floor(baseCount * 0.15));
+        const maxCount = Math.max(minCount, Math.floor(baseCount * 2.80));
+        const scaledCount = Math.round(baseCount * factor);
+        return Math.max(minCount, Math.min(maxCount, scaledCount));
     }
 
     startStorm() {
@@ -9612,7 +9643,8 @@ class MicroAsteroidHail {
         this.streamVy = sin(angle) * speed;
 
         // Populate new screen particles
-        const count = this.config.particleCount;
+        this.currentStormParticleCount = this._pickStormParticleCount();
+        const count = this.currentStormParticleCount;
         const currentLength = this.particles.length;
 
         // Mutate existing particles in-place up to the count
@@ -9633,7 +9665,36 @@ class MicroAsteroidHail {
     startCalm() {
         this.state = 'calm';
         this.stateTimer = millis();
-        this.stateDuration = random(15000, 35000); // Calm period lasts 15-35 seconds
+        this.stateDuration = random(15000, 65000); // Calm period lasts 15-65 seconds
+    }
+
+    _pickOrganicSpawnScreenPoint(halfW, halfH, margin, preferredAngle = null) {
+        const outerRx = halfW + margin;
+        const outerRy = halfH + margin;
+
+        for (let attempt = 0; attempt < 5; attempt++) {
+            const angle = (preferredAngle == null)
+                ? random(TWO_PI)
+                : preferredAngle + random(-PI * 0.55, PI * 0.55);
+
+            const bulge = 1 + 0.18 * sin(angle * 3 + random(TWO_PI)) + 0.12 * sin(angle * 5 + random(TWO_PI));
+            const radialJitter = random(0.9, 1.25);
+            const radiusScale = Math.max(0.7, bulge * radialJitter);
+
+            const sx = cos(angle) * outerRx * radiusScale;
+            const sy = sin(angle) * outerRy * radiusScale;
+
+            // Ensure particles spawn beyond the viewport bounds.
+            if (abs(sx) > halfW + 2 || abs(sy) > halfH + 2) {
+                return { x: sx, y: sy };
+            }
+        }
+
+        const fallbackAngle = preferredAngle == null ? random(TWO_PI) : preferredAngle;
+        return {
+            x: cos(fallbackAngle) * (outerRx + margin),
+            y: sin(fallbackAngle) * (outerRy + margin)
+        };
     }
 
     createParticle(randomPos = false, p = null) {
@@ -9652,17 +9713,9 @@ class MicroAsteroidHail {
         const driftVy = this.streamVy + random(-0.4, 0.4);
 
         if (randomPos) {
-            if (random() > 0.5) {
-                const sx = random() > 0.5 ? -halfW - margin : halfW + margin;
-                const sy = random(-halfH - margin, halfH + margin);
-                relX = sx / depth;
-                relY = sy / depth;
-            } else {
-                const sx = random(-halfW - margin, halfW + margin);
-                const sy = random() > 0.5 ? -halfH - margin : halfH + margin;
-                relX = sx / depth;
-                relY = sy / depth;
-            }
+            const spawn = this._pickOrganicSpawnScreenPoint(halfW, halfH, margin);
+            relX = spawn.x / depth;
+            relY = spawn.y / depth;
         } else {
             const playerVel = this.system.player?.vel;
             const pvx = playerVel ? playerVel.x : 0;
@@ -9675,28 +9728,14 @@ class MicroAsteroidHail {
             const speedSq = rx * rx + ry * ry;
 
             if (speedSq > 0.05) {
-                if (abs(rx) >= abs(ry)) {
-                    const sx = rx > 0 ? -halfW - margin : halfW + margin;
-                    const sy = random(-halfH - margin, halfH + margin);
-                    relX = sx / depth;
-                    relY = sy / depth;
-                } else {
-                    const sx = random(-halfW - margin, halfW + margin);
-                    const sy = ry > 0 ? -halfH - margin : halfH + margin;
-                    relX = sx / depth;
-                    relY = sy / depth;
-                }
+                const incomingAngle = atan2(-ry, -rx);
+                const spawn = this._pickOrganicSpawnScreenPoint(halfW, halfH, margin, incomingAngle);
+                relX = spawn.x / depth;
+                relY = spawn.y / depth;
             } else {
-                let sx, sy;
-                if (random() > 0.5) {
-                    sx = random() > 0.5 ? -halfW - margin : halfW + margin;
-                    sy = random(-halfH - margin, halfH + margin);
-                } else {
-                    sx = random(-halfW - margin, halfW + margin);
-                    sy = random() > 0.5 ? -halfH - margin : halfH + margin;
-                }
-                relX = sx / depth;
-                relY = sy / depth;
+                const spawn = this._pickOrganicSpawnScreenPoint(halfW, halfH, margin);
+                relX = spawn.x / depth;
+                relY = spawn.y / depth;
             }
         }
 
