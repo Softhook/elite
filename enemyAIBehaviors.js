@@ -3162,7 +3162,7 @@ class EnemyAIBehaviors {
         const ax = threat.pos.x - this.pos.x;
         const ay = threat.pos.y - this.pos.y;
         const dot = ax * perpX + ay * perpY;
-        if (dot < 0) { perpX = -perpX; perpY = -perpY; }
+        if (dot > 0) { perpX = -perpX; perpY = -perpY; }
 
         const offset = (Math.max(threatRadius, this.size) + 48) * avoidanceStrength;
         return createVector(desiredMovementTargetPos.x + perpX * offset, desiredMovementTargetPos.y + perpY * offset);

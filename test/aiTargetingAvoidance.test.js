@@ -116,6 +116,33 @@ describe('AI Targeting & Avoidance Tests', () => {
             expect(wasAdjusted).toBe(true);
         });
 
+        test('should nudge target away from obstacle (avoid nudge-towards bug)', () => {
+            // Position enemy at (0, 0)
+            enemy.pos.set(0, 0);
+
+            // Obstacle is slightly to the right and slightly UP (y is positive/negative depending on coordinate space)
+            // Let's place it at (200, 10). The path goes straight along the positive X axis to (400, 0).
+            // Since the obstacle is at y = 10, the safe adjustment should push target y in the opposite direction (y < 0).
+            mockSystem.asteroids = [
+                { pos: createVector(200, 10), maxRadius: 40, destroyed: false, isAsteroid: true }
+            ];
+
+            const targetPos = createVector(400, 0);
+            const safeTarget = enemy._avoidObstaclesAndAdjustTarget(mockSystem, targetPos);
+
+            // The obstacle is at y = 10 (positive y).
+            // Therefore, the adjusted target should have a negative y (steer away).
+            expect(safeTarget.y).toBeLessThan(0);
+
+            // Conversely, if the obstacle is at (200, -10) (negative y), target should have positive y.
+            mockSystem.asteroids = [
+                { pos: createVector(200, -10), maxRadius: 40, destroyed: false, isAsteroid: true }
+            ];
+            const safeTarget2 = enemy._avoidObstaclesAndAdjustTarget(mockSystem, targetPos);
+            expect(safeTarget2.y).toBeGreaterThan(0);
+        });
+
+
         test('should not adjust target when no obstacles', () => {
             // Target in clear space
             const targetPos = createVector(0, 500);
