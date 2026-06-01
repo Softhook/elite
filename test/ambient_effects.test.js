@@ -278,10 +278,10 @@ describe('Ambient Environmental Effects and Micro-Asteroids', () => {
     test('AmbientCosmicEvent updates active status and ends when duration expires', () => {
         const event = new AmbientCosmicEvent('supernova', 100, 100);
         expect(event.active).toBe(true);
-        expect(event.duration).toBe(8000);
+        expect(event.duration).toBe(15000);
 
         // Progress time past duration
-        mockTime += 9000;
+        mockTime += 16000;
         event.update(0, 0);
         
         expect(event.active).toBe(false);
