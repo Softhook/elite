@@ -417,6 +417,34 @@ describe('_getEnvHazardInfo', () => {
         const info2 = enemy._getEnvHazardInfo(system);
         expect(info1).toBe(info2); // same object reference = cache hit
     });
+
+    test('invalidates cache when the enemy moves into a hazard', () => {
+        const neb = new Nebula(0, 0, 300, 'radiation');
+        const system = makeSystem({ nebulae: [neb] });
+        enemy.pos = createVector(500, 0);
+        const info1 = enemy._getEnvHazardInfo(system);
+        expect(info1.inDangerousZone).toBe(false);
+
+        enemy.pos = createVector(0, 0);
+        const info2 = enemy._getEnvHazardInfo(system);
+        expect(info2).not.toBe(info1);
+        expect(info2.inDangerousZone).toBe(true);
+        expect(info2.dangerZoneType).toBe('radiation');
+    });
+
+    test('invalidates cache when the current target changes to one inside a hazard', () => {
+        const neb = new Nebula(0, 0, 300, 'radiation');
+        const system = makeSystem({ nebulae: [neb] });
+        enemy.pos = createVector(700, 0);
+        enemy.target = makeTarget(700, 0);
+        const info1 = enemy._getEnvHazardInfo(system);
+        expect(info1.targetInDangerZone).toBe(false);
+
+        enemy.target = makeTarget(0, 0);
+        const info2 = enemy._getEnvHazardInfo(system);
+        expect(info2).not.toBe(info1);
+        expect(info2.targetInDangerZone).toBe(true);
+    });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

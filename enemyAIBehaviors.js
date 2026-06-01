@@ -2688,6 +2688,7 @@ class EnemyAIBehaviors {
     static get ENV_RADIATION_ESCAPE_HULL_THRESHOLD() { return 0.6; } // Radiation: escape in combat when hull at or below 60%
     static get ENV_IDLE_ESCAPE_CHANCE_MULT() { return 0.35; }        // Idle hazard exit is less urgent than combat (35% of rookie combat escape scaling)
     static get ENV_EDGE_STANDOFF_MARGIN() { return 120; }            // Hold point outside zone edge: close enough to fire in, far enough to avoid sitting on boundary
+    static get ENV_CACHE_POSITION_TOLERANCE() { return 32; }         // Reuse hazard cache only while ship/target movement stays locally stable
     static get ENV_REPOSITION_STALL_GRACE_MS() { return 4500; }      // Suppress range-stall overrides briefly after hazard-driven repositioning
 
     /**
@@ -2713,8 +2714,25 @@ class EnemyAIBehaviors {
      */
     _getEnvHazardInfo(system) {
         const now = typeof millis === 'function' ? millis() : 0;
+        const posX = this.pos.x;
+        const posY = this.pos.y;
+        const target = this.target || null;
+        const targetPos = target?.pos || null;
         const interval = this._isOnScreen === false ? 2000 : 1000;
-        if (this._envHazardCache && (now - this._envHazardCacheTime < interval)) {
+        const cacheToleranceSq = EnemyAIBehaviors.ENV_CACHE_POSITION_TOLERANCE * EnemyAIBehaviors.ENV_CACHE_POSITION_TOLERANCE;
+        const cachePos = this._envHazardCachePos;
+        const cacheTargetPos = this._envHazardCacheTargetPos;
+        const canReuseCache = this._envHazardCache &&
+            (now - this._envHazardCacheTime < interval) &&
+            this._envHazardCacheSystem === system &&
+            this._envHazardCacheTarget === target &&
+            cachePos &&
+            ((posX - cachePos.x) * (posX - cachePos.x) + (posY - cachePos.y) * (posY - cachePos.y) <= cacheToleranceSq) &&
+            ((!targetPos && !cacheTargetPos) ||
+                (targetPos && cacheTargetPos &&
+                    (targetPos.x - cacheTargetPos.x) * (targetPos.x - cacheTargetPos.x) +
+                    (targetPos.y - cacheTargetPos.y) * (targetPos.y - cacheTargetPos.y) <= cacheToleranceSq));
+        if (canReuseCache) {
             return this._envHazardCache;
         }
         this._envHazardCacheTime = now;
@@ -2735,12 +2753,12 @@ class EnemyAIBehaviors {
 
         if (!system) {
             this._envHazardCache = info;
+            this._envHazardCacheSystem = system;
+            this._envHazardCacheTarget = target;
+            this._envHazardCachePos = { x: posX, y: posY };
+            this._envHazardCacheTargetPos = targetPos ? { x: targetPos.x, y: targetPos.y } : null;
             return info;
         }
-
-        const posX = this.pos.x;
-        const posY = this.pos.y;
-        const targetPos = this.target?.pos;
         let bestDangerPriority = -1;
         let bestDangerDistSq = Infinity;
         const getDangerPriority = (type) => {
@@ -2833,6 +2851,10 @@ class EnemyAIBehaviors {
         }
 
         this._envHazardCache = info;
+        this._envHazardCacheSystem = system;
+        this._envHazardCacheTarget = target;
+        this._envHazardCachePos = { x: posX, y: posY };
+        this._envHazardCacheTargetPos = targetPos ? { x: targetPos.x, y: targetPos.y } : null;
         return info;
     }
 
