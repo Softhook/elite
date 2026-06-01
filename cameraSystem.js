@@ -80,12 +80,14 @@ class CameraSystem {
 
     /**
      * Triggers a screen shake of the specified intensity.
-     * @param {number} intensity - Shake magnitude in pixels
+     * @param {number} intensity - Shake magnitude in pixels (reduced internally for subtle feedback)
      */
     triggerShake(intensity) {
         if (isNaN(intensity) || intensity <= 0) return;
-        // Cap maximum intensity to avoid violent disorienting shake
-        this.shakeIntensity = Math.min(45, this.shakeIntensity + intensity);
+        // Apply a global reduction factor (0.3) to make the shake effect less extreme
+        const reducedIntensity = intensity * 0.3;
+        // Cap maximum intensity to a comfortable limit (12 pixels) to avoid disorienting shakes
+        this.shakeIntensity = Math.min(12, this.shakeIntensity + reducedIntensity);
     }
 
     /**
