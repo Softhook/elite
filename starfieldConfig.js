@@ -148,16 +148,19 @@ const STARFIELD_CONFIG = {
         },
         // Transient background events spawn rates
         EVENTS: {
-            spawnChancePerFrame: 0.0003, // Probability of spawning an event on a frame
+            spawnChancePerFrame: 0.0001, // Probability of spawning an event on a frame (approx once per 2.7 mins)
             types: {
-                supernova: 0.10,      // 10% chance
-                comet: 0.25,          // 25% chance
-                warp_flash: 0.30,     // 30% chance
-                nebula_lightning: 0.15, // 15% chance
-                fleet_skirmish: 0.10,  // 10% chance
-                space_whale: 0.04,     // 4% chance (ultra-rare)
-                black_hole: 0.03,      // 3% chance (ultra-rare)
-                solar_flare: 0.03      // 3% chance (ultra-rare)
+                supernova: 0.08,
+                comet: 0.16,
+                warp_flash: 0.20,
+                nebula_lightning: 0.12,
+                fleet_skirmish: 0.10,
+                space_whale: 0.04,
+                black_hole: 0.04,
+                solar_flare: 0.04,
+                space_rift: 0.08,
+                pulsar_beacon: 0.08,
+                wormhole: 0.06
             }
         }
     }

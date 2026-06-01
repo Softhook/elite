@@ -238,13 +238,50 @@ describe('Ambient Environmental Effects and Micro-Asteroids', () => {
         expect(hail.sparks[0].color).toEqual([255, 140, 50]); // Orange
     });
 
+    test('MicroAsteroid recycles particle objects in-place during wraps and collisions', () => {
+        const hail = system.microAsteroidHail;
+        hail.particles = [];
+        
+        const particleRef = {
+            relX: 10000, // way off-screen to force a wrap
+            relY: 0,
+            size: 3,
+            opacity: 180,
+            depth: 0.9,
+            color: [255, 255, 255],
+            driftVx: 0,
+            driftVy: 0,
+            rotation: 0,
+            rotSpeed: 0
+        };
+        hail.particles.push(particleRef);
+
+        expect(hail.particles[0]).toBe(particleRef);
+        hail.update();
+        
+        // After wrapping, the particle position should be reset, but the object reference should be exactly the same!
+        expect(hail.particles[0]).toBe(particleRef);
+        expect(hail.particles[0].relX).not.toBe(10000);
+
+        // Test collision in-place reuse
+        hail.particles[0].relX = 10; // Colliding pos
+        hail.particles[0].relY = 0;
+        hail.particles[0].depth = 0.9;
+        
+        hail.update();
+        
+        // After collision, it should spark and reset, but keep the same object reference!
+        expect(hail.particles[0]).toBe(particleRef);
+        expect(hail.particles[0].relX).not.toBe(10);
+    });
+
     test('AmbientCosmicEvent updates active status and ends when duration expires', () => {
         const event = new AmbientCosmicEvent('supernova', 100, 100);
         expect(event.active).toBe(true);
-        expect(event.duration).toBe(6000);
+        expect(event.duration).toBe(8000);
 
         // Progress time past duration
-        mockTime += 7000;
+        mockTime += 9000;
         event.update(0, 0);
         
         expect(event.active).toBe(false);
@@ -261,5 +298,19 @@ describe('Ambient Environmental Effects and Micro-Asteroids', () => {
         expect(event.x).not.toBe(originalX);
         const expectedShift = -10 * (1 - 1.03); // playerVelX * (1 - parallax) = -10 * -0.03 = 0.3
         expect(event.x).toBeCloseTo(originalX + expectedShift);
+    });
+
+    test('All 11 AmbientCosmicEvent types can initialize and update', () => {
+        const types = [
+            'supernova', 'comet', 'warp_flash', 'nebula_lightning', 
+            'fleet_skirmish', 'space_whale', 'black_hole', 'solar_flare',
+            'space_rift', 'pulsar_beacon', 'wormhole'
+        ];
+        types.forEach(type => {
+            const event = new AmbientCosmicEvent(type, 100, 100);
+            expect(event.active).toBe(true);
+            event.update(5, 5);
+            expect(event.active).toBe(true);
+        });
     });
 });

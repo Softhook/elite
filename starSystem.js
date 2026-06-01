@@ -336,25 +336,44 @@ function processPendingStarfieldBitmaps(currentSystem) {
             continue;
         }
 
-        // Now do the expensive work: create p5 graphics buffer from ImageBitmap
+        // Now do the expensive work: create lightweight image buffer from ImageBitmap
         let buffer = null;
         let success = false;
 
         try {
             const tileSize = targetSystem._starfieldTileSize || STARFIELD_CONFIG.TILE_SIZE;
-            buffer = createGraphics(tileSize, tileSize);
-            const ctx = buffer.drawingContext;
-
-            // Disable image smoothing for pixel-perfect rendering
-            if (ctx.imageSmoothingEnabled !== undefined) {
-                ctx.imageSmoothingEnabled = false;
+            
+            // Check if we are in a browser context with canvas support to create a lightweight image
+            if (typeof document !== 'undefined' && typeof document.createElement === 'function' && typeof p5 !== 'undefined') {
+                const img = new p5.Image(tileSize, tileSize);
+                const canvas = document.createElement('canvas');
+                canvas.width = tileSize;
+                canvas.height = tileSize;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.drawImage(bitmap, 0, 0);
+                }
+                img.canvas = canvas;
+                img.elt = canvas;
+                img.width = tileSize;
+                img.height = tileSize;
+                img.modified = true;
+                buffer = img;
+                success = true;
+            } else {
+                // Fallback for Node.js / Jest headless environment
+                buffer = createGraphics(tileSize, tileSize);
+                const ctx = buffer.drawingContext;
+                if (ctx && ctx.imageSmoothingEnabled !== undefined) {
+                    ctx.imageSmoothingEnabled = false;
+                }
+                ctx.drawImage(bitmap, 0, 0, buffer.width, buffer.height);
+                success = true;
             }
-
-            ctx.drawImage(bitmap, 0, 0, buffer.width, buffer.height);
-            success = true;
         } catch (err) {
             // Drawing failed - cleanup
-            if (buffer) {
+            if (buffer && typeof buffer.remove === 'function') {
                 try { buffer.remove(); } catch (_) { }
             }
             buffer = null;
@@ -6904,17 +6923,62 @@ class StarSystem {
         if (td > 0.05 && random() < td * 0.22) {
             push();
             const ctx = drawingContext;
-            const numStrips = Math.floor(random(1, 1 + td * 4));
-            for (let i = 0; i < numStrips; i++) {
-                const sy = random(0, height - 30);
-                const sh = random(10, 45);
-                const offset = random(-20, 20) * td;
-                ctx.drawImage(ctx.canvas, 0, sy, width, sh, offset, sy, width, sh);
+            
+            // High-performance double-buffering to completely bypass GPU pipeline stalls/freezes
+            let hasGlitchBuffer = false;
+            if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
+                if (!this.glitchCanvas) {
+                    this.glitchCanvas = document.createElement('canvas');
+                    this.glitchCtx = this.glitchCanvas.getContext('2d');
+                }
+                if (this.glitchCanvas.width !== width || this.glitchCanvas.height !== height) {
+                    this.glitchCanvas.width = width;
+                    this.glitchCanvas.height = height;
+                }
+                hasGlitchBuffer = true;
             }
-            if (random() < 0.12 * td) {
+            
+            if (hasGlitchBuffer && this.glitchCtx && ctx) {
+                // Copy screen state once to offscreen buffer (zero feedback hazard copy)
+                this.glitchCtx.drawImage(ctx.canvas, 0, 0);
+                
+                // Draw horizontal row-shifting slices from the offscreen canvas back to screen
+                const numStrips = Math.floor(random(2, 2 + td * 5));
+                for (let i = 0; i < numStrips; i++) {
+                    const sy = random(0, height - 40);
+                    const sh = random(10, 45);
+                    const offset = random(-25, 25) * td;
+                    ctx.drawImage(this.glitchCanvas, 0, sy, width, sh, offset, sy, width, sh);
+                }
+                
+                // Overlay high-performance scanlines
                 blendMode(ADD);
-                fill(80, 150 * td, 255 * td, 30);
-                rect(0, 0, width, height);
+                stroke(80, 150 * td, 255, 60 * td);
+                strokeWeight(1.0);
+                const numScanlines = Math.floor(random(1, 4));
+                for (let i = 0; i < numScanlines; i++) {
+                    const sy = random(0, height);
+                    line(0, sy, width, sy);
+                }
+            } else {
+                // Fallback to high-performance scanline overlay if canvas buffering is unavailable
+                blendMode(ADD);
+                const numStrips = Math.floor(random(2, 2 + td * 6));
+                stroke(80, 150 * td, 255, 120 * td);
+                for (let i = 0; i < numStrips; i++) {
+                    const sy = random(0, height);
+                    strokeWeight(random(1.0, 3.5));
+                    line(0, sy, width, sy);
+                }
+            }
+            
+            // Faint chromatic/glow overlay block for Cassette Futurism flavor
+            noStroke();
+            if (random() < 0.25) {
+                fill(80, 140 * td, 255 * td, 20);
+                const blockY = random(0, height - 60);
+                const blockH = random(15, 55);
+                rect(0, blockY, width, blockH);
             }
             pop();
         }
@@ -8409,27 +8473,29 @@ class AmbientCosmicEvent {
     }
 
     init() {
+        const localLerp = (a, b, t) => a + (b - a) * t;
         switch (this.type) {
             case 'supernova':
-                this.duration = 6000;
-                for (let i = 0; i < 30; i++) {
+                this.duration = 8000;
+                // Subtly colored expanding cloud particles
+                for (let i = 0; i < 40; i++) {
                     const angle = random(TWO_PI);
-                    const speed = random(0.5, 3.5);
+                    const speed = random(0.2, 1.8);
                     this.particles.push({
                         vx: cos(angle) * speed,
                         vy: sin(angle) * speed,
                         x: 0,
                         y: 0,
-                        size: random(1.2, 4),
-                        color: random() > 0.5 ? [255, 120, 120] : [200, 100, 250]
+                        size: random(2.0, 6.0),
+                        color: random() > 0.5 ? [150, 100, 255] : [100, 180, 255]
                     });
                 }
                 break;
             case 'comet':
-                this.duration = 1800;
+                this.duration = 2000;
                 const angle = random(-PI * 0.15, -PI * 0.35);
-                this.vx = cos(angle) * 8;
-                this.vy = sin(angle) * 8;
+                this.vx = cos(angle) * 7;
+                this.vy = sin(angle) * 7;
                 this.curX = 0;
                 this.curY = 0;
                 this.color = random() > 0.5 ? [140, 220, 255] : [255, 210, 150];
@@ -8441,37 +8507,135 @@ class AmbientCosmicEvent {
             case 'nebula_lightning':
                 this.duration = 500;
                 this.color = random() > 0.6 ? [150, 80, 255] : (random() > 0.5 ? [80, 120, 255] : [255, 100, 150]);
-                this.lightningRadius = random(120, 280);
+                this.lightningRadius = random(150, 300);
                 this.pulseCount = random() > 0.5 ? 2 : 1;
+                // Pre-generate lightning bolt segments for branching electric paths
+                this.bolts = [];
+                const boltCount = floor(random(2, 4));
+                for (let b = 0; b < boltCount; b++) {
+                    const segments = [];
+                    let curX = 0;
+                    let curY = 0;
+                    const boltAngle = random(TWO_PI);
+                    const length = random(60, 150);
+                    const stepCount = 5;
+                    for (let s = 0; s <= stepCount; s++) {
+                        const t = s / stepCount;
+                        const bx = cos(boltAngle) * length * t + random(-12, 12);
+                        const by = sin(boltAngle) * length * t + random(-12, 12);
+                        segments.push({ x: bx, y: by });
+                    }
+                    this.bolts.push(segments);
+                }
                 break;
             case 'fleet_skirmish':
-                this.duration = 4500;
+                this.duration = 5000;
                 this.shots = [];
                 this.explosions = [];
                 break;
             case 'space_whale':
-                this.duration = 12000;
+                this.duration = 14000;
                 this.angle = random(TWO_PI);
-                this.speed = 0.5;
+                this.speed = 0.45;
                 this.vx = cos(this.angle) * this.speed;
                 this.vy = sin(this.angle) * this.speed;
-                this.size = random(80, 140);
+                this.size = random(90, 150);
                 break;
             case 'black_hole':
-                this.duration = 8000;
+                this.duration = 10000;
                 this.rotation = 0;
-                this.rotSpeed = random(0.01, 0.03);
-                this.size = random(40, 70);
+                this.rotSpeed = random(0.008, 0.015);
+                this.size = random(50, 85);
+                // Orbiting accretion disk particles
+                for (let i = 0; i < 40; i++) {
+                    const startRadius = random(this.size * 0.6, this.size * 2.2);
+                    this.particles.push({
+                        r: startRadius,
+                        angle: random(TWO_PI),
+                        speed: random(0.02, 0.05),
+                        size: random(1.0, 3.2),
+                        color: random() > 0.5 ? [255, 120, 30] : [220, 60, 180]
+                    });
+                }
                 break;
             case 'solar_flare':
-                this.duration = 5000;
+                this.duration = 6000;
                 this.angle = random(TWO_PI);
-                this.size = random(60, 120);
+                this.size = random(80, 140);
                 this.flarePath = [];
-                for (let i = 0; i <= 10; i++) {
+                for (let i = 0; i <= 12; i++) {
                     this.flarePath.push({
-                        relAngle: (i / 10) * PI,
-                        wiggle: random(-3, 3)
+                        relAngle: (i / 12) * PI,
+                        wiggle: random(-4, 4)
+                    });
+                }
+                // Ejected solar particles
+                this.particles = [];
+                for (let i = 0; i < 15; i++) {
+                    this.particles.push({
+                        x: 0,
+                        y: 0,
+                        vx: 0,
+                        vy: 0,
+                        size: random(2, 5),
+                        startTime: millis() + random(0, 3000),
+                        duration: random(1000, 2000)
+                    });
+                }
+                break;
+            case 'space_rift':
+                this.duration = 5000;
+                this.riftAngle = random(-PI * 0.15, PI * 0.15);
+                this.size = random(120, 200);
+                // Generate a jagged crack path
+                this.riftPath = [];
+                const steps = 8;
+                const angleCos = cos(this.riftAngle);
+                const angleSin = sin(this.riftAngle);
+                
+                for (let i = 0; i <= steps; i++) {
+                    const t = i / steps;
+                    const baseX = localLerp(-this.size / 2, this.size / 2, t);
+                    const baseY = random(-8, 8);
+                    // Rotate point by riftAngle
+                    const rotX = baseX * angleCos - baseY * angleSin;
+                    const rotY = baseX * angleSin + baseY * angleCos;
+                    this.riftPath.push({ x: rotX, y: rotY });
+                }
+                // Spark particles emanating from rift
+                for (let i = 0; i < 25; i++) {
+                    const pAngle = random(TWO_PI);
+                    const pSpeed = random(0.5, 2.5);
+                    this.particles.push({
+                        x: random(-this.size * 0.3, this.size * 0.3),
+                        y: random(-5, 5),
+                        vx: cos(pAngle) * pSpeed,
+                        vy: sin(pAngle) * pSpeed,
+                        size: random(1.5, 3.5),
+                        startTime: millis() + random(0, 3000),
+                        duration: random(600, 1200)
+                    });
+                }
+                break;
+            case 'pulsar_beacon':
+                this.duration = 12000;
+                this.rotation = random(TWO_PI);
+                this.rotSpeed = 0.045; // Fast spin for the neutron star sweep
+                this.size = random(25, 40);
+                break;
+            case 'wormhole':
+                this.duration = 9000;
+                this.rotation = 0;
+                this.rotSpeed = 0.012;
+                this.size = random(70, 110);
+                // Swirling particles spiraling in
+                for (let i = 0; i < 50; i++) {
+                    this.particles.push({
+                        r: random(this.size * 0.3, this.size * 2.5),
+                        angle: random(TWO_PI),
+                        speed: random(0.015, 0.035),
+                        size: random(1.2, 3.5),
+                        color: random() > 0.5 ? [0, 240, 220] : [140, 70, 255]
                     });
                 }
                 break;
@@ -8507,8 +8671,8 @@ class AmbientCosmicEvent {
                     this.particles.push({
                         x: this.curX,
                         y: this.curY,
-                        vx: -this.vx * 0.15 + random(-0.5, 0.5),
-                        vy: -this.vy * 0.15 + random(-0.5, 0.5),
+                        vx: -this.vx * 0.18 + random(-0.6, 0.6),
+                        vy: -this.vy * 0.18 + random(-0.6, 0.6),
                         size: random(1, 3.5),
                         startTime: millis(),
                         duration: random(400, 800)
@@ -8525,24 +8689,24 @@ class AmbientCosmicEvent {
                 }
                 break;
             case 'fleet_skirmish':
-                if (random() < 0.15 && elapsed < this.duration - 1500) {
-                    const sx = random(-80, 80);
-                    const sy = random(-80, 80);
-                    const ex = sx + random(-50, 50);
-                    const ey = sy + random(-50, 50);
+                if (random() < 0.18 && elapsed < this.duration - 1500) {
+                    const sx = random(-100, 100);
+                    const sy = random(-100, 100);
+                    const ex = sx + random(-70, 70);
+                    const ey = sy + random(-70, 70);
                     this.shots.push({
                         sx, sy, ex, ey,
-                        color: random() > 0.5 ? [255, 50, 50] : [50, 255, 50],
+                        color: random() > 0.5 ? [255, 60, 60] : [60, 255, 120],
                         startTime: millis(),
-                        duration: random(100, 200)
+                        duration: random(120, 220)
                     });
-                    if (random() < 0.25) {
+                    if (random() < 0.35) {
                         this.explosions.push({
                             x: ex,
                             y: ey,
                             startTime: millis(),
-                            duration: random(400, 800),
-                            maxSize: random(5, 12)
+                            duration: random(450, 900),
+                            maxSize: random(6, 15)
                         });
                     }
                 }
@@ -8566,6 +8730,77 @@ class AmbientCosmicEvent {
                 break;
             case 'black_hole':
                 this.rotation += this.rotSpeed;
+                // Spiral particles inward
+                for (let p of this.particles) {
+                    p.angle += p.speed;
+                    p.r -= 0.12 * (this.size / p.r); // Speed up as they get closer
+                    if (p.r < this.size * 0.25) {
+                        p.r = random(this.size * 0.8, this.size * 2.2);
+                        p.angle = random(TWO_PI);
+                    }
+                }
+                break;
+            case 'solar_flare':
+                this.rotation = (this.rotation || 0) + 0.002;
+                // Manage solar flare particles
+                const flareNow = millis();
+                for (let p of this.particles) {
+                    if (flareNow > p.startTime) {
+                        const pElapsed = flareNow - p.startTime;
+                        const pt = pElapsed / p.duration;
+                        if (pt >= 1.0) {
+                            p.startTime = flareNow + random(500, 2000);
+                            p.x = 0;
+                            p.y = 0;
+                            const pAngle = this.angle + random(-0.5, 0.5);
+                            const pSpeed = random(1.5, 3.5);
+                            p.vx = cos(pAngle) * pSpeed;
+                            p.vy = sin(pAngle) * pSpeed;
+                        } else {
+                            p.x += p.vx;
+                            p.y += p.vy;
+                            p.vx += sin(pElapsed * 0.01) * 0.05;
+                        }
+                    }
+                }
+                break;
+            case 'space_rift':
+                const riftNow = millis();
+                for (let p of this.particles) {
+                    if (riftNow > p.startTime) {
+                        const pElapsed = riftNow - p.startTime;
+                        const pt = pElapsed / p.duration;
+                        if (pt >= 1.0) {
+                            p.startTime = riftNow + random(500, 2500);
+                            p.x = random(-this.size * 0.35, this.size * 0.35);
+                            p.y = random(-6, 6);
+                            const pAngle = random(TWO_PI);
+                            const pSpeed = random(0.6, 2.8);
+                            p.vx = cos(pAngle) * pSpeed;
+                            p.vy = sin(pAngle) * pSpeed;
+                        } else {
+                            p.x += p.vx;
+                            p.y += p.vy;
+                            p.vx *= 0.96;
+                            p.vy *= 0.96;
+                        }
+                    }
+                }
+                break;
+            case 'pulsar_beacon':
+                this.rotation += this.rotSpeed;
+                break;
+            case 'wormhole':
+                this.rotation += this.rotSpeed;
+                // Spiral wormhole particles inward
+                for (let p of this.particles) {
+                    p.angle += p.speed;
+                    p.r -= 0.15;
+                    if (p.r < this.size * 0.25) {
+                        p.r = random(this.size * 0.8, this.size * 2.5);
+                        p.angle = random(TWO_PI);
+                    }
+                }
                 break;
         }
     }
@@ -8573,6 +8808,7 @@ class AmbientCosmicEvent {
     draw() {
         const elapsed = millis() - this.startTime;
         const t = elapsed / this.duration;
+        const localLerp = (a, b, t) => a + (b - a) * t;
 
         push();
         translate(this.x, this.y);
@@ -8580,252 +8816,504 @@ class AmbientCosmicEvent {
 
         switch (this.type) {
             case 'supernova': {
-                const coreAlpha = t < 0.1 ? map(t, 0, 0.1, 0, 80) : map(t, 0.1, 1, 80, 0);
-                const ringSize = map(t, 0.1, 1, 5, 240);
-                const ringAlpha = map(t, 0.1, 1, 45, 0);
+                const coreAlpha = t < 0.08 ? localLerp(0, 60, t / 0.08) : localLerp(60, 0, (t - 0.08) / 0.92);
+                const shockwaveSize = localLerp(10, 360, t);
+                const ringAlpha = t < 0.1 ? localLerp(0, 35, t / 0.1) : localLerp(35, 0, (t - 0.1) / 0.9);
 
-                if (t < 0.6) {
-                    const flareSize = map(t, 0, 0.2, 5, 50);
+                if (t < 0.5) {
+                    const flareSize = localLerp(8, 70, t / 0.5);
                     noStroke();
                     fill(255, 255, 255, coreAlpha);
-                    circle(0, 0, flareSize);
-                    fill(255, 220, 200, coreAlpha * 0.6);
-                    circle(0, 0, flareSize * 1.5);
-                    fill(200, 150, 255, coreAlpha * 0.3);
-                    circle(0, 0, flareSize * 2.5);
+                    circle(0, 0, flareSize * 0.8);
+                    
+                    const ctx = drawingContext;
+                    const grad = ctx.createRadialGradient(0, 0, 1, 0, 0, flareSize * 2.5);
+                    grad.addColorStop(0, `rgba(255, 200, 255, ${coreAlpha * 0.65 / 255})`);
+                    grad.addColorStop(0.4, `rgba(180, 120, 255, ${coreAlpha * 0.3 / 255})`);
+                    grad.addColorStop(1, 'rgba(100, 150, 255, 0)');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, flareSize * 2.5, 0, TWO_PI);
+                    ctx.fill();
                 }
 
-                if (t > 0.05) {
+                if (t > 0.02) {
                     noFill();
-                    strokeWeight(1.0);
-                    stroke(180, 100, 255, ringAlpha * 0.75);
-                    circle(0, 0, ringSize);
+                    strokeWeight(1.5);
+                    stroke(160, 100, 255, ringAlpha);
+                    circle(0, 0, shockwaveSize);
                     
-                    strokeWeight(2.0);
-                    stroke(255, 120, 50, ringAlpha * 0.5);
-                    circle(0, 0, ringSize * 0.85);
+                    strokeWeight(2.5);
+                    stroke(255, 140, 60, ringAlpha * 0.55);
+                    circle(0, 0, shockwaveSize * 0.82);
 
                     strokeWeight(1.0);
-                    stroke(255, 220, 100, ringAlpha * 0.4);
-                    circle(0, 0, ringSize * 0.7);
+                    stroke(120, 220, 255, ringAlpha * 0.4);
+                    circle(0, 0, shockwaveSize * 1.15);
                 }
 
                 noStroke();
                 for (let p of this.particles) {
-                    fill(p.color[0], p.color[1], p.color[2], ringAlpha * 1.5);
-                    circle(p.x, p.y, p.size * (1 - t * 0.4));
+                    fill(p.color[0], p.color[1], p.color[2], ringAlpha * 1.8);
+                    circle(p.x, p.y, p.size * (1.1 - t * 0.45));
                 }
 
-                if (t < 0.25 && typeof LightingEffects !== 'undefined' && typeof LightingEffects.addScreenFlash === 'function') {
-                    const flashVal = Math.floor(map(t, 0, 0.1, 0, 12) * (t < 0.1 ? 1 : map(t, 0.1, 0.25, 1, 0)));
+                if (t < 0.20 && typeof LightingEffects !== 'undefined' && typeof LightingEffects.addScreenFlash === 'function') {
+                    const flashVal = Math.floor(localLerp(0, 7, t / 0.05) * (t < 0.05 ? 1 : localLerp(1, 0, (t - 0.05) / 0.15)));
                     if (flashVal > 0) {
-                        LightingEffects.addScreenFlash([220, 210, 255], flashVal);
+                        LightingEffects.addScreenFlash([230, 220, 255], flashVal);
                     }
                 }
                 break;
             }
             case 'comet': {
-                const headSize = map(t, 0, 1, 4.5, 1.5);
-                const alpha = map(t, 0, 1, 230, 0);
+                const headSize = localLerp(5.0, 1.8, t);
+                const alpha = localLerp(240, 0, t);
 
                 noStroke();
                 const now = millis();
                 for (let p of this.particles) {
                     const pElapsed = now - p.startTime;
                     const pT = pElapsed / p.duration;
-                    const pAlpha = map(pT, 0, 1, alpha * 0.8, 0);
-                    fill(this.color[0], this.color[1] * 0.8, this.color[2] * 0.6, pAlpha);
-                    circle(p.x, p.y, p.size * (1 - pT));
+                    const pAlpha = localLerp(alpha * 0.75, 0, pT);
+                    fill(this.color[0], this.color[1] * 0.85, this.color[2] * 0.65, pAlpha);
+                    circle(p.x, p.y, p.size * (1 - pT * 0.8));
                 }
 
-                noFill();
-                stroke(100, 180, 255, alpha * 0.45);
-                strokeWeight(headSize * 0.6);
-                line(this.curX, this.curY, this.curX - this.vx * 3.5, this.curY - this.vy * 3.5);
+                const ctx = drawingContext;
+                const gradDust = ctx.createLinearGradient(this.curX, this.curY, this.curX - this.vx * 4.5, this.curY - this.vy * 4.5 + 15);
+                gradDust.addColorStop(0, `rgba(${this.color[0]}, ${this.color[1]}, ${this.color[2]}, ${alpha * 0.4 / 255})`);
+                gradDust.addColorStop(1, 'rgba(255, 180, 100, 0)');
+                ctx.strokeStyle = gradDust;
+                ctx.lineWidth = headSize * 1.5;
+                ctx.beginPath();
+                ctx.moveTo(this.curX, this.curY);
+                ctx.quadraticCurveTo(
+                    this.curX - this.vx * 2.2, this.curY - this.vy * 2.2 + 8,
+                    this.curX - this.vx * 4.5, this.curY - this.vy * 4.5 + 15
+                );
+                ctx.stroke();
+
+                const gradIon = ctx.createLinearGradient(this.curX, this.curY, this.curX - this.vx * 5.0, this.curY - this.vy * 5.0);
+                gradIon.addColorStop(0, `rgba(100, 200, 255, ${alpha * 0.75 / 255})`);
+                gradIon.addColorStop(1, 'rgba(50, 100, 255, 0)');
+                ctx.strokeStyle = gradIon;
+                ctx.lineWidth = headSize * 0.9;
+                ctx.beginPath();
+                ctx.moveTo(this.curX, this.curY);
+                ctx.lineTo(this.curX - this.vx * 5.0, this.curY - this.vy * 5.0);
+                ctx.stroke();
 
                 noStroke();
                 fill(255, 255, 255, alpha);
                 circle(this.curX, this.curY, headSize);
-                fill(this.color[0], this.color[1], this.color[2], alpha * 0.4);
+                fill(this.color[0], this.color[1], this.color[2], alpha * 0.45);
                 circle(this.curX, this.curY, headSize * 2.2);
                 break;
             }
             case 'warp_flash': {
-                const flashAlpha = t < 0.25 ? map(t, 0, 0.25, 0, 255) : map(t, 0.25, 1, 255, 0);
-                if (t < 0.45) {
-                    noStroke();
-                    fill(100, 200, 255, flashAlpha);
-                    circle(0, 0, 3 + sin(elapsed * 0.05) * 2);
-                } else {
-                    const warpProg = (t - 0.45) / 0.55;
-                    const streakAlpha = map(warpProg, 0, 1, 255, 0);
-                    const length = map(warpProg, 0, 0.5, 5, 80) * (warpProg < 0.5 ? 1 : 1 - (warpProg - 0.5) * 2);
-                    stroke(150, 230, 255, streakAlpha);
-                    strokeWeight(1.5);
-                    line(
-                        -cos(this.flashAngle) * (length * 0.5), -sin(this.flashAngle) * (length * 0.5),
-                        cos(this.flashAngle) * (length * 0.5), sin(this.flashAngle) * (length * 0.5)
-                    );
+                const flashAlpha = t < 0.2 ? localLerp(0, 255, t / 0.2) : localLerp(255, 0, (t - 0.2) / 0.8);
+                if (t < 0.35) {
+                    const contract = localLerp(25, 2, t / 0.35);
                     noFill();
-                    stroke(100, 180, 255, streakAlpha * 0.5);
-                    strokeWeight(1);
-                    circle(0, 0, map(warpProg, 0, 1, 2, 20));
+                    stroke(130, 210, 255, flashAlpha * 0.8);
+                    strokeWeight(1.5);
+                    circle(0, 0, contract);
+                    stroke(100, 160, 255, flashAlpha * 0.4);
+                    strokeWeight(3.0);
+                    circle(0, 0, contract * 1.5);
+                } else {
+                    const warpT = (t - 0.35) / 0.65;
+                    const streakAlpha = localLerp(255, 0, warpT);
+                    const len = localLerp(6, 120, warpT) * (warpT < 0.4 ? 1.0 : localLerp(1.0, 0.05, (warpT - 0.4) / 0.6));
+                    
+                    stroke(180, 240, 255, streakAlpha);
+                    strokeWeight(2.5);
+                    line(
+                        -cos(this.flashAngle) * (len * 0.5), -sin(this.flashAngle) * (len * 0.5),
+                        cos(this.flashAngle) * (len * 0.5), sin(this.flashAngle) * (len * 0.5)
+                    );
+                    
+                    stroke(120, 180, 255, streakAlpha * 0.6);
+                    strokeWeight(1.0);
+                    line(
+                        -cos(this.flashAngle + HALF_PI) * (len * 0.15), -sin(this.flashAngle + HALF_PI) * (len * 0.15),
+                        cos(this.flashAngle + HALF_PI) * (len * 0.15), sin(this.flashAngle + HALF_PI) * (len * 0.15)
+                    );
+
+                    noFill();
+                    stroke(100, 200, 255, streakAlpha * 0.55);
+                    strokeWeight(1.5);
+                    circle(0, 0, localLerp(3, 40, warpT));
                 }
                 break;
             }
             case 'nebula_lightning': {
                 let pulseAlpha = 0;
                 if (this.pulseCount === 1) {
-                    pulseAlpha = Math.sin(t * PI) * 140;
+                    pulseAlpha = Math.sin(t * PI) * 160;
                 } else {
                     const subCycle = elapsed % 250;
-                    pulseAlpha = Math.sin((subCycle / 250) * PI) * 130 * (elapsed < 250 ? 1.0 : 0.7);
+                    pulseAlpha = Math.sin((subCycle / 250) * PI) * 150 * (elapsed < 250 ? 1.0 : 0.65);
                 }
+                
                 const ctx = drawingContext;
                 const grad = ctx.createRadialGradient(0, 0, 10, 0, 0, this.lightningRadius);
                 const r = this.color[0], g = this.color[1], b = this.color[2];
                 grad.addColorStop(0, `rgba(${r},${g},${b},${pulseAlpha / 255})`);
-                grad.addColorStop(0.5, `rgba(${r},${g},${b},${pulseAlpha * 0.35 / 255})`);
+                grad.addColorStop(0.5, `rgba(${r},${g},${b},${pulseAlpha * 0.4 / 255})`);
                 grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
                 ctx.fillStyle = grad;
                 ctx.beginPath();
                 ctx.arc(0, 0, this.lightningRadius, 0, TWO_PI);
                 ctx.fill();
+
+                if (pulseAlpha > 60 && this.bolts) {
+                    stroke(255, 230, 255, pulseAlpha);
+                    for (let bolt of this.bolts) {
+                        strokeWeight(random(0.8, 2.2));
+                        beginShape();
+                        for (let pt of bolt) {
+                            vertex(pt.x, pt.y);
+                        }
+                        endShape();
+                    }
+                }
                 break;
             }
             case 'fleet_skirmish': {
                 for (let s of this.shots) {
                     const shotElapsed = millis() - s.startTime;
                     const shotT = shotElapsed / s.duration;
-                    const alpha = map(shotT, 0, 1, 240, 0);
+                    const alpha = localLerp(255, 0, shotT);
                     stroke(s.color[0], s.color[1], s.color[2], alpha);
-                    strokeWeight(1);
-                    const lx = lerp(s.sx, s.ex, shotT);
-                    const ly = lerp(s.sy, s.ey, shotT);
-                    line(lx, ly, lx + (s.ex - s.sx) * 0.25, ly + (s.ey - s.sy) * 0.25);
+                    strokeWeight(1.2);
+                    const lx = localLerp(s.sx, s.ex, shotT);
+                    const ly = localLerp(s.sy, s.ey, shotT);
+                    line(lx, ly, lx + (s.ex - s.sx) * 0.3, ly + (s.ey - s.sy) * 0.3);
                 }
                 noStroke();
                 for (let exp of this.explosions) {
                     const expElapsed = millis() - exp.startTime;
                     const expT = expElapsed / exp.duration;
-                    const size = map(expT, 0, 1, 2, exp.maxSize);
-                    const alpha = map(expT, 0, 1, 255, 0);
-                    fill(255, 200, 100, alpha);
-                    circle(exp.x, exp.y, size);
-                    fill(255, 100, 50, alpha * 0.6);
-                    circle(exp.x, exp.y, size * 1.5);
+                    const sz = localLerp(1.5, exp.maxSize, expT);
+                    const alpha = localLerp(255, 0, expT);
+                    fill(255, 210, 110, alpha);
+                    circle(exp.x, exp.y, sz);
+                    fill(255, 110, 50, alpha * 0.65);
+                    circle(exp.x, exp.y, sz * 1.6);
                 }
                 break;
             }
             case 'space_whale': {
-                const alpha = Math.sin(t * PI) * 55;
+                const alpha = Math.sin(t * PI) * 60;
                 noStroke();
-                fill(80, 180, 255, alpha);
+                fill(80, 185, 255, alpha);
                 push();
                 rotate(this.angle);
+                
+                const tailWiggle = sin(elapsed * 0.0035) * (this.size * 0.06);
+
                 beginShape();
-                vertex(-this.size * 0.5, 0);
-                bezierVertex(-this.size * 0.2, -this.size * 0.25, this.size * 0.2, -this.size * 0.22, this.size * 0.5, 0);
-                bezierVertex(this.size * 0.3, this.size * 0.18, -this.size * 0.1, this.size * 0.15, -this.size * 0.5, 0);
+                vertex(-this.size * 0.5, tailWiggle);
+                bezierVertex(-this.size * 0.25, -this.size * 0.28, this.size * 0.2, -this.size * 0.24, this.size * 0.5, 0);
+                bezierVertex(this.size * 0.32, this.size * 0.20, -this.size * 0.15, this.size * 0.18, -this.size * 0.5, tailWiggle);
                 endShape(CLOSE);
-                fill(100, 220, 255, alpha * 1.3);
+
+                fill(110, 225, 255, alpha * 1.25);
                 beginShape();
-                vertex(-this.size * 0.05, -this.size * 0.1);
-                bezierVertex(this.size * 0.05, -this.size * 0.35, this.size * 0.15, -this.size * 0.32, this.size * 0.02, -this.size * 0.08);
+                vertex(-this.size * 0.03, -this.size * 0.08);
+                bezierVertex(this.size * 0.08, -this.size * 0.36, this.size * 0.18, -this.size * 0.34, this.size * 0.04, -this.size * 0.06);
                 endShape(CLOSE);
+                
                 beginShape();
-                vertex(-this.size * 0.05, this.size * 0.1);
-                bezierVertex(this.size * 0.05, this.size * 0.35, this.size * 0.15, this.size * 0.32, this.size * 0.02, this.size * 0.08);
+                vertex(-this.size * 0.03, this.size * 0.08);
+                bezierVertex(this.size * 0.08, this.size * 0.36, this.size * 0.18, this.size * 0.34, this.size * 0.04, this.size * 0.06);
                 endShape(CLOSE);
-                fill(255, 255, 255, alpha * 1.8);
-                for (let k = 0; k < 5; k++) {
-                    const spotX = lerp(-this.size * 0.25, this.size * 0.2, k / 4);
-                    const spotY = sin(k * 1.5) * (this.size * 0.04);
-                    circle(spotX, spotY, 1.8);
+
+                fill(255, 255, 255, alpha * 1.7 * (0.7 + 0.3 * sin(elapsed * 0.005)));
+                for (let k = 0; k < 6; k++) {
+                    const spotX = localLerp(-this.size * 0.2, this.size * 0.25, k / 5);
+                    const spotY = sin(k * 1.3) * (this.size * 0.03) + (k < 3 ? tailWiggle * 0.4 : 0);
+                    circle(spotX, spotY, 2.0);
                 }
                 pop();
                 break;
             }
             case 'black_hole': {
                 const size = this.size;
-                const alpha = Math.sin(t * PI) * 180;
+                const alpha = Math.sin(t * PI) * 195;
+                if (alpha <= 0) break;
+
                 push();
                 rotate(this.rotation);
 
-                // 1. Draw outer gravitational lensing halo (very soft purple/blue glow)
-                noStroke();
-                fill(100, 70, 255, alpha * 0.15);
-                circle(0, 0, size * 2.2);
-                fill(230, 80, 255, alpha * 0.08);
-                circle(0, 0, size * 3.0);
-
-                // 2. Draw Einstein Ring (thin warped ring of light right around the horizon)
                 noFill();
-                stroke(255, 230, 160, alpha * 0.85);
-                strokeWeight(1.5);
+                stroke(140, 90, 255, alpha * 0.2);
+                strokeWeight(4.0);
+                circle(0, 0, size * 2.1);
+                
+                stroke(100, 210, 255, alpha * 0.28);
+                strokeWeight(1.2);
+                circle(0, 0, size * 1.75);
+
+                const segments = 4;
+                for (let i = 0; i < segments; i++) {
+                    const arcStart = i * HALF_PI + sin(elapsed * 0.001) * 0.5;
+                    stroke(255, 255, 255, alpha * 0.38);
+                    strokeWeight(1.5);
+                    arc(0, 0, size * 1.5, size * 1.5, arcStart, arcStart + (35 * PI / 180));
+                }
+
+                stroke(255, 235, 170, alpha * 0.9);
+                strokeWeight(2.0);
                 circle(0, 0, size * 0.65);
 
-                // 3. Draw Tilted Accretion Disk (Background part - lensed over the top)
-                stroke(255, 100, 30, alpha * 0.7);
-                strokeWeight(size * 0.18);
-                arc(0, -size * 0.1, size * 0.9, size * 0.5, PI + QUARTER_PI, TWO_PI - QUARTER_PI);
+                stroke(255, 90, 20, alpha * 0.72);
+                strokeWeight(size * 0.2);
+                arc(0, -size * 0.08, size * 1.15, size * 0.58, PI + (15 * PI / 180), TWO_PI - (15 * PI / 180));
                 
-                // Secondary fainter outer lensed ring
-                stroke(220, 50, 180, alpha * 0.35);
-                strokeWeight(size * 0.08);
-                arc(0, -size * 0.1, size * 1.2, size * 0.7, PI + QUARTER_PI, TWO_PI - QUARTER_PI);
+                stroke(230, 45, 180, alpha * 0.38);
+                strokeWeight(size * 0.09);
+                arc(0, -size * 0.08, size * 1.5, size * 0.78, PI + (15 * PI / 180), TWO_PI - (15 * PI / 180));
 
-                // 4. Draw Event Horizon (pure black core that blocks all light behind it)
                 blendMode(BLEND);
                 fill(0, 0, 0, alpha);
                 noStroke();
-                circle(0, 0, size * 0.55);
+                circle(0, 0, size * 0.58);
                 
-                // 5. Draw Accretion Disk (Foreground part - passing in front of the black core)
                 blendMode(ADD);
-                stroke(255, 130, 30, alpha * 0.95);
-                strokeWeight(size * 0.16);
-                arc(0, size * 0.06, size * 1.0, size * 0.35, -QUARTER_PI, PI + QUARTER_PI);
+                stroke(255, 125, 20, alpha * 0.95);
+                strokeWeight(size * 0.18);
+                arc(0, size * 0.05, size * 1.25, size * 0.42, -(15 * PI / 180), PI + (15 * PI / 180));
 
-                // Hot white core line inside the front disk segment
-                stroke(255, 255, 230, alpha * 0.8);
-                strokeWeight(1.5);
-                arc(0, size * 0.06, size * 1.0, size * 0.35, -QUARTER_PI * 0.5, PI + QUARTER_PI * 0.5);
+                stroke(255, 255, 240, alpha * 0.85);
+                strokeWeight(1.8);
+                arc(0, size * 0.05, size * 1.25, size * 0.42, (5 * PI / 180), PI - (5 * PI / 180));
+
+                noStroke();
+                for (let p of this.particles) {
+                    const px = cos(p.angle) * p.r;
+                    const py = sin(p.angle) * p.r * 0.45;
+                    const pAlpha = map(p.r, size * 0.5, size * 2.2, alpha * 1.2, alpha * 0.25);
+                    fill(p.color[0], p.color[1], p.color[2], pAlpha);
+                    circle(px, py, p.size * (1.2 - (p.r / (size * 2.2)) * 0.5));
+                }
 
                 pop();
                 break;
             }
             case 'solar_flare': {
-                const alpha = Math.sin(t * PI) * 120;
-                const loopSize = map(t, 0, 1, 10, this.size);
+                const alpha = Math.sin(t * PI) * 135;
+                const loopSize = localLerp(12, this.size, t);
+                
                 noFill();
-                stroke(255, 120, 20, alpha);
-                strokeWeight(2.5 * (1 - t * 0.5) + 0.5);
+                stroke(255, 110, 15, alpha);
+                strokeWeight(3.0 * (1 - t * 0.45) + 0.6);
                 push();
                 rotate(this.angle);
+                
                 beginShape();
                 for (let i = 0; i < this.flarePath.length; i++) {
                     const fp = this.flarePath[i];
                     const loopAngle = fp.relAngle;
-                    const r = loopSize * 0.5 * sin(loopAngle);
-                    const lx = cos(loopAngle) * loopSize * 0.5 + fp.wiggle * sin(elapsed * 0.005);
+                    const r = loopSize * 0.52 * sin(loopAngle);
+                    const lx = cos(loopAngle) * loopSize * 0.52 + fp.wiggle * sin(elapsed * 0.005);
                     const ly = -sin(loopAngle) * r;
                     vertex(lx, ly);
                 }
                 endShape();
-                stroke(255, 230, 100, alpha * 1.3);
-                strokeWeight(1);
+                
+                stroke(255, 235, 110, alpha * 1.35);
+                strokeWeight(1.2);
                 beginShape();
                 for (let i = 0; i < this.flarePath.length; i++) {
                     const fp = this.flarePath[i];
                     const loopAngle = fp.relAngle;
-                    const r = loopSize * 0.45 * sin(loopAngle);
-                    const lx = cos(loopAngle) * loopSize * 0.45 + fp.wiggle * 0.7 * sin(elapsed * 0.005);
+                    const r = loopSize * 0.46 * sin(loopAngle);
+                    const lx = cos(loopAngle) * loopSize * 0.46 + fp.wiggle * 0.65 * sin(elapsed * 0.0055);
                     const ly = -sin(loopAngle) * r;
                     vertex(lx, ly);
                 }
                 endShape();
                 pop();
+
+                noStroke();
+                const nowF = millis();
+                for (let p of this.particles) {
+                    if (nowF > p.startTime) {
+                        const pElapsed = nowF - p.startTime;
+                        const pT = pElapsed / p.duration;
+                        const pAlpha = map(pT, 0, 1, alpha * 1.2, 0);
+                        if (pAlpha > 0) {
+                            fill(255, 130, 25, pAlpha);
+                            circle(p.x, p.y, p.size * (1.2 - pT * 0.55));
+                            fill(255, 220, 80, pAlpha * 0.5);
+                            circle(p.x, p.y, p.size * (1.8 - pT * 0.85));
+                        }
+                    }
+                }
+                break;
+            }
+            case 'space_rift': {
+                const riftAlpha = t < 0.15 ? map(t, 0, 0.15, 0, 220) : (t > 0.8 ? map(t, 0.8, 1, 220, 0) : 220);
+                if (riftAlpha <= 0) break;
+
+                const openWidth = t < 0.25 ? map(t, 0, 0.25, 0.2, 8.0) : (t > 0.75 ? map(t, 0.75, 1, 8.0, 0.0) : 8.0);
+                
+                if (openWidth > 1.0 && this.riftPath) {
+                    noStroke();
+                    fill(150, 60, 255, riftAlpha * 0.2);
+                    beginShape();
+                    for (let pt of this.riftPath) {
+                        vertex(pt.x, pt.y - openWidth * 0.5);
+                    }
+                    for (let i = this.riftPath.length - 1; i >= 0; i--) {
+                        const pt = this.riftPath[i];
+                        vertex(pt.x, pt.y + openWidth * 0.5);
+                    }
+                    endShape(CLOSE);
+                }
+
+                noFill();
+                stroke(255, 60, 220, riftAlpha);
+                strokeWeight(1.8);
+                beginShape();
+                for (let pt of this.riftPath) {
+                    vertex(pt.x, pt.y - openWidth * 0.5);
+                }
+                endShape();
+                beginShape();
+                for (let pt of this.riftPath) {
+                    vertex(pt.x, pt.y + openWidth * 0.5);
+                }
+                endShape();
+
+                stroke(100, 240, 255, riftAlpha * 1.25);
+                strokeWeight(0.9);
+                beginShape();
+                for (let pt of this.riftPath) {
+                    vertex(pt.x, pt.y);
+                }
+                endShape();
+
+                noStroke();
+                const nowR = millis();
+                for (let p of this.particles) {
+                    if (nowR > p.startTime) {
+                        const pElapsed = nowR - p.startTime;
+                        const pT = pElapsed / p.duration;
+                        const pAlpha = map(pT, 0, 1, riftAlpha * 1.3, 0);
+                        if (pAlpha > 0) {
+                            fill(255, 100, 230, pAlpha);
+                            circle(p.x, p.y, p.size * (1 - pT * 0.5));
+                        }
+                    }
+                }
+                break;
+            }
+            case 'pulsar_beacon': {
+                const pulsarAlpha = Math.sin(t * PI) * 190;
+                if (pulsarAlpha <= 0) break;
+
+                const flashFreq = 0.055;
+                const corePulse = sin(elapsed * flashFreq) * 0.28 + 1.0;
+                const size = this.size;
+
+                push();
+                rotate(this.rotation);
+                
+                const beamLength = 500;
+                const beamWidth = 70 + sin(elapsed * 0.035) * 14;
+                
+                const ctx = drawingContext;
+                
+                const gradRight = ctx.createLinearGradient(0, 0, beamLength, 0);
+                gradRight.addColorStop(0, `rgba(100, 190, 255, ${pulsarAlpha / 255 * 0.75})`);
+                gradRight.addColorStop(0.35, `rgba(150, 90, 255, ${pulsarAlpha / 255 * 0.35})`);
+                gradRight.addColorStop(1, 'rgba(230, 70, 255, 0)');
+                
+                ctx.fillStyle = gradRight;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(beamLength, -beamWidth * 0.5);
+                ctx.lineTo(beamLength, beamWidth * 0.5);
+                ctx.closePath();
+                ctx.fill();
+
+                const gradLeft = ctx.createLinearGradient(0, 0, -beamLength, 0);
+                gradLeft.addColorStop(0, `rgba(100, 190, 255, ${pulsarAlpha / 255 * 0.75})`);
+                gradLeft.addColorStop(0.35, `rgba(150, 90, 255, ${pulsarAlpha / 255 * 0.35})`);
+                gradLeft.addColorStop(1, 'rgba(230, 70, 255, 0)');
+                
+                ctx.fillStyle = gradLeft;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-beamLength, -beamWidth * 0.5);
+                ctx.lineTo(-beamLength, beamWidth * 0.5);
+                ctx.closePath();
+                ctx.fill();
+                pop();
+
+                noStroke();
+                fill(80, 140, 255, pulsarAlpha * 0.28);
+                circle(0, 0, size * 2.8 * corePulse);
+                fill(120, 210, 255, pulsarAlpha * 0.55);
+                circle(0, 0, size * 1.5 * corePulse);
+                fill(255, 255, 255, pulsarAlpha);
+                circle(0, 0, size * 0.65 * corePulse);
+                break;
+            }
+            case 'wormhole': {
+                const whAlpha = Math.sin(t * PI) * 180;
+                if (whAlpha <= 0) break;
+
+                const size = this.size;
+                
+                push();
+                rotate(this.rotation);
+                noFill();
+                
+                stroke(0, 255, 230, whAlpha * 0.65);
+                strokeWeight(1.8);
+                ellipse(0, 0, size * 1.6, size * 0.65);
+
+                rotate(PI * 0.22);
+                stroke(150, 70, 255, whAlpha * 0.55);
+                strokeWeight(1.5);
+                ellipse(0, 0, size * 1.9, size * 0.52);
+
+                rotate(-PI * 0.44);
+                stroke(90, 160, 255, whAlpha * 0.45);
+                strokeWeight(1.2);
+                ellipse(0, 0, size * 1.25, size * 0.72);
+                pop();
+
+                blendMode(BLEND);
+                noStroke();
+                const ctx = drawingContext;
+                const gradCore = ctx.createRadialGradient(0, 0, 2, 0, 0, size * 0.5);
+                gradCore.addColorStop(0, 'rgba(0, 0, 0, 1.0)');
+                gradCore.addColorStop(0.7, `rgba(15, 5, 30, ${whAlpha / 255})`);
+                gradCore.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+                
+                ctx.fillStyle = gradCore;
+                ctx.beginPath();
+                ctx.arc(0, 0, size * 0.55, 0, TWO_PI);
+                ctx.fill();
+
+                blendMode(ADD);
+                noStroke();
+                for (let p of this.particles) {
+                    const px = cos(p.angle) * p.r;
+                    const py = sin(p.angle) * p.r * 0.42;
+                    
+                    const pAlpha = map(p.r, size * 0.25, size * 2.4, 0, whAlpha);
+                    const finalAlpha = p.r < size * 0.42 ? map(p.r, size * 0.25, size * 0.42, 0, pAlpha) : pAlpha;
+                    
+                    fill(p.color[0], p.color[1], p.color[2], finalAlpha * 1.3);
+                    circle(px, py, p.size * map(p.r, size * 0.25, size * 2.4, 0.4, 1.15));
+                }
                 break;
             }
         }
@@ -8841,6 +9329,15 @@ class MicroAsteroidHail {
         this.particles = [];
         this.sparks = [];
         
+        // Base stream velocity (randomized per storm)
+        this.streamVx = -1.8;
+        this.streamVy = 1.2;
+        
+        // Intermittent storm state machine
+        this.state = 'storming'; // 'storming' or 'calm'
+        this.stateTimer = millis();
+        this.stateDuration = random(6000, 15000); // Storm starts with 6-15 seconds
+
         const defConfig = {
             particleCount: 80,
             baseSpeed: 0.15,
@@ -8864,13 +9361,52 @@ class MicroAsteroidHail {
     }
 
     init() {
-        const count = this.config.particleCount;
-        for (let i = 0; i < count; i++) {
-            this.particles.push(this.createParticle(true));
+        this.particles = [];
+        if (this.state === 'storming') {
+            const count = this.config.particleCount;
+            for (let i = 0; i < count; i++) {
+                this.particles.push(this.createParticle(true));
+            }
         }
     }
 
-    createParticle(randomPos = false) {
+    startStorm() {
+        this.state = 'storming';
+        this.stateTimer = millis();
+        this.stateDuration = random(8000, 18000); // Storm lasts 8-18 seconds
+
+        // Randomize stream direction completely
+        const angle = random(TWO_PI);
+        const speed = random(1.0, 2.2);
+        this.streamVx = cos(angle) * speed;
+        this.streamVy = sin(angle) * speed;
+
+        // Populate new screen particles
+        const count = this.config.particleCount;
+        const currentLength = this.particles.length;
+
+        // Mutate existing particles in-place up to the count
+        for (let i = 0; i < Math.min(currentLength, count); i++) {
+            this.createParticle(true, this.particles[i]);
+        }
+        // If we need more, add them
+        if (currentLength < count) {
+            for (let i = currentLength; i < count; i++) {
+                this.particles.push(this.createParticle(true));
+            }
+        } else if (currentLength > count) {
+            // Truncate if we have too many
+            this.particles.length = count;
+        }
+    }
+
+    startCalm() {
+        this.state = 'calm';
+        this.stateTimer = millis();
+        this.stateDuration = random(15000, 35000); // Calm period lasts 15-35 seconds
+    }
+
+    createParticle(randomPos = false, p = null) {
         const minDepth = this.config.minDepth;
         const maxDepth = this.config.maxDepth;
         const depth = random(minDepth, maxDepth);
@@ -8882,8 +9418,8 @@ class MicroAsteroidHail {
         const margin = 80;
 
         let relX, relY;
-        const driftVx = random(-0.8, 0.8);
-        const driftVy = random(-0.8, 0.8);
+        const driftVx = this.streamVx + random(-0.4, 0.4);
+        const driftVy = this.streamVy + random(-0.4, 0.4);
 
         if (randomPos) {
             const sx = random(-halfW - margin, halfW + margin);
@@ -8895,8 +9431,10 @@ class MicroAsteroidHail {
             const pvx = playerVel ? playerVel.x : 0;
             const pvy = playerVel ? playerVel.y : 0;
             
-            const rx = driftVx - pvx * depth;
-            const ry = driftVy - pvy * depth;
+            // Particles move in screen-space relative to the camera at (driftVx - pvx) * depth.
+            // Spawn them on the screen edge opposite to their screen-space movement vector.
+            const rx = (driftVx - pvx) * depth;
+            const ry = (driftVy - pvy) * depth;
             const speedSq = rx * rx + ry * ry;
 
             if (speedSq > 0.05) {
@@ -8924,6 +9462,20 @@ class MicroAsteroidHail {
         const colors = this.config.colors;
         const color = colors[floor(random(colors.length))];
 
+        if (p) {
+            p.relX = relX;
+            p.relY = relY;
+            p.size = size;
+            p.opacity = opacity;
+            p.depth = depth;
+            p.color = color;
+            p.driftVx = driftVx;
+            p.driftVy = driftVy;
+            p.rotation = random(TWO_PI);
+            p.rotSpeed = random(-0.02, 0.02);
+            return p;
+        }
+
         return {
             relX: relX,
             relY: relY,
@@ -8947,10 +9499,22 @@ class MicroAsteroidHail {
         const halfW = width / 2;
         const halfH = height / 2;
         const margin = 80;
+        const now = millis();
 
-        for (let i = 0; i < this.particles.length; i++) {
+        // State transition check
+        if (now - this.stateTimer > this.stateDuration) {
+            if (this.state === 'storming') {
+                this.startCalm();
+            } else {
+                this.startStorm();
+            }
+        }
+
+        for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
             
+            // Particles exist in the world, so their position relative to the camera shifts by exactly the player's movement.
+            // This is scaled by depth in draw() to achieve parallax.
             p.relX += p.driftVx - pVelX;
             p.relY += p.driftVy - pVelY;
             p.rotation += p.rotSpeed;
@@ -8959,7 +9523,11 @@ class MicroAsteroidHail {
             const screenY = p.relY * p.depth;
 
             if (screenX < -halfW - margin || screenX > halfW + margin || screenY < -halfH - margin || screenY > halfH + margin) {
-                this.particles[i] = this.createParticle(false);
+                if (this.state === 'storming') {
+                    this.particles[i] = this.createParticle(false, p);
+                } else {
+                    this.particles.splice(i, 1);
+                }
                 continue;
             }
 
@@ -8985,12 +9553,15 @@ class MicroAsteroidHail {
                         angle: hitAngle
                     });
 
-                    this.particles[i] = this.createParticle(false);
+                    if (this.state === 'storming') {
+                        this.particles[i] = this.createParticle(false, p);
+                    } else {
+                        this.particles.splice(i, 1);
+                    }
                 }
             }
         }
 
-        const now = millis();
         const duration = this.config.sparkDuration;
         for (let i = this.sparks.length - 1; i >= 0; i--) {
             const s = this.sparks[i];
