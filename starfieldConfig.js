@@ -127,5 +127,39 @@ const STARFIELD_CONFIG = {
             },
             colors: [[230, 240, 255], [255, 255, 255]]
         }
-    ]
+    ],
+    // Ambient Environmental Effects Configuration
+    AMBIENT_EFFECTS: {
+        // Space Debris / Micro-Asteroid Hail configuration
+        HAIL: {
+            particleCount: 80,
+            baseSpeed: 0.15, // Drift speed factor
+            speedScale: 0.85, // Scale speed when player moves
+            minDepth: 0.1,
+            maxDepth: 1.0,
+            minSize: 0.6,
+            maxSize: 3.5,
+            collisionRadiusMultiplier: 1.3, // Check hits at player size * multiplier
+            minOpacity: 35,
+            maxOpacity: 190,
+            sparkDuration: 250, // duration of impact spark animation in ms
+            sparkMaxRadius: 15,
+            colors: [[160, 185, 230], [210, 225, 255], [255, 255, 255]]
+        },
+        // Transient background events spawn rates
+        EVENTS: {
+            spawnChancePerFrame: 0.0003, // Probability of spawning an event on a frame
+            types: {
+                supernova: 0.10,      // 10% chance
+                comet: 0.25,          // 25% chance
+                warp_flash: 0.30,     // 30% chance
+                nebula_lightning: 0.15, // 15% chance
+                fleet_skirmish: 0.10,  // 10% chance
+                space_whale: 0.04,     // 4% chance (ultra-rare)
+                black_hole: 0.03,      // 3% chance (ultra-rare)
+                solar_flare: 0.03      // 3% chance (ultra-rare)
+            }
+        }
+    }
 };
+

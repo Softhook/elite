@@ -619,6 +619,10 @@ class StarSystem {
         this._heroReportThreshold = 3; // Generate hero news after this many kills by one pilot
         this.residentNPCs = []; // Roster of recurring resident NPCs in this system
         this.factionInfluence = { Imperial: 0.10, Separatist: 0.10, Military: 0.10 };
+
+        // === Ambient Environmental Effects ===
+        this.ambientBackgroundEvents = [];
+        this.microAsteroidHail = new MicroAsteroidHail(this);
     }
 
     /**
@@ -2633,15 +2637,80 @@ class StarSystem {
             this._updateExplosions();
             this._updateSummonPings();
 
+            // Update ambient environmental effects (background events + micro-asteroid hail)
+            this._updateAmbientEffects();
+ 
             // Collision Checks
             this.checkCollisions();
             this.checkProjectileCollisions();
-
+ 
             // Spawning Timers
             this._updateSpawnTimers();
         } catch (e) {
             console.error(`Major ERROR in StarSystem ${this.name}.update:`, e);
         }
+    }
+
+    /**
+     * Updates active ambient background events and micro-asteroid particle streams.
+     * @private
+     */
+    _updateAmbientEffects() {
+        const pVelX = this.player?.vel ? this.player.vel.x : 0;
+        const pVelY = this.player?.vel ? this.player.vel.y : 0;
+
+        // 1. Update background events
+        for (let i = this.ambientBackgroundEvents.length - 1; i >= 0; i--) {
+            const ev = this.ambientBackgroundEvents[i];
+            ev.update(pVelX, pVelY);
+            if (!ev.active) {
+                this.ambientBackgroundEvents.splice(i, 1);
+            }
+        }
+
+        // 2. Spawn new random background events
+        const spawnChance = (typeof STARFIELD_CONFIG !== 'undefined' && STARFIELD_CONFIG.AMBIENT_EFFECTS && STARFIELD_CONFIG.AMBIENT_EFFECTS.EVENTS)
+            ? STARFIELD_CONFIG.AMBIENT_EFFECTS.EVENTS.spawnChancePerFrame
+            : 0.0018;
+
+        if (random() < spawnChance && this.ambientBackgroundEvents.length < 3) {
+            this._spawnRandomBackgroundEvent();
+        }
+
+        // 3. Update micro-asteroid hail
+        if (this.microAsteroidHail) {
+            this.microAsteroidHail.update();
+        }
+    }
+
+    /**
+     * Selects and spawns a new random cosmic phenomenon in the background.
+     * @private
+     */
+    _spawnRandomBackgroundEvent() {
+        const typesConfig = (typeof STARFIELD_CONFIG !== 'undefined' && STARFIELD_CONFIG.AMBIENT_EFFECTS && STARFIELD_CONFIG.AMBIENT_EFFECTS.EVENTS)
+            ? STARFIELD_CONFIG.AMBIENT_EFFECTS.EVENTS.types
+            : { supernova: 0.1, comet: 0.25, warp_flash: 0.3, nebula_lightning: 0.15, fleet_skirmish: 0.1, space_whale: 0.04, black_hole: 0.03, solar_flare: 0.03 };
+
+        const r = random();
+        let cumulative = 0;
+        let selectedType = 'comet';
+
+        for (const [type, weight] of Object.entries(typesConfig)) {
+            cumulative += weight;
+            if (r <= cumulative) {
+                selectedType = type;
+                break;
+            }
+        }
+
+        const camX = (typeof cameraSystem !== 'undefined') ? cameraSystem.pos.x : (this.player ? this.player.pos.x : 0);
+        const camY = (typeof cameraSystem !== 'undefined') ? cameraSystem.pos.y : (this.player ? this.player.pos.y : 0);
+
+        const spawnX = camX + random(-width * 0.6, width * 0.6);
+        const spawnY = camY + random(-height * 0.6, height * 0.6);
+
+        this.ambientBackgroundEvents.push(new AmbientCosmicEvent(selectedType, spawnX, spawnY));
     }
 
     /**
@@ -5530,9 +5599,23 @@ class StarSystem {
         // Layered parallax overlays for additional depth (distant stars, nebula, dust, particles)
         this._drawLayeredParallaxBackground();
 
+        // Draw ambient background events (supernovas, comets, warp flashes)
+        this._drawAmbientBackgroundEvents();
+
         // Draw spectacular stars (animated phenomena) - these are rare and change over time
         // so they're drawn directly each frame, but only in visible area
         this._drawSpectacularStarsOverlay();
+    }
+
+    /**
+     * Draws active ambient background events.
+     * @private
+     */
+    _drawAmbientBackgroundEvents() {
+        const len = this.ambientBackgroundEvents.length;
+        for (let i = 0; i < len; i++) {
+            this.ambientBackgroundEvents[i].draw();
+        }
     }
 
     /**
@@ -6761,6 +6844,11 @@ class StarSystem {
 
         // Player is always drawn (center of view)
         this.player.draw();
+
+        // Draw micro-asteroid hail (space debris with shield hit ripples)
+        if (this.microAsteroidHail) {
+            this.microAsteroidHail.draw();
+        }
 
         // Draw dynamic lighting effects (muzzle flashes, impact glows) in world space
         if (typeof LightingEffects !== 'undefined') {
@@ -8305,6 +8393,700 @@ class StarSystem {
 
 } // End of StarSystem class
 
-if (typeof module !== 'undefined') {
-    module.exports = { StarSystem };
+// =========================================================================
+// AMBIENT ENVIRONMENTAL EFFECTS HELPER CLASSES
+// =========================================================================
+
+class AmbientCosmicEvent {
+    constructor(type, x, y) {
+        this.type = type;
+        this.x = x; // world X
+        this.y = y; // world Y
+        this.startTime = millis();
+        this.particles = [];
+        this.active = true;
+        this.init();
+    }
+
+    init() {
+        switch (this.type) {
+            case 'supernova':
+                this.duration = 6000;
+                for (let i = 0; i < 30; i++) {
+                    const angle = random(TWO_PI);
+                    const speed = random(0.5, 3.5);
+                    this.particles.push({
+                        vx: cos(angle) * speed,
+                        vy: sin(angle) * speed,
+                        x: 0,
+                        y: 0,
+                        size: random(1.2, 4),
+                        color: random() > 0.5 ? [255, 120, 120] : [200, 100, 250]
+                    });
+                }
+                break;
+            case 'comet':
+                this.duration = 1800;
+                const angle = random(-PI * 0.15, -PI * 0.35);
+                this.vx = cos(angle) * 8;
+                this.vy = sin(angle) * 8;
+                this.curX = 0;
+                this.curY = 0;
+                this.color = random() > 0.5 ? [140, 220, 255] : [255, 210, 150];
+                break;
+            case 'warp_flash':
+                this.duration = 1000;
+                this.flashAngle = random(TWO_PI);
+                break;
+            case 'nebula_lightning':
+                this.duration = 500;
+                this.color = random() > 0.6 ? [150, 80, 255] : (random() > 0.5 ? [80, 120, 255] : [255, 100, 150]);
+                this.lightningRadius = random(120, 280);
+                this.pulseCount = random() > 0.5 ? 2 : 1;
+                break;
+            case 'fleet_skirmish':
+                this.duration = 4500;
+                this.shots = [];
+                this.explosions = [];
+                break;
+            case 'space_whale':
+                this.duration = 12000;
+                this.angle = random(TWO_PI);
+                this.speed = 0.5;
+                this.vx = cos(this.angle) * this.speed;
+                this.vy = sin(this.angle) * this.speed;
+                this.size = random(80, 140);
+                break;
+            case 'black_hole':
+                this.duration = 8000;
+                this.rotation = 0;
+                this.rotSpeed = random(0.01, 0.03);
+                this.size = random(40, 70);
+                break;
+            case 'solar_flare':
+                this.duration = 5000;
+                this.angle = random(TWO_PI);
+                this.size = random(60, 120);
+                this.flarePath = [];
+                for (let i = 0; i <= 10; i++) {
+                    this.flarePath.push({
+                        relAngle: (i / 10) * PI,
+                        wiggle: random(-3, 3)
+                    });
+                }
+                break;
+        }
+    }
+
+    update(playerVelX, playerVelY) {
+        const elapsed = millis() - this.startTime;
+        if (elapsed >= this.duration) {
+            this.active = false;
+            return;
+        }
+
+        const parallax = 1.03;
+        this.x -= playerVelX * (1 - parallax);
+        this.y -= playerVelY * (1 - parallax);
+
+        const t = elapsed / this.duration;
+
+        switch (this.type) {
+            case 'supernova':
+                for (let p of this.particles) {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vx *= 0.98;
+                    p.vy *= 0.98;
+                }
+                break;
+            case 'comet':
+                this.curX += this.vx;
+                this.curY += this.vy;
+                if (random() < 0.4) {
+                    this.particles.push({
+                        x: this.curX,
+                        y: this.curY,
+                        vx: -this.vx * 0.15 + random(-0.5, 0.5),
+                        vy: -this.vy * 0.15 + random(-0.5, 0.5),
+                        size: random(1, 3.5),
+                        startTime: millis(),
+                        duration: random(400, 800)
+                    });
+                }
+                const now = millis();
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if (now - p.startTime > p.duration) {
+                        this.particles.splice(i, 1);
+                    }
+                }
+                break;
+            case 'fleet_skirmish':
+                if (random() < 0.15 && elapsed < this.duration - 1500) {
+                    const sx = random(-80, 80);
+                    const sy = random(-80, 80);
+                    const ex = sx + random(-50, 50);
+                    const ey = sy + random(-50, 50);
+                    this.shots.push({
+                        sx, sy, ex, ey,
+                        color: random() > 0.5 ? [255, 50, 50] : [50, 255, 50],
+                        startTime: millis(),
+                        duration: random(100, 200)
+                    });
+                    if (random() < 0.25) {
+                        this.explosions.push({
+                            x: ex,
+                            y: ey,
+                            startTime: millis(),
+                            duration: random(400, 800),
+                            maxSize: random(5, 12)
+                        });
+                    }
+                }
+                const curTime = millis();
+                for (let i = this.shots.length - 1; i >= 0; i--) {
+                    const s = this.shots[i];
+                    if (curTime - s.startTime > s.duration) {
+                        this.shots.splice(i, 1);
+                    }
+                }
+                for (let i = this.explosions.length - 1; i >= 0; i--) {
+                    const exp = this.explosions[i];
+                    if (curTime - exp.startTime > exp.duration) {
+                        this.explosions.splice(i, 1);
+                    }
+                }
+                break;
+            case 'space_whale':
+                this.x += this.vx;
+                this.y += this.vy;
+                break;
+            case 'black_hole':
+                this.rotation += this.rotSpeed;
+                break;
+        }
+    }
+
+    draw() {
+        const elapsed = millis() - this.startTime;
+        const t = elapsed / this.duration;
+
+        push();
+        translate(this.x, this.y);
+        blendMode(ADD);
+
+        switch (this.type) {
+            case 'supernova': {
+                const coreAlpha = t < 0.1 ? map(t, 0, 0.1, 0, 80) : map(t, 0.1, 1, 80, 0);
+                const ringSize = map(t, 0.1, 1, 5, 240);
+                const ringAlpha = map(t, 0.1, 1, 45, 0);
+
+                if (t < 0.6) {
+                    const flareSize = map(t, 0, 0.2, 5, 50);
+                    noStroke();
+                    fill(255, 255, 255, coreAlpha);
+                    circle(0, 0, flareSize);
+                    fill(255, 220, 200, coreAlpha * 0.6);
+                    circle(0, 0, flareSize * 1.5);
+                    fill(200, 150, 255, coreAlpha * 0.3);
+                    circle(0, 0, flareSize * 2.5);
+                }
+
+                if (t > 0.05) {
+                    noFill();
+                    strokeWeight(1.0);
+                    stroke(180, 100, 255, ringAlpha * 0.75);
+                    circle(0, 0, ringSize);
+                    
+                    strokeWeight(2.0);
+                    stroke(255, 120, 50, ringAlpha * 0.5);
+                    circle(0, 0, ringSize * 0.85);
+
+                    strokeWeight(1.0);
+                    stroke(255, 220, 100, ringAlpha * 0.4);
+                    circle(0, 0, ringSize * 0.7);
+                }
+
+                noStroke();
+                for (let p of this.particles) {
+                    fill(p.color[0], p.color[1], p.color[2], ringAlpha * 1.5);
+                    circle(p.x, p.y, p.size * (1 - t * 0.4));
+                }
+
+                if (t < 0.25 && typeof LightingEffects !== 'undefined' && typeof LightingEffects.addScreenFlash === 'function') {
+                    const flashVal = Math.floor(map(t, 0, 0.1, 0, 12) * (t < 0.1 ? 1 : map(t, 0.1, 0.25, 1, 0)));
+                    if (flashVal > 0) {
+                        LightingEffects.addScreenFlash([220, 210, 255], flashVal);
+                    }
+                }
+                break;
+            }
+            case 'comet': {
+                const headSize = map(t, 0, 1, 4.5, 1.5);
+                const alpha = map(t, 0, 1, 230, 0);
+
+                noStroke();
+                const now = millis();
+                for (let p of this.particles) {
+                    const pElapsed = now - p.startTime;
+                    const pT = pElapsed / p.duration;
+                    const pAlpha = map(pT, 0, 1, alpha * 0.8, 0);
+                    fill(this.color[0], this.color[1] * 0.8, this.color[2] * 0.6, pAlpha);
+                    circle(p.x, p.y, p.size * (1 - pT));
+                }
+
+                noFill();
+                stroke(100, 180, 255, alpha * 0.45);
+                strokeWeight(headSize * 0.6);
+                line(this.curX, this.curY, this.curX - this.vx * 3.5, this.curY - this.vy * 3.5);
+
+                noStroke();
+                fill(255, 255, 255, alpha);
+                circle(this.curX, this.curY, headSize);
+                fill(this.color[0], this.color[1], this.color[2], alpha * 0.4);
+                circle(this.curX, this.curY, headSize * 2.2);
+                break;
+            }
+            case 'warp_flash': {
+                const flashAlpha = t < 0.25 ? map(t, 0, 0.25, 0, 255) : map(t, 0.25, 1, 255, 0);
+                if (t < 0.45) {
+                    noStroke();
+                    fill(100, 200, 255, flashAlpha);
+                    circle(0, 0, 3 + sin(elapsed * 0.05) * 2);
+                } else {
+                    const warpProg = (t - 0.45) / 0.55;
+                    const streakAlpha = map(warpProg, 0, 1, 255, 0);
+                    const length = map(warpProg, 0, 0.5, 5, 80) * (warpProg < 0.5 ? 1 : 1 - (warpProg - 0.5) * 2);
+                    stroke(150, 230, 255, streakAlpha);
+                    strokeWeight(1.5);
+                    line(
+                        -cos(this.flashAngle) * (length * 0.5), -sin(this.flashAngle) * (length * 0.5),
+                        cos(this.flashAngle) * (length * 0.5), sin(this.flashAngle) * (length * 0.5)
+                    );
+                    noFill();
+                    stroke(100, 180, 255, streakAlpha * 0.5);
+                    strokeWeight(1);
+                    circle(0, 0, map(warpProg, 0, 1, 2, 20));
+                }
+                break;
+            }
+            case 'nebula_lightning': {
+                let pulseAlpha = 0;
+                if (this.pulseCount === 1) {
+                    pulseAlpha = Math.sin(t * PI) * 140;
+                } else {
+                    const subCycle = elapsed % 250;
+                    pulseAlpha = Math.sin((subCycle / 250) * PI) * 130 * (elapsed < 250 ? 1.0 : 0.7);
+                }
+                const ctx = drawingContext;
+                const grad = ctx.createRadialGradient(0, 0, 10, 0, 0, this.lightningRadius);
+                const r = this.color[0], g = this.color[1], b = this.color[2];
+                grad.addColorStop(0, `rgba(${r},${g},${b},${pulseAlpha / 255})`);
+                grad.addColorStop(0.5, `rgba(${r},${g},${b},${pulseAlpha * 0.35 / 255})`);
+                grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.lightningRadius, 0, TWO_PI);
+                ctx.fill();
+                break;
+            }
+            case 'fleet_skirmish': {
+                for (let s of this.shots) {
+                    const shotElapsed = millis() - s.startTime;
+                    const shotT = shotElapsed / s.duration;
+                    const alpha = map(shotT, 0, 1, 240, 0);
+                    stroke(s.color[0], s.color[1], s.color[2], alpha);
+                    strokeWeight(1);
+                    const lx = lerp(s.sx, s.ex, shotT);
+                    const ly = lerp(s.sy, s.ey, shotT);
+                    line(lx, ly, lx + (s.ex - s.sx) * 0.25, ly + (s.ey - s.sy) * 0.25);
+                }
+                noStroke();
+                for (let exp of this.explosions) {
+                    const expElapsed = millis() - exp.startTime;
+                    const expT = expElapsed / exp.duration;
+                    const size = map(expT, 0, 1, 2, exp.maxSize);
+                    const alpha = map(expT, 0, 1, 255, 0);
+                    fill(255, 200, 100, alpha);
+                    circle(exp.x, exp.y, size);
+                    fill(255, 100, 50, alpha * 0.6);
+                    circle(exp.x, exp.y, size * 1.5);
+                }
+                break;
+            }
+            case 'space_whale': {
+                const alpha = Math.sin(t * PI) * 55;
+                noStroke();
+                fill(80, 180, 255, alpha);
+                push();
+                rotate(this.angle);
+                beginShape();
+                vertex(-this.size * 0.5, 0);
+                bezierVertex(-this.size * 0.2, -this.size * 0.25, this.size * 0.2, -this.size * 0.22, this.size * 0.5, 0);
+                bezierVertex(this.size * 0.3, this.size * 0.18, -this.size * 0.1, this.size * 0.15, -this.size * 0.5, 0);
+                endShape(CLOSE);
+                fill(100, 220, 255, alpha * 1.3);
+                beginShape();
+                vertex(-this.size * 0.05, -this.size * 0.1);
+                bezierVertex(this.size * 0.05, -this.size * 0.35, this.size * 0.15, -this.size * 0.32, this.size * 0.02, -this.size * 0.08);
+                endShape(CLOSE);
+                beginShape();
+                vertex(-this.size * 0.05, this.size * 0.1);
+                bezierVertex(this.size * 0.05, this.size * 0.35, this.size * 0.15, this.size * 0.32, this.size * 0.02, this.size * 0.08);
+                endShape(CLOSE);
+                fill(255, 255, 255, alpha * 1.8);
+                for (let k = 0; k < 5; k++) {
+                    const spotX = lerp(-this.size * 0.25, this.size * 0.2, k / 4);
+                    const spotY = sin(k * 1.5) * (this.size * 0.04);
+                    circle(spotX, spotY, 1.8);
+                }
+                pop();
+                break;
+            }
+            case 'black_hole': {
+                const size = this.size;
+                const alpha = Math.sin(t * PI) * 180;
+                push();
+                rotate(this.rotation);
+
+                // 1. Draw outer gravitational lensing halo (very soft purple/blue glow)
+                noStroke();
+                fill(100, 70, 255, alpha * 0.15);
+                circle(0, 0, size * 2.2);
+                fill(230, 80, 255, alpha * 0.08);
+                circle(0, 0, size * 3.0);
+
+                // 2. Draw Einstein Ring (thin warped ring of light right around the horizon)
+                noFill();
+                stroke(255, 230, 160, alpha * 0.85);
+                strokeWeight(1.5);
+                circle(0, 0, size * 0.65);
+
+                // 3. Draw Tilted Accretion Disk (Background part - lensed over the top)
+                stroke(255, 100, 30, alpha * 0.7);
+                strokeWeight(size * 0.18);
+                arc(0, -size * 0.1, size * 0.9, size * 0.5, PI + QUARTER_PI, TWO_PI - QUARTER_PI);
+                
+                // Secondary fainter outer lensed ring
+                stroke(220, 50, 180, alpha * 0.35);
+                strokeWeight(size * 0.08);
+                arc(0, -size * 0.1, size * 1.2, size * 0.7, PI + QUARTER_PI, TWO_PI - QUARTER_PI);
+
+                // 4. Draw Event Horizon (pure black core that blocks all light behind it)
+                blendMode(BLEND);
+                fill(0, 0, 0, alpha);
+                noStroke();
+                circle(0, 0, size * 0.55);
+                
+                // 5. Draw Accretion Disk (Foreground part - passing in front of the black core)
+                blendMode(ADD);
+                stroke(255, 130, 30, alpha * 0.95);
+                strokeWeight(size * 0.16);
+                arc(0, size * 0.06, size * 1.0, size * 0.35, -QUARTER_PI, PI + QUARTER_PI);
+
+                // Hot white core line inside the front disk segment
+                stroke(255, 255, 230, alpha * 0.8);
+                strokeWeight(1.5);
+                arc(0, size * 0.06, size * 1.0, size * 0.35, -QUARTER_PI * 0.5, PI + QUARTER_PI * 0.5);
+
+                pop();
+                break;
+            }
+            case 'solar_flare': {
+                const alpha = Math.sin(t * PI) * 120;
+                const loopSize = map(t, 0, 1, 10, this.size);
+                noFill();
+                stroke(255, 120, 20, alpha);
+                strokeWeight(2.5 * (1 - t * 0.5) + 0.5);
+                push();
+                rotate(this.angle);
+                beginShape();
+                for (let i = 0; i < this.flarePath.length; i++) {
+                    const fp = this.flarePath[i];
+                    const loopAngle = fp.relAngle;
+                    const r = loopSize * 0.5 * sin(loopAngle);
+                    const lx = cos(loopAngle) * loopSize * 0.5 + fp.wiggle * sin(elapsed * 0.005);
+                    const ly = -sin(loopAngle) * r;
+                    vertex(lx, ly);
+                }
+                endShape();
+                stroke(255, 230, 100, alpha * 1.3);
+                strokeWeight(1);
+                beginShape();
+                for (let i = 0; i < this.flarePath.length; i++) {
+                    const fp = this.flarePath[i];
+                    const loopAngle = fp.relAngle;
+                    const r = loopSize * 0.45 * sin(loopAngle);
+                    const lx = cos(loopAngle) * loopSize * 0.45 + fp.wiggle * 0.7 * sin(elapsed * 0.005);
+                    const ly = -sin(loopAngle) * r;
+                    vertex(lx, ly);
+                }
+                endShape();
+                pop();
+                break;
+            }
+        }
+
+        blendMode(BLEND);
+        pop();
+    }
 }
+
+class MicroAsteroidHail {
+    constructor(system) {
+        this.system = system;
+        this.particles = [];
+        this.sparks = [];
+        
+        const defConfig = {
+            particleCount: 80,
+            baseSpeed: 0.15,
+            speedScale: 0.85,
+            minDepth: 0.1,
+            maxDepth: 1.0,
+            minSize: 0.6,
+            maxSize: 3.5,
+            collisionRadiusMultiplier: 1.3,
+            minOpacity: 35,
+            maxOpacity: 190,
+            sparkDuration: 250,
+            sparkMaxRadius: 15,
+            colors: [[160, 185, 230], [210, 225, 255], [255, 255, 255]]
+        };
+        this.config = (typeof STARFIELD_CONFIG !== 'undefined' && STARFIELD_CONFIG.AMBIENT_EFFECTS && STARFIELD_CONFIG.AMBIENT_EFFECTS.HAIL)
+            ? STARFIELD_CONFIG.AMBIENT_EFFECTS.HAIL
+            : defConfig;
+            
+        this.init();
+    }
+
+    init() {
+        const count = this.config.particleCount;
+        for (let i = 0; i < count; i++) {
+            this.particles.push(this.createParticle(true));
+        }
+    }
+
+    createParticle(randomPos = false) {
+        const minDepth = this.config.minDepth;
+        const maxDepth = this.config.maxDepth;
+        const depth = random(minDepth, maxDepth);
+        const size = map(depth, minDepth, maxDepth, this.config.minSize, this.config.maxSize);
+        const opacity = map(depth, minDepth, maxDepth, this.config.minOpacity, this.config.maxOpacity);
+        
+        const halfW = width / 2;
+        const halfH = height / 2;
+        const margin = 80;
+
+        let relX, relY;
+        const driftVx = random(-0.8, 0.8);
+        const driftVy = random(-0.8, 0.8);
+
+        if (randomPos) {
+            const sx = random(-halfW - margin, halfW + margin);
+            const sy = random(-halfH - margin, halfH + margin);
+            relX = sx / depth;
+            relY = sy / depth;
+        } else {
+            const playerVel = this.system.player?.vel;
+            const pvx = playerVel ? playerVel.x : 0;
+            const pvy = playerVel ? playerVel.y : 0;
+            
+            const rx = driftVx - pvx * depth;
+            const ry = driftVy - pvy * depth;
+            const speedSq = rx * rx + ry * ry;
+
+            if (speedSq > 0.05) {
+                const angle = atan2(ry, rx) + PI + random(-HALF_PI, HALF_PI);
+                const spawnDist = max(halfW, halfH) + margin - 20;
+                const sx = cos(angle) * spawnDist;
+                const sy = sin(angle) * spawnDist;
+                
+                relX = sx / depth;
+                relY = sy / depth;
+            } else {
+                let sx, sy;
+                if (random() > 0.5) {
+                    sx = random() > 0.5 ? -halfW - margin + 10 : halfW + margin - 10;
+                    sy = random(-halfH, halfH);
+                } else {
+                    sx = random(-halfW, halfW);
+                    sy = random() > 0.5 ? -halfH - margin + 10 : halfH + margin - 10;
+                }
+                relX = sx / depth;
+                relY = sy / depth;
+            }
+        }
+
+        const colors = this.config.colors;
+        const color = colors[floor(random(colors.length))];
+
+        return {
+            relX: relX,
+            relY: relY,
+            size: size,
+            opacity: opacity,
+            depth: depth,
+            color: color,
+            driftVx: driftVx,
+            driftVy: driftVy,
+            rotation: random(TWO_PI),
+            rotSpeed: random(-0.02, 0.02)
+        };
+    }
+
+    update() {
+        if (!this.system.player) return;
+        const player = this.system.player;
+        const pVelX = player.vel ? player.vel.x : 0;
+        const pVelY = player.vel ? player.vel.y : 0;
+
+        const halfW = width / 2;
+        const halfH = height / 2;
+        const margin = 80;
+
+        for (let i = 0; i < this.particles.length; i++) {
+            const p = this.particles[i];
+            
+            p.relX += p.driftVx - pVelX;
+            p.relY += p.driftVy - pVelY;
+            p.rotation += p.rotSpeed;
+
+            const screenX = p.relX * p.depth;
+            const screenY = p.relY * p.depth;
+
+            if (screenX < -halfW - margin || screenX > halfW + margin || screenY < -halfH - margin || screenY > halfH + margin) {
+                this.particles[i] = this.createParticle(false);
+                continue;
+            }
+
+            if (p.depth >= 0.75) {
+                const distSq = p.relX * p.relX + p.relY * p.relY;
+                const sizeMult = this.config.collisionRadiusMultiplier;
+                const playerColSize = (player.size || 30) * 0.65;
+                const shieldRadius = playerColSize * sizeMult;
+                const shieldRadiusSq = shieldRadius * shieldRadius;
+
+                if (distSq < shieldRadiusSq) {
+                    const hitAngle = atan2(p.relY, p.relX);
+                    const hasShield = player.shield > 0 && !player.shieldsDisabled;
+                    const sparkColor = hasShield ? [100, 200, 255] : [255, 140, 50];
+                    
+                    this.sparks.push({
+                        relX: cos(hitAngle) * (hasShield ? shieldRadius : playerColSize * 0.6),
+                        relY: sin(hitAngle) * (hasShield ? shieldRadius : playerColSize * 0.6),
+                        color: sparkColor,
+                        maxSize: random(8, 14),
+                        startTime: millis(),
+                        isShield: hasShield,
+                        angle: hitAngle
+                    });
+
+                    this.particles[i] = this.createParticle(false);
+                }
+            }
+        }
+
+        const now = millis();
+        const duration = this.config.sparkDuration;
+        for (let i = this.sparks.length - 1; i >= 0; i--) {
+            const s = this.sparks[i];
+            if (now - s.startTime > duration) {
+                this.sparks.splice(i, 1);
+            }
+        }
+    }
+
+    draw() {
+        if (!this.system.player) return;
+        const player = this.system.player;
+        const now = millis();
+        const duration = this.config.sparkDuration;
+
+        push();
+        const px = player.pos.x;
+        const py = player.pos.y;
+
+        noStroke();
+        for (let i = 0; i < this.particles.length; i++) {
+            const p = this.particles[i];
+            const wx = px + p.relX * p.depth;
+            const wy = py + p.relY * p.depth;
+
+            fill(p.color[0], p.color[1], p.color[2], p.opacity);
+            
+            push();
+            translate(wx, wy);
+            rotate(p.rotation);
+            if (p.size > 2) {
+                beginShape();
+                vertex(-p.size * 0.5, -p.size * 0.2);
+                vertex(0, -p.size * 0.6);
+                vertex(p.size * 0.4, -p.size * 0.3);
+                vertex(p.size * 0.5, p.size * 0.3);
+                vertex(0, p.size * 0.5);
+                vertex(-p.size * 0.4, p.size * 0.2);
+                endShape(CLOSE);
+            } else {
+                circle(0, 0, p.size);
+            }
+            pop();
+        }
+
+        for (let i = 0; i < this.sparks.length; i++) {
+            const s = this.sparks[i];
+            const elapsed = now - s.startTime;
+            const t = elapsed / duration;
+            const alpha = map(t, 0, 1, 230, 0);
+            
+            const wx = px + s.relX;
+            const wy = py + s.relY;
+
+            push();
+            translate(wx, wy);
+            blendMode(ADD);
+            
+            if (s.isShield) {
+                noFill();
+                stroke(s.color[0], s.color[1], s.color[2], alpha);
+                strokeWeight(2.5 * (1 - t) + 0.5);
+                
+                const arcLength = radians(60) * (1 - t * 0.5);
+                arc(
+                    -s.relX, -s.relY,
+                    (player.size || 30) * 0.65 * this.config.collisionRadiusMultiplier * 2,
+                    (player.size || 30) * 0.65 * this.config.collisionRadiusMultiplier * 2,
+                    s.angle - arcLength / 2,
+                    s.angle + arcLength / 2
+                );
+
+                noStroke();
+                fill(255, 255, 255, alpha);
+                circle(0, 0, s.maxSize * (0.8 - t * 0.5));
+            } else {
+                stroke(s.color[0], s.color[1], s.color[2], alpha);
+                strokeWeight(1.5);
+                noFill();
+                const sparkDist = s.maxSize * 1.2 * t;
+                
+                for (let k = 0; k < 4; k++) {
+                    const angle = s.angle + k * HALF_PI + random(-0.2, 0.2);
+                    line(
+                        cos(angle) * (sparkDist * 0.2), sin(angle) * (sparkDist * 0.2),
+                        cos(angle) * sparkDist, sin(angle) * sparkDist
+                    );
+                }
+            }
+            pop();
+        }
+        pop();
+    }
+}
+
+if (typeof module !== 'undefined') {
+    module.exports = { StarSystem, AmbientCosmicEvent, MicroAsteroidHail };
+}
+
