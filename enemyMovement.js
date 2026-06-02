@@ -21,7 +21,8 @@ class EnemyMovement {
         // We still allow rotation so the ship can aim during boost.
         if (this.isSpeedBursting) {
             // Only rotate toward target if we have one (for aiming during boost)
-            if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined) {
+            if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined &&
+                !isNaN(desiredMovementTargetPos.x) && !isNaN(desiredMovementTargetPos.y)) {
                 this.tempVector.set(
                     desiredMovementTargetPos.x - this.pos.x,
                     desiredMovementTargetPos.y - this.pos.y
@@ -35,7 +36,8 @@ class EnemyMovement {
             return angleDifference;
         }
 
-        if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined) {
+        if (desiredMovementTargetPos?.x !== undefined && desiredMovementTargetPos?.y !== undefined &&
+            !isNaN(desiredMovementTargetPos.x) && !isNaN(desiredMovementTargetPos.y)) {
             // Reuse tempVector to avoid allocations
             this.tempVector.set(
                 desiredMovementTargetPos.x - this.pos.x,
@@ -208,7 +210,7 @@ class EnemyMovement {
                 // effectiveThrustMultiplier is 1.0 by default
 
                 // Add braking when close to target to prevent overshooting/ramming
-                if (desiredMovementTargetPos) {
+                if (desiredMovementTargetPos && !isNaN(desiredMovementTargetPos.x) && !isNaN(desiredMovementTargetPos.y)) {
                     const distToTarget = dist(this.pos.x, this.pos.y, desiredMovementTargetPos.x, desiredMovementTargetPos.y);
                     const brakingDist = this.size * 4.0;
 
