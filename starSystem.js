@@ -2709,7 +2709,29 @@ class StarSystem {
     _spawnRandomBackgroundEvent() {
         const typesConfig = (typeof STARFIELD_CONFIG !== 'undefined' && STARFIELD_CONFIG.AMBIENT_EFFECTS && STARFIELD_CONFIG.AMBIENT_EFFECTS.EVENTS)
             ? STARFIELD_CONFIG.AMBIENT_EFFECTS.EVENTS.types
-            : { supernova: 0.1, comet: 0.25, warp_flash: 0.3, nebula_lightning: 0.15, fleet_skirmish: 0.1, space_whale: 0.04, black_hole: 0.03, solar_flare: 0.03 };
+            : {
+                supernova: 0.06,
+                comet: 0.12,
+                warp_flash: 0.15,
+                nebula_lightning: 0.09,
+                fleet_skirmish: 0.075,
+                space_whale: 0.03,
+                black_hole: 0.03,
+                solar_flare: 0.03,
+                space_rift: 0.06,
+                pulsar_beacon: 0.06,
+                wormhole: 0.045,
+                ion_storm: 0.03,
+                crystal_comet: 0.03,
+                quasar_jet: 0.025,
+                dark_matter_tide: 0.025,
+                aurora_wave: 0.025,
+                stellar_nursery: 0.025,
+                graviton_lens: 0.02,
+                temporal_echo: 0.02,
+                plasma_rain: 0.025,
+                void_bloom: 0.025
+            };
 
         const r = random();
         let cumulative = 0;
@@ -8666,6 +8688,94 @@ class AmbientCosmicEvent {
                     });
                 }
                 break;
+            case 'ion_storm':
+                this.duration = 9000;
+                this.lightningRadius = random(180, 340);
+                this.color = random() > 0.5 ? [110, 255, 240] : [140, 220, 255];
+                this.bolts = [];
+                for (let i = 0; i < floor(random(5, 9)); i++) {
+                    const startA = random(TWO_PI);
+                    const len = random(70, 160);
+                    this.bolts.push({
+                        startA,
+                        len,
+                        startDelay: random(0, 7000),
+                        duration: random(220, 420)
+                    });
+                }
+                break;
+            case 'crystal_comet':
+                this.duration = 6500;
+                this.curX = 0;
+                this.curY = 0;
+                this.vx = random(-4.6, -2.8);
+                this.vy = random(1.2, 2.4);
+                this.color = [180, 245, 255];
+                break;
+            case 'quasar_jet':
+                this.duration = 14000;
+                this.rotation = random(TWO_PI);
+                this.rotSpeed = random(0.01, 0.02);
+                this.size = random(35, 55);
+                this.jetLength = random(500, 760);
+                break;
+            case 'dark_matter_tide':
+                this.duration = 12000;
+                this.size = random(110, 180);
+                break;
+            case 'aurora_wave':
+                this.duration = 10000;
+                this.size = random(220, 330);
+                this.wavePhase = random(TWO_PI);
+                this.color = random() > 0.5 ? [80, 255, 180] : [90, 170, 255];
+                break;
+            case 'stellar_nursery':
+                this.duration = 16000;
+                this.size = random(170, 250);
+                this.clouds = [];
+                for (let i = 0; i < 42; i++) {
+                    this.clouds.push({
+                        x: random(-this.size, this.size),
+                        y: random(-this.size * 0.55, this.size * 0.55),
+                        vx: random(-0.18, 0.18),
+                        vy: random(-0.12, 0.12),
+                        size: random(14, 42),
+                        color: random() > 0.5 ? [255, 110, 210] : [120, 160, 255]
+                    });
+                }
+                break;
+            case 'graviton_lens':
+                this.duration = 13000;
+                this.rotation = random(TWO_PI);
+                this.rotSpeed = random(0.007, 0.013);
+                this.size = random(80, 130);
+                break;
+            case 'temporal_echo':
+                this.duration = 10500;
+                this.echoes = [];
+                this.lastEchoTime = millis();
+                this.color = random() > 0.5 ? [255, 220, 130] : [170, 210, 255];
+                break;
+            case 'plasma_rain':
+                this.duration = 11000;
+                this.size = random(180, 280);
+                this.particles = [];
+                for (let i = 0; i < 45; i++) {
+                    this.particles.push({
+                        x: random(-this.size, this.size),
+                        y: random(-this.size * 0.65, this.size * 0.65),
+                        len: random(18, 42),
+                        speed: random(1.6, 3.4),
+                        alpha: random(110, 220)
+                    });
+                }
+                break;
+            case 'void_bloom':
+                this.duration = 12500;
+                this.rotation = random(TWO_PI);
+                this.rotSpeed = random(0.005, 0.011);
+                this.size = random(95, 150);
+                break;
         }
     }
 
@@ -8885,6 +8995,87 @@ class AmbientCosmicEvent {
                         p.angle = random(TWO_PI);
                     }
                 }
+                break;
+            case 'ion_storm':
+                if (this.bolts) {
+                    for (let bolt of this.bolts) {
+                        if (elapsed > bolt.startDelay + bolt.duration) {
+                            bolt.startDelay = elapsed + random(80, 900);
+                            bolt.duration = random(180, 380);
+                            bolt.startA = random(TWO_PI);
+                            bolt.len = random(70, 160);
+                        }
+                    }
+                }
+                break;
+            case 'crystal_comet':
+                this.curX += this.vx;
+                this.curY += this.vy;
+                if (random() < 0.7) {
+                    this.particles.push({
+                        x: this.curX,
+                        y: this.curY,
+                        vx: -this.vx * 0.28 + random(-0.7, 0.7),
+                        vy: -this.vy * 0.28 + random(-0.7, 0.7),
+                        size: random(1.2, 3.2),
+                        startTime: now,
+                        duration: random(700, 1300)
+                    });
+                }
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if (now - p.startTime > p.duration) {
+                        this.particles.splice(i, 1);
+                    }
+                }
+                break;
+            case 'quasar_jet':
+                this.rotation += this.rotSpeed;
+                break;
+            case 'dark_matter_tide':
+                break;
+            case 'aurora_wave':
+                this.wavePhase += 0.02;
+                break;
+            case 'stellar_nursery':
+                for (let c of this.clouds) {
+                    c.x += c.vx;
+                    c.y += c.vy;
+                    if (c.x > this.size || c.x < -this.size) c.vx *= -1;
+                    if (c.y > this.size * 0.55 || c.y < -this.size * 0.55) c.vy *= -1;
+                }
+                break;
+            case 'graviton_lens':
+                this.rotation += this.rotSpeed;
+                break;
+            case 'temporal_echo':
+                if (now - this.lastEchoTime > 260) {
+                    this.echoes.push({
+                        radius: 8,
+                        createdAt: now
+                    });
+                    this.lastEchoTime = now;
+                }
+                for (let i = this.echoes.length - 1; i >= 0; i--) {
+                    const e = this.echoes[i];
+                    e.radius += 1.7;
+                    if (now - e.createdAt > 1800) this.echoes.splice(i, 1);
+                }
+                break;
+            case 'plasma_rain':
+                for (let p of this.particles) {
+                    p.y += p.speed;
+                    p.x += sin(now * 0.003 + p.y * 0.02) * 0.25;
+                    if (p.y > this.size * 0.65) {
+                        p.y = -this.size * 0.65;
+                        p.x = random(-this.size, this.size);
+                    }
+                }
+                break;
+            case 'void_bloom':
+                this.rotation += this.rotSpeed;
                 break;
         }
     }
@@ -9549,6 +9740,185 @@ class AmbientCosmicEvent {
                     fill(p.color[0], p.color[1], p.color[2], finalAlpha * 1.35);
                     circle(px, py, p.size * map(p.r, size * 0.25, size * 2.6, 0.35, 1.2));
                 }
+                break;
+            }
+            case 'ion_storm': {
+                const alpha = Math.sin(t * PI) * 220;
+                if (alpha <= 0) break;
+                noFill();
+                stroke(this.color[0], this.color[1], this.color[2], alpha * 0.55);
+                strokeWeight(2.5);
+                circle(0, 0, this.lightningRadius * 0.45);
+                strokeWeight(1.2);
+                for (let bolt of this.bolts) {
+                    if (elapsed > bolt.startDelay && elapsed < bolt.startDelay + bolt.duration) {
+                        const boltT = (elapsed - bolt.startDelay) / bolt.duration;
+                        const boltAlpha = sin(boltT * PI) * alpha;
+                        const ex = cos(bolt.startA) * bolt.len;
+                        const ey = sin(bolt.startA) * bolt.len;
+                        stroke(210, 255, 255, boltAlpha);
+                        line(0, 0, ex, ey);
+                        stroke(this.color[0], this.color[1], this.color[2], boltAlpha * 0.45);
+                        line(ex * 0.65, ey * 0.65, ex + random(-20, 20), ey + random(-20, 20));
+                    }
+                }
+                break;
+            }
+            case 'crystal_comet': {
+                const alpha = localLerp(210, 0, t);
+                noStroke();
+                for (let p of this.particles) {
+                    const pElapsed = now - p.startTime;
+                    const pT = pElapsed / p.duration;
+                    fill(150, 245, 255, alpha * (1 - pT));
+                    circle(p.x, p.y, p.size * (1.1 - pT * 0.6));
+                }
+                stroke(160, 240, 255, alpha * 0.8);
+                strokeWeight(2.0);
+                line(this.curX, this.curY, this.curX - this.vx * 5.0, this.curY - this.vy * 5.0);
+                noStroke();
+                fill(225, 255, 255, alpha);
+                circle(this.curX, this.curY, 7.0);
+                fill(150, 220, 255, alpha * 0.4);
+                circle(this.curX, this.curY, 16.0);
+                break;
+            }
+            case 'quasar_jet': {
+                const alpha = Math.sin(t * PI) * 210;
+                if (alpha <= 0) break;
+                push();
+                rotate(this.rotation);
+                const ctx = drawingContext;
+                const gradRight = ctx.createLinearGradient(0, 0, this.jetLength, 0);
+                gradRight.addColorStop(0, `rgba(255,255,255,${alpha / 255})`);
+                gradRight.addColorStop(0.25, `rgba(130,190,255,${alpha * 0.6 / 255})`);
+                gradRight.addColorStop(1, 'rgba(90,40,255,0)');
+                ctx.fillStyle = gradRight;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(this.jetLength, -26);
+                ctx.lineTo(this.jetLength, 26);
+                ctx.closePath();
+                ctx.fill();
+                const gradLeft = ctx.createLinearGradient(0, 0, -this.jetLength, 0);
+                gradLeft.addColorStop(0, `rgba(255,255,255,${alpha / 255})`);
+                gradLeft.addColorStop(0.25, `rgba(255,170,120,${alpha * 0.55 / 255})`);
+                gradLeft.addColorStop(1, 'rgba(255,80,20,0)');
+                ctx.fillStyle = gradLeft;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-this.jetLength, -24);
+                ctx.lineTo(-this.jetLength, 24);
+                ctx.closePath();
+                ctx.fill();
+                noStroke();
+                fill(255, 255, 255, alpha);
+                circle(0, 0, this.size);
+                pop();
+                break;
+            }
+            case 'dark_matter_tide': {
+                const alpha = Math.sin(t * PI) * 160;
+                if (alpha <= 0) break;
+                noFill();
+                for (let i = 0; i < 4; i++) {
+                    const ringT = (t + i * 0.22) % 1;
+                    const r = localLerp(this.size * 0.25, this.size * 2.1, ringT);
+                    stroke(110, 70, 180, alpha * (1 - ringT));
+                    strokeWeight(2.0 - i * 0.3);
+                    ellipse(0, 0, r * 1.4, r * 0.6);
+                }
+                break;
+            }
+            case 'aurora_wave': {
+                const alpha = Math.sin(t * PI) * 180;
+                if (alpha <= 0) break;
+                noFill();
+                stroke(this.color[0], this.color[1], this.color[2], alpha);
+                strokeWeight(2.2);
+                for (let l = 0; l < 3; l++) {
+                    beginShape();
+                    for (let x = -this.size; x <= this.size; x += 14) {
+                        const y = sin((x * 0.03) + this.wavePhase + l * 0.9) * (20 + l * 8);
+                        vertex(x, y + l * 14 - 14);
+                    }
+                    endShape();
+                }
+                break;
+            }
+            case 'stellar_nursery': {
+                const alpha = Math.sin(t * PI) * 145;
+                if (alpha <= 0) break;
+                noStroke();
+                for (let c of this.clouds) {
+                    fill(c.color[0], c.color[1], c.color[2], alpha * 0.32);
+                    circle(c.x, c.y, c.size);
+                }
+                fill(255, 240, 255, alpha * 0.55);
+                circle(0, 0, this.size * 0.38);
+                break;
+            }
+            case 'graviton_lens': {
+                const alpha = Math.sin(t * PI) * 205;
+                if (alpha <= 0) break;
+                push();
+                rotate(this.rotation);
+                noFill();
+                stroke(180, 220, 255, alpha * 0.7);
+                strokeWeight(2.4);
+                ellipse(0, 0, this.size * 1.7, this.size * 0.55);
+                rotate(PI * 0.28);
+                stroke(255, 180, 110, alpha * 0.6);
+                strokeWeight(1.6);
+                ellipse(0, 0, this.size * 2.1, this.size * 0.42);
+                pop();
+                noStroke();
+                fill(40, 40, 60, alpha * 0.65);
+                circle(0, 0, this.size * 0.45);
+                break;
+            }
+            case 'temporal_echo': {
+                const alpha = Math.sin(t * PI) * 185;
+                if (alpha <= 0) break;
+                noFill();
+                stroke(this.color[0], this.color[1], this.color[2], alpha * 0.85);
+                strokeWeight(1.6);
+                for (let e of this.echoes) {
+                    const age = (now - e.createdAt) / 1800;
+                    ellipse(0, 0, e.radius * 2.0, e.radius * 0.9);
+                    stroke(this.color[0], this.color[1], this.color[2], alpha * (1 - age) * 0.5);
+                }
+                fill(this.color[0], this.color[1], this.color[2], alpha * 0.45);
+                noStroke();
+                circle(0, 0, 16);
+                break;
+            }
+            case 'plasma_rain': {
+                const alpha = Math.sin(t * PI) * 205;
+                if (alpha <= 0) break;
+                stroke(110, 230, 255, alpha * 0.7);
+                strokeWeight(1.4);
+                for (let p of this.particles) {
+                    line(p.x, p.y, p.x - 4, p.y - p.len);
+                }
+                break;
+            }
+            case 'void_bloom': {
+                const alpha = Math.sin(t * PI) * 200;
+                if (alpha <= 0) break;
+                push();
+                rotate(this.rotation);
+                noStroke();
+                for (let i = 0; i < 10; i++) {
+                    const a = i * (TWO_PI / 10);
+                    const px = cos(a) * this.size * 0.42;
+                    const py = sin(a) * this.size * 0.22;
+                    fill(180, 80, 255, alpha * 0.28);
+                    ellipse(px, py, this.size * 0.5, this.size * 0.18);
+                }
+                fill(20, 8, 35, alpha * 0.9);
+                circle(0, 0, this.size * 0.42);
+                pop();
                 break;
             }
         }

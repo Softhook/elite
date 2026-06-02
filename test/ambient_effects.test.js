@@ -312,15 +312,19 @@ describe('Ambient Environmental Effects and Micro-Asteroids', () => {
         expect(event.x).toBeCloseTo(originalX + expectedShift);
     });
 
-    test('All 11 AmbientCosmicEvent types can initialize and update', () => {
+    test('All 21 AmbientCosmicEvent types can initialize and update', () => {
         const types = [
             'supernova', 'comet', 'warp_flash', 'nebula_lightning', 
             'fleet_skirmish', 'space_whale', 'black_hole', 'solar_flare',
-            'space_rift', 'pulsar_beacon', 'wormhole'
+            'space_rift', 'pulsar_beacon', 'wormhole',
+            'ion_storm', 'crystal_comet', 'quasar_jet', 'dark_matter_tide',
+            'aurora_wave', 'stellar_nursery', 'graviton_lens', 'temporal_echo',
+            'plasma_rain', 'void_bloom'
         ];
         types.forEach(type => {
             const event = new AmbientCosmicEvent(type, 100, 100);
             expect(event.active).toBe(true);
+            expect(event.duration).toBeGreaterThan(0);
             event.update(5, 5);
             expect(event.active).toBe(true);
         });
