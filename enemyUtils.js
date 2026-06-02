@@ -141,6 +141,10 @@ class EnemyUtils {
         if (target && target.constructor && target.constructor.name === 'Asteroid') {
             return false;
         }
+        // Reject entities that have been removed from the simulation (e.g. distance-culled despawns)
+        if (target && target.removed) {
+            return false;
+        }
         // Player is not a valid target while docked (invulnerable at station)
         if (target && target.isDockedAndInvulnerable) {
             return false;

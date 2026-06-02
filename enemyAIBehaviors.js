@@ -3859,6 +3859,10 @@ class EnemyAIBehaviors {
     isHealingTargetValid(target) {
         // Works for both Enemy (hull) and Player (health)
         if (!target || target.destroyed) return false;
+        // Reject entities removed from the simulation (e.g. distance-culled despawns)
+        if (target.removed) return false;
+        // Don't heal ships in the middle of dying
+        if (target.isDying) return false;
         // Prevent self-healing
         if (target === this) return false;
         // Check hull (Enemy) or health (Player)
@@ -4059,14 +4063,14 @@ class EnemyAIBehaviors {
 
         // --- Target Selection ---
         // If we don't have a valid target, try to find one
-        if (!this.target || (this.target.destroyed) || (this.target.isDying)) {
+        if (!this.target || !this.isTargetValid(this.target)) {
             // Find a new target: Player or other Enemy
             let bestTarget = null;
             let bestDistSq = Infinity;
 
             // Consider player
             const player = system?.player;
-            if (player && !player.destroyed && !player.isDying) {
+            if (player && this.isTargetValid(player)) {
                 const distSq = (player.pos.x - this.pos.x) ** 2 + (player.pos.y - this.pos.y) ** 2;
                 if (distSq < 2000 * 2000) { // Only target if somewhat nearby
                     bestTarget = player;
@@ -4078,7 +4082,7 @@ class EnemyAIBehaviors {
             if (system?.enemies) {
                 for (const potentialTarget of system.enemies) {
                     if (potentialTarget === this) continue; // Don't preach to self
-                    if (potentialTarget.destroyed) continue;
+                    if (!this.isTargetValid(potentialTarget)) continue;
                     if (potentialTarget.role === AI_ROLE.MISSIONARY) continue; // Don't preach to the choir
 
                     const distSq = (potentialTarget.pos.x - this.pos.x) ** 2 + (potentialTarget.pos.y - this.pos.y) ** 2;
