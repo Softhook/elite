@@ -8693,7 +8693,7 @@ class AmbientCosmicEvent {
                 this.lightningRadius = random(180, 340);
                 this.color = random() > 0.5 ? [110, 255, 240] : [140, 220, 255];
                 this.bolts = [];
-                for (let i = 0; i < floor(random(5, 9)); i++) {
+                for (let i = 0; i < floor(random(5, 10)); i++) {
                     const startA = random(TWO_PI);
                     const len = random(70, 160);
                     this.bolts.push({
