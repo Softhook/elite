@@ -2857,6 +2857,8 @@ class StarSystem {
 
             // Despawn check (but protect mission targets)
             if (enemy.isDestroyed() || this.shouldDespawnEntity(enemy, 1.1)) {
+                // Mark as removed so any lingering target references are rejected by isTargetValid()
+                enemy.removed = true;
                 // Clean up enemiesById Map when enemy is removed
                 if (enemy.id != null && this.enemiesById) {
                     this.enemiesById.delete(enemy.id);
@@ -3260,6 +3262,9 @@ class StarSystem {
             (enemy) => enemy.update(this),
             (enemy) => enemy.isDestroyed() || this.shouldDespawnEntity(enemy, 1.1),
             (enemy) => {
+                // Mark as removed so any lingering references (e.g. missionary targets) are
+                // treated as invalid by isTargetValid() even if the entity is not yet destroyed.
+                enemy.removed = true;
                 // Clean up enemiesById Map when enemy is removed
                 if (enemy.id != null && this.enemiesById) {
                     this.enemiesById.delete(enemy.id);

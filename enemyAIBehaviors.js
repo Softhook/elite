@@ -752,7 +752,8 @@ class EnemyAIBehaviors {
             // WE ARE MOVING (REPOSITIONING)
 
             // Ensure we have a target
-            if (!this.patrolTargetPos) {
+            if (!this.patrolTargetPos || isNaN(this.patrolTargetPos.x) || isNaN(this.patrolTargetPos.y)) {
+                this.patrolTargetPos = null;
                 this.changeState(AI_STATE.IDLE);
                 return;
             }
@@ -1062,7 +1063,8 @@ class EnemyAIBehaviors {
                 this.changeState(AI_STATE.PATROLLING);
             }
 
-            if (!this.patrolTargetPos) {
+            if (!this.patrolTargetPos || isNaN(this.patrolTargetPos.x) || isNaN(this.patrolTargetPos.y)) {
+                this.patrolTargetPos = null;
                 // Set initial patrol target to random point within station radius
                 if (system?.station?.pos) {
                     const stationRadius = system.station.dockingRadius || system.station.size * 0.5 || 200;
@@ -1317,7 +1319,8 @@ class EnemyAIBehaviors {
                 this.target = null; // Ensure target is null when patrolling
                 let isTargetingStation = false; // Flag to know if the station is the intended target
 
-                if (!this.patrolTargetPos) {
+                if (!this.patrolTargetPos || isNaN(this.patrolTargetPos.x) || isNaN(this.patrolTargetPos.y)) {
+                    this.patrolTargetPos = null;
                     // Default to station if available, otherwise prepare to leave
                     if (system?.station?.pos) {
                         this.patrolTargetPos = system.station.pos.copy();
@@ -2407,7 +2410,8 @@ class EnemyAIBehaviors {
                     }
 
                     // Initialize patrol target if not set
-                    if (!this.patrolTargetPos) {
+                    if (!this.patrolTargetPos || isNaN(this.patrolTargetPos.x) || isNaN(this.patrolTargetPos.y)) {
+                        this.patrolTargetPos = null;
                         // Start patrol from a random point in the system
                         const patrolAngle = random(TWO_PI);
                         const patrolDist = random(this._minerPatrolMinDist, this._minerPatrolRange);
@@ -2483,7 +2487,7 @@ class EnemyAIBehaviors {
         }
 
         // Fire at asteroid if in range
-        if (distanceToAsteroid < this.firingRange && this.isArmed()) {
+        if (this.asteroidTarget && !this.asteroidTarget.destroyed && distanceToAsteroid < this.firingRange && this.isArmed()) {
             const angleToAsteroid = atan2(
                 this.asteroidTarget.pos.y - this.pos.y,
                 this.asteroidTarget.pos.x - this.pos.x
@@ -2497,7 +2501,7 @@ class EnemyAIBehaviors {
 
             // Fire if weapon is ready and we're roughly aimed at the asteroid (within 15 degrees)
             if (this.isWeaponReady() && Math.abs(angleDiff) < 0.26) { // 0.26 radians ~= 15 degrees
-                this.fireWeapon(system, angleToAsteroid);
+                this.fireWeapon(angleToAsteroid, this.asteroidTarget);
             }
         }
 
@@ -2591,7 +2595,8 @@ class EnemyAIBehaviors {
         }
 
         // Similar to police patrol but occasionally dock at station
-        if (!this.patrolTargetPos) {
+        if (!this.patrolTargetPos || isNaN(this.patrolTargetPos.x) || isNaN(this.patrolTargetPos.y)) {
+            this.patrolTargetPos = null;
             // Random patrol behavior: sometimes near station (random point within radius), sometimes random point
             if (system?.station?.pos && random() < 0.3) {
                 const stationRadius = system.station.dockingRadius || system.station.size * 0.5 || 200;
@@ -3526,13 +3531,19 @@ class EnemyAIBehaviors {
     selectRepairTarget(damagedObjects) {
         if (!damagedObjects || damagedObjects.length === 0) return null;
 
+        const MAX_REPAIR_RANGE = 6000;
+
         // Prioritize by hull percentage (most damaged first), then distance
         let bestTarget = null;
         let bestScore = -Infinity;
 
         for (const obj of damagedObjects) {
-            const hullPercent = obj.health / obj.maxHealth;
+            if (!obj.pos) continue;
+            if (!obj.maxHealth || obj.maxHealth <= 0) continue;
             const distToObj = dist(this.pos.x, this.pos.y, obj.pos.x, obj.pos.y);
+            if (distToObj > MAX_REPAIR_RANGE) continue;
+
+            const hullPercent = obj.health / obj.maxHealth;
 
             // Lower hull % = higher priority (invert)
             const urgencyScore = (1 - hullPercent) * 100;
@@ -3848,6 +3859,10 @@ class EnemyAIBehaviors {
     isHealingTargetValid(target) {
         // Works for both Enemy (hull) and Player (health)
         if (!target || target.destroyed) return false;
+        // Reject entities removed from the simulation (e.g. distance-culled despawns)
+        if (target.removed) return false;
+        // Don't heal ships in the middle of dying
+        if (target.isDying) return false;
         // Prevent self-healing
         if (target === this) return false;
         // Check hull (Enemy) or health (Player)
@@ -4048,14 +4063,14 @@ class EnemyAIBehaviors {
 
         // --- Target Selection ---
         // If we don't have a valid target, try to find one
-        if (!this.target || (this.target.destroyed) || (this.target.isDying)) {
+        if (!this.target || !this.isTargetValid(this.target)) {
             // Find a new target: Player or other Enemy
             let bestTarget = null;
             let bestDistSq = Infinity;
 
             // Consider player
             const player = system?.player;
-            if (player && !player.destroyed && !player.isDying) {
+            if (player && this.isTargetValid(player)) {
                 const distSq = (player.pos.x - this.pos.x) ** 2 + (player.pos.y - this.pos.y) ** 2;
                 if (distSq < 2000 * 2000) { // Only target if somewhat nearby
                     bestTarget = player;
@@ -4067,7 +4082,7 @@ class EnemyAIBehaviors {
             if (system?.enemies) {
                 for (const potentialTarget of system.enemies) {
                     if (potentialTarget === this) continue; // Don't preach to self
-                    if (potentialTarget.destroyed) continue;
+                    if (!this.isTargetValid(potentialTarget)) continue;
                     if (potentialTarget.role === AI_ROLE.MISSIONARY) continue; // Don't preach to the choir
 
                     const distSq = (potentialTarget.pos.x - this.pos.x) ** 2 + (potentialTarget.pos.y - this.pos.y) ** 2;
@@ -4271,7 +4286,8 @@ class EnemyAIBehaviors {
     _updateMissionaryPatrol(system) {
         const dtSeconds = (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
 
-        if (!this.patrolTargetPos || this.distanceTo({ pos: this.patrolTargetPos }) < 100) {
+        if (!this.patrolTargetPos || isNaN(this.patrolTargetPos.x) || isNaN(this.patrolTargetPos.y) || this.distanceTo({ pos: this.patrolTargetPos }) < 100) {
+            this.patrolTargetPos = null;
             // Select random patrol point near station or in system
             if (system?.station?.pos && random() < 0.4) {
                 const stationRadius = system.station.dockingRadius || 300;

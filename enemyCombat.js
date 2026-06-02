@@ -37,7 +37,7 @@ class EnemyCombat {
         // Prioritize barrier if health or shield are low
         const barrierWeapon = this.weapons.find(w => w.type === WEAPON_TYPE.BARRIER);
         if (barrierWeapon && this.barrierCooldown <= 0) {
-            const hullPct = this.hull / this.maxHull;
+            const hullPct = this.maxHull > 0 ? this.hull / this.maxHull : 0;
             const shieldPct = this.maxShield > 0 ? this.shield / this.maxShield : 1;
             if (hullPct < 0.3 || shieldPct < 0.3) {
                 return barrierWeapon;
@@ -161,7 +161,7 @@ class EnemyCombat {
                 const closeMineRange = triggerR * 1.75; // very close bonus window
 
                 // Fleeing/low health context
-                const lowHealth = (this.hull / this.maxHull) < 0.4;
+                const lowHealth = this.maxHull > 0 ? (this.hull / this.maxHull) < 0.4 : false;
                 const isFleeing = this.currentState === AI_STATE.FLEEING || this.currentState === AI_STATE.REPOSITIONING;
 
                 // Baseline desire to use mines when chased and reasonably close
@@ -333,9 +333,9 @@ class EnemyCombat {
 
                 // Log weapon change for debugging
                 if (this.lastWeaponSwitch === undefined ||
-                    millis() - this.lastWeaponSwitch > 2000) {
+                    nowMs - this.lastWeaponSwitch > 2000) {
                     AI_LOG(`${this.shipTypeName} switching to ${this.currentWeapon.name} at range ${distanceToTarget.toFixed(0)}`);
-                    this.lastWeaponSwitch = millis();
+                    this.lastWeaponSwitch = nowMs;
                 }
             }
         }
@@ -346,6 +346,7 @@ class EnemyCombat {
      * @return {boolean} Whether weapon is ready to fire
      */
     isWeaponReady() {
+        if (!this.currentWeapon) return false;
         return this.fireCooldown <= 0;
     }
 
@@ -389,7 +390,7 @@ class EnemyCombat {
         if (this.currentState === AI_STATE.IDLE) return false;
 
         // RANK-BASED AIM TOLERANCE: Rookies spray wildly, Elites snipe precisely
-        const rankMods = this._getRankModifiers();
+        const rankMods = this._getRankModifiers ? this._getRankModifiers() : null;
         const aimMult = rankMods?.aimToleranceMultiplier ?? 1.0;
 
         // Allow more permissive firing while REPOSITIONING so enemies can shoot while moving
@@ -633,6 +634,7 @@ class EnemyCombat {
     /** Creates and adds a projectile aimed in the specified direction (radians). */
     fire(system, fireAngleRadians) {
         if (!this._isInCombatState()) return;
+        if (this.fireCooldown > 0) return;
 
         if (!system) { return; }
         if (isNaN(this.angle) || isNaN(fireAngleRadians)) { return; }
@@ -687,6 +689,13 @@ class EnemyCombat {
         const weaponIdx = (this.weapons && this.weapons.indexOf(this.currentWeapon)) > -1
             ? this.weapons.indexOf(this.currentWeapon)
             : 0;
+
+        // Pad weaponCooldowns array if a dynamically added weapon index exceeds current size
+        if (this.weaponCooldowns && weaponIdx >= this.weaponCooldowns.length) {
+            while (this.weaponCooldowns.length <= weaponIdx) {
+                this.weaponCooldowns.push(0);
+            }
+        }
 
         // Check specific weapon cooldown
         const currentCooldown = (this.weaponCooldowns && this.weaponCooldowns[weaponIdx]) || 0;
@@ -861,6 +870,7 @@ class EnemyCombat {
         if (!this.weapons || this.weapons.length <= 1) return;
 
         const originalIndex = this.weaponIndex;
+        const originalWeapon = this.currentWeapon;
         let attempts = 0;
 
         do {
@@ -882,8 +892,10 @@ class EnemyCombat {
 
         } while (this.weaponIndex !== originalIndex && attempts < this.weapons.length);
 
-        // If all weapons are overheated/unavailable, stay on current
-        // (should rarely happen, but prevents infinite loop)
+        // Reaching here means no usable weapon was found (success path returns early above).
+        // Restore original state to prevent desync between weaponIndex and currentWeapon.
+        this.weaponIndex = originalIndex;
+        this.currentWeapon = originalWeapon;
     }
 
     _switchWeaponAfterBeamOverheat() {
@@ -1152,6 +1164,13 @@ class EnemyCombat {
             return;
         }
 
+        // Also check per-weapon slot cooldown
+        const secondarySlotCooldown = (this.weaponCooldowns && this.weaponCooldowns[secondaryWeaponIndex]) || 0;
+        if (secondarySlotCooldown > 0) {
+            if (debugDualFire) AI_LOG(`${this.shipTypeName} DUAL FIRE: Slot cooldown active (${secondarySlotCooldown.toFixed(2)}s remaining)`);
+            return;
+        }
+
         // Fire the secondary weapon at secondary target
         // Pass secondaryWeapon as weaponOverride so WeaponSystem.fire uses correct weapon properties
         const secondaryType = secondaryWeapon.type || WEAPON_TYPE.PROJECTILE;
@@ -1162,6 +1181,13 @@ class EnemyCombat {
 
         if (fired) {
             this._secondaryFireCooldown = this.computeCooldown(secondaryWeapon.fireRate || 0.5);
+            // Also set per-weapon slot cooldown for this secondary weapon
+            if (this.weaponCooldowns) {
+                while (this.weaponCooldowns.length <= secondaryWeaponIndex) {
+                    this.weaponCooldowns.push(0);
+                }
+                this.weaponCooldowns[secondaryWeaponIndex] = this._secondaryFireCooldown;
+            }
             AI_LOG(`${this.shipTypeName} DUAL FIRE SUCCESS: ${secondaryWeapon.name} at ${secondaryTarget.shipTypeName || 'target'}, cooldown set to ${this._secondaryFireCooldown.toFixed(2)}s`);
         } else {
             if (debugDualFire) AI_LOG(`${this.shipTypeName} DUAL FIRE: WeaponSystem.fire returned false for ${secondaryWeapon.name}`);
