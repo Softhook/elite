@@ -150,19 +150,28 @@ const STARFIELD_CONFIG = {
         EVENTS: {
             spawnChancePerFrame: 0.0001, // Probability of spawning an event on a frame (approx once per 2.7 mins)
             types: {
-                supernova: 0.08,
-                comet: 0.16,
-                warp_flash: 0.20,
-                nebula_lightning: 0.12,
-                fleet_skirmish: 0.10,
-                space_whale: 0.04,
-                black_hole: 0.04,
-                solar_flare: 0.04,
-                space_rift: 0.08,
-                pulsar_beacon: 0.08,
-                wormhole: 0.06
+                supernova: 0.06,
+                comet: 0.12,
+                warp_flash: 0.15,
+                nebula_lightning: 0.09,
+                fleet_skirmish: 0.075,
+                space_whale: 0.03,
+                black_hole: 0.03,
+                solar_flare: 0.03,
+                space_rift: 0.06,
+                pulsar_beacon: 0.06,
+                wormhole: 0.045,
+                ion_storm: 0.03,
+                crystal_comet: 0.03,
+                quasar_jet: 0.025,
+                dark_matter_tide: 0.025,
+                aurora_wave: 0.025,
+                stellar_nursery: 0.025,
+                graviton_lens: 0.02,
+                temporal_echo: 0.02,
+                plasma_rain: 0.025,
+                void_bloom: 0.025
             }
         }
     }
 };
-

@@ -312,17 +312,55 @@ describe('Ambient Environmental Effects and Micro-Asteroids', () => {
         expect(event.x).toBeCloseTo(originalX + expectedShift);
     });
 
-    test('All 11 AmbientCosmicEvent types can initialize and update', () => {
+    test('All 21 AmbientCosmicEvent types can initialize and update', () => {
         const types = [
             'supernova', 'comet', 'warp_flash', 'nebula_lightning', 
             'fleet_skirmish', 'space_whale', 'black_hole', 'solar_flare',
-            'space_rift', 'pulsar_beacon', 'wormhole'
+            'space_rift', 'pulsar_beacon', 'wormhole',
+            'ion_storm', 'crystal_comet', 'quasar_jet', 'dark_matter_tide',
+            'aurora_wave', 'stellar_nursery', 'graviton_lens', 'temporal_echo',
+            'plasma_rain', 'void_bloom'
         ];
         types.forEach(type => {
             const event = new AmbientCosmicEvent(type, 100, 100);
             expect(event.active).toBe(true);
+            expect(event.duration).toBeGreaterThan(0);
             event.update(5, 5);
             expect(event.active).toBe(true);
         });
+    });
+
+    test('Temporal echo applies each ring stroke alpha before drawing it', () => {
+        global.push = jest.fn();
+        global.pop = jest.fn();
+        global.translate = jest.fn();
+        global.blendMode = jest.fn();
+        global.ADD = 'ADD';
+        global.BLEND = 'BLEND';
+        global.noFill = jest.fn();
+        global.stroke = jest.fn();
+        global.strokeWeight = jest.fn();
+        global.ellipse = jest.fn();
+        global.fill = jest.fn();
+        global.noStroke = jest.fn();
+        global.circle = jest.fn();
+
+        const event = new AmbientCosmicEvent('temporal_echo', 100, 100);
+        event.startTime = mockTime - event.duration / 2;
+        event.echoes = [
+            { radius: 12, createdAt: mockTime - 180 },
+            { radius: 24, createdAt: mockTime - 900 }
+        ];
+
+        event.draw();
+
+        const alpha = Math.sin(0.5 * Math.PI) * 185;
+        expect(global.stroke).toHaveBeenNthCalledWith(1, event.color[0], event.color[1], event.color[2], alpha * 0.45);
+        expect(global.ellipse).toHaveBeenNthCalledWith(1, 0, 0, 24, 10.8);
+        expect(global.stroke.mock.invocationCallOrder[0]).toBeLessThan(global.ellipse.mock.invocationCallOrder[0]);
+
+        expect(global.stroke).toHaveBeenNthCalledWith(2, event.color[0], event.color[1], event.color[2], alpha * 0.25);
+        expect(global.ellipse).toHaveBeenNthCalledWith(2, 0, 0, 48, 21.6);
+        expect(global.stroke.mock.invocationCallOrder[1]).toBeLessThan(global.ellipse.mock.invocationCallOrder[1]);
     });
 });
