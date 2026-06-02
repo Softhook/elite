@@ -329,4 +329,38 @@ describe('Ambient Environmental Effects and Micro-Asteroids', () => {
             expect(event.active).toBe(true);
         });
     });
+
+    test('Temporal echo applies each ring stroke alpha before drawing it', () => {
+        global.push = jest.fn();
+        global.pop = jest.fn();
+        global.translate = jest.fn();
+        global.blendMode = jest.fn();
+        global.ADD = 'ADD';
+        global.BLEND = 'BLEND';
+        global.noFill = jest.fn();
+        global.stroke = jest.fn();
+        global.strokeWeight = jest.fn();
+        global.ellipse = jest.fn();
+        global.fill = jest.fn();
+        global.noStroke = jest.fn();
+        global.circle = jest.fn();
+
+        const event = new AmbientCosmicEvent('temporal_echo', 100, 100);
+        event.startTime = mockTime - event.duration / 2;
+        event.echoes = [
+            { radius: 12, createdAt: mockTime - 180 },
+            { radius: 24, createdAt: mockTime - 900 }
+        ];
+
+        event.draw();
+
+        const alpha = Math.sin(0.5 * Math.PI) * 185;
+        expect(global.stroke).toHaveBeenNthCalledWith(1, event.color[0], event.color[1], event.color[2], alpha * 0.45);
+        expect(global.ellipse).toHaveBeenNthCalledWith(1, 0, 0, 24, 10.8);
+        expect(global.stroke.mock.invocationCallOrder[0]).toBeLessThan(global.ellipse.mock.invocationCallOrder[0]);
+
+        expect(global.stroke).toHaveBeenNthCalledWith(2, event.color[0], event.color[1], event.color[2], alpha * 0.25);
+        expect(global.ellipse).toHaveBeenNthCalledWith(2, 0, 0, 48, 21.6);
+        expect(global.stroke.mock.invocationCallOrder[1]).toBeLessThan(global.ellipse.mock.invocationCallOrder[1]);
+    });
 });

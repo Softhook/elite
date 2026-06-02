@@ -9881,12 +9881,11 @@ class AmbientCosmicEvent {
                 const alpha = Math.sin(t * PI) * 185;
                 if (alpha <= 0) break;
                 noFill();
-                stroke(this.color[0], this.color[1], this.color[2], alpha * 0.85);
                 strokeWeight(1.6);
                 for (let e of this.echoes) {
                     const age = (now - e.createdAt) / 1800;
-                    ellipse(0, 0, e.radius * 2.0, e.radius * 0.9);
                     stroke(this.color[0], this.color[1], this.color[2], alpha * (1 - age) * 0.5);
+                    ellipse(0, 0, e.radius * 2.0, e.radius * 0.9);
                 }
                 fill(this.color[0], this.color[1], this.color[2], alpha * 0.45);
                 noStroke();
