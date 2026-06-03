@@ -19,18 +19,14 @@ const PerlinNoise = (function () {
 
     let perlin; // will be initialized lazily
 
-    // Noise value cache: keyed by quantised world coordinate.
+    // Noise value cache: keyed by unscaled global grid coordinates.
     // When the grid shifts, ~95% of sample points overlap — cache hits avoid
     // expensive 4-octave evaluations. Cleared when planet seed changes.
     let _noiseCache = null;
     let _cacheSeed = undefined;
-    const CACHE_QUANTUM = 1; // Round world coords to nearest integer for cache key
 
-    function _cacheKey(wx, wy, nz) {
-        // Quantise to reduce key count while keeping precision adequate
-        const qx = Math.round(wx / CACHE_QUANTUM) * CACHE_QUANTUM;
-        const qy = Math.round(wy / CACHE_QUANTUM) * CACHE_QUANTUM;
-        return qx + ',' + qy + ',' + nz.toFixed(3);
+    function _cacheKey(ggx, ggy) {
+        return ggx + ',' + ggy;
     }
 
     return {
@@ -111,8 +107,8 @@ const PerlinNoise = (function () {
          * When the grid shifts, ~95% of sample points overlap — cache hits
          * skip both the 4-octave Perlin eval AND the Math.pow.
          */
-        cachedNoise: function (wx, wy, nz) {
-            const key = _cacheKey(wx, wy, nz);
+        cachedNoise: function (ggx, ggy, wx, wy, nz) {
+            const key = _cacheKey(ggx, ggy);
             if (_noiseCache && _noiseCache.has(key)) {
                 return _noiseCache.get(key);
             }
@@ -224,7 +220,7 @@ self.onmessage = function (e) {
                 const worldX = globalGX * cellSize;
                 const nx = worldX * sampleMultiplier + featureOffsetX;
 
-                const [noiseVal, rawPow] = PerlinNoise.cachedNoise(nx, ny, nz);
+                const [noiseVal, rawPow] = PerlinNoise.cachedNoise(globalGX, globalGY, nx, ny, nz);
                 const h = noiseVal * 500;
                 heights[gy][gx] = h;
 

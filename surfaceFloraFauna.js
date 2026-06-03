@@ -770,7 +770,7 @@ class SurfaceFauna {
 
         let nearest = null;
         let minDist = SurfaceFauna.BASE_DETECTION_RANGE;
-        const minDistSq = minDist * minDist;
+        let minDistSq = minDist * minDist;
 
         for (let i = 0; i < objects.length; i++) {
             const obj = objects[i];
@@ -782,10 +782,9 @@ class SurfaceFauna {
             const distSq = dx * dx + dy * dy;
 
             if (distSq < minDistSq) {
+                minDistSq = distSq;
                 minDist = Math.sqrt(distSq); // Only sqrt when we have a candidate
                 nearest = obj;
-                // Update minDistSq for subsequent checks
-                // Note: we keep using the linear minDist for the next sqrt comparison below
             }
         }
 

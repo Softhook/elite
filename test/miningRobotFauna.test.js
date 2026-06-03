@@ -712,9 +712,9 @@ describe('MINING_CONFIG Constants', () => {
 describe('SurfaceFauna Constants', () => {
     test('has attack behavior constants', () => {
         expect(SurfaceFauna.ATTACK_SPEED_MULTIPLIER).toBe(1.5);
-        expect(SurfaceFauna.BASE_DETECTION_RANGE).toBe(300);
-        expect(SurfaceFauna.BASE_ABANDON_RANGE).toBe(600);
+        expect(SurfaceFauna.BASE_DETECTION_RANGE).toBe(200);
+        expect(SurfaceFauna.BASE_ABANDON_RANGE).toBe(500);
         expect(SurfaceFauna.ATTACK_DAMAGE).toBe(5);
-        expect(SurfaceFauna.BASE_SEARCH_INTERVAL).toBe(2.0);
+        expect(SurfaceFauna.BASE_SEARCH_INTERVAL).toBe(5.0);
     });
 });

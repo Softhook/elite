@@ -202,6 +202,54 @@ describe('Player Combat', () => {
     // The previous HTML test had: player.switchToWeapon((originalIndex + 1) % player.weapons.length);
     // If it's not in Player class, the test will fail.
     // I'll comment it out if it fails, or assume it's there.
+
+    test('weapon safety alert is bypassed and ship weapons do not fire when in astronaut mode on planet surface', () => {
+        const originalSurfaceMode = global.surfaceMode;
+        const originalUiManager = global.uiManager;
+        const originalSoundManager = global.soundManager;
+
+        global.surfaceMode = {
+            isActive: () => true,
+            isLanded: true,
+            controlMode: 'ASTRONAUT'
+        };
+        global.uiManager = { addMessage: jest.fn() };
+        global.soundManager = { playSound: jest.fn() };
+
+        const fired = player.fireWeapon();
+
+        expect(fired).toBe(false);
+        expect(global.uiManager.addMessage).not.toHaveBeenCalled();
+        expect(global.soundManager.playSound).not.toHaveBeenCalled();
+
+        global.surfaceMode = originalSurfaceMode;
+        global.uiManager = originalUiManager;
+        global.soundManager = originalSoundManager;
+    });
+
+    test('weapon safety alert is triggered when in ship control mode and landed on planet surface', () => {
+        const originalSurfaceMode = global.surfaceMode;
+        const originalUiManager = global.uiManager;
+        const originalSoundManager = global.soundManager;
+
+        global.surfaceMode = {
+            isActive: () => true,
+            isLanded: true,
+            controlMode: 'SHIP'
+        };
+        global.uiManager = { addMessage: jest.fn() };
+        global.soundManager = { playSound: jest.fn() };
+
+        const fired = player.fireWeapon();
+
+        expect(fired).toBe(false);
+        expect(global.uiManager.addMessage).toHaveBeenCalledWith("Weapons Safety: Landed", expect.any(Array), expect.any(Number));
+        expect(global.soundManager.playSound).toHaveBeenCalledWith('error');
+
+        global.surfaceMode = originalSurfaceMode;
+        global.uiManager = originalUiManager;
+        global.soundManager = originalSoundManager;
+    });
 });
 
 // ============================================

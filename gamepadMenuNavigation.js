@@ -277,7 +277,11 @@ function _handleGamepadMissions(gp) {
     // Order detail buttons: action buttons (accept/complete/abandon) before back
     const detailButtonsObj = uiManager?.missionDetailButtonAreas || {};
     const detailButtons = Object.entries(detailButtonsObj)
-        .sort(([key]) => key === 'back' ? 1 : -1) // action buttons first, back last
+        .sort(([keyA], [keyB]) => {
+            if (keyA === 'back') return 1;
+            if (keyB === 'back') return -1;
+            return 0;
+        }) // action buttons first, back last
         .map(([, btn]) => btn)
         .filter(b => b && b.w > 0);
 
@@ -650,7 +654,11 @@ function drawGamepadMenuHighlightForState(state) {
         } else {
             const detailButtonsObj = uiManager?.missionDetailButtonAreas || {};
             const db = Object.entries(detailButtonsObj)
-                .sort(([key]) => key === 'back' ? 1 : -1)
+                .sort(([keyA], [keyB]) => {
+                    if (keyA === 'back') return 1;
+                    if (keyB === 'back') return -1;
+                    return 0;
+                })
                 .map(([, btn]) => btn)
                 .filter(b => b && b.w > 0);
             if (db.length > 0) highlightBtn = db[constrain(_gpMissionDetailIndex, 0, db.length - 1)];

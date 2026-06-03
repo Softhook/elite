@@ -327,6 +327,9 @@ function draw() {
             if (Math.abs(currentThrust - _lastThrustLevel) > 0.05) {
                 soundManager?.updateThrustSound(currentThrust, player);
                 _lastThrustLevel = currentThrust;
+            } else if (currentThrust === 0 && _lastThrustLevel !== 0) {
+                soundManager?.updateThrustSound(0, player);
+                _lastThrustLevel = 0;
             }
         }
     } else {
@@ -585,6 +588,9 @@ function executeInputAction(action, context) {
     // Special actions with their own context checks
     if (action === INPUT_ACTIONS.MAP_MARKET_TOGGLE) return _handleMapMarketToggle();
     if (action === INPUT_ACTIONS.FIRE_PRIMARY) {
+        if (gameStateManager?.currentState === 'SURFACE_MODE' && surfaceMode && surfaceMode.controlMode === 'ASTRONAUT') {
+            return false;
+        }
         player?.handleFireInput?.();
         return true;
     }

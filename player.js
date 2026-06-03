@@ -1678,6 +1678,13 @@ class Player {
     /** Fires the current weapon based on its type using WeaponSystem. */
     fireWeapon(target = null) {
 
+        // If we are in astronaut mode, ship weapons shouldn't fire, and we shouldn't show a safety message
+        if (typeof surfaceMode !== 'undefined' && surfaceMode &&
+            typeof surfaceMode.isActive === 'function' && surfaceMode.isActive() &&
+            surfaceMode.controlMode === 'ASTRONAUT') {
+            return false;
+        }
+
         // Check if landed on planet surface (Safety Lock)
         // Access global surfaceMode instance if available
         if (typeof surfaceMode !== 'undefined' && surfaceMode &&

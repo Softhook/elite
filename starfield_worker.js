@@ -292,10 +292,10 @@ function drawLayerToCtx(ctx, tx, ty, tileSize, systemIndex, config) {
     const worldRight = worldLeft + tileSize;
     const worldTop = ty * tileSize;
 
-    const startGX = (worldLeft / gridSize) | 0;
-    const endGX = ((worldRight + gridSize - 1) / gridSize) | 0;
-    const startGY = (worldTop / gridSize) | 0;
-    const endGY = ((worldTop + tileSize + gridSize - 1) / gridSize) | 0;
+    const startGX = Math.floor(worldLeft / gridSize);
+    const endGX = Math.floor((worldRight + gridSize - 1) / gridSize);
+    const startGY = Math.floor(worldTop / gridSize);
+    const endGY = Math.floor((worldTop + tileSize + gridSize - 1) / gridSize);
 
     const maxStarsPerCell = config.maxStarsPerCell;
     const minSize = config.sizeRange[0];

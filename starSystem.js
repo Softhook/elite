@@ -9854,7 +9854,8 @@ class AmbientCosmicEvent {
                 // --- Draw each wave ribbon with smooth edge falloff ---
                 noFill();
                 for (let l = 0; l < 3; l++) {
-                    beginShape();
+                    let prevX = null;
+                    let prevY = null;
                     for (let x = -halfW; x <= halfW; x += 12) {
                         // Smooth falloff near edges using cosine easing
                         const distFromCenter = abs(x) / halfW;
@@ -9864,13 +9865,16 @@ class AmbientCosmicEvent {
                             const t = constrain((distFromCenter - 0.65) / 0.35, 0, 1);
                             edgeFade = 1.0 - (1.0 - cos(t * HALF_PI));
                         }
-                        const y = sin((x * 0.03) + this.wavePhase + l * 0.9) * (20 + l * 8);
-                        const vertAlpha = alpha * edgeFade;
-                        stroke(r, g, b, vertAlpha);
-                        strokeWeight(2.2 * edgeFade + 0.4);
-                        vertex(x, y + l * 14 - 14);
+                        const y = sin((x * 0.03) + this.wavePhase + l * 0.9) * (20 + l * 8) + l * 14 - 14;
+                        if (prevX !== null) {
+                            const vertAlpha = alpha * edgeFade;
+                            stroke(r, g, b, vertAlpha);
+                            strokeWeight(2.2 * edgeFade + 0.4);
+                            line(prevX, prevY, x, y);
+                        }
+                        prevX = x;
+                        prevY = y;
                     }
-                    endShape();
                 }
                 break;
             }
