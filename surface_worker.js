@@ -107,17 +107,20 @@ const PerlinNoise = (function () {
         },
 
         /**
-         * Cached noise evaluation. When the terrain grid shifts between buffer
-         * generations, most sample points overlap — cache hits skip 4-octave eval.
+         * Cached noise evaluation. Returns [noiseVal, powResult].
+         * When the grid shifts, ~95% of sample points overlap — cache hits
+         * skip both the 4-octave Perlin eval AND the Math.pow.
          */
         cachedNoise: function (wx, wy, nz) {
             const key = _cacheKey(wx, wy, nz);
             if (_noiseCache && _noiseCache.has(key)) {
                 return _noiseCache.get(key);
             }
-            const val = this.noise(wx, wy, nz);
-            if (_noiseCache) _noiseCache.set(key, val);
-            return val;
+            const noiseVal = this.noise(wx, wy, nz);
+            const powVal = Math.pow(noiseVal, 1.3);
+            const entry = [noiseVal, powVal];
+            if (_noiseCache) _noiseCache.set(key, entry);
+            return entry;
         },
 
         seed: function (val) {
@@ -138,21 +141,6 @@ const PerlinNoise = (function () {
         }
     };
 })();
-
-// Re-map a number from one range to another
-function map(n, start1, stop1, start2, stop2) {
-    return (n - start1) / (stop1 - start1) * (stop2 - start2) + start2;
-}
-
-// Helper to get raw RGB from p5-like color array or hex
-function parseColor(c) {
-    // If it's passed as a levels array [r,g,b,a]
-    if (Array.isArray(c)) {
-        return { r: c[0], g: c[1], b: c[2] };
-    }
-    // Simple fallback
-    return { r: 128, g: 128, b: 128 };
-}
 
 self.onmessage = function (e) {
     const data = e.data;
@@ -184,11 +172,8 @@ self.onmessage = function (e) {
         PerlinNoise.seed(planetSeed || 12345);
 
         // 2. Generate Mesh Points
-        const cellSize = meshSize / resolution; // e.g. 4200 / 120 = 35
+        const cellSize = meshSize / resolution;
         const halfRes = Math.floor(resolution / 2);
-
-        const centerWX = gridX * cellSize;
-        const centerWY = gridY * cellSize;
 
         // Constants
         const sampleMultiplier = 0.003;
@@ -217,75 +202,73 @@ self.onmessage = function (e) {
             threeRGB = [{ r: 50, g: 50, b: 50, lum: 0.2 }, { r: 100, g: 100, b: 100, lum: 0.4 }, { r: 200, g: 200, b: 200, lum: 0.8 }];
         }
 
-        // Generate height map array [resolution+1][resolution+1]
-        // We need resolution+1 to form complete quads
+        // Generate height map and pre-lit colours.
+        // Use flat typed arrays instead of objects to avoid GC pressure
+        // and property-access overhead on 5,776 grid points.
         const heights = [];
-        const colors = [];
-        const numPoints = resolution + 1; // 121 points for 120 cells
+        const numPoints = resolution + 1;
+        const colorR = new Float64Array(numPoints * numPoints);
+        const colorG = new Float64Array(numPoints * numPoints);
+        const colorB = new Float64Array(numPoints * numPoints);
 
-        // Generate a slightly larger grid than requested to avoid edge glitches?
-        // For now, exact grid.
         for (let gy = 0; gy < numPoints; gy++) {
-            heights[gy] = [];
-            colors[gy] = [];
+            heights[gy] = new Float64Array(numPoints);
 
-            // Calculate world position relative to the grid center
-            // gridY is the center index. 
-            // The mesh goes from (gridY - halfRes) to (gridY + halfRes)
             const globalGY = gridY + (gy - halfRes);
             const worldY = globalGY * cellSize;
             const ny = worldY * sampleMultiplier + featureOffsetY;
+            const rowBase = gy * numPoints;
 
             for (let gx = 0; gx < numPoints; gx++) {
                 const globalGX = gridX + (gx - halfRes);
                 const worldX = globalGX * cellSize;
                 const nx = worldX * sampleMultiplier + featureOffsetX;
 
-                // Use cached noise — when grid shifts, ~95% of samples overlap
-                const noiseVal = PerlinNoise.cachedNoise(nx, ny, nz);
-
-                const h = noiseVal * 500; // 0-500 Height
-
-                // Color calculation (same as surfaceTerrain.js)
-                const nColor = Math.min(1, Math.max(0, Math.pow(noiseVal, 1.3)));
-                const paletteLen = 3;
-                const scaled = nColor * (paletteLen - 1);
-                const paletteIdx = Math.floor(scaled);
-                const lerpFactor = scaled - paletteIdx;
-
-                const contrastBias = 2.6;
-                let cf = ((lerpFactor - 0.5) * contrastBias) + 0.5;
-                if (cf < 0) cf = 0; if (cf > 1) cf = 1;
-
-                const col1 = threeRGB[Math.min(paletteIdx, 2)];
-                const col2 = threeRGB[Math.min(paletteIdx + 1, 2)];
-
-                const r = col1.r + (col2.r - col1.r) * cf;
-                const g = col1.g + (col2.g - col1.g) * cf;
-                const b = col1.b + (col2.b - col1.b) * cf;
-
+                const [noiseVal, rawPow] = PerlinNoise.cachedNoise(nx, ny, nz);
+                const h = noiseVal * 500;
                 heights[gy][gx] = h;
-                colors[gy][gx] = { r, g, b };
+
+                // Palette colour using pre-cached pow(noise, 1.3), clamped safe
+                const nColor = rawPow < 0 ? 0 : rawPow > 1 ? 1 : rawPow;
+                const scaled = nColor * 2;
+                const pIdx = scaled | 0;   // fast floor for positive numbers
+                let cf = ((scaled - pIdx - 0.5) * 2.6) + 0.5;
+                if (cf < 0) cf = 0; else if (cf > 1) cf = 1;
+
+                const c1 = threeRGB[pIdx < 2 ? pIdx : 2];
+                const c2 = threeRGB[(pIdx + 1) < 2 ? (pIdx + 1) : 2];
+
+                const idx = rowBase + gx;
+                colorR[idx] = c1.r + (c2.r - c1.r) * cf;
+                colorG[idx] = c1.g + (c2.g - c1.g) * cf;
+                colorB[idx] = c1.b + (c2.b - c1.b) * cf;
             }
         }
 
-        // 3. Render Quads to Canvas
+        // 3. Render Quads — precompute everything possible outside the loops
         const cx = bufPx / 2;
         const cy = bufPx / 2;
 
-        // Pre-calc sun & extrusion
         const sunDirX = Math.cos(sunAngle);
         const sunDirY = Math.sin(sunAngle);
         const extAngle = extrusionAngle !== undefined ? extrusionAngle : 0.5;
         const cosA = Math.cos(extAngle);
         const sinA = Math.sin(extAngle);
 
-        // Local coords span -halfRes*cellSize to +halfRes*cellSize (world units).
-        // Scale to buffer pixels via pixelScale so mesh fills inner area exactly.
+        // Combined scale factors (avoids multiplying per vertex)
+        const sinAScaled = sinA * pixelScale;
+        const cosAScaled = cosA * pixelScale;
+
         const baseOffsetX = -halfRes * cellSize;
         const baseOffsetY = -halfRes * cellSize;
 
-        // Fill entire buffer with base terrain colour so margins blend seamlessly
+        // Precompute column X positions once (resolution+1 values)
+        const colPosX = new Float64Array(numPoints);
+        for (let gx = 0; gx < numPoints; gx++) {
+            colPosX[gx] = cx + (baseOffsetX + gx * cellSize) * pixelScale;
+        }
+
+        // Fill background
         const baseCol = threeRGB[1] || threeRGB[0];
         ctx.fillStyle = `rgb(${baseCol.r},${baseCol.g},${baseCol.b})`;
         ctx.fillRect(0, 0, bufPx, bufPx);
@@ -294,14 +277,23 @@ self.onmessage = function (e) {
         for (let gy = 0; gy < resolution; gy++) {
             const rowY0 = baseOffsetY + gy * cellSize;
             const rowY1 = baseOffsetY + (gy + 1) * cellSize;
+            // Precompute row Y pixel positions
+            const rowY0px = cy + rowY0 * pixelScale;
+            const rowY1px = cy + rowY1 * pixelScale;
+
+            const rowH0 = heights[gy];
+            const rowH1 = heights[gy + 1];
+            const rowBase0 = gy * numPoints;
+            const rowBase1 = (gy + 1) * numPoints;
 
             for (let gx = 0; gx < resolution; gx++) {
-                const h00 = heights[gy][gx];
-                const h10 = heights[gy][gx + 1];
-                const h01 = heights[gy + 1][gx];
-                const h11 = heights[gy + 1][gx + 1];
+                const h00 = rowH0[gx];
+                const h10 = rowH0[gx + 1];
+                const h01 = rowH1[gx];
+                const h11 = rowH1[gx + 1];
 
-                const c00 = colors[gy][gx];
+                const idx = rowBase0 + gx;
+                const cr = colorR[idx], cg = colorG[idx], cb = colorB[idx];
 
                 // Lighting
                 const slopeX = ((h10 - h00) + (h11 - h01)) * 0.5;
@@ -310,42 +302,44 @@ self.onmessage = function (e) {
                 const avgHeight = (h00 + h10 + h01 + h11) * 0.25;
                 const heightLight = avgHeight * 0.0008;
                 const steepness = Math.abs(slopeX) + Math.abs(slopeY);
-                const valleyDarken = steepness * 0.005;
 
-                let shade = 0.65 + sunIntensity + heightLight - valleyDarken;
+                let shade = 0.65 + sunIntensity + heightLight - steepness * 0.005;
                 if (shade < 0.25) shade = 0.25;
-                if (shade > 1.4) shade = 1.4;
+                else if (shade > 1.4) shade = 1.4;
 
-                const r = Math.floor(c00.r * shade);
-                const g = Math.floor(c00.g * shade);
-                const b = Math.floor(c00.b * shade);
-
-                // Draw quad — world coords scaled to buffer pixels
-                const colX0 = baseOffsetX + gx * cellSize;
-                const colX1 = baseOffsetX + (gx + 1) * cellSize;
+                const r = (cr * shade) | 0;
+                const g = (cg * shade) | 0;
+                const b = (cb * shade) | 0;
 
                 ctx.fillStyle = `rgb(${r},${g},${b})`;
 
-                // Fast path: if quad is nearly flat (height variation < 3 units),
-                // use fillRect which is much cheaper than the path API.
-                const hMin = Math.min(h00, h10, h01, h11);
-                const hMax = Math.max(h00, h10, h01, h11);
+                // Col positions from precomputed array
+                const colX0px = colPosX[gx];
+                const colX1px = colPosX[gx + 1];
+
+                // Fast path: flat quads use fillRect (most terrain)
+                const hMin = h00 < h10 ? (h00 < h01 ? (h00 < h11 ? h00 : h11) : (h01 < h11 ? h01 : h11))
+                                     : (h10 < h01 ? (h10 < h11 ? h10 : h11) : (h01 < h11 ? h01 : h11));
+                const hMax = h00 > h10 ? (h00 > h01 ? (h00 > h11 ? h00 : h11) : (h01 > h11 ? h01 : h11))
+                                     : (h10 > h01 ? (h10 > h11 ? h10 : h11) : (h01 > h11 ? h01 : h11));
+
                 if (hMax - hMin < 3) {
-                    const hAvg = (h00 + h10 + h01 + h11) * 0.25;
-                    const rx = cx + (colX0 - hAvg * sinA) * pixelScale;
-                    const ry = cy + (rowY0 - hAvg * cosA) * pixelScale;
-                    const rw = (colX1 - colX0) * pixelScale;
-                    const rh = (rowY1 - rowY0) * pixelScale;
-                    ctx.fillRect(rx, ry, Math.max(1, rw), Math.max(1, rh));
+                    // Reuse avgHeight from lighting above
+                    const rx = colX0px - avgHeight * sinAScaled;
+                    const ry = rowY0px - avgHeight * cosAScaled;
+                    const rw = colX1px - colX0px;
+                    const rh = rowY1px - rowY0px;
+                    ctx.fillRect(rx, ry, rw > 1 ? rw : 1, rh > 1 ? rh : 1);
                 } else {
                     ctx.beginPath();
-                    ctx.moveTo(cx + (colX0 - h00 * sinA) * pixelScale, cy + (rowY0 - h00 * cosA) * pixelScale);
-                    ctx.lineTo(cx + (colX1 - h10 * sinA) * pixelScale, cy + (rowY0 - h10 * cosA) * pixelScale);
-                    ctx.lineTo(cx + (colX1 - h11 * sinA) * pixelScale, cy + (rowY1 - h11 * cosA) * pixelScale);
-                    ctx.lineTo(cx + (colX0 - h01 * sinA) * pixelScale, cy + (rowY1 - h01 * cosA) * pixelScale);
+                    ctx.moveTo(colX0px - h00 * sinAScaled, rowY0px - h00 * cosAScaled);
+                    ctx.lineTo(colX1px - h10 * sinAScaled, rowY0px - h10 * cosAScaled);
+                    ctx.lineTo(colX1px - h11 * sinAScaled, rowY1px - h11 * cosAScaled);
+                    ctx.lineTo(colX0px - h01 * sinAScaled, rowY1px - h01 * cosAScaled);
                     ctx.closePath();
                     ctx.fill();
                 }
+            }
         }
 
         // 4. Return Bitmap with scaling metadata
