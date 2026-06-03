@@ -593,8 +593,8 @@ function executeInputAction(action, context) {
         return false;
     }
 
-    // Weapon slots
-    if (action.startsWith && action.startsWith('WEAPON_SLOT_')) {
+    // Weapon slots (INPUT_ACTIONS.WEAPON_SLOT_1 through _9)
+    if (action.startsWith('WEAPON_SLOT_')) {
         return handleWeaponSlotSelection(action);
     }
 
@@ -709,7 +709,7 @@ function handleGamepadContinuousInput() {
     // Dispatch to context-specific handler
     switch (context) {
         case INPUT_CONTEXTS.SAVE_SELECTION: _gpHandleSaveSelection(gp, context); break;
-        case INPUT_CONTEXTS.STATION_MENU: _gpHandleStationMenu(gp, state); break;
+        case INPUT_CONTEXTS.STATION_MENU: _handleGamepadStationMenus(gp, state); break;
         case INPUT_CONTEXTS.MISSION_OVERLAY: _gpHandleMissionOverlay(gp, context); break;
         case INPUT_CONTEXTS.INVENTORY: _gpHandleInventory(gp); break;
         case INPUT_CONTEXTS.GALAXY_MAP: _gpHandleGalaxyMap(gp, context); break;
@@ -723,10 +723,6 @@ function _gpHandleSaveSelection(gp, context) {
     if (im.isGamepadActionPressed(INPUT_ACTIONS.NAV_DOWN, context)) saveSelectionScreen?.handleKeyPressed(null, DOWN_ARROW);
     if (im.isGamepadActionPressed(INPUT_ACTIONS.NAV_LEFT, context)) saveSelectionScreen?.handleKeyPressed(null, LEFT_ARROW);
     if (im.isGamepadActionPressed(INPUT_ACTIONS.NAV_RIGHT, context)) saveSelectionScreen?.handleKeyPressed(null, RIGHT_ARROW);
-}
-
-function _gpHandleStationMenu(gp, state) {
-    _handleGamepadStationMenus(gp, state);
 }
 
 function _gpHandleMissionOverlay(gp, context) {
@@ -935,33 +931,9 @@ function renderUI() {
     uiManager?.drawFramerate();    // fps cap removed for frame-rate independence
     uiManager?.drawMessages();
 
-    // Draw gamepad menu highlight if applicable (must be after game state renders UI)
-    if (window._gamepadManager && window._gamepadManager.connected) {
-        const state = gameStateManager.currentState;
-        const isStationState = STATION_STATES && STATION_STATES.includes(state);
-        if (isStationState) {
-            let highlightBtn = null;
-            if (state === 'VIEWING_MISSIONS') {
-                if (_gpMissionPanel === 'list') {
-                    const lb = uiManager?.missionListButtonAreas || [];
-                    if (lb.length > 0) highlightBtn = lb[constrain(_gpMenuIndex, 0, lb.length - 1)];
-                } else {
-                    // Match the sorting used in _handleGamepadMissions: action buttons first, back last
-                    const detailButtonsObj = uiManager?.missionDetailButtonAreas || {};
-                    const db = Object.entries(detailButtonsObj)
-                        .sort(([key]) => key === 'back' ? 1 : -1)
-                        .map(([, btn]) => btn)
-                        .filter(b => b && b.w > 0);
-                    if (db.length > 0) highlightBtn = db[constrain(_gpMissionDetailIndex, 0, db.length - 1)];
-                }
-            } else {
-                const buttons = _getButtonAreasForState(state);
-                if (buttons && buttons.length > 0 && _gpMenuIndex < buttons.length) {
-                    highlightBtn = buttons[_gpMenuIndex];
-                }
-            }
-            if (highlightBtn) _drawGamepadMenuHighlight(highlightBtn);
-        }
+    // Draw gamepad menu highlight (delegated to gamepadMenuNavigation.js)
+    if (typeof drawGamepadMenuHighlightForState === 'function') {
+        drawGamepadMenuHighlightForState(gameStateManager.currentState);
     }
 }
 
@@ -1014,7 +986,6 @@ function keyPressed() {
         if (executeInputAction(mappedAction, context)) return false;
         return false;
     }
-
 }
 
 /**
@@ -1284,18 +1255,21 @@ function handleMinimapZoomIn() {
 }
 
 /**
+ * Returns true if the player is in a flight state, alive, and not docked.
+ * Used as a guard for abilities like cloak and speed burst.
+ * @returns {boolean}
+ */
+function isPlayerInFlightAndVulnerable() {
+    return FLIGHT_STATES.includes(gameStateManager.currentState)
+        && player && !player.destroyed
+        && !player.isDockedAndInvulnerable;
+}
+
+/**
  * Handle cloak activation ('C' key)
  */
 function handleCloakActivation() {
-    // Allow cloak in both IN_FLIGHT and SURFACE_MODE states
-    if (!FLIGHT_STATES.includes(gameStateManager.currentState) || !player || player.destroyed) {
-        return false;
-    }
-
-    // Don't allow cloak while docked
-    if (player.isDockedAndInvulnerable) {
-        return false;
-    }
+    if (!isPlayerInFlightAndVulnerable()) return false;
 
     if (typeof player.activateCloak === 'function') {
         player.activateCloak();
@@ -1308,13 +1282,7 @@ function handleCloakActivation() {
  * Handle speed burst activation ('R' key)
  */
 function handleSpeedBurstActivation() {
-    if (!FLIGHT_STATES.includes(gameStateManager.currentState) || !player || player.destroyed) {
-        return false;
-    }
-
-    if (player.isDockedAndInvulnerable) {
-        return false;
-    }
+    if (!isPlayerInFlightAndVulnerable()) return false;
 
     if (!player.installedUpgrades?.booster || player.boostMaxDuration <= 0) {
         uiManager?.addMessage("Speed Burst unavailable: booster upgrade not installed.", [255, 150, 100]);

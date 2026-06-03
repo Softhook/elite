@@ -5,6 +5,7 @@
 //   ambientSoundManager, eventManager, surfaceMode, GameGlobals, globalSessionSeed,
 //   saveSelectionScreen, SAVE_KEY_PREFIX, LAST_ACTIVE_SLOT_KEY, SAVE_LOG,
 //   showCriticalError, dist, constrain, createVector, randomSeed, noiseSeed
+// NOTE: resetGame() is defined in sketch.js, not here.
 
 // --- Save/Load Functionality ---
 

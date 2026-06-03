@@ -632,3 +632,34 @@ function _drawGamepadMenuHighlight(btn) {
 
     pop();
 }
+
+/**
+ * Public entry point for sketch.js renderUI().
+ * Draws the gamepad selection highlight for the current station state.
+ * @param {string} state - Current game state
+ */
+function drawGamepadMenuHighlightForState(state) {
+    if (!window._gamepadManager?.connected) return;
+    if (!STATION_STATES || !STATION_STATES.includes(state)) return;
+
+    let highlightBtn = null;
+    if (state === 'VIEWING_MISSIONS') {
+        if (_gpMissionPanel === 'list') {
+            const lb = uiManager?.missionListButtonAreas || [];
+            if (lb.length > 0) highlightBtn = lb[constrain(_gpMenuIndex, 0, lb.length - 1)];
+        } else {
+            const detailButtonsObj = uiManager?.missionDetailButtonAreas || {};
+            const db = Object.entries(detailButtonsObj)
+                .sort(([key]) => key === 'back' ? 1 : -1)
+                .map(([, btn]) => btn)
+                .filter(b => b && b.w > 0);
+            if (db.length > 0) highlightBtn = db[constrain(_gpMissionDetailIndex, 0, db.length - 1)];
+        }
+    } else {
+        const buttons = _getButtonAreasForState(state);
+        if (buttons && buttons.length > 0 && _gpMenuIndex < buttons.length) {
+            highlightBtn = buttons[_gpMenuIndex];
+        }
+    }
+    if (highlightBtn) _drawGamepadMenuHighlight(highlightBtn);
+}
