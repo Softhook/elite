@@ -19,6 +19,20 @@ const PerlinNoise = (function () {
 
     let perlin; // will be initialized lazily
 
+    // Noise value cache: keyed by quantised world coordinate.
+    // When the grid shifts, ~95% of sample points overlap — cache hits avoid
+    // expensive 4-octave evaluations. Cleared when planet seed changes.
+    let _noiseCache = null;
+    let _cacheSeed = undefined;
+    const CACHE_QUANTUM = 1; // Round world coords to nearest integer for cache key
+
+    function _cacheKey(wx, wy, nz) {
+        // Quantise to reduce key count while keeping precision adequate
+        const qx = Math.round(wx / CACHE_QUANTUM) * CACHE_QUANTUM;
+        const qy = Math.round(wy / CACHE_QUANTUM) * CACHE_QUANTUM;
+        return qx + ',' + qy + ',' + nz.toFixed(3);
+    }
+
     return {
         noise: function (x, y, z) {
             y = y || 0;
@@ -91,9 +105,31 @@ const PerlinNoise = (function () {
             }
             return r;
         },
+
+        /**
+         * Cached noise evaluation. When the terrain grid shifts between buffer
+         * generations, most sample points overlap — cache hits skip 4-octave eval.
+         */
+        cachedNoise: function (wx, wy, nz) {
+            const key = _cacheKey(wx, wy, nz);
+            if (_noiseCache && _noiseCache.has(key)) {
+                return _noiseCache.get(key);
+            }
+            const val = this.noise(wx, wy, nz);
+            if (_noiseCache) _noiseCache.set(key, val);
+            return val;
+        },
+
         seed: function (val) {
+            // Clear noise cache when seed changes (new planet)
+            const newSeed = (val || 12345) >>> 0;
+            if (newSeed !== _cacheSeed) {
+                _noiseCache = new Map();
+                _cacheSeed = newSeed;
+            }
+
             // Simple LCG seeding for the Perlin array
-            let lcg = (val || 12345) >>> 0;
+            let lcg = newSeed;
             perlin = new Float32Array(PERLIN_SIZE + 1);
             for (let i = 0; i < PERLIN_SIZE + 1; i++) {
                 lcg = (lcg * 1664525 + 1013904223) >>> 0;
@@ -205,8 +241,8 @@ self.onmessage = function (e) {
                 const worldX = globalGX * cellSize;
                 const nx = worldX * sampleMultiplier + featureOffsetX;
 
-                // Noise 0..1 (Perlin is 0..1 by default roughly, mostly centered)
-                const noiseVal = PerlinNoise.noise(nx, ny, nz);
+                // Use cached noise — when grid shifts, ~95% of samples overlap
+                const noiseVal = PerlinNoise.cachedNoise(nx, ny, nz);
 
                 const h = noiseVal * 500; // 0-500 Height
 
@@ -289,14 +325,27 @@ self.onmessage = function (e) {
                 const colX1 = baseOffsetX + (gx + 1) * cellSize;
 
                 ctx.fillStyle = `rgb(${r},${g},${b})`;
-                ctx.beginPath();
-                ctx.moveTo(cx + (colX0 - h00 * sinA) * pixelScale, cy + (rowY0 - h00 * cosA) * pixelScale);
-                ctx.lineTo(cx + (colX1 - h10 * sinA) * pixelScale, cy + (rowY0 - h10 * cosA) * pixelScale);
-                ctx.lineTo(cx + (colX1 - h11 * sinA) * pixelScale, cy + (rowY1 - h11 * cosA) * pixelScale);
-                ctx.lineTo(cx + (colX0 - h01 * sinA) * pixelScale, cy + (rowY1 - h01 * cosA) * pixelScale);
-                ctx.closePath();
-                ctx.fill();
-            }
+
+                // Fast path: if quad is nearly flat (height variation < 3 units),
+                // use fillRect which is much cheaper than the path API.
+                const hMin = Math.min(h00, h10, h01, h11);
+                const hMax = Math.max(h00, h10, h01, h11);
+                if (hMax - hMin < 3) {
+                    const hAvg = (h00 + h10 + h01 + h11) * 0.25;
+                    const rx = cx + (colX0 - hAvg * sinA) * pixelScale;
+                    const ry = cy + (rowY0 - hAvg * cosA) * pixelScale;
+                    const rw = (colX1 - colX0) * pixelScale;
+                    const rh = (rowY1 - rowY0) * pixelScale;
+                    ctx.fillRect(rx, ry, Math.max(1, rw), Math.max(1, rh));
+                } else {
+                    ctx.beginPath();
+                    ctx.moveTo(cx + (colX0 - h00 * sinA) * pixelScale, cy + (rowY0 - h00 * cosA) * pixelScale);
+                    ctx.lineTo(cx + (colX1 - h10 * sinA) * pixelScale, cy + (rowY0 - h10 * cosA) * pixelScale);
+                    ctx.lineTo(cx + (colX1 - h11 * sinA) * pixelScale, cy + (rowY1 - h11 * cosA) * pixelScale);
+                    ctx.lineTo(cx + (colX0 - h01 * sinA) * pixelScale, cy + (rowY1 - h01 * cosA) * pixelScale);
+                    ctx.closePath();
+                    ctx.fill();
+                }
         }
 
         // 4. Return Bitmap with scaling metadata

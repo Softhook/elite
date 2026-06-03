@@ -15,7 +15,10 @@ const SURFACE_CONFIG = {
     CLIMB_SPEED: 200,
 
     // Terrain mesh
-    MESH_RESOLUTION: 100,      // Grid resolution (balanced for detail and performance)
+    // MESH_RESOLUTION controls quad count (resolution² quads). Each quad is MESH_SIZE/resolution world units.
+    // At 75: 5,625 quads of ~51wu each → 34 screen-pixels at normal altitude. Good detail/perf balance.
+    // At 100: 10,000 quads of ~38wu each → 25 screen-pixels. Higher detail but 78% more fill calls in worker.
+    MESH_RESOLUTION: 75,       // Grid resolution (75² = 5,625 quads; was 100² = 10,000)
     MESH_SIZE: 3800,           // World units covered (safe balance of sharpness and view distance)
     SPAWN_CELL_SIZE: 35,       // Fixed spawn density (independent of resolution)
     DEFAULT_FEATURE_SEED: 12345, // Fallback seed for terrain generation
