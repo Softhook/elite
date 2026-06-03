@@ -5,6 +5,16 @@
 const OFFSCREEN_VOLUME_REDUCTION_FACTOR = 0.1;
 const SHIELD_RECHARGE_RATE_MULTIPLIER = 4.0;
 
+// Performance caches (frame-rate independent)
+let _cachedShipControlState = false;
+let _lastStateCheckFrame = -1;
+let _lastThrustLevel = -1;
+let _lastThrustSoundTime = 0;
+let _lastCommunicationCleanup = 0;
+let _lastFactionMessage = 0;
+let _lastNewsUpdate = 0;
+let _lastTimerCheck = 0;
+
 /**
  * Returns true if the player is currently in a ship-control state
  * (flying in space or piloting on a planetary surface).
@@ -12,10 +22,30 @@ const SHIELD_RECHARGE_RATE_MULTIPLIER = 4.0;
  * @returns {boolean}
  */
 function isShipControlState() {
-    if (!gameStateManager) return false;
+    // Cache result per frame (frameCount only used for cache invalidation)
+    if (frameCount === _lastStateCheckFrame) {
+        return _cachedShipControlState;
+    }
+    
+    _lastStateCheckFrame = frameCount;
+    
+    if (!gameStateManager) {
+        _cachedShipControlState = false;
+        return false;
+    }
+    
     const state = gameStateManager.currentState;
-    if (state === 'IN_FLIGHT') return true;
-    if (state === 'SURFACE_MODE' && surfaceMode && surfaceMode.controlMode === 'SHIP') return true;
+    if (state === 'IN_FLIGHT') {
+        _cachedShipControlState = true;
+        return true;
+    }
+    
+    if (state === 'SURFACE_MODE' && surfaceMode && surfaceMode.controlMode === 'SHIP') {
+        _cachedShipControlState = true;
+        return true;
+    }
+    
+    _cachedShipControlState = false;
     return false;
 }
 
@@ -288,11 +318,24 @@ function draw() {
     handleGamepadContinuousInput();
     handleContinuousFiring();
 
-    // Update player thrust sound proportional to applied thrust
+    // Update player thrust sound (throttled to 30fps max for performance)
+    const now = millis();
     if (player && !player.destroyed && isShipControlState()) {
-        soundManager?.updateThrustSound(player.thrustLevel, player);
+        // Update thrust sound at most every 33ms (~30 fps) - frame rate independent
+        if (now - _lastThrustSoundTime > 33) {
+            _lastThrustSoundTime = now;
+            const currentThrust = player.thrustLevel;
+            if (Math.abs(currentThrust - _lastThrustLevel) > 0.05) {
+                soundManager?.updateThrustSound(currentThrust, player);
+                _lastThrustLevel = currentThrust;
+            }
+        }
     } else {
-        soundManager?.updateThrustSound(0);
+        if (_lastThrustLevel !== 0) {
+            soundManager?.updateThrustSound(0);
+            _lastThrustLevel = 0;
+            _lastThrustSoundTime = now;
+        }
     }
 
     renderGameState();
@@ -369,14 +412,16 @@ function updateEventManager() {
 }
 
 /**
- * Perform periodic background tasks
+ * Perform periodic background tasks (throttled to reduce CPU usage)
  */
-let _lastCommunicationCleanup = 0;
-let _lastFactionMessage = 0;
-let _lastNewsUpdate = 0;
-
 function performPeriodicTasks() {
     const now = millis();
+    
+    // Only check timers every 250ms (4 times per second) - frame rate independent
+    if (now - _lastTimerCheck < 250) {
+        return;
+    }
+    _lastTimerCheck = now;
 
     // Communication system cleanup every ~60 seconds
     if (now - _lastCommunicationCleanup > 60000 && communicationSystem) {
@@ -1539,6 +1584,16 @@ function mouseWheel(event) {
  * Preserves fullscreen mode if active.
  */
 function resetGame() {
+    // Reset performance caches
+    _lastThrustLevel = -1;
+    _cachedShipControlState = false;
+    _lastStateCheckFrame = -1;
+    _lastThrustSoundTime = 0;
+    _lastTimerCheck = 0;
+    _lastCommunicationCleanup = 0;
+    _lastFactionMessage = 0;
+    _lastNewsUpdate = 0;
+    
     console.log("Resetting game to initial state...");
 
     // Store fullscreen state
@@ -1645,7 +1700,6 @@ function resetGame() {
 }
 
 // --- End Reset ---
-
 
 // --- p5.js windowResized Function ---
 // Called automatically by p5.js when the browser window is resized.
