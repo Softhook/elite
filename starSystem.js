@@ -9833,13 +9833,41 @@ class AmbientCosmicEvent {
             case 'aurora_wave': {
                 const alpha = Math.sin(t * PI) * 180;
                 if (alpha <= 0) break;
+
+                const r = this.color[0], g = this.color[1], b = this.color[2];
+                const halfW = this.size;
+                const halfH = this.size * 0.55;
+
+                // --- Soft organic radial glow behind the waves ---
+                {
+                    const ctx = drawingContext;
+                    const grad = ctx.createRadialGradient(0, 0, halfW * 0.15, 0, 0, halfW * 1.05);
+                    grad.addColorStop(0, `rgba(${r},${g},${b},${alpha * 0.35 / 255})`);
+                    grad.addColorStop(0.5, `rgba(${r},${g},${b},${alpha * 0.12 / 255})`);
+                    grad.addColorStop(1, 'rgba(0,0,0,0)');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, halfW * 2.1, halfH * 2.1, 0, 0, TWO_PI);
+                    ctx.fill();
+                }
+
+                // --- Draw each wave ribbon with smooth edge falloff ---
                 noFill();
-                stroke(this.color[0], this.color[1], this.color[2], alpha);
-                strokeWeight(2.2);
                 for (let l = 0; l < 3; l++) {
                     beginShape();
-                    for (let x = -this.size; x <= this.size; x += 14) {
+                    for (let x = -halfW; x <= halfW; x += 12) {
+                        // Smooth falloff near edges using cosine easing
+                        const distFromCenter = abs(x) / halfW;
+                        let edgeFade = 1.0;
+                        if (distFromCenter > 0.65) {
+                            // Cosine ease-out from 0.65 to 1.0
+                            const t = constrain((distFromCenter - 0.65) / 0.35, 0, 1);
+                            edgeFade = 1.0 - (1.0 - cos(t * HALF_PI));
+                        }
                         const y = sin((x * 0.03) + this.wavePhase + l * 0.9) * (20 + l * 8);
+                        const vertAlpha = alpha * edgeFade;
+                        stroke(r, g, b, vertAlpha);
+                        strokeWeight(2.2 * edgeFade + 0.4);
                         vertex(x, y + l * 14 - 14);
                     }
                     endShape();
@@ -9849,10 +9877,36 @@ class AmbientCosmicEvent {
             case 'stellar_nursery': {
                 const alpha = Math.sin(t * PI) * 145;
                 if (alpha <= 0) break;
+
+                const halfW = this.size;
+                const halfH = this.size * 0.55;
+
+                // --- Soft organic radial glow behind the nursery ---
+                {
+                    const ctx = drawingContext;
+                    const grad = ctx.createRadialGradient(0, 0, halfW * 0.15, 0, 0, halfW * 1.05);
+                    grad.addColorStop(0, `rgba(255, 180, 220, ${alpha * 0.22 / 255})`);
+                    grad.addColorStop(0.5, `rgba(140, 120, 220, ${alpha * 0.08 / 255})`);
+                    grad.addColorStop(1, 'rgba(0,0,0,0)');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, halfW * 2.1, halfH * 2.1, 0, 0, TWO_PI);
+                    ctx.fill();
+                }
+
+                // --- Draw clouds with smooth edge falloff ---
                 noStroke();
                 for (let c of this.clouds) {
-                    fill(c.color[0], c.color[1], c.color[2], alpha * 0.32);
-                    circle(c.x, c.y, c.size);
+                    const dx = abs(c.x) / halfW;
+                    const dy = abs(c.y) / halfH;
+                    const maxDist = Math.max(dx, dy);
+                    let edgeFade = 1.0;
+                    if (maxDist > 0.55) {
+                        const tt = constrain((maxDist - 0.55) / 0.45, 0, 1);
+                        edgeFade = 1.0 - (1.0 - cos(tt * HALF_PI));
+                    }
+                    fill(c.color[0], c.color[1], c.color[2], alpha * 0.32 * edgeFade);
+                    circle(c.x, c.y, c.size * (0.8 + 0.2 * edgeFade));
                 }
                 fill(255, 240, 255, alpha * 0.55);
                 circle(0, 0, this.size * 0.38);
@@ -9895,9 +9949,39 @@ class AmbientCosmicEvent {
             case 'plasma_rain': {
                 const alpha = Math.sin(t * PI) * 205;
                 if (alpha <= 0) break;
-                stroke(110, 230, 255, alpha * 0.7);
-                strokeWeight(1.4);
+
+                const r = 110, g = 230, b = 255;
+                const halfW = this.size;
+                const halfH = this.size * 0.65;
+
+                // --- Soft organic radial glow behind the rain ---
+                {
+                    const ctx = drawingContext;
+                    const grad = ctx.createRadialGradient(0, 0, halfW * 0.12, 0, 0, halfW * 1.05);
+                    grad.addColorStop(0, `rgba(${r},${g},${b},${alpha * 0.18 / 255})`);
+                    grad.addColorStop(0.5, `rgba(${r},${g},${b},${alpha * 0.06 / 255})`);
+                    grad.addColorStop(1, 'rgba(0,0,0,0)');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, halfW * 2.1, halfH * 2.1, 0, 0, TWO_PI);
+                    ctx.fill();
+                }
+
+                // --- Draw rain streaks with smooth edge falloff ---
                 for (let p of this.particles) {
+                    // Distance-based edge fade
+                    const dx = abs(p.x) / halfW;
+                    const dy = abs(p.y) / halfH;
+                    const maxDist = Math.max(dx, dy);
+                    let edgeFade = 1.0;
+                    if (maxDist > 0.6) {
+                        const tt = constrain((maxDist - 0.6) / 0.4, 0, 1);
+                        edgeFade = 1.0 - (1.0 - cos(tt * HALF_PI));
+                    }
+                    const streakAlpha = alpha * 0.7 * edgeFade;
+                    if (streakAlpha < 2) continue;
+                    stroke(r, g, b, streakAlpha);
+                    strokeWeight(1.4 * edgeFade + 0.3);
                     line(p.x, p.y, p.x - 4, p.y - p.len);
                 }
                 break;
