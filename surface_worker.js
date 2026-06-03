@@ -127,26 +127,22 @@ self.onmessage = function (e) {
         meshSize, resolution, // Configuration
         planetSeed, planetPalette, // Planet parameters
         sunAngle, extrusionAngle, // Visual parameters
-        featureRand // Terrain random factor
+        featureRand, // Terrain random factor
+        bufferPixels, marginPixels // Buffer sizing (optional, defaults to 5500/0)
     } = data;
 
     try {
-        // 1. Setup Canvas
-        // Determine buffer size
-        // We need to cover meshSize * meshSize world units.
-        // But we also need 'cullPadding' or similar?
-        // Actually, the main thread draws the ImageBitmap. The buffer size should match the resolution
-        // times the 'draw density', or just be large enough to hold the pixel-perfect result?
-        // Wait, for 'generateMesh', we want to return a texture that covers the area.
-        // Let's make the canvas size proportional to the mesh size, or fixed?
-        // If we draw it 1:1 with world units, it might be huge (4200x4200).
-        // Let's use the resolution * a scale factor, or just map exactly.
-        // To keep it sharp, let's use a reasonable pixel density. 
-        // 5000 units. If 1 unit = 1 pixel, that's a 5k texture. Adjust as needed.
+        // 1. Setup Canvas with configurable buffer size
+        // Mesh covers meshSize world units; rendered at pixelScale into the buffer.
+        // Margins filled with base terrain colour prevent edge artefacts.
+        const bufPx = (bufferPixels && bufferPixels > 0) ? bufferPixels : 5500;
+        const margin = (marginPixels !== undefined && marginPixels >= 0) ? marginPixels : 0;
+        const innerPx = bufPx - margin * 2;
+        const pixelScale = innerPx / meshSize;  // pixels per world unit
+        const worldPerPixel = meshSize / innerPx; // world units per pixel (for drawImage)
 
-        const bufferSide = 5500; // Fixed size covering the 5000 mesh + margin for edge safety
-        const off = new OffscreenCanvas(bufferSide, bufferSide);
-        const ctx = off.getContext('2d', { alpha: true }); // Alpha true for transparency edges
+        const off = new OffscreenCanvas(bufPx, bufPx);
+        const ctx = off.getContext('2d', { alpha: true });
 
         // Seed noise
         PerlinNoise.seed(planetSeed || 12345);
@@ -238,9 +234,8 @@ self.onmessage = function (e) {
         }
 
         // 3. Render Quads to Canvas
-        // Center of canvas
-        const cx = bufferSide / 2;
-        const cy = bufferSide / 2;
+        const cx = bufPx / 2;
+        const cy = bufPx / 2;
 
         // Pre-calc sun & extrusion
         const sunDirX = Math.cos(sunAngle);
@@ -249,23 +244,18 @@ self.onmessage = function (e) {
         const cosA = Math.cos(extAngle);
         const sinA = Math.sin(extAngle);
 
-        // We draw quads relative to the center of the mesh
-        // The mesh center is at (0,0) in local space, which maps to (cx, cy)
-        // Local coord range: -halfRes*cellSize to +halfRes*cellSize
-
+        // Local coords span -halfRes*cellSize to +halfRes*cellSize (world units).
+        // Scale to buffer pixels via pixelScale so mesh fills inner area exactly.
         const baseOffsetX = -halfRes * cellSize;
         const baseOffsetY = -halfRes * cellSize;
 
-        // Display Stability: Fill background with a base terrain color before drawing quads.
-        // This ensures sub-pixel gaps (seams) bleed ground color instead of dark space,
-        // solving the shimmering issue at virtually zero cost compared to strokes.
-        const baseCol = threeRGB[1] || threeRGB[0]; // Use median palette color
+        // Fill entire buffer with base terrain colour so margins blend seamlessly
+        const baseCol = threeRGB[1] || threeRGB[0];
         ctx.fillStyle = `rgb(${baseCol.r},${baseCol.g},${baseCol.b})`;
-        ctx.fillRect(0, 0, bufferSide, bufferSide);
+        ctx.fillRect(0, 0, bufPx, bufPx);
 
         // Iterate quads
         for (let gy = 0; gy < resolution; gy++) {
-            // Row shared Y calc
             const rowY0 = baseOffsetY + gy * cellSize;
             const rowY1 = baseOffsetY + (gy + 1) * cellSize;
 
@@ -277,11 +267,10 @@ self.onmessage = function (e) {
 
                 const c00 = colors[gy][gx];
 
-                // Lighting (same as surfaceTerrain.js)
+                // Lighting
                 const slopeX = ((h10 - h00) + (h11 - h01)) * 0.5;
                 const slopeY = ((h01 - h00) + (h11 - h01)) * 0.5;
                 const sunIntensity = (slopeX * -sunDirX + slopeY * -sunDirY) * 0.015;
-
                 const avgHeight = (h00 + h10 + h01 + h11) * 0.25;
                 const heightLight = avgHeight * 0.0008;
                 const steepness = Math.abs(slopeX) + Math.abs(slopeY);
@@ -295,30 +284,30 @@ self.onmessage = function (e) {
                 const g = Math.floor(c00.g * shade);
                 const b = Math.floor(c00.b * shade);
 
-                // Draw Quad using 2D path
-                // Extrude: ScreenX = WorldX - height*sin, ScreenY = WorldY - height*cos
+                // Draw quad — world coords scaled to buffer pixels
                 const colX0 = baseOffsetX + gx * cellSize;
                 const colX1 = baseOffsetX + (gx + 1) * cellSize;
 
-                // Render quad (solid fill only - backing handles the seams)
                 ctx.fillStyle = `rgb(${r},${g},${b})`;
                 ctx.beginPath();
-                ctx.moveTo(cx + colX0 - h00 * sinA, cy + rowY0 - h00 * cosA);
-                ctx.lineTo(cx + colX1 - h10 * sinA, cy + rowY0 - h10 * cosA);
-                ctx.lineTo(cx + colX1 - h11 * sinA, cy + rowY1 - h11 * cosA);
-                ctx.lineTo(cx + colX0 - h01 * sinA, cy + rowY1 - h01 * cosA);
+                ctx.moveTo(cx + (colX0 - h00 * sinA) * pixelScale, cy + (rowY0 - h00 * cosA) * pixelScale);
+                ctx.lineTo(cx + (colX1 - h10 * sinA) * pixelScale, cy + (rowY0 - h10 * cosA) * pixelScale);
+                ctx.lineTo(cx + (colX1 - h11 * sinA) * pixelScale, cy + (rowY1 - h11 * cosA) * pixelScale);
+                ctx.lineTo(cx + (colX0 - h01 * sinA) * pixelScale, cy + (rowY1 - h01 * cosA) * pixelScale);
                 ctx.closePath();
                 ctx.fill();
             }
         }
 
-        // 4. Return Bitmap
+        // 4. Return Bitmap with scaling metadata
+        const result = { bitmap: null, gridX, gridY, worldPerPixel };
         if (typeof off.transferToImageBitmap === 'function') {
-            const bitmap = off.transferToImageBitmap();
-            self.postMessage({ bitmap, gridX, gridY }, [bitmap]);
+            result.bitmap = off.transferToImageBitmap();
+            self.postMessage(result, [result.bitmap]);
         } else {
             createImageBitmap(off).then(bitmap => {
-                self.postMessage({ bitmap, gridX, gridY }, [bitmap]);
+                result.bitmap = bitmap;
+                self.postMessage(result, [bitmap]);
             });
         }
 

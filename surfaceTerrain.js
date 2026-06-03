@@ -60,11 +60,10 @@ class SurfaceTerrain {
             this.pendingBuffer = {
                 bitmap: data.bitmap,
                 gridX: data.gridX,
-                gridY: data.gridY
+                gridY: data.gridY,
+                worldPerPixel: data.worldPerPixel || 1
             };
             this.isGenerating = false;
-            // Note: We don't verify if it's "stale" here because even an old buffer 
-            // is better than nothing, but in practice the request flow controls this.
         }
     }
 
@@ -166,6 +165,7 @@ class SurfaceTerrain {
      * @param {number} playerX 
      * @param {number} playerY 
      * @param {boolean} forceRequest - force a worker request (e.g. on teleport/entry)
+     * @param {number} sunAngle - lighting angle
      * @returns {boolean} True if a NEW buffer was swapped in this frame (changed)
      */
     update(playerX, playerY, forceRequest = false, sunAngle = -Math.PI / 4) {
@@ -192,6 +192,7 @@ class SurfaceTerrain {
                 this.currentBuffer = this.pendingBuffer.bitmap;
                 this.currentGridX = this.pendingBuffer.gridX;
                 this.currentGridY = this.pendingBuffer.gridY;
+                this._worldPerPixel = this.pendingBuffer.worldPerPixel || 1;
 
                 this.pendingBuffer = null;
                 this.isGenerating = false;
@@ -227,7 +228,9 @@ class SurfaceTerrain {
                 planetPalette: planetPalette,
                 sunAngle: sunAngle,
                 extrusionAngle: this.config.EXTRUSION_ANGLE,
-                featureRand: this._getFeatureRand()
+                featureRand: this._getFeatureRand(),
+                bufferPixels: this.config.TERRAIN_BUFFER_PIXELS || 5500,
+                marginPixels: this.config.TERRAIN_BUFFER_MARGIN || 0
             });
         }
 
@@ -240,24 +243,26 @@ class SurfaceTerrain {
 
     /**
      * Draw the terrain buffer (instant swap, no alpha transitions)
+     * Uses worldPerPixel from worker to map buffer pixels to world units correctly
+     * when the buffer was rendered at a different pixel density.
      */
     draw() {
         if (!this.currentBuffer || this.currentGridX === null) return;
 
         const cellSize = this.config.MESH_SIZE / this.config.MESH_RESOLUTION;
+        const wpp = this._worldPerPixel || 1; // world units per buffer pixel
 
         if (typeof drawingContext !== 'undefined') {
             const ctx = drawingContext;
 
-            // Draw current buffer at full opacity (no alpha blending)
             const bufferWorldCX = this.currentGridX * cellSize;
             const bufferWorldCY = this.currentGridY * cellSize;
-            const w = this.currentBuffer.width;
-            const h = this.currentBuffer.height;
-            const bx = bufferWorldCX - w / 2;
-            const by = bufferWorldCY - h / 2;
+            const worldW = this.currentBuffer.width * wpp;
+            const worldH = this.currentBuffer.height * wpp;
+            const bx = bufferWorldCX - worldW / 2;
+            const by = bufferWorldCY - worldH / 2;
 
-            ctx.drawImage(this.currentBuffer, bx, by, w, h);
+            ctx.drawImage(this.currentBuffer, bx, by, worldW, worldH);
         }
     }
 

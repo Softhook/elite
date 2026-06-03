@@ -44,6 +44,7 @@ class SurfaceFlora {
         this.health = 50; // Flora has moderate durability
         this.maxHealth = 50;
         this.isSurface = true; // Mark as surface entity for HUD
+        this.isFlora = true;  // Mark as flora - skip update loop (flora is static)
     }
 
     /**
@@ -528,10 +529,10 @@ class SurfaceFauna {
 
     // Attack behavior constants
     static ATTACK_SPEED_MULTIPLIER = 1.5;   // Speed multiplier when pursuing base
-    static BASE_DETECTION_RANGE = 300;       // Max distance to detect player bases (reduced for less aggression)
-    static BASE_ABANDON_RANGE = 600;         // Distance at which fauna abandons pursuit
+    static BASE_DETECTION_RANGE = 200;       // Max distance to detect player bases (reduced from 300)
+    static BASE_ABANDON_RANGE = 500;         // Distance at which fauna abandons pursuit (reduced from 600)
     static ATTACK_DAMAGE = 5;                // Damage per attack
-    static BASE_SEARCH_INTERVAL = 2.0;       // Seconds between base searches
+    static BASE_SEARCH_INTERVAL = 5.0;       // Seconds between base searches (increased from 2.0)
 
     /**
      * @param {number} x - World X coordinate
@@ -617,9 +618,17 @@ class SurfaceFauna {
     update(dt, player) {
         if (this.destroyed) return;
 
-        // Update height based on terrain
-        if (typeof surfaceMode !== 'undefined' && typeof surfaceMode._getTerrainHeightAt === 'function') {
-            this.yOffset = surfaceMode._getTerrainHeightAt(this.pos.x, this.pos.y);
+        // Only update terrain height when relatively close to player
+        // Skip terrain lookup for distant fauna - saves Map lookups per frame
+        if (player && player.pos) {
+            const dx = this.pos.x - player.pos.x;
+            const dy = this.pos.y - player.pos.y;
+            // Only update terrain height if within ~800 units (closer than update range)
+            if (dx * dx + dy * dy < 640000) { // 800^2
+                if (typeof surfaceMode !== 'undefined' && typeof surfaceMode._getTerrainHeightAt === 'function') {
+                    this.yOffset = surfaceMode._getTerrainHeightAt(this.pos.x, this.pos.y);
+                }
+            }
         }
 
         this.animTime += dt * 2;
@@ -751,22 +760,32 @@ class SurfaceFauna {
 
     /**
      * Find nearest player-built base in surfaceMode.surfaceObjects
+     * Optimized: early exit when no bases exist, skip objects beyond detection range
      * @private
      */
     _findNearestBase() {
         if (typeof surfaceMode === 'undefined' || !surfaceMode || !surfaceMode.surfaceObjects) return;
-        if (!Array.isArray(surfaceMode.surfaceObjects) || surfaceMode.surfaceObjects.length === 0) return;
+        const objects = surfaceMode.surfaceObjects;
+        if (!Array.isArray(objects) || objects.length === 0) return;
 
         let nearest = null;
         let minDist = SurfaceFauna.BASE_DETECTION_RANGE;
+        const minDistSq = minDist * minDist;
 
-        for (const obj of surfaceMode.surfaceObjects) {
+        for (let i = 0; i < objects.length; i++) {
+            const obj = objects[i];
             if (!obj || obj.destroyed || !obj.playerBuilt) continue;
 
-            const d = p5.Vector.dist(this.pos, obj.pos);
-            if (d < minDist) {
-                minDist = d;
+            // Fast squared-distance check before full p5.Vector.dist
+            const dx = obj.pos.x - this.pos.x;
+            const dy = obj.pos.y - this.pos.y;
+            const distSq = dx * dx + dy * dy;
+
+            if (distSq < minDistSq) {
+                minDist = Math.sqrt(distSq); // Only sqrt when we have a candidate
                 nearest = obj;
+                // Update minDistSq for subsequent checks
+                // Note: we keep using the linear minDist for the next sqrt comparison below
             }
         }
 

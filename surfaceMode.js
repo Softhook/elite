@@ -45,11 +45,19 @@ const SURFACE_CONFIG = {
     CANYON_DETECTION_DISTANCE: 400, // Distance to check for canyon edges
 
     // Cache cleanup
-    CACHE_CLEANUP_INTERVAL: 600, // Frames between cache cleanup operations
+    CACHE_CLEANUP_INTERVAL: 1800, // Frames between cache cleanup operations (was 600 - too frequent)
 
     // Performance
     UPDATE_RANGE: 2000,         // Max distance for object updates (units)
     BEAM_DISPLAY_DURATION: 150, // Beam visual duration (ms)
+
+    // Terrain buffer pixel density (worker-side)
+    // MESH_SIZE world units are rendered into a buffer of BUFFER_PIXELS.
+    // Smaller = less GPU memory and faster worker generation.
+    // At 3500px with 300px margins, inner 2900px covers 3800wu → ~1.31 wu/px.
+    // At normal altitude this matches screen res; at low alt it's slightly softer.
+    TERRAIN_BUFFER_PIXELS: 3500,  // Was effectively 5500 (hardcoded in worker)
+    TERRAIN_BUFFER_MARGIN: 300,   // Pixels of padding each side
 
     // Defense Drone Configuration
     DRONE: {
@@ -85,13 +93,18 @@ const SURFACE_CONFIG = {
     },
 
     // Level of Detail (LOD) Configuration for flora/fauna rendering
-    // Reduces geometry complexity at higher altitudes to improve performance
-    // Simple 2-level system: full detail below threshold, simplified above
+    // Per-object distance-based LOD: close objects get full detail, distant ones simplify.
+    // This avoids the ugly "global switch" effect of altitude-based LOD.
     LOD: {
-        DETAIL_THRESHOLD: 1200,   // Below 1200: full detail, above: simplified
-        MIN_SCREEN_SIZE: 3,       // Don't draw if apparent size < 3 pixels
-        FULL_DETAIL: 3,           // LOD level for full detail rendering
-        SIMPLIFIED: 2             // LOD level for simplified rendering
+        // Distance bands from player (world units)
+        FULL_DETAIL_RANGE: 500,     // Within 500 units: LOD 3 (full geometry)
+        SIMPLIFIED_RANGE: 1000,     // 500-1000 units: LOD 2 (reduced primitives) 
+        MINIMAL_RANGE: 1800,        // 1000-1800 units: LOD 1 (single primitive)
+                                    // Beyond 1800: culled by viewport
+        MIN_SCREEN_SIZE: 3,         // Don't draw if apparent size < 3 pixels
+        FULL_DETAIL: 3,             // LOD level for full detail rendering
+        SIMPLIFIED: 2,              // LOD level for simplified rendering
+        MINIMAL: 1                  // LOD level for minimal (single primitive) rendering
     },
 
     // Cloud Layer Configuration - fades surface to white at high altitudes
@@ -342,23 +355,34 @@ class SurfaceMode {
     }
 
     /**
-     * Calculate LOD (Level of Detail) level based on altitude and apparent size
-     * Used to reduce rendering complexity for distant flora/fauna
-     * Simple 2-level system: LOD 3 (full detail) or LOD 2 (simplified)
+     * Calculate LOD (Level of Detail) level based on distance from player.
+     * Gradual, per-object reduction that looks natural: nearby objects stay
+     * detailed while distant ones simplify independently.
+     * 
      * @param {number} objSize - Object's world size
-     * @returns {number} LOD level: 3=full detail, 2=simplified
+     * @param {number} distSq - Squared distance from player to object (or -1 to use altitude)
+     * @returns {number} LOD level: 3=full detail, 2=simplified, 1=minimal
      * @private
      */
-    _calculateLODLevel(objSize) {
+    _calculateLODLevel(objSize, distSq = -1) {
         const lod = SURFACE_CONFIG.LOD;
 
-        // Early return for very small apparent size (screen-size culling)
-        // Use cached perspective scale to avoid recalculation per object
+        // Screen-size culling: skip objects too small to matter
         const apparentSize = objSize * this._cachedPerspectiveScale;
-        if (apparentSize < lod.MIN_SCREEN_SIZE) return lod.SIMPLIFIED;
+        if (apparentSize < lod.MIN_SCREEN_SIZE) return lod.MINIMAL;
 
-        // Distance-based LOD: Use cached LOD level for consistency across frame
-        // Full detail below threshold, simplified above
+        // Distance-based LOD using cached player reference position
+        if (distSq >= 0 && this._cachedPlayerRefX !== undefined) {
+            if (distSq < lod.FULL_DETAIL_RANGE * lod.FULL_DETAIL_RANGE) {
+                return lod.FULL_DETAIL;     // Close: full geometry
+            }
+            if (distSq < lod.SIMPLIFIED_RANGE * lod.SIMPLIFIED_RANGE) {
+                return lod.SIMPLIFIED;      // Mid: reduced primitives
+            }
+            return lod.MINIMAL;             // Far: single primitive
+        }
+
+        // Fallback for objects without distance data: use altitude-based heuristic
         return this._cachedBaseLODLevel;
     }
 
@@ -955,17 +979,22 @@ class SurfaceMode {
             const focusY = this.surfaceY - visualYOffset; // Corrected: ship center is focal point
 
             // Update terrain - worker handles mesh generation and buffer swapping
-            // Pass sunAngle to ensure consistent lighting
             const sunAngle = this._getSunAngle();
             const bufferSwapped = this.terrain.update(focusX, focusY, false, sunAngle);
 
             if (bufferSwapped) {
-                // If buffer swapped, we might want to respawn objects relative to the new grid center
-                // But objects are world-space persistent. We only need to spawn new ones if we moved far enough.
-                // The terrain update handles the grid shift.
+                // Only respawn objects if the grid CENTER actually changed.
+                // _spawnObjects is expensive (~11K iterations); buffer swaps
+                // can happen on small position deltas that don't change the grid.
                 const gridPos = this.terrain.getGridPosition();
-                // Optimize: only respawn if grid significantly changed or it's a fresh load
-                this._spawnObjects(gridPos.x, gridPos.y);
+                const prevGridX = this._lastSpawnGridX;
+                const prevGridY = this._lastSpawnGridY;
+                if (prevGridX === undefined || prevGridY === undefined ||
+                    gridPos.x !== prevGridX || gridPos.y !== prevGridY) {
+                    this._lastSpawnGridX = gridPos.x;
+                    this._lastSpawnGridY = gridPos.y;
+                    this._spawnObjects(gridPos.x, gridPos.y);
+                }
             }
 
             // Update surface objects (single pass, dt-corrected)
@@ -976,9 +1005,10 @@ class SurfaceMode {
                 // Get viewport for culling (use constant from config)
                 const updateRange = SURFACE_CONFIG.UPDATE_RANGE || 2000;
                 const updateRangeSq = updateRange * updateRange;
-                // Tighter culling for fauna wandering behavior (reduced to 70% of normal range)
-                // Fauna can skip movement updates when far away since they just wander randomly
-                const faunaReducedRangeSq = (updateRange * 0.7) ** 2;
+                // Tighter culling for fauna - they wander randomly and don't need frequent updates
+                // Only need to track them when they're actively attacking or following
+                const faunaUpdateRange = 1000; // Reduced from 1400 for better performance
+                const faunaReducedRangeSq = faunaUpdateRange * faunaUpdateRange;
 
                 // Add hysteresis margin to prevent jitter at boundary (5% buffer)
                 const HYSTERESIS_FACTOR = 1.05;
@@ -990,6 +1020,10 @@ class SurfaceMode {
 
                 for (let obj of this.surfaceObjects) {
                     if (!obj || obj.destroyed) continue;
+
+                    // SKIP flora entirely in update loop - they never move and their
+                    // update() is a no-op. This saves distance checks and iteration.
+                    if (obj.isFlora === true) continue;
 
                     // Distance-based culling for updates (world space is faster than visual)
                     // Only update objects within reasonable range of player
@@ -1119,7 +1153,6 @@ class SurfaceMode {
             const focusY = this.surfaceY - visualYOffset; // Corrected: ship center is focal point
 
             // Generate terrain mesh and buffer - asynchronously request from worker
-            // We force a request here
             this.terrain.update(focusX, focusY, true, this._getSunAngle());
             this._terrainRequested = true;
             this._terrainReady = false;
@@ -1148,6 +1181,8 @@ class SurfaceMode {
                 this._terrainReady = true;
                 // Spawn initial objects once we have the grid
                 const gridPos = this.terrain.getGridPosition();
+                this._lastSpawnGridX = gridPos.x;
+                this._lastSpawnGridY = gridPos.y;
                 this._spawnObjects(gridPos.x, gridPos.y);
                 // Initialize mining robots for player bases
                 this._initializeMiningRobotsForBases();
@@ -2361,12 +2396,17 @@ class SurfaceMode {
             // Cache frequently-used values for the frame to avoid recalculation
             // These are used by multiple draw methods and LOD calculations
             this._cachedPerspectiveScale = this._getPerspectiveScale();
-            this._cachedBaseLODLevel = this.altitude < SURFACE_CONFIG.LOD.DETAIL_THRESHOLD ?
+            this._cachedBaseLODLevel = this.altitude < 1200 ?
                 SURFACE_CONFIG.LOD.FULL_DETAIL : SURFACE_CONFIG.LOD.SIMPLIFIED;
             this._cachedExtrusionAngle = this._getExtrusionAngle();
             this._cachedExtrusionSin = Math.sin(this._cachedExtrusionAngle);
             this._cachedExtrusionCos = Math.cos(this._cachedExtrusionAngle);
             this._cachedCounterScale = this._getCounterScale();
+            // Cache visual center (where ship appears on screen) for per-object distance LOD.
+            // Camera translates by (-surfaceX + visualXOffset, -(surfaceY - visualYOffset)),
+            // so the world point at screen center = (surfaceX - visualXOffset, surfaceY - visualYOffset).
+            this._cachedPlayerRefX = this.surfaceX - this.altitude * this._cachedExtrusionSin;
+            this._cachedPlayerRefY = this.surfaceY - this.altitude * this._cachedExtrusionCos;
         }
 
         // Update camera shake decay
@@ -2996,6 +3036,11 @@ class SurfaceMode {
             flora = typeof AlienTree !== 'undefined' ? new AlienTree(x, y, size, planetColors, seed) : null;
         }
 
+        // Mark as flora for fast filtering in update/draw loops
+        if (flora) {
+            flora.isFlora = true;
+        }
+
         return flora;
     }
 
@@ -3544,6 +3589,13 @@ class SurfaceMode {
                 continue;
             }
 
+            // Perf: Cull flora/fauna based on apparent screen size early
+            // Saves cost of depth sort + draw for tiny objects
+            const apparentSize = objSize * this._cachedPerspectiveScale;
+            if (apparentSize < SURFACE_CONFIG.LOD.MIN_SCREEN_SIZE && (obj.isFlora || obj.isFauna)) {
+                continue;
+            }
+
             // Store depth key directly on object (temporary, per-frame)
             obj._depthY = visY;
             buffer.push(obj);
@@ -3557,10 +3609,30 @@ class SurfaceMode {
             const obj = buffer[i];
             const objAlt = (typeof obj.altitude !== 'undefined') ? obj.altitude : (obj.yOffset || 0);
             const objSize = obj.size || 50;
-            const lodLevel = this._calculateLODLevel(objSize);
+
+            // Per-object distance-based LOD: compute squared distance from player
+            let distSq = -1;
+            if (this._cachedPlayerRefX !== undefined && obj.pos) {
+                const pdx = obj.pos.x - this._cachedPlayerRefX;
+                const pdy = obj.pos.y - this._cachedPlayerRefY;
+                distSq = pdx * pdx + pdy * pdy;
+            }
+            const lodLevel = this._calculateLODLevel(objSize, distSq);
 
             if (obj.draw) {
-                obj.draw(obj.pos.x, obj.pos.y, sunAngle, objAlt, lodLevel);
+                // LOD 1 (minimal): Draw a single simple prism for flora/fauna
+                // Much cheaper than calling the full draw() with all its primitives
+                if (lodLevel <= SURFACE_CONFIG.LOD.MINIMAL && (obj.isFlora || obj.isFauna)) {
+                    const h = (typeof obj.getHeight === 'function') ? obj.getHeight() : (obj.height || objSize);
+                    const lvl1Alt = objAlt + h * 0.5;
+                    const sinA = this._cachedExtrusionSin;
+                    const cosA = this._cachedExtrusionCos;
+                    const lx = obj.pos.x - lvl1Alt * sinA;
+                    const ly = obj.pos.y - lvl1Alt * cosA;
+                    Draw3D.drawPrism(lx, ly, objSize * 0.6, 5, h * 0.5, obj.color || color(100, 150, 100), this._cachedExtrusionAngle, sunAngle, true);
+                } else {
+                    obj.draw(obj.pos.x, obj.pos.y, sunAngle, objAlt, lodLevel);
+                }
             }
 
             if (this.debugMode) {
