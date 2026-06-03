@@ -5,6 +5,9 @@
 const OFFSCREEN_VOLUME_REDUCTION_FACTOR = 0.1;
 const SHIELD_RECHARGE_RATE_MULTIPLIER = 4.0;
 
+// Game states where the player is piloting (used for DRY state checks)
+const FLIGHT_STATES = ["IN_FLIGHT", "SURFACE_MODE"];
+
 // Performance caches (frame-rate independent)
 let _cachedShipControlState = false;
 let _lastStateCheckFrame = -1;
@@ -58,9 +61,11 @@ const GameGlobals = {
     soundManager: null,
     ambientSoundManager: null,
     stationMusicManager: null,
+    spaceMusicManager: null,
     titleScreen: null,
     saveSelectionScreen: null,
     inventoryScreen: null,
+    missionOverlay: null,
     inputManager: null,
     eventManager: null,
     communicationSystem: null,
@@ -94,10 +99,9 @@ function preload() {
 function setup() {
     try {
         initializeCanvas();
-        initializeManagers();
+        createCoreGameObjects();
         initializeWeaponSystem();
         validateShipDefinitions();
-        initializeGameObjects();
         configurePlayerShip();
         setInitialGameState();
         setupAudioGestures();
@@ -142,21 +146,48 @@ function initializeCanvas() {
 }
 
 /**
- * Initialize core game managers
+ * Create all core game objects (managers, world, player, UI, screens).
+ * Used by both setup() and resetGame() to eliminate duplication.
+ * Assigns to both module-level vars (backward compat) and GameGlobals.
  */
-function initializeManagers() {
+function createCoreGameObjects() {
     soundManager = new SoundManager();
     ambientSoundManager = new AmbientSoundManager();
     stationMusicManager = new StationMusicManager();
     spaceMusicManager = new SpaceMusicManager();
     eventManager = new EventManager();
+    gameStateManager = new GameStateManager();
+    galaxy = new Galaxy();
+    player = new Player();
+    uiManager = new UIManager();
+    titleScreen = new TitleScreen();
+    inventoryScreen = new InventoryScreen();
+    missionOverlay = new MissionOverlay();
+    saveSelectionScreen = new SaveSelectionScreen();
+    communicationSystem = new CommunicationSystem();
+    const newsManager = new NewsManager();
 
+    // Initialize communication system with references
+    communicationSystem.initialize({ uiManager, player });
+    communicationSystem.initializeSpeech(); // Enable speech synthesis
+
+    // Sync all to GameGlobals
     Object.assign(GameGlobals, {
         soundManager,
         ambientSoundManager,
         stationMusicManager,
         spaceMusicManager,
-        eventManager
+        eventManager,
+        gameStateManager,
+        galaxy,
+        player,
+        uiManager,
+        titleScreen,
+        inventoryScreen,
+        missionOverlay,
+        saveSelectionScreen,
+        communicationSystem,
+        newsManager
     });
 }
 
@@ -180,38 +211,6 @@ function validateShipDefinitions() {
     if (typeof SHIP_DEFINITIONS === 'undefined') {
         throw new Error("FATAL ERROR: SHIP_DEFINITIONS not loaded from ships.js! Check file inclusion order in index.html.");
     }
-}
-
-/**
- * Initialize main game objects
- */
-function initializeGameObjects() {
-    gameStateManager = new GameStateManager();
-    galaxy = new Galaxy();
-    player = new Player();
-    uiManager = new UIManager();
-    titleScreen = new TitleScreen();
-    inventoryScreen = new InventoryScreen();
-    missionOverlay = new MissionOverlay();
-    saveSelectionScreen = new SaveSelectionScreen();
-    communicationSystem = new CommunicationSystem();
-    GameGlobals.newsManager = new NewsManager();
-
-    // Initialize communication system with references
-    communicationSystem.initialize({ uiManager, player });
-    communicationSystem.initializeSpeech(); // Enable speech synthesis
-
-    Object.assign(GameGlobals, {
-        gameStateManager,
-        galaxy,
-        player,
-        uiManager,
-        titleScreen,
-        inventoryScreen,
-        missionOverlay,
-        saveSelectionScreen,
-        communicationSystem
-    });
 }
 
 /**
@@ -456,149 +455,150 @@ function getActiveInputContext() {
     });
 }
 
-function executeInputAction(action, context) {
-    switch (action) {
-        case INPUT_ACTIONS.CONFIRM:
-            if (context === INPUT_CONTEXTS.TITLE) {
-                titleScreen?.handleClick();
-                return true;
-            }
-            if (context === INPUT_CONTEXTS.INSTRUCTIONS) {
-                gameStateManager.setState('SAVE_SELECTION');
-                soundManager?.playSound('click');
-                return true;
-            }
-            if (context === INPUT_CONTEXTS.SAVE_SELECTION) {
-                saveSelectionScreen?.handleKeyPressed('\n', ENTER);
-                return true;
-            }
-            if (context === INPUT_CONTEXTS.GAME_OVER) {
-                if (typeof resetGame === 'function') resetGame();
-                return true;
-            }
-            if (context === INPUT_CONTEXTS.GALAXY_MAP) {
-                _handleGalaxyMapSelection();
-                return true;
-            }
-            if (context === INPUT_CONTEXTS.STATION_MENU) {
-                return dispatchStationMenuKeyboardAction(INPUT_ACTIONS.CONFIRM);
-            }
-            return false;
-        case INPUT_ACTIONS.BACK:
-            if (context === INPUT_CONTEXTS.INSTRUCTIONS) {
-                gameStateManager.setState('TITLE_SCREEN');
-                return true;
-            }
-            if (context === INPUT_CONTEXTS.SAVE_SELECTION) {
-                saveSelectionScreen?.handleKeyPressed(null, ESCAPE);
-                return true;
-            }
-            if (context === INPUT_CONTEXTS.MISSION_OVERLAY) {
-                gameStateManager.toggleMissionOverlay();
-                soundManager?.playSound('click');
-                return true;
-            }
-            if (context === INPUT_CONTEXTS.INVENTORY) {
-                return handleInventoryToggle();
-            }
-            if (context === INPUT_CONTEXTS.GALAXY_MAP) {
-                const returnState = gameStateManager._previousState || 'IN_FLIGHT';
-                gameStateManager.setState(returnState);
-                gameStateManager._previousState = null;
-                if (uiManager?.galaxyMap) uiManager.galaxyMap.gamepadSelectedIndex = -1;
-                soundManager?.playSound('mapClose');
-                return true;
-            }
-            if (context === INPUT_CONTEXTS.STATION_MENU) {
-                return dispatchStationMenuKeyboardAction(INPUT_ACTIONS.BACK);
-            }
-            return false;
-        case INPUT_ACTIONS.NAV_UP:
-            if (context === INPUT_CONTEXTS.STATION_MENU) {
-                return dispatchStationMenuKeyboardAction(INPUT_ACTIONS.NAV_UP);
-            }
-            if (context === INPUT_CONTEXTS.MISSION_OVERLAY && missionOverlay) {
-                missionOverlay.scrollOffset = Math.max(0, missionOverlay.scrollOffset - 24);
-                return true;
-            }
-            return false;
-        case INPUT_ACTIONS.NAV_DOWN:
-            if (context === INPUT_CONTEXTS.STATION_MENU) {
-                return dispatchStationMenuKeyboardAction(INPUT_ACTIONS.NAV_DOWN);
-            }
-            if (context === INPUT_CONTEXTS.MISSION_OVERLAY && missionOverlay) {
-                missionOverlay.scrollOffset = Math.min(
-                    missionOverlay.maxScroll || 0,
-                    missionOverlay.scrollOffset + 24
-                );
-                return true;
-            }
-            return false;
-        case INPUT_ACTIONS.NAV_LEFT:
-            if (context === INPUT_CONTEXTS.STATION_MENU) {
-                return dispatchStationMenuKeyboardAction(INPUT_ACTIONS.NAV_LEFT);
-            }
-            return false;
-        case INPUT_ACTIONS.NAV_RIGHT:
-            if (context === INPUT_CONTEXTS.STATION_MENU) {
-                return dispatchStationMenuKeyboardAction(INPUT_ACTIONS.NAV_RIGHT);
-            }
-            return false;
-        case INPUT_ACTIONS.TOGGLE_INVENTORY: return handleInventoryToggle();
-        case INPUT_ACTIONS.TOGGLE_MAP: return handleMapToggle();
-        case INPUT_ACTIONS.TOGGLE_MISSION: return handleMissionOverlayToggle();
-        case INPUT_ACTIONS.TOGGLE_SECRET_NAV: return handleSecretBaseNavigation();
-        case INPUT_ACTIONS.TOGGLE_WANTED: return handleWantedToggle();
-        case INPUT_ACTIONS.AUTOPILOT_PLANET: return handleAutopilot('h');
-        case INPUT_ACTIONS.AUTOPILOT_SERVICE: return handleAutopilot('j');
-        case INPUT_ACTIONS.MINIMAP_ZOOM_IN: return handleMinimapZoomIn();
-        case INPUT_ACTIONS.MINIMAP_ZOOM_OUT: return handleMinimapZoomOut();
-        case INPUT_ACTIONS.ACTIVATE_CLOAK: return handleCloakActivation();
-        case INPUT_ACTIONS.SURFACE_DESCENT: return handleSurfaceDescent();
-        case INPUT_ACTIONS.MAP_MARKET_TOGGLE:
-            if (gameStateManager.currentState !== 'GALAXY_MAP') return false;
-            const targetIdx = uiManager?.galaxyMap?.gamepadSelectedIndex ?? -1;
-            if (targetIdx === -1) return false;
-            const systems = galaxy?.getSystemDataForMap ? galaxy.getSystemDataForMap() : [];
-            const sysData = systems[targetIdx];
-            const isCurrent = (targetIdx === galaxy?.currentSystemIndex);
-            if (sysData && (sysData.visited || isCurrent)) {
-                if (uiManager.marketOverlaySystemIndex === targetIdx) {
-                    uiManager.marketOverlaySystemIndex = -1;
-                    soundManager?.playSound('click_off');
-                } else {
-                    uiManager.marketOverlaySystemIndex = targetIdx;
-                    soundManager?.playSound('click');
-                }
-            } else {
-                uiManager?.addMessage("Market data unavailable.", [255, 150, 150]);
-                soundManager?.playSound('error');
-            }
+// --- Context-based input action dispatching ---
+// Each context handler receives the action and returns true if handled.
+
+function _handleConfirmAction(context) {
+    switch (context) {
+        case INPUT_CONTEXTS.TITLE:
+            titleScreen?.handleClick();
             return true;
-        case INPUT_ACTIONS.FIRE_PRIMARY:
-            player?.handleFireInput?.();
+        case INPUT_CONTEXTS.INSTRUCTIONS:
+            gameStateManager.setState('SAVE_SELECTION');
+            soundManager?.playSound('click');
             return true;
-        case INPUT_ACTIONS.LAUNCH_ESCAPE_CAPSULE:
-            if (isShipControlState()) {
-                handleEjectEscapePod();
-                return true;
-            }
-            return false;
-        case INPUT_ACTIONS.ACTIVATE_BURST:
-            return handleSpeedBurstActivation();
-        case INPUT_ACTIONS.WEAPON_SLOT_1:
-        case INPUT_ACTIONS.WEAPON_SLOT_2:
-        case INPUT_ACTIONS.WEAPON_SLOT_3:
-        case INPUT_ACTIONS.WEAPON_SLOT_4:
-        case INPUT_ACTIONS.WEAPON_SLOT_5:
-        case INPUT_ACTIONS.WEAPON_SLOT_6:
-        case INPUT_ACTIONS.WEAPON_SLOT_7:
-        case INPUT_ACTIONS.WEAPON_SLOT_8:
-        case INPUT_ACTIONS.WEAPON_SLOT_9:
-            return handleWeaponSlotSelection(action);
+        case INPUT_CONTEXTS.SAVE_SELECTION:
+            saveSelectionScreen?.handleKeyPressed('\n', ENTER);
+            return true;
+        case INPUT_CONTEXTS.GAME_OVER:
+            if (typeof resetGame === 'function') resetGame();
+            return true;
+        case INPUT_CONTEXTS.GALAXY_MAP:
+            _handleGalaxyMapSelection();
+            return true;
+        case INPUT_CONTEXTS.STATION_MENU:
+            return dispatchStationMenuKeyboardAction(INPUT_ACTIONS.CONFIRM);
         default:
             return false;
     }
+}
+
+function _handleBackAction(context) {
+    switch (context) {
+        case INPUT_CONTEXTS.INSTRUCTIONS:
+            gameStateManager.setState('TITLE_SCREEN');
+            return true;
+        case INPUT_CONTEXTS.SAVE_SELECTION:
+            saveSelectionScreen?.handleKeyPressed(null, ESCAPE);
+            return true;
+        case INPUT_CONTEXTS.MISSION_OVERLAY:
+            gameStateManager.toggleMissionOverlay();
+            soundManager?.playSound('click');
+            return true;
+        case INPUT_CONTEXTS.INVENTORY:
+            return handleInventoryToggle();
+        case INPUT_CONTEXTS.GALAXY_MAP: {
+            const returnState = gameStateManager._previousState || 'IN_FLIGHT';
+            gameStateManager.setState(returnState);
+            gameStateManager._previousState = null;
+            if (uiManager?.galaxyMap) uiManager.galaxyMap.gamepadSelectedIndex = -1;
+            soundManager?.playSound('mapClose');
+            return true;
+        }
+        case INPUT_CONTEXTS.STATION_MENU:
+            return dispatchStationMenuKeyboardAction(INPUT_ACTIONS.BACK);
+        default:
+            return false;
+    }
+}
+
+function _handleNavAction(action, context) {
+    if (context === INPUT_CONTEXTS.STATION_MENU) {
+        return dispatchStationMenuKeyboardAction(action);
+    }
+    if (context === INPUT_CONTEXTS.MISSION_OVERLAY && missionOverlay) {
+        if (action === INPUT_ACTIONS.NAV_UP) {
+            missionOverlay.scrollOffset = Math.max(0, missionOverlay.scrollOffset - 24);
+        } else if (action === INPUT_ACTIONS.NAV_DOWN) {
+            missionOverlay.scrollOffset = Math.min(
+                missionOverlay.maxScroll || 0,
+                missionOverlay.scrollOffset + 24
+            );
+        }
+        return true;
+    }
+    return false;
+}
+
+function _handleMapMarketToggle() {
+    if (gameStateManager.currentState !== 'GALAXY_MAP') return false;
+    const targetIdx = uiManager?.galaxyMap?.gamepadSelectedIndex ?? -1;
+    if (targetIdx === -1) return false;
+    const systems = galaxy?.getSystemDataForMap ? galaxy.getSystemDataForMap() : [];
+    const sysData = systems[targetIdx];
+    const isCurrent = (targetIdx === galaxy?.currentSystemIndex);
+    if (sysData && (sysData.visited || isCurrent)) {
+        if (uiManager.marketOverlaySystemIndex === targetIdx) {
+            uiManager.marketOverlaySystemIndex = -1;
+            soundManager?.playSound('click_off');
+        } else {
+            uiManager.marketOverlaySystemIndex = targetIdx;
+            soundManager?.playSound('click');
+        }
+    } else {
+        uiManager?.addMessage("Market data unavailable.", [255, 150, 150]);
+        soundManager?.playSound('error');
+    }
+    return true;
+}
+
+// Context-agnostic action handlers (no context switch needed)
+const _CONTEXT_FREE_ACTIONS = {
+    [INPUT_ACTIONS.TOGGLE_INVENTORY]: handleInventoryToggle,
+    [INPUT_ACTIONS.TOGGLE_MAP]: handleMapToggle,
+    [INPUT_ACTIONS.TOGGLE_MISSION]: handleMissionOverlayToggle,
+    [INPUT_ACTIONS.TOGGLE_SECRET_NAV]: handleSecretBaseNavigation,
+    [INPUT_ACTIONS.TOGGLE_WANTED]: handleWantedToggle,
+    [INPUT_ACTIONS.AUTOPILOT_PLANET]: () => handleAutopilot('h'),
+    [INPUT_ACTIONS.AUTOPILOT_SERVICE]: () => handleAutopilot('j'),
+    [INPUT_ACTIONS.MINIMAP_ZOOM_IN]: handleMinimapZoomIn,
+    [INPUT_ACTIONS.MINIMAP_ZOOM_OUT]: handleMinimapZoomOut,
+    [INPUT_ACTIONS.ACTIVATE_CLOAK]: handleCloakActivation,
+    [INPUT_ACTIONS.SURFACE_DESCENT]: handleSurfaceDescent,
+    [INPUT_ACTIONS.ACTIVATE_BURST]: handleSpeedBurstActivation
+};
+
+function executeInputAction(action, context) {
+    // Dispatch by action type
+    if (action === INPUT_ACTIONS.CONFIRM) return _handleConfirmAction(context);
+    if (action === INPUT_ACTIONS.BACK) return _handleBackAction(context);
+    if (action === INPUT_ACTIONS.NAV_UP || action === INPUT_ACTIONS.NAV_DOWN ||
+        action === INPUT_ACTIONS.NAV_LEFT || action === INPUT_ACTIONS.NAV_RIGHT) {
+        return _handleNavAction(action, context);
+    }
+
+    // Context-free actions (dispatch directly)
+    if (_CONTEXT_FREE_ACTIONS[action]) {
+        return _CONTEXT_FREE_ACTIONS[action]();
+    }
+
+    // Special actions with their own context checks
+    if (action === INPUT_ACTIONS.MAP_MARKET_TOGGLE) return _handleMapMarketToggle();
+    if (action === INPUT_ACTIONS.FIRE_PRIMARY) {
+        player?.handleFireInput?.();
+        return true;
+    }
+    if (action === INPUT_ACTIONS.LAUNCH_ESCAPE_CAPSULE) {
+        if (isShipControlState()) { handleEjectEscapePod(); return true; }
+        return false;
+    }
+
+    // Weapon slots
+    if (action.startsWith && action.startsWith('WEAPON_SLOT_')) {
+        return handleWeaponSlotSelection(action);
+    }
+
+    return false;
 }
 
 function handleWeaponSlotSelection(action) {
@@ -676,102 +676,118 @@ function handleContinuousFiring() {
 }
 
 /**
- * Handle gamepad continuous input (sticks & triggers → movement)
+ * Handle gamepad continuous input (sticks & triggers → movement).
+ * Dispatches to context-specific handlers.
  * p5.js keyIsDown() doesn't see synthetic KeyboardEvents, so we must
  * directly inject movement by calling player methods from stick state.
  */
 function handleGamepadContinuousInput() {
     const gp = window._gamepadManager;
-    if (!gp || !gp.state || !player || !inputManager) return;
+    if (!gp?.connected || !gp?.state || !player || !inputManager) return;
 
     const state = gameStateManager.currentState;
     if (player.destroyed && state !== 'GAME_OVER') return;
-    const s = gp.state;
+
     const context = getActiveInputContext();
+    if (!context) return;
 
-    if (context !== INPUT_CONTEXTS.STATION_MENU && inputManager.isGamepadActionPressed(INPUT_ACTIONS.CONFIRM, context)) {
-        executeInputAction(INPUT_ACTIONS.CONFIRM, context);
-    }
-    if (context !== INPUT_CONTEXTS.STATION_MENU && inputManager.isGamepadActionPressed(INPUT_ACTIONS.BACK, context)) {
-        executeInputAction(INPUT_ACTIONS.BACK, context);
+    // Common actions available in most contexts (except station menus)
+    if (context !== INPUT_CONTEXTS.STATION_MENU) {
+        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.CONFIRM, context)) {
+            executeInputAction(INPUT_ACTIONS.CONFIRM, context);
+        }
+        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.BACK, context)) {
+            executeInputAction(INPUT_ACTIONS.BACK, context);
+        }
     }
 
+    // Global toggles (available in most contexts)
     if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.TOGGLE_MAP, context)) executeInputAction(INPUT_ACTIONS.TOGGLE_MAP, context);
     if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.TOGGLE_INVENTORY, context)) executeInputAction(INPUT_ACTIONS.TOGGLE_INVENTORY, context);
     if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.TOGGLE_MISSION, context)) executeInputAction(INPUT_ACTIONS.TOGGLE_MISSION, context);
 
-    if (context === INPUT_CONTEXTS.SAVE_SELECTION) {
-        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.NAV_UP, context)) saveSelectionScreen?.handleKeyPressed(null, UP_ARROW);
-        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.NAV_DOWN, context)) saveSelectionScreen?.handleKeyPressed(null, DOWN_ARROW);
-        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.NAV_LEFT, context)) saveSelectionScreen?.handleKeyPressed(null, LEFT_ARROW);
-        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.NAV_RIGHT, context)) saveSelectionScreen?.handleKeyPressed(null, RIGHT_ARROW);
-        return;
+    // Dispatch to context-specific handler
+    switch (context) {
+        case INPUT_CONTEXTS.SAVE_SELECTION: _gpHandleSaveSelection(gp, context); break;
+        case INPUT_CONTEXTS.STATION_MENU: _gpHandleStationMenu(gp, state); break;
+        case INPUT_CONTEXTS.MISSION_OVERLAY: _gpHandleMissionOverlay(gp, context); break;
+        case INPUT_CONTEXTS.INVENTORY: _gpHandleInventory(gp); break;
+        case INPUT_CONTEXTS.GALAXY_MAP: _gpHandleGalaxyMap(gp, context); break;
+        default: _gpHandleShipControl(gp, context, state); break;
+    }
+}
+
+function _gpHandleSaveSelection(gp, context) {
+    const im = inputManager;
+    if (im.isGamepadActionPressed(INPUT_ACTIONS.NAV_UP, context)) saveSelectionScreen?.handleKeyPressed(null, UP_ARROW);
+    if (im.isGamepadActionPressed(INPUT_ACTIONS.NAV_DOWN, context)) saveSelectionScreen?.handleKeyPressed(null, DOWN_ARROW);
+    if (im.isGamepadActionPressed(INPUT_ACTIONS.NAV_LEFT, context)) saveSelectionScreen?.handleKeyPressed(null, LEFT_ARROW);
+    if (im.isGamepadActionPressed(INPUT_ACTIONS.NAV_RIGHT, context)) saveSelectionScreen?.handleKeyPressed(null, RIGHT_ARROW);
+}
+
+function _gpHandleStationMenu(gp, state) {
+    _handleGamepadStationMenus(gp, state);
+}
+
+function _gpHandleMissionOverlay(gp, context) {
+    if (!missionOverlay) return;
+    const s = gp.state;
+    const scrollSpeed = 8;
+    if (Math.abs(s.rs.y) > 0.1) {
+        missionOverlay.scrollOffset += s.rs.y * scrollSpeed;
+    } else if (inputManager.isGamepadActionHeld(INPUT_ACTIONS.NAV_UP, context)) {
+        missionOverlay.scrollOffset -= scrollSpeed;
+    } else if (inputManager.isGamepadActionHeld(INPUT_ACTIONS.NAV_DOWN, context)) {
+        missionOverlay.scrollOffset += scrollSpeed;
+    }
+    missionOverlay.scrollOffset = Math.min(
+        Math.max(missionOverlay.scrollOffset, 0),
+        missionOverlay.maxScroll || 0
+    );
+}
+
+function _gpHandleInventory(gp) {
+    if (typeof _handleGamepadInventory === 'function') {
+        _handleGamepadInventory(gp, player, inventoryScreen);
+    }
+}
+
+function _gpHandleGalaxyMap(gp, context) {
+    if (!uiManager?.galaxyMap || !galaxy) return;
+    const gm = uiManager.galaxyMap, im = inputManager, s = gp.state;
+
+    if (gm.gamepadSelectedIndex === -1) {
+        gm.gamepadSelectedIndex = galaxy.currentSystemIndex;
+    }
+    if (im.isGamepadActionPressed(INPUT_ACTIONS.MAP_MARKET_TOGGLE, context)) {
+        executeInputAction(INPUT_ACTIONS.MAP_MARKET_TOGGLE, context);
     }
 
-    if (context === INPUT_CONTEXTS.STATION_MENU) {
-        _handleGamepadStationMenus(gp, state);
-        return;
-    }
+    let dx = 0, dy = 0;
+    if (im.isGamepadActionPressed(INPUT_ACTIONS.NAV_UP, context)) dy = -1;
+    else if (im.isGamepadActionPressed(INPUT_ACTIONS.NAV_DOWN, context)) dy = 1;
+    else if (im.isGamepadActionPressed(INPUT_ACTIONS.NAV_LEFT, context)) dx = -1;
+    else if (im.isGamepadActionPressed(INPUT_ACTIONS.NAV_RIGHT, context)) dx = 1;
 
-    if (context === INPUT_CONTEXTS.MISSION_OVERLAY) {
-        if (missionOverlay) {
-            const scrollSpeed = 8;
-            if (Math.abs(s.rs.y) > 0.1) {
-                missionOverlay.scrollOffset += s.rs.y * scrollSpeed;
-            } else if (inputManager.isGamepadActionHeld(INPUT_ACTIONS.NAV_UP, context)) {
-                missionOverlay.scrollOffset -= scrollSpeed;
-            } else if (inputManager.isGamepadActionHeld(INPUT_ACTIONS.NAV_DOWN, context)) {
-                missionOverlay.scrollOffset += scrollSpeed;
-            }
-            missionOverlay.scrollOffset = Math.min(
-                Math.max(missionOverlay.scrollOffset, 0),
-                missionOverlay.maxScroll || 0
-            );
+    if (dx === 0 && dy === 0) {
+        const sPrev = gp.previousState;
+        if (sPrev) {
+            if (s.ls.y < -0.5 && sPrev.ls.y >= -0.5) dy = -1;
+            else if (s.ls.y > 0.5 && sPrev.ls.y <= 0.5) dy = 1;
+            else if (s.ls.x < -0.5 && sPrev.ls.x >= -0.5) dx = -1;
+            else if (s.ls.x > 0.5 && sPrev.ls.x <= 0.5) dx = 1;
         }
-        return;
     }
 
-    if (context === INPUT_CONTEXTS.INVENTORY) {
-        if (typeof _handleGamepadInventory === 'function') {
-            _handleGamepadInventory(gp, player, inventoryScreen);
-        }
-        return;
-    }
+    if (dx !== 0 || dy !== 0) _handleGalaxyMapHopping(dx, dy);
+}
 
-    if (context === INPUT_CONTEXTS.GALAXY_MAP) {
-        if (uiManager?.galaxyMap && galaxy) {
-            if (uiManager.galaxyMap.gamepadSelectedIndex === -1) {
-                uiManager.galaxyMap.gamepadSelectedIndex = galaxy.currentSystemIndex;
-            }
-            if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.MAP_MARKET_TOGGLE, context)) {
-                executeInputAction(INPUT_ACTIONS.MAP_MARKET_TOGGLE, context);
-            }
-
-            let dx = 0, dy = 0;
-            if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.NAV_UP, context)) dy = -1;
-            else if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.NAV_DOWN, context)) dy = 1;
-            else if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.NAV_LEFT, context)) dx = -1;
-            else if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.NAV_RIGHT, context)) dx = 1;
-
-            if (dx === 0 && dy === 0) {
-                const sPrev = gp.previousState;
-                if (sPrev) {
-                    if (s.ls.y < -0.5 && sPrev.ls.y >= -0.5) dy = -1;
-                    else if (s.ls.y > 0.5 && sPrev.ls.y <= 0.5) dy = 1;
-                    else if (s.ls.x < -0.5 && sPrev.ls.x >= -0.5) dx = -1;
-                    else if (s.ls.x > 0.5 && sPrev.ls.x <= 0.5) dx = 1;
-                }
-            }
-
-            if (dx !== 0 || dy !== 0) _handleGalaxyMapHopping(dx, dy);
-        }
-        return;
-    }
-
-    // ── In-flight / Surface ship control: analog sticks → movement ──
+/**
+ * Handle in-flight / surface ship gamepad control: analog sticks → movement.
+ */
+function _gpHandleShipControl(gp, context, state) {
     if (!isShipControlState()) return;
 
-    // Read analog values
     const shipControls = inputManager.getGamepadShipControls(context);
     const lsX = shipControls.strafeX;
     const lsY = shipControls.thrustY;
@@ -780,8 +796,6 @@ function handleGamepadContinuousInput() {
     const r2Val = shipControls.forwardThrottle;
 
     const rotTimeScale = (typeof deltaTime === 'number') ? deltaTime / 16.67 : 1;
-    // Use the same thresholds as the actual control logic so autopilot disengages
-    // exactly when control input becomes active — no earlier, no later.
     const rsMag = Math.sqrt(rsX * rsX + rsY * rsY);
     const lsMag = Math.sqrt(lsX * lsX + lsY * lsY);
     const hasGamepadInput = rsMag > 0.08 || lsMag > 0.05 || r2Val > 0.08;
@@ -792,26 +806,17 @@ function handleGamepadContinuousInput() {
         uiManager?.addMessage('Autopilot disengaged: On manual control');
     }
 
-    // Right stick: world-space aim — steer the ship toward the direction the stick points.
-    // Pushing right → ship turns to face right; pushing up → turns to face up.
-    // The angular error drives rotation each frame, capped at rotationSpeed so the ship
-    // never snaps instantly. Stick magnitude scales the maximum turn authority so
-    // gentle deflections give finer steering.
+    // Right stick: world-space aim
     if (rsMag > 0.08) {
         const targetAngle = Math.atan2(rsY, rsX);
         let err = targetAngle - player.angle;
-        // Normalise to [-PI, PI] for shortest-arc rotation
         while (err > Math.PI) err -= 2 * Math.PI;
         while (err < -Math.PI) err += 2 * Math.PI;
         const maxTurn = player.rotationSpeed * rotTimeScale * rsMag;
         player.angle += Math.sign(err) * Math.min(Math.abs(err), maxTurn);
     }
 
-    // Left stick: world-space (screen-space) omnidirectional movement.
-    // Decompose the stick vector into ship-local axes so that pushing the stick
-    // up always moves the ship toward the top of the screen regardless of heading.
-    //   fwd   = dot((lsX, lsY), ship-facing (cos a, sin a))
-    //   right = dot((lsX, lsY), ship-right  (-sin a, cos a))
+    // Left stick: world-space omnidirectional movement
     const isTargetSelectionMode = (state === 'IN_FLIGHT') && inputManager?.isTargetSelectionModeEnabled?.();
     let stickForwardAmount = 0, stickReverseAmount = 0;
     if (!isTargetSelectionMode && (Math.abs(lsX) > 0.05 || Math.abs(lsY) > 0.05)) {
@@ -822,7 +827,6 @@ function handleGamepadContinuousInput() {
         stickForwardAmount = Math.max(0,  fwd);
         stickReverseAmount = Math.max(0, -fwd);
 
-        // Strafe from the perpendicular (world-right) component
         if (Math.abs(right) > 0.1) {
             const strafeStrength = Math.max(0.2, Math.abs(right)) * 0.4;
             if (right < 0) player.kiteLeft(strafeStrength);
@@ -831,53 +835,46 @@ function handleGamepadContinuousInput() {
         }
     }
 
-    // Combine stick world-forward component with trigger forward
     const forwardAmount = Math.max(stickForwardAmount, r2Val);
-    const reverseAmount = stickReverseAmount;
-
     if (forwardAmount > 0.08) {
         player.isThrusting = true;
         player.thrust(forwardAmount);
-    } else if (reverseAmount > 0.08) {
+    } else if (stickReverseAmount > 0.08) {
         player.isThrusting = true;
         player.isReverseThrusting = true;
-        player.reverseThrust(PLAYER_CONFIG.REVERSE_THRUST_MULTIPLIER * reverseAmount);
+        player.reverseThrust(PLAYER_CONFIG.REVERSE_THRUST_MULTIPLIER * stickReverseAmount);
     }
 
     // Surface mode altitude from bumpers
     if (state === 'SURFACE_MODE' && surfaceMode) {
         if (inputManager.isGamepadActionHeld(INPUT_ACTIONS.ALTITUDE_UP, context)) surfaceMode.altitudeInput = 1;
         else if (inputManager.isGamepadActionHeld(INPUT_ACTIONS.ALTITUDE_DOWN, context)) surfaceMode.altitudeInput = -1;
-        else if (!keyIsDown(90) && !keyIsDown(88)) { // Only reset if keyboard Z/X not held
-            surfaceMode.altitudeInput = 0;
-        }
+        else if (!keyIsDown(90) && !keyIsDown(88)) surfaceMode.altitudeInput = 0;
     }
 
-    if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.ACTIVATE_CLOAK, context)) executeInputAction(INPUT_ACTIONS.ACTIVATE_CLOAK, context);
-    if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.MINIMAP_ZOOM_IN, context)) executeInputAction(INPUT_ACTIONS.MINIMAP_ZOOM_IN, context);
-    if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.MINIMAP_ZOOM_OUT, context)) executeInputAction(INPUT_ACTIONS.MINIMAP_ZOOM_OUT, context);
-    if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.ACTIVATE_BURST, context)) executeInputAction(INPUT_ACTIONS.ACTIVATE_BURST, context);
-    if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.LAUNCH_ESCAPE_CAPSULE, context)) executeInputAction(INPUT_ACTIONS.LAUNCH_ESCAPE_CAPSULE, context);
+    // Action buttons during ship control
+    const im = inputManager;
+    if (im.isGamepadActionPressed(INPUT_ACTIONS.ACTIVATE_CLOAK, context)) executeInputAction(INPUT_ACTIONS.ACTIVATE_CLOAK, context);
+    if (im.isGamepadActionPressed(INPUT_ACTIONS.MINIMAP_ZOOM_IN, context)) executeInputAction(INPUT_ACTIONS.MINIMAP_ZOOM_IN, context);
+    if (im.isGamepadActionPressed(INPUT_ACTIONS.MINIMAP_ZOOM_OUT, context)) executeInputAction(INPUT_ACTIONS.MINIMAP_ZOOM_OUT, context);
+    if (im.isGamepadActionPressed(INPUT_ACTIONS.ACTIVATE_BURST, context)) executeInputAction(INPUT_ACTIONS.ACTIVATE_BURST, context);
+    if (im.isGamepadActionPressed(INPUT_ACTIONS.LAUNCH_ESCAPE_CAPSULE, context)) executeInputAction(INPUT_ACTIONS.LAUNCH_ESCAPE_CAPSULE, context);
 
-    // Weapon switching available in space and surface ship mode
-    if (isShipControlState()) {
-        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.WEAPON_NEXT, context) && player.weapons && player.weapons.length > 1) {
+    // Weapon switching
+    if (player.weapons && player.weapons.length > 1) {
+        if (im.isGamepadActionPressed(INPUT_ACTIONS.WEAPON_NEXT, context)) {
             const nextIdx = (player.weaponIndex + 1) % player.weapons.length;
-            if (player.switchToWeapon(nextIdx)) {
-                soundManager?.playSound('click');
-            }
-        } else if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.WEAPON_PREV, context) && player.weapons && player.weapons.length > 1) {
+            if (player.switchToWeapon(nextIdx)) soundManager?.playSound('click');
+        } else if (im.isGamepadActionPressed(INPUT_ACTIONS.WEAPON_PREV, context)) {
             const prevIdx = (player.weaponIndex - 1 + player.weapons.length) % player.weapons.length;
-            if (player.switchToWeapon(prevIdx)) {
-                soundManager?.playSound('click');
-            }
+            if (player.switchToWeapon(prevIdx)) soundManager?.playSound('click');
         }
     }
 
     // Flight-only shortcuts
     if (state === 'IN_FLIGHT') {
-        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.TOGGLE_TARGET_SELECTION_MODE, context)) {
-            const enabled = inputManager.toggleTargetSelectionMode();
+        if (im.isGamepadActionPressed(INPUT_ACTIONS.TOGGLE_TARGET_SELECTION_MODE, context)) {
+            const enabled = im.toggleTargetSelectionMode();
             uiManager?.addMessage(
                 enabled ? 'Target selection mode: Left Stick' : 'Target selection mode: OFF',
                 enabled ? [120, 255, 160] : [200, 200, 200]
@@ -885,25 +882,21 @@ function handleGamepadContinuousInput() {
             soundManager?.playSound('click');
         }
 
-        if (inputManager.isTargetSelectionModeEnabled?.()) {
-            const targetDirection = inputManager.consumeTargetSelectionStickDirection(lsX, lsY);
+        if (im.isTargetSelectionModeEnabled?.()) {
+            const targetDirection = im.consumeTargetSelectionStickDirection(lsX, lsY);
             if (targetDirection && typeof player.selectTargetByDirection === 'function') {
                 player.selectTargetByDirection(targetDirection.x, targetDirection.y);
             }
         }
 
-        // Target cycling with D-pad up/down is flight-only (surface D-pad up/down controls altitude).
-        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.TARGET_NEXT, context)) {
-            player.cycleTarget(1);
-        } else if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.TARGET_PREV, context)) {
-            player.cycleTarget(-1);
-        }
+        if (im.isGamepadActionPressed(INPUT_ACTIONS.TARGET_NEXT, context)) player.cycleTarget(1);
+        else if (im.isGamepadActionPressed(INPUT_ACTIONS.TARGET_PREV, context)) player.cycleTarget(-1);
 
-        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.SURFACE_DESCENT, context)) executeInputAction(INPUT_ACTIONS.SURFACE_DESCENT, context);
-        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.AUTOPILOT_PLANET, context)) executeInputAction(INPUT_ACTIONS.AUTOPILOT_PLANET, context);
-        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.AUTOPILOT_SERVICE, context)) executeInputAction(INPUT_ACTIONS.AUTOPILOT_SERVICE, context);
-        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.TOGGLE_SECRET_NAV, context)) executeInputAction(INPUT_ACTIONS.TOGGLE_SECRET_NAV, context);
-        if (inputManager.isGamepadActionPressed(INPUT_ACTIONS.TOGGLE_WANTED, context)) executeInputAction(INPUT_ACTIONS.TOGGLE_WANTED, context);
+        if (im.isGamepadActionPressed(INPUT_ACTIONS.SURFACE_DESCENT, context)) executeInputAction(INPUT_ACTIONS.SURFACE_DESCENT, context);
+        if (im.isGamepadActionPressed(INPUT_ACTIONS.AUTOPILOT_PLANET, context)) executeInputAction(INPUT_ACTIONS.AUTOPILOT_PLANET, context);
+        if (im.isGamepadActionPressed(INPUT_ACTIONS.AUTOPILOT_SERVICE, context)) executeInputAction(INPUT_ACTIONS.AUTOPILOT_SERVICE, context);
+        if (im.isGamepadActionPressed(INPUT_ACTIONS.TOGGLE_SECRET_NAV, context)) executeInputAction(INPUT_ACTIONS.TOGGLE_SECRET_NAV, context);
+        if (im.isGamepadActionPressed(INPUT_ACTIONS.TOGGLE_WANTED, context)) executeInputAction(INPUT_ACTIONS.TOGGLE_WANTED, context);
     }
 }
 
@@ -1109,7 +1102,7 @@ function _handleGalaxyMapSelection() {
  */
 function handleInventoryToggle() {
     const state = gameStateManager.currentState;
-    if (state === "IN_FLIGHT" || state === "SURFACE_MODE") {
+    if (FLIGHT_STATES.includes(state)) {
         const opening = !gameStateManager.showingInventory;
         gameStateManager.showingInventory = opening;
         soundManager?.playSound(opening ? 'mapOpen' : 'mapClose');
@@ -1123,7 +1116,7 @@ function handleInventoryToggle() {
  */
 function handleMapToggle() {
     const state = gameStateManager.currentState;
-    if (state === "IN_FLIGHT" || state === "SURFACE_MODE") {
+    if (FLIGHT_STATES.includes(state)) {
         // Store the previous state so we can return to it
         gameStateManager._previousState = state;
         gameStateManager.setState("GALAXY_MAP");
@@ -1143,7 +1136,7 @@ function handleMapToggle() {
  */
 function handleMissionOverlayToggle() {
     const state = gameStateManager.currentState;
-    if (state === "IN_FLIGHT" || state === "SURFACE_MODE") {
+    if (FLIGHT_STATES.includes(state)) {
         if (gameStateManager.toggleMissionOverlay()) {
             soundManager?.playSound('click');
             return true;
@@ -1271,7 +1264,7 @@ function handleAutopilot(autopilotKey) {
  */
 function handleMinimapZoomOut() {
     const state = gameStateManager.currentState;
-    if ((state === "IN_FLIGHT" || state === "SURFACE_MODE") && uiManager) {
+    if (FLIGHT_STATES.includes(state) && uiManager) {
         uiManager.cycleOutMinimapZoom();
         return true;
     }
@@ -1283,7 +1276,7 @@ function handleMinimapZoomOut() {
  */
 function handleMinimapZoomIn() {
     const state = gameStateManager.currentState;
-    if ((state === "IN_FLIGHT" || state === "SURFACE_MODE") && uiManager) {
+    if (FLIGHT_STATES.includes(state) && uiManager) {
         uiManager.cycleInMinimapZoom();
         return true;
     }
@@ -1295,8 +1288,7 @@ function handleMinimapZoomIn() {
  */
 function handleCloakActivation() {
     // Allow cloak in both IN_FLIGHT and SURFACE_MODE states
-    const validStates = ["IN_FLIGHT", "SURFACE_MODE"];
-    if (!validStates.includes(gameStateManager.currentState) || !player || player.destroyed) {
+    if (!FLIGHT_STATES.includes(gameStateManager.currentState) || !player || player.destroyed) {
         return false;
     }
 
@@ -1316,8 +1308,7 @@ function handleCloakActivation() {
  * Handle speed burst activation ('R' key)
  */
 function handleSpeedBurstActivation() {
-    const validStates = ["IN_FLIGHT", "SURFACE_MODE"];
-    if (!validStates.includes(gameStateManager.currentState) || !player || player.destroyed) {
+    if (!FLIGHT_STATES.includes(gameStateManager.currentState) || !player || player.destroyed) {
         return false;
     }
 
@@ -1465,7 +1456,7 @@ function handleMarketButtonPress() {
  */
 function handleInventoryClick() {
     const state = gameStateManager.currentState;
-    if (!gameStateManager.showingInventory || (state !== "IN_FLIGHT" && state !== "SURFACE_MODE")) {
+    if (!gameStateManager.showingInventory || !FLIGHT_STATES.includes(state)) {
         return false;
     }
 
@@ -1509,7 +1500,7 @@ function handleGeneralUIClick() {
  */
 function handleInFlightTargeting() {
     const state = gameStateManager.currentState;
-    if (state === "IN_FLIGHT" || state === "SURFACE_MODE") {
+    if (FLIGHT_STATES.includes(state)) {
         player?.handleMousePressedForTargeting();
         return true;
     }
@@ -1604,60 +1595,37 @@ function resetGame() {
         clearTimeout(__saveDebounceTimer);
         __saveDebounceTimer = null;
     }
-    // Note: We no longer clear the active save slot on reset.
-    // Saves are preserved because saving is blocked during GAME_OVER or dying,
-    // and load validation rejects dead/destroyed states.
 
-    // Stop all sounds
+    // Clean up old instances before creating new ones
     if (soundManager && typeof soundManager.stopAllSounds === 'function') {
         soundManager.stopAllSounds();
     }
-
-    // Clean up ambient sounds
     if (ambientSoundManager && typeof ambientSoundManager.cleanup === 'function') {
         ambientSoundManager.cleanup();
     }
-
-    // Clean up station music
     if (stationMusicManager && typeof stationMusicManager.cleanup === 'function') {
         stationMusicManager.cleanup();
     }
-
-    // Clean up space music
     if (spaceMusicManager && typeof spaceMusicManager.cleanup === 'function') {
         spaceMusicManager.cleanup();
+    }
+    if (communicationSystem && typeof communicationSystem.cleanupSpeech === 'function') {
+        communicationSystem.cleanupSpeech();
     }
 
     // Reset global state
     loadGameWasSuccessful = false;
+    GameGlobals.loadGameWasSuccessful = false;
     window.activeSaveSlotIndex = 0;
 
-    // Create new instances of all core game objects
-    gameStateManager = new GameStateManager();
-    galaxy = new Galaxy();
-    player = new Player();
-    uiManager = new UIManager();
-    titleScreen = new TitleScreen();
-    inventoryScreen = new InventoryScreen();
-    missionOverlay = new MissionOverlay();
-    saveSelectionScreen = new SaveSelectionScreen();
-    eventManager = new EventManager();
-
-    // Clean up old speech before creating new communication system
-    if (communicationSystem && typeof communicationSystem.cleanupSpeech === 'function') {
-        communicationSystem.cleanupSpeech();
-    }
-    communicationSystem = new CommunicationSystem();
-    stationMusicManager = new StationMusicManager();
-    spaceMusicManager = new SpaceMusicManager();
-    GameGlobals.newsManager = new NewsManager();
-    communicationSystem.initialize({ uiManager, player });
-    communicationSystem.initializeSpeech(); // Enable speech synthesis for ship communications
+    // Create fresh instances (also updates all backward-compat let vars)
+    createCoreGameObjects();
 
     // Re-initialize surface mode for fresh state
     if (typeof initSurfaceMode === 'function') {
         initSurfaceMode();
     }
+
     // Reinitialize player ship definition
     if (typeof player.applyShipDefinition === 'function') {
         player.applyShipDefinition(player.shipTypeName);
@@ -1669,24 +1637,12 @@ function resetGame() {
         WeaponSystem.init(100);
     }
 
-    // Sync GameGlobals with freshly created instances
-    Object.assign(GameGlobals, {
-        gameStateManager,
-        galaxy,
-        player,
-        uiManager,
-        titleScreen,
-        inventoryScreen,
-        missionOverlay,
-        saveSelectionScreen,
-        communicationSystem,
-        eventManager,
-        soundManager,
-        ambientSoundManager,
-        stationMusicManager,
-        spaceMusicManager,
-        loadGameWasSuccessful: false
-    });
+    // Reinit input manager with gamepad (preserved across reset)
+    if (window._gamepadManager && typeof InputManager === 'function') {
+        inputManager = new InputManager(window._gamepadManager);
+        window._inputManager = inputManager;
+        GameGlobals.inputManager = inputManager;
+    }
 
     // Restore fullscreen if it was active
     if (wasFullscreen) {

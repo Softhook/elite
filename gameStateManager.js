@@ -91,6 +91,7 @@ class GameStateManager {
         // State tracking
         this.currentState = "TITLE_SCREEN";
         this.previousState = null;
+        this._previousState = null;  // Used for GALAXY_MAP back-navigation (set/cleared by sketch.js)
 
         // Jump mechanics
         this.jumpTargetSystemIndex = -1;
