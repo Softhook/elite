@@ -2723,21 +2723,46 @@ class EventManager {
     }
 
     /**
-     * Spawns ships in a defensive guard formation around a location.
-     * Used by BLOCKADE event.
-     * @private
+     * Spawns ships in a formation around `principal` using slot-based formation offsets.
+     * Each guard is assigned a unique slot index so they spread into a proper formation
+     * rather than stacking at the same position (the old bug).
+     * Guards are registered in a wingManager guard wing so they can alert each other in combat.
+     *
+     * @param {number} count      — number of guards to spawn
+     * @param {object} anchor     — spawn scatter centre {x, y}
+     * @param {object} principal  — the entity to protect (player, station, Enemy VIP)
+     * @param {number} radius     — scatter radius around anchor for initial spawn positions
+     * @param {string} [faction]  — override faction for formation shape (default: principal's faction or 'MILITARY')
      */
-    _spawnGuardFormation(count, anchor, principal, radius) {
+    _spawnGuardFormation(count, anchor, principal, radius, faction = null) {
         const ships = [];
-        for (let i = 0; i < count; i++) {
+
+        // Determine formation shape from principal's faction if available
+        const guardFaction = (principal && principal.faction) || faction || 'MILITARY';
+
+        // Create a guard wing in wingManager so guards share combat alerts
+        const wingId = (typeof wingManager !== 'undefined')
+            ? wingManager.createGuardWing(principal, guardFaction)
+            : null;
+
+        const spawnCount = Math.min(count, WING_MAX_FOLLOWERS);
+
+        for (let i = 0; i < spawnCount; i++) {
             const angle = random(TWO_PI);
-            const dist = radius + random(-150, 150);
-            const sx = anchor.x + cos(angle) * dist;
-            const sy = anchor.y + sin(angle) * dist;
+            const d     = radius + random(-150, 150);
+            const sx    = anchor.x + cos(angle) * d;
+            const sy    = anchor.y + sin(angle) * d;
+
             const enemy = this._spawnAdHocEnemy(sx, sy, AI_ROLE.GUARD, (e) => {
-                e.principal = principal;
+                e.principal    = principal;
                 e.currentState = AI_STATE.GUARDING;
+
+                // Register in the guard wing — assigns a unique slot index
+                if (wingId && typeof wingManager !== 'undefined') {
+                    wingManager.addMember(wingId, e);
+                }
             });
+
             if (enemy) ships.push(enemy);
         }
         return ships;

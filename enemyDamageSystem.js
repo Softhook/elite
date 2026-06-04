@@ -421,6 +421,11 @@ class EnemyDamageSystem {
         this.haulerCombatTimer = undefined;
         this.forcedCombatTimer = 0;
 
+        // Remove from wing formation (promotes leader, dissolves if empty, no-op if not in wing)
+        if (this.wingId && typeof wingManager !== 'undefined') {
+            wingManager.removeMember(this);
+        }
+
         // Clear ability states on death
         this.isCloaked = false;
         this.isSpeedBursting = false;

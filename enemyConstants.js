@@ -98,7 +98,8 @@ const AI_STATE = {
     COLLECTING_CARGO: 8,   // New state for cargo collection behavior
     FLEEING: 9,        // New state for damaged ships trying to escape
     GUARDING: 10,
-    SNIPING: 11
+    SNIPING: 11,
+    WING_FLYING: 12,   // Formation flying — used by both autonomous wings and guards in slot position
 };
 
 // Reverse lookup for AI_STATE values to names
@@ -124,11 +125,95 @@ const VERY_CLOSE_RANGE_MULT = 0.2; // 20% of firing range = very close
 const OFF_SCREEN_OPTIMAL_RANGE_FACTOR = 0.7; // Stop thrusting at 70% of firing range (off-screen)
 const OFF_SCREEN_PREDICTION_FACTOR = 0.5;    // Use half prediction time for off-screen aiming
 
-// -------------------------
-// --- Guard Formation Constants ---
-// -------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// --- Wing / Guard Formation Constants ---
+// ─────────────────────────────────────────────────────────────────────────────
 
-const GUARD_FORMATION_SIZE_FACTOR = 0.5; // Multiplier of size for formation distance checks
+/** Factions whose COMBAT ships organise into formation wings. */
+const WING_ELIGIBLE_FACTIONS = new Set(['MILITARY', 'IMPERIAL', 'SEPARATIST']);
+
+/** Roles always excluded from autonomous formation flying (regardless of faction). */
+const WING_INELIGIBLE_ROLES = new Set([
+    'Guard', 'Transport', 'Hauler', 'Healer', 'Repair',
+    'Missionary', 'BOUNTY_HUNTER', 'EscapePod',
+]);
+
+const WING_MAX_FOLLOWERS      = 7;     // max followers per wing / guard group
+const WING_JOIN_RANGE         = 1800;  // px: idle ship seeks a wing within this radius
+const WING_LEAVE_RANGE        = 3200;  // px: follower auto-leaves if it drifts this far
+const WING_REFORM_DELAY_S     = 4.0;   // s: post-combat wait before autonomous ships re-join
+const GUARD_REFORM_DELAY_S    = 6.0;   // s: post-combat wait before guards re-join
+const WING_SLOT_SNAP_FRACTION = 0.6;   // fraction of ship.size used as "in-slot" threshold
+const WING_VELOCITY_BLEND     = 0.18;  // per-frame blend toward anchor velocity (0-1)
+const WING_CHECK_INTERVAL_MIN = 1.5;   // s: min idle time before wing-join attempt
+const WING_CHECK_INTERVAL_MAX = 3.5;   // s: max idle time before wing-join attempt
+
+/** Range at which friendly ships will rally to an allied player's formation wing. */
+const PLAYER_FORMATION_JOIN_RANGE = 6000;  // px: generous — player is the faction rally point
+
+/** When one guard breaks for combat, alert siblings within this radius. */
+const GUARD_ALERT_RADIUS = 900;
+
+// Legacy: kept for any existing code still referencing it
+const GUARD_FORMATION_SIZE_FACTOR = 0.5;
+
+/**
+ * Formation slot offsets [local-x, local-y] relative to leader/principal heading.
+ *   x: positive = forward, negative = behind
+ *   y: positive = right,   negative = left
+ * These are rotated into world space by the anchor's heading angle each frame.
+ */
+const WING_FORMATION_SLOTS = {
+    V: [
+        [ -90,   90],  // slot 0 — right-1
+        [ -90,  -90],  // slot 1 — left-1
+        [-180,  180],  // slot 2 — right-2
+        [-180, -180],  // slot 3 — left-2
+        [-270,  270],  // slot 4 — right-3
+        [-270, -270],  // slot 5 — left-3
+    ],
+    ECHELON_RIGHT: [
+        [ -90,   90],
+        [-180,  180],
+        [-270,  270],
+        [-360,  360],
+        [-450,  450],
+        [-540,  540],
+        [-630,  630],
+    ],
+    LINE_ABREAST: [
+        [  0,  130],
+        [  0, -130],
+        [  0,  260],
+        [  0, -260],
+        [  0,  390],
+        [  0, -390],
+        [  0,  520],
+    ],
+};
+
+/** Maps each eligible faction to its preferred formation shape key. */
+const FACTION_FORMATION_SHAPE = {
+    MILITARY:   'V',
+    IMPERIAL:   'ECHELON_RIGHT',
+    SEPARATIST: 'LINE_ABREAST',
+    default:    'V',
+};
+
+/**
+ * Returns true if `ship` may join or create an autonomous formation wing.
+ * Guards are excluded — they use the guard wing system via _spawnGuardFormation.
+ * @param {Enemy} ship
+ * @returns {boolean}
+ */
+function isWingEligible(ship) {
+    return (
+        WING_ELIGIBLE_FACTIONS.has(ship.faction) &&
+        !WING_INELIGIBLE_ROLES.has(ship.role)    &&
+        typeof ship.isArmed === 'function' && ship.isArmed() &&
+        !ship.wingId
+    );
+}
 
 // -------------------------
 // --- Police AI Constants ---
@@ -695,4 +780,22 @@ if (typeof module !== 'undefined' && module.exports) {
     global.TARGET_SCORE_CURRENT_TARGET_BONUS = TARGET_SCORE_CURRENT_TARGET_BONUS;
     global.DEFAULT_SCAN_INTERVAL = DEFAULT_SCAN_INTERVAL;
     global.MAX_TARGETING_RADIUS = MAX_TARGETING_RADIUS;
+
+    // Wing/formation constants
+    global.WING_ELIGIBLE_FACTIONS = WING_ELIGIBLE_FACTIONS;
+    global.WING_INELIGIBLE_ROLES = WING_INELIGIBLE_ROLES;
+    global.WING_MAX_FOLLOWERS = WING_MAX_FOLLOWERS;
+    global.WING_JOIN_RANGE = WING_JOIN_RANGE;
+    global.WING_LEAVE_RANGE = WING_LEAVE_RANGE;
+    global.WING_REFORM_DELAY_S = WING_REFORM_DELAY_S;
+    global.GUARD_REFORM_DELAY_S = GUARD_REFORM_DELAY_S;
+    global.WING_SLOT_SNAP_FRACTION = WING_SLOT_SNAP_FRACTION;
+    global.WING_VELOCITY_BLEND = WING_VELOCITY_BLEND;
+    global.WING_CHECK_INTERVAL_MIN = WING_CHECK_INTERVAL_MIN;
+    global.WING_CHECK_INTERVAL_MAX = WING_CHECK_INTERVAL_MAX;
+    global.PLAYER_FORMATION_JOIN_RANGE = PLAYER_FORMATION_JOIN_RANGE;
+    global.GUARD_ALERT_RADIUS = GUARD_ALERT_RADIUS;
+    global.WING_FORMATION_SLOTS = WING_FORMATION_SLOTS;
+    global.FACTION_FORMATION_SHAPE = FACTION_FORMATION_SHAPE;
+    global.isWingEligible = isWingEligible;
 }

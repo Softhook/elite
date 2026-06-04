@@ -371,6 +371,7 @@ class Player {
 
         // Bodyguards
         this.activeBodyguards = [];
+        this._bodyguardWingId = null;  // wingManager guard-wing id for formation slots
         this.bodyguardLimit = PLAYER_CONFIG.MAX_BODYGUARDS;
 
         // Navigation
@@ -4954,6 +4955,10 @@ class Player {
             this.hasBeenPolice = true;
             this.isPolice = false;
             this.factionShip = null;
+            // Dissolve allied formation wing if active
+            if (typeof wingManager !== 'undefined') {
+                wingManager.dissolvePlayerWing(this);
+            }
             PLAYER_LOG("Player left POLICE faction");
             return true;
         }
@@ -4966,6 +4971,11 @@ class Player {
         const oldFaction = this.playerFaction;
         this.playerFaction = null;
         this.factionShip = null;
+
+        // Dissolve allied formation wing if active
+        if (typeof wingManager !== 'undefined') {
+            wingManager.dissolvePlayerWing(this);
+        }
 
         PLAYER_LOG(`Player left ${oldFaction} faction`);
         return true;
@@ -4997,6 +5007,23 @@ class Player {
         return guard.enemyRef.currentSystem === system
             && Array.isArray(system.enemies)
             && system.enemies.includes(guard.enemyRef);
+    }
+
+    /**
+     * Dissolves the bodyguard formation wing and clears all members' wing references.
+     * Idempotent — safe to call even when no wing exists.
+     * @private
+     */
+    _dissolveBodyguardWing() {
+        if (!this._bodyguardWingId || typeof wingManager === 'undefined') return;
+        const wing = wingManager.getWing(this._bodyguardWingId);
+        if (wing) {
+            // Clear wing references from all members before dissolving
+            for (let i = wing.members.length - 1; i >= 0; i--) {
+                wingManager.removeMember(wing.members[i]);
+            }
+        }
+        this._bodyguardWingId = null;
     }
 
     // =========================================================================
@@ -5104,6 +5131,9 @@ class Player {
             return;
         }
 
+        // Dissolve the guard formation wing before destroying enemies
+        this._dissolveBodyguardWing();
+
         // Remove bodyguards from the current system if they're spawned
         if (this.currentSystem) {
             this.activeBodyguards.forEach(guard => {
@@ -5136,6 +5166,24 @@ class Player {
         // Clean up any destroyed bodyguards from the list
         this.activeBodyguards = this.activeBodyguards.filter(guard => !guard.destroyed);
 
+        // No guards left — dissolve the formation wing and exit
+        if (this.activeBodyguards.length === 0) {
+            this._dissolveBodyguardWing();
+            return;
+        }
+
+        // Ensure a shared guard wing exists so bodyguards spread into distinct
+        // formation slots instead of collapsing to the same position.
+        // Re-validate in case the wing was dissolved externally (all guards died).
+        if (typeof wingManager !== 'undefined') {
+            const existingWing = this._bodyguardWingId ? wingManager.getWing(this._bodyguardWingId) : null;
+            if (!existingWing) {
+                this._bodyguardWingId = null;
+                const faction = this.playerFaction || this.faction || 'MILITARY';
+                this._bodyguardWingId = wingManager.createGuardWing(this, faction);
+            }
+        }
+
         // Spawn each bodyguard near the player
         this.activeBodyguards.forEach((guard, index) => {
             // Check if guard has an existing enemyRef
@@ -5144,6 +5192,10 @@ class Player {
 
                 // If the guard's enemyRef is in a different system or marked for respawn, clean it up
                 if (guard.enemyRef.currentSystem !== system || guard.enemyRef.destroyed || !guardStillInSystem) {
+                    // Remove stale ref from formation wing before destroying
+                    if (this._bodyguardWingId && typeof wingManager !== 'undefined') {
+                        wingManager.removeMember(guard.enemyRef);
+                    }
                     // Mark old reference as destroyed to clean it from old system
                     if (!guard.enemyRef.destroyed && guard.enemyRef.currentSystem !== system) {
                         guard.enemyRef.destroyed = true;
@@ -5169,6 +5221,12 @@ class Player {
                     // Force guard behavior back to escort mode after relinking.
                     if (guard.enemyRef.currentState !== AI_STATE.GUARDING) {
                         guard.enemyRef.changeState(AI_STATE.GUARDING, { principal: this });
+                    }
+
+                    // Ensure registered in guard wing (handles legacy bodyguards predating wing fix)
+                    if (this._bodyguardWingId && typeof wingManager !== 'undefined' &&
+                        guard.enemyRef.wingId !== this._bodyguardWingId) {
+                        wingManager.addMember(this._bodyguardWingId, guard.enemyRef);
                     }
 
                     // Guard is already spawned in the current system and alive, no respawn needed.
@@ -5216,6 +5274,11 @@ class Player {
             }
             if (!guard.gender && bodyguardEnemy.gender) {
                 guard.gender = bodyguardEnemy.gender;
+            }
+
+            // Register in shared guard formation wing so bodyguards spread into distinct slots
+            if (this._bodyguardWingId && typeof wingManager !== 'undefined') {
+                wingManager.addMember(this._bodyguardWingId, bodyguardEnemy);
             }
 
             // Add to system enemies (use addEnemy for proper Map tracking)

@@ -90,6 +90,9 @@ class EnemyStateMachine {
             case AI_STATE.GUARDING:
                 this._updateState_GUARDING();
                 break;
+            case AI_STATE.WING_FLYING:
+                this._updateState_WING_FLYING(targetExists, distanceToTarget);
+                break;
             default:
                 // Non-combat states (TRANSPORTING, COLLECTING_CARGO, NEAR_STATION, LEAVING_SYSTEM)
                 // are handled by their respective role AI methods, not the combat state machine
@@ -109,6 +112,27 @@ class EnemyStateMachine {
         const fleeDelay = rankMods?.fleeDecisionDelay ?? 0;
         const defaultIdleFleeThreshold = (typeof IDLE_FLEE_HULL_THRESHOLD !== 'undefined') ? IDLE_FLEE_HULL_THRESHOLD : 0.4;
         const fleeThreshold = rankMods?.fleeHullThreshold ?? defaultIdleFleeThreshold;
+
+        // ── Wing reform timer countdown ───────────────────────────────────────
+        if (this._wingReformTimer > 0) {
+            this._wingReformTimer -= this._getDeltaSeconds();
+        }
+
+        // ── Re-join formation after combat (followers & guards only, not leaders) ─
+        if (this.wingId && this.wingRole !== 'LEADER' && this._wingReformTimer <= 0 && !targetExists) {
+            const wing = (typeof wingManager !== 'undefined') ? wingManager.getWing(this.wingId) : null;
+            if (wing) {
+                const anchor = wing.type === 'WING' ? wing.leader : wing.principalRef;
+                if (anchor?.pos) {
+                    this.changeState(AI_STATE.WING_FLYING);
+                    return;
+                }
+            } else {
+                // Wing dissolved while we were fighting — clear stale reference
+                this.wingId = null; this.wingRole = null; this.wingSlotIndex = -1;
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────────
 
         const shouldFleeForLowHull = this.hull < this.maxHull * fleeThreshold;
         const hasFleeDelayElapsed = () => {
@@ -169,6 +193,20 @@ class EnemyStateMachine {
             }
         }
 
+        // ── Autonomous wing formation join check (eligible faction combat ships only) ──
+        if (!targetExists && typeof isWingEligible === 'function' && isWingEligible(this)) {
+            this._wingCheckTimer -= this._getDeltaSeconds();
+            if (this._wingCheckTimer <= 0) {
+                this._wingCheckTimer = (typeof random === 'function')
+                    ? random(WING_CHECK_INTERVAL_MIN, WING_CHECK_INTERVAL_MAX)
+                    : WING_CHECK_INTERVAL_MAX;
+                if (typeof this.tryJoinOrCreateWing === 'function') {
+                    this.tryJoinOrCreateWing();
+                }
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         // Otherwise, remains IDLE but apply gentle drift to avoid being completely static
         // This makes ships less predictable even when idle
     }
@@ -180,6 +218,15 @@ class EnemyStateMachine {
      * @private
      */
     _getDefaultStateForRole() {
+        // Wing/guard members without a target should return to formation
+        if (this.wingId && this._wingReformTimer <= 0) {
+            const wing = (typeof wingManager !== 'undefined') ? wingManager.getWing(this.wingId) : null;
+            if (wing) {
+                const anchor = wing.type === 'WING' ? wing.leader : wing.principalRef;
+                if (anchor?.pos) return AI_STATE.WING_FLYING;
+            }
+        }
+
         // Bounty hunters leave after completing their contract
         if (this.role === AI_ROLE.BOUNTY_HUNTER && this.hasCompletedContract) {
             return AI_STATE.LEAVING_SYSTEM;
@@ -518,8 +565,14 @@ class EnemyStateMachine {
                 this.target = principalAttacker;
                 // Maintain a short engagement lock to prevent target/idle flicker
                 this.guardEngagementLock = Math.max(this.guardEngagementLock || 0, GUARD_ENGAGEMENT_LOCK_DURATION);
-                this.changeState(AI_STATE.APPROACHING);
                 this.guardReactionTime = GUARD_REACTION_COOLDOWN;
+
+                // Alert all sibling guards in this guard wing so they engage together
+                if (this.wingId && typeof wingManager !== 'undefined') {
+                    wingManager.alertGuardSiblings(this.wingId, principalAttacker);
+                }
+
+                this.changeState(AI_STATE.APPROACHING);
                 return;
             }
         }
@@ -548,50 +601,195 @@ class EnemyStateMachine {
         }
 
         // Maintain escort formation around principal when no immediate threat
-        if (!principal.pos) {
+        if (!principal.pos) return;
+
+        // If assigned to a wing slot, use the shared slot-following logic
+        if (this.wingId && this.wingSlotIndex >= 0) {
+            const wing = (typeof wingManager !== 'undefined') ? wingManager.getWing(this.wingId) : null;
+            if (wing) {
+                this._flyFormationSlot(wing, principal);
+                return;
+            }
+        }
+
+        // Fallback: no slot assigned — orbit just behind/beside principal
+        const fallbackAngle = principal.angle || 0;
+        const fallbackX = principal.pos.x - cos(fallbackAngle) * 100;
+        const fallbackY = principal.pos.y - sin(fallbackAngle) * 100;
+        const distToPrincipal = dist(this.pos.x, this.pos.y, principal.pos.x, principal.pos.y);
+        if (distToPrincipal > 150) {
+            if (!this._wingFormTarget) {
+                this._wingFormTarget = createVector(fallbackX, fallbackY);
+            } else {
+                this._wingFormTarget.set(fallbackX, fallbackY);
+            }
+            this.performRotationAndThrust(this._wingFormTarget);
+        } else {
+            const ts = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
+            if (principal.vel) {
+                this.tempVector.set(principal.vel.x - this.vel.x, principal.vel.y - this.vel.y);
+                this.tempVector.mult(0.2 * ts);
+                this.vel.add(this.tempVector);
+            }
+            this.brakingMultiplier = 0.99;
+        }
+    }
+
+    /**
+     * WING_FLYING state handler.
+     *
+     * Used by both autonomous faction wings and guards in slot position.
+     * - WING leaders behave like IDLE/patrol while maintaining wing identity.
+     * - WING followers / GUARD members steer toward their formation slot.
+     * - Both break instantly to APPROACHING when an enemy enters detection range.
+     *
+     * @param {boolean} targetExists
+     * @param {number}  distanceToTarget
+     * @private
+     */
+    _updateState_WING_FLYING(targetExists, distanceToTarget) {
+        if (typeof wingManager === 'undefined') {
+            this.changeState(this._getDefaultStateForRole());
             return;
         }
 
-        const formationOffset = this.guardFormationOffset || createVector(-70, 0);
-        const principalAngle = principal.angle || 0;
-        const cosP = cos(principalAngle);
-        const sinP = sin(principalAngle);
+        const wing = wingManager.getWing(this.wingId);
 
-        const worldOffsetX = cosP * formationOffset.x - sinP * formationOffset.y;
-        const worldOffsetY = sinP * formationOffset.x + cosP * formationOffset.y;
-
-        const desiredX = principal.pos.x + worldOffsetX;
-        const desiredY = principal.pos.y + worldOffsetY;
-        const distToPrincipal = dist(this.pos.x, this.pos.y, principal.pos.x, principal.pos.y);
-        const distToFormation = dist(this.pos.x, this.pos.y, desiredX, desiredY);
-
-        if (!this._guardFormationTarget) {
-            this._guardFormationTarget = createVector(desiredX, desiredY);
-        } else {
-            this._guardFormationTarget.set(desiredX, desiredY);
+        // Wing dissolved or not found
+        if (!wing) {
+            this.wingId = null; this.wingRole = null; this.wingSlotIndex = -1;
+            this.changeState(this._getDefaultStateForRole());
+            return;
         }
 
-        if (distToPrincipal > this.guardLeashDistance || distToFormation > (this.size || 1) * 0.5) {
-            this.performRotationAndThrust(this._guardFormationTarget);
-        } else {
-            // Frame-rate independent velocity matching
-            const guardTimeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
-            if (principal.vel) {
-                this.tempVector.set(principal.vel.x - this.vel.x, principal.vel.y - this.vel.y);
-                const velDiffMagSq = this.tempVector.magSq();
-                this.tempVector.mult(0.25 * guardTimeScale);
-                this.vel.add(this.tempVector);
+        // Determine the anchor entity (leader for WING, principal for GUARD)
+        const anchor = wing.type === 'WING' ? wing.leader : wing.principalRef;
+        if (!anchor?.pos) {
+            wingManager.removeMember(this);
+            this.changeState(this._getDefaultStateForRole());
+            return;
+        }
 
-                if (velDiffMagSq < 0.1) {
-                    this.brakingMultiplier = 0.99;
-                } else {
-                    this.brakingMultiplier = 1.0;
+        // Combat break: leader always breaks; followers only break when:
+        //   a) the leader has already committed (no longer in WING_FLYING), OR
+        //   b) this ship is directly under attack (has a recent lastAttacker)
+        if (targetExists && distanceToTarget < this.detectionRange) {
+            let shouldBreak = (this.wingRole === 'LEADER');
+
+            if (!shouldBreak && this.wingRole === 'FOLLOWER') {
+                if (wing.type === 'WING' && wing.leader) {
+                    // Peer wing: follower breaks when the leader commits to combat
+                    const leaderState = wing.leader.currentState;
+                    if (leaderState !== AI_STATE.WING_FLYING && leaderState !== AI_STATE.IDLE) {
+                        // Adopt the leader's target for coordinated attack
+                        if (wing.leader.target && this.isTargetValid(wing.leader.target)) {
+                            this.target = wing.leader.target;
+                        }
+                        shouldBreak = true;
+                    }
+                } else if (wing.type === 'GUARD' && wing.principalRef) {
+                    // Player-anchored formation: break when principal is under attack
+                    const pr = wing.principalRef;
+                    if (pr.lastAttacker && this.isTargetValid(pr.lastAttacker)) {
+                        const da = this.distanceTo(pr.lastAttacker);
+                        if (da < this.detectionRange * 1.5) {
+                            this.target = pr.lastAttacker;
+                            shouldBreak = true;
+                        }
+                    }
                 }
-            } else {
-                this.brakingMultiplier = 1.0;
+                // OR this follower is directly under attack — defend yourself
+                if (!shouldBreak && this.lastAttacker && this.isTargetValid(this.lastAttacker)) {
+                    const da = this.distanceTo(this.lastAttacker);
+                    if (da < this.detectionRange * 1.2) {
+                        this.target = this.lastAttacker;
+                        shouldBreak = true;
+                    }
+                }
             }
 
-            this.rotateTowards(principalAngle);
+            if (shouldBreak) {
+                this._wingReformTimer = (wing.type === 'GUARD') ? GUARD_REFORM_DELAY_S : WING_REFORM_DELAY_S;
+
+                // Alert guard siblings when a guard breaks for combat
+                if (wing.type === 'GUARD') {
+                    wingManager.alertGuardSiblings(this.wingId, this.target);
+                }
+
+                this.changeState(AI_STATE.APPROACHING);
+                return;
+            }
+        }
+
+        // Follower drift check: leave if too far from anchor
+        if (this.wingRole === 'FOLLOWER') {
+            if (this.distanceTo(anchor) > WING_LEAVE_RANGE) {
+                wingManager.removeMember(this);
+                this.changeState(this._getDefaultStateForRole());
+                return;
+            }
+            // Damaged follower: flee rather than burn in formation
+            const fleeThreshold = (typeof IDLE_FLEE_HULL_THRESHOLD !== 'undefined')
+                ? IDLE_FLEE_HULL_THRESHOLD : 0.4;
+            if (this.hull < this.maxHull * fleeThreshold) {
+                wingManager.removeMember(this);
+                this.changeState(AI_STATE.FLEEING);
+                return;
+            }
+            this._flyFormationSlot(wing, anchor);
+        } else {
+            // LEADER: patrol/IDLE normally while holding wing identity
+            this._updateState_IDLE(targetExists);
+        }
+    }
+
+    /**
+     * Steers this ship toward its assigned formation slot relative to `anchor`.
+     * Works for both WING followers and GUARD members.
+     * Uses the same rotation math as the old guard formation, generalised to any slot.
+     *
+     * @param {object} wing   — WingData from wingManager
+     * @param {object} anchor — entity with .pos, .angle, .vel
+     * @private
+     */
+    _flyFormationSlot(wing, anchor) {
+        const slots     = WING_FORMATION_SLOTS?.[wing.formationShape];
+        const slotLocal = slots?.[this.wingSlotIndex];
+        if (!slotLocal) return; // safety: slot index out of range
+
+        const la   = anchor.angle || 0;
+        const cosL = cos(la);
+        const sinL = sin(la);
+
+        // Rotate local-space offset into world space
+        const worldX   = cosL * slotLocal[0] - sinL * slotLocal[1];
+        const worldY   = sinL * slotLocal[0] + cosL * slotLocal[1];
+        const desiredX = anchor.pos.x + worldX;
+        const desiredY = anchor.pos.y + worldY;
+        const distToSlot = dist(this.pos.x, this.pos.y, desiredX, desiredY);
+
+        // Reuse cached vector to avoid per-frame allocation
+        if (!this._wingFormTarget) {
+            this._wingFormTarget = createVector(desiredX, desiredY);
+        } else {
+            this._wingFormTarget.set(desiredX, desiredY);
+        }
+
+        const snapDist = (this.size || 20) * WING_SLOT_SNAP_FRACTION;
+
+        if (distToSlot > snapDist) {
+            // Navigate toward the slot position
+            this.performRotationAndThrust(this._wingFormTarget);
+        } else {
+            // In slot — velocity-match the anchor
+            const timeScale = (typeof deltaTime === 'number') ? deltaTime / FRAME_TIME_BASELINE_MS : 1;
+            if (anchor.vel) {
+                this.tempVector.set(anchor.vel.x - this.vel.x, anchor.vel.y - this.vel.y);
+                this.tempVector.mult(WING_VELOCITY_BLEND * timeScale);
+                this.vel.add(this.tempVector);
+            }
+            this.rotateTowards(la);
+            this.brakingMultiplier = 0.99;
         }
     }
 
@@ -901,6 +1099,12 @@ class EnemyStateMachine {
                     const guardReactionMultiplier = Math.min(Math.max(rankMods?.guardReactionTimeMultiplier ?? 1.0, 0.1), 2.0);
                     this.guardReactionTime = GUARD_REACTION_COOLDOWN * guardReactionMultiplier;
                 }
+                break;
+
+            case AI_STATE.WING_FLYING:
+                // Store health snapshot for damage-exit detection (mirrors APPROACHING/SNIPING)
+                this.shieldPlusHullAtStateEntry = this.shield + this.hull;
+                this._wingReformTimer = 0; // Allow immediate re-join on next entry
                 break;
         }
     }

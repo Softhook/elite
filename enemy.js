@@ -358,12 +358,23 @@ class Enemy {
         this._shieldWasZero = (this.shield <= 0);
 
         // --- Guard-specific properties ---
-        this.principal = null; // The entity this guard is protecting
-        this.guardFormationOffset = createVector(-70, 0); // Desired position relative to principal (x: behind/ahead, y: left/right)
+        this.principal = null;            // The entity this guard is protecting
         this.guardLeashDistance = 450;    // Max distance to stray from principal when not engaging
         this.guardEngageRange = 700;      // Range to detect and engage principal's attacker
         this.guardReactionTime = 0;       // Cooldown for reacting to principal's attacker
         this.guardEngagementLock = 0;     // Timer to maintain engagement with principal's attacker (prevents flickering)
+        // ---
+
+        // --- Wing / Formation properties (transient — NOT serialised) ---
+        // Used by both autonomous WING_FLYING state and guards in GUARDING state.
+        this.wingId           = null;     // string ID into wingManager, or null
+        this.wingRole         = null;     // 'LEADER' | 'FOLLOWER' | null
+        this.wingSlotIndex    = -1;       // index into WING_FORMATION_SLOTS (-1 = leader, no slot)
+        this._wingReformTimer = 0;        // seconds until this ship re-attempts joining formation after combat
+        this._wingCheckTimer  = (typeof random === 'function')
+            ? random(WING_CHECK_INTERVAL_MIN, WING_CHECK_INTERVAL_MAX)
+            : WING_CHECK_INTERVAL_MIN;    // idle countdown before first wing-join attempt
+        this._wingFormTarget  = null;     // reused p5.Vector for slot steering (avoids GC pressure)
         // ---
 
         // --- Combat AI Flags ---

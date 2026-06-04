@@ -409,6 +409,10 @@ function updateEventManager() {
 
     // Update event manager only during active flight
     if (currentState === "IN_FLIGHT" && eventManager.starSystem) {
+        // Update wing formation registry before enemy AI so wings are clean this frame
+        if (typeof wingManager !== 'undefined') {
+            wingManager.update();
+        }
         eventManager.update();
     }
 }

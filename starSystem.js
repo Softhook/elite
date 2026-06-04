@@ -1787,6 +1787,12 @@ class StarSystem {
                     this.player.spawnBodyguards(this);
                 }
 
+                // Create allied formation wing if player has joined a faction
+                // Friendly faction combat ships will form up around the player.
+                if (this.player.playerFaction && typeof wingManager !== 'undefined') {
+                    wingManager.getOrCreatePlayerWing(this.player, this.player.playerFaction);
+                }
+
                 // CHANGE: Use this.player in method calls
                 for (let i = 0; i < 3; i++) {
                     try { this.trySpawnNPC(); } catch (e) { }
@@ -2229,6 +2235,14 @@ class StarSystem {
         const defaultGuardShips = ["ViperGuard", "GladiusFighterGuard"];
         const numGuards = hauler.size > 100 ? min(2, slotsLeft) : (random() < 0.6 ? 1 : 0);
 
+        if (numGuards <= 0) return;
+
+        // Create a guard wing so guards spread into distinct formation slots
+        const guardFaction = hauler.faction || 'MILITARY';
+        const wingId = (typeof wingManager !== 'undefined')
+            ? wingManager.createGuardWing(hauler, guardFaction)
+            : null;
+
         for (let g = 0; g < numGuards; g++) {
             let guardShipTypeName;
             if (GUARD_SHIPS.length > 0) guardShipTypeName = random(GUARD_SHIPS);
@@ -2247,6 +2261,11 @@ class StarSystem {
             guardNPC.initializeColors();
             guardNPC.principal = hauler;
             guardNPC.changeState(AI_STATE.GUARDING, { principal: hauler });
+
+            // Register in shared guard formation wing so guards spread into distinct slots
+            if (wingId && typeof wingManager !== 'undefined') {
+                wingManager.addMember(wingId, guardNPC);
+            }
 
             this.addEnemy(guardNPC);
             HAULER_LOG(`Spawned ${guardNPC.shipTypeName} (Guard) for hauler ${hauler.shipTypeName}`);

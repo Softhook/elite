@@ -2109,40 +2109,49 @@ class EnemyAIBehaviors {
 
         // Check if currently in combat mode
         if (this.inCombat === true) {
-            // Update combat timer
-            if (this.combatEngagementTimer !== undefined) {
-                this.combatEngagementTimer -= timerDelta;
-                if (this.combatEngagementTimer <= 0) {
-                    AI_LOG(`Combat ship ${this.shipTypeName} disengaging from combat.`);
-                    this.combatEngagementTimer = undefined; // Clear timer
-                    this.lastAttacker = null; // Forget attacker
-                    this.target = null; // Clear target
-                    this.inCombat = false; // Clear combat flag
-                    this.attackCooldown = 10.0; // Prevent immediate re-engagement
+            // If we returned to formation flying, clear the combat flag.
+            // (Happens when target dies while combatEngagementTimer still running.)
+            if (this.currentState === AI_STATE.WING_FLYING) {
+                this.inCombat = false;
+                this.combatEngagementTimer = undefined;
+            } else {
+                // Update combat timer
+                if (this.combatEngagementTimer !== undefined) {
+                    this.combatEngagementTimer -= timerDelta;
+                    if (this.combatEngagementTimer <= 0) {
+                        AI_LOG(`Combat ship ${this.shipTypeName} disengaging from combat.`);
+                        this.combatEngagementTimer = undefined; // Clear timer
+                        this.lastAttacker = null; // Forget attacker
+                        this.target = null; // Clear target
+                        this.inCombat = false; // Clear combat flag
+                        this.attackCooldown = 10.0; // Prevent immediate re-engagement
 
-                    // Return to patrol
-                    this.changeState(AI_STATE.PATROLLING);
-                    this.patrolTargetPos = this.previousTargetPos || system?.station?.pos?.copy();
+                        // Return to patrol
+                        this.changeState(AI_STATE.PATROLLING);
+                        this.patrolTargetPos = this.previousTargetPos || system?.station?.pos?.copy();
 
-                    // Move towards patrol target this frame
-                    this.performSafeRotationAndThrust(system, this.patrolTargetPos);
-                    this.updatePhysics();
-                    return;
+                        // Move towards patrol target this frame
+                        this.performSafeRotationAndThrust(system, this.patrolTargetPos);
+                        this.updatePhysics();
+                        return;
+                    }
                 }
-            }
 
-            // Force reinstate combat state if needed
-            if (this.currentState !== AI_STATE.APPROACHING &&
-                this.currentState !== AI_STATE.ATTACK_PASS &&
-                this.currentState !== AI_STATE.REPOSITIONING &&
-                this.currentState !== AI_STATE.FLEEING &&
-                this.currentState !== AI_STATE.SNIPING &&
-                this.currentState !== AI_STATE.PATROLLING) {
-                AI_LOG(`Forcing combat ship ${this.shipTypeName} back to APPROACHING state`);
-                this.changeState(AI_STATE.APPROACHING);
-            }
+                // Force reinstate combat state if needed
+                if (this.currentState !== AI_STATE.APPROACHING &&
+                    this.currentState !== AI_STATE.ATTACK_PASS &&
+                    this.currentState !== AI_STATE.REPOSITIONING &&
+                    this.currentState !== AI_STATE.FLEEING &&
+                    this.currentState !== AI_STATE.SNIPING &&
+                    this.currentState !== AI_STATE.PATROLLING &&
+                    this.currentState !== AI_STATE.WING_FLYING &&
+                    this.currentState !== AI_STATE.IDLE) {
+                    AI_LOG(`Forcing combat ship ${this.shipTypeName} back to APPROACHING state`);
+                    this.changeState(AI_STATE.APPROACHING);
+                }
 
-            // Continue with normal combat AI below
+                // Continue with normal combat AI below
+            }
         }
 
         // Check the combat state flags as well (backup check)
@@ -2217,6 +2226,70 @@ class EnemyAIBehaviors {
 
         // Environmental hazard awareness - rank-scaled reactions to nebulae and storms
         this._updateEnvironmentalBehavior(system, targetExists);
+
+        // Formation flying: WING_FLYING state already handles movement via
+        // _flyFormationSlot() — don't let patrol behavior clobber it.
+        if (this.currentState === AI_STATE.WING_FLYING) {
+            return;
+        }
+
+        // ── Re-join formation after combat (for ships already in a wing) ─
+        // The wing reform timer only ticks down in _updateState_IDLE, but
+        // the patrol override below forces PATROLLING before IDLE runs, so
+        // we handle both timer and re-join here to avoid getting stuck.
+        if (this.wingId && !targetExists &&
+            this.currentState !== AI_STATE.FLEEING &&
+            this.currentState !== AI_STATE.LEAVING_SYSTEM) {
+
+            // Count down the reform timer
+            if (this._wingReformTimer > 0) {
+                this._wingReformTimer -= (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
+            }
+
+            // Re-join formation when timer expires (followers only, not leaders)
+            if (this.wingRole !== 'LEADER' && this._wingReformTimer <= 0) {
+                const wing = (typeof wingManager !== 'undefined') ? wingManager.getWing(this.wingId) : null;
+                if (wing) {
+                    const anchor = wing.type === 'WING' ? wing.leader : wing.principalRef;
+                    if (anchor?.pos) {
+                        this.changeState(AI_STATE.WING_FLYING);
+                        return;
+                    }
+                } else {
+                    // Wing dissolved — clear stale reference
+                    this.wingId = null; this.wingRole = null; this.wingSlotIndex = -1;
+                }
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────
+
+        // ── Wing formation join (peer wings + player formation) ─────────
+        // Throttled: only check periodically when peaceful and not already in a wing.
+        if (!targetExists && !this.wingId &&
+            this.currentState !== AI_STATE.FLEEING &&
+            this.currentState !== AI_STATE.LEAVING_SYSTEM) {
+
+            this._wingCheckTimer -= (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
+            if (this._wingCheckTimer <= 0) {
+                this._wingCheckTimer = (typeof random === 'function')
+                    ? random(WING_CHECK_INTERVAL_MIN, WING_CHECK_INTERVAL_MAX)
+                    : WING_CHECK_INTERVAL_MAX;
+
+                // 1) Try to form up with an allied player first
+                this._tryJoinPlayerFormation(system);
+
+                // 2) If still not in a wing, try peer wing join/create
+                if (!this.wingId && typeof this.tryJoinOrCreateWing === 'function') {
+                    this.tryJoinOrCreateWing();
+                }
+            }
+        }
+
+        // If we just joined a wing, skip patrol override — formation handles movement
+        if (this.currentState === AI_STATE.WING_FLYING) {
+            return;
+        }
+        // ─────────────────────────────────────────────────────────────────
 
         // If in patrol mode (no target), use patrol behavior
         if (!targetExists || this.currentState === AI_STATE.PATROLLING) {
@@ -4346,6 +4419,75 @@ class EnemyAIBehaviors {
         }
 
         this.updatePhysics();
+    }
+
+    /**
+     * When peaceful and the player is an ally (same faction), join their formation wing.
+     * This lets friendly faction combat ships form up around the player as a combat wing.
+     * @param {StarSystem} system
+     * @private
+     */
+    _tryJoinPlayerFormation(system) {
+        const player = system?.player;
+        if (!player?.pos || !player.playerFaction) return;
+        if (typeof wingManager === 'undefined') return;
+
+        // Must be same faction as the player
+        if (this.faction !== player.playerFaction) return;
+
+        // Only eligible combat ships (same check as isWingEligible minus wingId check)
+        if (typeof isWingEligible !== 'function') return;
+        if (!WING_ELIGIBLE_FACTIONS.has(this.faction)) return;
+        if (WING_INELIGIBLE_ROLES.has(this.role)) return;
+        if (typeof this.isArmed === 'function' && !this.isArmed()) return;
+
+        // Must be within rally range of the player (generous — player is the faction anchor)
+        const distToPlayer = this.distanceTo(player);
+        const rallyRange = (typeof PLAYER_FORMATION_JOIN_RANGE !== 'undefined')
+            ? PLAYER_FORMATION_JOIN_RANGE : 6000;
+        if (distToPlayer > rallyRange) return;
+
+        // Ensure the player has a formation wing
+        const wingId = wingManager.getOrCreatePlayerWing(player, player.playerFaction);
+
+        // Try to join
+        const joined = wingManager.addMember(wingId, this);
+        if (joined) {
+            this.changeState(AI_STATE.WING_FLYING);
+        }
+    }
+
+    /**
+     * Attempt to join a nearby same-faction wing, or create a new one as leader.
+     * Only called from IDLE state for eligible faction combat ships (not guards, not pirates, not aliens).
+     * Ships that join or create a wing transition immediately to WING_FLYING.
+     */
+    tryJoinOrCreateWing() {
+        if (typeof wingManager === 'undefined') return;
+        if (typeof isWingEligible !== 'function' || !isWingEligible(this)) return;
+
+        // Try to slot into an existing nearby wing of the same faction
+        const nearby = wingManager.findNearbyWing(
+            this.faction,
+            this.pos.x, this.pos.y,
+            WING_JOIN_RANGE
+        );
+
+        if (nearby) {
+            const joined = wingManager.addMember(nearby.id, this);
+            if (joined) {
+                if (typeof this.changeState === 'function') {
+                    this.changeState(AI_STATE.WING_FLYING);
+                }
+                return;
+            }
+        }
+
+        // No suitable wing found — become a new leader and wait for others to join
+        wingManager.createWing(this);
+        if (typeof this.changeState === 'function') {
+            this.changeState(AI_STATE.WING_FLYING);
+        }
     }
 }
 

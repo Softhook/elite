@@ -1256,6 +1256,10 @@ class GameStateManager {
                 // Clear player target on jump transition
                 if (player) {
                     player.target = null;
+                    // Dissolve allied formation wing — will be recreated in the new system
+                    if (typeof wingManager !== 'undefined') {
+                        wingManager.dissolvePlayerWing(player);
+                    }
                 }
 
                 // Change music chords during the white-out transition (mid-jump)

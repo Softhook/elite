@@ -339,9 +339,16 @@ class Mission {
 
         MISSION_LOG(`Spawning ${guardCount} guards for assassination mission.`);
 
+        // Create a guard wing in wingManager so guards share formation slots and combat alerts
+        // Use target's faction (defaulting to MILITARY) for the formation shape
+        const guardFaction = (target && target.faction) || 'MILITARY';
+        const wingId = (typeof wingManager !== 'undefined')
+            ? wingManager.createGuardWing(target, guardFaction)
+            : null;
+
         for (let g = 0; g < guardCount; g++) {
             const guardData = this._calculateGuardPosition(g, guardCount, target, baseAngle, baseDist);
-            const guardNPC = this._createGuardNPC(guardData, target);
+            const guardNPC = this._createGuardNPC(guardData, target, wingId);
             sys.addEnemy(guardNPC);
             this._guardRefs.push(guardNPC);
             this._guardIds.push(guardNPC.id);
@@ -365,7 +372,7 @@ class Mission {
     }
 
     /** Create a guard NPC */
-    _createGuardNPC(guardData, target) {
+    _createGuardNPC(guardData, target, wingId = null) {
         const gShip = this.guardShipType ||
             (typeof COMBAT_SHIPS !== 'undefined' && COMBAT_SHIPS.length > 0 ? random(COMBAT_SHIPS) :
                 (typeof PIRATE_SHIP_TYPES !== 'undefined' ? random(PIRATE_SHIP_TYPES) : 'Krait'));
@@ -378,12 +385,10 @@ class Mission {
         guardNPC.isAssassinationGuard = true;
         guardNPC.principal = target;
 
-        try {
-            guardNPC.guardFormationOffset = createVector(
-                cos(guardData.angle) * (80 + guardData.index * 30),
-                sin(guardData.angle) * (80 + guardData.index * 30)
-            );
-        } catch (e) { /* createVector may be unavailable */ }
+        // Register in the guard wing — assigns a unique slot index for proper formation spread
+        if (wingId && typeof wingManager !== 'undefined') {
+            wingManager.addMember(wingId, guardNPC);
+        }
 
         return guardNPC;
     }
