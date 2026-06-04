@@ -76,6 +76,8 @@ global.STARFIELD_CONFIG = {
     AMBIENT_EFFECTS: {
         HAIL: {
             particleCount: 5, // Keep it small for tests
+            minParticleCount: 5,
+            maxParticleCount: 5,
             baseSpeed: 0.15,
             speedScale: 0.85,
             minDepth: 0.1,
