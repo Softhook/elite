@@ -1188,8 +1188,7 @@ function handleWantedToggle() {
         return true;
     }
 
-    currentSystem.playerWanted = !isCurrentlyWanted;
-    currentSystem.policeAlertSent = !isCurrentlyWanted;
+    currentSystem.setPlayerWanted(!isCurrentlyWanted);
     GS_LOG(`Player wanted status in ${currentSystem.name}: ${!isCurrentlyWanted}`);
 
     if (!isCurrentlyWanted) {

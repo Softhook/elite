@@ -355,6 +355,7 @@ function loadGame(slotIndex) {
 
                 if (player.currentSystem) {
                     player.currentSystem.player = player;
+                    player.isWanted = player.currentSystem.isPlayerWanted();
 
                     // Fix for initial station positioning
                     if (player.currentSystem.station && player.currentSystem.station.pos) {

@@ -3657,8 +3657,7 @@ class UIStationMenus {
                 if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
 
                 if (player.currentSystem) {
-                    player.currentSystem.playerWanted = false;
-                    player.currentSystem.policeAlertSent = false;
+                    player.currentSystem.setPlayerWanted(false);
                 }
                 if (typeof saveGame === 'function') saveGame();
                 return true;

@@ -693,6 +693,7 @@ class StarSystem {
 
         // Record wanted status change if it actually changed
         if (previousWantedStatus !== wanted && this.player) {
+            this.player.isWanted = wanted;
             this.player.recordWantedStatusChange(wanted, this.name);
         }
     }
@@ -1720,6 +1721,9 @@ class StarSystem {
 
         // CRITICAL FIX: Associate the player with this system
         this.player = player;
+        if (player) {
+            player.isWanted = this.playerWanted;
+        }
 
         // Reset starfield buffer to force regeneration with new player position
         this.resetStarfieldBuffer();

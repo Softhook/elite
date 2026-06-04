@@ -978,7 +978,7 @@ class EnemyAIBehaviors {
             this.reportedWantedTarget = false;
 
             // Clear system alert flag if needed
-            if (system.player && !system.player.isWanted && system.policeAlertSent) {
+            if (system.player && !system.isPlayerWanted() && system.policeAlertSent) {
                 system.policeAlertSent = false;
             }
         }

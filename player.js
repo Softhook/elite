@@ -4929,8 +4929,7 @@ class Player {
             this.isPolice = true;
             // Clear wanted status when joining police
             if (this.currentSystem) {
-                this.currentSystem.playerWanted = false;
-                this.currentSystem.policeAlertSent = false;
+                this.currentSystem.setPlayerWanted(false);
             }
         } else {
             this.playerFaction = factionName;

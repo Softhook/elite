@@ -707,8 +707,7 @@ class UIFactionRecruitment {
 
         const success = player.spendCredits ? player.spendCredits(amount) : false;
         if (success) {
-            player.currentSystem.playerWanted = false;
-            player.currentSystem.policeAlertSent = false;
+            player.currentSystem.setPlayerWanted(false);
             if (typeof addMessageFn === 'function') {
                 addMessageFn(`Fine paid. Legal status cleared in ${player.currentSystem.name}.`, [144, 238, 144]);
             }

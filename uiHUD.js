@@ -402,6 +402,8 @@ class UIHUD {
             let factionDisplay = "";
             let factionRank = "";
 
+            this._cachedIsWanted = player.currentSystem?.isPlayerWanted() || false;
+
             if (player.isPolice) {
                 factionDisplay = "POLICE";
                 factionRank = player.getFactionRank("POLICE");
@@ -415,7 +417,7 @@ class UIHUD {
                 factionDisplay = "SEPARATIST";
                 factionRank = player.getFactionRank("SEPARATIST");
             } else {
-                factionDisplay = "LEGAL";
+                factionDisplay = this._cachedIsWanted ? "WANTED" : "LEGAL";
             }
 
             let statusText = `${eliteRating} - ${factionDisplay}`;
@@ -423,8 +425,7 @@ class UIHUD {
                 statusText += ` (${factionRank})`;
             }
 
-            this._cachedIsWanted = player.currentSystem?.isPlayerWanted() || false;
-            if (this._cachedIsWanted) {
+            if (this._cachedIsWanted && factionDisplay !== "WANTED") {
                 statusText += " - Wanted";
             }
 

@@ -1453,8 +1453,7 @@ class UIManager {
         if (!player || !player.currentSystem) return false;
         const success = player.spendCredits(amount);
         if (success) {
-            player.currentSystem.playerWanted = false;
-            player.currentSystem.policeAlertSent = false;
+            player.currentSystem.setPlayerWanted(false);
             this.addMessage(`Fine paid. Legal status cleared in ${player.currentSystem.name}.`, 'lightgreen');
             if (typeof soundManager !== 'undefined') soundManager.playSound('upgrade');
             if (typeof saveGame === 'function') saveGame();
