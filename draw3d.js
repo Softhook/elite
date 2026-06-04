@@ -31,29 +31,23 @@ for (let i = 0; i < SHADE_TABLE_SIZE; i++) {
     SHADE_TABLE[i] = Math.max(SHADING_MIN, Math.min(SHADING_MAX, SHADING_BASE + key + fill + rim));
 }
 
+// Pre-computed scale factor for fast angle-to-index conversion
+const SHADE_INDEX_SCALE = SHADE_TABLE_SIZE / (Math.PI * 2);
+
 /**
- * Fast shading lookup using pre-computed table
+ * Fast shading lookup using pre-computed table.
+ * Optimized: avoids float modulo, uses integer floor + integer modulo.
  * @param {number} angleDiff - Angle difference in radians
  * @returns {number} Brightness multiplier (SHADING_MIN - SHADING_MAX, currently 0.35 - 1.15)
  */
 function getShading(angleDiff) {
-    let normalized = angleDiff % (Math.PI * 2);
-    if (normalized < 0) normalized += Math.PI * 2;
-    const index = Math.floor((normalized / (Math.PI * 2)) * SHADE_TABLE_SIZE) % SHADE_TABLE_SIZE;
-    return SHADE_TABLE[index];
-}
-
-/**
- * Compute shading using direct formula (for cases where lookup isn't beneficial)
- * @param {number} angleDiff - Angle difference in radians
- * @returns {number} Brightness multiplier (SHADING_MIN - SHADING_MAX, currently 0.35 - 1.15)
- */
-function computeShading(angleDiff) {
-    const ndl = Math.cos(angleDiff);
-    const key = Math.pow(Math.max(0, ndl), SHADING_KEY_EXPONENT) * SHADING_KEY_INTENSITY;
-    const fill = Math.pow(Math.max(0, -ndl), SHADING_FILL_EXPONENT) * SHADING_FILL_INTENSITY;
-    const rim = Math.pow(Math.max(0, 1 - Math.abs(ndl)), SHADING_RIM_EXPONENT) * SHADING_RIM_INTENSITY;
-    return Math.max(SHADING_MIN, Math.min(SHADING_MAX, SHADING_BASE + key + fill + rim));
+    const scaled = angleDiff * SHADE_INDEX_SCALE;
+    // Fast floor-equivalent indexing: `| 0` truncates toward zero, so adjust negative fractions.
+    let idx = scaled | 0;
+    if (scaled < idx) idx -= 1;
+    idx = idx % SHADE_TABLE_SIZE;
+    if (idx < 0) idx += SHADE_TABLE_SIZE;
+    return SHADE_TABLE[idx];
 }
 
 function drawShipRimGlint(layerCache, layerR, localSunAngle) {
@@ -122,8 +116,12 @@ function getEdgeNormal(edge) {
     return edge.normal;
 }
 
+// Cache for nearest sun position per system to avoid O(planets) scan every frame
+const _sunPosCache = new WeakMap();
+
 /**
  * Returns the angle from an entity toward the nearest sun in its current system.
+ * Sun position is cached per system (WeakMap keyed by system object) to avoid O(planets) scan.
  * Falls back to world-origin sun direction when no explicit sun can be resolved.
  * @param {Object} entity
  * @returns {number}
@@ -131,32 +129,37 @@ function getEdgeNormal(edge) {
 function getNearestSunAngleForEntity(entity) {
     const ex = entity?.pos?.x ?? 0;
     const ey = entity?.pos?.y ?? 0;
-    const planets = entity?.currentSystem?.planets;
+    const system = entity?.currentSystem;
 
-    let nearestSun = null;
-    let bestDistSq = Infinity;
-
-    if (Array.isArray(planets)) {
-        for (let i = 0; i < planets.length; i++) {
-            const p = planets[i];
-            if (!p?.pos) continue;
-            const hasExplicitSunIndex = Number.isFinite(p.planetIndex) && p.planetIndex === 0;
-            const isSun = !!p.isSun || hasExplicitSunIndex;
-            if (!isSun) continue;
-            const dx = p.pos.x - ex;
-            const dy = p.pos.y - ey;
-            const d2 = dx * dx + dy * dy;
-            if (d2 < bestDistSq) {
-                bestDistSq = d2;
-                nearestSun = p.pos;
+    let sunPos;
+    if (system) {
+        sunPos = _sunPosCache.get(system);
+        if (!sunPos) {
+            // Cache miss: scan planets once per system
+            const planets = system.planets;
+            let bestDistSq = Infinity;
+            if (Array.isArray(planets)) {
+                for (let i = 0; i < planets.length; i++) {
+                    const p = planets[i];
+                    if (!p?.pos) continue;
+                    const hasExplicitSunIndex = Number.isFinite(p.planetIndex) && p.planetIndex === 0;
+                    if (!p.isSun && !hasExplicitSunIndex) continue;
+                    // Use system center as reference for cache (not entity position)
+                    const d2 = p.pos.x * p.pos.x + p.pos.y * p.pos.y;
+                    if (d2 < bestDistSq) {
+                        bestDistSq = d2;
+                        sunPos = p.pos;
+                    }
+                }
             }
+            if (!sunPos) sunPos = { x: 0, y: 0 };
+            _sunPosCache.set(system, sunPos);
         }
+    } else {
+        sunPos = { x: 0, y: 0 };
     }
 
-    if (!nearestSun) {
-        nearestSun = { x: 0, y: 0 };
-    }
-    return Math.atan2(nearestSun.y - ey, nearestSun.x - ex);
+    return Math.atan2(sunPos.y - ey, sunPos.x - ex);
 }
 
 // ============================================================================
@@ -164,22 +167,40 @@ function getNearestSunAngleForEntity(entity) {
 // ============================================================================
 
 // Pre-computed trig tables for common polygon sides (4-16 sides)
+// Each cache entry: { cos, sin, faceNX, faceNY, faceAngle } — all Float32Array(sides)
 const _trigCache = {};
 function getTrigCache(sides) {
     if (!_trigCache[sides]) {
         const angleStep = (Math.PI * 2) / sides;
-        const cache = { cos: new Float32Array(sides), sin: new Float32Array(sides) };
+        const cache = {
+            cos: new Float32Array(sides),
+            sin: new Float32Array(sides),
+            faceNX: new Float32Array(sides),
+            faceNY: new Float32Array(sides),
+            faceAngle: new Float32Array(sides)
+        };
         for (let i = 0; i < sides; i++) {
             const ang = i * angleStep - Math.PI / 2;
             cache.cos[i] = Math.cos(ang);
             cache.sin[i] = Math.sin(ang);
+            // Face normal at midpoint between vertex i and i+1
+            const fa = (i + 0.5) * angleStep - Math.PI / 2;
+            cache.faceNX[i] = Math.cos(fa);
+            cache.faceNY[i] = Math.sin(fa);
+            cache.faceAngle[i] = fa;
         }
         _trigCache[sides] = cache;
     }
     return _trigCache[sides];
 }
 
-// Color component cache to avoid repeated p5 color() calls
+// Static pre-computed box face data: normals and edge endpoints (relative to center)
+const _BOX_FACE = [
+    { nx:  0, ny: -1, angle: -Math.PI / 2, x1: -0.5, y1: -0.5, x2:  0.5, y2: -0.5 }, // top
+    { nx:  1, ny:  0, angle:  0,            x1:  0.5, y1: -0.5, x2:  0.5, y2:  0.5 }, // right
+    { nx:  0, ny:  1, angle:  Math.PI / 2,  x1:  0.5, y1:  0.5, x2: -0.5, y2:  0.5 }, // bottom
+    { nx: -1, ny:  0, angle:  Math.PI,       x1: -0.5, y1:  0.5, x2: -0.5, y2: -0.5 }  // left
+];
 const _colorCache = new WeakMap();
 function getColorComponents(col) {
     if (_colorCache.has(col)) return _colorCache.get(col);
@@ -192,78 +213,6 @@ function getColorComponents(col) {
     _colorCache.set(col, components);
     return components;
 }
-
-// ============================================================================
-// DEFERRED RENDERING QUEUE - For depth-sorted primitive drawing
-// ============================================================================
-
-/**
- * Global rendering queue for depth-sorting primitives
- * When active, Draw3D calls are deferred and sorted by depth before execution
- */
-let _renderQueue = null;
-
-/**
- * Start deferred rendering mode - all Draw3D calls will be queued instead of executed
- */
-function beginDeferredRendering() {
-    _renderQueue = [];
-}
-
-/**
- * Sort queued primitives by depth and execute them
- * Call this at the end of a renderer to flush all deferred draws
- */
-function flushDeferredRendering() {
-    if (!_renderQueue || _renderQueue.length === 0) {
-        _renderQueue = null;
-        return;
-    }
-
-    // Capture the queue and clear it BEFORE executing
-    // This prevents infinite recursion when queued functions call Draw3D methods
-    const queue = _renderQueue;
-    _renderQueue = null;
-
-    // Sort by depth (higher depth = farther away = draw first)
-    queue.sort((a, b) => b.depth - a.depth);
-
-    // Execute all queued draw calls in sorted order
-    for (let item of queue) {
-        item.fn();
-    }
-}
-
-/**
- * Calculate effective depth for a primitive considering position and rotation
- * @param {number} x - X position
- * @param {number} y - Y position  
- * @param {number} depth - Extrusion depth
- * @param {number} angle - Rotation angle
- * @returns {number} Effective depth value (higher = farther)
- */
-function calculatePrimitiveDepth(x, y, depth, angle) {
-    // In isometric 2.5D, depth is a combination of Y position and X position rotated
-    // The depth vector tells us the "viewing angle"
-    // 
-    // Key insight: The depth vector (dv.x, dv.y) represents the direction "away from camera"
-    // So depth should be: position projected onto the depth direction
-    //
-    // Depth = y (primary, screen space) + how far "into the screen" based on angle
-
-    const dv = Draw3D.getDepthVector(depth, angle);
-
-    // Use Y as primary depth, then add X contribution based on viewing angle
-    // When angle = 0 (dv.y > 0): Y is depth, X doesn't matter much
-    // When angle = π/2 (dv.x > 0): X becomes important for depth
-    // 
-    // Normalized depth direction: dv is already the offset direction
-    // Project position onto this direction for depth
-    const depthScore = y + (dv.y * 0.5) + (x * Math.sin(angle || 0) * 0.3);
-
-    return depthScore;
-}
-
 
 const Draw3D = {
 
@@ -286,20 +235,9 @@ const Draw3D = {
      * @param {boolean} skipBottom - If true, skip drawing bottom cap (optimization for fixed-view surface mode)
      */
     drawPrism: function (x, y, r, sides, depth, col, angle, sunAngle, skipBottom = false) {
-        // If deferred rendering is active, queue this call
-        if (_renderQueue !== null) {
-            const primitiveDepth = calculatePrimitiveDepth(x, y, depth, angle);
-            _renderQueue.push({
-                depth: primitiveDepth,
-                fn: () => this.drawPrism(x, y, r, sides, depth, col, angle, sunAngle, skipBottom)
-            });
-            return;
-        }
-
         const dv = this.getDepthVector(depth, angle);
         const trig = getTrigCache(sides);
         const cc = getColorComponents(col);
-        const angleStep = (Math.PI * 2) / sides;
 
         strokeWeight(1);
 
@@ -314,29 +252,25 @@ const Draw3D = {
             endShape(CLOSE);
         }
 
-        // Draw sides with backface culling
+        // Draw sides with backface culling — use pre-computed face normals & angles from trig cache
+        const dvx = dv.x, dvy = dv.y;
         for (let i = 0; i < sides; i++) {
-            const next = (i + 1) % sides;
-            const faceAngle = (i + 0.5) * angleStep - Math.PI / 2;
-
-            const nx = Math.cos(faceAngle);
-            const ny = Math.sin(faceAngle);
-            const dot = nx * dv.x + ny * dv.y;
-
-            if (dot > 0.001) {
+            // Backface cull: dot(faceNormal, depthVector) > 0 means facing camera
+            if (trig.faceNX[i] * dvx + trig.faceNY[i] * dvy > 0.001) {
+                const next = (i + 1) % sides;
                 const vx = x + trig.cos[i] * r;
                 const vy = y + trig.sin[i] * r;
                 const nvx = x + trig.cos[next] * r;
                 const nvy = y + trig.sin[next] * r;
 
-                const b = getShading(faceAngle - sunAngle);
+                const b = getShading(trig.faceAngle[i] - sunAngle);
 
                 fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
                 stroke(cc.r * b * 0.8, cc.g * b * 0.8, cc.b * b * 0.8, cc.a);
 
                 beginShape();
-                vertex(vx + dv.x, vy + dv.y);
-                vertex(nvx + dv.x, nvy + dv.y);
+                vertex(vx + dvx, vy + dvy);
+                vertex(nvx + dvx, nvy + dvy);
                 vertex(nvx, nvy);
                 vertex(vx, vy);
                 endShape(CLOSE);
@@ -354,90 +288,14 @@ const Draw3D = {
     },
 
     /**
-     * Draw a prism in stages (bottom/sides/top separately)
-     */
-    drawPrismSplit: function (x, y, r, sides, depth, col, angle, sunAngle, stage) {
-        const dv = this.getDepthVector(depth, angle);
-        const angleStep = TWO_PI / sides;
-
-        strokeWeight(1);
-
-        if (stage === 'bottom') {
-            fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5, alpha(col));
-            stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4, alpha(col));
-            beginShape();
-            for (let i = 0; i < sides; i++) {
-                const ang = i * angleStep - PI / 2;
-                vertex(x + Math.cos(ang) * r + dv.x, y + Math.sin(ang) * r + dv.y);
-            }
-            endShape(CLOSE);
-            return;
-        }
-
-        if (stage === 'sides') {
-            for (let i = 0; i < sides; i++) {
-                const ang = i * angleStep - PI / 2;
-                const nextAng = (i + 1) * angleStep - PI / 2;
-                const faceAngle = (i + 0.5) * angleStep - PI / 2;
-                const nx = Math.cos(faceAngle);
-                const ny = Math.sin(faceAngle);
-                const dot = nx * dv.x + ny * dv.y;
-
-                if (dot > 0.001) {
-                    const vx = x + Math.cos(ang) * r;
-                    const vy = y + Math.sin(ang) * r;
-                    const nvx = x + Math.cos(nextAng) * r;
-                    const nvy = y + Math.sin(nextAng) * r;
-                    const b = getShading(faceAngle - sunAngle);
-
-                    fill(red(col) * b, green(col) * b, blue(col) * b, alpha(col));
-                    stroke(red(col) * b * 0.8, green(col) * b * 0.8, blue(col) * b * 0.8, alpha(col));
-                    beginShape();
-                    vertex(vx + dv.x, vy + dv.y);
-                    vertex(nvx + dv.x, nvy + dv.y);
-                    vertex(nvx, nvy);
-                    vertex(vx, vy);
-                    endShape(CLOSE);
-                }
-            }
-            return;
-        }
-
-        if (stage === 'top') {
-            fill(col);
-            stroke(red(col) * 0.8, green(col) * 0.8, blue(col) * 0.8, alpha(col));
-            beginShape();
-            for (let i = 0; i < sides; i++) {
-                const ang = i * angleStep - PI / 2;
-                vertex(x + Math.cos(ang) * r, y + Math.sin(ang) * r);
-            }
-            endShape(CLOSE);
-            return;
-        }
-    },
-
-    /**
      * Draw a 3D extruded box
      * @param {boolean} skipBottom - If true, skip drawing bottom cap (optimization for fixed-view surface mode)
      */
     drawBox3D: function (x, y, w, h, depth, col, angle, sunAngle, skipBottom = false) {
-        // If deferred rendering is active, queue this call instead of executing
-        if (_renderQueue !== null) {
-            const primitiveDepth = calculatePrimitiveDepth(x, y, depth, angle);
-            _renderQueue.push({
-                depth: primitiveDepth,
-                fn: () => this.drawBox3D(x, y, w, h, depth, col, angle, sunAngle, skipBottom)
-            });
-            return;
-        }
-
         const dv = this.getDepthVector(depth, angle);
         const cc = getColorComponents(col);
-        const hw = w / 2;
-        const hh = h / 2;
-
-        // Pre-computed face angles and normals for box
-        const faceAngles = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
+        const hw = w / 2, hh = h / 2;
+        const dvx = dv.x, dvy = dv.y;
 
         strokeWeight(1);
 
@@ -446,34 +304,28 @@ const Draw3D = {
             fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
             stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
             beginShape();
-            vertex(x - hw + dv.x, y - hh + dv.y);
-            vertex(x + hw + dv.x, y - hh + dv.y);
-            vertex(x + hw + dv.x, y + hh + dv.y);
-            vertex(x - hw + dv.x, y + hh + dv.y);
+            vertex(x - hw + dvx, y - hh + dvy);
+            vertex(x + hw + dvx, y - hh + dvy);
+            vertex(x + hw + dvx, y + hh + dvy);
+            vertex(x - hw + dvx, y + hh + dvy);
             endShape(CLOSE);
         }
 
-        // Sides with backface culling
+        // Sides with backface culling — unrolled 4 faces with pre-computed normals
         for (let i = 0; i < 4; i++) {
-            const nx = Math.cos(faceAngles[i]);
-            const ny = Math.sin(faceAngles[i]);
-            const dot = nx * dv.x + ny * dv.y;
-
-            if (dot > 0.001) {
-                const b = getShading(faceAngles[i] - sunAngle);
+            const f = _BOX_FACE[i];
+            if (f.nx * dvx + f.ny * dvy > 0.001) {
+                const b = getShading(f.angle - sunAngle);
 
                 fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
                 stroke(cc.r * b * 0.8, cc.g * b * 0.8, cc.b * b * 0.8, cc.a);
 
-                beginShape();
-                let x1, y1, x2, y2;
-                if (i === 0) { x1 = x - hw; y1 = y - hh; x2 = x + hw; y2 = y - hh; }
-                else if (i === 1) { x1 = x + hw; y1 = y - hh; x2 = x + hw; y2 = y + hh; }
-                else if (i === 2) { x1 = x + hw; y1 = y + hh; x2 = x - hw; y2 = y + hh; }
-                else { x1 = x - hw; y1 = y + hh; x2 = x - hw; y2 = y - hh; }
+                const x1 = x + f.x1 * w, y1 = y + f.y1 * h;
+                const x2 = x + f.x2 * w, y2 = y + f.y2 * h;
 
-                vertex(x1 + dv.x, y1 + dv.y);
-                vertex(x2 + dv.x, y2 + dv.y);
+                beginShape();
+                vertex(x1 + dvx, y1 + dvy);
+                vertex(x2 + dvx, y2 + dvy);
                 vertex(x2, y2);
                 vertex(x1, y1);
                 endShape(CLOSE);
@@ -491,29 +343,15 @@ const Draw3D = {
      * Draw an extruded arbitrary shape from vertices
      */
     drawExtrudedShape: function (vertices, depth, col, angle, sunAngle, cull = true) {
-        // If deferred rendering is active, queue this call
-        if (_renderQueue !== null) {
-            // Calculate centroid for depth sorting
-            let cx = 0, cy = 0;
-            for (let v of vertices) { cx += v.x; cy += v.y; }
-            cx /= vertices.length;
-            cy /= vertices.length;
-            const primitiveDepth = calculatePrimitiveDepth(cx, cy, depth, angle);
-            _renderQueue.push({
-                depth: primitiveDepth,
-                fn: () => this.drawExtrudedShape(vertices, depth, col, angle, sunAngle, cull)
-            });
-            return;
-        }
-
         const dv = this.getDepthVector(depth, angle);
+        const cc = getColorComponents(col);
 
         strokeWeight(1);
         const len = vertices.length;
 
         // Bottom Cap
-        fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5, alpha(col));
-        stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4, alpha(col));
+        fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
+        stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
         beginShape();
         for (let i = 0; i < len; i++) {
             vertex(vertices[i].x + dv.x, vertices[i].y + dv.y);
@@ -521,6 +359,7 @@ const Draw3D = {
         endShape(CLOSE);
 
         // Sides
+        const dvx = dv.x, dvy = dv.y;
         for (let i = 0; i < len; i++) {
             const next = (i + 1) % len;
             const v1 = vertices[i];
@@ -532,17 +371,17 @@ const Draw3D = {
 
             const nx = Math.cos(faceAngle);
             const ny = Math.sin(faceAngle);
-            const dot = nx * dv.x + ny * dv.y;
+            const dot = nx * dvx + ny * dvy;
 
             if (!cull || dot > 0.001) {
                 const b = getShading(faceAngle - sunAngle);
 
-                fill(red(col) * b, green(col) * b, blue(col) * b, alpha(col));
-                stroke(red(col) * b * 0.8, green(col) * b * 0.8, blue(col) * b * 0.8, alpha(col));
+                fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
+                stroke(cc.r * b * 0.8, cc.g * b * 0.8, cc.b * b * 0.8, cc.a);
 
                 beginShape();
-                vertex(v1.x + dv.x, v1.y + dv.y);
-                vertex(v2.x + dv.x, v2.y + dv.y);
+                vertex(v1.x + dvx, v1.y + dvy);
+                vertex(v2.x + dvx, v2.y + dvy);
                 vertex(v2.x, v2.y);
                 vertex(v1.x, v1.y);
                 endShape(CLOSE);
@@ -551,7 +390,7 @@ const Draw3D = {
 
         // Top
         fill(col);
-        stroke(red(col) * 0.8, green(col) * 0.8, blue(col) * 0.8, alpha(col));
+        stroke(cc.r * 0.8, cc.g * 0.8, cc.b * 0.8, cc.a);
         beginShape();
         for (let i = 0; i < len; i++) {
             vertex(vertices[i].x, vertices[i].y);
@@ -563,17 +402,8 @@ const Draw3D = {
      * Draw a 3D ring (torus cross-section)
      */
     drawRing3D: function (x, y, rOuter, rInner, sides, depth, col, angle, sunAngle, shapeRotation = 0) {
-        // If deferred rendering is active, queue this call
-        if (_renderQueue !== null) {
-            const primitiveDepth = calculatePrimitiveDepth(x, y, depth, angle);
-            _renderQueue.push({
-                depth: primitiveDepth,
-                fn: () => this.drawRing3D(x, y, rOuter, rInner, sides, depth, col, angle, sunAngle, shapeRotation)
-            });
-            return;
-        }
-
         const dv = this.getDepthVector(depth, angle);
+        const cc = getColorComponents(col);
         const angleStep = TWO_PI / sides;
 
         strokeWeight(1);
@@ -581,8 +411,8 @@ const Draw3D = {
         // Bottom cap with contour for hole
         const hasContour = typeof beginContour === 'function' && typeof endContour === 'function';
 
-        fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5, alpha(col));
-        stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4, alpha(col));
+        fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5, cc.a);
+        stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4, cc.a);
 
         if (hasContour) {
             try {
@@ -625,8 +455,8 @@ const Draw3D = {
 
             if (dot > 0.001) {
                 const b = getShading(faceAngle - sunAngle);
-                fill(red(col) * b, green(col) * b, blue(col) * b, alpha(col));
-                stroke(red(col) * b * 0.8, green(col) * b * 0.8, blue(col) * b * 0.8, alpha(col));
+                fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
+                stroke(cc.r * b * 0.8, cc.g * b * 0.8, cc.b * b * 0.8, cc.a);
                 beginShape();
                 vertex(ox1 + dv.x, oy1 + dv.y);
                 vertex(ox2 + dv.x, oy2 + dv.y);
@@ -642,8 +472,8 @@ const Draw3D = {
 
             if (dotIn > 0.001) {
                 const bIn = getShading(innerFaceAngle - sunAngle);
-                fill(red(col) * bIn, green(col) * bIn, blue(col) * bIn, alpha(col));
-                stroke(red(col) * bIn * 0.8, green(col) * bIn * 0.8, blue(col) * bIn * 0.8, alpha(col));
+                fill(cc.r * bIn, cc.g * bIn, cc.b * bIn, cc.a);
+                stroke(cc.r * bIn * 0.8, cc.g * bIn * 0.8, cc.b * bIn * 0.8, cc.a);
                 beginShape();
                 vertex(ix1 + dv.x, iy1 + dv.y);
                 vertex(ix2 + dv.x, iy2 + dv.y);
@@ -655,7 +485,7 @@ const Draw3D = {
 
         // Top cap
         fill(col);
-        stroke(red(col) * 0.8, green(col) * 0.8, blue(col) * 0.8, alpha(col));
+        stroke(cc.r * 0.8, cc.g * 0.8, cc.b * 0.8, cc.a);
         if (hasContour) {
             try {
                 beginShape();
@@ -680,6 +510,7 @@ const Draw3D = {
 
     // Fallback for rings when contours aren't supported
     _drawRingFallback: function (x, y, rOuter, rInner, sides, dv, col, shapeRotation, stage) {
+        const cc = getColorComponents(col);
         const angleStep = TWO_PI / sides;
         const ox = dv.x, oy = dv.y;
 
@@ -698,7 +529,7 @@ const Draw3D = {
             vertex(x + Math.cos(ang) * rInner + ox, y + Math.sin(ang) * rInner + oy);
         }
         endShape(CLOSE);
-        stroke(red(col) * 0.8, green(col) * 0.8, blue(col) * 0.8, alpha(col));
+        stroke(cc.r * 0.8, cc.g * 0.8, cc.b * 0.8, cc.a);
     },
 
     /**
@@ -713,15 +544,6 @@ const Draw3D = {
      * @param {boolean} inverted - If true, dome is concave (dish) instead of convex
      */
     drawDome: function (x, y, radius, segments, col, angle, sunAngle, inverted = false) {
-        if (_renderQueue !== null) {
-            const primitiveDepth = calculatePrimitiveDepth(x, y, radius, angle);
-            _renderQueue.push({
-                depth: primitiveDepth,
-                fn: () => this.drawDome(x, y, radius, segments, col, angle, sunAngle, inverted)
-            });
-            return;
-        }
-
         // Use depth vector for angle-based extrusion (dome height direction)
         const domeHeight = radius * 0.6; // Height of the dome
         const dv = this.getDepthVector(domeHeight, angle);
@@ -836,15 +658,6 @@ const Draw3D = {
      * @param {number} sunAngle - Sun angle for shading
      */
     drawCone: function (x, y, baseRadius, height, segments, col, angle, sunAngle) {
-        if (_renderQueue !== null) {
-            const primitiveDepth = calculatePrimitiveDepth(x, y, height, angle);
-            _renderQueue.push({
-                depth: primitiveDepth,
-                fn: () => this.drawCone(x, y, baseRadius, height, segments, col, angle, sunAngle)
-            });
-            return;
-        }
-
         const dv = this.getDepthVector(height, angle);
         const cc = getColorComponents(col);
         const angleStep = TWO_PI / segments;
@@ -910,15 +723,6 @@ const Draw3D = {
      * @param {number} sunAngle - Sun angle for shading
      */
     drawHelix: function (x, y, radius, height, turns, segments, thickness, col, angle, sunAngle) {
-        if (_renderQueue !== null) {
-            const primitiveDepth = calculatePrimitiveDepth(x, y, height, angle);
-            _renderQueue.push({
-                depth: primitiveDepth,
-                fn: () => this.drawHelix(x, y, radius, height, turns, segments, thickness, col, angle, sunAngle)
-            });
-            return;
-        }
-
         const cc = getColorComponents(col);
         const totalSegments = Math.floor(segments * turns);
         const heightStep = height / totalSegments;
@@ -964,15 +768,6 @@ const Draw3D = {
      * @param {number} sunAngle - Sun angle for shading
      */
     drawLattice: function (x, y, width, height, gridX, gridY, beamThickness, col, angle, sunAngle) {
-        if (_renderQueue !== null) {
-            const primitiveDepth = calculatePrimitiveDepth(x, y, beamThickness, angle);
-            _renderQueue.push({
-                depth: primitiveDepth,
-                fn: () => this.drawLattice(x, y, width, height, gridX, gridY, beamThickness, col, angle, sunAngle)
-            });
-            return;
-        }
-
         const stepX = width / gridX;
         const stepY = height / gridY;
         const halfW = width / 2;
@@ -1004,15 +799,6 @@ const Draw3D = {
      * @param {boolean} withTip - Add a small sphere tip
      */
     drawRod: function (x1, y1, x2, y2, thickness, col, angle, sunAngle, withTip = false) {
-        if (_renderQueue !== null) {
-            const primitiveDepth = calculatePrimitiveDepth((x1 + x2) / 2, (y1 + y2) / 2, thickness, angle);
-            _renderQueue.push({
-                depth: primitiveDepth,
-                fn: () => this.drawRod(x1, y1, x2, y2, thickness, col, angle, sunAngle, withTip)
-            });
-            return;
-        }
-
         const dx = x2 - x1;
         const dy = y2 - y1;
         const len = Math.sqrt(dx * dx + dy * dy);
@@ -1045,15 +831,6 @@ const Draw3D = {
      * @param {number} sunAngle - Sun angle for shading
      */
     drawGeodesicDome: function (x, y, radius, subdivisions, col, angle, sunAngle) {
-        if (_renderQueue !== null) {
-            const primitiveDepth = calculatePrimitiveDepth(x, y, radius, angle);
-            _renderQueue.push({
-                depth: primitiveDepth,
-                fn: () => this.drawGeodesicDome(x, y, radius, subdivisions, col, angle, sunAngle)
-            });
-            return;
-        }
-
         const cc = getColorComponents(col);
         const segments = Math.max(6, 6 * (subdivisions + 1));
         const rings = Math.max(3, 3 * (subdivisions + 1));
@@ -1080,7 +857,9 @@ const Draw3D = {
 
                 // Calculate face center for lighting
                 const faceAngle = (theta1 + theta2) / 2;
-                const b = getShading(faceAngle - sunAngle) * (0.7 + Math.random() * 0.3);
+                // Use deterministic pseudo-random based on face position (avoids per-frame flicker)
+                const facetVariation = 0.85 + ((i * 7 + r * 13) % 100) / 100 * 0.3;
+                const b = getShading(faceAngle - sunAngle) * facetVariation;
 
                 fill(cc.r * b, cc.g * b, cc.b * b, cc.a);
                 stroke(cc.r * 0.3, cc.g * 0.3, cc.b * 0.3, cc.a * 0.8);
@@ -1113,15 +892,6 @@ const Draw3D = {
      * @param {number} sunAngle - Sun angle for shading
      */
     drawTorus: function (x, y, majorRadius, minorRadius, segments, tubeSegments, col, angle, sunAngle) {
-        if (_renderQueue !== null) {
-            const primitiveDepth = calculatePrimitiveDepth(x, y, minorRadius, angle);
-            _renderQueue.push({
-                depth: primitiveDepth,
-                fn: () => this.drawTorus(x, y, majorRadius, minorRadius, segments, tubeSegments, col, angle, sunAngle)
-            });
-            return;
-        }
-
         const cc = getColorComponents(col);
         const majorStep = TWO_PI / segments;
         const minorStep = TWO_PI / tubeSegments;
@@ -1196,12 +966,13 @@ const Draw3D = {
      */
     drawExtrudedRing: function (outerVerts, innerVerts, depth, col, angle, sunAngle) {
         const dv = this.getDepthVector(depth, angle);
+        const cc = getColorComponents(col);
         strokeWeight(1);
         const len = outerVerts.length;
 
         // Bottom cap
-        fill(red(col) * 0.5, green(col) * 0.5, blue(col) * 0.5);
-        stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4);
+        fill(cc.r * 0.5, cc.g * 0.5, cc.b * 0.5);
+        stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4);
 
         const hasContour = typeof beginContour === 'function' && typeof endContour === 'function';
         if (hasContour) {
@@ -1220,7 +991,7 @@ const Draw3D = {
                 beginShape();
                 for (let i = len - 1; i >= 0; i--) vertex(innerVerts[i].x + dv.x, innerVerts[i].y + dv.y);
                 endShape(CLOSE);
-                stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4);
+                stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4);
             }
         } else {
             beginShape();
@@ -1230,7 +1001,7 @@ const Draw3D = {
             beginShape();
             for (let i = len - 1; i >= 0; i--) vertex(innerVerts[i].x + dv.x, innerVerts[i].y + dv.y);
             endShape(CLOSE);
-            stroke(red(col) * 0.4, green(col) * 0.4, blue(col) * 0.4);
+            stroke(cc.r * 0.4, cc.g * 0.4, cc.b * 0.4);
         }
 
         // Sides
@@ -1246,8 +1017,8 @@ const Draw3D = {
 
             if (dot > 0.001) {
                 const b = getShading(faceAngle - sunAngle);
-                fill(red(col) * b, green(col) * b, blue(col) * b);
-                stroke(red(col) * b * 0.8, green(col) * b * 0.8, blue(col) * b * 0.8);
+                fill(cc.r * b, cc.g * b, cc.b * b);
+                stroke(cc.r * b * 0.8, cc.g * b * 0.8, cc.b * b * 0.8);
                 beginShape();
                 vertex(v1.x + dv.x, v1.y + dv.y);
                 vertex(v2.x + dv.x, v2.y + dv.y);
@@ -1265,8 +1036,8 @@ const Draw3D = {
 
             if (idot > 0.001) {
                 const b = getShading(innerFaceAngle - sunAngle);
-                fill(red(col) * b, green(col) * b, blue(col) * b);
-                stroke(red(col) * b * 0.8, green(col) * b * 0.8, blue(col) * b * 0.8);
+                fill(cc.r * b, cc.g * b, cc.b * b);
+                stroke(cc.r * b * 0.8, cc.g * b * 0.8, cc.b * b * 0.8);
                 beginShape();
                 vertex(iv1.x + dv.x, iv1.y + dv.y);
                 vertex(iv2.x + dv.x, iv2.y + dv.y);
@@ -1278,7 +1049,7 @@ const Draw3D = {
 
         // Top cap
         fill(col);
-        stroke(red(col) * 0.8, green(col) * 0.8, blue(col) * 0.8);
+        stroke(cc.r * 0.8, cc.g * 0.8, cc.b * 0.8);
         if (hasContour) {
             try {
                 beginShape();
@@ -1681,6 +1452,7 @@ console.log("draw3d.js - Centralized Faux 3D Rendering System loaded.");
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
+        Draw3D,
         computeShipRimGlintStrength,
         drawShipRimGlint,
         getNearestSunAngleForEntity
