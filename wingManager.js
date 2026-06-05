@@ -247,6 +247,20 @@ const wingManager = (() => {
     }
 
     /**
+     * Find the player's allied formation wing ID (or null if none exists).
+     * @param {object} player
+     * @returns {string|null}
+     */
+    function findPlayerWing(player) {
+        for (const [id, wing] of _wings) {
+            if (wing._isPlayerFormation && wing.principalRef === player) {
+                return id;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Dissolve the player's formation wing (called when player leaves system / loses faction).
      * @param {object} player
      */
@@ -344,6 +358,7 @@ const wingManager = (() => {
         findNearbyWing,
         findPlayerFormationWing,
         getOrCreatePlayerWing,
+        findPlayerWing,
         dissolvePlayerWing,
         alertGuardSiblings,
         update,

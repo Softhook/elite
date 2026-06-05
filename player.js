@@ -372,6 +372,7 @@ class Player {
         // Bodyguards
         this.activeBodyguards = [];
         this._bodyguardWingId = null;  // wingManager guard-wing id for formation slots
+        this._wingTransferData = null; // wing members carried across system jumps
         this.bodyguardLimit = PLAYER_CONFIG.MAX_BODYGUARDS;
 
         // Navigation

@@ -1790,7 +1790,36 @@ class StarSystem {
                 // Create allied formation wing if player has joined a faction
                 // Friendly faction combat ships will form up around the player.
                 if (this.player.playerFaction && typeof wingManager !== 'undefined') {
-                    wingManager.getOrCreatePlayerWing(this.player, this.player.playerFaction);
+                    const wingId = wingManager.getOrCreatePlayerWing(this.player, this.player.playerFaction);
+
+                    // Re-spawn wing members that jumped with the player
+                    if (Array.isArray(this.player._wingTransferData) && this.player._wingTransferData.length > 0) {
+                        for (const wd of this.player._wingTransferData) {
+                            const angle = random(TWO_PI);
+                            const dist = 100 + random(100);
+                            const sx = this.player.pos.x + cos(angle) * dist;
+                            const sy = this.player.pos.y + sin(angle) * dist;
+
+                            const follower = new Enemy(sx, sy, this.player, wd.shipType, AI_ROLE.COMBAT);
+                            follower.calculateRadianProperties();
+                            follower.initializeColors();
+                            follower.faction = wd.faction || this.player.playerFaction;
+                            if (wd.hull && wd.maxHull) {
+                                follower.hull = wd.hull;
+                                follower.maxHull = wd.maxHull;
+                            }
+                            if (wd.displayName) follower.displayName = wd.displayName;
+                            if (wd.gender) follower.gender = wd.gender;
+
+                            // Register in the new formation wing
+                            const joined = wingManager.addMember(wingId, follower);
+                            if (joined) {
+                                follower.changeState(AI_STATE.WING_FLYING);
+                                this.addEnemy(follower);
+                            }
+                        }
+                        this.player._wingTransferData = null;
+                    }
                 }
 
                 // CHANGE: Use this.player in method calls
@@ -3013,6 +3042,9 @@ class StarSystem {
                     // Skip guards belonging to the same principal (flying in formation)
                     if (enemy1.role === AI_ROLE.GUARD && enemy2.role === AI_ROLE.GUARD &&
                         enemy1.principal && enemy1.principal === enemy2.principal) continue;
+
+                    // Skip any two ships in the same formation wing (COMBAT role player wing)
+                    if (enemy1.wingId && enemy1.wingId === enemy2.wingId) continue;
 
                     // Prevent checking same pair twice using id-based key
                     const id1 = enemy1.id ?? i;
@@ -4856,6 +4888,9 @@ class StarSystem {
                     // Skip guards belonging to the same principal (flying in formation)
                     if (enemy1.role === AI_ROLE.GUARD && enemy2.role === AI_ROLE.GUARD &&
                         enemy1.principal && enemy1.principal === enemy2.principal) continue;
+
+                    // Skip any two ships in the same formation wing (COMBAT role player wing)
+                    if (enemy1.wingId && enemy1.wingId === enemy2.wingId) continue;
 
                     // Prevent checking same pair twice using numeric hash instead of string concatenation
                     const id1 = enemy1.id ?? i;

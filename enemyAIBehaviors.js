@@ -2234,15 +2234,16 @@ class EnemyAIBehaviors {
         }
 
         // ── Re-join formation after combat (for ships already in a wing) ─
-        // The wing reform timer only ticks down in _updateState_IDLE, but
-        // the patrol override below forces PATROLLING before IDLE runs, so
-        // we handle both timer and re-join here to avoid getting stuck.
+        // The wing reform timer ticks down in _updateState_IDLE, but the patrol
+        // override below forces PATROLLING before IDLE runs for ships returning
+        // from combat. We handle both timer and re-join here as a fallback, but
+        // skip the decrement if IDLE already handled it this frame.
         if (this.wingId && !targetExists &&
             this.currentState !== AI_STATE.FLEEING &&
             this.currentState !== AI_STATE.LEAVING_SYSTEM) {
 
-            // Count down the reform timer
-            if (this._wingReformTimer > 0) {
+            // Avoid double-countdown: _updateState_IDLE already decrements this
+            if (this.currentState !== AI_STATE.IDLE && this._wingReformTimer > 0) {
                 this._wingReformTimer -= (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
             }
 
@@ -2265,11 +2266,14 @@ class EnemyAIBehaviors {
 
         // ── Wing formation join (peer wings + player formation) ─────────
         // Throttled: only check periodically when peaceful and not already in a wing.
+        // Avoid double-countdown: _updateState_IDLE already decrements this timer.
         if (!targetExists && !this.wingId &&
             this.currentState !== AI_STATE.FLEEING &&
             this.currentState !== AI_STATE.LEAVING_SYSTEM) {
 
-            this._wingCheckTimer -= (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
+            if (this.currentState !== AI_STATE.IDLE) {
+                this._wingCheckTimer -= (typeof deltaTime === 'number' ? deltaTime / 1000 : DEFAULT_DELTA_SECONDS);
+            }
             if (this._wingCheckTimer <= 0) {
                 this._wingCheckTimer = (typeof random === 'function')
                     ? random(WING_CHECK_INTERVAL_MIN, WING_CHECK_INTERVAL_MAX)
@@ -4423,7 +4427,9 @@ class EnemyAIBehaviors {
 
     /**
      * When peaceful and the player is an ally (same faction), join their formation wing.
-     * This lets friendly faction combat ships form up around the player as a combat wing.
+     * The number of ships that form up scales with the player's faction rank.
+     * Low-ranked players attract few/no followers; high-ranked players attract a full wing.
+     * NPCs with higher pilot rank than the player's faction level won't follow — they lead instead.
      * @param {StarSystem} system
      * @private
      */
@@ -4431,24 +4437,39 @@ class EnemyAIBehaviors {
         const player = system?.player;
         if (!player?.pos || !player.playerFaction) return;
         if (typeof wingManager === 'undefined') return;
+        if (typeof PILOT_RANK === 'undefined') return;
 
         // Must be same faction as the player
         if (this.faction !== player.playerFaction) return;
 
-        // Only eligible combat ships (same check as isWingEligible minus wingId check)
+        // Only eligible combat ships
         if (typeof isWingEligible !== 'function') return;
         if (!WING_ELIGIBLE_FACTIONS.has(this.faction)) return;
         if (WING_INELIGIBLE_ROLES.has(this.role)) return;
         if (typeof this.isArmed === 'function' && !this.isArmed()) return;
 
-        // Must be within rally range of the player (generous — player is the faction anchor)
+        // ── Rank check: higher-ranked NPCs won't follow a lower-ranked player ──
+        const playerRankLevel = (typeof player.getFactionRankLevel === 'function')
+            ? player.getFactionRankLevel(player.playerFaction)  // 0–7
+            : 0;
+        const npcPilotRank = (this.pilotRank !== undefined && this.pilotRank !== null)
+            ? this.pilotRank
+            : (typeof PILOT_RANK !== 'undefined' ? PILOT_RANK.ROOKIE : 2);
+
+        // NPC follows only if its pilot rank ≤ player's faction rank level
+        if (npcPilotRank > playerRankLevel) return;
+
+        // ── Rank-based follower cap: at most playerRankLevel members ─────────
+        const maxFollowers = Math.min(playerRankLevel, WING_MAX_FOLLOWERS);
+        const wingId = wingManager.getOrCreatePlayerWing(player, player.playerFaction);
+        const wing = wingManager.getWing(wingId);
+        if (wing && wing.members.length >= maxFollowers) return;
+
+        // Must be within rally range of the player
         const distToPlayer = this.distanceTo(player);
         const rallyRange = (typeof PLAYER_FORMATION_JOIN_RANGE !== 'undefined')
             ? PLAYER_FORMATION_JOIN_RANGE : 6000;
         if (distToPlayer > rallyRange) return;
-
-        // Ensure the player has a formation wing
-        const wingId = wingManager.getOrCreatePlayerWing(player, player.playerFaction);
 
         // Try to join
         const joined = wingManager.addMember(wingId, this);
@@ -4461,10 +4482,15 @@ class EnemyAIBehaviors {
      * Attempt to join a nearby same-faction wing, or create a new one as leader.
      * Only called from IDLE state for eligible faction combat ships (not guards, not pirates, not aliens).
      * Ships that join or create a wing transition immediately to WING_FLYING.
+     * Higher-ranked pilots become leaders; lower-ranked pilots join them.
      */
     tryJoinOrCreateWing() {
         if (typeof wingManager === 'undefined') return;
         if (typeof isWingEligible !== 'function' || !isWingEligible(this)) return;
+
+        const myPilotRank = (this.pilotRank !== undefined && this.pilotRank !== null)
+            ? this.pilotRank
+            : (typeof PILOT_RANK !== 'undefined' ? PILOT_RANK.ROOKIE : 2);
 
         // Try to slot into an existing nearby wing of the same faction
         const nearby = wingManager.findNearbyWing(
@@ -4474,6 +4500,17 @@ class EnemyAIBehaviors {
         );
 
         if (nearby) {
+            // Don't join a wing led by a lower-ranked pilot — lead instead
+            const leaderRank = nearby.leader?.pilotRank;
+            if (leaderRank !== undefined && leaderRank < myPilotRank) {
+                // Create our own wing as leader; higher rank should lead
+                wingManager.createWing(this);
+                if (typeof this.changeState === 'function') {
+                    this.changeState(AI_STATE.WING_FLYING);
+                }
+                return;
+            }
+
             const joined = wingManager.addMember(nearby.id, this);
             if (joined) {
                 if (typeof this.changeState === 'function') {

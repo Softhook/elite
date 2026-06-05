@@ -706,6 +706,14 @@ class EnemyStateMachine {
                         shouldBreak = true;
                     }
                 }
+                // OR this follower has independently acquired a target (proactive engagement)
+                if (!shouldBreak && this.target && this.isTargetValid(this.target) &&
+                    this.target !== this.lastAttacker) {
+                    const da = this.distanceTo(this.target);
+                    if (da < this.detectionRange) {
+                        shouldBreak = true;
+                    }
+                }
             }
 
             if (shouldBreak) {

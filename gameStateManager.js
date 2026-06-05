@@ -1256,8 +1256,26 @@ class GameStateManager {
                 // Clear player target on jump transition
                 if (player) {
                     player.target = null;
-                    // Dissolve allied formation wing — will be recreated in the new system
+
+                    // Save allied formation wing members so they follow through the jump
                     if (typeof wingManager !== 'undefined') {
+                        const wingId = wingManager.findPlayerWing(player);
+                        const wing = wingId ? wingManager.getWing(wingId) : null;
+                        player._wingTransferData = [];
+                        if (wing && wing.members.length > 0) {
+                            for (const m of wing.members) {
+                                if (m && !m.isDestroyed() && m.pos) {
+                                    player._wingTransferData.push({
+                                        shipType: m.shipType || m.shipTypeName,
+                                        hull: m.hull,
+                                        maxHull: m.maxHull,
+                                        displayName: m.displayName || null,
+                                        gender: m.gender || null,
+                                        faction: m.faction,
+                                    });
+                                }
+                            }
+                        }
                         wingManager.dissolvePlayerWing(player);
                     }
                 }
