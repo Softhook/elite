@@ -603,12 +603,17 @@ describe('New Events Tests', () => {
         });
 
         test('should add signage and custom marker styling for new ambient events', () => {
+            jest.clearAllMocks();
             em.executeConfiguredEvent('MEDICAL_RELIEF_CONVOY');
             expect(system.enemies.length).toBeGreaterThan(0);
             expect(ui.eventMarkers.length).toBeGreaterThan(0);
             expect(ui.eventMarkers[0].label).toBe('Relief Convoy');
             expect(ui.eventMarkers[0].color).toBe('cyan');
-            expect(ui.persistentMessages.find(m => m.id === 'BULLETIN_MEDICAL_RELIEF_CONVOY')).toBeDefined();
+            expect(ui.persistentMessages.find(m => m.id === 'BULLETIN_MEDICAL_RELIEF_CONVOY')).toBeUndefined();
+            expect(global.GameGlobals.newsManager.addDynamicEventNews).toHaveBeenCalledWith(
+                'MEDICAL_RELIEF_CONVOY',
+                expect.objectContaining({ systemName: system.name })
+            );
 
             em.executeConfiguredEvent('SATELLITE_SHRAPNEL_FIELD');
             expect(system.asteroids.length).toBeGreaterThan(0);

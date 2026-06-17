@@ -572,6 +572,12 @@ class EventManager {
             'SURVEY_DRONE_SWEEP', 'REACTOR_PURGE_CANISTERS', 'CRYO_POD_SPILL',
             'SMUGGLER_DECOY_CACHE', 'SATELLITE_SHRAPNEL_FIELD', 'ION_WAKE_STORM'
         ]);
+
+        this.urgentDynamicEventTokens = new Set([
+            'RAID', 'SWARM', 'AMBUSH', 'SKIRMISH', 'WAR', 'THREAT', 'BOMBER',
+            'SHRAPNEL', 'STORM', 'INTERDICTION', 'HUNT', 'ASSAULT', 'PURGE',
+            'OUTAGE', 'SABOTAGE', 'ACCIDENT', 'QUARANTINE', 'PLAGUE', 'FAMINE'
+        ]);
     }
 
     _buildLoreExpansionEvents() {
@@ -790,6 +796,10 @@ class EventManager {
     }
 
     _publishEventAtmosphere(eventType) {
+        if (!this._shouldShowTemporaryEventBulletin(eventType)) {
+            return;
+        }
+
         const atmosphere = this._getEventAtmosphere(eventType);
         if (!atmosphere?.bulletin) return;
 
@@ -799,6 +809,17 @@ class EventManager {
 
         if (!bulletinText) return;
         this._addPersistentEvent(`BULLETIN_${eventType}`, bulletinText, atmosphere.markerColor || 'white', this._extendDurationMs(150000));
+    }
+
+    _shouldShowTemporaryEventBulletin(eventType) {
+        const normalizedType = String(eventType || '').toUpperCase();
+        // Legacy/core events remain temporary by default because they are immediate system-state feedback.
+        if (!normalizedType || !this.dynamicNewsEventTypes.has(normalizedType)) {
+            return true;
+        }
+
+        const tokens = normalizedType.split('_');
+        return tokens.some(token => this.urgentDynamicEventTokens.has(token));
     }
 
     initializeReferences(starSystem, player, uiManager) {
